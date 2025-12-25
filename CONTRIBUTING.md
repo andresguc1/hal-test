@@ -5,7 +5,7 @@ First off, thank you for considering contributing to HAL-TEST! It's people like 
 ## How Can I Contribute?
 
 ### Reporting Bugs
-- Use the [GitHub Issue Tracker](https://github.com/your-username/Hal_Test_v0/issues).
+- Use the [GitHub Issue Tracker](https://github.com/andresguc1/hal-test/issues).
 - Describe the bug in detail, including steps to reproduce.
 - Mention your environment (OS, Browser, Node version).
 
