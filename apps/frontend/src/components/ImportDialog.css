@@ -1,0 +1,431 @@
+/* Import Dialog Styles */
+
+/* Removed Orbitron import as per user request */
+
+:root {
+  /* Standard App Palette - Matching index.css */
+  --dialog-bg: #1a1a1a;
+  /* Slightly lighter than pure black, matches button bg */
+  --border-color: #444;
+  --text-primary: rgba(255, 255, 255, 0.87);
+  --text-secondary: #94a3b8;
+  --accent-color: #646cff;
+  /* Matching --color-accent from index.css */
+  --accent-hover: #535bf2;
+  /* Matching --color-accent-hover from index.css */
+
+  /* Inherit font from body */
+  --font-family: inherit;
+}
+
+/* Overlay: Transparent to keep workspace visible */
+.import-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  /* Subtle dimming */
+  backdrop-filter: blur(2px);
+  /* Slight blur */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.import-dialog {
+  background: var(--dialog-bg);
+  border-radius: 12px;
+  /* Standard rounded corners */
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 20px 50px rgba(0, 0, 0, 0.5);
+  width: 90%;
+  max-width: 600px;
+  max-height: 85vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  position: relative;
+}
+
+/* Removed HAL "Eye" decorative element */
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px) scale(0.98);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Header */
+.import-dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.import-dialog-header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  /* Removed letter-spacing and uppercase */
+}
+
+.import-dialog-header h2 svg {
+  color: var(--accent-color);
+}
+
+.close-button {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.close-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  /* Removed rotation */
+}
+
+/* Mode Selector */
+.import-mode-selector {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  padding: 20px 24px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.mode-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 12px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: var(--font-family);
+}
+
+.mode-button:hover:not(:disabled) {
+  background: rgba(100, 108, 255, 0.08);
+  /* Accent hover */
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+.mode-button.active {
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+  background: rgba(100, 108, 255, 0.1);
+}
+
+.mode-button.active svg {
+  color: var(--accent-color);
+}
+
+.mode-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Content Area */
+.import-dialog-content {
+  padding: 24px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.import-section {
+  margin-bottom: 20px;
+}
+
+/* File Input */
+.file-input-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 20px;
+  border: 1px dashed var(--text-secondary);
+  border-radius: 8px;
+  transition: all 0.2s;
+  background: transparent;
+}
+
+.file-input-label:hover {
+  background: rgba(100, 108, 255, 0.05);
+  border-color: var(--accent-color);
+}
+
+.file-input-display {
+  font-size: 1rem;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+}
+
+.file-input-display svg {
+  color: var(--accent-color);
+  flex-shrink: 0;
+}
+
+.detected-framework {
+  margin-left: auto;
+  padding: 4px 10px;
+  background: rgba(16, 185, 129, 0.1);
+  /* Green background */
+  border: 1px solid #10b981;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #10b981;
+  text-transform: uppercase;
+}
+
+.directory-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.file-count {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* POM Info */
+.pom-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(59, 130, 246, 0.1);
+  /* Blue background */
+  border-left: 3px solid #3b82f6;
+  border-radius: 4px;
+  color: #93c5fd;
+  font-size: 13px;
+  margin-top: 12px;
+}
+
+.pom-info svg {
+  flex-shrink: 0;
+  color: #3b82f6;
+}
+
+/* Help Text */
+.help-text {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-top: 8px;
+  /* Removed uppercase */
+}
+
+/* Progress Section */
+.progress-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: rgba(100, 108, 255, 0.05);
+  border: 1px solid rgba(100, 108, 255, 0.2);
+  border-radius: 4px;
+  margin-top: 20px;
+  animation: slideIn 0.3s ease-out;
+  color: var(--accent-color);
+}
+
+.progress-section svg {
+  color: var(--accent-color);
+}
+
+.progress-section span {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.progress-section.complete {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #10b981;
+}
+
+.progress-section.complete svg {
+  color: #10b981;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Error Section */
+.error-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid #ef4444;
+  border-radius: 4px;
+  margin-top: 20px;
+  animation: shake 0.4s ease-out;
+}
+
+.error-section svg {
+  color: #ef4444;
+}
+
+.error-section span {
+  color: #fca5a5;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Footer */
+.import-dialog-footer {
+  display: flex;
+  gap: 12px;
+  padding: 20px 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.button-secondary,
+.button-primary {
+  flex: 1;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  font-family: var(--font-family);
+}
+
+.button-secondary {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+
+.button-secondary:hover:not(:disabled) {
+  border-color: var(--text-primary);
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.button-primary {
+  background: var(--accent-color);
+  color: #ffffff;
+}
+
+.button-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+}
+
+.button-secondary:disabled,
+.button-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Scrollbar */
+.import-dialog-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.import-dialog-content::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.import-dialog-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.import-dialog-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .import-dialog {
+    width: 95%;
+    max-height: 95vh;
+  }
+
+  .import-mode-selector {
+    grid-template-columns: 1fr;
+  }
+
+  .mode-button {
+    flex-direction: row;
+    justify-content: flex-start;
+    padding: 12px 16px;
+  }
+
+  .import-dialog-footer {
+    flex-direction: column;
+  }
+}

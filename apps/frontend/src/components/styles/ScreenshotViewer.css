@@ -1,0 +1,216 @@
+/* ScreenshotViewer.css */
+/* Styles for screenshot display in node configuration panel */
+
+.screenshot-section {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--metallic-silver);
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.screenshot-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--cold-white);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.screenshot-loading {
+  text-align: center;
+  padding: 20px;
+  color: var(--metallic-silver);
+  font-size: 13px;
+}
+
+.screenshot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.screenshot-item {
+  background: var(--deep-space);
+  border: 1px solid var(--metallic-silver);
+  border-radius: 8px;
+  padding: 12px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.screenshot-item:hover {
+  border-color: var(--star-blue);
+  box-shadow: 0 0 8px rgba(26, 115, 232, 0.3);
+  transform: translateY(-2px);
+}
+
+.screenshot-label {
+  font-size: 12px;
+  color: var(--star-blue);
+  margin-bottom: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.screenshot-image {
+  width: 100%;
+  height: auto;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  display: block;
+  background: var(--tech-gray);
+}
+
+.screenshot-image:hover {
+  transform: scale(1.02);
+}
+
+.screenshot-meta {
+  font-size: 11px;
+  color: var(--metallic-silver);
+  margin-top: 8px;
+  text-align: center;
+  font-family: monospace;
+}
+
+.screenshot-actions {
+  margin-top: 12px;
+}
+
+.btn-compare-screenshots {
+  width: 100%;
+  padding: 10px;
+  background: var(--star-blue);
+  color: var(--cold-white);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-compare-screenshots:hover {
+  background: #1557b0;
+  box-shadow: 0 0 8px rgba(26, 115, 232, 0.5);
+  transform: translateY(-1px);
+}
+
+.btn-compare-screenshots:active {
+  transform: translateY(0);
+}
+
+/* Modal styles */
+.screenshot-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.2s ease-in-out;
+  padding: 20px;
+}
+
+.screenshot-modal-content {
+  background: var(--tech-gray);
+  border: 2px solid var(--metallic-silver);
+  border-radius: 8px;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+.screenshot-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: var(--hal-red);
+  color: var(--cold-white);
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.screenshot-modal-close:hover {
+  background: #cc0000;
+  transform: rotate(90deg);
+}
+
+.screenshot-modal-header {
+  padding: 16px 20px;
+  background: var(--deep-space);
+  border-bottom: 1px solid var(--metallic-silver);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--cold-white);
+}
+
+.screenshot-modal-image {
+  max-width: 100%;
+  max-height: calc(90vh - 120px);
+  object-fit: contain;
+  background: var(--deep-space);
+}
+
+.screenshot-modal-footer {
+  padding: 12px 20px;
+  background: var(--deep-space);
+  border-top: 1px solid var(--metallic-silver);
+  font-size: 12px;
+  color: var(--metallic-silver);
+  text-align: center;
+  font-family: monospace;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .screenshot-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .screenshot-modal-content {
+    max-width: 95vw;
+    max-height: 95vh;
+  }
+
+  .screenshot-modal-image {
+    max-height: calc(95vh - 120px);
+  }
+}

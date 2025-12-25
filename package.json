@@ -1,0 +1,35 @@
+{
+    "name": "halt-test-monorepo",
+    "version": "1.0.0",
+    "description": "Unified platform for automation and mock services",
+    "license": "GPL-3.0-only",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/USER_NAME/halt-test.git"
+    },
+    "bugs": {
+        "url": "https://github.com/USER_NAME/halt-test/issues"
+    },
+    "homepage": "https://github.com/USER_NAME/halt-test#readme",
+    "private": true,
+    "scripts": {
+        "dev": "turbo dev",
+        "dev:backend": "turbo dev --filter @halt-test/backend",
+        "dev:frontend": "turbo dev --filter @halt-test/frontend",
+        "build": "turbo build",
+        "test": "turbo test",
+        "lint": "turbo lint",
+        "clean": "turbo clean && rm -rf node_modules"
+    },
+    "devDependencies": {
+        "turbo": "^2.3.3"
+    },
+    "packageManager": "pnpm@10.23.0",
+    "pnpm": {
+        "onlyBuiltDependencies": [
+            "better-sqlite3",
+            "sqlite3",
+            "playwright"
+        ]
+    }
+}

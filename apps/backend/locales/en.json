@@ -1,0 +1,252 @@
+{
+    "common": {
+        "success": "Operation completed successfully.",
+        "error_internal": "Internal server error. Please try again later.",
+        "error_unknown": "Unknown server error.",
+        "route_not_found": "Route not found: {{method}} {{path}}",
+        "error_validation": "Data validation error in the request.",
+        "browser_disconnected": "The browser has been disconnected. Please launch a new browser.",
+        "browser_closed": "The browser has been closed. Please launch a new browser.",
+        "page_closed": "The target page is closed."
+    },
+    "actions": {
+        "launch_browser": {
+            "success": "Browser launched successfully.",
+            "error": "Failed to launch the browser."
+        },
+        "open_url": {
+            "success": "URL opened successfully.",
+            "error": "Failed to open the URL.",
+            "url_required": "url is required."
+        },
+        "close_browser": {
+            "success": "Browser closed successfully.",
+            "error": "Error closing the browser."
+        },
+        "click": {
+            "success": "Successful click on selector '{{selector}}'."
+        },
+        "type_text": {
+            "success": "Text entered successfully in selector '{{selector}}'."
+        },
+        "scroll": {
+            "success": "Scroll applied successfully to {{target}}."
+        },
+        "manage_tabs": {
+            "new_success": "New tab opened successfully. Total tabs: {{count}}",
+            "switch_success": "Switched to tab {{index}}: {{title}}",
+            "close_all_success": "All tabs closed ({{count}} tabs).",
+            "close_index_success": "Tab at index {{index}} closed.",
+            "close_active_success": "Active tab closed.",
+            "list_success": "Found {{count}} open tab(s).",
+            "error_invalid_action": "Invalid tab action: {{action}}. Valid actions: {{validActions}}",
+            "error_tab_index_required": "The 'tabIndex' parameter is required for the 'switch' action.",
+            "error_invalid_index": "Invalid tab index: {{index}}. Available tabs: 0-{{max}}",
+            "error_no_tabs": "No active tabs to close."
+        },
+        "find_element": {
+            "success": "Element found: {{selector}}"
+        },
+        "back": {
+            "success": "Navigation 'Back' successful.",
+            "error_no_history": "No navigation history back in this tab."
+        },
+        "forward": {
+            "success": "Navigation 'Forward' successful.",
+            "error_no_history": "No navigation history forward in this tab."
+        },
+        "get_set_content": {
+            "get_attribute_success": "Attribute '{{attribute}}' obtained successfully.",
+            "get_html_success": "HTML content obtained successfully.",
+            "get_text_success": "Text content obtained successfully.",
+            "set_attribute_success": "Attribute '{{attribute}}' set successfully.",
+            "set_html_success": "HTML content set successfully.",
+            "set_text_success": "Text content set successfully."
+        },
+        "select_option": {
+            "success": "Option selected successfully."
+        },
+        "submit_form": {
+            "success": "Form submitted successfully."
+        },
+        "upload_file": {
+            "success": "Files uploaded successfully."
+        },
+        "execute_js": {
+            "success": "Script executed successfully."
+        },
+        "take_screenshot": {
+            "success": "Screenshot taken successfully."
+        },
+        "save_dom": {
+            "success": "DOM saved successfully."
+        },
+        "wait_for_element": {
+            "visible": "Element '{{selector}}' is now visible.",
+            "hidden": "Element '{{selector}}' is now hidden.",
+            "attached": "Element '{{selector}}' is attached to the DOM.",
+            "detached": "Element '{{selector}}' has been removed from the DOM.",
+            "condition_met": "Condition met."
+        },
+        "wait_visible": {
+            "success": "Element is now visible."
+        },
+        "wait_navigation": {
+            "success": "Navigation completed."
+        },
+        "wait_network": {
+            "success": "Network idle condition met."
+        },
+        "wait_conditional": {
+            "success": "Wait condition fulfilled."
+        },
+        "log_errors": {
+            "success": "Browser errors logging started."
+        },
+        "listen_events": {
+            "success": "Event listener registered."
+        },
+        "intercept_request": {
+            "success": "Interception ({{action}}) configured for: {{urlPattern}}"
+        },
+        "mock_response": {
+            "success": "Mock response configured for: {{urlPattern}}"
+        },
+        "block_resource": {
+            "success": "Blocking configured for pattern: {{urlPattern}} (type: {{resourceType}})"
+        },
+        "modify_headers": {
+            "success": "Header injection configured for: {{urlPattern}}"
+        },
+        "wait_for_response": {
+            "success": "Response received."
+        },
+        "wait_for_request": {
+            "success": "Request detected."
+        },
+        "set_network_conditions": {
+            "success": "Network conditions applied: {{profile}}"
+        },
+        "clear_all_mocks": {
+            "success": "All interceptions and mocks have been removed."
+        },
+        "manage_cookies": {
+            "get_success": "Cookies obtained.",
+            "set_success": "Cookies set successfully.",
+            "delete_success": "Cookies deleted: {{cookies}}.",
+            "clear_success": "All cookies have been cleared."
+        },
+        "manage_storage": {
+            "get_success": "Storage obtained.",
+            "set_success": "Storage updated.",
+            "remove_success": "Storage property removed.",
+            "clear_success": "Storage cleared."
+        },
+        "inject_tokens": {
+            "header_success": "Token injected in Header: {{key}}",
+            "cookie_success": "Token injected in Cookie: {{key}}",
+            "query_success": "Token injected in Query Param and reloaded: {{key}}"
+        },
+        "persist_session": {
+            "save_success": "Session saved in file.",
+            "load_success": "Session loaded (Best Effort) in active context.",
+            "clear_success": "Session cleared (Cookies and Storage)."
+        },
+        "create_context": {
+            "success": "Context verified/created successfully."
+        },
+        "cleanup_state": {
+            "success": "State (cookies and storage) cleared successfully."
+        },
+        "close_context": {
+            "success": "Context closed successfully."
+        },
+        "handle_hooks": {
+            "success": "Hook executed.",
+            "no_script": "No hook script provided."
+        },
+        "control_exceptions": {
+            "success": "Exception control configured on the page."
+        },
+        "read_data": {
+            "success": "Data read successfully.",
+            "unsupported_type": "Unsupported read type."
+        },
+        "save_results": {
+            "success": "Results saved."
+        },
+        "handle_downloads": {
+            "success": "Download completed."
+        },
+        "call_llm": {
+            "success": "LLM called (Simulated)."
+        },
+        "generate_data": {
+            "success": "Data generated."
+        },
+        "validate_semantic": {
+            "success": "Semantic validation completed."
+        },
+        "mock_router": {
+            "operation_not_found": "Operation '{{operationName}}' not found.",
+            "project_not_found": "Project not found.",
+            "no_data_received": "No data received in the request body.",
+            "flow_processed_success": "Workflow or data received and processed correctly (Mock).",
+            "open_url_test_success": "Open URL schema validation successful."
+        },
+        "interaction": {
+            "error_unsupported_action": "Unsupported action: {{action}}."
+        },
+        "resize_viewport": {
+            "success": "Viewport resized to {{width}}x{{height}}."
+        },
+        "drag_drop": {
+            "success": "Element {{source}} dragged and dropped correctly in {{target}}."
+        },
+        "import_router": {
+            "content_required": "Content is required.",
+            "directory_path_required": "Directory path is required.",
+            "directory_path_required_pom": "Directory path is required for POM import.",
+            "files_or_directory_required": "Either files or directory path is required."
+        },
+        "export_router": {
+            "flow_required": "A valid flow (array of steps) is required.",
+            "flow_data_required": "Flow data is required."
+        },
+        "run_tests": {
+            "success": "Test execution triggered (Simulated). Real integration would require a test runner."
+        },
+        "integrate_ci": {
+            "success": "CI integration notified (Simulated)."
+        }
+    },
+    "errors": {
+        "no_active_browsers": "No active browsers. Call launch_browser first.",
+        "browser_not_found": "No browser found with ID: {{id}}",
+        "no_active_pages": "No active pages in the context. Call open_url first.",
+        "selector_required": "The 'selector' parameter is required.",
+        "invalid_action": "The 'action' parameter must be 'get' or 'set'.",
+        "invalid_content_type": "The 'contentType' parameter must be 'text', 'html' or 'attribute'.",
+        "invalid_selection_criteria": "Invalid selection criteria: {{criteria}}.",
+        "files_required": "At least one file must be provided for upload.",
+        "unsafe_file_paths": "The following file paths are unsafe: {{paths}}.",
+        "parse_args_error": "Error parsing 'args': {{error}}.",
+        "script_execution_error": "Error in injected script execution: {{error}}.",
+        "unsafe_file_path": "Unsafe file path: use of '..' detected.",
+        "element_not_found": "Element not found: {{selector}}",
+        "save_dom_destination_required": "You must provide 'path' (file) or 'variableName' (variable) to save the DOM.",
+        "wait_timeout": "Timeout: Element '{{selector}}' did not meet condition '{{condition}}' within {{timeout}}ms",
+        "invalid_cookies_data_format": "cookiesData must be a valid JSON string.",
+        "cookies_array_required": "cookiesData must be an array of objects/names for this action.",
+        "invalid_cookies_action": "Invalid cookies action: {{action}}.",
+        "headers_json_required": "The headers field must be a valid JSON string.",
+        "invalid_storage_action": "Invalid storage action: {{action}}.",
+        "unsupported_injection_target": "Unsupported injection target: {{target}}.",
+        "session_path_required": "Path is required to persist the session.",
+        "session_load_error": "Could not read session file at: {{path}}",
+        "invalid_persistence_action": "Invalid persistence action: {{action}}.",
+        "width_height_required": "Parameters width and height are required.",
+        "error_dragging": "Error executing drag and drop action.",
+        "source_target_required": "sourceSelector and targetSelector are required."
+    }
+}

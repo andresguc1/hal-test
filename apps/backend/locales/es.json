@@ -1,0 +1,252 @@
+{
+    "common": {
+        "success": "Operación completada con éxito.",
+        "error_internal": "Error interno del servidor. Intente nuevamente más tarde.",
+        "error_unknown": "Error desconocido del servidor.",
+        "route_not_found": "Ruta no encontrada: {{method}} {{path}}",
+        "error_validation": "Error de validación de datos en la solicitud.",
+        "browser_disconnected": "El browser ha sido desconectado. Por favor, lanza un nuevo browser.",
+        "browser_closed": "El browser ha sido cerrado. Por favor, lanza un nuevo browser.",
+        "page_closed": "La página objetivo está cerrada."
+    },
+    "actions": {
+        "launch_browser": {
+            "success": "Navegador lanzado correctamente.",
+            "error": "Error al lanzar el navegador."
+        },
+        "open_url": {
+            "success": "URL abierta correctamente.",
+            "error": "Error al abrir la URL.",
+            "url_required": "url es requerida."
+        },
+        "close_browser": {
+            "success": "Navegador cerrado correctamente.",
+            "error": "Error al cerrar el navegador."
+        },
+        "click": {
+            "success": "Clic exitoso en selector '{{selector}}'."
+        },
+        "type_text": {
+            "success": "Texto ingresado exitosamente en selector '{{selector}}'."
+        },
+        "scroll": {
+            "success": "Desplazamiento aplicado correctamente a {{target}}."
+        },
+        "manage_tabs": {
+            "new_success": "Nueva pestaña abierta con éxito. Total de pestañas: {{count}}",
+            "switch_success": "Cambiado a pestaña {{index}}: {{title}}",
+            "close_all_success": "Todas las pestañas cerradas ({{count}} pestañas).",
+            "close_index_success": "Pestaña en índice {{index}} cerrada.",
+            "close_active_success": "Pestaña activa cerrada.",
+            "list_success": "Se encontraron {{count}} pestaña(s) abierta(s).",
+            "error_invalid_action": "Acción de pestaña no válida: {{action}}. Acciones válidas: {{validActions}}",
+            "error_tab_index_required": "El parámetro 'tabIndex' es obligatorio para la acción 'switch'.",
+            "error_invalid_index": "Índice de pestaña no válido: {{index}}. Pestañas disponibles: 0-{{max}}",
+            "error_no_tabs": "No hay pestañas activas para cerrar."
+        },
+        "find_element": {
+            "success": "Elemento encontrado: {{selector}}"
+        },
+        "back": {
+            "success": "Navegación 'Atrás' exitosa.",
+            "error_no_history": "No hay historial de navegación hacia atrás en esta pestaña."
+        },
+        "forward": {
+            "success": "Navegación 'Adelante' exitosa.",
+            "error_no_history": "No hay historial de navegación hacia adelante en esta pestaña."
+        },
+        "get_set_content": {
+            "get_attribute_success": "Atributo '{{attribute}}' obtenido exitosamente.",
+            "get_html_success": "Contenido HTML obtenido exitosamente.",
+            "get_text_success": "Contenido de texto obtenido exitosamente.",
+            "set_attribute_success": "Atributo '{{attribute}}' establecido exitosamente.",
+            "set_html_success": "Contenido HTML establecido exitosamente.",
+            "set_text_success": "Contenido de texto establecido exitosamente."
+        },
+        "select_option": {
+            "success": "Opción seleccionada correctamente."
+        },
+        "submit_form": {
+            "success": "Formulario enviado exitosamente."
+        },
+        "upload_file": {
+            "success": "Archivos subidos exitosamente."
+        },
+        "execute_js": {
+            "success": "Script ejecutado exitosamente."
+        },
+        "take_screenshot": {
+            "success": "Captura tomada exitosamente."
+        },
+        "save_dom": {
+            "success": "DOM guardado exitosamente."
+        },
+        "wait_for_element": {
+            "visible": "El elemento '{{selector}}' es ahora visible.",
+            "hidden": "El elemento '{{selector}}' está ahora oculto.",
+            "attached": "El elemento '{{selector}}' está adjunto al DOM.",
+            "detached": "El elemento '{{selector}}' ha sido removido del DOM.",
+            "condition_met": "Condición cumplida."
+        },
+        "wait_visible": {
+            "success": "El elemento es ahora visible."
+        },
+        "wait_navigation": {
+            "success": "Navegación completada."
+        },
+        "wait_network": {
+            "success": "Se cumplió la condición de inactividad de red."
+        },
+        "wait_conditional": {
+            "success": "Condición de espera cumplida."
+        },
+        "log_errors": {
+            "success": "Inicio de registro de errores del navegador."
+        },
+        "listen_events": {
+            "success": "Escucha de eventos registrada."
+        },
+        "intercept_request": {
+            "success": "Intercepción ({{action}}) configurada para: {{urlPattern}}"
+        },
+        "mock_response": {
+            "success": "Mock de respuesta configurado para: {{urlPattern}}"
+        },
+        "block_resource": {
+            "success": "Bloqueo configurado para patrón: {{urlPattern}} (tipo: {{resourceType}})"
+        },
+        "modify_headers": {
+            "success": "Inyección de cabeceras configurada para: {{urlPattern}}"
+        },
+        "wait_for_response": {
+            "success": "Respuesta recibida."
+        },
+        "wait_for_request": {
+            "success": "Petición detectada."
+        },
+        "set_network_conditions": {
+            "success": "Condiciones de red aplicadas: {{profile}}"
+        },
+        "clear_all_mocks": {
+            "success": "Todas las intercepciones y mocks han sido eliminados."
+        },
+        "manage_cookies": {
+            "get_success": "Cookies obtenidas.",
+            "set_success": "Cookies establecidas correctamente.",
+            "delete_success": "Cookies eliminadas: {{cookies}}.",
+            "clear_success": "Todas las cookies han sido limpiadas."
+        },
+        "manage_storage": {
+            "get_success": "Almacenamiento obtenido.",
+            "set_success": "Almacenamiento actualizado.",
+            "remove_success": "Propiedad de almacenamiento eliminada.",
+            "clear_success": "Almacenamiento limpiado."
+        },
+        "inject_tokens": {
+            "header_success": "Token inyectado en Header: {{key}}",
+            "cookie_success": "Token inyectado en Cookie: {{key}}",
+            "query_success": "Token inyectado en Query Param y recargado: {{key}}"
+        },
+        "persist_session": {
+            "save_success": "Sesión guardada en archivo.",
+            "load_success": "Sesión cargada (Mejor Esfuerzo) en contexto activo.",
+            "clear_success": "Sesión limpiada (Cookies y Almacenamiento)."
+        },
+        "create_context": {
+            "success": "Contexto verificado/creado exitosamente."
+        },
+        "cleanup_state": {
+            "success": "Estado (cookies y almacenamiento) limpiado correctamente."
+        },
+        "close_context": {
+            "success": "Contexto cerrado correctamente."
+        },
+        "handle_hooks": {
+            "success": "Hook ejecutado.",
+            "no_script": "No se proporcionó script de hook."
+        },
+        "control_exceptions": {
+            "success": "Control de excepciones configurado en la página."
+        },
+        "read_data": {
+            "success": "Datos leídos exitosamente.",
+            "unsupported_type": "Tipo de lectura no soportado."
+        },
+        "save_results": {
+            "success": "Resultados guardados."
+        },
+        "handle_downloads": {
+            "success": "Descarga completada."
+        },
+        "call_llm": {
+            "success": "LLM llamado (Simulado)."
+        },
+        "generate_data": {
+            "success": "Datos generados."
+        },
+        "validate_semantic": {
+            "success": "Validación semántica completada."
+        },
+        "mock_router": {
+            "operation_not_found": "Operación '{{operationName}}' no encontrada.",
+            "project_not_found": "Proyecto no encontrado.",
+            "no_data_received": "No se recibieron datos en el cuerpo de la solicitud.",
+            "flow_processed_success": "Flujo de trabajo o datos recibidos y procesados correctamente (Mock).",
+            "open_url_test_success": "Validación de esquema de Open URL exitosa."
+        },
+        "interaction": {
+            "error_unsupported_action": "Acción no soportada: {{action}}."
+        },
+        "resize_viewport": {
+            "success": "Viewport redimensionado a {{width}}x{{height}}."
+        },
+        "drag_drop": {
+            "success": "Elemento {{source}} arrastrado y soltado correctamente en {{target}}."
+        },
+        "import_router": {
+            "content_required": "El contenido es obligatorio.",
+            "directory_path_required": "La ruta del directorio es obligatoria.",
+            "directory_path_required_pom": "La ruta del directorio es obligatoria para la importación POM.",
+            "files_or_directory_required": "Se requieren archivos o la ruta del directorio."
+        },
+        "export_router": {
+            "flow_required": "Se requiere un flujo válido (array de pasos).",
+            "flow_data_required": "Se requieren datos del flujo."
+        },
+        "run_tests": {
+            "success": "Ejecución de pruebas activada (Simulada). La integración real requeriría un ejecutor de pruebas."
+        },
+        "integrate_ci": {
+            "success": "Integración de CI notificada (Simulada)."
+        }
+    },
+    "errors": {
+        "no_active_browsers": "No hay navegadores activos. Llama a launch_browser primero.",
+        "browser_not_found": "No se encontró navegador con ID: {{id}}",
+        "no_active_pages": "No hay páginas activas en el contexto. Llama a open_url primero.",
+        "selector_required": "El parámetro 'selector' es obligatorio.",
+        "invalid_action": "El parámetro 'action' debe ser 'get' o 'set'.",
+        "invalid_content_type": "El parámetro 'contentType' debe ser 'text', 'html' o 'attribute'.",
+        "invalid_selection_criteria": "Criterio de selección no válido: {{criteria}}.",
+        "files_required": "Debe proporcionar al menos un archivo para subir.",
+        "unsafe_file_paths": "Las siguientes rutas de archivos no son seguras: {{paths}}.",
+        "parse_args_error": "Error al parsear 'args': {{error}}.",
+        "script_execution_error": "Error en la ejecución del script inyectado: {{error}}.",
+        "unsafe_file_path": "Ruta de archivo no segura: se detectó uso de '..'.",
+        "element_not_found": "Elemento no encontrado: {{selector}}",
+        "save_dom_destination_required": "Debe proporcionar 'path' (archivo) o 'variableName' (variable) para guardar el DOM.",
+        "wait_timeout": "Timeout: El elemento '{{selector}}' no cumplió la condición '{{condition}}' en {{timeout}}ms",
+        "invalid_cookies_data_format": "cookiesData debe ser un string JSON válido.",
+        "cookies_array_required": "cookiesData debe ser un array de objetos/nombres para esta acción.",
+        "invalid_cookies_action": "Acción de cookies no válida: {{action}}.",
+        "headers_json_required": "El campo headers debe ser un string JSON válido.",
+        "invalid_storage_action": "Acción de almacenamiento no válida: {{action}}.",
+        "unsupported_injection_target": "Target de inyección no soportado: {{target}}.",
+        "session_path_required": "El path es obligatorio para persistir la sesión.",
+        "session_load_error": "No se pudo leer el archivo de sesión en: {{path}}",
+        "invalid_persistence_action": "Acción de persistencia no válida: {{action}}.",
+        "width_height_required": "Los parámetros width y height son obligatorios.",
+        "error_dragging": "Error al ejecutar la acción de arrastrar y soltar.",
+        "source_target_required": "sourceSelector y targetSelector son obligatorios."
+    }
+}

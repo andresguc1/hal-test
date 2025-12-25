@@ -1,0 +1,55 @@
+/* Status Indicator Styles */
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 16px;
+  background: rgba(44, 47, 51, 0.95);
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.status-connected {
+  color: #4caf50;
+  background: rgba(76, 175, 80, 0.1);
+}
+
+.status-disconnected {
+  color: #f44336;
+  background: rgba(244, 67, 54, 0.1);
+}
+
+.status-saving {
+  color: #2196f3;
+  background: rgba(33, 150, 243, 0.1);
+}
+
+.status-execution {
+  color: #ff9800;
+  background: rgba(255, 152, 0, 0.1);
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}

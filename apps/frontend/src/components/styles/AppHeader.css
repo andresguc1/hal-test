@@ -1,0 +1,104 @@
+/* hal_test/src/components/styles/AppHeader.css */
+
+/* Header general */
+.header {
+  height: 56px;
+  /* más compacto */
+  padding: 0 20px;
+  background-color: #ff9f1c;
+  /* naranja icónico Odisea */
+  border-bottom: 1px solid #b0b0b0;
+  /* metálico */
+  color: #0b0c10;
+  /* texto oscuro para contraste */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: "Arial", sans-serif;
+}
+
+/* Título */
+.app-title {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* Ajuste visual del menú */
+.header .user-menu {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.burger-btn {
+  font-size: 1.4rem;
+  background: none;
+  border: none;
+  color: #0b0c10;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.burger-btn:hover {
+  transform: scale(1.1);
+}
+
+/* Dropdown */
+.menu-dropdown {
+  position: absolute;
+  top: 58px;
+  /* justo debajo del header */
+  right: 0;
+  background-color: #2c2f33;
+  /* gris tecnológico */
+  color: #e5e5e5;
+  /* blanco frío */
+  border: 1px solid #b0b0b0;
+  border-radius: 6px;
+  width: 200px;
+  padding: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  z-index: 100;
+}
+
+/* Perfil */
+.profile-section {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.profile-pic {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  margin-right: 8px;
+  border: 1px solid #b0b0b0;
+}
+
+.username {
+  font-weight: bold;
+  font-size: 0.95rem;
+}
+
+/* Opciones */
+.menu-options {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.menu-options li {
+  padding: 8px;
+  cursor: pointer;
+  border-radius: 3px;
+  font-size: 0.95rem;
+}
+
+.menu-options li:hover {
+  background-color: #ff9f1c;
+  /* naranja de acento */
+  color: #0b0c10;
+}

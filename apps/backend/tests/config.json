@@ -1,0 +1,6 @@
+{
+  "browserType": "chromium",
+  "headless": false,
+  "slowMo": 0,
+  "args": ["--start-maximized"]
+}

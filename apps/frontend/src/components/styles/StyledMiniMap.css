@@ -1,0 +1,14 @@
+/* Fixed positioning for mini-map to prevent jumping */
+.react-flow__minimap {
+  position: fixed;
+  bottom: 55px !important;
+  /* Above footer */
+  /* right property removed - let App.css handle dynamic positioning */
+  z-index: 5;
+  /* Below panels but above canvas */
+}
+
+/* Glow effect on hover */
+.react-flow__minimap:hover {
+  box-shadow: 0 0 15px rgba(26, 115, 232, 0.6);
+}

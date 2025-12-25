@@ -1,0 +1,219 @@
+/* variables (mantienen tus colores) */
+:root {
+  --deepSpace: #0b0c10;
+  /* texto oscuro / deepSpace */
+  --techGray: #2c2f33;
+  /* fondo menú / techGray */
+  --coldWhite: #e5e5e5;
+  /* texto claro / coldWhite */
+  --metallicSilver: #b0b0b0;
+  /* borde */
+  --hoverOrange: #ff9f1c;
+  /* hover naranja */
+}
+
+/* contenedor */
+.user-menu {
+  position: relative;
+  display: inline-block;
+}
+
+/* botón burger */
+.burger-btn {
+  font-size: 1.5rem;
+  background: none;
+  border: none;
+  color: var(--deepSpace);
+  cursor: pointer;
+  padding: 6px;
+  line-height: 1;
+}
+
+/* dropdown */
+.menu-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background-color: var(--techGray);
+  color: var(--coldWhite);
+  border: 1px solid var(--metallicSilver);
+  border-radius: 5px;
+  width: 240px;
+  /* un poco más ancho para el estado */
+  padding: 10px;
+  z-index: 100;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  --menu-gap: 10px;
+}
+
+/* perfil */
+.profile-section {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.profile-pic {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  margin-right: 10px;
+}
+
+.username {
+  font-weight: bold;
+  color: var(--coldWhite);
+}
+
+/* opciones del menú */
+.menu-options {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.menu-options li {
+  padding: 8px 6px;
+  cursor: pointer;
+  border-radius: 3px;
+  color: var(--coldWhite);
+  user-select: none;
+}
+
+.menu-options li:hover {
+  background-color: var(--hoverOrange);
+  color: var(--deepSpace);
+}
+
+.menu-item-language {
+  padding: 4px 0 !important;
+  cursor: default !important;
+}
+
+.menu-item-language:hover {
+  background-color: transparent !important;
+}
+
+/* sección de API */
+.api-section {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+}
+
+/* estado de la API - contenedor */
+.api-status {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+/* punto indicador pequeño */
+.status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex: 0 0 12px;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.4);
+  background: #999;
+  /* fallback */
+}
+
+/* estados del punto */
+.status-dot.unknown {
+  background: #9ea3a8;
+}
+
+/* gris claro */
+.status-dot.checking {
+  background: #ffd56b;
+}
+
+/* amarillo suave - checking */
+.status-dot.up {
+  background: #33cc66;
+}
+
+/* verde - operativa */
+.status-dot.down {
+  background: #ff4c4c;
+}
+
+/* rojo - no disponible */
+.status-dot.error {
+  background: #d46a6a;
+}
+
+/* rojo oscuro - error */
+
+/* info de estado (texto) */
+.status-info {
+  display: flex;
+  flex-direction: column;
+  color: var(--coldWhite);
+  font-size: 0.9rem;
+}
+
+.status-line {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.status-sub {
+  font-size: 0.75rem;
+  color: rgba(229, 229, 229, 0.85);
+  margin-top: 3px;
+}
+
+/* botón verificar */
+.api-actions {
+  margin-top: 6px;
+  display: flex;
+  gap: 8px;
+}
+
+.check-api-btn {
+  background: transparent;
+  border: 1px solid var(--metallicSilver);
+  color: var(--coldWhite);
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.check-api-btn[disabled],
+.check-api-btn[aria-disabled="true"] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.check-api-btn:hover:not([disabled]) {
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+/* utilidades */
+.last-checked {
+  font-style: italic;
+  font-size: 0.78rem;
+  color: rgba(229, 229, 229, 0.75);
+}
+
+.status-msg {
+  font-size: 0.78rem;
+  color: rgba(229, 229, 229, 0.65);
+}
+
+/* responsive pequeño */
+@media (max-width: 480px) {
+  .menu-dropdown {
+    right: 8px;
+    left: 8px;
+    width: auto;
+  }
+}

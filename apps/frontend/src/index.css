@@ -1,0 +1,122 @@
+/*
+ * =========================================
+ * 1. NORMALIZE/RESET BÁSICO
+ * Asegura la consistencia entre navegadores y elimina márgenes por defecto.
+ * =========================================
+ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Elimina el margen por defecto en el body */
+body {
+  margin: 0;
+  /* Elimina el padding y margen por defecto de los elementos */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/*
+ * =========================================
+ * 2. VARIABLES Y ESQUEMA DE COLOR ROOT
+ * Variables centralizadas para fácil theming.
+ * =========================================
+ */
+:root {
+  /* Tipografía */
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+
+  /* Variables de color (Modo Oscuro por defecto) */
+  --color-text-primary: rgba(255, 255, 255, 0.87);
+  --color-background: #242424;
+  --color-accent: #646cff;
+  /* Color principal de enlaces/botones */
+  --color-accent-hover: #535bf2;
+
+  color-scheme: light dark;
+}
+
+/*
+ * =========================================
+ * 3. ESTILOS BASE DEL DOCUMENTO
+ * Optimización del body para contener la aplicación de pantalla completa.
+ * =========================================
+ */
+body {
+  /* Usa las variables de color */
+  color: var(--color-text-primary);
+  background-color: var(--color-background);
+
+  /* Asegura que el body ocupe toda la ventana para la aplicación Flow */
+  min-width: 320px;
+  min-height: 100vh;
+  /* El body debe contener la aplicación, no necesariamente centrar items si la app es de ancho completo */
+}
+
+/*
+ * =========================================
+ * 4. ESTILOS DE ELEMENTOS (Enlaces, Títulos, Botones)
+ * Utiliza las variables para consistencia.
+ * =========================================
+ */
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+a {
+  font-weight: 500;
+  color: var(--color-accent);
+  text-decoration: inherit;
+  transition: color 0.25s;
+  /* Animación para el color */
+}
+
+a:hover {
+  color: var(--color-accent-hover);
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+
+button:hover {
+  border-color: var(--color-accent);
+}
+
+button:focus,
+button:focus-visible {
+  outline: 4px auto var(--color-accent);
+}
+
+/*
+ * =========================================
+ * 5. MEDIA QUERY (Modo Claro)
+ * =========================================
+ */
+@media (prefers-color-scheme: light) {
+  :root {
+    /* Sobrescribir variables para el modo claro */
+    --color-text-primary: #213547;
+    --color-background: #ffffff;
+    --color-accent-hover: #747bff;
+  }
+
+  button {
+    background-color: #f9f9f9;
+  }
+}

@@ -1,0 +1,6 @@
+open url "https://example.com"
+click "Login"
+type "user@example.com" into "Email"
+type "password123" into "Password"
+click "Submit"
+check that page contains "Welcome, User"

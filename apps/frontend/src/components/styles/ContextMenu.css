@@ -1,0 +1,121 @@
+/* ContextMenu.css */
+
+.context-menu {
+  position: fixed;
+  z-index: 10000;
+  min-width: 180px;
+  background: rgba(30, 30, 33, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  box-shadow: 
+    0 10px 25px -5px rgba(0, 0, 0, 0.4),
+    0 8px 10px -6px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  animation: contextMenuShow 0.15s ease-out;
+  overflow: hidden;
+}
+
+@keyframes contextMenuShow {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.menu-header {
+  padding: 8px 12px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #888;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  margin-bottom: 4px;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: #e1e1e3;
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  position: relative;
+  text-align: left;
+}
+
+.menu-item:hover:not(.disabled) {
+  background: rgba(255, 140, 50, 0.15);
+  color: #ff8c32; /* halOrange */
+}
+
+.menu-item:focus {
+  outline: none;
+  background: rgba(255, 140, 50, 0.25);
+  box-shadow: 0 0 0 2px rgba(255, 140, 50, 0.4);
+}
+
+.menu-item.danger {
+  color: #fca5a5;
+}
+
+.menu-item.danger:hover:not(.disabled) {
+  background: rgba(220, 38, 38, 0.15);
+  color: #ef4444;
+}
+
+.menu-item.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  filter: grayscale(1);
+}
+
+.item-icon {
+  margin-right: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  opacity: 0.8;
+}
+
+.item-label {
+  flex: 1;
+}
+
+.item-shortcut {
+  font-size: 10px;
+  opacity: 0.5;
+  margin-left: 12px;
+  font-family: inherit;
+}
+
+.menu-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 4px 6px;
+}
+
+/* Scrollbar for long menus */
+.context-menu::-webkit-scrollbar {
+  width: 4px;
+}
+
+.context-menu::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}

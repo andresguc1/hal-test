@@ -1,0 +1,147 @@
+.flow-tabs-container {
+  position: fixed;
+  bottom: 60px;
+  /* Height of footer */
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  background-color: #1e1e1e;
+  /* Dark background matching app header */
+  border-top: 1px solid #333;
+  padding: 0 10px;
+  height: 40px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  /* Firefox */
+  z-index: 100;
+  /* Above main content but below dialogs */
+}
+
+.flow-tabs-container::-webkit-scrollbar {
+  display: none;
+  /* Chrome/Safari */
+}
+
+.flow-tab {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  margin-right: 2px;
+  background-color: #2d2d2d;
+  color: #aaa;
+  font-size: 13px;
+  cursor: pointer;
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+  user-select: none;
+  min-width: 100px;
+  max-width: 200px;
+  position: relative;
+}
+
+.flow-tab:hover {
+  background-color: #3d3d3d;
+  color: #fff;
+}
+
+.flow-tab.active {
+  background-color: #1e1e1e;
+  /* Match container/canvas bg */
+  color: #fff;
+  border-bottom: 2px solid #ff8c32;
+  /* halOrange */
+}
+
+.flow-tab-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-right: 8px;
+  flex-grow: 1;
+}
+
+.flow-tab-close {
+  opacity: 0;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 14px;
+  transition:
+    opacity 0.2s,
+    background-color 0.2s;
+}
+
+.flow-tab:hover .flow-tab-close {
+  opacity: 0.6;
+}
+
+.flow-tab-close:hover {
+  opacity: 1 !important;
+  background-color: #444;
+  color: #ff4444;
+}
+
+.flow-tab-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  color: #aaa;
+  cursor: pointer;
+  font-size: 18px;
+  margin-left: 4px;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+}
+
+.flow-tab-add:hover {
+  background-color: #333;
+  color: #fff;
+}
+
+/* Context Menu */
+.flow-tab-context-menu {
+  position: fixed;
+  background-color: #252526;
+  border: 1px solid #454545;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  padding: 4px 0;
+  z-index: 10000;
+  min-width: 150px;
+}
+
+.context-menu-item {
+  padding: 6px 12px;
+  font-size: 13px;
+  color: #ccc;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.context-menu-item:hover {
+  background-color: #094771;
+  /* VS Code selection blue */
+  color: #fff;
+}
+
+.context-menu-item.delete {
+  color: #ff6b6b;
+}
+
+.context-menu-separator {
+  height: 1px;
+  background-color: #454545;
+  margin: 4px 0;
+}

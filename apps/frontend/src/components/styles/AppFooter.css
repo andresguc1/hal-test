@@ -1,0 +1,79 @@
+.footer {
+  background-color: #0b0c10;
+  /* deepSpace */
+  border-top: 1px solid #2c2f33;
+  /* techGray border */
+  padding: 10px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* --- GRUPOS --- */
+.footer-left,
+.footer-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* --- BOTONES BASE --- */
+.btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: 0.3px;
+  background-color: transparent;
+  color: #e5e5e5;
+  /* coldWhite */
+}
+
+.btn svg {
+  fill: currentColor;
+}
+
+/* --- VARIANTES --- */
+
+/* Ejecutar (naranja futurista, inspirado en la cabina de la nave) */
+.btn-execute {
+  background-color: #ff9f1c;
+  color: #0b0c10;
+  box-shadow: 0 0 6px rgba(255, 159, 28, 0.5);
+}
+
+.btn-execute:hover {
+  background-color: #ffb347;
+  box-shadow: 0 0 10px rgba(255, 159, 28, 0.7);
+}
+
+/* Guardar (gris metálico pulido) */
+.btn-save {
+  background-color: #2c2f33;
+  border: 1px solid #b0b0b0;
+  color: #e5e5e5;
+}
+
+.btn-save:hover {
+  background-color: #3a3e44;
+  box-shadow: 0 0 8px rgba(176, 176, 176, 0.3);
+}
+
+/* Importar / Exportar (gris tecnológico más suave) */
+.btn-secondary {
+  background-color: #1a1c20;
+  border: 1px solid #2c2f33;
+  color: #b0b0b0;
+}
+
+.btn-secondary:hover {
+  background-color: #2c2f33;
+  color: #e5e5e5;
+  box-shadow: 0 0 6px rgba(42, 46, 51, 0.6);
+}
