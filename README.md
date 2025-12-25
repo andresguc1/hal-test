@@ -3,7 +3,7 @@
 HAL-TEST: A visual, node-based automation framework for complex browser orchestration. Built with Playwright and ReactFlow, it allows building automation pipelines via an intuitive drag-and-drop UI. Features real-time execution feedback, snapshots, project persistence with SQLite, and full EN/ES support. Simplify your QA workflow today!
 
 <div align="center">
-  <video src="https://github.com/andresguc1/hal-test/raw/main/apps/frontend/public/others/haltest_vid_1.mp4" width="100%" autoplay loop muted></video>
+  <video src="./apps/frontend/public/others/haltest_vid_1.mp4" width="100%" autoplay loop muted></video>
 </div>
 
 ## 🚀 Key Features
