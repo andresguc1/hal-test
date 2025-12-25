@@ -1,19 +1,20 @@
-# Hal Test Flow Manager
+# HAL-TEST Frontend 🎨
 
-[![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](https://choosealicense.com/licenses/mit/)
-[![React](https://img.shields.io/badge/React-18-blue.svg)](https://reactjs.org/)
-[![Vite](https://img.shields.io/badge/Vite-5-646CFF.svg)](https://vitejs.dev/)
-
-A powerful React-based application for creating, managing, and executing automated flow sequences. Designed to integrate seamlessly with the **HalTest Backend**, which provides browser automation through Playwright.
+HAL-TEST is a powerful React-based application for creating, managing, and executing automated flow sequences. It provides a visual, node-based interface that integrates seamlessly with the **HAL-TEST Backend**, offering real-time browser automation and monitoring.
 
 ---
 
 ## ⚡ Quick Start
 
-1. Clone both repositories (frontend + backend)
-2. Start the backend: `cd hal-test_Backend && npm start`
-3. Start the frontend: `cd hal_test && npm run dev`
-4. Open http://localhost:5173
+1. Install dependencies from the root:
+   ```bash
+   pnpm install
+   ```
+2. Start the development servers (frontend + backend):
+   ```bash
+   pnpm dev
+   ```
+3. Open http://localhost:5173
 
 ---
 

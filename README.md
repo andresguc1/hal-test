@@ -1,17 +1,18 @@
 # HAL-TEST 🤖
 
-HAL-TEST is a powerful, node-based visual editor for automated testing and browser orchestration. It allows you to build complex automation flows by dragging and dropping nodes, configuring their parameters, and executing them in real-time.
+HAL-TEST is an open-source visual automation framework designed for developers and QA engineers. It provides a node-based interface to orchestrate complex browser interactions through Playwright, allowing you to build, test, and document automation flows visually. With built-in project persistence, real-time snapshot previews, and full English/Spanish localization, HAL-TEST transforms how automation is built and shared.
 
-![HAL-TEST Preview](https://github.com/your-username/Hal_Test_v0/raw/main/preview.png)
+![HAL-TEST Preview](https://github.com/your-username/hal-test/raw/main/preview.png)
 
 ## 🚀 Key Features
 
-- **Visual Flow Editor**: Build automations with intuitive node-based logic.
-- **Real-time Execution**: See node results and snapshots immediately.
-- **Internationalization**: Full support for English and Spanish.
-- **Dynamic Node Library**: Large selection of nodes for browser management, DOM manipulation, network control, AI interactions (LLM), and more.
-- **Copy/Paste Support**: Intelligent node duplication with connection mapping.
-- **Project Persistence**: Save and manage multiple flows within local projects.
+- **Visual Flow Editor**: Build automations with intuitive node-based logic powered by ReactFlow.
+- **Real-time Execution**: See node results, logs, and screenshots immediately during execution.
+- **Multilingual UI (i18n)**: Fully synchronized English and Spanish support across all components and nodes.
+- **Dynamic Node Library**: Specialized nodes for browser management, DOM manipulation, network orchestration, and AI-driven actions (LLM).
+- **Intelligent Clipboard**: Full support for Copy, Paste, and Cut operations with automatic connection mapping.
+- **Simplified Experience**: Optimized configuration panels that hide technical complexity (backend-driven IDs).
+- **Project Persistence**: Robust local storage using SQLite and Sequelize for managing multiple automation projects and flows.
 
 ## 🛠️ Architecture
 
