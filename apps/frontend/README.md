@@ -1,362 +1,224 @@
 # HAL-TEST Frontend 🎨
 
-HAL-TEST is a powerful React-based application for creating, managing, and executing automated flow sequences. It provides a visual, node-based interface that integrates seamlessly with the **HAL-TEST Backend**, offering real-time browser automation and monitoring.
+Modern **React** application for visual browser automation with an intuitive node-based editor.
 
----
+## 🏗️ Tech Stack
 
-## ⚡ Quick Start
+- **React 18** - UI framework
+- **React Flow** - Visual node editor
+- **Motion 12** (motion.dev) - Modern animations
+- **TanStack Query** - Server state management
+- **Lucide React** - Icon library
+- **Vite** - Build tool & dev server
+- **i18next** - Internationalization (EN/ES)
 
-1. Install dependencies from the root:
-   ```bash
-   pnpm install
-   ```
-2. Start the development servers (frontend + backend):
-   ```bash
-   pnpm dev
-   ```
-3. Open http://localhost:5173
+## ✨ Key Features
 
----
+### Visual Flow Editor
+- Drag-and-drop node creation
+- Real-time execution feedback
+- Multiple project/flow management
+- Undo/redo with history
+- Copy/paste/cut operations
 
-## 📦 Related Repositories
+### Enhanced UX
+- **Motion Animations**: Smooth panel transitions and micro-interactions
+- **Premium Canvas**: Gradients, shadows, state badges
+- **50+ Node Icons**: Category-specific icons for instant recognition
+- **Dark Theme**: Professional glassmorphic design
 
-### 🔗 HalTest Backend
+### Advanced Features
+- Automatic screenshot capture (IndexedDB)
+- Context menus (node, edge, canvas, selection)
+- Keyboard shortcuts
+- Export/import flows
+- Multi-language support
 
-This frontend works together with the HalTest Backend, available here:
+## 📁 Project Structure
 
-➡️ **Repository:** https://github.com/andresguc1/hal-test_Backend
+```
+src/
+├── components/
+│   ├── nodes/
+│   │   ├── CustomNode.jsx       # Enhanced node component
+│   │   ├── nodeIcons.js          # 50+ icon mappings
+│   │   └── CustomNode.css
+│   ├── styles/
+│   │   ├── App.css
+│   │   ├── reactflow-theme.css   # Custom React Flow styling
+│   │   └── motion-variants.js    # Reusable animations
+│   ├── AppHeader.jsx
+│   ├── NodeCreationPanel.jsx    # Draggable node library
+│   ├── NodeConfigurationPanel.jsx
+│   ├── FlowTabs.jsx              # Project/flow management
+│   └── ...
+├── hooks/
+│   ├── useFlowManager.js         # Main flow logic
+│   ├── useProjectManager.js      # Project persistence
+│   ├── useKeyboardShortcuts.js
+│   └── ...
+├── utils/
+│   ├── ScreenshotManager.js      # IndexedDB screenshots
+│   ├── ProjectManager.js
+│   └── ...
+└── App.jsx                       # Main app component
+```
 
-The backend exposes RESTful endpoints for browser automation, action execution, session handling, Playwright control, and more. Make sure you have it running for full functionality.
+## 🚀 Development
 
----
+### Prerequisites
+- Node.js 18+
+- pnpm
 
-## 🚀 Features
-
-### 🎨 **Visual Flow Builder**
-
-- Interactive drag-and-drop interface powered by React Flow
-- Easily create complex automation flows
-- Real-time editing of nodes, edges, and parameters
-
-### 🧩 **Node & Action Management**
-
-- Node types automatically aligned with backend actions (retrieved from `/routes`)
-- Dynamic configuration panels based on backend **Joi schemas**
-- Parameter validation before triggering an execution
-
-### 🖥️ **Flow Execution Engine**
-
-- Execute entire flows by sending sequential REST calls to the backend:
-  - Each node corresponds to: `/actions/:actionName`
-  - Node parameters are sent in the request body
-- Real-time progress tracking for each action
-- Error handling, logging, and execution reports
-
-### 📁 **Advanced Import / Export System**
-
-#### 🔄 Three Import Modes
-
-1. **📄 File Import**
-   - Import individual test files
-   - Automatic framework detection
-   - Supports 12+ testing frameworks
-   - Real-time conversion to Hal_Test flows
-
-2. **📁 Directory Import**
-   - Recursive directory scanning
-   - Batch import multiple test files
-   - Automatic organization in canvas
-   - Smart filtering (ignores node_modules, .git, etc.)
-
-3. **📁+ Directory + POM**
-   - All directory import features
-   - Page Object Model resolution
-   - Project indexing for class/function references
-   - Ideal for enterprise projects
-
-#### 🎯 Supported Frameworks
-
-- **Playwright** (.js, .ts)
-- **Cypress** (.cy.js, .cy.ts)
-- **Selenium** (JavaScript, Python, Java, C#)
-- **TestCafe** (.js, .ts)
-- **Puppeteer** (.js, .ts)
-- **WebdriverIO** (.js, .ts)
-- **Nightwatch** (.js, .ts)
-- **Katalon** (.groovy)
-- **TestRigor** (.txt)
-
-#### 📤 Export Features
-
-- Export flows to JSON for reuse or sharing
-- Include metadata and execution stats
-- Version control friendly format
-
-**📚 Learn More:**
-
-- [Import System Documentation](./IMPORT_SYSTEM.md)
-- [Code Examples](./IMPORT_EXAMPLES.md)
-- [Changes Summary](./CHANGES_SUMMARY.md)
-
-### 🗺️ **Navigation & Tools**
-
-- Built-in minimap for large flows
-- Collapsible side panels for a clean workspace
-- Figma-like navigation and zoom controls
-- Optional dark mode (if added later)
-
-### 🔌 **Full Integration With HalTest Backend**
-
-Supports all backend features, including:
-
-- Browser launch & control
-- Navigation
-- DOM interactions
-- Wait conditions
-- Screenshots & DOM captures
-- Session & context management
-- Network mocking & interception
-- AI-based actions
-- CI-oriented test flows
-
----
-
-## 🛠️ Tech Stack
-
-- **React 18**
-- **Vite**
-- **React Flow**
-- **Axios / Fetch** (for backend communication)
-- **CSS Modules**
-- **React Icons**
-- **Vitest**
-
----
-
-## 📋 Prerequisites
-
-- Node.js >= 18.x
-- npm or yarn
-- [HalTest Backend](https://github.com/andresguc1/hal-test_Backend) running
-
----
-
-## 📦 Installation
+### Commands
 
 ```bash
-git clone <repository-url>
-cd hal_test
-npm install
+# Install dependencies
+pnpm install
+
+# Start dev server (http://localhost:5173)
+pnpm dev
+
+# Build for production
+pnpm build
+
+# Preview production build
+pnpm preview
+
+# Lint
+pnpm lint
 ```
 
----
+### Environment Variables
 
-## 🏃‍♂️ Usage
-
-### Development
-
+Create `.env` file (optional):
 ```bash
-npm run dev
+VITE_API_BASE=http://localhost:2001/api
 ```
 
-Open: http://localhost:5173
+## 🎨 Styling Philosophy
 
-### Production Build
+- **Vanilla CSS** - Maximum control & performance
+- **CSS Variables** - Consistent theming
+- **No Tailwind** - Custom, maintainable styles
+- **Motion 12** - Modern, performant animations
 
+## 🔧 Key Components
+
+### useFlowManager
+Main hook for flow state management:
+- Node CRUD operations
+- Edge connections
+- Execution logic
+- Undo/redo
+- Clipboard operations
+
+### CustomNode
+Enhanced node component with:
+- Category-specific icons
+- Gradient backgrounds
+- State badges (executing/success/error)
+- 3D shadow effects
+
+### Motion Integration
+Standardized animations in `motion-variants.js`:
+- Panel transitions (left/right)
+- Tab animations
+- Item staggering
+
+## 📦 Dependencies
+
+### Core
+- `react` & `react-dom`
+- `@xyflow/react` - Flow editor
+- `motion` - Animations
+
+### State & Data
+- `@tanstack/react-query` - Server state
+- `react-i18next` - i18n
+
+### UI & Icons
+- `lucide-react` - Icons
+- `@dnd-kit/*` - Drag & drop utilities
+
+### Utilities
+- `uuid` - ID generation
+- `idb` - IndexedDB wrapper
+
+## 🌍 Internationalization
+
+Translations in `public/locales/{en,es}/`:
+- `common.json` - UI strings
+- `nodes.json` - Node labels/descriptions
+
+Add/update translations using:
 ```bash
-npm run build
-npm run preview
+pnpm translate
 ```
 
----
+## 🐛 Debugging
 
-## 🔌 Backend Configuration
+### React DevTools
+Install [React Developer Tools](https://react.dev/learn/react-developer-tools)
 
-1. Ensure the HalTest Backend is running (default: `http://localhost:3000`)
-
-2. Create a `.env` file in the project root:
-
-```env
-VITE_API_URL=http://localhost:3000
-```
-
-3. The app will automatically connect to the backend on startup.
-
-### Testing the Connection
-
-The app will display a connection status indicator in the top bar.
-
-### API Client Configuration
-
-Use it in your API client:
-
+### Console Logging
+The app uses a custom logger (`utils/logger.js`):
 ```javascript
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
-});
+logger.debug('message', data, 'ComponentName');
+logger.error('error', error, 'ComponentName');
 ```
 
----
+### IndexedDB Inspection
+Screenshots stored in IndexedDB:
+- Open DevTools → Application → IndexedDB → `hal-test-screenshots`
 
-## 🧠 How Flow Execution Works
+## 🔑 Keyboard Shortcuts
 
-Each flow node represents an automation action:
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl/Cmd + S` | Save flow |
+| `Ctrl/Cmd + Z` | Undo |
+| `Ctrl/Cmd + Shift + Z` | Redo |
+| `Ctrl/Cmd + C` | Copy selected |
+| `Ctrl/Cmd + V` | Paste |
+| `Ctrl/Cmd + X` | Cut |
+| `Del/Backspace` | Delete selected |
+| `Ctrl/Cmd + A` | Select all |
+| `Ctrl/Cmd + D` | Duplicate |
 
-```json
-{
-  "id": "1",
-  "type": "actionNode",
-  "data": {
-    "action": "open_url",
-    "params": { "url": "https://example.com" }
-  }
-}
-```
+## 🎯 Best Practices
 
-The frontend sends:
+### Performance
+- All nodes are memoized
+- React Flow optimization enabled
+- Debounced auto-save
+- Efficient state updates
 
-```http
-POST {API_URL}/actions/open_url
-Content-Type: application/json
+### Code Quality
+- Functional components with hooks
+- Single responsibility principle
+- Consistent naming conventions
+- Comprehensive error handling
 
-{
-  "url": "https://example.com"
-}
-```
+### Accessibility
+- Semantic HTML
+- ARIA labels
+- Keyboard navigation
+- Focus management
 
-The backend executes it using Playwright and returns:
+## 📝 Contributing
 
-```json
-{
-  "success": true,
-  "result": "Page loaded"
-}
-```
+See main [CONTRIBUTING.md](../../CONTRIBUTING.md) for guidelines.
 
-By connecting nodes, you can visually build complete browser automation pipelines.
+### Frontend-Specific
+1. Follow existing component structure
+2. Use functional components + hooks
+3. Add i18n keys for all user-facing strings
+4. Test with keyboard navigation
+5. Ensure responsive design
 
----
+## 🔗 Related
 
-## 📝 Example Flow
-
-Here's a simple flow that navigates to a website and takes a screenshot:
-
-```json
-{
-  "nodes": [
-    {
-      "id": "1",
-      "type": "actionNode",
-      "data": {
-        "action": "launch_browser",
-        "params": { "headless": false }
-      }
-    },
-    {
-      "id": "2",
-      "type": "actionNode",
-      "data": {
-        "action": "open_url",
-        "params": { "url": "https://example.com" }
-      }
-    },
-    {
-      "id": "3",
-      "type": "actionNode",
-      "data": {
-        "action": "capture_screenshot",
-        "params": { "path": "./screenshot.png" }
-      }
-    }
-  ],
-  "edges": [
-    { "id": "e1-2", "source": "1", "target": "2" },
-    { "id": "e2-3", "source": "2", "target": "3" }
-  ]
-}
-```
-
----
-
-## 📜 Available Scripts
-
-- `npm run dev` – Start development server
-- `npm run build` – Build for production
-- `npm run preview` – Preview production build
-- `npm run lint` – Run ESLint
-- `npm run format` – Format code
-- `npm test` – Run tests
-
----
-
-## 🐛 Troubleshooting
-
-### Backend Connection Issues
-
-- Verify the backend is running: `curl http://localhost:3000/health`
-- Check CORS settings in the backend
-- Ensure `VITE_API_URL` matches your backend URL
-
-### Flow Execution Errors
-
-- Check browser console for detailed error messages
-- Verify node parameters match backend schema
-- Ensure Playwright is properly installed in the backend
-
-### Build Issues
-
-```bash
-rm -rf node_modules package-lock.json
-npm install
-npm run build
-```
-
----
-
-## 🗺️ Roadmap
-
-- [ ] Dark mode support
-- [ ] Flow templates library
-- [ ] Collaborative editing
-- [ ] Real-time execution monitoring
-- [ ] Flow versioning
-- [ ] AI-assisted flow generation
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! You can help improve:
-
-- Node/action components
-- Flow editor UX/UI
-- Execution engine
-- Documentation
-
-### How to Contribute
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit your changes: `git commit -m 'Add amazing feature'`
-4. Push to the branch: `git push origin feature/amazing-feature`
-5. Open a Pull Request
-
----
-
-## 👤 Author
-
-- [andresguc.super.site](https://andresguc.super.site/)
-
----
-
-## 🙏 Acknowledgments
-
-- [React Flow](https://reactflow.dev/) for the amazing flow builder library
-- [Playwright](https://playwright.dev/) for browser automation capabilities
-- The open-source community
-
----
-
-## 📄 License
-
-MIT
+- **Backend**: `../backend/README.md`
+- **API Docs**: `../backend/API_DOCUMENTATION_GUIDE.md`
+- **Main README**: `../../README.md`

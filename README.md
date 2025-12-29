@@ -1,85 +1,214 @@
 # HAL-TEST 🤖
 
-HAL-TEST: A visual, node-based automation framework for complex browser orchestration. Built with Playwright and ReactFlow, it allows building automation pipelines via an intuitive drag-and-drop UI. Features real-time execution feedback, snapshots, project persistence with SQLite, and full EN/ES support. Simplify your QA workflow today!
-
-
+**HAL-TEST** is a modern, visual automation framework for browser orchestration and testing. Built with **React Flow** and **Playwright**, it provides an intuitive drag-and-drop interface for creating complex automation workflows without writing code.
 
 https://github.com/user-attachments/assets/a49ea28d-cf72-44f2-838c-05a96643c69e
-
-
 
 <div align="center">
   <video src="./apps/frontend/public/others/haltest_vid_1.mp4" width="100%" autoplay loop muted></video>
 </div>
 
-## 🚀 Key Features
+## ✨ Key Features
 
-- **Visual Flow Editor**: Build automations with intuitive node-based logic powered by ReactFlow.
-- **Real-time Execution**: See node results, logs, and screenshots immediately during execution.
-- **Multilingual UI (i18n)**: Fully synchronized English and Spanish support across all components and nodes.
-- **Dynamic Node Library**: Specialized nodes for browser management, DOM manipulation, network orchestration, and AI-driven actions (LLM).
-- **Intelligent Clipboard**: Full support for Copy, Paste, and Cut operations with automatic connection mapping.
-- **Simplified Experience**: Optimized configuration panels that hide technical complexity (backend-driven IDs).
-- **Project Persistence**: Robust local storage using SQLite and Sequelize for managing multiple automation projects and flows.
+### Visual Flow Editor
+- **Node-Based Automation**: Build complex workflows using an intuitive drag-and-drop interface
+- **50+ Specialized Nodes**: Browser management, DOM manipulation, network control, AI integration
+- **Smart Connections**: Visual flow logic with animated execution feedback
+- **Drag & Drop**: Directly drag nodes from the library onto the canvas
 
-## 🛠️ Architecture
+### Modern UX
+- **Motion Animations**: Smooth, professional animations powered by Motion 12
+- **Enhanced Canvas**: Premium visual design with gradients, shadows, and state badges
+- **Category-Specific Icons**: 50+ unique icons for instant node recognition
+- **Real-Time Feedback**: Live execution status with visual indicators
 
-- **Frontend**: React, ReactFlow, Lucide Icons, Vanilla CSS.
-- **Backend**: Node.js, Express, Sequelize (SQLite), Playwright.
-- **Storage**: Local SQLite database for persistence.
+### Developer Experience
+- **Multilingual Support (i18n)**: Full English/Spanish localization
+- **Project Management**: Multi-project/multi-flow organization with SQLite persistence
+- **Intelligent Clipboard**: Copy/paste/cut with automatic connection mapping
+- **Keyboard Shortcuts**: Complete shortcut system for power users
 
-## 📦 Installation
+### Advanced Features
+- **Network Orchestration**: Intercept, mock, and modify network requests
+- **Screenshot Automation**: Automatic before/after snapshots with IndexedDB storage
+- **LLM Integration**: AI-powered test generation and semantic validation
+- **Session Management**: Cookie, storage, and token persistence
+
+## 🏗️ Architecture
+
+### Tech Stack
+- **Frontend**: React, React Flow, Motion 12, Lucide Icons, TanStack Query
+- **Backend**: Node.js, Express, Sequelize (SQLite), Playwright
+- **Storage**: SQLite (projects/flows) + IndexedDB (screenshots)
+- **Build**: pnpm workspace + Turbo monorepo
+
+### Project Structure
+```
+hal-test/
+├── apps/
+│   ├── backend/          # Express API + Playwright runner
+│   └── frontend/         # React Flow UI
+├── packages/             # Shared utilities (if any)
+└── .github/             # GitHub templates & workflows
+```
+
+## 🚀 Quick Start
 
 ### Prerequisites
-- [Node.js](https://nodejs.org/) (v18+)
-- [pnpm](https://pnpm.io/) (Highly recommended)
+- **Node.js** 18+ ([Download](https://nodejs.org/))
+- **pnpm** ([Install](https://pnpm.io/installation))
 
-### Setup
+### Installation
 
-1. **Clone the repository**:
+1. **Clone the repository**
    ```bash
    git clone https://github.com/andresguc1/hal-test.git
    cd hal-test
    ```
 
-2. **Install dependencies**:
+2. **Install dependencies**
    ```bash
    pnpm install
    ```
 
-3. **Configure Environment**:
-   Create a `.env` file in `apps/backend` (copy from `.env.example` if available) with your configuration.
+3. **Setup environment** (optional)
+   ```bash
+   # Copy example env file if it exists
+   cp apps/backend/.env.example apps/backend/.env
+   ```
 
-4. **Initialize Database**:
+4. **Initialize database**
    ```bash
    pnpm --filter backend db:init
    ```
 
-5. **Start Development Servers**:
+5. **Start development servers**
    ```bash
    pnpm dev
    ```
-   - Frontend: `http://localhost:5173`
-   - Backend: `http://localhost:2001`
+   - **Frontend**: http://localhost:5173
+   - **Backend**: http://localhost:2001
+
+## 📖 Usage
+
+### Creating Your First Flow
+
+1. **Create a Project**: Click the project selector and create a new project
+2. **Add Nodes**: Drag nodes from the sidebar or click to add to canvas
+3. **Connect Nodes**: Draw connections between nodes to define execution order
+4. **Configure**: Click nodes to configure their parameters
+5. **Execute**: Click "Run Flow" to execute your automation
+
+### Example Workflows
+
+**Web Scraping**
+```
+Launch Browser → Open URL → Find Element → Get Content → Save Results
+```
+
+**Form Automation**
+```
+Launch Browser → Open URL → Type Text → Click Submit → Take Screenshot
+```
+
+**API Testing with UI**
+```
+Launch Browser → Intercept Request → Mock Response → Verify UI
+```
+
+## 🎨 Recent Enhancements
+
+### Motion Integration (v1.2.0)
+- Smooth panel slide-in/out animations
+- Animated flow tab transitions
+- Interactive button hover effects
+- Professional entrance animations
+
+### Canvas Visual Upgrade (v1.3.0)
+- Category-specific node icons (50+)
+- Gradient backgrounds & 3D shadows
+- Visual state badges (executing/success/error)
+- Enhanced edge animations
+- Dark gradient background
+- Glassmorphic controls
+
+### Drag & Drop (v1.3.0)
+- Direct drag from node library to canvas
+- Precise positioning
+- Backward compatible (click still works)
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to get involved.
+We welcome contributions! Please read our [Contributing Guide](CONTRIBUTING.md) before submitting PRs.
 
-### Community PRs
-To contribute:
-1. Fork the repo.
-2. Create your feature branch (`git checkout -b feature/amazing-feature`).
-3. Commit your changes (`git commit -m 'Add some amazing feature'`).
-4. Push to the branch (`git push origin feature/amazing-feature`).
-5. Open a Pull Request.
+### Development Workflow
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes with clear commit messages
+4. Ensure all tests pass
+5. Submit a Pull Request
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
+
+## 📝 Documentation
+
+- **API Docs**: `apps/backend/API_DOCUMENTATION_GUIDE.md`
+- **Frontend README**: `apps/frontend/README.md`
+- **Backend README**: `apps/backend/README.md`
+
+## 🛠️ Scripts
+
+```bash
+# Development
+pnpm dev                    # Start all services
+pnpm --filter frontend dev  # Frontend only
+pnpm --filter backend dev   # Backend only
+
+# Database
+pnpm --filter backend db:init    # Initialize database
+pnpm --filter backend db:reset   # Reset database
+
+# Build
+pnpm build                  # Build all apps
+
+# Utilities
+pnpm translate              # Update translations
+```
+
+## 🐛 Troubleshooting
+
+### Port Already in Use
+```bash
+# Kill processes on ports 5173 or 2001
+lsof -ti:5173 | xargs kill -9
+lsof -ti:2001 | xargs kill -9
+```
+
+### Database Issues
+```bash
+# Reset the database
+pnpm --filter backend db:reset
+pnpm --filter backend db:init
+```
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgements
 
-- [ReactFlow](https://reactflow.dev/)
-- [Playwright](https://playwright.dev/)
-- [Lucide Icons](https://lucide.dev/)
+- [React Flow](https://reactflow.dev/) - Visual node editor
+- [Playwright](https://playwright.dev/) - Browser automation
+- [Motion](https://motion.dev/) - Modern animation library
+- [Lucide Icons](https://lucide.dev/) - Beautiful icon set
+- [TanStack Query](https://tanstack.com/query) - Data synchronization
+
+## 🌟 Show Your Support
+
+Give a ⭐️ if this project helped you!
+
+## 📧 Contact
+
+**Andrés Gutiérrez** - [@andresguc1](https://github.com/andresguc1)
+
+Project Link: [https://github.com/andresguc1/hal-test](https://github.com/andresguc1/hal-test)
