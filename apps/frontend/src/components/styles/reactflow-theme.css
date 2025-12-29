@@ -1,0 +1,141 @@
+/**
+ * React Flow Custom Theme
+ * Enhances controls, minimap, and edges for better UX
+ */
+
+/* ========================================
+   REACT FLOW CONTROLS
+   ======================================== */
+.react-flow__controls {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    border-radius: 12px;
+    overflow: hidden;
+    background: rgba(17, 24, 39, 0.95);
+    backdrop-filter: blur(8px);
+}
+
+.react-flow__controls-button {
+    background: linear-gradient(135deg, #374151 0%, #1F2937 100%);
+    border: 1px solid #4B5563;
+    border-radius: 0;
+    color: #E5E7EB;
+    width: 36px;
+    height: 36px;
+    transition: all 0.2s ease;
+}
+
+.react-flow__controls-button:hover {
+    background: linear-gradient(135deg, #4B5563 0%, #374151 100%);
+    border-color: #6B7280;
+    color: #FFFFFF;
+    transform: scale(1.05);
+}
+
+.react-flow__controls-button svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* ========================================
+   MINIMAP
+   ======================================== */
+.react-flow__minimap {
+    background: rgba(17, 24, 39, 0.95);
+    border: 2px solid #374151;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(8px);
+}
+
+.react-flow__minimap-mask {
+    fill: rgba(59, 130, 246, 0.1);
+    stroke: #3B82F6;
+    stroke-width: 2;
+}
+
+.react-flow__minimap-node {
+    fill: #4B5563;
+    stroke: #6B7280;
+    stroke-width: 1;
+}
+
+/* ========================================
+   EDGES (CONNECTIONS)
+   ======================================== */
+.react-flow__edge-path {
+    stroke: #6B7280;
+    stroke-width: 2.5;
+    transition: stroke 0.2s ease;
+}
+
+.react-flow__edge-path:hover {
+    stroke: #3B82F6;
+    stroke-width: 3;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+    stroke: #FF8C32;
+    stroke-width: 3;
+}
+
+/* Animated edges */
+.react-flow__edge.animated path {
+    stroke-dasharray: 5;
+    animation: dashdraw 0.5s linear infinite;
+}
+
+@keyframes dashdraw {
+    to {
+        stroke-dashoffset: -10;
+    }
+}
+
+/* Edge markers (arrows) */
+.react-flow__edge .react-flow__edge-marker {
+    fill: #6B7280;
+}
+
+.react-flow__edge:hover .react-flow__edge-marker {
+    fill: #3B82F6;
+}
+
+.react-flow__edge.selected .react-flow__edge-marker {
+    fill: #FF8C32;
+}
+
+/* ========================================
+   SELECTION BOX
+   ======================================== */
+.react-flow__selectionpane {
+    border: 2px dashed #3B82F6;
+    background: rgba(59, 130, 246, 0.1);
+}
+
+/* ========================================
+   ANIMATIONS
+   ======================================== */
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.7;
+    }
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}

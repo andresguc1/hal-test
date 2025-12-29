@@ -19,6 +19,11 @@ const Flow = sequelize.define('Flow', {
     projectId: {
         type: DataTypes.STRING,
         allowNull: true,
+    },
+    order: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0,
     }
 }, {
     timestamps: true,

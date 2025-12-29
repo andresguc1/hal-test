@@ -422,34 +422,43 @@ export const useFlowManager = (currentProject, currentFlowId) => {
   // OPTIMIZACIÓN 7: Operaciones de nodo optimizadas
   // ========================================
   const addNode = useCallback(
-    (typeKey) => {
+    (typeKey, position = null) => {
       saveToHistory();
       const id = generateNodeId();
       const label = NODE_LABELS[typeKey] || typeKey;
 
-      // Calculate position based on existing nodes to avoid overlap
-      const nodeWidth = 160; // Reduced from 220
-      const nodeHeight = 60; // Reduced from 80
-      const horizontalSpacing = 100; // Spacing between columns
-      const verticalSpacing = 150; // Increased from 80 to prevent overlap
-      const nodesPerRow = 3; // Number of nodes per row
+      let nodePosition;
 
-      // NEW: Central offset to position nodes in the middle of the canvas
-      const startX = 400;
-      const startY = 250;
+      if (position) {
+        // Use provided position (from drag & drop)
+        nodePosition = position;
+      } else {
+        // Calculate position based on existing nodes to avoid overlap
+        const nodeWidth = 160; // Reduced from 220
+        const nodeHeight = 60; // Reduced from 80
+        const horizontalSpacing = 100; // Spacing between columns
+        const verticalSpacing = 150; // Increased from 80 to prevent overlap
+        const nodesPerRow = 3; // Number of nodes per row
 
-      // Calculate grid position
-      const nodeCount = nodesRef.current.length;
-      const row = Math.floor(nodeCount / nodesPerRow);
-      const col = nodeCount % nodesPerRow;
+        // NEW: Central offset to position nodes in the middle of the canvas
+        const startX = 400;
+        const startY = 250;
+
+        // Calculate grid position
+        const nodeCount = nodesRef.current.length;
+        const row = Math.floor(nodeCount / nodesPerRow);
+        const col = nodeCount % nodesPerRow;
+
+        nodePosition = {
+          x: startX + col * (nodeWidth + horizontalSpacing),
+          y: startY + row * (nodeHeight + verticalSpacing),
+        };
+      }
 
       const newNode = {
         id,
         type: "custom", // Use custom memoized node type
-        position: {
-          x: startX + col * (nodeWidth + horizontalSpacing),
-          y: startY + row * (nodeHeight + verticalSpacing),
-        },
+        position: nodePosition,
         data: {
           label, // Only show user-friendly label
           type: typeKey,

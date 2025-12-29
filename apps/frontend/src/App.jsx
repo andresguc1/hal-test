@@ -2,6 +2,7 @@ import React, { useState, useCallback, useMemo, useEffect } from "react";
 import { ReactFlow, Controls, Background, useReactFlow } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import "./components/styles/App.css";
+import "./components/styles/reactflow-theme.css";
 
 import AppHeader from "./components/AppHeader";
 import NodeCreationPanel from "./components/NodeCreationPanel";
@@ -24,6 +25,7 @@ import { useFlowShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useToast } from "./hooks/useToast";
 import { useFigmaInteraction } from "./hooks/useFigmaInteraction";
 import { useTranslation } from "react-i18next";
+import { AnimatePresence } from "motion/react";
 
 // ========================================
 // COMPONENTE PRINCIPAL
@@ -33,6 +35,9 @@ export default function App() {
   const { t } = useTranslation();
   // Toast notifications
   const toast = useToast();
+
+  // Refs
+  const reactFlowWrapper = React.useRef(null);
 
   // Project Manager Hook
   const {
@@ -47,6 +52,7 @@ export default function App() {
     switchFlow,
     deleteFlow,
     renameFlow,
+    reorderFlows,
   } = useProjectManager();
 
   // Migration Effect
@@ -56,7 +62,7 @@ export default function App() {
         const migratedProject = await migrateFromLegacy();
         if (migratedProject) {
           toast.success(`✓ ${t("common.migrate_success")}`);
-          await loadProjects(); // Reload projects list
+          loadProjects(); // Invalidate and refetch projects
         }
       } catch (error) {
         console.error("Migration error:", error);
@@ -65,14 +71,9 @@ export default function App() {
     };
 
     runMigration();
-  }, [toast, loadProjects]);
+  }, [toast, loadProjects, t]);
 
-  // Initial Load
-  React.useEffect(() => {
-    loadProjects();
-  }, [loadProjects]);
-
-  // Load project when selected or initial load
+  // Load project when initial list arrives and no project is selected
   React.useEffect(() => {
     if (projects.length > 0 && !currentProject) {
       // Load most recent project by default
@@ -338,6 +339,39 @@ export default function App() {
   );
 
   // ========================================
+  // DRAG & DROP HANDLERS
+  // ========================================
+  const { screenToFlowPosition } = useReactFlow();
+
+  const onDragOver = useCallback((event) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+  }, []);
+
+  const onDrop = useCallback(
+    (event) => {
+      event.preventDefault();
+
+      const type = event.dataTransfer.getData("application/reactflow");
+      if (!type) return;
+
+      // Get ReactFlow bounds
+      const reactFlowBounds = reactFlowWrapper.current.getBoundingClientRect();
+      const position = {
+        x: event.clientX - reactFlowBounds.left,
+        y: event.clientY - reactFlowBounds.top,
+      };
+
+      // Convert screen coordinates to flow coordinates
+      const flowPosition = screenToFlowPosition(position);
+
+      // Add node at the drop position
+      addNode(type, flowPosition);
+    },
+    [addNode, screenToFlowPosition],
+  );
+
+  // ========================================
   // KEYBOARD SHORTCUTS
   // ========================================
   useFlowShortcuts({
@@ -409,6 +443,8 @@ export default function App() {
       onEdgeContextMenu,
       onPaneContextMenu,
       onSelectionContextMenu,
+      onDrop,
+      onDragOver,
       nodeTypes, // Custom node types for optimized rendering
     }),
     [
@@ -424,6 +460,8 @@ export default function App() {
       onEdgeContextMenu,
       onPaneContextMenu,
       onSelectionContextMenu,
+      onDrop,
+      onDragOver,
     ],
   );
 
@@ -477,6 +515,7 @@ export default function App() {
 
       {/* Área principal */}
       <div
+        ref={reactFlowWrapper}
         className={`main-content 
           ${isCreationPanelVisible ? "shifted-left" : ""} 
           ${isConfigurationPanelVisible ? "shifted-right" : ""}`}
@@ -485,10 +524,11 @@ export default function App() {
           <StyledMiniMap />
           <Controls />
           <Background
-            color={colors.metallicSilver}
+            color="#4B5563"
             variant="dots"
-            gap={12}
-            size={1}
+            gap={20}
+            size={1.5}
+            style={{ background: "linear-gradient(180deg, #111827 0%, #1F2937 100%)" }}
           />
         </ReactFlow>
 
@@ -546,6 +586,7 @@ export default function App() {
           onCreateFlow={createFlow}
           onRenameFlow={renameFlow}
           onDeleteFlow={deleteFlow}
+          onReorderFlows={reorderFlows}
           onDuplicateFlow={() => {
             // TODO: Implement duplicate
             toast.info(`${t("common.coming_soon")}`);

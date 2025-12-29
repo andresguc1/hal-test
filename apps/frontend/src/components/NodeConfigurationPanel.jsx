@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from "react";
 import { XCircle, Play, Trash2, AlertCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { motion, AnimatePresence } from "motion/react";
+import { panelVariants } from "../utils/motion-variants";
 import "./styles/NodeConfigurationPanel.css";
 import { NODE_FIELD_CONFIGS, VISUAL_CHANGE_NODES } from "./hooks/constants";
 import { logger } from "../utils/logger";
@@ -700,101 +702,120 @@ function NodeConfigurationPanel({
   const canExecute = !hasErrors;
 
   return (
-    <aside
-      className={`config-panel ${isVisible ? "visible" : ""}`}
-      aria-hidden={!isVisible}
-    >
-      <div className="config-header">
-        <h2>
-          {t("common.configure")}: <span className="node-type">{t(`nodes.labels.${action.type}`)}</span>
-        </h2>
-        <button
-          className="btn-close-panel"
-          onClick={handleClose}
-          aria-label={t("common.close_panel")}
+    <AnimatePresence>
+      {isVisible && (
+        <motion.aside
+          key="node-config-panel"
+          variants={panelVariants.right}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          className="config-panel"
+          role="complementary"
         >
-          <XCircle size={22} />
-        </button>
-      </div>
-
-      <div className="config-body">{renderFields()}</div>
-
-      {action?.data?.error && (
-        <div className="error-display">
-          <div className="error-header">
-            <AlertCircle size={20} />
-            <span>{t("common.execution_error")}</span>
-          </div>
-          <div className="error-message">
-            {(() => {
-              const errorMsg = action.data.error;
-              if (
-                typeof errorMsg === "string" &&
-                errorMsg.includes("<!DOCTYPE")
-              ) {
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(errorMsg, "text/html");
-                const bodyText = doc.body?.textContent?.trim();
-                return bodyText || t("nodes.config.error_server_unknown");
-              }
-              return errorMsg;
-            })()}
-          </div>
-        </div>
-      )}
-
-      {action?.type === "manage_tabs" &&
-        action?.data?.configuration?.action === "list" &&
-        action?.data?.result?.data?.tabs && (
-          <div className="tab-list-display">
-            <div className="tab-list-header">
-              <span>
-                📑 {t("nodes.config.tab_list_title", { count: action.data.result.data.tabs.length })}
+          <div className="config-header">
+            <h2>
+              {t("common.configure")}:{" "}
+              <span className="node-type">
+                {t(`nodes.labels.${action.type}`)}
               </span>
-            </div>
-            <div className="tab-list-content">
-              {action.data.result.data.tabs.map((tab, index) => (
-                <div
-                  key={index}
-                  className={`tab-item ${tab.active ? "active" : ""}`}
-                >
-                  <div className="tab-index">#{index}</div>
-                  <div className="tab-info">
-                    <div className="tab-url" title={tab.url}>
-                      {tab.url || "about:blank"}
-                    </div>
-                    {tab.active && <span className="tab-badge">{t("nodes.config.active_tab")}</span>}
-                  </div>
-                </div>
-              ))}
-            </div>
+            </h2>
+            <button
+              className="btn-close-panel"
+              onClick={handleClose}
+              aria-label={t("common.close_panel")}
+            >
+              <XCircle size={22} />
+            </button>
           </div>
-        )}
 
-      {VISUAL_CHANGE_NODES.has(action?.type) && (
-        <ScreenshotViewer
-          screenshots={action?.data?.screenshots}
-          nodeId={action?.nodeId}
-          isVisible={isVisible}
-        />
+          <div className="config-body">{renderFields()}</div>
+
+          {action?.data?.error && (
+            <div className="error-display">
+              <div className="error-header">
+                <AlertCircle size={20} />
+                <span>{t("common.execution_error")}</span>
+              </div>
+              <div className="error-message">
+                {(() => {
+                  const errorMsg = action.data.error;
+                  if (
+                    typeof errorMsg === "string" &&
+                    errorMsg.includes("<!DOCTYPE")
+                  ) {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(errorMsg, "text/html");
+                    const bodyText = doc.body?.textContent?.trim();
+                    return bodyText || t("nodes.config.error_server_unknown");
+                  }
+                  return errorMsg;
+                })()}
+              </div>
+            </div>
+          )}
+
+          {action?.type === "manage_tabs" &&
+            action?.data?.configuration?.action === "list" &&
+            action?.data?.result?.data?.tabs && (
+              <div className="tab-list-display">
+                <div className="tab-list-header">
+                  <span>
+                    📑{" "}
+                    {t("nodes.config.tab_list_title", {
+                      count: action.data.result.data.tabs.length,
+                    })}
+                  </span>
+                </div>
+                <div className="tab-list-content">
+                  {action.data.result.data.tabs.map((tab, index) => (
+                    <div
+                      key={index}
+                      className={`tab-item ${tab.active ? "active" : ""}`}
+                    >
+                      <div className="tab-index">#{index}</div>
+                      <div className="tab-info">
+                        <div className="tab-url" title={tab.url}>
+                          {tab.url || "about:blank"}
+                        </div>
+                        {tab.active && (
+                          <span className="tab-badge">
+                            {t("nodes.config.active_tab")}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+          {VISUAL_CHANGE_NODES.has(action?.type) && (
+            <ScreenshotViewer
+              screenshots={action?.data?.screenshots}
+              nodeId={action?.nodeId}
+              isVisible={isVisible}
+            />
+          )}
+
+          <div className="config-footer">
+            <button
+              className={`btn-run ${!canExecute ? "disabled" : ""}`}
+              onClick={handleExecute}
+              disabled={!canExecute}
+            >
+              <Play size={18} /> {t("common.run")}
+            </button>
+            <button className="btn-cancel" onClick={handleClose}>
+              {t("common.cancel")}
+            </button>
+            <button className="btn-delete" onClick={handleDelete}>
+              <Trash2 size={18} /> {t("common.delete")}
+            </button>
+          </div>
+        </motion.aside>
       )}
-
-      <div className="config-footer">
-        <button
-          className={`btn-run ${!canExecute ? "disabled" : ""}`}
-          onClick={handleExecute}
-          disabled={!canExecute}
-        >
-          <Play size={18} /> {t("common.run")}
-        </button>
-        <button className="btn-cancel" onClick={handleClose}>
-          {t("common.cancel")}
-        </button>
-        <button className="btn-delete" onClick={handleDelete}>
-          <Trash2 size={18} /> {t("common.delete")}
-        </button>
-      </div>
-    </aside>
+    </AnimatePresence>
   );
 }
 

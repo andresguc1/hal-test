@@ -16,6 +16,8 @@ import {
   Brain,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { motion, AnimatePresence } from "motion/react";
+import { panelVariants } from "../utils/motion-variants";
 import "./styles/NodeCreationPanel.css";
 
 // Definición de categorías y nodos (convertidos a claves de i18n para etiquetas)
@@ -143,58 +145,73 @@ export default function NodeCreationPanel({ addNode, isVisible, togglePanel }) {
         aria-label={
           isVisible ? t("common.hide_panel") : t("common.show_panel")
         }
-        onClick={togglePanel} // <-- Función activa
+        onClick={togglePanel}
       >
         {isVisible ? <ChevronLeft size={20} /> : <Menu size={20} />}
       </button>
 
-      {/* Panel lateral */}
-      <aside
-        className={`panel-left ${!isVisible ? "hidden" : ""}`}
-        role="complementary"
-        aria-hidden={!isVisible}
-      >
-        <h2>{t("app.library_title")}</h2>
-
-        <div className="panel-content-flex">
-          {/* Tabs verticales */}
-          <div
-            className="tab-bar-vertical"
-            role="tablist"
-            aria-orientation="vertical"
+      {/* Panel lateral con AnimatePresence */}
+      <AnimatePresence>
+        {isVisible && (
+          <motion.aside
+            key="node-creation-panel"
+            variants={panelVariants.left}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className="panel-left"
+            role="complementary"
           >
-            {Object.keys(NODE_CATEGORIES).map((tabId) => (
-              <button
-                key={tabId}
-                className={`tab-button-vertical ${activeTab === tabId ? "active" : ""}`}
-                onClick={() => setActiveTab(tabId)}
-                aria-selected={activeTab === tabId}
-                role="tab"
-                title={t(`nodes.categories.${tabId}`)}
-              >
-                {NODE_CATEGORIES[tabId].icon}
-                <span className="tab-label-vertical">
-                  {t(`nodes.categories.${tabId}`)}
-                </span>
-              </button>
-            ))}
-          </div>
+            <h2>{t("app.library_title")}</h2>
 
-          {/* Contenido de nodos */}
-          <div className="tab-content-vertical" role="tabpanel">
-            {NODE_CATEGORIES[activeTab].nodes.map((node) => (
-              <button
-                key={node.id}
-                className="btn-node"
-                onClick={() => addNode(node.id)}
-                title={t(`nodes.labels.${node.id}`)}
+            <div className="panel-content-flex">
+              {/* Tabs verticales */}
+              <div
+                className="tab-bar-vertical"
+                role="tablist"
+                aria-orientation="vertical"
               >
-                {t(`nodes.labels.${node.id}`)}
-              </button>
-            ))}
-          </div>
-        </div>
-      </aside>
+                {Object.keys(NODE_CATEGORIES).map((tabId) => (
+                  <button
+                    key={tabId}
+                    className={`tab-button-vertical ${activeTab === tabId ? "active" : ""}`}
+                    onClick={() => setActiveTab(tabId)}
+                    aria-selected={activeTab === tabId}
+                    role="tab"
+                    title={t(`nodes.categories.${tabId}`)}
+                  >
+                    {NODE_CATEGORIES[tabId].icon}
+                    <span className="tab-label-vertical">
+                      {t(`nodes.categories.${tabId}`)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Contenido de nodos */}
+              <div className="tab-content-vertical" role="tabpanel">
+                {NODE_CATEGORIES[activeTab].nodes.map((node) => (
+                  <motion.button
+                    key={node.id}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData("application/reactflow", node.id);
+                      e.dataTransfer.effectAllowed = "move";
+                    }}
+                    whileHover={{ x: 5, backgroundColor: "rgba(255,255,255,0.08)" }}
+                    whileTap={{ scale: 0.96 }}
+                    className="btn-node"
+                    onClick={() => addNode(node.id)}
+                    title={t(`nodes.labels.${node.id}`)}
+                  >
+                    {t(`nodes.labels.${node.id}`)}
+                  </motion.button>
+                ))}
+              </div>
+            </div>
+          </motion.aside>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

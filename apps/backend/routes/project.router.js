@@ -27,11 +27,19 @@ const mapFlowData = (flow) => {
 // PROJECTS
 // ========================================
 
-// List all projects
+// List all projects with flows
 router.get('/projects', async (req, res) => {
     try {
         const projects = await Project.findAll({
-            order: [['updatedAt', 'DESC']]
+            include: [{
+                model: Flow,
+                as: 'flows'
+            }],
+            order: [
+                ['updatedAt', 'DESC'],
+                [{ model: Flow, as: 'flows' }, 'order', 'ASC'],
+                [{ model: Flow, as: 'flows' }, 'createdAt', 'ASC']
+            ]
         });
         res.json(projects);
     } catch (error) {
@@ -44,7 +52,15 @@ router.post('/projects', async (req, res) => {
     try {
         const { name, description } = req.body;
         const project = await Project.create({ name, description });
-        res.status(201).json(project);
+
+        // Return project with flows (even if empty initially)
+        const newProject = await Project.findByPk(project.id, {
+            include: [{
+                model: Flow,
+                as: 'flows'
+            }]
+        });
+        res.status(201).json(newProject);
     } catch (error) {
         res.status(400).json({ error: error.message });
     }
@@ -54,7 +70,14 @@ router.post('/projects', async (req, res) => {
 router.get('/projects/:id', async (req, res) => {
     try {
         const project = await Project.findByPk(req.params.id, {
-            include: [{ model: Flow, as: 'flows' }]
+            include: [{
+                model: Flow,
+                as: 'flows'
+            }],
+            order: [
+                [{ model: Flow, as: 'flows' }, 'order', 'ASC'],
+                [{ model: Flow, as: 'flows' }, 'createdAt', 'ASC']
+            ]
         });
         if (!project) return res.status(404).json({ error: 'Project not found' });
         res.json(project);
@@ -71,7 +94,19 @@ router.put('/projects/:id', async (req, res) => {
         if (!project) return res.status(404).json({ error: 'Project not found' });
 
         await project.update({ name, description, activeFlowId });
-        res.json(project);
+
+        // Return project with flows
+        const updatedProject = await Project.findByPk(project.id, {
+            include: [{
+                model: Flow,
+                as: 'flows'
+            }],
+            order: [
+                [{ model: Flow, as: 'flows' }, 'order', 'ASC'],
+                [{ model: Flow, as: 'flows' }, 'createdAt', 'ASC']
+            ]
+        });
+        res.json(updatedProject);
     } catch (error) {
         res.status(400).json({ error: error.message });
     }
@@ -97,12 +132,28 @@ router.delete('/projects/:id', async (req, res) => {
 // Create flow
 router.post('/projects/:projectId/flows', async (req, res) => {
     try {
-        const { name } = req.body;
+        const { projectId } = req.params;
         const flow = await Flow.create({
             name,
-            projectId: req.params.projectId
+            projectId
         });
-        res.status(201).json(flow);
+
+        // Return the updated project with all flows
+        const updatedProject = await Project.findByPk(projectId, {
+            include: [{
+                model: Flow,
+                as: 'flows'
+            }],
+            order: [
+                [{ model: Flow, as: 'flows' }, 'order', 'ASC'],
+                [{ model: Flow, as: 'flows' }, 'createdAt', 'ASC']
+            ]
+        });
+
+        res.status(201).json({
+            flow: mapFlowData(flow),
+            project: updatedProject
+        });
     } catch (error) {
         res.status(400).json({ error: error.message });
     }
@@ -192,6 +243,46 @@ router.put('/projects/:projectId/flows/:flowId', async (req, res) => {
     }
 });
 
+// Bulk reorder flows
+router.put('/projects/:projectId/flows/reorder', async (req, res) => {
+    const transaction = await sequelize.transaction();
+    try {
+        const { projectId } = req.params;
+        const { orders } = req.body; // Array of { id: string, order: number }
+
+        if (!Array.isArray(orders)) {
+            throw new Error('Orders must be an array');
+        }
+
+        for (const item of orders) {
+            await Flow.update(
+                { order: item.order },
+                {
+                    where: { id: item.id, projectId },
+                    transaction
+                }
+            );
+        }
+
+        await transaction.commit();
+
+        const updatedProject = await Project.findByPk(projectId, {
+            include: [{
+                model: Flow,
+                as: 'flows'
+            }],
+            order: [
+                [{ model: Flow, as: 'flows' }, 'order', 'ASC'],
+                [{ model: Flow, as: 'flows' }, 'createdAt', 'ASC']
+            ]
+        });
+        res.json(updatedProject);
+    } catch (error) {
+        if (transaction) await transaction.rollback();
+        res.status(400).json({ error: error.message });
+    }
+});
+
 // Delete flow
 router.delete('/projects/:projectId/flows/:flowId', async (req, res) => {
     try {
@@ -199,10 +290,26 @@ router.delete('/projects/:projectId/flows/:flowId', async (req, res) => {
         const flow = await Flow.findOne({
             where: { id: flowId, projectId: projectId },
         });
-        if (!flow) return res.status(404).json({ error: 'Flow not found' });
+        if (!flow) return res.status(404).json({ error: 'Flow found' });
 
         await flow.destroy();
-        res.json({ message: 'Flow deleted' });
+
+        // Return the updated project with all remaining flows
+        const updatedProject = await Project.findByPk(projectId, {
+            include: [{
+                model: Flow,
+                as: 'flows'
+            }],
+            order: [
+                [{ model: Flow, as: 'flows' }, 'order', 'ASC'],
+                [{ model: Flow, as: 'flows' }, 'createdAt', 'ASC']
+            ]
+        });
+
+        res.json({
+            message: 'Flow deleted',
+            project: updatedProject
+        });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

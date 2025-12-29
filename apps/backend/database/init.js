@@ -20,8 +20,8 @@ export const initDb = async (force = false) => {
         await sequelize.authenticate();
         console.log('Connection has been established successfully.');
 
-        await sequelize.sync({ force });
-        console.log(`Database synchronized (force: ${force})`);
+        await sequelize.sync();
+        console.log(`Database synchronized`);
 
         // Seed initial project if empty
         const count = await Project.count();

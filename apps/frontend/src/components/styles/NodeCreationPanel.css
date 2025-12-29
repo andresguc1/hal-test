@@ -58,8 +58,9 @@ body {
   position: fixed;
   top: var(--header-height);
   left: 0;
+  /* Changed: Always at left when mounted */
   height: calc(100vh - var(--header-height));
-  transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Removed transition - Motion handles this now */
   z-index: 20;
   box-sizing: border-box;
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.7);
@@ -67,9 +68,7 @@ body {
   overflow: hidden;
 }
 
-.panel-left.hidden {
-  left: -280px;
-}
+/* Removed .hidden class - AnimatePresence handles visibility */
 
 .panel-left h2 {
   margin: 0 15px 20px 15px;

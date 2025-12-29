@@ -5,7 +5,8 @@
 .config-panel {
   position: fixed;
   top: 60px;
-  right: -340px;
+  right: 0;
+  /* Changed: Always at right when mounted */
   width: 320px;
   height: calc(100vh - 60px - 60px - 40px);
   /* header - footer - flowtabs */
@@ -16,14 +17,12 @@
   flex-direction: column;
   justify-content: space-between;
   box-shadow: -2px 0 10px rgba(0, 0, 0, 0.35);
-  transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Removed transition - Motion handles this now */
   z-index: 50;
   border-left: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.config-panel.visible {
-  right: 0;
-}
+/* Removed .visible class - AnimatePresence handles visibility */
 
 /* ========================================
    HEADER

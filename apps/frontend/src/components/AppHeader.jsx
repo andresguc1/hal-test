@@ -1,15 +1,26 @@
-import React from "react";
+import { motion } from "motion/react";
 import "./styles/AppHeader.css";
 import UserMenu from "./UserMenu";
-import LanguageSelector from "./LanguageSelector";
 
 export default function AppHeader() {
   return (
-    <header className="header">
-      <h1 className="app-title">HAL-TEST</h1>
+    <motion.header
+      initial={{ y: -20, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.5, ease: "easeOut" }}
+      className="header"
+    >
+      <motion.h1
+        initial={{ x: -20, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        transition={{ delay: 0.2, duration: 0.5 }}
+        className="app-title"
+      >
+        HAL-TEST
+      </motion.h1>
       <div className="header-actions">
         <UserMenu />
       </div>
-    </header>
+    </motion.header>
   );
 }

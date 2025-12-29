@@ -62,9 +62,9 @@ const ProjectSelector = ({
         <div
           style={{
             position: "absolute",
-            top: "100%",
+            bottom: "100%",
             left: 0,
-            marginTop: "4px",
+            marginBottom: "4px",
             background: "#252526",
             border: "1px solid #454545",
             borderRadius: "4px",

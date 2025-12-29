@@ -1,187 +1,161 @@
 import { useState, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { projectManager } from "../../utils/ProjectManager";
+import { api } from "../../utils/api";
 import { logger } from "../../utils/logger";
 
 export function useProjectManager() {
-  const [projects, setProjects] = useState([]);
-  const [currentProject, setCurrentProject] = useState(null);
+  const queryClient = useQueryClient();
+  const [currentProjectId, setCurrentProjectId] = useState(null);
   const [currentFlowId, setCurrentFlowId] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
 
   // ========================================
-  // PROJECTS
+  // QUERIES
   // ========================================
 
-  const loadProjects = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const list = await projectManager.listProjects();
-      setProjects(list);
-    } catch (err) {
-      logger.error("Failed to load projects", err, "useProjectManager");
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const { data: projects = [], isLoading: isLoadingProjects, error: projectsError } = useQuery({
+    queryKey: ["projects"],
+    queryFn: () => projectManager.listProjects(),
+    onError: (err) => logger.error("Failed to load projects", err, "useProjectManager"),
+  });
 
-  const createProject = useCallback(
-    async (name, description) => {
-      try {
-        setIsLoading(true);
-        const project = await projectManager.createProject(name, description);
-        await loadProjects();
-        return project;
-      } catch (err) {
-        logger.error("Failed to create project", err, "useProjectManager");
-        setError(err.message);
-        throw err;
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [loadProjects],
-  );
-
-  const loadProject = useCallback(async (projectId) => {
-    try {
-      setIsLoading(true);
-      const project = await projectManager.getProject(projectId);
-      if (project) {
-        setCurrentProject(project);
-        // Set active flow if exists
+  const { data: currentProject = null, isLoading: isLoadingProject } = useQuery({
+    queryKey: ["project", currentProjectId],
+    queryFn: () => projectManager.getProject(currentProjectId),
+    enabled: !!currentProjectId,
+    onSuccess: (project) => {
+      if (project && !currentFlowId) {
         if (project.activeFlowId) {
           setCurrentFlowId(project.activeFlowId);
-        } else if (project.flows.length > 0) {
+        } else if (project.flows && project.flows.length > 0) {
           setCurrentFlowId(project.flows[0].id);
-        } else {
-          setCurrentFlowId(null);
         }
       }
-      return project;
-    } catch (err) {
-      logger.error("Failed to load project", err, "useProjectManager");
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  const deleteProject = useCallback(
-    async (projectId) => {
-      try {
-        setIsLoading(true);
-        await projectManager.deleteProject(projectId);
-        if (currentProject && currentProject.id === projectId) {
-          setCurrentProject(null);
-          setCurrentFlowId(null);
-        }
-        await loadProjects();
-      } catch (err) {
-        logger.error("Failed to delete project", err, "useProjectManager");
-        setError(err.message);
-      } finally {
-        setIsLoading(false);
-      }
     },
-    [currentProject, loadProjects],
-  );
+    onError: (err) => logger.error("Failed to load project", err, "useProjectManager"),
+  });
 
   // ========================================
-  // FLOWS
+  // MUTATIONS (Projects)
   // ========================================
 
-  const createFlow = useCallback(
-    async (name) => {
-      if (!currentProject) return;
-      try {
-        setIsLoading(true);
-        const flow = await projectManager.createFlow(currentProject.id, name);
-        // Reload project to get updated flows list
-        await loadProject(currentProject.id);
-        setCurrentFlowId(flow.id);
-        return flow;
-      } catch (err) {
-        logger.error("Failed to create flow", err, "useProjectManager");
-        setError(err.message);
-        throw err;
-      } finally {
-        setIsLoading(false);
+  const createProjectMutation = useMutation({
+    mutationFn: ({ name, description }) => projectManager.createProject(name, description),
+    onSuccess: (newProject) => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      setCurrentProjectId(newProject.id);
+    },
+  });
+
+  const deleteProjectMutation = useMutation({
+    mutationFn: (projectId) => projectManager.deleteProject(projectId),
+    onSuccess: (_, projectId) => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      if (currentProjectId === projectId) {
+        setCurrentProjectId(null);
+        setCurrentFlowId(null);
       }
     },
-    [currentProject, loadProject],
-  );
+  });
+
+  const updateProjectMutation = useMutation({
+    mutationFn: ({ projectId, updates }) => projectManager.updateProject(projectId, updates),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(["project", updated.id], updated);
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+    },
+  });
+
+  // ========================================
+  // MUTATIONS (Flows)
+  // ========================================
+
+  const createFlowMutation = useMutation({
+    mutationFn: ({ projectId, name }) => projectManager.createFlow(projectId, name),
+    onSuccess: (flow, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      setCurrentFlowId(flow.id);
+    },
+  });
+
+  const deleteFlowMutation = useMutation({
+    mutationFn: ({ projectId, flowId }) => projectManager.deleteFlow(projectId, flowId),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+    },
+  });
+
+  const updateFlowMutation = useMutation({
+    mutationFn: ({ projectId, flowId, updates }) => projectManager.updateFlow(projectId, flowId, updates),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+    },
+  });
+
+  const reorderFlowsMutation = useMutation({
+    mutationFn: ({ projectId, orders }) => api.put(`/projects/${projectId}/flows/reorder`, { orders }),
+    onMutate: async ({ projectId, orders }) => {
+      await queryClient.cancelQueries({ queryKey: ["project", projectId] });
+      const previousProject = queryClient.getQueryData(["project", projectId]);
+
+      if (previousProject) {
+        const sortedFlows = [...previousProject.flows].sort((a, b) => {
+          const orderA = orders.find(o => o.id === a.id)?.order ?? 0;
+          const orderB = orders.find(o => o.id === b.id)?.order ?? 0;
+          return orderA - orderB;
+        });
+        queryClient.setQueryData(["project", projectId], { ...previousProject, flows: sortedFlows });
+      }
+
+      return { previousProject };
+    },
+    onSuccess: (updated) => {
+      queryClient.setQueryData(["project", updated.id], updated);
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousProject) {
+        queryClient.setQueryData(["project", variables.projectId], context.previousProject);
+      }
+    },
+  });
+
+  // ========================================
+  // HELPERS
+  // ========================================
 
   const switchFlow = useCallback(
     async (flowId) => {
-      if (!currentProject) return;
+      if (!currentProjectId) return;
       try {
-        // Verify flow exists in current project
-        const flow = currentProject.flows.find((f) => f.id === flowId);
-        if (flow) {
-          setCurrentFlowId(flowId);
-          // Update active flow in DB
-          await projectManager.updateProject(currentProject.id, {
-            activeFlowId: flowId,
-          });
-        }
+        setCurrentFlowId(flowId);
+        await updateProjectMutation.mutateAsync({
+          projectId: currentProjectId,
+          updates: { activeFlowId: flowId },
+        });
       } catch (err) {
         logger.error("Failed to switch flow", err, "useProjectManager");
-        setError(err.message);
       }
     },
-    [currentProject],
-  );
-
-  const deleteFlow = useCallback(
-    async (flowId) => {
-      if (!currentProject) return;
-      try {
-        setIsLoading(true);
-        await projectManager.deleteFlow(currentProject.id, flowId);
-        await loadProject(currentProject.id);
-      } catch (err) {
-        logger.error("Failed to delete flow", err, "useProjectManager");
-        setError(err.message);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [currentProject, loadProject],
-  );
-
-  const renameFlow = useCallback(
-    async (flowId, newName) => {
-      if (!currentProject) return;
-      try {
-        await projectManager.updateFlow(currentProject.id, flowId, {
-          name: newName,
-        });
-        await loadProject(currentProject.id);
-      } catch (err) {
-        logger.error("Failed to rename flow", err, "useProjectManager");
-        setError(err.message);
-      }
-    },
-    [currentProject, loadProject],
+    [currentProjectId, updateProjectMutation],
   );
 
   return {
     projects,
     currentProject,
     currentFlowId,
-    isLoading,
-    error,
+    isLoading: isLoadingProjects || isLoadingProject || createProjectMutation.isLoading,
+    error: projectsError?.message || null,
 
-    loadProjects,
-    createProject,
-    loadProject,
-    deleteProject,
+    loadProjects: () => queryClient.invalidateQueries({ queryKey: ["projects"] }),
+    createProject: (name, description) => createProjectMutation.mutateAsync({ name, description }),
+    loadProject: (projectId) => setCurrentProjectId(projectId),
+    deleteProject: (projectId) => deleteProjectMutation.mutateAsync(projectId),
 
-    createFlow,
+    createFlow: (name) => createFlowMutation.mutateAsync({ projectId: currentProjectId, name }),
     switchFlow,
-    deleteFlow,
-    renameFlow,
+    deleteFlow: (flowId) => deleteFlowMutation.mutateAsync({ projectId: currentProjectId, flowId }),
+    renameFlow: (flowId, newName) => updateFlowMutation.mutateAsync({ projectId: currentProjectId, flowId, updates: { name: newName } }),
+    reorderFlows: (orders) => reorderFlowsMutation.mutateAsync({ projectId: currentProjectId, orders }),
   };
 }

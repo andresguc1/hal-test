@@ -8,6 +8,7 @@ import {
   CheckCircle,
   Loader,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import "./ImportDialog.css";
 
 /**
@@ -22,6 +23,7 @@ import "./ImportDialog.css";
  * - Real-time progress tracking
  */
 const ImportDialog = ({ isOpen, onClose, onImport }) => {
+  const { t } = useTranslation();
   const [importMode, setImportMode] = useState("file"); // 'file', 'directory', 'directory-pom'
   const [selectedFile, setSelectedFile] = useState(null);
   const [selectedDirectory, setSelectedDirectory] = useState(null);
