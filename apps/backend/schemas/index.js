@@ -77,4 +77,10 @@ export { default as generateDataBodySchema } from './generate_data/body.js';
 export { default as validateSemanticBodySchema } from './validate_semantic/body.js';
 export { default as runTestsBodySchema } from './run_tests/body.js';
 
-// 🆕 Rutas Adicionales
+// 🔀 Flow Control
+export { default as variableBodySchema } from './variable/body.js';
+export { default as conditionalBodySchema } from './conditional/body.js';
+export { default as loopBodySchema } from './loop/body.js';
+export { default as branchBodySchema } from './branch/body.js';
+export { default as flowControlBodySchema } from './flow_control/body.js';
+export { default as transformBodySchema } from './transform/body.js';

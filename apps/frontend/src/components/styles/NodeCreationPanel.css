@@ -136,24 +136,42 @@ body {
 .tab-bar-vertical {
   display: flex;
   flex-direction: column;
-  width: 100px;
+  width: 80px;
+  /* Reduced specific width */
   flex-shrink: 0;
-  padding: 0 5px 0 10px;
+  padding: 5px 2px;
   overflow-y: auto;
   border-right: 1px solid var(--darker-gray);
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+  max-height: calc(100vh - var(--header-height) - 60px);
+  /* Slightly more vertical space */
 }
 
+/* Visible scrollbar for tabs */
 .tab-bar-vertical::-webkit-scrollbar {
-  display: none;
+  width: 4px;
+  /* Thinner scrollbar */
+}
+
+.tab-bar-vertical::-webkit-scrollbar-track {
+  background: var(--darker-gray);
+}
+
+.tab-bar-vertical::-webkit-scrollbar-thumb {
+  background: var(--metallic-silver);
+  border-radius: 3px;
+}
+
+.tab-bar-vertical::-webkit-scrollbar-thumb:hover {
+  background: var(--star-blue);
 }
 
 .tab-button-vertical {
   background: none;
   border: none;
-  padding: 8px 0;
-  margin-bottom: 5px;
+  padding: 6px 0;
+  /* Reduced padding */
+  margin-bottom: 2px;
+  /* Reduced margin */
   cursor: pointer;
   font-size: 0.8rem;
   color: var(--metallic-silver);
@@ -164,12 +182,19 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   border-radius: 6px;
+  width: 100%;
+  /* Full width */
 }
 
 .tab-button-vertical .tab-label-vertical {
-  margin-top: 4px;
-  font-size: 0.65rem;
+  margin-top: 3px;
+  /* Reduced top margin */
+  font-size: 0.6rem;
+  /* Slightly smaller font */
   font-weight: 500;
+  text-align: center;
+  line-height: 1.1;
+  padding: 0 2px;
 }
 
 .tab-button-vertical.active {
@@ -177,28 +202,67 @@ body {
   font-weight: 700;
   background-color: var(--darker-gray);
   box-shadow: inset 3px 0 0 var(--hal-orange);
-  border-radius: 0 6px 6px 0;
-  padding-left: 5px;
-  transform: translateX(-5px);
+  border-radius: 4px;
+  /* Slightly squarer */
+  padding-left: 0;
+  /* Reset padding change */
+  transform: none;
+  /* Remove shift on active to save space/jitter */
 }
 
 .tab-button-vertical:hover:not(.active) {
   color: var(--cold-white);
-  background-color: #3c4044;
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Vertical tabs */
+.vertical-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--deep-space);
+  overflow: hidden;
+  max-height: 450px;
+  /* Limit height to enable scrolling */
+  overflow-y: auto;
+  /* Enable vertical scroll */
+  padding-right: 5px;
+  /* Space for scrollbar */
+}
+
+/* Hide scrollbar but keep functionality */
+.vertical-tabs::-webkit-scrollbar {
+  width: 6px;
+}
+
+.vertical-tabs::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.vertical-tabs::-webkit-scrollbar-thumb {
+  background: var(--metallic-silver);
+  border-radius: 3px;
+}
+
+.vertical-tabs::-webkit-scrollbar-thumb:hover {
+  background: var(--star-blue);
 }
 
 /* Contenido de nodos */
 .tab-content-vertical {
   flex-grow: 1;
+  padding: 10px;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 0 15px;
+  /* Slightly tighter gap */
   overflow-y: auto;
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+  /* Enable scroll for nodes list */
+  max-height: calc(100vh - var(--header-height) - 60px);
 }
 
+/* Scrollbar for node content */
 .tab-content-vertical::-webkit-scrollbar {
   display: none;
 }

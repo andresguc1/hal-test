@@ -82,6 +82,9 @@ export const NODE_LABELS = {
   cli_params: "CLI Params",
   return_code: "Return Code",
   integrate_ci: "CI/CD Integration",
+
+  // Flow Control
+  variable: "Variable",
 };
 
 /**
@@ -125,6 +128,12 @@ export const NODE_CATEGORIES = {
     label: "AI Models (LLM)",
     icon: "🧠",
     nodes: ["call_llm", "generate_data", "validate_semantic"],
+  },
+  // Flow Control Category
+  flow_control: {
+    label: "Flow Control",
+    icon: "🔀",
+    nodes: ["variable"],
   },
 };
 
@@ -2126,9 +2135,298 @@ export const NODE_FIELD_CONFIGS = {
       type: "checkbox",
       defaultValue: true,
     },
-
   ],
 
+  variable: [
+    {
+      name: "operation",
+      label: "Operation",
+      type: "select",
+      options: [
+        { value: "set", label: "Set - Assign value to variable" },
+        { value: "get", label: "Get - Read variable value" },
+        { value: "increment", label: "Increment - Add to number" },
+        { value: "push", label: "Push - Add to array" },
+      ],
+      defaultValue: "set",
+      required: true,
+      hint: "Type of operation to perform on the variable.",
+    },
+    {
+      name: "name",
+      label: "Variable Name",
+      type: "text",
+      placeholder: "Ex: counter, userEmail, items",
+      required: true,
+      validation: (value, allParams, t) => {
+        if (!value) return "Variable name is required";
+        if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(value)) {
+          return "Must start with letter or underscore, alphanumeric only";
+        }
+        return null;
+      },
+      hint: "Alphanumeric name, must start with letter or underscore.",
+    },
+    {
+      name: "value",
+      label: "Value",
+      type: "textarea",
+      placeholder: "Ex: Hello World, 42, [1,2,3], {\"key\": \"value\"}",
+      required: false,
+      conditional: {
+        field: "operation",
+        is: ["set", "increment", "push"],
+      },
+      hint: "Value to set/increment/push. Can be text, number, array, or object (JSON).",
+    },
+    {
+      name: "scope",
+      label: "Scope",
+      type: "select",
+      options: [
+        { value: "flow", label: "Flow - Current execution only" },
+        { value: "global", label: "Global - Shared across flows" },
+      ],
+      defaultValue: "flow",
+      required: true,
+      hint: "Flow scope: limited to current execution. Global: shared across all executions.",
+    },
+
+
+  ],
+  conditional: [
+    {
+      name: "conditions",
+      label: "Conditions (JSON Array)",
+      type: "textarea",
+      placeholder: '[{"left": "${counter}", "operator": ">", "right": 10}]',
+      required: true,
+      validation: (value) => {
+        if (!value) return "Conditions are required";
+        try {
+          const parsed = JSON.parse(value);
+          if (!Array.isArray(parsed)) return "Must be a JSON array";
+          if (parsed.length === 0) return "At least one condition required";
+          return null;
+        } catch (e) {
+          return "Invalid JSON format";
+        }
+      },
+      hint: 'Array of conditions: [{"left": "${var}", "operator": "===", "right": "value"}]',
+    },
+    {
+      name: "logic",
+      label: "Logic Operator",
+      type: "select",
+      options: [
+        { value: "AND", label: "AND - All conditions must be true" },
+        { value: "OR", label: "OR - At least one must be true" },
+      ],
+      defaultValue: "AND",
+      required: true,
+      hint: "How to combine multiple conditions.",
+    },
+  ],
+
+  loop: [
+    {
+      name: "mode",
+      label: "Loop Mode",
+      type: "select",
+      options: [
+        { value: "count", label: "Count - Fixed iterations" },
+        { value: "while", label: "While - Condition-based" },
+        { value: "forEach", label: "ForEach - Iterate array" },
+      ],
+      defaultValue: "count",
+      required: true,
+      hint: "Type of loop to execute.",
+    },
+    {
+      name: "iterations",
+      label: "Iterations",
+      type: "number",
+      placeholder: "10",
+      required: false,
+      conditional: {
+        field: "mode",
+        is: ["count"],
+      },
+      validation: (value, allParams) => {
+        if (allParams.mode === "count") {
+          const n = Number(value);
+          if (!value || isNaN(n) || n < 1) return "Must be >= 1";
+          if (n > 1000) return "Max 1000 iterations";
+        }
+        return null;
+      },
+      hint: "Number of times to repeat (1-1000).",
+    },
+    {
+      name: "condition",
+      label: "While Condition",
+      type: "textarea",
+      placeholder: "${counter} < 100",
+      required: false,
+      conditional: {
+        field: "mode",
+        is: ["while"],
+      },
+      hint: 'Expression to evaluate. Loop continues while true. Ex: "${count} < 10"',
+    },
+    {
+      name: "array",
+      label: "Array Variable",
+      type: "text",
+      placeholder: "${items}",
+      required: false,
+      conditional: {
+        field: "mode",
+        is: ["forEach"],
+      },
+      hint: "Variable containing the array to iterate.",
+    },
+    {
+      name: "itemVar",
+      label: "Item Variable Name",
+      type: "text",
+      placeholder: "currentItem",
+      required: false,
+      conditional: {
+        field: "mode",
+        is: ["forEach"],
+      },
+      hint: "Variable name to store current item in each iteration.",
+    },
+    {
+      name: "maxIterations",
+      label: "Max Iterations (Safety)",
+      type: "number",
+      defaultValue: 1000,
+      placeholder: "1000",
+      hint: "Maximum iterations to prevent infinite loops.",
+    },
+  ],
+
+  branch: [
+    {
+      name: "mode",
+      label: "Execution Mode",
+      type: "select",
+      options: [
+        { value: "parallel", label: "Parallel - Execute all simultaneously" },
+        { value: "sequential", label: "Sequential - One after another" },
+        { value: "race", label: "Race - First to complete" },
+      ],
+      defaultValue: "parallel",
+      required: true,
+      hint: "How to execute multiple output paths.",
+    },
+    {
+      name: "timeout",
+      label: "Timeout (ms)",
+      type: "number",
+      defaultValue: 30000,
+      placeholder: "30000",
+      validation: (value) => {
+        const n = Number(value);
+        if (isNaN(n) || n < 0) return "Must be >= 0 (0 = no timeout)";
+        return null;
+      },
+      hint: "Maximum time to wait for execution. 0 = no timeout.",
+    },
+  ],
+
+  flow_control: [
+    {
+      name: "action",
+      label: "Control Action",
+      type: "select",
+      options: [
+        { value: "break", label: "Break - Exit current loop" },
+        { value: "continue", label: "Continue - Skip to next iteration" },
+        { value: "return", label: "Return - Exit flow with value" },
+      ],
+      required: true,
+      hint: "Flow control action to perform.",
+    },
+    {
+      name: "returnValue",
+      label: "Return Value",
+      type: "textarea",
+      placeholder: '{"status": "success", "data": ${result}}',
+      required: false,
+      conditional: {
+        field: "action",
+        is: ["return"],
+      },
+      hint: "Value to return when exiting flow (only for 'return' action).",
+    },
+  ],
+
+  transform: [
+    {
+      name: "operation",
+      label: "Transform Operation",
+      type: "select",
+      options: [
+        { value: "map", label: "Map - Transform each element" },
+        { value: "filter", label: "Filter - Select elements by condition" },
+        { value: "reduce", label: "Reduce - Aggregate values (planned)" },
+        { value: "merge", label: "Merge - Combine arrays" },
+      ],
+      defaultValue: "map",
+      required: true,
+      hint: "Type of data transformation.",
+    },
+    {
+      name: "input",
+      label: "Input Array",
+      type: "text",
+      placeholder: "${items}",
+      required: true,
+      hint: "Variable containing the input array.",
+    },
+    {
+      name: "expression",
+      label: "Expression",
+      type: "textarea",
+      placeholder: "item.price * 1.1",
+      required: false,
+      conditional: {
+        field: "operation",
+        is: ["map", "filter"],
+      },
+      hint: 'Expression to evaluate. For map: transformation. For filter: condition. Use "item" to reference current element.',
+    },
+    {
+      name: "mergeWith",
+      label: "Merge With Array",
+      type: "text",
+      placeholder: "${otherItems}",
+      required: false,
+      conditional: {
+        field: "operation",
+        is: ["merge"],
+      },
+      hint: "Second array to merge with input array.",
+    },
+    {
+      name: "outputVar",
+      label: "Output Variable",
+      type: "text",
+      placeholder: "processedItems",
+      required: true,
+      validation: (value) => {
+        if (!value) return "Output variable name is required";
+        if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(value)) {
+          return "Must start with letter or underscore, alphanumeric only";
+        }
+        return null;
+      },
+      hint: "Variable name to store the result.",
+    },
+  ],
   find_element: [
     {
       name: "selector",
@@ -2651,4 +2949,8 @@ export const NODE_TYPE_TO_CATEGORY = {
   cli_params: "execution_interface",
   return_code: "execution_interface",
   integrate_ci: "execution_interface",
+
+  // Flow Control
+  variable: "flow_control",
 };
+

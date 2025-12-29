@@ -147,20 +147,27 @@
             "return_code": "Return Code",
             "integrate_ci": "CI/CD Integration",
             "wait_for_element_adv": "Wait Element (Adv)",
-            "submit_form": "Submit Form"
+            "submit_form": "Submit Form",
+            "variable": "Variable",
+            "conditional": "Conditional",
+            "loop": "Loop",
+            "branch": "Branch",
+            "flow_control": "Flow Control",
+            "transform": "Transform"
         },
         "categories": {
             "browser_management": "Browser",
             "dom_manipulation": "DOM",
-            "user_simulation": "Interaction",
-            "synchronization": "Synchronization",
-            "diagnostics": "Diagnostics",
+            "user_simulation": "Input",
+            "synchronization": "Sync",
+            "diagnostics": "Debug",
             "network_control": "Network",
             "session_management": "Session",
-            "test_execution": "Context/Control",
-            "file_data": "Files/Data",
-            "llm_ai": "AI Models (LLM)",
-            "execution_interface": "Execution"
+            "test_execution": "Context",
+            "file_data": "Files",
+            "llm_ai": "AI / LLM",
+            "execution_interface": "Exec",
+            "flow_control": "Flow"
         },
         "fields": {
             "browserType": "Browser Type",

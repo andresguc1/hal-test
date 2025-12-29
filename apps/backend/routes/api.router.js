@@ -378,6 +378,44 @@ const actionRoutes = [
         action: 'integrateCIAction',
         category: 'ci',
     },
+
+    // ========== Flow Control ==========
+    {
+        path: 'variable',
+        schema: 'variableBodySchema',
+        action: 'variableAction',
+        category: 'flow_control',
+    },
+    {
+        path: 'conditional',
+        schema: 'conditionalBodySchema',
+        action: 'conditionalAction',
+        category: 'flow_control',
+    },
+    {
+        path: 'loop',
+        schema: 'loopBodySchema',
+        action: 'loopAction',
+        category: 'flow_control',
+    },
+    {
+        path: 'branch',
+        schema: 'branchBodySchema',
+        action: 'branchAction',
+        category: 'flow_control',
+    },
+    {
+        path: 'flow_control',
+        schema: 'flowControlBodySchema',
+        action: 'flowControlAction',
+        category: 'flow_control',
+    },
+    {
+        path: 'transform',
+        schema: 'transformBodySchema',
+        action: 'transformAction',
+        category: 'flow_control',
+    },
 ];
 
 // ==========================================================

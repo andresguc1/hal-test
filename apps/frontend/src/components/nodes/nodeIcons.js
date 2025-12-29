@@ -15,6 +15,7 @@ import {
     FolderOpen,
     Sparkles,
     Terminal,
+    Settings2,
     // Specific node icons
     Link2,
     X,
@@ -60,6 +61,7 @@ export const CATEGORY_ICONS = {
     file_data: FolderOpen,
     llm_ai: Sparkles,
     execution_interface: Terminal,
+    flow_control: Settings2, // Added flow_control category
     default: Play,
 };
 
@@ -138,6 +140,9 @@ export const NODE_TYPE_ICONS = {
     cli_params: Terminal,
     return_code: Terminal,
     integrate_ci: Settings,
+
+    // Flow Control
+    variable: Settings2,
 };
 
 /**

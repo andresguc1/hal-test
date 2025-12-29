@@ -7,10 +7,14 @@
 import { browserService } from '../services/browser.service.js';
 import { traceService } from '../services/trace.service.js';
 import { globalStateManager } from '../services/stateManager.js';
+import VariableManager from '../services/VariableManager.js';
 import * as fsp from 'fs/promises';
 // import * as fs from 'fs';
 import * as path from 'path';
 
+
+// Create Variable Manager instance
+const variableManager = new VariableManager();
 // ==========================================================
 // CONFIGURATION AND CONSTANTS
 // ==========================================================
@@ -2439,6 +2443,193 @@ export const resizeViewportAction = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Error resizing viewport.',
+            error: error.message,
+        });
+    }
+};
+
+// ==========================================================
+// FLOW CONTROL ACTIONS
+// ==========================================================
+
+export const variableAction = async (req, res) => {
+    try {
+        const { operation, name, value, scope = "flow" } = req.body;
+
+        let result;
+        let message;
+
+        switch (operation) {
+            case "set":
+                variableManager.set(name, value, scope);
+                result = { name, value, scope, operation: "set" };
+                message = req.t("actions.variable.set_success", { name, scope });
+                break;
+
+            case "get":
+                const getValue = variableManager.get(name, scope);
+                result = { name, value: getValue, scope, operation: "get" };
+                message = req.t("actions.variable.get_success", { name });
+                break;
+
+            case "increment":
+                const amount = typeof value === "number" ? value : 1;
+                variableManager.increment(name, amount, scope);
+                const newValue = variableManager.get(name, scope);
+                result = { name, value: newValue, amount, scope, operation: "increment" };
+                message = req.t("actions.variable.increment_success", { name, amount });
+                break;
+
+            case "push":
+                variableManager.push(name, value, scope);
+                const array = variableManager.get(name, scope);
+                result = { name, array, scope, operation: "push" };
+                message = req.t("actions.variable.push_success", { name });
+                break;
+
+            default:
+                return res.status(400).json({
+                    success: false,
+                    message: `Invalid operation: ${operation}`,
+                });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message,
+            data: result,
+        });
+    } catch (error) {
+        console.error("[ERROR] variableAction:", error.message);
+        return res.status(500).json({
+            success: false,
+            message: req.t("actions.variable.error"),
+            error: error.message,
+        });
+    }
+};
+
+
+export const conditionalAction = async (req, res) => {
+    try {
+        const { conditions, logic = 'AND' } = req.body;
+        
+        const result = variableManager.evaluateConditions(conditions, logic);
+        
+        return res.status(200).json({
+            success: true,
+            message: req.t("actions.conditional.success"),
+            data: { 
+                result, 
+                path: result ? 'true' : 'false',
+                conditions,
+                logic 
+            },
+        });
+    } catch (error) {
+        console.error("[ERROR] conditionalAction:", error.message);
+        return res.status(500).json({
+            success: false,
+            message: req.t("actions.conditional.error"),
+            error: error.message,
+        });
+    }
+};
+
+export const loopAction = async (req, res) => {
+    try {
+        const { mode, iterations, condition, array, itemVar, maxIterations = 1000 } = req.body;
+        
+        const data = { mode, iterations, condition, array, itemVar, maxIterations };
+        
+        return res.status(200).json({
+            success: true,
+            message: req.t("actions.loop.success"),
+            data,
+        });
+    } catch (error) {
+        console.error("[ERROR] loopAction:", error.message);
+        return res.status(500).json({
+            success: false,
+            message: req.t("actions.loop.error"),
+            error: error.message,
+        });
+    }
+};
+
+export const branchAction = async (req, res) => {
+    try {
+        const { mode, timeout = 30000 } = req.body;
+        
+        return res.status(200).json({
+            success: true,
+            message: req.t("actions.branch.success"),
+            data: { mode, timeout },
+        });
+    } catch (error) {
+        console.error("[ERROR] branchAction:", error.message);
+        return res.status(500).json({
+            success: false,
+            message: req.t("actions.branch.error"),
+            error: error.message,
+        });
+    }
+};
+
+export const flowControlAction = async (req, res) => {
+    try {
+        const { action, returnValue } = req.body;
+        
+        return res.status(200).json({
+            success: true,
+            message: req.t("actions.flow_control.success"),
+            data: { action, returnValue },
+        });
+    } catch (error) {
+        console.error("[ERROR] flowControlAction:", error.message);
+        return res.status(500).json({
+            success: false,
+            message: req.t("actions.flow_control.error"),
+            error: error.message,
+        });
+    }
+};
+
+export const transformAction = async (req, res) => {
+    try {
+        const { operation, input, expression, mergeWith, outputVar } = req.body;
+        
+        const resolvedInput = variableManager.resolve(input);
+        const inputArray = variableManager.get(resolvedInput.replace('${', '').replace('}', ''), 'flow') || [];
+        
+        let result;
+        switch (operation) {
+            case 'map':
+                result = inputArray.map(item => variableManager.evaluate(expression, { item }));
+                break;
+            case 'filter':
+                result = inputArray.filter(item => variableManager.evaluate(expression, { item }));
+                break;
+            case 'merge':
+                const mergeArray = variableManager.get(mergeWith.replace('${', '').replace('}', ''), 'flow') || [];
+                result = [...inputArray, ...mergeArray];
+                break;
+            default:
+                result = inputArray;
+        }
+        
+        variableManager.set(outputVar, result, 'flow');
+        
+        return res.status(200).json({
+            success: true,
+            message: req.t("actions.transform.success"),
+            data: { operation, result, outputVar },
+        });
+    } catch (error) {
+        console.error("[ERROR] transformAction:", error.message);
+        return res.status(500).json({
+            success: false,
+            message: req.t("actions.transform.error"),
             error: error.message,
         });
     }

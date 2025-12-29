@@ -14,6 +14,8 @@ import {
   Terminal,
   // Importación de Brain para la categoría LLM/AI
   Brain,
+  // Flow Control category icon
+  Settings2,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "motion/react";
@@ -127,6 +129,17 @@ const NODE_CATEGORIES = {
       { id: "cli_params" },
       { id: "return_code" },
       { id: "integrate_ci" },
+    ],
+  },
+  flow_control: {
+    icon: <Settings2 size={20} />,
+    nodes: [
+      { id: "variable" },
+      { id: "conditional" },
+      { id: "loop" },
+      { id: "branch" },
+      { id: "flow_control" },
+      { id: "transform" },
     ],
   },
 };
