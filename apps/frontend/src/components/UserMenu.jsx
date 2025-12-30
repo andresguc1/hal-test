@@ -266,7 +266,7 @@ export default function UserMenu({
       const serviceName = body && body.service ? String(body.service) : null;
       const uptimeSeconds =
         body &&
-        (typeof body.uptime === "number" || !Number.isNaN(Number(body.uptime)))
+          (typeof body.uptime === "number" || !Number.isNaN(Number(body.uptime)))
           ? Number(body.uptime)
           : null;
       const isUp =
@@ -497,11 +497,12 @@ export default function UserMenu({
               )}
               {provider === "google" && (
                 <>
-                  <option value="gemini-2.0-flash-exp">
-                    Gemini 2.0 Flash (Preview)
-                  </option>
+                  <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
                   <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
                   <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                  <option value="gemini-2.0-pro-exp-02-05">
+                    Gemini 2.0 Pro Experimental
+                  </option>
                 </>
               )}
               {provider === "anthropic" && (

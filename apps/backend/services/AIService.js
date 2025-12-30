@@ -33,6 +33,7 @@ class AIService {
 
         // Google Gemini
         if (name.startsWith('gemini')) {
+            console.log(`[AIService] Using Google Gemini model: ${name}`);
             if (keys.google) return createGoogleGenerativeAI({ apiKey: keys.google })(name);
             if (this.google) return this.google(name);
             throw new Error('Missing Google API Key. Please provide it in User Settings.');
