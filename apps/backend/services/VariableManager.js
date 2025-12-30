@@ -1,6 +1,6 @@
 /**
  * VariableManager Service
- * 
+ *
  * Manages variables across different scopes (flow, global)
  * Provides safe expression evaluation for conditions and values
  */
@@ -9,7 +9,7 @@ class VariableManager {
     constructor() {
         this.scopes = {
             global: {}, // Shared across all flows
-            flow: {},   // Specific to current flow execution
+            flow: {}, // Specific to current flow execution
         };
     }
 
@@ -88,7 +88,7 @@ class VariableManager {
     /**
      * Resolve variable references in a string
      * Example: "Hello ${name}" -> "Hello John"
-     * 
+     *
      * @param {string} template - String with ${var} placeholders
      * @returns {string} Resolved string
      */
@@ -111,7 +111,7 @@ class VariableManager {
     /**
      * Safely evaluate an expression with variables
      * Uses a restricted context for security
-     * 
+     *
      * @param {string} expression - Expression to evaluate (e.g., "${counter} > 10")
      * @param {object} additionalContext - Additional values for evaluation
      * @returns {any} Evaluation result
@@ -141,7 +141,7 @@ class VariableManager {
             // This prevents access to dangerous globals
             const func = new Function(
                 ...Object.keys(context),
-                `'use strict'; return (${resolved});`
+                `'use strict'; return (${resolved});`,
             );
 
             return func(...Object.values(context));
@@ -158,7 +158,7 @@ class VariableManager {
      * @returns {boolean} True if variable exists
      */
     has(name, scope = 'flow') {
-        return this.scopes[scope].hasOwnProperty(name);
+        return Object.prototype.hasOwnProperty.call(this.scopes[scope], name);
     }
 
     /**
@@ -186,9 +186,7 @@ class VariableManager {
             case '===':
                 return resolvedLeft === resolvedRight;
             case '!==':
-                return resolvedLeft !== res
-
-                olvedRight;
+                return resolvedLeft !== resolvedRight;
             case '>':
                 return Number(resolvedLeft) > Number(resolvedRight);
             case '<':
@@ -199,10 +197,11 @@ class VariableManager {
                 return Number(resolvedLeft) <= Number(resolvedRight);
             case 'contains':
                 return String(resolvedLeft).includes(String(resolvedRight));
-            case 'exists':
+            case 'exists': {
                 // Check if variable exists (left should be a variable name)
                 const varName = String(left).replace(/\${(.+)}/, '$1');
                 return this.has(varName, 'flow') || this.has(varName, 'global');
+            }
             default:
                 throw new Error(`Unknown operator: ${operator}`);
         }
@@ -219,12 +218,12 @@ class VariableManager {
             throw new Error('Conditions must be a non-empty array');
         }
 
-        const results = conditions.map(cond => this.evaluateCondition(cond));
+        const results = conditions.map((cond) => this.evaluateCondition(cond));
 
         if (logic === 'AND') {
-            return results.every(r => r === true);
+            return results.every((r) => r === true);
         } else if (logic === 'OR') {
-            return results.some(r => r === true);
+            return results.some((r) => r === true);
         } else {
             throw new Error(`Unknown logic operator: ${logic}`);
         }

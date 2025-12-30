@@ -51,13 +51,33 @@ function CustomNode({ data, selected }) {
     }
   };
 
-  // Define state colors for enhanced visual effect 
+  // Define state colors for enhanced visual effect
   const stateColors = {
-    [NODE_STATES.DEFAULT]: { border: "#CBD5E1", shadow: "#64748B", glow: "rgba(203, 213, 225, 0.5)" },
-    [NODE_STATES.EXECUTING]: { border: "#F59E0B", shadow: "#D97706", glow: "rgba(245, 158, 11, 0.4)" },
-    [NODE_STATES.SUCCESS]: { border: "#10B981", shadow: "#059669", glow: "rgba(16, 185, 129, 0.4)" },
-    [NODE_STATES.ERROR]: { border: "#EF4444", shadow: "#DC2626", glow: "rgba(239, 68, 68, 0.4)" },
-    [NODE_STATES.SKIPPED]: { border: "#94A3B8", shadow: "#64748B", glow: "rgba(148, 163, 184, 0.3)" },
+    [NODE_STATES.DEFAULT]: {
+      border: "#CBD5E1",
+      shadow: "#64748B",
+      glow: "rgba(203, 213, 225, 0.5)",
+    },
+    [NODE_STATES.EXECUTING]: {
+      border: "#F59E0B",
+      shadow: "#D97706",
+      glow: "rgba(245, 158, 11, 0.4)",
+    },
+    [NODE_STATES.SUCCESS]: {
+      border: "#10B981",
+      shadow: "#059669",
+      glow: "rgba(16, 185, 129, 0.4)",
+    },
+    [NODE_STATES.ERROR]: {
+      border: "#EF4444",
+      shadow: "#DC2626",
+      glow: "rgba(239, 68, 68, 0.4)",
+    },
+    [NODE_STATES.SKIPPED]: {
+      border: "#94A3B8",
+      shadow: "#64748B",
+      glow: "rgba(148, 163, 184, 0.3)",
+    },
   };
 
   const currentStateColor =
@@ -111,10 +131,14 @@ function CustomNode({ data, selected }) {
     position: "absolute",
     top: -6,
     right: -6,
-    background: state === NODE_STATES.SUCCESS ? "#10B981"
-      : state === NODE_STATES.ERROR ? "#EF4444"
-        : state === NODE_STATES.EXECUTING ? "#F59E0B"
-          : "transparent",
+    background:
+      state === NODE_STATES.SUCCESS
+        ? "#10B981"
+        : state === NODE_STATES.ERROR
+          ? "#EF4444"
+          : state === NODE_STATES.EXECUTING
+            ? "#F59E0B"
+            : "transparent",
     borderRadius: "50%",
     padding: "4px",
     boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
@@ -144,9 +168,7 @@ function CustomNode({ data, selected }) {
 
       {/* State Badge */}
       {getStateBadge() && (
-        <div style={badgeContainerStyle}>
-          {getStateBadge()}
-        </div>
+        <div style={badgeContainerStyle}>{getStateBadge()}</div>
       )}
 
       {/* Node Header with Icon and Label */}

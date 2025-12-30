@@ -14,7 +14,7 @@ Node.belongsTo(Flow, { as: 'flow', foreignKey: 'flowId' });
 Flow.hasMany(Edge, { as: 'edges', foreignKey: 'flowId', onDelete: 'CASCADE' });
 Edge.belongsTo(Flow, { as: 'flow', foreignKey: 'flowId' });
 
-export const initDb = async (force = false) => {
+export const initDb = async (_force = false) => {
     try {
         console.log('Initializing database...');
         await sequelize.authenticate();
@@ -35,14 +35,14 @@ export const initDb = async (force = false) => {
             const project = await Project.create({
                 id: defaultProjectId,
                 name: 'Default Project',
-                description: 'Automatically created default project'
+                description: 'Automatically created default project',
             });
 
             const flow = await Flow.create({
                 id: defaultFlowId,
                 name: 'Main Flow',
                 projectId: project.id,
-                viewport: { x: 0, y: 0, zoom: 1 }
+                viewport: { x: 0, y: 0, zoom: 1 },
             });
 
             await project.update({ activeFlowId: flow.id });
@@ -52,9 +52,9 @@ export const initDb = async (force = false) => {
             console.log(`- Flow created: ${flow.name} (${flow.id}, projectId: ${flow.projectId})`);
         } else {
             const projects = await Project.findAll({ include: [{ model: Flow, as: 'flows' }] });
-            projects.forEach(p => {
+            projects.forEach((p) => {
                 console.log(`Existing Project: ${p.name} (${p.id})`);
-                p.flows.forEach(f => {
+                p.flows.forEach((f) => {
                     console.log(`  - Flow: ${f.name} (${f.id})`);
                 });
             });

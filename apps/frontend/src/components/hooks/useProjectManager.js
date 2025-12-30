@@ -13,34 +13,43 @@ export function useProjectManager() {
   // QUERIES
   // ========================================
 
-  const { data: projects = [], isLoading: isLoadingProjects, error: projectsError } = useQuery({
+  const {
+    data: projects = [],
+    isLoading: isLoadingProjects,
+    error: projectsError,
+  } = useQuery({
     queryKey: ["projects"],
     queryFn: () => projectManager.listProjects(),
-    onError: (err) => logger.error("Failed to load projects", err, "useProjectManager"),
+    onError: (err) =>
+      logger.error("Failed to load projects", err, "useProjectManager"),
   });
 
-  const { data: currentProject = null, isLoading: isLoadingProject } = useQuery({
-    queryKey: ["project", currentProjectId],
-    queryFn: () => projectManager.getProject(currentProjectId),
-    enabled: !!currentProjectId,
-    onSuccess: (project) => {
-      if (project && !currentFlowId) {
-        if (project.activeFlowId) {
-          setCurrentFlowId(project.activeFlowId);
-        } else if (project.flows && project.flows.length > 0) {
-          setCurrentFlowId(project.flows[0].id);
+  const { data: currentProject = null, isLoading: isLoadingProject } = useQuery(
+    {
+      queryKey: ["project", currentProjectId],
+      queryFn: () => projectManager.getProject(currentProjectId),
+      enabled: !!currentProjectId,
+      onSuccess: (project) => {
+        if (project && !currentFlowId) {
+          if (project.activeFlowId) {
+            setCurrentFlowId(project.activeFlowId);
+          } else if (project.flows && project.flows.length > 0) {
+            setCurrentFlowId(project.flows[0].id);
+          }
         }
-      }
+      },
+      onError: (err) =>
+        logger.error("Failed to load project", err, "useProjectManager"),
     },
-    onError: (err) => logger.error("Failed to load project", err, "useProjectManager"),
-  });
+  );
 
   // ========================================
   // MUTATIONS (Projects)
   // ========================================
 
   const createProjectMutation = useMutation({
-    mutationFn: ({ name, description }) => projectManager.createProject(name, description),
+    mutationFn: ({ name, description }) =>
+      projectManager.createProject(name, description),
     onSuccess: (newProject) => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       setCurrentProjectId(newProject.id);
@@ -59,7 +68,8 @@ export function useProjectManager() {
   });
 
   const updateProjectMutation = useMutation({
-    mutationFn: ({ projectId, updates }) => projectManager.updateProject(projectId, updates),
+    mutationFn: ({ projectId, updates }) =>
+      projectManager.updateProject(projectId, updates),
     onSuccess: (updated) => {
       queryClient.setQueryData(["project", updated.id], updated);
       queryClient.invalidateQueries({ queryKey: ["projects"] });
@@ -71,7 +81,8 @@ export function useProjectManager() {
   // ========================================
 
   const createFlowMutation = useMutation({
-    mutationFn: ({ projectId, name }) => projectManager.createFlow(projectId, name),
+    mutationFn: ({ projectId, name }) =>
+      projectManager.createFlow(projectId, name),
     onSuccess: (flow, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: ["project", projectId] });
       setCurrentFlowId(flow.id);
@@ -79,32 +90,38 @@ export function useProjectManager() {
   });
 
   const deleteFlowMutation = useMutation({
-    mutationFn: ({ projectId, flowId }) => projectManager.deleteFlow(projectId, flowId),
+    mutationFn: ({ projectId, flowId }) =>
+      projectManager.deleteFlow(projectId, flowId),
     onSuccess: (_, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: ["project", projectId] });
     },
   });
 
   const updateFlowMutation = useMutation({
-    mutationFn: ({ projectId, flowId, updates }) => projectManager.updateFlow(projectId, flowId, updates),
+    mutationFn: ({ projectId, flowId, updates }) =>
+      projectManager.updateFlow(projectId, flowId, updates),
     onSuccess: (_, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: ["project", projectId] });
     },
   });
 
   const reorderFlowsMutation = useMutation({
-    mutationFn: ({ projectId, orders }) => api.put(`/projects/${projectId}/flows/reorder`, { orders }),
+    mutationFn: ({ projectId, orders }) =>
+      api.put(`/projects/${projectId}/flows/reorder`, { orders }),
     onMutate: async ({ projectId, orders }) => {
       await queryClient.cancelQueries({ queryKey: ["project", projectId] });
       const previousProject = queryClient.getQueryData(["project", projectId]);
 
       if (previousProject) {
         const sortedFlows = [...previousProject.flows].sort((a, b) => {
-          const orderA = orders.find(o => o.id === a.id)?.order ?? 0;
-          const orderB = orders.find(o => o.id === b.id)?.order ?? 0;
+          const orderA = orders.find((o) => o.id === a.id)?.order ?? 0;
+          const orderB = orders.find((o) => o.id === b.id)?.order ?? 0;
           return orderA - orderB;
         });
-        queryClient.setQueryData(["project", projectId], { ...previousProject, flows: sortedFlows });
+        queryClient.setQueryData(["project", projectId], {
+          ...previousProject,
+          flows: sortedFlows,
+        });
       }
 
       return { previousProject };
@@ -115,7 +132,10 @@ export function useProjectManager() {
     },
     onError: (err, variables, context) => {
       if (context?.previousProject) {
-        queryClient.setQueryData(["project", variables.projectId], context.previousProject);
+        queryClient.setQueryData(
+          ["project", variables.projectId],
+          context.previousProject,
+        );
       }
     },
   });
@@ -144,18 +164,29 @@ export function useProjectManager() {
     projects,
     currentProject,
     currentFlowId,
-    isLoading: isLoadingProjects || isLoadingProject || createProjectMutation.isLoading,
+    isLoading:
+      isLoadingProjects || isLoadingProject || createProjectMutation.isLoading,
     error: projectsError?.message || null,
 
-    loadProjects: () => queryClient.invalidateQueries({ queryKey: ["projects"] }),
-    createProject: (name, description) => createProjectMutation.mutateAsync({ name, description }),
+    loadProjects: () =>
+      queryClient.invalidateQueries({ queryKey: ["projects"] }),
+    createProject: (name, description) =>
+      createProjectMutation.mutateAsync({ name, description }),
     loadProject: (projectId) => setCurrentProjectId(projectId),
     deleteProject: (projectId) => deleteProjectMutation.mutateAsync(projectId),
 
-    createFlow: (name) => createFlowMutation.mutateAsync({ projectId: currentProjectId, name }),
+    createFlow: (name) =>
+      createFlowMutation.mutateAsync({ projectId: currentProjectId, name }),
     switchFlow,
-    deleteFlow: (flowId) => deleteFlowMutation.mutateAsync({ projectId: currentProjectId, flowId }),
-    renameFlow: (flowId, newName) => updateFlowMutation.mutateAsync({ projectId: currentProjectId, flowId, updates: { name: newName } }),
-    reorderFlows: (orders) => reorderFlowsMutation.mutateAsync({ projectId: currentProjectId, orders }),
+    deleteFlow: (flowId) =>
+      deleteFlowMutation.mutateAsync({ projectId: currentProjectId, flowId }),
+    renameFlow: (flowId, newName) =>
+      updateFlowMutation.mutateAsync({
+        projectId: currentProjectId,
+        flowId,
+        updates: { name: newName },
+      }),
+    reorderFlows: (orders) =>
+      reorderFlowsMutation.mutateAsync({ projectId: currentProjectId, orders }),
   };
 }

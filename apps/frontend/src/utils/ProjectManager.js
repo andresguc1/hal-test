@@ -15,7 +15,11 @@ class ProjectManager {
       project.activeFlowId = flow.id;
       await this.updateProject(project.id, { activeFlowId: flow.id });
 
-      logger.info("Project created", { id: project.id, name }, "ProjectManager");
+      logger.info(
+        "Project created",
+        { id: project.id, name },
+        "ProjectManager",
+      );
       return { ...project, flows: [flow] };
     } catch (err) {
       logger.error("Failed to create project", err, "ProjectManager");
@@ -87,7 +91,10 @@ class ProjectManager {
 
   async updateFlow(projectId, flowId, flowData) {
     try {
-      const updatedFlow = await api.put(`/projects/${projectId}/flows/${flowId}`, flowData);
+      const updatedFlow = await api.put(
+        `/projects/${projectId}/flows/${flowId}`,
+        flowData,
+      );
       return updatedFlow;
     } catch (err) {
       logger.error("Failed to update flow", err, "ProjectManager");
@@ -108,18 +115,22 @@ class ProjectManager {
   // VERSIONING (Mocked for now in backend, or skipped)
   // ========================================
 
-  async saveVersion(projectId, message, auto = false) {
+  async saveVersion(projectId, message, _auto = false) {
     // Porting versioning to SQL would require a new model.
     // For now, let's just log it.
-    logger.info("Version save requested (not implemented in backend yet)", { projectId, message }, "ProjectManager");
+    logger.info(
+      "Version save requested (not implemented in backend yet)",
+      { projectId, message },
+      "ProjectManager",
+    );
     return { id: "mock-version-id" };
   }
 
-  async getVersionHistory(projectId) {
+  async getVersionHistory(_projectId) {
     return [];
   }
 
-  async restoreVersion(projectId, versionId) {
+  async restoreVersion(_projectId, _versionId) {
     throw new Error("Restore version not implemented in backend");
   }
 }

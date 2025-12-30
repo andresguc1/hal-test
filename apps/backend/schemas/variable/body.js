@@ -38,30 +38,31 @@ export default Joi.object({
         .default('flow')
         .description('Variable scope: flow (current execution) or global (shared)'),
 }).meta({
-    description: 'Unified variable operations: set/get/increment/push values with flow or global scope',
+    description:
+        'Unified variable operations: set/get/increment/push values with flow or global scope',
     examples: [
         {
             operation: 'set',
             name: 'counter',
             value: 0,
-            scope: 'flow'
+            scope: 'flow',
         },
         {
             operation: 'get',
             name: 'counter',
-            scope: 'flow'
+            scope: 'flow',
         },
         {
             operation: 'increment',
             name: 'counter',
             value: 1,
-            scope: 'flow'
+            scope: 'flow',
         },
         {
             operation: 'push',
             name: 'items',
             value: 'new item',
-            scope: 'flow'
-        }
-    ]
+            scope: 'flow',
+        },
+    ],
 });

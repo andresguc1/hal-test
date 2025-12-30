@@ -17,9 +17,18 @@
         "lint": {
             "outputs": []
         },
+        "lint:fix": {
+            "outputs": []
+        },
         "dev": {
             "cache": false,
             "persistent": true
+        },
+        "clean": {
+            "cache": false
+        },
+        "format": {
+            "cache": false
         }
     }
 }

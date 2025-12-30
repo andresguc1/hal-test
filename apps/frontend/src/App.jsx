@@ -10,7 +10,9 @@ import NodeConfigurationPanel from "./components/NodeConfigurationPanel";
 import AppFooter from "./components/AppFooter";
 import StyledMiniMap from "./components/StyledMiniMap";
 import { nodeTypes } from "./components/nodes";
-import StatusIndicator from "./components/StatusIndicator";
+{
+  /* Status Indicator removed */
+}
 import ProgressBar from "./components/ProgressBar";
 import ImportDialog from "./components/ImportDialog";
 import ExportDialog from "./components/ExportDialog";
@@ -86,7 +88,7 @@ export default function App() {
   const { zoomIn, zoomOut, fitView } = handlers;
 
   // Hook de React Flow para acceder a funciones de eliminación
-  const { getNodes, getEdges, deleteElements } = useReactFlow();
+  const { getNodes, getEdges, deleteElements, setEdges } = useReactFlow();
 
   // Panel visibility state
   const [isCreationPanelVisible, setIsCreationPanelVisible] = useState(true);
@@ -99,7 +101,7 @@ export default function App() {
     total: 0,
     status: "",
   });
-  const [isSaving, setIsSaving] = useState(false);
+  const [_isSaving, setIsSaving] = useState(false);
   const [menu, setMenu] = useState(null);
 
   // Custom hook para manejar el flujo
@@ -208,7 +210,7 @@ export default function App() {
         throw error; // Re-throw to let ImportDialog handle it
       }
     },
-    [importFlow, toast],
+    [importFlow, toast, t],
   );
 
   // ========================================
@@ -472,24 +474,7 @@ export default function App() {
   return (
     <div className="app-container">
       {/* Status Indicator */}
-      <div
-        className="status-indicator-wrapper"
-        style={{
-          position: "fixed",
-          top: "70px",
-          right: isConfigurationPanelVisible ? "340px" : "20px",
-          zIndex: 9998,
-          transition: "right 0.35s cubic-bezier(0.4, 0, 0.2, 1)"
-        }}
-      >
-        <StatusIndicator
-          isConnected={true}
-          isSaving={isSaving}
-          executionStats={
-            nodes.length > 0 ? { successful: 0, total: nodes.length } : null
-          }
-        />
-      </div>
+      {/* Status Indicator removed */}
 
       {/* Progress Bar */}
       {executionProgress.total > 0 && (
@@ -528,7 +513,9 @@ export default function App() {
             variant="dots"
             gap={20}
             size={1.5}
-            style={{ background: "linear-gradient(180deg, #111827 0%, #1F2937 100%)" }}
+            style={{
+              background: "linear-gradient(180deg, #111827 0%, #1F2937 100%)",
+            }}
           />
         </ReactFlow>
 
@@ -545,11 +532,11 @@ export default function App() {
               paste: handlePaste,
               cut: handleCut,
               delete: () => {
-                if (menu.type === 'node') deleteNode(menu.id);
-                if (menu.type === 'edge') {
+                if (menu.type === "node") deleteNode(menu.id);
+                if (menu.type === "edge") {
                   setEdges((eds) => eds.filter((e) => e.id !== menu.id));
                 }
-                if (menu.type === 'selection') {
+                if (menu.type === "selection") {
                   handleDeleteSelected();
                 }
               },
@@ -560,7 +547,8 @@ export default function App() {
               redo: redo,
               canUndo: canUndo,
               canRedo: canRedo,
-              canPaste: clipboard.nodes.length > 0 || clipboard.edges.length > 0,
+              canPaste:
+                clipboard.nodes.length > 0 || clipboard.edges.length > 0,
             }}
           />
         )}

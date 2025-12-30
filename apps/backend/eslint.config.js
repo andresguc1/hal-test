@@ -28,6 +28,8 @@ export default [
                 {
                     // Permite variables de error no utilizadas, como '_' en try...catch
                     caughtErrors: 'none',
+                    varsIgnorePattern: '^[A-Z_]',
+                    argsIgnorePattern: '^_',
                 },
             ],
         },

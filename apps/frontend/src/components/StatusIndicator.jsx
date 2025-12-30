@@ -53,7 +53,8 @@ export default function StatusIndicator({
         <div className="status-item status-execution">
           <CheckCircle size={16} />
           <span>
-            {executionStats.successful}/{executionStats.total} {t("common.executed")}
+            {executionStats.successful}/{executionStats.total}{" "}
+            {t("common.executed")}
           </span>
         </div>
       )}

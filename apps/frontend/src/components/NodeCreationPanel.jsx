@@ -14,12 +14,16 @@ import {
   Terminal,
   // Importación de Brain para la categoría LLM/AI
   Brain,
+  Sparkles,
   // Flow Control category icon
   Settings2,
+  Settings,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from "motion/react";
 import { panelVariants } from "../utils/motion-variants";
+import SettingsDialog from "./SettingsDialog";
 import "./styles/NodeCreationPanel.css";
 
 // Definición de categorías y nodos (convertidos a claves de i18n para etiquetas)
@@ -114,14 +118,7 @@ const NODE_CATEGORIES = {
       { id: "handle_downloads" },
     ],
   },
-  llm_ai: {
-    icon: <Brain size={20} />,
-    nodes: [
-      { id: "call_llm" },
-      { id: "generate_data" },
-      { id: "validate_semantic" },
-    ],
-  },
+
   execution_interface: {
     icon: <Terminal size={20} />,
     nodes: [
@@ -142,6 +139,14 @@ const NODE_CATEGORIES = {
       { id: "transform" },
     ],
   },
+  llm_ai: {
+    icon: <Sparkles className="w-5 h-5 text-purple-400" />,
+    nodes: [
+      { id: "call_llm" },
+      { id: "generate_data" },
+      { id: "validate_semantic" },
+    ],
+  },
 };
 
 const initialTabId = Object.keys(NODE_CATEGORIES)[0];
@@ -149,15 +154,14 @@ const initialTabId = Object.keys(NODE_CATEGORIES)[0];
 export default function NodeCreationPanel({ addNode, isVisible, togglePanel }) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState(initialTabId);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   return (
     <div className="panel-wrapper-burger">
       {/* Botón Toggle */}
       <button
         className={`btn-toggle-burger ${isVisible ? "panel-open" : ""}`}
-        aria-label={
-          isVisible ? t("common.hide_panel") : t("common.show_panel")
-        }
+        aria-label={isVisible ? t("common.hide_panel") : t("common.show_panel")}
         onClick={togglePanel}
       >
         {isVisible ? <ChevronLeft size={20} /> : <Menu size={20} />}
@@ -211,7 +215,10 @@ export default function NodeCreationPanel({ addNode, isVisible, togglePanel }) {
                       e.dataTransfer.setData("application/reactflow", node.id);
                       e.dataTransfer.effectAllowed = "move";
                     }}
-                    whileHover={{ x: 5, backgroundColor: "rgba(255,255,255,0.08)" }}
+                    whileHover={{
+                      x: 5,
+                      backgroundColor: "rgba(255,255,255,0.08)",
+                    }}
                     whileTap={{ scale: 0.96 }}
                     className="btn-node"
                     onClick={() => addNode(node.id)}
@@ -222,9 +229,26 @@ export default function NodeCreationPanel({ addNode, isVisible, togglePanel }) {
                 ))}
               </div>
             </div>
+            <div className="mt-auto px-2 pb-4 pt-2 border-t border-[#2c2f33]">
+              <button
+                className="tab-button-vertical w-full"
+                onClick={() => setIsSettingsOpen(true)}
+                title={t("settings.title", "Settings")}
+              >
+                <Settings className="w-5 h-5 text-gray-400 hover:text-white transition-colors" />
+                <span className="tab-label-vertical text-xs mt-1 text-gray-400">
+                  Settings
+                </span>
+              </button>
+            </div>
           </motion.aside>
         )}
       </AnimatePresence>
+
+      <SettingsDialog
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+      />
     </div>
   );
 }

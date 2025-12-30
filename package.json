@@ -19,6 +19,8 @@
         "build": "turbo build",
         "test": "turbo test",
         "lint": "turbo lint",
+        "lint:fix": "turbo lint:fix",
+        "format": "turbo format",
         "clean": "turbo clean && rm -rf node_modules"
     },
     "devDependencies": {

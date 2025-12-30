@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { XCircle, Play, Trash2, AlertCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from "motion/react";
 import { panelVariants } from "../utils/motion-variants";
 import "./styles/NodeConfigurationPanel.css";
@@ -51,7 +52,7 @@ function NodeConfigurationPanel({
   onClose,
   onDeleteNode,
   updateNodeConfiguration,
-  nodes = [],
+  nodes: _nodes = [],
 }) {
   const { t, i18n } = useTranslation();
   const [formData, setFormData] = useState({});
@@ -109,7 +110,8 @@ function NodeConfigurationPanel({
     ) {
       return `${t(`nodes.fields.${fieldConfig.name}`)} ${t("common.required_field")}`;
     }
-    if (fieldConfig.validation) return fieldConfig.validation(value, formData, t);
+    if (fieldConfig.validation)
+      return fieldConfig.validation(value, formData, t);
     return null;
   };
 
@@ -308,7 +310,12 @@ function NodeConfigurationPanel({
       });
 
       if (!resp.ok) {
-        alert(t("nodes.config.request_error", { status: resp.status, statusText: resp.statusText }));
+        alert(
+          t("nodes.config.request_error", {
+            status: resp.status,
+            statusText: resp.statusText,
+          }),
+        );
         return;
       }
 
@@ -352,7 +359,10 @@ function NodeConfigurationPanel({
 
     const { name, type, placeholder, options, min, max, hint } = fieldConfig;
     const value =
-      formData[name] ?? (fieldConfig.type === "checkbox" || fieldConfig.type === "boolean" ? false : "");
+      formData[name] ??
+      (fieldConfig.type === "checkbox" || fieldConfig.type === "boolean"
+        ? false
+        : "");
     const error = errors[name];
 
     const commonProps = {
@@ -361,7 +371,11 @@ function NodeConfigurationPanel({
       className: error ? "input-error" : "",
     };
 
-    const hintText = hint ? t(`nodes.hints.${name}`, hint) : (i18n.exists(`nodes.hints.${name}`) ? t(`nodes.hints.${name}`) : null);
+    const hintText = hint
+      ? t(`nodes.hints.${name}`, hint)
+      : i18n.exists(`nodes.hints.${name}`)
+        ? t(`nodes.hints.${name}`)
+        : null;
 
     if (type === "select") {
       return (

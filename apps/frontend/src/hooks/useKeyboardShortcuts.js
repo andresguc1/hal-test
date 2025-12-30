@@ -32,8 +32,18 @@ export function useKeyboardShortcuts(shortcuts, enabled = true) {
         target.tagName === "SELECT" ||
         target.isContentEditable;
 
-      // Si estamos en un campo de entrada, solo permitir atajos con modificadores
+      // Si estamos en un campo de entrada...
       if (isInputElement) {
+        // PERMITIR atajos nativos de edición (Copy, Paste, Cut, Select All, Undo, Redo)
+        const key = event.key.toLowerCase();
+        const isNativeAction =
+          (event.ctrlKey || event.metaKey) &&
+          ["c", "v", "x", "a", "z", "y"].includes(key);
+
+        if (isNativeAction) {
+          return; // Dejar que el navegador maneje copiar/pegar/deshacer nativamente
+        }
+
         const hasModifier = event.ctrlKey || event.metaKey || event.altKey;
         if (!hasModifier) {
           return; // Ignorar teclas simples en campos de entrada

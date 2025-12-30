@@ -15,6 +15,7 @@ Modern **React** application for visual browser automation with an intuitive nod
 ## ✨ Key Features
 
 ### Visual Flow Editor
+
 - Drag-and-drop node creation
 - Real-time execution feedback
 - Multiple project/flow management
@@ -22,12 +23,14 @@ Modern **React** application for visual browser automation with an intuitive nod
 - Copy/paste/cut operations
 
 ### Enhanced UX
+
 - **Motion Animations**: Smooth panel transitions and micro-interactions
 - **Premium Canvas**: Gradients, shadows, state badges
 - **50+ Node Icons**: Category-specific icons for instant recognition
 - **Dark Theme**: Professional glassmorphic design
 
 ### Advanced Features
+
 - Automatic screenshot capture (IndexedDB)
 - Context menus (node, edge, canvas, selection)
 - Keyboard shortcuts
@@ -67,6 +70,7 @@ src/
 ## 🚀 Development
 
 ### Prerequisites
+
 - Node.js 18+
 - pnpm
 
@@ -92,6 +96,7 @@ pnpm lint
 ### Environment Variables
 
 Create `.env` file (optional):
+
 ```bash
 VITE_API_BASE=http://localhost:2001/api
 ```
@@ -106,7 +111,9 @@ VITE_API_BASE=http://localhost:2001/api
 ## 🔧 Key Components
 
 ### useFlowManager
+
 Main hook for flow state management:
+
 - Node CRUD operations
 - Edge connections
 - Execution logic
@@ -114,14 +121,18 @@ Main hook for flow state management:
 - Clipboard operations
 
 ### CustomNode
+
 Enhanced node component with:
+
 - Category-specific icons
 - Gradient backgrounds
 - State badges (executing/success/error)
 - 3D shadow effects
 
 ### Motion Integration
+
 Standardized animations in `motion-variants.js`:
+
 - Panel transitions (left/right)
 - Tab animations
 - Item staggering
@@ -129,29 +140,35 @@ Standardized animations in `motion-variants.js`:
 ## 📦 Dependencies
 
 ### Core
+
 - `react` & `react-dom`
 - `@xyflow/react` - Flow editor
 - `motion` - Animations
 
 ### State & Data
+
 - `@tanstack/react-query` - Server state
 - `react-i18next` - i18n
 
 ### UI & Icons
+
 - `lucide-react` - Icons
 - `@dnd-kit/*` - Drag & drop utilities
 
 ### Utilities
+
 - `uuid` - ID generation
 - `idb` - IndexedDB wrapper
 
 ## 🌍 Internationalization
 
 Translations in `public/locales/{en,es}/`:
+
 - `common.json` - UI strings
 - `nodes.json` - Node labels/descriptions
 
 Add/update translations using:
+
 ```bash
 pnpm translate
 ```
@@ -159,48 +176,56 @@ pnpm translate
 ## 🐛 Debugging
 
 ### React DevTools
+
 Install [React Developer Tools](https://react.dev/learn/react-developer-tools)
 
 ### Console Logging
+
 The app uses a custom logger (`utils/logger.js`):
+
 ```javascript
-logger.debug('message', data, 'ComponentName');
-logger.error('error', error, 'ComponentName');
+logger.debug("message", data, "ComponentName");
+logger.error("error", error, "ComponentName");
 ```
 
 ### IndexedDB Inspection
+
 Screenshots stored in IndexedDB:
+
 - Open DevTools → Application → IndexedDB → `hal-test-screenshots`
 
 ## 🔑 Keyboard Shortcuts
 
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl/Cmd + S` | Save flow |
-| `Ctrl/Cmd + Z` | Undo |
-| `Ctrl/Cmd + Shift + Z` | Redo |
-| `Ctrl/Cmd + C` | Copy selected |
-| `Ctrl/Cmd + V` | Paste |
-| `Ctrl/Cmd + X` | Cut |
-| `Del/Backspace` | Delete selected |
-| `Ctrl/Cmd + A` | Select all |
-| `Ctrl/Cmd + D` | Duplicate |
+| Shortcut               | Action          |
+| ---------------------- | --------------- |
+| `Ctrl/Cmd + S`         | Save flow       |
+| `Ctrl/Cmd + Z`         | Undo            |
+| `Ctrl/Cmd + Shift + Z` | Redo            |
+| `Ctrl/Cmd + C`         | Copy selected   |
+| `Ctrl/Cmd + V`         | Paste           |
+| `Ctrl/Cmd + X`         | Cut             |
+| `Del/Backspace`        | Delete selected |
+| `Ctrl/Cmd + A`         | Select all      |
+| `Ctrl/Cmd + D`         | Duplicate       |
 
 ## 🎯 Best Practices
 
 ### Performance
+
 - All nodes are memoized
 - React Flow optimization enabled
 - Debounced auto-save
 - Efficient state updates
 
 ### Code Quality
+
 - Functional components with hooks
 - Single responsibility principle
 - Consistent naming conventions
 - Comprehensive error handling
 
 ### Accessibility
+
 - Semantic HTML
 - ARIA labels
 - Keyboard navigation
@@ -211,6 +236,7 @@ Screenshots stored in IndexedDB:
 See main [CONTRIBUTING.md](../../CONTRIBUTING.md) for guidelines.
 
 ### Frontend-Specific
+
 1. Follow existing component structure
 2. Use functional components + hooks
 3. Add i18n keys for all user-facing strings

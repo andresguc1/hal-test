@@ -8,10 +8,11 @@ import { browserService } from '../services/browser.service.js';
 import { traceService } from '../services/trace.service.js';
 import { globalStateManager } from '../services/stateManager.js';
 import VariableManager from '../services/VariableManager.js';
+import { aiService } from '../services/AIService.js';
+import { z } from 'zod';
 import * as fsp from 'fs/promises';
 // import * as fs from 'fs';
 import * as path from 'path';
-
 
 // Create Variable Manager instance
 const variableManager = new VariableManager();
@@ -80,9 +81,7 @@ async function getOrCreateContext(req, browser, browserId) {
                     if (typeof ctx.pages === 'function') {
                         const pages = ctx.pages();
                         if (Array.isArray(pages) && pages.length > 0) {
-                            console.log(
-                                '[INFO] Reusing existing context with active pages',
-                            );
+                            console.log('[INFO] Reusing existing context with active pages');
                             return ctx;
                         }
                     }
@@ -121,7 +120,9 @@ async function getOrCreateContext(req, browser, browserId) {
         }
     }
 
-    throw new Error('The browser does not support creating contexts (newContext method not available)');
+    throw new Error(
+        'The browser does not support creating contexts (newContext method not available)',
+    );
 }
 
 /**
@@ -190,7 +191,11 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
         ].includes(actionName);
 
         if (!isBrowserAction && !isContextAction && actionName !== 'open_url') {
-            ({ page, browserId: targetBrowserId, context } = await getActivePage(req, opts.browserId));
+            ({
+                page,
+                browserId: targetBrowserId,
+                context,
+            } = await getActivePage(req, opts.browserId));
             // browser = context.browser(); // Unused
         } else if (opts.browserId) {
             const validation = validateBrowser(req, opts.browserId);
@@ -232,7 +237,10 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
         // Clean up the browser if the error is connection/closed related
         if (
             targetBrowserId &&
-            (errorMessage.includes('disconnected') || errorMessage.includes('closed') || errorMessage.includes('desconectado') || errorMessage.includes('cerrado'))
+            (errorMessage.includes('disconnected') ||
+                errorMessage.includes('closed') ||
+                errorMessage.includes('desconectado') ||
+                errorMessage.includes('cerrado'))
         ) {
             browserService.delete(targetBrowserId);
         }
@@ -315,7 +323,9 @@ export const openUrlAction = async (req, res) => {
         const { url, waitUntil = 'load', timeout = 30000 } = req.body ?? {};
 
         if (!url) {
-            return res.status(400).json({ success: false, message: req.t('actions.open_url.url_required') });
+            return res
+                .status(400)
+                .json({ success: false, message: req.t('actions.open_url.url_required') });
         }
 
         const validation = validateBrowser(req, req.body.browserId);
@@ -349,7 +359,7 @@ export const openUrlAction = async (req, res) => {
             console.log('[INFO] Creating new page for navigation.');
         }
 
-        await page.bringToFront().catch(() => { });
+        await page.bringToFront().catch(() => {});
         await page.goto(url, { waitUntil, timeout });
         const duration = Date.now() - start;
 
@@ -617,7 +627,10 @@ export const manageTabsAction = (req, res) =>
         const validActions = ['new', 'switch', 'close', 'list'];
         if (!validActions.includes(action)) {
             throw new Error(
-                req.t('actions.manage_tabs.error_invalid_action', { action, validActions: validActions.join(', ') })
+                req.t('actions.manage_tabs.error_invalid_action', {
+                    action,
+                    validActions: validActions.join(', '),
+                }),
             );
         }
 
@@ -642,7 +655,10 @@ export const manageTabsAction = (req, res) =>
             const pages = context.pages();
             if (tabIndex < 0 || tabIndex >= pages.length) {
                 throw new Error(
-                    req.t('actions.manage_tabs.error_invalid_index', { index: tabIndex, max: pages.length - 1 })
+                    req.t('actions.manage_tabs.error_invalid_index', {
+                        index: tabIndex,
+                        max: pages.length - 1,
+                    }),
                 );
             }
             const targetPage = pages[tabIndex];
@@ -650,7 +666,10 @@ export const manageTabsAction = (req, res) =>
             responseData.tabIndex = tabIndex;
             responseData.url = targetPage.url();
             responseData.title = await targetPage.title();
-            message = req.t('actions.manage_tabs.switch_success', { index: tabIndex, title: responseData.title });
+            message = req.t('actions.manage_tabs.switch_success', {
+                index: tabIndex,
+                title: responseData.title,
+            });
         } else if (action === 'close') {
             // Close tab(s)
             if (closeAll) {
@@ -663,7 +682,10 @@ export const manageTabsAction = (req, res) =>
                 const pages = context.pages();
                 if (tabIndex < 0 || tabIndex >= pages.length) {
                     throw new Error(
-                        req.t('actions.manage_tabs.error_invalid_index', { index: tabIndex, max: pages.length - 1 })
+                        req.t('actions.manage_tabs.error_invalid_index', {
+                            index: tabIndex,
+                            max: pages.length - 1,
+                        }),
                     );
                 }
                 await pages[tabIndex].close();
@@ -973,7 +995,9 @@ export const selectOptionAction = (req, res) =>
             } else if (selectionCriteria === 'index') {
                 valuesToSelect.index = parseInt(selectionValue, 10);
             } else {
-                throw new Error(req.t('errors.invalid_selection_criteria', { criteria: selectionCriteria }));
+                throw new Error(
+                    req.t('errors.invalid_selection_criteria', { criteria: selectionCriteria }),
+                );
             }
         }
 
@@ -1057,8 +1081,8 @@ export const uploadFileAction = (req, res) =>
         const fileArray = Array.isArray(files)
             ? files
             : typeof files === 'string'
-                ? files.split(',').map((file) => file.trim())
-                : [];
+              ? files.split(',').map((file) => file.trim())
+              : [];
 
         // Validate that files are provided
         if (!fileArray || fileArray.length === 0) {
@@ -1070,9 +1094,7 @@ export const uploadFileAction = (req, res) =>
             (file) => file.includes('..') || file.startsWith('/'),
         );
         if (invalidFiles.length > 0) {
-            throw new Error(
-                req.t('errors.unsafe_file_paths', { paths: invalidFiles.join(', ') }),
-            );
+            throw new Error(req.t('errors.unsafe_file_paths', { paths: invalidFiles.join(', ') }));
         }
 
         // Upload files
@@ -1311,9 +1333,7 @@ export const waitForElementAction = (req, res) =>
         } catch (error) {
             // Specific handling for TimeoutError
             if (error.name === 'TimeoutError' || error.message.includes('Timeout')) {
-                throw new Error(
-                    req.t('errors.wait_timeout', { selector, condition, timeout }),
-                );
+                throw new Error(req.t('errors.wait_timeout', { selector, condition, timeout }));
             }
             throw error;
         }
@@ -1338,9 +1358,7 @@ export const waitVisibleAction = (req, res) =>
                     if (el) el.scrollIntoView({ block: 'center', inline: 'center' });
                 }, selector);
             } catch (err) {
-                console.warn(
-                    `[WARN] Could not scroll to element '${selector}': ${err.message}`,
-                );
+                console.warn(`[WARN] Could not scroll to element '${selector}': ${err.message}`);
                 // Continue, maybe it's already visible or the error will trigger in the next step
             }
         }
@@ -1561,7 +1579,7 @@ export const interceptRequestAction = (req, res) =>
         // Manejo de timeout para des-registrar (opcional, Playwright no tiene un unroute con timeout nativo)
         if (timeout > 0) {
             setTimeout(() => {
-                page.unroute(urlPattern, handleRoute).catch(() => { });
+                page.unroute(urlPattern, handleRoute).catch(() => {});
             }, timeout);
         }
 
@@ -1606,7 +1624,7 @@ export const mockResponseAction = (req, res) =>
 
         if (timeout > 0) {
             setTimeout(() => {
-                page.unroute(urlPattern, handleRoute).catch(() => { });
+                page.unroute(urlPattern, handleRoute).catch(() => {});
             }, timeout);
         }
 
@@ -1630,12 +1648,15 @@ export const blockResourceAction = (req, res) =>
 
         if (timeout > 0) {
             setTimeout(() => {
-                page.unroute(urlPattern, handleRoute).catch(() => { });
+                page.unroute(urlPattern, handleRoute).catch(() => {});
             }, timeout);
         }
 
         return {
-            message: req.t('actions.block_resource.success', { urlPattern, resourceType: resourceType || 'all' }),
+            message: req.t('actions.block_resource.success', {
+                urlPattern,
+                resourceType: resourceType || 'all',
+            }),
         };
     });
 
@@ -1666,7 +1687,7 @@ export const modifyHeadersAction = (req, res) =>
 
         if (timeout > 0) {
             setTimeout(() => {
-                page.unroute(urlPattern, handleRoute).catch(() => { });
+                page.unroute(urlPattern, handleRoute).catch(() => {});
             }, timeout);
         }
 
@@ -2182,38 +2203,6 @@ export const handleDownloadsAction = (req, res) =>
         return { message: req.t('actions.handle_downloads.success'), data: { path: savePath } };
     });
 
-export const callLlmAction = (req, res) =>
-    executePlaywrightAction(req, res, 'call_llm', async (page, opts) => {
-        const { prompt, model } = opts;
-        // Mock implementation: In a real environment, an LLM API would be called here.
-        // For now, we return a simulated response.
-        const mockResponse = `Simulated response from model ${model || 'default'} for: ${prompt.substring(0, 20)}...`;
-        return { message: req.t('actions.call_llm.success'), data: { response: mockResponse } };
-    });
-
-export const generateDataAction = (req, res) =>
-    executePlaywrightAction(req, res, 'generate_data', async (page, opts) => {
-        const { schema } = opts;
-        // Generación de datos simple basada en keys del schema
-        const data = {};
-        if (schema && typeof schema === 'object') {
-            for (const key of Object.keys(schema)) {
-                if (key.includes('email')) data[key] = `user_${Date.now()}@example.com`;
-                else if (key.includes('name')) data[key] = `User ${Date.now()}`;
-                else if (key.includes('age')) data[key] = Math.floor(Math.random() * 80) + 18;
-                else data[key] = `sample_${key}`;
-            }
-        }
-        return { message: req.t('actions.generate_data.success'), data: { generated: data } };
-    });
-
-export const validateSemanticAction = (req, res) =>
-    executePlaywrightAction(req, res, 'validate_semantic', async (page, opts) => {
-        const { assertion } = opts;
-        // Mock: Validacion semántica siempre pasa en esta demo
-        return { message: 'Validacion semántica completada', data: { passed: true, assertion } };
-    });
-
 export const runTestsAction = (req, res) =>
     res.status(200).json({
         success: true,
@@ -2313,7 +2302,10 @@ export const dragDropAction = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: req.t('actions.drag_drop.success', { source: sourceSelector, target: targetSelector }),
+            message: req.t('actions.drag_drop.success', {
+                source: sourceSelector,
+                target: targetSelector,
+            }),
             durationMs: duration,
             browserId: finalBrowserId,
         });
@@ -2454,38 +2446,41 @@ export const resizeViewportAction = async (req, res) => {
 
 export const variableAction = async (req, res) => {
     try {
-        const { operation, name, value, scope = "flow" } = req.body;
+        const { operation, name, value, scope = 'flow' } = req.body;
 
         let result;
         let message;
 
         switch (operation) {
-            case "set":
+            case 'set':
                 variableManager.set(name, value, scope);
-                result = { name, value, scope, operation: "set" };
-                message = req.t("actions.variable.set_success", { name, scope });
+                result = { name, value, scope, operation: 'set' };
+                message = req.t('actions.variable.set_success', { name, scope });
                 break;
 
-            case "get":
+            case 'get': {
                 const getValue = variableManager.get(name, scope);
-                result = { name, value: getValue, scope, operation: "get" };
-                message = req.t("actions.variable.get_success", { name });
+                result = { name, value: getValue, scope, operation: 'get' };
+                message = req.t('actions.variable.get_success', { name });
                 break;
+            }
 
-            case "increment":
-                const amount = typeof value === "number" ? value : 1;
+            case 'increment': {
+                const amount = typeof value === 'number' ? value : 1;
                 variableManager.increment(name, amount, scope);
                 const newValue = variableManager.get(name, scope);
-                result = { name, value: newValue, amount, scope, operation: "increment" };
-                message = req.t("actions.variable.increment_success", { name, amount });
+                result = { name, value: newValue, amount, scope, operation: 'increment' };
+                message = req.t('actions.variable.increment_success', { name, amount });
                 break;
+            }
 
-            case "push":
+            case 'push': {
                 variableManager.push(name, value, scope);
                 const array = variableManager.get(name, scope);
-                result = { name, array, scope, operation: "push" };
-                message = req.t("actions.variable.push_success", { name });
+                result = { name, array, scope, operation: 'push' };
+                message = req.t('actions.variable.push_success', { name });
                 break;
+            }
 
             default:
                 return res.status(400).json({
@@ -2500,37 +2495,36 @@ export const variableAction = async (req, res) => {
             data: result,
         });
     } catch (error) {
-        console.error("[ERROR] variableAction:", error.message);
+        console.error('[ERROR] variableAction:', error.message);
         return res.status(500).json({
             success: false,
-            message: req.t("actions.variable.error"),
+            message: req.t('actions.variable.error'),
             error: error.message,
         });
     }
 };
 
-
 export const conditionalAction = async (req, res) => {
     try {
         const { conditions, logic = 'AND' } = req.body;
-        
+
         const result = variableManager.evaluateConditions(conditions, logic);
-        
+
         return res.status(200).json({
             success: true,
-            message: req.t("actions.conditional.success"),
-            data: { 
-                result, 
+            message: req.t('actions.conditional.success'),
+            data: {
+                result,
                 path: result ? 'true' : 'false',
                 conditions,
-                logic 
+                logic,
             },
         });
     } catch (error) {
-        console.error("[ERROR] conditionalAction:", error.message);
+        console.error('[ERROR] conditionalAction:', error.message);
         return res.status(500).json({
             success: false,
-            message: req.t("actions.conditional.error"),
+            message: req.t('actions.conditional.error'),
             error: error.message,
         });
     }
@@ -2539,19 +2533,19 @@ export const conditionalAction = async (req, res) => {
 export const loopAction = async (req, res) => {
     try {
         const { mode, iterations, condition, array, itemVar, maxIterations = 1000 } = req.body;
-        
+
         const data = { mode, iterations, condition, array, itemVar, maxIterations };
-        
+
         return res.status(200).json({
             success: true,
-            message: req.t("actions.loop.success"),
+            message: req.t('actions.loop.success'),
             data,
         });
     } catch (error) {
-        console.error("[ERROR] loopAction:", error.message);
+        console.error('[ERROR] loopAction:', error.message);
         return res.status(500).json({
             success: false,
-            message: req.t("actions.loop.error"),
+            message: req.t('actions.loop.error'),
             error: error.message,
         });
     }
@@ -2560,17 +2554,17 @@ export const loopAction = async (req, res) => {
 export const branchAction = async (req, res) => {
     try {
         const { mode, timeout = 30000 } = req.body;
-        
+
         return res.status(200).json({
             success: true,
-            message: req.t("actions.branch.success"),
+            message: req.t('actions.branch.success'),
             data: { mode, timeout },
         });
     } catch (error) {
-        console.error("[ERROR] branchAction:", error.message);
+        console.error('[ERROR] branchAction:', error.message);
         return res.status(500).json({
             success: false,
-            message: req.t("actions.branch.error"),
+            message: req.t('actions.branch.error'),
             error: error.message,
         });
     }
@@ -2579,17 +2573,17 @@ export const branchAction = async (req, res) => {
 export const flowControlAction = async (req, res) => {
     try {
         const { action, returnValue } = req.body;
-        
+
         return res.status(200).json({
             success: true,
-            message: req.t("actions.flow_control.success"),
+            message: req.t('actions.flow_control.success'),
             data: { action, returnValue },
         });
     } catch (error) {
-        console.error("[ERROR] flowControlAction:", error.message);
+        console.error('[ERROR] flowControlAction:', error.message);
         return res.status(500).json({
             success: false,
-            message: req.t("actions.flow_control.error"),
+            message: req.t('actions.flow_control.error'),
             error: error.message,
         });
     }
@@ -2598,39 +2592,222 @@ export const flowControlAction = async (req, res) => {
 export const transformAction = async (req, res) => {
     try {
         const { operation, input, expression, mergeWith, outputVar } = req.body;
-        
+
         const resolvedInput = variableManager.resolve(input);
-        const inputArray = variableManager.get(resolvedInput.replace('${', '').replace('}', ''), 'flow') || [];
-        
+        const inputArray =
+            variableManager.get(resolvedInput.replace('${', '').replace('}', ''), 'flow') || [];
+
         let result;
         switch (operation) {
             case 'map':
-                result = inputArray.map(item => variableManager.evaluate(expression, { item }));
+                result = inputArray.map((item) => variableManager.evaluate(expression, { item }));
                 break;
             case 'filter':
-                result = inputArray.filter(item => variableManager.evaluate(expression, { item }));
+                result = inputArray.filter((item) =>
+                    variableManager.evaluate(expression, { item }),
+                );
                 break;
-            case 'merge':
-                const mergeArray = variableManager.get(mergeWith.replace('${', '').replace('}', ''), 'flow') || [];
+            case 'merge': {
+                const mergeArray =
+                    variableManager.get(mergeWith.replace('${', '').replace('}', ''), 'flow') || [];
                 result = [...inputArray, ...mergeArray];
                 break;
+            }
             default:
                 result = inputArray;
         }
-        
+
         variableManager.set(outputVar, result, 'flow');
-        
+
         return res.status(200).json({
             success: true,
-            message: req.t("actions.transform.success"),
+            message: req.t('actions.transform.success'),
             data: { operation, result, outputVar },
         });
     } catch (error) {
-        console.error("[ERROR] transformAction:", error.message);
+        console.error('[ERROR] transformAction:', error.message);
         return res.status(500).json({
             success: false,
-            message: req.t("actions.transform.error"),
+            message: req.t('actions.transform.error'),
             error: error.message,
+        });
+    }
+};
+
+// ==========================================================
+// 🤖 AI ACTIONS
+// ==========================================================
+
+export const callLlmAction = async (req, res) => {
+    try {
+        const { prompt, system, model, variable } = req.body;
+
+        const defaultModel = req.headers['x-openai-model'];
+        const keys = {
+            openai: req.headers['x-openai-key'],
+            google: req.headers['x-google-key'],
+            anthropic: req.headers['x-anthropic-key'],
+        };
+
+        const response = await aiService.generateText({
+            prompt: variableManager.resolve(prompt),
+            system: system ? variableManager.resolve(system) : undefined,
+            modelName: model,
+            defaultModel,
+            keys,
+        });
+
+        variableManager.set(variable, response, 'flow');
+
+        return res.status(200).json({
+            success: true,
+            message: req.t('actions.call_llm.success'),
+            data: { response, variable },
+        });
+    } catch (error) {
+        console.error('[ERROR] callLlmAction:', error.message);
+        return res.status(500).json({
+            success: false,
+            message: req.t('actions.call_llm.error'),
+            error: error.message,
+        });
+    }
+};
+
+export const generateDataAction = async (req, res) => {
+    try {
+        const { description, fields, count = 1, variable } = req.body;
+
+        // Build Zod schema dynamically from fields
+        const shape = {};
+        fields.forEach((field) => {
+            let validator;
+            switch (field.type) {
+                case 'string':
+                    validator = z.string();
+                    break;
+                case 'number':
+                    validator = z.number();
+                    break;
+                case 'boolean':
+                    validator = z.boolean();
+                    break;
+                case 'array':
+                    validator = z.array(z.string());
+                    break; // Simplified for now
+                case 'object':
+                    validator = z.record(z.any());
+                    break;
+                default:
+                    validator = z.string();
+            }
+            if (field.description) validator = validator.describe(field.description);
+            shape[field.name] = validator;
+        });
+
+        let schema = z.object(shape);
+        if (count > 1) {
+            schema = z.array(schema);
+        }
+
+        const defaultModel = req.headers['x-openai-model'];
+        const keys = {
+            openai: req.headers['x-openai-key'],
+            google: req.headers['x-google-key'],
+            anthropic: req.headers['x-anthropic-key'],
+        };
+
+        const data = await aiService.generateStructured({
+            description: variableManager.resolve(description),
+            schema,
+            defaultModel,
+            keys,
+        });
+
+        variableManager.set(variable, data, 'flow');
+
+        return res.status(200).json({
+            success: true,
+            message: req.t('actions.generate_data.success'),
+            data: { data, variable },
+        });
+    } catch (error) {
+        console.error('[ERROR] generateDataAction:', error.message);
+        return res.status(500).json({
+            success: false,
+            message: req.t('actions.generate_data.error'),
+            error: error.message,
+        });
+    }
+};
+
+export const validateSemanticAction = async (req, res) => {
+    try {
+        const { content, criteria, variable } = req.body;
+
+        const defaultModel = req.headers['x-openai-model'];
+        const keys = {
+            openai: req.headers['x-openai-key'],
+            google: req.headers['x-google-key'],
+            anthropic: req.headers['x-anthropic-key'],
+        };
+
+        const result = await aiService.validate({
+            content: variableManager.resolve(content),
+            criteria: variableManager.resolve(criteria),
+            defaultModel,
+            keys,
+        });
+
+        variableManager.set(variable, result, 'flow');
+
+        return res.status(200).json({
+            success: true,
+            message: req.t('actions.validate_semantic.success'),
+            data: { result, variable },
+        });
+    } catch (error) {
+        console.error('[ERROR] validateSemanticAction:', error.message);
+        return res.status(500).json({
+            success: false,
+            message: req.t('actions.validate_semantic.error'),
+            error: error.message,
+        });
+    }
+};
+
+/**
+ * Validate AI Credentials by attempting a minimal generation
+ */
+export const validateAICredentials = async (req, res) => {
+    try {
+        const { provider, model, apiKey } = req.body;
+
+        if (!provider || !model || !apiKey) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing provider, model or apiKey',
+            });
+        }
+
+        const keys = { [provider]: apiKey.trim() };
+        // We use a very cheap, short prompt to test connectivity
+        await aiService.generateText({
+            prompt: "Return 'OK' if you see this.",
+            modelName: model,
+            defaultModel: model,
+            keys,
+        });
+
+        res.json({ success: true, message: 'Connection successful' });
+    } catch (error) {
+        // Log brief error internally (avoid logging full error object which might have keys)
+        console.error('[AI Validation Error]', error.message);
+
+        // Return 200 so frontend doesn't log "Unauthorized" console error
+        res.status(200).json({
+            success: false,
+            message: 'Validation failed: ' + (error.message || 'Unknown error'),
         });
     }
 };

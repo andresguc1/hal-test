@@ -278,7 +278,13 @@ export const useFlowManager = (currentProject, currentFlowId) => {
   // ========================================
   useEffect(() => {
     // Only save if auto-save is enabled AND the current nodes belong to the active flowId
-    if (!autoSaveEnabled || !currentProject || !currentFlowId || lastLoadedFlowId.current !== currentFlowId) return;
+    if (
+      !autoSaveEnabled ||
+      !currentProject ||
+      !currentFlowId ||
+      lastLoadedFlowId.current !== currentFlowId
+    )
+      return;
 
     // Debounce de 2 segundos - solo guarda si no hay cambios recientes
     const debouncedSave = debounce(() => {
@@ -1691,7 +1697,8 @@ export const useFlowManager = (currentProject, currentFlowId) => {
     }, [saveToHistory]),
 
     pasteElements: useCallback(() => {
-      if (clipboard.nodes.length === 0 && clipboard.edges.length === 0) return 0;
+      if (clipboard.nodes.length === 0 && clipboard.edges.length === 0)
+        return 0;
 
       saveToHistory();
 

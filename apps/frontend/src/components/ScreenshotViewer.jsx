@@ -85,11 +85,14 @@ function ScreenshotViewer({ screenshots, nodeId, isVisible = true }) {
 
   const formatTime = (timestamp) => {
     if (!timestamp) return "";
-    return new Date(timestamp).toLocaleTimeString(i18n.language === "es" ? "es-ES" : "en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    });
+    return new Date(timestamp).toLocaleTimeString(
+      i18n.language === "es" ? "es-ES" : "en-US",
+      {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      },
+    );
   };
 
   return (
@@ -116,7 +119,9 @@ function ScreenshotViewer({ screenshots, nodeId, isVisible = true }) {
           ) : (
             <div className="screenshot-placeholder">
               <div className="placeholder-icon">📸</div>
-              <div className="placeholder-text">{t("screenshots.no_captures")}</div>
+              <div className="placeholder-text">
+                {t("screenshots.no_captures")}
+              </div>
             </div>
           )}
         </div>
@@ -134,7 +139,9 @@ function ScreenshotViewer({ screenshots, nodeId, isVisible = true }) {
             </button>
             <div className="screenshot-modal-header">
               {t("screenshots.title")}{" "}
-              {selectedImage.timing === "before" ? t("screenshots.before") : t("screenshots.after")}
+              {selectedImage.timing === "before"
+                ? t("screenshots.before")
+                : t("screenshots.after")}
             </div>
             <img
               src={selectedImage.url}

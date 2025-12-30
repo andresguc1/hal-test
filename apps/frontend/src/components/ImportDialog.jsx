@@ -306,14 +306,18 @@ const ImportDialog = ({ isOpen, onClose, onImport }) => {
                       <div className="directory-info">
                         <span>{selectedDirectory.name}</span>
                         <span className="file-count">
-                          {t("dialogs.import.files_count", { count: selectedDirectory.count })}
+                          {t("dialogs.import.files_count", {
+                            count: selectedDirectory.count,
+                          })}
                         </span>
                       </div>
                     </>
                   ) : (
                     <>
                       <FolderOpen size={24} />
-                      <span>{t("dialogs.import.select_directory_placeholder")}</span>
+                      <span>
+                        {t("dialogs.import.select_directory_placeholder")}
+                      </span>
                     </>
                   )}
                 </div>
@@ -324,9 +328,7 @@ const ImportDialog = ({ isOpen, onClose, onImport }) => {
                   <span>{t("dialogs.import.pom_hint")}</span>
                 </div>
               )}
-              <p className="help-text">
-                {t("dialogs.import.recursive_hint")}
-              </p>
+              <p className="help-text">{t("dialogs.import.recursive_hint")}</p>
             </div>
           )}
 

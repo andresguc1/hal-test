@@ -116,10 +116,10 @@ const ProjectSelector = ({
                   (e.currentTarget.style.background = "#2a2d2e")
                 }
                 onMouseLeave={(e) =>
-                (e.currentTarget.style.background =
-                  currentProject?.id === project.id
-                    ? "#37373d"
-                    : "transparent")
+                  (e.currentTarget.style.background =
+                    currentProject?.id === project.id
+                      ? "#37373d"
+                      : "transparent")
                 }
               >
                 <div style={{ display: "flex", flexDirection: "column" }}>
@@ -127,7 +127,9 @@ const ProjectSelector = ({
                     {project.name}
                   </span>
                   <span style={{ color: "#888", fontSize: "11px" }}>
-                    {new Date(project.updatedAt).toLocaleDateString(i18n.language === 'es' ? 'es-ES' : 'en-US')}
+                    {new Date(project.updatedAt).toLocaleDateString(
+                      i18n.language === "es" ? "es-ES" : "en-US",
+                    )}
                   </span>
                 </div>
 
@@ -136,7 +138,11 @@ const ProjectSelector = ({
                     onClick={(e) => {
                       e.stopPropagation();
                       if (
-                        window.confirm(t("common.delete_project_confirm", { name: project.name }))
+                        window.confirm(
+                          t("common.delete_project_confirm", {
+                            name: project.name,
+                          }),
+                        )
                       ) {
                         onDeleteProject(project.id);
                       }

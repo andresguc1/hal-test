@@ -11,29 +11,33 @@ export default Joi.object({
     iterations: Joi.when('mode', {
         is: 'count',
         then: Joi.number().integer().min(1).max(1000).required(),
-        otherwise: Joi.forbidden()
+        otherwise: Joi.forbidden(),
     }),
 
     // For while mode
     condition: Joi.when('mode', {
         is: 'while',
         then: Joi.string().required(),
-        otherwise: Joi.forbidden()
+        otherwise: Joi.forbidden(),
     }),
 
     // For forEach mode
     array: Joi.when('mode', {
         is: 'forEach',
         then: Joi.string().required(),
-        otherwise: Joi.forbidden()
+        otherwise: Joi.forbidden(),
     }),
 
     itemVar: Joi.when('mode', {
         is: 'forEach',
         then: Joi.string().required(),
-        otherwise: Joi.forbidden()
+        otherwise: Joi.forbidden(),
     }),
 
-    maxIterations: Joi.number().integer().min(1).max(10000).default(1000)
+    maxIterations: Joi.number()
+        .integer()
+        .min(1)
+        .max(10000)
+        .default(1000)
         .description('Safety limit for while loops'),
 });

@@ -111,7 +111,6 @@ app.get('/api/status', (req, res) => {
     });
 });
 
-
 // --- 6. ERROR HANDLING ---
 
 // Handle Route Not Found (404)

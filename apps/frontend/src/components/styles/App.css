@@ -223,7 +223,9 @@ html,
   justify-content: center;
   z-index: 5;
   /* Por debajo de controles y paneles */
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
 }
 
 /* 🔑 CLAVE: Estado de Selección Visual */
@@ -231,7 +233,7 @@ html,
   z-index: 10 !important;
 }
 
-.react-flow__node.selected>div {
+.react-flow__node.selected > div {
   border-color: var(--hal-orange) !important;
   box-shadow:
     0 0 0 2px var(--hal-orange),
@@ -265,7 +267,6 @@ html,
 }
 
 @keyframes pulse-edge {
-
   0%,
   100% {
     opacity: 1;

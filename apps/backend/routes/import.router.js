@@ -41,7 +41,9 @@ router.post('/analyze', (req, res) => {
         }
 
         if (!content) {
-            return res.status(400).json({ success: false, message: req.t('actions.import_router.content_required') });
+            return res
+                .status(400)
+                .json({ success: false, message: req.t('actions.import_router.content_required') });
         }
 
         const result = importService.analyze(content);
@@ -59,7 +61,9 @@ router.post('/convert', (req, res) => {
         console.log('[DEBUG] Framework requested:', framework);
 
         if (!content) {
-            return res.status(400).json({ success: false, message: req.t('actions.import_router.content_required') });
+            return res
+                .status(400)
+                .json({ success: false, message: req.t('actions.import_router.content_required') });
         }
 
         const result = importService.convert(content, framework);
@@ -85,7 +89,10 @@ router.post('/import-directory', (req, res) => {
         console.log('[DEBUG] Directory path:', path);
 
         if (!path) {
-            return res.status(400).json({ success: false, message: req.t('actions.import_router.directory_path_required') });
+            return res.status(400).json({
+                success: false,
+                message: req.t('actions.import_router.directory_path_required'),
+            });
         }
 
         const result = importService.importDirectory(path);

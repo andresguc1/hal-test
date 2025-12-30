@@ -10,16 +10,16 @@ const mapFlowData = (flow) => {
     const flowObj = flow.toJSON();
     return {
         ...flowObj,
-        nodes: (flowObj.nodes || []).map(n => ({
+        nodes: (flowObj.nodes || []).map((n) => ({
             ...n,
             id: n.nodeId, // Use nodeId as React Flow id
-            nodeId: undefined // Hide from frontend
+            nodeId: undefined, // Hide from frontend
         })),
-        edges: (flowObj.edges || []).map(e => ({
+        edges: (flowObj.edges || []).map((e) => ({
             ...e,
             id: e.edgeId, // Use edgeId as React Flow id
-            edgeId: undefined // Hide from frontend
-        }))
+            edgeId: undefined, // Hide from frontend
+        })),
     };
 };
 
@@ -31,15 +31,17 @@ const mapFlowData = (flow) => {
 router.get('/projects', async (req, res) => {
     try {
         const projects = await Project.findAll({
-            include: [{
-                model: Flow,
-                as: 'flows'
-            }],
+            include: [
+                {
+                    model: Flow,
+                    as: 'flows',
+                },
+            ],
             order: [
                 ['updatedAt', 'DESC'],
                 [{ model: Flow, as: 'flows' }, 'order', 'ASC'],
-                [{ model: Flow, as: 'flows' }, 'createdAt', 'ASC']
-            ]
+                [{ model: Flow, as: 'flows' }, 'createdAt', 'ASC'],
+            ],
         });
         res.json(projects);
     } catch (error) {
@@ -55,10 +57,12 @@ router.post('/projects', async (req, res) => {
 
         // Return project with flows (even if empty initially)
         const newProject = await Project.findByPk(project.id, {
-            include: [{
-                model: Flow,
-                as: 'flows'
-            }]
+            include: [
+                {
+                    model: Flow,
+                    as: 'flows',
+                },
+            ],
         });
         res.status(201).json(newProject);
     } catch (error) {
@@ -70,14 +74,16 @@ router.post('/projects', async (req, res) => {
 router.get('/projects/:id', async (req, res) => {
     try {
         const project = await Project.findByPk(req.params.id, {
-            include: [{
-                model: Flow,
-                as: 'flows'
-            }],
+            include: [
+                {
+                    model: Flow,
+                    as: 'flows',
+                },
+            ],
             order: [
                 [{ model: Flow, as: 'flows' }, 'order', 'ASC'],
-                [{ model: Flow, as: 'flows' }, 'createdAt', 'ASC']
-            ]
+                [{ model: Flow, as: 'flows' }, 'createdAt', 'ASC'],
+            ],
         });
         if (!project) return res.status(404).json({ error: 'Project not found' });
         res.json(project);
@@ -97,14 +103,16 @@ router.put('/projects/:id', async (req, res) => {
 
         // Return project with flows
         const updatedProject = await Project.findByPk(project.id, {
-            include: [{
-                model: Flow,
-                as: 'flows'
-            }],
+            include: [
+                {
+                    model: Flow,
+                    as: 'flows',
+                },
+            ],
             order: [
                 [{ model: Flow, as: 'flows' }, 'order', 'ASC'],
-                [{ model: Flow, as: 'flows' }, 'createdAt', 'ASC']
-            ]
+                [{ model: Flow, as: 'flows' }, 'createdAt', 'ASC'],
+            ],
         });
         res.json(updatedProject);
     } catch (error) {
@@ -133,26 +141,29 @@ router.delete('/projects/:id', async (req, res) => {
 router.post('/projects/:projectId/flows', async (req, res) => {
     try {
         const { projectId } = req.params;
+        const { name } = req.body;
         const flow = await Flow.create({
             name,
-            projectId
+            projectId,
         });
 
         // Return the updated project with all flows
         const updatedProject = await Project.findByPk(projectId, {
-            include: [{
-                model: Flow,
-                as: 'flows'
-            }],
+            include: [
+                {
+                    model: Flow,
+                    as: 'flows',
+                },
+            ],
             order: [
                 [{ model: Flow, as: 'flows' }, 'order', 'ASC'],
-                [{ model: Flow, as: 'flows' }, 'createdAt', 'ASC']
-            ]
+                [{ model: Flow, as: 'flows' }, 'createdAt', 'ASC'],
+            ],
         });
 
         res.status(201).json({
             flow: mapFlowData(flow),
-            project: updatedProject
+            project: updatedProject,
         });
     } catch (error) {
         res.status(400).json({ error: error.message });
@@ -169,8 +180,8 @@ router.get('/projects/:projectId/flows/:flowId', async (req, res) => {
             where: { id: flowId, projectId: projectId },
             include: [
                 { model: Node, as: 'nodes' },
-                { model: Edge, as: 'edges' }
-            ]
+                { model: Edge, as: 'edges' },
+            ],
         });
 
         if (!flow) {
@@ -200,7 +211,9 @@ router.put('/projects/:projectId/flows/:flowId', async (req, res) => {
 
         if (!flow) {
             await transaction.rollback();
-            console.warn(`[ProjectRouter] Flow NOT FOUND for update: ID=${flowId}, ProjectID=${projectId}`);
+            console.warn(
+                `[ProjectRouter] Flow NOT FOUND for update: ID=${flowId}, ProjectID=${projectId}`,
+            );
             return res.status(404).json({ error: 'Flow not found' });
         }
 
@@ -208,23 +221,29 @@ router.put('/projects/:projectId/flows/:flowId', async (req, res) => {
 
         if (nodes) {
             await Node.destroy({ where: { flowId: flow.id }, transaction });
-            await Node.bulkCreate(nodes.map(n => ({
-                nodeId: n.id,
-                type: n.type,
-                data: n.data,
-                position: n.position,
-                flowId: flow.id
-            })), { transaction });
+            await Node.bulkCreate(
+                nodes.map((n) => ({
+                    nodeId: n.id,
+                    type: n.type,
+                    data: n.data,
+                    position: n.position,
+                    flowId: flow.id,
+                })),
+                { transaction },
+            );
         }
 
         if (edges) {
             await Edge.destroy({ where: { flowId: flow.id }, transaction });
-            await Edge.bulkCreate(edges.map(e => ({
-                edgeId: e.id,
-                source: e.source,
-                target: e.target,
-                flowId: flow.id
-            })), { transaction });
+            await Edge.bulkCreate(
+                edges.map((e) => ({
+                    edgeId: e.id,
+                    source: e.source,
+                    target: e.target,
+                    flowId: flow.id,
+                })),
+                { transaction },
+            );
         }
 
         await transaction.commit();
@@ -232,8 +251,8 @@ router.put('/projects/:projectId/flows/:flowId', async (req, res) => {
         const updatedFlow = await Flow.findByPk(flow.id, {
             include: [
                 { model: Node, as: 'nodes' },
-                { model: Edge, as: 'edges' }
-            ]
+                { model: Edge, as: 'edges' },
+            ],
         });
         res.json(mapFlowData(updatedFlow));
     } catch (error) {
@@ -259,22 +278,24 @@ router.put('/projects/:projectId/flows/reorder', async (req, res) => {
                 { order: item.order },
                 {
                     where: { id: item.id, projectId },
-                    transaction
-                }
+                    transaction,
+                },
             );
         }
 
         await transaction.commit();
 
         const updatedProject = await Project.findByPk(projectId, {
-            include: [{
-                model: Flow,
-                as: 'flows'
-            }],
+            include: [
+                {
+                    model: Flow,
+                    as: 'flows',
+                },
+            ],
             order: [
                 [{ model: Flow, as: 'flows' }, 'order', 'ASC'],
-                [{ model: Flow, as: 'flows' }, 'createdAt', 'ASC']
-            ]
+                [{ model: Flow, as: 'flows' }, 'createdAt', 'ASC'],
+            ],
         });
         res.json(updatedProject);
     } catch (error) {
@@ -296,19 +317,21 @@ router.delete('/projects/:projectId/flows/:flowId', async (req, res) => {
 
         // Return the updated project with all remaining flows
         const updatedProject = await Project.findByPk(projectId, {
-            include: [{
-                model: Flow,
-                as: 'flows'
-            }],
+            include: [
+                {
+                    model: Flow,
+                    as: 'flows',
+                },
+            ],
             order: [
                 [{ model: Flow, as: 'flows' }, 'order', 'ASC'],
-                [{ model: Flow, as: 'flows' }, 'createdAt', 'ASC']
-            ]
+                [{ model: Flow, as: 'flows' }, 'createdAt', 'ASC'],
+            ],
         });
 
         res.json({
             message: 'Flow deleted',
-            project: updatedProject
+            project: updatedProject,
         });
     } catch (error) {
         res.status(500).json({ error: error.message });

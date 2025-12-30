@@ -5,11 +5,13 @@ export default Joi.object({
     action: Joi.string()
         .valid('break', 'continue', 'return')
         .required()
-        .description('Flow control action: break (exit loop), continue (next iteration), return (exit flow)'),
+        .description(
+            'Flow control action: break (exit loop), continue (next iteration), return (exit flow)',
+        ),
 
     returnValue: Joi.when('action', {
         is: 'return',
         then: Joi.any(),
-        otherwise: Joi.forbidden()
+        otherwise: Joi.forbidden(),
     }).description('Value to return (only for return action)'),
 });

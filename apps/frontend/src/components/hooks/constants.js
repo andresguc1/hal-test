@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 // ========================================
 // CONSTANTES DE CONFIGURACIÓN
 // ========================================
@@ -284,7 +285,6 @@ export const NODE_FIELD_CONFIGS = {
         return null;
       },
     },
-
   ],
 
   click: [
@@ -295,7 +295,8 @@ export const NODE_FIELD_CONFIGS = {
       placeholder: '#some-element or //button[@id="submit"]',
       required: true,
       validation: (v, allParams, t) => {
-        if (!v || String(v).trim() === "") return t("nodes.validation.selector_required");
+        if (!v || String(v).trim() === "")
+          return t("nodes.validation.selector_required");
         return null;
       },
     },
@@ -310,7 +311,6 @@ export const NODE_FIELD_CONFIGS = {
         { value: "middle", label: "Middle" },
       ],
     },
-
   ],
 
   type_text: [
@@ -321,7 +321,8 @@ export const NODE_FIELD_CONFIGS = {
       placeholder: '#username-field or //input[@id="user"]',
       required: true,
       validation: (v, allParams, t) => {
-        if (!v || String(v).trim() === "") return t("nodes.validation.selector_required");
+        if (!v || String(v).trim() === "")
+          return t("nodes.validation.selector_required");
         return null;
       },
     },
@@ -372,7 +373,6 @@ export const NODE_FIELD_CONFIGS = {
         return null;
       },
     },
-
   ],
 
   select_option: [
@@ -469,8 +469,7 @@ export const NODE_FIELD_CONFIGS = {
       name: "selector",
       label: "Container Selector (Optional)",
       type: "text",
-      placeholder:
-        "Ex: #scroll-container. If empty, scrolls the entire page.",
+      placeholder: "Ex: #scroll-container. If empty, scrolls the entire page.",
       required: false,
       hint: "Leave empty to scroll main window. Use a selector for a specific element.",
     },
@@ -612,7 +611,8 @@ export const NODE_FIELD_CONFIGS = {
       placeholder: '#ready-confirmation-modal or //div[@id="modal"]',
       required: true,
       validation: (v, allParams, t) => {
-        if (!v || String(v).trim() === "") return t("nodes.validation.selector_required");
+        if (!v || String(v).trim() === "")
+          return t("nodes.validation.selector_required");
         return null;
       },
     },
@@ -634,7 +634,6 @@ export const NODE_FIELD_CONFIGS = {
       type: "checkbox",
       defaultValue: true,
     },
-
   ],
 
   wait_navigation: [
@@ -662,7 +661,6 @@ export const NODE_FIELD_CONFIGS = {
         return null;
       },
     },
-
   ],
 
   wait_network: [
@@ -684,7 +682,6 @@ export const NODE_FIELD_CONFIGS = {
       type: "checkbox",
       defaultValue: true,
     },
-
   ],
 
   wait_conditional: [
@@ -724,7 +721,6 @@ export const NODE_FIELD_CONFIGS = {
         return null;
       },
     },
-
   ],
 
   take_screenshot: [
@@ -941,8 +937,6 @@ export const NODE_FIELD_CONFIGS = {
         return null;
       },
     },
-
-
   ],
 
   intercept_request: [
@@ -999,8 +993,6 @@ export const NODE_FIELD_CONFIGS = {
         return null;
       },
     },
-
-
   ],
 
   mock_response: [
@@ -1011,7 +1003,8 @@ export const NODE_FIELD_CONFIGS = {
       placeholder: "**/api/v1/products/*",
       required: true,
       validation: (v, allParams, t) => {
-        if (!v || String(v).trim() === "") return t("nodes.validation.url_pattern_required");
+        if (!v || String(v).trim() === "")
+          return t("nodes.validation.url_pattern_required");
         return null;
       },
     },
@@ -1067,8 +1060,6 @@ export const NODE_FIELD_CONFIGS = {
         return null;
       },
     },
-
-
   ],
 
   block_resource: [
@@ -1079,7 +1070,8 @@ export const NODE_FIELD_CONFIGS = {
       placeholder: "https://tracking.analytics.com/**",
       required: true,
       validation: (v, allParams, t) => {
-        if (!v || String(v).trim() === "") return t("nodes.validation.url_pattern_required");
+        if (!v || String(v).trim() === "")
+          return t("nodes.validation.url_pattern_required");
         return null;
       },
     },
@@ -1112,8 +1104,6 @@ export const NODE_FIELD_CONFIGS = {
         return null;
       },
     },
-
-
   ],
 
   modify_headers: [
@@ -1153,8 +1143,6 @@ export const NODE_FIELD_CONFIGS = {
       placeholder: "0 = indefinite",
       defaultValue: 0,
     },
-
-
   ],
 
   wait_for_response: [
@@ -1185,7 +1173,6 @@ export const NODE_FIELD_CONFIGS = {
       type: "text",
       placeholder: "responseVar",
     },
-
   ],
 
   wait_for_request: [
@@ -1217,7 +1204,6 @@ export const NODE_FIELD_CONFIGS = {
       type: "number",
       defaultValue: 30000,
     },
-
   ],
 
   set_network_conditions: [
@@ -1268,12 +1254,9 @@ export const NODE_FIELD_CONFIGS = {
       min: -1,
       conditional: { field: "profile", is: "Custom" },
     },
-
   ],
 
-  clear_all_mocks: [
-
-  ],
+  clear_all_mocks: [],
 
   manage_cookies: [
     {
@@ -1297,7 +1280,7 @@ export const NODE_FIELD_CONFIGS = {
         '[{"name":"auth_token","value":"...","domain":"ejemplo.com","secure":true}]',
       defaultValue: "",
       // validación ligera: si acción= set o delete, debe existir algo
-      validation: (v, form) => {
+      validation: (v, form, t) => {
         if (
           (form.action === "set" || form.action === "delete") &&
           (!v || String(v).trim() === "")
@@ -1307,8 +1290,6 @@ export const NODE_FIELD_CONFIGS = {
         return null;
       },
     },
-
-
   ],
 
   manage_storage: [
@@ -1350,8 +1331,6 @@ export const NODE_FIELD_CONFIGS = {
       placeholder: "ABC-SESSION-XYZ-987",
       defaultValue: "",
     },
-
-
   ],
 
   inject_tokens: [
@@ -1394,8 +1373,6 @@ export const NODE_FIELD_CONFIGS = {
       validation: (v, allParams, t) =>
         !v || String(v).trim() === "" ? "urlPattern is required" : null,
     },
-
-
   ],
 
   persist_session: [
@@ -1417,7 +1394,7 @@ export const NODE_FIELD_CONFIGS = {
       type: "text",
       placeholder: "/data/admin_session_001.json",
       defaultValue: "",
-      validation: (v, form) => {
+      validation: (v, form, t) => {
         if (
           (form.action === "save" || form.action === "load") &&
           (!v || String(v).trim() === "")
@@ -1439,12 +1416,9 @@ export const NODE_FIELD_CONFIGS = {
       type: "checkbox",
       defaultValue: false,
     },
-
-
   ],
 
   create_context: [
-
     {
       name: "storageState",
       label: "Storage state (file path, optional)",
@@ -1497,11 +1471,9 @@ export const NODE_FIELD_CONFIGS = {
       placeholder: "en-US",
       defaultValue: "",
     },
-
   ],
 
   cleanup_state: [
-
     {
       name: "target",
       label: "Target",
@@ -1544,11 +1516,9 @@ export const NODE_FIELD_CONFIGS = {
       type: "checkbox",
       defaultValue: true,
     },
-
   ],
 
   handle_hooks: [
-
     {
       name: "hookType",
       label: "Hook Type",
@@ -1577,9 +1547,7 @@ export const NODE_FIELD_CONFIGS = {
       placeholder: "async (page, action, params, result) => { /* ... */ }",
       required: true,
       validation: (v, allParams, t) =>
-        !v || String(v).trim() === ""
-          ? "Callback code is required"
-          : null,
+        !v || String(v).trim() === "" ? "Callback code is required" : null,
     },
     {
       name: "once",
@@ -1587,7 +1555,6 @@ export const NODE_FIELD_CONFIGS = {
       type: "checkbox",
       defaultValue: false,
     },
-
   ],
 
   control_exceptions: [
@@ -1653,7 +1620,6 @@ export const NODE_FIELD_CONFIGS = {
   ],
 
   read_data: [
-
     {
       name: "sourceType",
       label: "Source Type",
@@ -1673,8 +1639,7 @@ export const NODE_FIELD_CONFIGS = {
       placeholder: "data/test_users.csv",
       required: true,
       validation: (v, allParams, t) => {
-        if (!v || String(v).trim() === "")
-          return "File path is required";
+        if (!v || String(v).trim() === "") return "File path is required";
         return null;
       },
     },
@@ -1685,8 +1650,7 @@ export const NODE_FIELD_CONFIGS = {
       placeholder: "userList",
       required: true,
       validation: (v, allParams, t) => {
-        if (!v || String(v).trim() === "")
-          return "Variable name is required";
+        if (!v || String(v).trim() === "") return "Variable name is required";
         return null;
       },
     },
@@ -1707,11 +1671,9 @@ export const NODE_FIELD_CONFIGS = {
         { value: "ascii", label: "ASCII" },
       ],
     },
-
   ],
 
   save_results: [
-
     {
       name: "destinationType",
       label: "Destination Type",
@@ -1749,11 +1711,9 @@ export const NODE_FIELD_CONFIGS = {
         { value: "ascii", label: "ASCII" },
       ],
     },
-
   ],
 
   handle_downloads: [
-
     {
       name: "action",
       label: "Action",
@@ -1817,11 +1777,9 @@ export const NODE_FIELD_CONFIGS = {
         return null;
       },
     },
-
   ],
 
   call_llm: [
-
     {
       name: "model",
       label: "Modelo",
@@ -1849,8 +1807,7 @@ export const NODE_FIELD_CONFIGS = {
       placeholder: "adCopy",
       required: true,
       validation: (v, allParams, t) => {
-        if (!v || String(v).trim() === "")
-          return "Variable name is required";
+        if (!v || String(v).trim() === "") return "Variable name is required";
         return null;
       },
     },
@@ -1878,11 +1835,9 @@ export const NODE_FIELD_CONFIGS = {
         return null;
       },
     },
-
   ],
 
   generate_data: [
-
     {
       name: "model",
       label: "Modelo",
@@ -1910,8 +1865,7 @@ export const NODE_FIELD_CONFIGS = {
       placeholder: "mockedUsers",
       required: true,
       validation: (v, allParams, t) => {
-        if (!v || String(v).trim() === "")
-          return "Variable name is required";
+        if (!v || String(v).trim() === "") return "Variable name is required";
         return null;
       },
     },
@@ -1938,11 +1892,9 @@ export const NODE_FIELD_CONFIGS = {
         return null;
       },
     },
-
   ],
 
   validate_semantic: [
-
     {
       name: "model",
       label: "Modelo",
@@ -1982,11 +1934,9 @@ export const NODE_FIELD_CONFIGS = {
       type: "number",
       defaultValue: 15000,
     },
-
   ],
 
   run_tests: [
-
     {
       name: "testSuite",
       label: "Test / Suite Path",
@@ -1994,8 +1944,7 @@ export const NODE_FIELD_CONFIGS = {
       placeholder: "tests/critical_flow.spec.js",
       required: true,
       validation: (v, allParams, t) => {
-        if (!v || String(v).trim() === "")
-          return "Test path is required";
+        if (!v || String(v).trim() === "") return "Test path is required";
         return null;
       },
     },
@@ -2039,11 +1988,9 @@ export const NODE_FIELD_CONFIGS = {
         return null;
       },
     },
-
   ],
 
   return_code: [
-
     {
       name: "successField",
       label: "Success field (dot notation)",
@@ -2074,11 +2021,9 @@ export const NODE_FIELD_CONFIGS = {
       type: "checkbox",
       defaultValue: true,
     },
-
   ],
 
   integrate_ci: [
-
     {
       name: "provider",
       label: "CI Provider",
@@ -2171,7 +2116,7 @@ export const NODE_FIELD_CONFIGS = {
       name: "value",
       label: "Value",
       type: "textarea",
-      placeholder: "Ex: Hello World, 42, [1,2,3], {\"key\": \"value\"}",
+      placeholder: 'Ex: Hello World, 42, [1,2,3], {"key": "value"}',
       required: false,
       conditional: {
         field: "operation",
@@ -2191,8 +2136,6 @@ export const NODE_FIELD_CONFIGS = {
       required: true,
       hint: "Flow scope: limited to current execution. Global: shared across all executions.",
     },
-
-
   ],
   conditional: [
     {
@@ -2201,7 +2144,7 @@ export const NODE_FIELD_CONFIGS = {
       type: "textarea",
       placeholder: '[{"left": "${counter}", "operator": ">", "right": 10}]',
       required: true,
-      validation: (value) => {
+      validation: (value, allParams, t) => {
         if (!value) return "Conditions are required";
         try {
           const parsed = JSON.parse(value);
@@ -2252,7 +2195,7 @@ export const NODE_FIELD_CONFIGS = {
         field: "mode",
         is: ["count"],
       },
-      validation: (value, allParams) => {
+      validation: (value, allParams, t) => {
         if (allParams.mode === "count") {
           const n = Number(value);
           if (!value || isNaN(n) || n < 1) return "Must be >= 1";
@@ -2328,7 +2271,7 @@ export const NODE_FIELD_CONFIGS = {
       type: "number",
       defaultValue: 30000,
       placeholder: "30000",
-      validation: (value) => {
+      validation: (value, allParams, t) => {
         const n = Number(value);
         if (isNaN(n) || n < 0) return "Must be >= 0 (0 = no timeout)";
         return null;
@@ -2417,7 +2360,7 @@ export const NODE_FIELD_CONFIGS = {
       type: "text",
       placeholder: "processedItems",
       required: true,
-      validation: (value) => {
+      validation: (value, allParams, t) => {
         if (!value) return "Output variable name is required";
         if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(value)) {
           return "Must start with letter or underscore, alphanumeric only";
@@ -2435,7 +2378,8 @@ export const NODE_FIELD_CONFIGS = {
       placeholder: '#id-del-boton-principal or //button[text()="OK"]',
       required: true,
       validation: (v, allParams, t) => {
-        if (!v || String(v).trim() === "") return t("nodes.validation.selector_required");
+        if (!v || String(v).trim() === "")
+          return t("nodes.validation.selector_required");
         return null;
       },
     },
@@ -2468,7 +2412,6 @@ export const NODE_FIELD_CONFIGS = {
       type: "checkbox",
       defaultValue: true,
     },
-
   ],
 
   get_set_content: [
@@ -2479,7 +2422,8 @@ export const NODE_FIELD_CONFIGS = {
       placeholder: "#element or .class",
       required: true,
       validation: (v, allParams, t) => {
-        if (!v || String(v).trim() === "") return t("nodes.validation.selector_required");
+        if (!v || String(v).trim() === "")
+          return t("nodes.validation.selector_required");
         return null;
       },
     },
@@ -2552,7 +2496,6 @@ export const NODE_FIELD_CONFIGS = {
   ],
 
   cli_params: [
-
     {
       name: "paramName",
       label: "Parameter Name (CLI)",
@@ -2598,7 +2541,6 @@ export const NODE_FIELD_CONFIGS = {
         "if (value !== 'dev' && value !== 'staging' && value !== 'prod') { throw new Error('Environment must be dev, staging or prod.'); }",
       defaultValue: "",
     },
-
   ],
 
   wait_for_element: [
@@ -2765,8 +2707,7 @@ export const NODE_FIELD_CONFIGS = {
       name: "executablePath",
       label: "Executable path (custom)",
       type: "text",
-      placeholder:
-        "Ex: /path/to/chrome.exe. Use custom browser executable.",
+      placeholder: "Ex: /path/to/chrome.exe. Use custom browser executable.",
     },
     // Se podrían añadir más como 'timeout', 'devtools', o 'downloadsPath' si son necesarios.
   ],
@@ -2800,15 +2741,12 @@ export const NODE_FIELD_CONFIGS = {
       type: "checkbox",
       defaultValue: true,
     },
-
   ],
   go_back: [
-
     // Eliminado: El campo "steps"
   ],
 
   go_forward: [
-
     // Eliminado: El campo "steps"
   ],
 };
@@ -2953,4 +2891,3 @@ export const NODE_TYPE_TO_CATEGORY = {
   // Flow Control
   variable: "flow_control",
 };
-

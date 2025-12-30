@@ -7,21 +7,19 @@ export default Joi.object({
         .required()
         .description('Transform operation'),
 
-    input: Joi.string().required()
-        .description('Input array variable (e.g., ${items})'),
+    input: Joi.string().required().description('Input array variable (e.g., ${items})'),
 
     expression: Joi.when('operation', {
         is: Joi.string().valid('map', 'filter'),
         then: Joi.string().required(),
-        otherwise: Joi.forbidden()
+        otherwise: Joi.forbidden(),
     }).description('Expression to evaluate for map/filter'),
 
     mergeWith: Joi.when('operation', {
         is: 'merge',
         then: Joi.string().required(),
-        otherwise: Joi.forbidden()
+        otherwise: Joi.forbidden(),
     }).description('Array to merge with'),
 
-    outputVar: Joi.string().required()
-        .description('Variable name to store result'),
+    outputVar: Joi.string().required().description('Variable name to store result'),
 });

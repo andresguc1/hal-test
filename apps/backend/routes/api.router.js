@@ -416,6 +416,26 @@ const actionRoutes = [
         action: 'transformAction',
         category: 'flow_control',
     },
+
+    // ========== AI Integration ==========
+    {
+        path: 'call_llm',
+        schema: 'callLlmBodySchema',
+        action: 'callLlmAction',
+        category: 'llm_ai',
+    },
+    {
+        path: 'generate_data',
+        schema: 'generateDataBodySchema',
+        action: 'generateDataAction',
+        category: 'llm_ai',
+    },
+    {
+        path: 'validate_semantic',
+        schema: 'validateSemanticBodySchema',
+        action: 'validateSemanticAction',
+        category: 'llm_ai',
+    },
 ];
 
 // ==========================================================
@@ -496,5 +516,7 @@ router.use('/import', importRouter);
 // Register export router
 router.use('/export', exportRouter);
 
+// Custom Route for AI Validation
+router.post('/ai/validate', actions.validateAICredentials);
 
 export default router;

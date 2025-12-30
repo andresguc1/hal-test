@@ -82,7 +82,10 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges }) => {
     try {
       const flow = convertNodesToFlow();
 
-      setProgress({ stage: "sending", message: t("dialogs.export.generating_json") });
+      setProgress({
+        stage: "sending",
+        message: t("dialogs.export.generating_json"),
+      });
 
       const response = await fetch("/api/export/json", {
         method: "POST",
@@ -92,9 +95,7 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges }) => {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.message || `Error: ${response.statusText}`,
-        );
+        throw new Error(errorData.message || `Error: ${response.statusText}`);
       }
 
       // Download the file
@@ -148,9 +149,7 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges }) => {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.message || `Error: ${response.statusText}`,
-        );
+        throw new Error(errorData.message || `Error: ${response.statusText}`);
       }
 
       const result = await response.json();
@@ -246,7 +245,9 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges }) => {
           >
             <FileJson size={20} />
             <span>{t("dialogs.export.mode_json_label")}</span>
-            <span className="mode-description">{t("dialogs.export.mode_json_desc")}</span>
+            <span className="mode-description">
+              {t("dialogs.export.mode_json_desc")}
+            </span>
           </button>
           <button
             className={`mode-button ${exportMode === "code" ? "active" : ""}`}
@@ -258,7 +259,9 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges }) => {
           >
             <Code2 size={20} />
             <span>{t("dialogs.export.mode_code_label")}</span>
-            <span className="mode-description">{t("dialogs.export.mode_code_desc")}</span>
+            <span className="mode-description">
+              {t("dialogs.export.mode_code_desc")}
+            </span>
           </button>
         </div>
 
@@ -273,11 +276,15 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges }) => {
                 <p>{t("dialogs.export.json_desc")}</p>
                 <div className="export-stats">
                   <div className="stat">
-                    <span className="stat-label">{t("dialogs.export.nodes_label")}</span>
+                    <span className="stat-label">
+                      {t("dialogs.export.nodes_label")}
+                    </span>
                     <span className="stat-value">{nodes.length}</span>
                   </div>
                   <div className="stat">
-                    <span className="stat-label">{t("dialogs.export.edges_label")}</span>
+                    <span className="stat-label">
+                      {t("dialogs.export.edges_label")}
+                    </span>
                     <span className="stat-value">{edges.length}</span>
                   </div>
                 </div>
@@ -304,7 +311,9 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges }) => {
                 </div>
                 <div className="export-stats">
                   <div className="stat">
-                    <span className="stat-label">{t("dialogs.export.actions_label")}</span>
+                    <span className="stat-label">
+                      {t("dialogs.export.actions_label")}
+                    </span>
                     <span className="stat-value">{nodes.length}</span>
                   </div>
                 </div>

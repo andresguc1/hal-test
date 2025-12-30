@@ -11,6 +11,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"**/*.js\" \"!node_modules/**\"",
+    "clean": "rm -rf node_modules",
     "prepare": "husky"
   },
   "keywords": [],
@@ -22,9 +23,13 @@
     "directory": "apps/backend"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.1",
+    "@ai-sdk/google": "^3.0.1",
+    "@ai-sdk/openai": "^3.0.1",
     "@babel/parser": "^7.28.5",
     "@babel/traverse": "^7.28.5",
     "@playwright/mcp": "^0.0.44",
+    "ai": "^6.0.3",
     "body-parser": "^2.2.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
@@ -42,7 +47,8 @@
     "sequelize": "^6.37.7",
     "sqlite3": "^5.1.7",
     "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.1"
+    "swagger-ui-express": "^5.0.1",
+    "zod": "^4.2.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.38.0",
