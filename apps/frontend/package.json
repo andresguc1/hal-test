@@ -74,7 +74,7 @@
     ]
   },
   "engines": {
-    "node": ">=18"
+    "node": "20.x"
   },
   "browserslist": [
     "last 2 versions",
