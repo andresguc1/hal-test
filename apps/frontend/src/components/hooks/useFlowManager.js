@@ -1254,7 +1254,8 @@ export const useFlowManager = (currentProject, currentFlowId) => {
           if (browserId) {
             try {
               console.log(`🧹 Cleaning up browser ${browserId}...`);
-              await fetch("http://localhost:2001/api/actions/close_browser", {
+              const apiBase = import.meta.env.PROD ? "https://hal-test-backend.onrender.com" : "http://localhost:2001";
+              await fetch(`${apiBase}/api/actions/close_browser`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ browserId }),

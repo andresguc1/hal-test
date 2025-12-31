@@ -10,9 +10,8 @@
  * @type {string[]}
  */
 const ALLOWED_DOMAINS = [
-  "http://localhost:2001",
-  "http://127.0.0.1:2001",
-  // Add production domain from environment variable if available
+  ...(import.meta.env.PROD ? ["https://hal-test-backend.onrender.com"] : ["http://localhost:2001", "http://127.0.0.1:2001"]),
+  // Add configured API base if available
   ...(import.meta.env?.VITE_API_BASE ? [import.meta.env.VITE_API_BASE] : []),
 ];
 

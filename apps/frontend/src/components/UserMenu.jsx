@@ -20,7 +20,7 @@ import {
  * - Settings View: Strict Sequential Flow (Provider -> LLM Model -> API Key)
  */
 export default function UserMenu({
-  apiUrl = "http://localhost:2001/api/status",
+  apiUrl = (import.meta.env.PROD ? "https://hal-test-backend.onrender.com" : "http://localhost:2001") + "/api/status",
   timeoutMs = 5000,
 }) {
   const { t } = useTranslation();
@@ -112,7 +112,8 @@ export default function UserMenu({
 
     try {
       // 2. Call Validation Endpoint
-      const response = await fetch("http://localhost:2001/api/ai/validate", {
+      const apiBase = import.meta.env.PROD ? "https://hal-test-backend.onrender.com" : "http://localhost:2001";
+      const response = await fetch(`${apiBase}/api/ai/validate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

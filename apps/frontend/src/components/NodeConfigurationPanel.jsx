@@ -269,7 +269,7 @@ function NodeConfigurationPanel({
         return; // important: avoid local fetch when onExecute exists
       }
 
-      const BACKEND_API_BASE = "http://localhost:2001/api/actions";
+      const BACKEND_API_BASE = (import.meta.env.PROD ? "https://hal-test-backend.onrender.com" : "http://localhost:2001") + "/api/actions";
 
       const endpointByType = {
         launch_browser: `${BACKEND_API_BASE}/launch_browser`,
