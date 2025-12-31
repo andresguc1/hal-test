@@ -24,6 +24,13 @@ class BrowserManager {
             timeout,
         } = options;
 
+        // FORCE headless mode in production (servers don't have X11/Display)
+        const isProduction = process.env.NODE_ENV === 'production';
+        if (isProduction && !headless) {
+            console.log('[BrowserService] Production environment detected - forcing headless mode');
+            headless = true;
+        }
+
         // 1. Select the browser engine
         let browserEngine;
         switch (browserType) {
