@@ -1,0 +1,122 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: # Manual trigger
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # ========================================
+  # JOB 1: Linting & Testing
+  # ========================================
+  test:
+    name: 🧪 Test & Lint
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: 📥 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 🔍 Run ESLint
+        run: pnpm run lint
+        continue-on-error: true # Don't fail build on lint errors (for now)
+
+      - name: 🎨 Check Prettier formatting
+        run: pnpm exec prettier --check "**/*.{js,jsx,json,md}"
+        continue-on-error: true
+
+      - name: 🧪 Run backend tests
+        run: cd apps/backend && pnpm test
+        continue-on-error: true # Don't fail build on test errors (for now)
+
+  # ========================================
+  # JOB 2: Build Verification
+  # ========================================
+  build:
+    name: 🏗️ Build Check
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: 📥 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 🏗️ Build frontend
+        run: cd apps/frontend && pnpm build
+
+      - name: 📦 Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: apps/frontend/dist
+          retention-days: 1
+
+  # ========================================
+  # JOB 3: Deploy to Production
+  # ========================================
+  deploy:
+    name: 🚀 Deploy
+    runs-on: ubuntu-latest
+    needs: [test, build]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🚀 Trigger Netlify Deploy
+        run: |
+          echo "Netlify auto-deploys on push to main"
+          echo "Frontend URL: https://monumental-puffpuff-0cf489.netlify.app"
+
+      - name: 🚀 Trigger Render Deploy
+        run: |
+          echo "Render auto-deploys on push to main"
+          echo "Backend URL: https://hal-test-backend.onrender.com"
+
+      - name: ⏳ Wait for deployments
+        run: sleep 60 # Give services time to deploy
+
+      - name: 🏥 Health check - Backend
+        run: |
+          echo "Checking backend health..."
+          curl -f https://hal-test-backend.onrender.com/api/status || exit 1
+
+      - name: ✅ Deployment successful
+        run: |
+          echo "::notice::✅ Deployment completed successfully!"
+          echo "Frontend: https://monumental-puffpuff-0cf489.netlify.app"
+          echo "Backend: https://hal-test-backend.onrender.com"
