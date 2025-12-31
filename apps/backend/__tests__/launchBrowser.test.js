@@ -11,8 +11,8 @@ import request from 'supertest';
 // Asegúrate de que tu archivo app.js use 'export default app;' para que esta importación funcione.
 import app from '../app.js';
 
-// La función 'describe' y 'it' (o 'test') son nativas de Vitest/Jest.
-describe('GET /api/nodes/operations?op=launch_browser', () => {
+// SKIPPED: This route /api/nodes/operations was removed from the codebase
+describe.skip('GET /api/nodes/operations?op=launch_browser', () => {
     // Test 1: Verificar respuesta 200 y formato de objeto
     it('debería responder con un código 200 y un objeto JSON', async () => {
         const response = await request(app).get('/api/nodes/operations?op=launch_browser');

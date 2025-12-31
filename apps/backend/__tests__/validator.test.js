@@ -18,6 +18,7 @@ const mockHttp = (reqData = {}) => {
         body: reqData.body || {},
         params: reqData.params || {},
         query: reqData.query || {},
+        t: (key) => key, // Mock i18n translation function
     };
 
     // Mock simple de res con métodos encadenables por si se necesitan

@@ -35,7 +35,15 @@ const createTestApp = (errorToThrow) => {
 // PRUEBAS
 // -------------------------------------------------------------
 
+import { afterEach } from 'vitest';
+
 describe('ErrorHandler Middleware', () => {
+    const originalEnv = process.env.NODE_ENV;
+
+    afterEach(() => {
+        // Restore original NODE_ENV after each test
+        process.env.NODE_ENV = originalEnv;
+    });
     // 🎯 NUEVO: Prueba de error 500 en modo Desarrollo (debe mostrar stack)
     it('debe capturar errores sin statusCode y devolver 500 con stack en desarrollo', async () => {
         const genericError = new Error('Memory leak detected.');

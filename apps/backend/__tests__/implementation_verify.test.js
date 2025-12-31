@@ -1,8 +1,8 @@
 import request from 'supertest';
 import { describe, it, expect } from 'vitest';
+import app from '../app.js';
 
-const baseUrl = 'http://localhost:2001';
-const api = request(baseUrl);
+const api = request(app);
 
 describe('Refactored Implementation Verification', () => {
     let browserId;
@@ -14,7 +14,10 @@ describe('Refactored Implementation Verification', () => {
     });
 
     it('should launch a browser', async () => {
-        const res = await api.post('/api/actions/launch_browser').send({ headless: true });
+        const res = await api.post('/api/actions/launch_browser').send({
+            browserType: 'chromium',
+            headless: true,
+        });
         expect(res.status).toBe(200);
         expect(res.body.success).toBe(true);
         expect(res.body.browserId).toBeDefined();
@@ -32,7 +35,7 @@ describe('Refactored Implementation Verification', () => {
         const res = await api.post('/api/actions/manage_cookies').send({
             browserId,
             action: 'set',
-            cookies,
+            cookiesData: JSON.stringify(cookies), // Schema expects JSON string
         });
         expect(res.status).toBe(200);
         expect(res.body.message).toContain('Cookies establecidas');
@@ -42,6 +45,7 @@ describe('Refactored Implementation Verification', () => {
         const res = await api.post('/api/actions/manage_cookies').send({
             browserId,
             action: 'get',
+            variableName: 'cookies', // Required for get action
         });
         expect(res.status).toBe(200);
         expect(res.body.data.cookies).toBeDefined();
@@ -54,7 +58,7 @@ describe('Refactored Implementation Verification', () => {
             browserId,
             urlPattern: '**/api/mocked',
             status: 200,
-            body: { mocked: true },
+            responseBody: { mocked: true }, // Schema expects responseBody
         });
         expect(res.status).toBe(200);
         expect(res.body.message).toContain('Mock configurado');
@@ -71,10 +75,11 @@ describe('Refactored Implementation Verification', () => {
     });
 
     it('should read data (text)', async () => {
-        const res = await api.post('/api/actions/read_data').send({
+        const res = await api.post('/api/actions/get_set_content').send({
             browserId,
             selector: 'h1',
-            type: 'text',
+            action: 'get',
+            contentType: 'text',
         });
         expect(res.status).toBe(200);
         expect(res.body.data.content).toBeDefined();
@@ -94,7 +99,10 @@ describe('Refactored Implementation Verification', () => {
 
     // Test stubs
     it('should call LLM action (stub)', async () => {
-        const res = await api.post('/api/actions/call_llm').send({ prompt: 'Hello' });
+        const res = await api.post('/api/actions/call_llm').send({
+            prompt: 'Hello',
+            variable: 'llmResponse',
+        });
         expect(res.status).toBe(200);
         expect(res.body.message).toContain('Simulado');
     });

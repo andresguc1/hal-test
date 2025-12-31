@@ -40,6 +40,7 @@ const mockRes = {
 
 const mockReq = (body) => ({
     body: { ...body, browserId: 'mock-browser-id' },
+    t: (key) => key, // Mock i18n function
 });
 
 describe('executeJsAction Logic', () => {
