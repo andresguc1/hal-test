@@ -43,6 +43,8 @@
     "joi-to-swagger": "^6.2.0",
     "morgan": "^1.10.1",
     "multer": "^2.0.2",
+    "pg": "^8.16.3",
+    "pg-hstore": "^2.3.4",
     "playwright": "^1.57.0-alpha-2025-10-24",
     "sequelize": "^6.37.7",
     "sqlite3": "^5.1.7",
