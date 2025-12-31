@@ -1,4 +1,6 @@
-const API_BASE_URL = import.meta.env?.VITE_API_BASE || import.meta.env?.VITE_API_URL || "/api";
+const API_BASE_URL = import.meta.env.PROD
+  ? "https://hal-test-backend.onrender.com/api"
+  : (import.meta.env.VITE_API_BASE || "/api");
 
 const getHeaders = () => {
   const headers = { "Content-Type": "application/json" };
