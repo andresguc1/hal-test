@@ -1,5 +1,5 @@
 import React from 'react';
-import { getSmoothStepPath } from 'reactflow';
+import { getSmoothStepPath } from '@xyflow/react';
 
 const CustomConnectionLine = ({ fromX, fromY, toX, toY, connectionLineStyle }) => {
     const [edgePath] = getSmoothStepPath({
@@ -32,8 +32,8 @@ const CustomConnectionLine = ({ fromX, fromY, toX, toY, connectionLineStyle }) =
             {/* SVG definitions for gradient and glow */}
             <defs>
                 <linearGradient id="connectionGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.8} />
-                    <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.9} />
+                    <stop offset="0%" stopColor="#1a73e8" stopOpacity={0.8} /> {/* star-blue */}
+                    <stop offset="100%" stopColor="#ff8c32" stopOpacity={0.9} /> {/* hal-orange */}
                 </linearGradient>
                 <filter id="glow">
                     <feGaussianBlur stdDeviation="2" result="coloredBlur" />

@@ -453,7 +453,7 @@ export default function App() {
       connectionLineComponent: CustomConnectionLine,
       connectionLineStyle: {
         strokeWidth: 2.5,
-        stroke: '#8b5cf6',
+        stroke: '#ff8c32', // hal-orange
       },
     }),
     [
