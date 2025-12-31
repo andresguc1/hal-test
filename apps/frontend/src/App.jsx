@@ -10,6 +10,7 @@ import NodeConfigurationPanel from "./components/NodeConfigurationPanel";
 import AppFooter from "./components/AppFooter";
 import StyledMiniMap from "./components/StyledMiniMap";
 import { nodeTypes } from "./components/nodes";
+import CustomConnectionLine from "./components/CustomConnectionLine";
 {
   /* Status Indicator removed */
 }
@@ -448,6 +449,12 @@ export default function App() {
       onDrop,
       onDragOver,
       nodeTypes, // Custom node types for optimized rendering
+      // Visual feedback for connections
+      connectionLineComponent: CustomConnectionLine,
+      connectionLineStyle: {
+        strokeWidth: 2.5,
+        stroke: '#8b5cf6',
+      },
     }),
     [
       staticFlowProps,
