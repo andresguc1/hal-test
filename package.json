@@ -21,10 +21,18 @@
         "lint": "turbo lint",
         "lint:fix": "turbo lint:fix",
         "format": "turbo format",
-        "clean": "turbo clean && rm -rf node_modules"
+        "clean": "turbo clean && rm -rf node_modules",
+        "prepare": "husky"
     },
     "devDependencies": {
+        "husky": "^9.1.7",
+        "lint-staged": "^16.2.6",
         "turbo": "^2.3.3"
+    },
+    "lint-staged": {
+        "apps/**/*.{js,jsx,ts,tsx,json,css,md}": [
+            "prettier --write"
+        ]
     },
     "packageManager": "pnpm@9.15.4",
     "pnpm": {
