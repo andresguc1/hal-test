@@ -13,7 +13,7 @@
     "format": "prettier --write \"**/*.js\" \"!node_modules/**\"",
     "clean": "rm -rf node_modules",
     "prepare": "husky",
-    "postinstall": "npx playwright install --with-deps chromium"
+    "postinstall": "npx playwright install chromium"
   },
   "keywords": [],
   "author": "andresguc <andresguc@gmail.com>",
