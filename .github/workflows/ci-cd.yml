@@ -34,7 +34,7 @@ jobs:
           cache: 'pnpm'
 
       - name: 📥 Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install
 
       - name: 🔍 Run ESLint
         run: pnpm run lint
@@ -72,7 +72,7 @@ jobs:
           cache: 'pnpm'
 
       - name: 📥 Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install
 
       - name: 🏗️ Build frontend
         run: cd apps/frontend && pnpm build
