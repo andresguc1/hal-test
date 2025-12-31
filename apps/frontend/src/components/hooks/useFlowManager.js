@@ -68,6 +68,8 @@ const DEFAULT_EDGE_OPTIONS = {
   },
   markerEnd: {
     type: 'arrowclosed',
+    width: 20,
+    height: 20,
     color: '#ff8c32', // hal-orange to match theme
   },
   // Hacer los edges seleccionables y eliminables

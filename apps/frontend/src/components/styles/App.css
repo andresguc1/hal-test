@@ -225,7 +225,18 @@ html,
   /* Por debajo de controles y paneles */
   transition:
     box-shadow 0.2s ease,
-    border-color 0.2s ease;
+    border-color 0.2s ease,
+    transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 🎨 Hover Effect - Smooth scale and glow */
+.react-flow__node:hover > div {
+  transform: scale(1.05);
+  box-shadow:
+    0 0 0 1px var(--star-blue),
+    0 0 20px rgba(26, 115, 232, 0.4),
+    0 4px 12px rgba(0, 0, 0, 0.3) !important;
+  border-color: var(--star-blue) !important;
 }
 
 /* 🔑 CLAVE: Estado de Selección Visual */
