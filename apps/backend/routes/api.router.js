@@ -467,7 +467,7 @@ actionRoutes.forEach(({ path, schema, action }) => {
     const schemaObject = schemas[schema];
     const actionHandler = actions[action];
 
-    router.post(`/${path}`, validate({ body: schemaObject }), actionHandler);
+    router.post(`/actions/${path}`, validate({ body: schemaObject }), actionHandler);
 });
 
 console.log(`✅ ${actionRoutes.length} action routes registered successfully`);
@@ -496,7 +496,7 @@ router.get('/routes', (req, res) => {
         }
         acc[route.category].push({
             path: route.path,
-            endpoint: `/${route.path}`,
+            endpoint: `/actions/${route.path}`,
             method: 'POST',
         });
         return acc;
