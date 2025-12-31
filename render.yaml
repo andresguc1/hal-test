@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: hal-test-backend
+    runtime: node
+    region: oregon
+    plan: free
+    buildCommand: pnpm install && npx playwright install chromium
+    startCommand: npm start
+    preDeployCommand: npx playwright install chromium
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
