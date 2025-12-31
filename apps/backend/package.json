@@ -12,7 +12,8 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"**/*.js\" \"!node_modules/**\"",
     "clean": "rm -rf node_modules",
-    "prepare": "husky"
+    "prepare": "husky",
+    "postinstall": "npx playwright install --with-deps chromium"
   },
   "keywords": [],
   "author": "andresguc <andresguc@gmail.com>",
