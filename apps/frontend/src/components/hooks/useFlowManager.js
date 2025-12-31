@@ -31,7 +31,9 @@ const AUTO_SAVE_INTERVAL = 30000;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export const API_BASE_URL = import.meta.env?.VITE_API_BASE ?? "/api/actions";
+export const API_BASE_URL = import.meta.env.PROD
+  ? "https://hal-test-backend.onrender.com/api/actions"
+  : (import.meta.env?.VITE_API_BASE || "/api/actions");
 
 // ========================================
 // OPTIMIZACIÓN 1: Funciones puras fuera del hook
