@@ -63,12 +63,12 @@ const createExecutedLabel = (action) => {
 const DEFAULT_EDGE_OPTIONS = {
   animated: true,
   style: {
-    stroke: "#B0B0B0", // metallicSilver
+    stroke: '#ff8c32', // hal-orange
     strokeWidth: 2,
   },
   markerEnd: {
-    type: "arrowclosed",
-    color: "#B0B0B0", // metallicSilver
+    type: 'arrowclosed',
+    color: '#ff8c32', // hal-orange to match theme
   },
   // Hacer los edges seleccionables y eliminables
   focusable: true,
