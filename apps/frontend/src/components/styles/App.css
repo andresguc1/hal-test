@@ -23,8 +23,10 @@ html,
   margin: 0;
   /* MODIFICACIÓN: Fuente Monoespaciada para estética de consola */
   font-family: monospace, "Courier New", Courier, sans-serif;
-  background-color: var(--deep-space);
-  color: var(--cold-white);
+
+  /* Usar variables de Shadcn para permitir el cambio de tema */
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
 }
 
 .app-container {
@@ -171,7 +173,7 @@ html,
   height: 100%;
   width: 100%;
   position: relative;
-  background-color: var(--deep-space);
+  background-color: hsl(var(--background));
 }
 
 /* Botones de creación de nodos */

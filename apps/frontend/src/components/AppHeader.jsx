@@ -2,6 +2,7 @@
 import { motion } from "motion/react";
 import "./styles/AppHeader.css";
 import UserMenu from "./UserMenu";
+import { ModeToggle } from "./mode-toggle";
 
 export default function AppHeader() {
   return (
@@ -20,6 +21,7 @@ export default function AppHeader() {
         HAL-TEST
       </motion.h1>
       <div className="header-actions">
+        <ModeToggle />
         <UserMenu />
       </div>
     </motion.header>

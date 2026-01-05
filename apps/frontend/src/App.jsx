@@ -29,6 +29,7 @@ import { useToast } from "./hooks/useToast";
 import { useFigmaInteraction } from "./hooks/useFigmaInteraction";
 import { useTranslation } from "react-i18next";
 import { AnimatePresence } from "motion/react";
+import { ThemeProvider } from "./components/theme-provider";
 
 // ========================================
 // COMPONENTE PRINCIPAL
@@ -479,143 +480,142 @@ export default function App() {
   // ========================================
 
   return (
-    <div className="app-container">
-      {/* Status Indicator */}
-      {/* Status Indicator removed */}
+    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} storageKey="vite-ui-theme">
+      <div className="app-container">
+        {/* Status Indicator */}
+        {/* Status Indicator removed */}
 
-      {/* Progress Bar */}
-      {executionProgress.total > 0 && (
-        <ProgressBar
-          current={executionProgress.current}
-          total={executionProgress.total}
-          status={executionProgress.status}
-          onCancel={() =>
-            setExecutionProgress({ current: 0, total: 0, status: "" })
-          }
-        />
-      )}
-
-      {/* Header */}
-      <AppHeader />
-
-      {/* Panel izquierdo */}
-      <NodeCreationPanel
-        addNode={addNode}
-        isVisible={isCreationPanelVisible}
-        togglePanel={toggleCreationPanel}
-      />
-
-      {/* Área principal */}
-      <div
-        ref={reactFlowWrapper}
-        className={`main-content 
-          ${isCreationPanelVisible ? "shifted-left" : ""} 
-          ${isConfigurationPanelVisible ? "shifted-right" : ""}`}
-      >
-        <ReactFlow {...flowConfig}>
-          <StyledMiniMap />
-          <Controls />
-          <Background
-            color="#4B5563"
-            variant="dots"
-            gap={20}
-            size={1.5}
-            style={{
-              background: "linear-gradient(180deg, #111827 0%, #1F2937 100%)",
-            }}
-          />
-        </ReactFlow>
-
-        {/* Context Menu Overlay */}
-        {menu && (
-          <ContextMenu
-            x={menu.x}
-            y={menu.y}
-            type={menu.type}
-            data={menu.data}
-            onClose={() => setMenu(null)}
-            actions={{
-              copy: handleCopy,
-              paste: handlePaste,
-              cut: handleCut,
-              delete: () => {
-                if (menu.type === "node") deleteNode(menu.id);
-                if (menu.type === "edge") {
-                  setEdges((eds) => eds.filter((e) => e.id !== menu.id));
-                }
-                if (menu.type === "selection") {
-                  handleDeleteSelected();
-                }
-              },
-              duplicate: handleDuplicateNodes,
-              addNode: () => setIsCreationPanelVisible(true),
-              selectAll: handleSelectAll,
-              undo: undo,
-              redo: redo,
-              canUndo: canUndo,
-              canRedo: canRedo,
-              canPaste:
-                clipboard.nodes.length > 0 || clipboard.edges.length > 0,
-            }}
+        {/* Progress Bar */}
+        {executionProgress.total > 0 && (
+          <ProgressBar
+            current={executionProgress.current}
+            total={executionProgress.total}
+            status={executionProgress.status}
+            onCancel={() =>
+              setExecutionProgress({ current: 0, total: 0, status: "" })
+            }
           />
         )}
-      </div>
 
-      {/* Panel derecho */}
-      <NodeConfigurationPanel
-        action={selectedAction}
-        isVisible={isConfigurationPanelVisible}
-        onExecute={executeStep}
-        onClose={closeConfiguration}
-        onDeleteNode={deleteNode}
-        updateNodeConfiguration={updateNodeConfiguration}
-        nodes={nodes}
-      />
+        {/* Header */}
+        <AppHeader />
 
-      {/* Flow Tabs - Above Footer */}
-      {currentProject && (
-        <FlowTabs
-          flows={currentProject.flows || []}
-          activeFlowId={currentFlowId}
-          onSwitchFlow={switchFlow}
-          onCreateFlow={createFlow}
-          onRenameFlow={renameFlow}
-          onDeleteFlow={deleteFlow}
-          onReorderFlows={reorderFlows}
-          onDuplicateFlow={() => {
-            // TODO: Implement duplicate
-            toast.info(`${t("common.coming_soon")}`);
-          }}
-          projects={projects}
-          currentProject={currentProject}
-          onSelectProject={loadProject}
-          onCreateProject={createProject}
-          onDeleteProject={deleteProject}
+        {/* Panel izquierdo */}
+        <NodeCreationPanel
+          addNode={addNode}
+          isVisible={isCreationPanelVisible}
+          togglePanel={toggleCreationPanel}
         />
-      )}
 
-      {/* Footer */}
-      <AppFooter
-        onExecuteFlow={handleExecuteFlow}
-        onSave={handleSaveFlow}
-        onExport={handleExportFlow}
-        onImport={handleImportFlow}
-      />
+        {/* Área principal */}
+        <div
+          ref={reactFlowWrapper}
+          className={`main-content 
+            ${isCreationPanelVisible ? "shifted-left" : ""} 
+            ${isConfigurationPanelVisible ? "shifted-right" : ""}`}
+        >
+          <ReactFlow {...flowConfig}>
+            <StyledMiniMap />
+            <Controls />
+            <Background
+              className="react-flow-background"
+              variant="dots"
+              gap={20}
+              size={1.5}
+            />
+          </ReactFlow>
 
-      {/* Import Dialog */}
-      <ImportDialog
-        isOpen={isImportDialogOpen}
-        onClose={handleImportDialogClose}
-        onImport={handleImport}
-      />
+          {/* Context Menu Overlay */}
+          {menu && (
+            <ContextMenu
+              x={menu.x}
+              y={menu.y}
+              type={menu.type}
+              data={menu.data}
+              onClose={() => setMenu(null)}
+              actions={{
+                copy: handleCopy,
+                paste: handlePaste,
+                cut: handleCut,
+                delete: () => {
+                  if (menu.type === "node") deleteNode(menu.id);
+                  if (menu.type === "edge") {
+                    setEdges((eds) => eds.filter((e) => e.id !== menu.id));
+                  }
+                  if (menu.type === "selection") {
+                    handleDeleteSelected();
+                  }
+                },
+                duplicate: handleDuplicateNodes,
+                addNode: () => setIsCreationPanelVisible(true),
+                selectAll: handleSelectAll,
+                undo: undo,
+                redo: redo,
+                canUndo: canUndo,
+                canRedo: canRedo,
+                canPaste:
+                  clipboard.nodes.length > 0 || clipboard.edges.length > 0,
+              }}
+            />
+          )}
+        </div>
 
-      {/* Export Dialog */}
-      <ExportDialog
-        isOpen={isExportDialogOpen}
-        onClose={handleExportDialogClose}
-        nodes={nodes}
-        edges={edges}
-      />
-    </div>
+        {/* Panel derecho */}
+        <NodeConfigurationPanel
+          action={selectedAction}
+          isVisible={isConfigurationPanelVisible}
+          onExecute={executeStep}
+          onClose={closeConfiguration}
+          onDeleteNode={deleteNode}
+          updateNodeConfiguration={updateNodeConfiguration}
+          nodes={nodes}
+        />
+
+        {/* Flow Tabs - Above Footer */}
+        {currentProject && (
+          <FlowTabs
+            flows={currentProject.flows || []}
+            activeFlowId={currentFlowId}
+            onSwitchFlow={switchFlow}
+            onCreateFlow={createFlow}
+            onRenameFlow={renameFlow}
+            onDeleteFlow={deleteFlow}
+            onReorderFlows={reorderFlows}
+            onDuplicateFlow={() => {
+              // TODO: Implement duplicate
+              toast.info(`${t("common.coming_soon")}`);
+            }}
+            projects={projects}
+            currentProject={currentProject}
+            onSelectProject={loadProject}
+            onCreateProject={createProject}
+            onDeleteProject={deleteProject}
+          />
+        )}
+
+        {/* Footer */}
+        <AppFooter
+          onExecuteFlow={handleExecuteFlow}
+          onSave={handleSaveFlow}
+          onExport={handleExportFlow}
+          onImport={handleImportFlow}
+        />
+
+        {/* Import Dialog */}
+        <ImportDialog
+          isOpen={isImportDialogOpen}
+          onClose={handleImportDialogClose}
+          onImport={handleImport}
+        />
+
+        {/* Export Dialog */}
+        <ExportDialog
+          isOpen={isExportDialogOpen}
+          onClose={handleExportDialogClose}
+          nodes={nodes}
+          edges={edges}
+        />
+      </div>
+    </ThemeProvider>
   );
 }
