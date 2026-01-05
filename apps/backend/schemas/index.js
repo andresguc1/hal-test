@@ -34,6 +34,7 @@ export { default as waitNetworkBodySchema } from './wait_network/body.js';
 export { default as waitConditionalBodySchema } from './wait_conditional/body.js';
 // Nota: wait_fixed no estaba en el router final, pero lo incluimos si es necesario.
 export { default as waitFixedBodySchema } from './wait_fixed/body.js';
+export { default as pauseBodySchema } from './pause/body.js';
 
 // 📸 Captura, Logs y Reportes
 export { default as takeScreenshotBodySchema } from './take_screenshot/body.js';
