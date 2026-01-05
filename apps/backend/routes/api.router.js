@@ -181,6 +181,12 @@ const actionRoutes = [
         category: 'wait',
     },
     {
+        path: 'pause',
+        schema: 'pauseBodySchema',
+        action: 'pauseAction',
+        category: 'wait',
+    },
+    {
         path: 'wait_for_response',
         schema: 'waitForResponseBodySchema',
         action: 'waitForResponseAction',

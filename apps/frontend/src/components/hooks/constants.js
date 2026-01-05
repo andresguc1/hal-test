@@ -31,6 +31,7 @@ export const NODE_LABELS = {
   upload_file: "Upload Files",
 
   // Utilities
+  pause: "Pause (Sleep)",
   wait_conditional: "Wait (Delay)",
   take_screenshot: "Take Screenshot",
   extract_text: "Extract Text",
@@ -118,6 +119,7 @@ export const NODE_CATEGORIES = {
     label: "Utilities",
     icon: "🔧",
     nodes: [
+      "pause",
       "wait_conditional",
       "take_screenshot",
       "extract_text",
@@ -720,6 +722,25 @@ export const NODE_FIELD_CONFIGS = {
         if (Number(v) <= 0) return t("nodes.validation.timeout_min_1");
         return null;
       },
+    },
+  ],
+
+  pause: [
+    {
+      name: "duration",
+      label: "Duration (ms)",
+      type: "number",
+      placeholder: "Ex: 5000 (5 seconds)",
+      defaultValue: 1000,
+      min: 0,
+      required: true,
+      validation: (v, allParams, t) => {
+        if (v === "" || v === undefined || Number.isNaN(Number(v)))
+          return "Duration must be a number";
+        if (Number(v) < 0) return "Duration cannot be negative";
+        return null;
+      },
+      hint: "Stops execution for the specified time (Sleep). Useful for debugging.",
     },
   ],
 
@@ -2680,6 +2701,7 @@ export const NODE_FIELD_CONFIGS = {
       label: "Headless mode (no UI)",
       type: "checkbox",
       defaultValue: false,
+      hint: "Disable to see browser window. (Only works in Local env, ignored in Production)",
     },
     {
       name: "maximizeWindow",
@@ -2839,6 +2861,7 @@ export const NODE_TYPE_TO_CATEGORY = {
   upload_file: "user_simulation",
 
   // Synchronization
+  pause: "synchronization",
   wait_visible: "synchronization",
   wait_navigation: "synchronization",
   wait_network: "synchronization",

@@ -67,6 +67,7 @@ const NODE_CATEGORIES = {
       { id: "wait_visible" },
       { id: "wait_navigation" },
       { id: "wait_conditional" },
+      { id: "pause" },
     ],
   },
   diagnostics: {

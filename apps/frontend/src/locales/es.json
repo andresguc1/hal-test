@@ -108,6 +108,7 @@
       "hover": "Pasar mouse sobre elemento",
       "drag_drop": "Arrastrar",
       "upload_file": "Subir Archivos",
+      "pause": "Pausa (Espera)",
       "wait_conditional": "Esperar (Delay)",
       "take_screenshot": "Captura de Pantalla",
       "extract_text": "Extraer texto",
@@ -164,7 +165,7 @@
     },
     "fields": {
       "browserType": "Tipo de navegador",
-      "headless": "Headless (Invisible)",
+      "headless": "Headless (Ver navegador - Solo Local)",
       "maximizeWindow": "Iniciar modo maximizado",
       "slowMo": "SlowMo (ms)",
       "args": "Args (string)",

@@ -100,6 +100,9 @@
         "wait_conditional": {
             "success": "Condición de espera cumplida."
         },
+        "pause": {
+            "success": "Pausa de {{duration}}ms completada"
+        },
         "log_errors": {
             "success": "Inicio de registro de errores del navegador."
         },

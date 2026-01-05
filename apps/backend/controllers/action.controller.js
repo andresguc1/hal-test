@@ -1513,6 +1513,25 @@ export const logErrorsAction = (req, res) =>
         }
     });
 
+// ==========================================================
+// PAUSE / SLEEP ACTION
+// ==========================================================
+
+export const pauseAction = (req, res) =>
+    executePlaywrightAction(req, res, 'pause', async (page, opts) => {
+        const { duration } = opts;
+
+        // Use page.waitForTimeout (or simple setTimeout if page not available)
+        // Since executePlaywrightAction ensures 'page' exists, we use Playwright's method
+        // which helps in keeping the test runner alive/aware.
+        await page.waitForTimeout(duration);
+
+        return {
+            message: req.t('actions.pause.success', { duration }),
+            traceDetails: { duration },
+        };
+    });
+
 export const listenEventsAction = (req, res) =>
     executePlaywrightAction(req, res, 'listen_events', async (page, opts) => {
         const { event } = opts; // e.g., 'dialog', 'request', 'response'
