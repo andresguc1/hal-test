@@ -733,9 +733,23 @@ export const useFlowManager = (currentProject, currentFlowId) => {
         try {
           // NOTE: "Before" screenshot logic removed as per simplified requirements.
 
+          // Inject AI Keys from settings
+          // Inject AI Keys from settings
+          const openaiKey = localStorage.getItem('hal_openai_key');
+          const googleKey = localStorage.getItem('hal_google_key');
+          const anthropicKey = localStorage.getItem('hal_anthropic_key');
+
+          const headers = {
+            "Content-Type": "application/json"
+          };
+
+          if (openaiKey) headers['x-openai-key'] = openaiKey;
+          if (googleKey) headers['x-google-key'] = googleKey;
+          if (anthropicKey) headers['x-anthropic-key'] = anthropicKey;
+
           const response = await fetch(endpoint, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: headers,
             body: JSON.stringify(bodyToSend),
             signal: executionAbortController.current?.signal,
           });
@@ -743,60 +757,27 @@ export const useFlowManager = (currentProject, currentFlowId) => {
           if (!response.ok) {
             const text = await response.text().catch(() => "");
             let errData = null;
+            let errorMessage = `HTTP Error ${response.status}`;
+
             try {
               errData = JSON.parse(text);
-            } catch {
-              // Ignorar error de parsing
-            }
-
-            let serverMsg =
-              (errData && errData.message) || text || response.statusText;
-
-            // If serverMsg contains HTML, extract text content
-            if (
-              typeof serverMsg === "string" &&
-              serverMsg.includes("<!DOCTYPE")
-            ) {
-              try {
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(serverMsg, "text/html");
-                const bodyText = doc.body?.textContent?.trim();
-                if (bodyText && bodyText.length > 0) {
-                  serverMsg = bodyText;
-                } else {
-                  serverMsg = `Error ${response.status}: ${response.statusText}`;
-                }
-              } catch {
-                serverMsg = `Error ${response.status}: ${response.statusText}`;
+              if (errData && errData.message) {
+                errorMessage = errData.message;
               }
+            } catch {
+              // Ignore parsing error, use text if available
+              if (text && text.length < 200) errorMessage = text;
             }
 
-            const shouldRetry =
-              response.status >= 500 && attempt < MAX_RETRIES - 1;
-
-            if (shouldRetry) {
-              const delay = RETRY_BASE_MS * 2 ** attempt;
-              updateNodeState(nodeId, NODE_STATES.WARNING, {
-                message: `Error ${response.status}. Reintentando...`,
-                attempt: attempt + 1,
-              });
-              setApiStatus({
-                state: "warning",
-                message: `Error ${response.status}. Reintentando en ${delay / 1000}s...`,
-              });
-              await sleep(delay);
-              continue;
-            }
-
-            throw new Error(serverMsg || `Error ${response.status}`);
+            throw new Error(errorMessage);
           }
 
-          const result = await response.json().catch(() => ({}));
+          const result = await response.json();
           const duration = Date.now() - startTime;
 
           const instanceId =
-            result.instanceId ??
-            result.browserId ??
+            result.data?.instanceId ??
+            result.data?.browserId ??
             result.instance?.id ??
             null;
 
@@ -817,18 +798,10 @@ export const useFlowManager = (currentProject, currentFlowId) => {
 
               return {
                 ...node,
-                data: {
-                  ...node.data,
-                  configuration: newConfig,
-                  executed: true,
-                  state: NODE_STATES.SUCCESS,
-                  // label: createExecutedLabel({ type, payload: newConfig }), // DISABLED: Keep original label
-                  executionTime: duration,
-                  result: result,
-                },
-                style: getNodeStyle(NODE_STATES.SUCCESS),
+                data: { ...node.data, configuration: newConfig, executed: true, state: NODE_STATES.SUCCESS, result, executionTime: duration },
+                style: getNodeStyle(NODE_STATES.SUCCESS)
               };
-            }),
+            })
           );
 
           setApiStatus({
@@ -838,7 +811,6 @@ export const useFlowManager = (currentProject, currentFlowId) => {
           });
 
           // SCREENSHOT: Logic for reuse or automatic capture
-          // 1. Check if the action itself returned a screenshot (e.g. take_screenshot node)
           let explicitScreenshot = null;
           if (
             result?.data?.screenshot &&
@@ -849,7 +821,6 @@ export const useFlowManager = (currentProject, currentFlowId) => {
             result?.screenshot &&
             typeof result.screenshot === "string"
           ) {
-            // Fallback for flat structure
             explicitScreenshot = result.screenshot;
           }
 
@@ -865,27 +836,15 @@ export const useFlowManager = (currentProject, currentFlowId) => {
             );
             updateNodeScreenshot(nodeId, "after", screenshotMetadata);
           }
-          // 2. If no explicit screenshot, check if we should auto-capture
           else if (shouldAutoCapture) {
             updateNodeState(nodeId, NODE_STATES.CAPTURING_AFTER);
-            await captureScreenshot({
-              nodeId,
-              timing: "after",
-              browserId,
-              nodeType: type,
-            });
-            // Restore success state after screenshot
+            await captureScreenshot({ nodeId, timing: "after", browserId, nodeType: type });
             updateNodeState(nodeId, NODE_STATES.SUCCESS);
           }
 
           setIsLoading(false);
+          return { success: true, result, duration, instanceId };
 
-          return {
-            success: true,
-            result,
-            duration,
-            instanceId,
-          };
         } catch (error) {
           const isNetworkError =
             error.name === "AbortError" ||

@@ -8,7 +8,7 @@ import { browserService } from '../services/browser.service.js';
 import { traceService } from '../services/trace.service.js';
 import { globalStateManager } from '../services/stateManager.js';
 import VariableManager from '../services/VariableManager.js';
-import { aiService } from '../services/AIService.js';
+import aiService from '../services/AIService.js';
 import { z } from 'zod';
 import * as fsp from 'fs/promises';
 // import * as fs from 'fs';
@@ -2659,29 +2659,43 @@ export const transformAction = async (req, res) => {
 
 export const callLlmAction = async (req, res) => {
     try {
-        const { prompt, system, model, variable } = req.body;
+        let { prompt, system, model, variableName, maxTokens, temperature, provider } = req.body;
 
         const defaultModel = req.headers['x-openai-model'];
-        const keys = {
-            openai: req.headers['x-openai-key'],
-            google: req.headers['x-google-key'],
-            anthropic: req.headers['x-anthropic-key'],
-        };
+
+        // Auto-detect provider if not explicitly set
+        if (!provider && model) {
+            if (model.toLowerCase().includes('gemini')) provider = 'google';
+            else if (model.toLowerCase().includes('claude')) provider = 'anthropic';
+            else if (model.toLowerCase().includes('grok')) provider = 'grok';
+            else provider = 'openai';
+        } else if (!provider) {
+            provider = 'openai';
+        }
+
+        // Select key based on provider
+        let apiKey = req.headers['x-openai-key'];
+        if (provider === 'google') apiKey = req.headers['x-google-key'];
+        if (provider === 'anthropic') apiKey = req.headers['x-anthropic-key'];
+        if (provider === 'grok') apiKey = req.headers['x-openai-key']; // Grok often uses same key slot or x-grok-key, but usually compatible with openai sdk
 
         const response = await aiService.generateText({
             prompt: variableManager.resolve(prompt),
             system: system ? variableManager.resolve(system) : undefined,
-            modelName: model,
+            model: model, // Fix: Changed modelName to model to match AIService signature
             defaultModel,
-            keys,
+            provider,
+            apiKey,
+            maxTokens,
+            temperature,
         });
 
-        variableManager.set(variable, response, 'flow');
+        variableManager.set(variableName, response, 'flow');
 
         return res.status(200).json({
             success: true,
             message: req.t('actions.call_llm.success'),
-            data: { response, variable },
+            data: { response, variable: variableName },
         });
     } catch (error) {
         console.error('[ERROR] callLlmAction:', error.message);

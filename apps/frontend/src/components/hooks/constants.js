@@ -1833,6 +1833,13 @@ export const NODE_FIELD_CONFIGS = {
       },
     },
     {
+      name: "system",
+      label: "System Prompt",
+      type: "textarea",
+      placeholder: "You are a helpful assistant...",
+      required: false,
+    },
+    {
       name: "temperature",
       label: "Temperature",
       type: "number",

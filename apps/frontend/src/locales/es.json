@@ -180,6 +180,7 @@
       "file": "Archivo",
       "path": "Ruta",
       "variableName": "Nombre de Variable",
+      "system": "Prompt del Sistema",
       "script": "Script",
       "condition": "Condición",
       "fullPage": "Página completa",

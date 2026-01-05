@@ -188,6 +188,7 @@
       "file": "File",
       "path": "Path",
       "variableName": "Variable Name",
+      "system": "System Prompt",
       "script": "Script",
       "condition": "Condition",
       "fullPage": "Full Page",
