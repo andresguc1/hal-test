@@ -98,14 +98,14 @@ function ScreenshotViewer({ screenshots, nodeId, isVisible = true }) {
   return (
     <>
       <div className="screenshot-section">
-        <h3 className="screenshot-title">📸 {t("screenshots.title")}</h3>
+        <h3 className="screenshot-title">📸 {t("screenshots.title", "Screenshots")}</h3>
 
         <div className="screenshot-container">
           {loadedImages.after ? (
             <div className="screenshot-item single-view">
               <img
                 src={loadedImages.after.url}
-                alt={t("screenshots.alt_text")}
+                alt={t("screenshots.alt_text", "Execution result")}
                 className="screenshot-image"
                 loading="lazy"
                 onClick={() => handleImageClick(loadedImages.after, "after")}
@@ -120,7 +120,7 @@ function ScreenshotViewer({ screenshots, nodeId, isVisible = true }) {
             <div className="screenshot-placeholder">
               <div className="placeholder-icon">📸</div>
               <div className="placeholder-text">
-                {t("screenshots.no_captures")}
+                {t("screenshots.no_captures", "No screenshots available")}
               </div>
             </div>
           )}
@@ -138,10 +138,10 @@ function ScreenshotViewer({ screenshots, nodeId, isVisible = true }) {
               ✕
             </button>
             <div className="screenshot-modal-header">
-              {t("screenshots.title")}{" "}
+              {t("screenshots.title", "Screenshots")}{" "}
               {selectedImage.timing === "before"
-                ? t("screenshots.before")
-                : t("screenshots.after")}
+                ? t("screenshots.before", "Before")
+                : t("screenshots.after", "After")}
             </div>
             <img
               src={selectedImage.url}

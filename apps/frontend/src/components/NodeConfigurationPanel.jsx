@@ -1,50 +1,41 @@
-// NodeConfigurationPanel.jsx
+// NodeConfigurationPanel.jsx - Refactored with shadcn/ui
 import React, { useState, useEffect } from "react";
-import { XCircle, Play, Trash2, AlertCircle } from "lucide-react";
+import { XCircle, Play, Trash2, AlertCircle, Settings } from "lucide-react";
 import { useTranslation } from "react-i18next";
-// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from "motion/react";
 import { panelVariants } from "../utils/motion-variants";
-import "./styles/NodeConfigurationPanel.css";
 import { NODE_FIELD_CONFIGS, VISUAL_CHANGE_NODES } from "./hooks/constants";
 import { logger } from "../utils/logger";
 import ScreenshotViewer from "./ScreenshotViewer";
 
+// shadcn/ui components
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+
 // ===============================================
 // CRITICAL: Custom comparison function for React.memo
-// This function prevents unnecessary re-renders during node dragging.
-// If it returns 'true', the re-render is skipped.
 const areEqual = (prevProps, nextProps) => {
-  // 1. If visibility changes, we must re-render (panel open/closed).
   if (prevProps.isVisible !== nextProps.isVisible) return false;
-
-  // 2. If the selected node changes (id or type), we must re-render (form content).
   if (prevProps.action?.nodeId !== nextProps.action?.nodeId) return false;
   if (prevProps.action?.type !== nextProps.action?.type) return false;
-
-  // 3. If screenshots change, we must re-render
   const prevScreenshots = prevProps.action?.data?.screenshots;
   const nextScreenshots = nextProps.action?.data?.screenshots;
   if (prevScreenshots !== nextScreenshots) return false;
-
-  // 4. We intentionally ignore the 'nodes' prop. Its reference changes constantly
-  // during dragging, but the changes don't affect the form if the 'action' is the same.
-  // We assume other props (functions) are wrapped in useCallback and are stable.
-
   return true;
 };
 // ===============================================
 
-/**
- * Props:
- * - action
- * - isVisible
- * - onExecute(action)
- * - onClose()
- * - onDeleteNode(nodeId)
- * - updateNodeConfiguration(nodeId, newConfig)
- * - nodes  <-- complete LIST of nodes (volatile)
- */
 function NodeConfigurationPanel({
   action,
   isVisible,
@@ -142,10 +133,8 @@ function NodeConfigurationPanel({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    const newValue = type === "checkbox" ? checked : value;
-    setFormData((prev) => ({ ...prev, [name]: newValue }));
+  const handleChange = (name, value) => {
+    setFormData((prev) => ({ ...prev, [name]: value }));
     setIsDirty(true);
     if (errors[name]) {
       setErrors((prev) => {
@@ -154,6 +143,13 @@ function NodeConfigurationPanel({
         return c;
       });
     }
+  };
+
+  // For native input events
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    const newValue = type === "checkbox" ? checked : value;
+    handleChange(name, newValue);
   };
 
   const handleSave = async () => {
@@ -173,14 +169,12 @@ function NodeConfigurationPanel({
     }
   };
 
-  // Auto-save logic: Save changes 500ms after the user stops typing
+  // Auto-save logic
   useEffect(() => {
     if (!action?.nodeId || !isDirty) return;
-
     const timer = setTimeout(() => {
       handleSave();
     }, 500);
-
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData, isDirty, action?.nodeId]);
@@ -191,7 +185,6 @@ function NodeConfigurationPanel({
     await handleSave();
     if (!action) return;
 
-    // Build payload according to type
     let payload = {};
 
     if (action.type === "launch_browser") {
@@ -203,7 +196,6 @@ function NodeConfigurationPanel({
         maximizeWindow: !!formData.maximizeWindow,
       };
     } else if (action.type === "open_url") {
-      // Additional validation for open_url
       if (!formData.url || formData.url.trim() === "") {
         alert(t("nodes.config.url_required"));
         return;
@@ -251,7 +243,6 @@ function NodeConfigurationPanel({
 
       logger.debug("Prepared execPackage", execPackage, "NodeConfigPanel");
 
-      // If onExecute exists, delegate entire execution to it and DO NOT fallback to local fetch.
       if (typeof onExecute === "function") {
         try {
           logger.debug("Delegating to onExecute", null, "NodeConfigPanel");
@@ -266,10 +257,13 @@ function NodeConfigurationPanel({
           logger.error("onExecute error", err, "NodeConfigPanel");
           alert(t("nodes.config.execution_error_generic"));
         }
-        return; // important: avoid local fetch when onExecute exists
+        return;
       }
 
-      const BACKEND_API_BASE = (import.meta.env.PROD ? "https://hal-test-backend.onrender.com" : "http://localhost:2001") + "/api/actions";
+      const BACKEND_API_BASE =
+        (import.meta.env.PROD
+          ? "https://hal-test-backend.onrender.com"
+          : "http://localhost:2001") + "/api/actions";
 
       const endpointByType = {
         launch_browser: `${BACKEND_API_BASE}/launch_browser`,
@@ -300,7 +294,7 @@ function NodeConfigurationPanel({
       logger.debug(
         "Performing fetch POST",
         { url: urlToCall, payload },
-        "NodeConfigPanel",
+        "NodeConfigPanel"
       );
 
       const resp = await fetch(urlToCall, {
@@ -314,7 +308,7 @@ function NodeConfigurationPanel({
           t("nodes.config.request_error", {
             status: resp.status,
             statusText: resp.statusText,
-          }),
+          })
         );
         return;
       }
@@ -340,8 +334,10 @@ function NodeConfigurationPanel({
     onClose();
   };
 
+  // ===============================================
+  // FIELD RENDERERS
+  // ===============================================
   const renderField = (fieldConfig) => {
-    // Conditional rendering logic
     if (fieldConfig.conditional) {
       const { field, is } = fieldConfig.conditional;
       const dependentValue = formData[field];
@@ -365,12 +361,6 @@ function NodeConfigurationPanel({
         : "");
     const error = errors[name];
 
-    const commonProps = {
-      name,
-      onChange: handleChange,
-      className: error ? "input-error" : "",
-    };
-
     const hintText = hint
       ? t(`nodes.hints.${name}`, hint)
       : i18n.exists(`nodes.hints.${name}`)
@@ -379,24 +369,45 @@ function NodeConfigurationPanel({
 
     if (type === "select") {
       return (
-        <div key={name} className="field-group">
-          <label>
+        <div key={name} className="group relative pb-8 mb-8 last:border-0 border-b border-solid border-[#3a3f47]/50">
+          <Label className="text-white text-sm font-semibold block mb-4">
             {t(`nodes.fields.${name}`, fieldConfig.label)}
-            {fieldConfig.required && <span className="required">*</span>}
-          </label>
-          <select {...commonProps} value={value}>
-            <option value="">{t("common.select_default")}</option>
-            {options?.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {t(`nodes.options.${name}.${opt.value}`, opt.label)}
-              </option>
-            ))}
-          </select>
-          {hintText && <p className="field-hint">{hintText}</p>}
+            {fieldConfig.required && <span className="text-[#ff6b6b] ml-1">*</span>}
+          </Label>
+          <Select
+            value={value || ""}
+            onValueChange={(val) => handleChange(name, val)}
+          >
+            <SelectTrigger className="w-full bg-[#15181c] border-[#3a3f47] text-[#e5e5e5] focus:ring-[#1a73e8] focus:border-[#1a73e8] !h-16 !text-lg [&>span]:whitespace-normal [&>span]:text-left">
+              <SelectValue placeholder={t("common.select_default")} />
+            </SelectTrigger>
+            <SelectContent
+              className="bg-[#15181c] border-[#3a3f47] rounded-lg max-h-[200px] overflow-auto w-[var(--radix-select-trigger-width)]"
+              position="popper"
+              sideOffset={4}
+              align="start"
+              side="bottom"
+            >
+              {options?.map((opt) => (
+                <SelectItem
+                  key={opt.value}
+                  value={opt.value}
+                  className="text-[#e5e5e5] focus:bg-[#2a2f37] focus:text-white rounded py-2 text-base"
+                >
+                  {t(`nodes.options.${name}.${opt.value}`, opt.label)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {hintText && (
+            <p className="text-[11px] text-[#6b7280] italic mt-3 leading-relaxed">
+              {hintText}
+            </p>
+          )}
           {error && (
-            <span className="field-error">
+            <div className="flex items-center gap-1 text-[#ff6b6b] text-xs mt-2">
               <AlertCircle size={14} /> {error}
-            </span>
+            </div>
           )}
         </div>
       );
@@ -404,46 +415,56 @@ function NodeConfigurationPanel({
 
     if (type === "checkbox" || type === "boolean") {
       return (
-        <div key={name} className="field-group checkbox-field">
-          <label className="checkbox-label">
-            <input
-              type="checkbox"
-              name={name}
-              checked={!!value}
-              onChange={handleChange}
-            />
-            <span>{t(`nodes.fields.${name}`, fieldConfig.label)}</span>
-          </label>
-          {hintText && <p className="field-hint">{hintText}</p>}
-          {error && (
-            <span className="field-error">
-              <AlertCircle size={14} /> {error}
-            </span>
-          )}
+        <div key={name} className="group relative pb-8 mb-8 last:border-0 border-b border-solid border-[#3a3f47]/50 flex flex-row items-center justify-between gap-4">
+          <div className="flex-1 space-y-1">
+            <Label htmlFor={name} className="text-white text-sm font-semibold cursor-pointer">
+              {t(`nodes.fields.${name}`, fieldConfig.label)}
+            </Label>
+            {hintText && (
+              <p className="text-[11px] text-[#6b7280] italic leading-relaxed">
+                {hintText}
+              </p>
+            )}
+          </div>
+          <Switch
+            id={name}
+            checked={!!value}
+            onCheckedChange={(checked) => handleChange(name, checked)}
+            className="data-[state=checked]:bg-[#1a73e8] data-[state=unchecked]:bg-[#3a3f47]"
+          />
         </div>
       );
     }
 
     if (type === "number") {
       return (
-        <div key={name} className="field-group">
-          <label>
+        <div key={name} className="group relative pb-8 mb-8 last:border-0 border-b border-solid border-[#3a3f47]/50">
+          <Label className="text-white text-sm font-semibold block mb-4">
             {t(`nodes.fields.${name}`, fieldConfig.label)}
-            {fieldConfig.required && <span className="required">*</span>}
-          </label>
-          <input
+            {fieldConfig.required && <span className="text-[#ff6b6b] ml-1">*</span>}
+          </Label>
+          <Input
             type="number"
-            {...commonProps}
+            name={name}
             value={value}
+            onChange={handleInputChange}
             placeholder={t(`nodes.placeholders.${name}`, placeholder)}
             min={min}
             max={max}
+            className={cn(
+              "w-full bg-[#15181c] border-[#3a3f47] text-[#e5e5e5] focus-visible:ring-[#1a73e8] focus-visible:border-[#1a73e8] !h-16 !text-lg",
+              error && "border-[#ff6b6b]"
+            )}
           />
-          {hintText && <p className="field-hint">{hintText}</p>}
+          {hintText && (
+            <p className="text-[11px] text-[#6b7280] italic mt-3 leading-relaxed">
+              {hintText}
+            </p>
+          )}
           {error && (
-            <span className="field-error">
+            <div className="flex items-center gap-1 text-[#ff6b6b] text-xs mt-2">
               <AlertCircle size={14} /> {error}
-            </span>
+            </div>
           )}
         </div>
       );
@@ -451,22 +472,31 @@ function NodeConfigurationPanel({
 
     if (type === "textarea") {
       return (
-        <div key={name} className="field-group">
-          <label>
+        <div key={name} className="group relative pb-8 mb-8 last:border-0 border-b border-solid border-[#3a3f47]/50">
+          <Label className="text-white text-sm font-semibold block mb-4">
             {t(`nodes.fields.${name}`, fieldConfig.label)}
-            {fieldConfig.required && <span className="required">*</span>}
-          </label>
+            {fieldConfig.required && <span className="text-[#ff6b6b] ml-1">*</span>}
+          </Label>
           <textarea
-            {...commonProps}
+            name={name}
             value={value}
+            onChange={handleInputChange}
             placeholder={t(`nodes.placeholders.${name}`, placeholder)}
-            rows={4}
+            rows={5}
+            className={cn(
+              "w-full rounded-lg bg-[#15181c] border border-[#3a3f47] text-[#e5e5e5] p-4 text-base focus:outline-none focus:ring-2 focus:ring-[#1a73e8] focus:border-[#1a73e8] resize-y min-h-[120px] transition-colors",
+              error && "border-[#ff6b6b]"
+            )}
           />
-          {hintText && <p className="field-hint">{hintText}</p>}
+          {hintText && (
+            <p className="text-[11px] text-[#6b7280] italic mt-2 leading-relaxed">
+              {hintText}
+            </p>
+          )}
           {error && (
-            <span className="field-error">
+            <div className="flex items-center gap-1 text-[#ff6b6b] text-xs mt-2">
               <AlertCircle size={14} /> {error}
-            </span>
+            </div>
           )}
         </div>
       );
@@ -474,22 +504,31 @@ function NodeConfigurationPanel({
 
     // default text
     return (
-      <div key={name} className="field-group">
-        <label>
+      <div key={name} className="group relative pb-8 mb-8 last:border-0 border-b border-solid border-[#3a3f47]/50">
+        <Label className="text-white text-sm font-semibold block mb-4">
           {t(`nodes.fields.${name}`, fieldConfig.label)}
-          {fieldConfig.required && <span className="required">*</span>}
-        </label>
-        <input
+          {fieldConfig.required && <span className="text-[#ff6b6b] ml-1">*</span>}
+        </Label>
+        <Input
           type="text"
-          {...commonProps}
+          name={name}
           value={value}
+          onChange={handleInputChange}
           placeholder={t(`nodes.placeholders.${name}`, placeholder)}
+          className={cn(
+            "w-full bg-[#15181c] border-[#3a3f47] text-[#e5e5e5] focus-visible:ring-[#1a73e8] focus-visible:border-[#1a73e8] !h-16 !text-lg",
+            error && "border-[#ff6b6b]"
+          )}
         />
-        {hintText && <p className="field-hint">{hintText}</p>}
+        {hintText && (
+          <p className="text-[11px] text-[#6b7280] italic mt-3 leading-relaxed">
+            {hintText}
+          </p>
+        )}
         {error && (
-          <span className="field-error">
+          <div className="flex items-center gap-1 text-[#ff6b6b] text-xs mt-2">
             <AlertCircle size={14} /> {error}
-          </span>
+          </div>
         )}
       </div>
     );
@@ -500,215 +539,270 @@ function NodeConfigurationPanel({
     if (!action) return null;
 
     if (!fields || fields.length === 0) {
+      // Manual field rendering for nodes without config
       if (action.type === "launch_browser") {
         return (
-          <>
-            <div className="field-group">
-              <label>{t("nodes.fields.browserType")}</label>
-              <select
-                name="browserType"
+          <div>
+            <div className="group relative pb-8 mb-8 last:border-0 border-b border-solid border-[#3a3f47]/50">
+              <Label className="text-white text-sm font-semibold block mb-4">
+                {t("nodes.fields.browserType")}
+              </Label>
+              <Select
                 value={formData.browserType ?? "chromium"}
-                onChange={handleChange}
+                onValueChange={(val) => handleChange("browserType", val)}
               >
-                <option value="chromium">chromium</option>
-                <option value="firefox">firefox</option>
-                <option value="webkit">webkit</option>
-              </select>
+                <SelectTrigger className="w-full bg-[#15181c] border-[#3a3f47] text-[#e5e5e5] focus:ring-[#1a73e8] focus:border-[#1a73e8] !h-16 !text-lg [&>span]:whitespace-normal [&>span]:text-left">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent
+                  className="bg-[#15181c] border-[#3a3f47] rounded-lg max-h-[200px] overflow-auto w-[var(--radix-select-trigger-width)]"
+                  position="popper"
+                  sideOffset={4}
+                  align="start"
+                  side="bottom"
+                >
+                  <SelectItem value="chromium" className="text-[#e5e5e5] focus:bg-[#2a2f37] focus:text-white rounded py-2 text-base">chromium</SelectItem>
+                  <SelectItem value="firefox" className="text-[#e5e5e5] focus:bg-[#2a2f37] focus:text-white rounded py-2 text-base">firefox</SelectItem>
+                  <SelectItem value="webkit" className="text-[#e5e5e5] focus:bg-[#2a2f37] focus:text-white rounded py-2 text-base">webkit</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <div className="field-group checkbox-field">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  name="headless"
-                  checked={!!formData.headless}
-                  onChange={handleChange}
-                />
+
+            <div className="group relative pb-8 mb-8 last:border-0 border-b border-solid border-[#3a3f47]/50 flex flex-row items-center justify-between gap-4">
+              <Label className="text-white text-sm font-semibold cursor-pointer flex-1">
                 {t("nodes.fields.headless")}
-              </label>
+              </Label>
+              <Switch
+                checked={!!formData.headless}
+                onCheckedChange={(checked) => handleChange("headless", checked)}
+                className="data-[state=checked]:bg-[#1a73e8] data-[state=unchecked]:bg-[#3a3f47]"
+              />
             </div>
-            <div className="field-group checkbox-field">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  name="maximizeWindow"
-                  checked={!!formData.maximizeWindow}
-                  onChange={handleChange}
-                />
+
+            <div className="group relative pb-8 mb-8 last:border-0 border-b border-solid border-[#3a3f47]/50 flex flex-row items-center justify-between gap-4">
+              <Label className="text-white text-sm font-semibold cursor-pointer flex-1">
                 {t("nodes.fields.maximizeWindow")}
-              </label>
+              </Label>
+              <Switch
+                checked={!!formData.maximizeWindow}
+                onCheckedChange={(checked) => handleChange("maximizeWindow", checked)}
+                className="data-[state=checked]:bg-[#1a73e8] data-[state=unchecked]:bg-[#3a3f47]"
+              />
             </div>
-            <div className="field-group">
-              <label>{t("nodes.fields.slowMo")}</label>
-              <input
+
+            <div className="group relative pb-8 mb-8 last:border-0 border-b border-solid border-[#3a3f47]/50">
+              <Label className="text-white text-sm font-semibold block mb-4">
+                {t("nodes.fields.slowMo")}
+              </Label>
+              <Input
                 type="number"
                 name="slowMo"
                 value={formData.slowMo ?? 0}
-                onChange={handleChange}
+                onChange={handleInputChange}
+                className="w-full bg-[#15181c] border-[#3a3f47] text-[#e5e5e5] focus-visible:ring-[#1a73e8] focus-visible:border-[#1a73e8] !h-16 !text-lg"
               />
             </div>
-            <div className="field-group">
-              <label>{t("nodes.fields.args")}</label>
-              <input
+
+            <div className="group relative pb-8 mb-8 last:border-0 border-b border-solid border-[#3a3f47]/50">
+              <Label className="text-white text-sm font-semibold block mb-4">
+                {t("nodes.fields.args")}
+              </Label>
+              <Input
                 type="text"
                 name="args"
                 value={formData.args ?? ""}
-                onChange={handleChange}
+                onChange={handleInputChange}
                 placeholder="--start-maximized"
+                className="w-full bg-[#15181c] border-[#3a3f47] text-[#e5e5e5] focus-visible:ring-[#1a73e8] focus-visible:border-[#1a73e8] !h-16 !text-lg"
               />
             </div>
-            <div className="field-group">
-              <label>{t("nodes.fields.endpoint")}</label>
-              <input
+
+            <div className="group relative pb-8 mb-8 last:border-0 border-b border-solid border-[#3a3f47]/50">
+              <Label className="text-white text-sm font-semibold block mb-4">
+                {t("nodes.fields.endpoint")}
+              </Label>
+              <Input
                 type="text"
                 name="endpoint"
                 value={formData.endpoint ?? ""}
-                onChange={handleChange}
+                onChange={handleInputChange}
+                className="w-full bg-[#15181c] border-[#3a3f47] text-[#e5e5e5] focus-visible:ring-[#1a73e8] focus-visible:border-[#1a73e8] !h-16 !text-lg"
               />
             </div>
-          </>
+          </div>
         );
       }
 
       if (action.type === "open_url") {
         return (
-          <>
-            <div className="field-group">
-              <label>
+          <div>
+            <div className="group relative pb-8 mb-8 last:border-0 border-b border-solid border-[#3a3f47]/50">
+              <Label className="text-white text-sm font-semibold block mb-4">
                 {t("nodes.fields.url")}
-                <span className="required">*</span>
-              </label>
-              <input
+                <span className="text-red-500 ml-1">*</span>
+              </Label>
+              <Input
                 type="text"
                 name="url"
                 value={formData.url ?? ""}
-                onChange={handleChange}
+                onChange={handleInputChange}
                 placeholder="https://www.google.com"
-                required
-                className={errors.url ? "input-error" : ""}
+                className={cn(
+                  "w-full bg-[#15181c] border-[#3a3f47] text-[#e5e5e5] focus-visible:ring-[#1a73e8] focus-visible:border-[#1a73e8] !h-16 !text-lg",
+                  errors.url && "border-red-500"
+                )}
               />
               {errors.url && (
-                <span className="field-error">
+                <div className="flex items-center gap-1 text-red-400 text-xs mt-2">
                   <AlertCircle size={14} /> {errors.url}
-                </span>
+                </div>
               )}
             </div>
 
-            <div className="field-group">
-              <label>{t("nodes.fields.waitUntil")}</label>
-              <select
-                name="waitUntil"
+            <div className="group relative pb-8 mb-8 last:border-0 border-b border-solid border-[#3a3f47]/50">
+              <Label className="text-white text-sm font-semibold block mb-4">
+                {t("nodes.fields.waitUntil")}
+              </Label>
+              <Select
                 value={formData.waitUntil ?? "domcontentloaded"}
-                onChange={handleChange}
+                onValueChange={(val) => handleChange("waitUntil", val)}
               >
-                <option value="load">load</option>
-                <option value="domcontentloaded">domcontentloaded</option>
-                <option value="networkidle0">networkidle0</option>
-                <option value="networkidle2">networkidle2</option>
-              </select>
+                <SelectTrigger className="w-full bg-[#15181c] border-[#3a3f47] text-[#e5e5e5] focus:ring-[#1a73e8] focus:border-[#1a73e8] !h-16 !text-lg [&>span]:whitespace-normal [&>span]:text-left">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-[#1d2024] border-[#2c2f33]">
+                  <SelectItem value="load" className="text-[#e5e5e5] focus:bg-[#2a2f37] focus:text-white rounded py-2 text-base">load</SelectItem>
+                  <SelectItem value="domcontentloaded" className="text-[#e5e5e5] focus:bg-[#2a2f37] focus:text-white rounded py-2 text-base">domcontentloaded</SelectItem>
+                  <SelectItem value="networkidle0" className="text-[#e5e5e5] focus:bg-[#2a2f37] focus:text-white rounded py-2 text-base">networkidle0</SelectItem>
+                  <SelectItem value="networkidle2" className="text-[#e5e5e5] focus:bg-[#2a2f37] focus:text-white rounded py-2 text-base">networkidle2</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
-            <div className="field-group">
-              <label>{t("nodes.fields.timeout")}</label>
-              <input
+            <div className="group relative pb-8 mb-8 last:border-0 border-b border-solid border-[#3a3f47]/50">
+              <Label className="text-white text-sm font-semibold block mb-4">
+                {t("nodes.fields.timeout")}
+              </Label>
+              <Input
                 type="number"
                 name="timeout"
                 value={formData.timeout ?? 20000}
-                onChange={handleChange}
+                onChange={handleInputChange}
                 min={0}
+                className="w-full bg-[#15181c] border-[#3a3f47] text-[#e5e5e5] focus-visible:ring-[#1a73e8] focus-visible:border-[#1a73e8] !h-16 !text-lg"
               />
             </div>
 
-            <div className="field-group">
-              <label>{t("nodes.fields.endpoint")}</label>
-              <input
+            <div className="group relative pb-8 mb-8 last:border-0 border-b border-solid border-[#3a3f47]/50">
+              <Label className="text-white text-sm font-semibold block mb-4">
+                {t("nodes.fields.endpoint")}
+              </Label>
+              <Input
                 type="text"
                 name="endpoint"
                 value={formData.endpoint ?? ""}
-                onChange={handleChange}
+                onChange={handleInputChange}
+                className="w-full bg-[#15181c] border-[#3a3f47] text-[#e5e5e5] focus-visible:ring-[#1a73e8] focus-visible:border-[#1a73e8] !h-16 !text-lg"
               />
             </div>
-          </>
+          </div>
         );
       }
 
       if (action.type === "manage_tabs") {
         return (
-          <>
-            <div className="field-group">
-              <label>{t("nodes.fields.action")}</label>
-              <select
-                name="action"
+          <div>
+            <div className="group relative pb-8 mb-8 last:border-0 border-b border-solid border-[#3a3f47]/50">
+              <Label className="text-white text-sm font-semibold block mb-4">
+                {t("nodes.fields.action")}
+              </Label>
+              <Select
                 value={formData.action ?? "new"}
-                onChange={handleChange}
-                required
+                onValueChange={(val) => handleChange("action", val)}
               >
-                <option value="new">new</option>
-                <option value="switch">switch</option>
-                <option value="close">close</option>
-                <option value="list">list</option>
-              </select>
+                <SelectTrigger className="w-full bg-[#15181c] border-[#3a3f47] text-[#e5e5e5] focus:ring-[#1a73e8] focus:border-[#1a73e8] !h-16 !text-lg [&>span]:whitespace-normal [&>span]:text-left">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-[#1d2024] border-[#2c2f33]">
+                  <SelectItem value="new" className="text-[#e5e5e5] focus:bg-[#2a2f37] focus:text-white rounded py-2 text-base">new</SelectItem>
+                  <SelectItem value="switch" className="text-[#e5e5e5] focus:bg-[#2a2f37] focus:text-white rounded py-2 text-base">switch</SelectItem>
+                  <SelectItem value="close" className="text-[#e5e5e5] focus:bg-[#2a2f37] focus:text-white rounded py-2 text-base">close</SelectItem>
+                  <SelectItem value="list" className="text-[#e5e5e5] focus:bg-[#2a2f37] focus:text-white rounded py-2 text-base">list</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {formData.action === "new" && (
-              <div className="field-group">
-                <label>
+              <div className="group relative pb-8 mb-8 last:border-0 border-b border-solid border-[#3a3f47]/50">
+                <Label className="text-white text-sm font-semibold block mb-4">
                   {t("nodes.fields.url")} ({t("common.optional")})
-                  <span className="required">*</span>
-                </label>
-                <input
+                </Label>
+                <Input
                   type="text"
                   name="url"
                   value={formData.url ?? ""}
-                  onChange={handleChange}
+                  onChange={handleInputChange}
                   placeholder="https://www.google.com"
-                  required
+                  className="w-full bg-[#15181c] border-[#3a3f47] text-[#e5e5e5] focus-visible:ring-[#1a73e8] focus-visible:border-[#1a73e8] !h-16 !text-lg"
                 />
               </div>
             )}
 
             {(formData.action === "switch" || formData.action === "close") && (
-              <div className="field-group">
-                <label>{t("nodes.fields.tabIndex")}</label>
-                <input
+              <div className="group relative pb-8 mb-8 last:border-0 border-b border-solid border-[#3a3f47]/50">
+                <Label className="text-white text-sm font-semibold block mb-4">
+                  {t("nodes.fields.tabIndex")}
+                </Label>
+                <Input
                   type="number"
                   name="tabIndex"
                   value={formData.tabIndex ?? 0}
-                  onChange={handleChange}
+                  onChange={handleInputChange}
                   min={0}
                   placeholder="0"
-                  required
+                  className="w-full bg-[#15181c] border-[#3a3f47] text-[#e5e5e5] focus-visible:ring-[#1a73e8] focus-visible:border-[#1a73e8] !h-16 !text-lg"
                 />
               </div>
             )}
 
-            <div className="field-group">
-              <label>{t("nodes.fields.endpoint")}</label>
-              <input
+            <div className="group relative pb-8 mb-8 last:border-0 border-b border-solid border-[#3a3f47]/50">
+              <Label className="text-white text-sm font-semibold block mb-4">
+                {t("nodes.fields.endpoint")}
+              </Label>
+              <Input
                 type="text"
                 name="endpoint"
                 value={formData.endpoint ?? ""}
-                onChange={handleChange}
+                onChange={handleInputChange}
+                className="w-full bg-[#15181c] border-[#3a3f47] text-[#e5e5e5] focus-visible:ring-[#1a73e8] focus-visible:border-[#1a73e8] !h-16 !text-lg"
               />
             </div>
-          </>
+          </div>
         );
       }
 
       // fallback generic
-      return Object.keys(formData).map((k) => (
-        <div className="field-group" key={k}>
-          <label>{k}</label>
-          <input
-            type="text"
-            name={k}
-            value={formData[k] ?? ""}
-            onChange={handleChange}
-          />
+      return (
+        <div className="space-y-4">
+          {Object.keys(formData).map((k) => (
+            <div key={k} className="group relative pb-8 mb-8 last:border-0 border-b border-solid border-[#3a3f47]/50">
+              <Label className="text-white text-sm font-semibold block mb-4">
+                {k}
+              </Label>
+              <Input
+                type="text"
+                name={k}
+                value={formData[k] ?? ""}
+                onChange={handleInputChange}
+                className="w-full bg-[#15181c] border-[#3a3f47] text-[#e5e5e5] focus-visible:ring-[#1a73e8] focus-visible:border-[#1a73e8] !h-16 !text-lg"
+              />
+            </div>
+          ))}
         </div>
-      ));
+      );
     }
 
-    return fields.map(renderField);
+    return <div className="space-y-4">{fields.map(renderField)}</div>;
   };
 
   if (!action) return null;
@@ -724,108 +818,130 @@ function NodeConfigurationPanel({
           initial="initial"
           animate="animate"
           exit="exit"
-          className="config-panel"
+          style={{ right: 0, left: 'auto' }}
+          className="fixed top-[56px] h-[calc(100vh-56px-120px)] w-[360px] bg-[#22262b] border-l border-[#1a1d21] z-20 flex flex-col shadow-[-4px_0_15px_rgba(0,0,0,0.5)]"
           role="complementary"
         >
-          <div className="config-header">
-            <h2>
-              {t("common.configure")}:{" "}
-              <span className="node-type">
+          {/* Header */}
+          <div className="p-4 mb-6 border-b border-[#0b0c10] flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Settings className="w-4 h-4 text-[#1a73e8]" />
+              <h2 className="text-base font-semibold text-[#ff8c32]">
                 {t(`nodes.labels.${action.type}`)}
-              </span>
-            </h2>
-            <button
-              className="btn-close-panel"
+              </h2>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={handleClose}
-              aria-label={t("common.close_panel")}
+              className="text-[#b0b0b0] hover:text-white hover:bg-[#3c4044] h-8 w-8"
             >
-              <XCircle size={22} />
-            </button>
+              <XCircle size={18} />
+            </Button>
           </div>
 
-          <div className="config-body">{renderFields()}</div>
+          {/* Body */}
+          <ScrollArea className="flex-1 bg-[#22262b]">
+            <div className="p-10">{renderFields()}</div>
 
-          {action?.data?.error && (
-            <div className="error-display">
-              <div className="error-header">
-                <AlertCircle size={20} />
-                <span>{t("common.execution_error")}</span>
-              </div>
-              <div className="error-message">
-                {(() => {
-                  const errorMsg = action.data.error;
-                  if (
-                    typeof errorMsg === "string" &&
-                    errorMsg.includes("<!DOCTYPE")
-                  ) {
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(errorMsg, "text/html");
-                    const bodyText = doc.body?.textContent?.trim();
-                    return bodyText || t("nodes.config.error_server_unknown");
-                  }
-                  return errorMsg;
-                })()}
-              </div>
-            </div>
-          )}
-
-          {action?.type === "manage_tabs" &&
-            action?.data?.configuration?.action === "list" &&
-            action?.data?.result?.data?.tabs && (
-              <div className="tab-list-display">
-                <div className="tab-list-header">
-                  <span>
-                    📑{" "}
-                    {t("nodes.config.tab_list_title", {
-                      count: action.data.result.data.tabs.length,
-                    })}
-                  </span>
+            {/* Error Display */}
+            {action?.data?.error && (
+              <div className="mx-4 mb-4 p-3 bg-red-900/30 border border-red-500/50 rounded-md">
+                <div className="flex items-center gap-2 text-red-400 font-semibold text-sm mb-1">
+                  <AlertCircle size={16} />
+                  <span>{t("common.execution_error")}</span>
                 </div>
-                <div className="tab-list-content">
-                  {action.data.result.data.tabs.map((tab, index) => (
-                    <div
-                      key={index}
-                      className={`tab-item ${tab.active ? "active" : ""}`}
-                    >
-                      <div className="tab-index">#{index}</div>
-                      <div className="tab-info">
-                        <div className="tab-url" title={tab.url}>
-                          {tab.url || "about:blank"}
-                        </div>
-                        {tab.active && (
-                          <span className="tab-badge">
-                            {t("nodes.config.active_tab")}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <p className="text-red-300 text-xs font-mono">
+                  {(() => {
+                    const errorMsg = action.data.error;
+                    if (
+                      typeof errorMsg === "string" &&
+                      errorMsg.includes("<!DOCTYPE")
+                    ) {
+                      const parser = new DOMParser();
+                      const doc = parser.parseFromString(errorMsg, "text/html");
+                      const bodyText = doc.body?.textContent?.trim();
+                      return bodyText || t("nodes.config.error_server_unknown");
+                    }
+                    return errorMsg;
+                  })()}
+                </p>
               </div>
             )}
 
-          {VISUAL_CHANGE_NODES.has(action?.type) && (
-            <ScreenshotViewer
-              screenshots={action?.data?.screenshots}
-              nodeId={action?.nodeId}
-              isVisible={isVisible}
-            />
-          )}
+            {/* Tab List Display */}
+            {action?.type === "manage_tabs" &&
+              action?.data?.configuration?.action === "list" &&
+              action?.data?.result?.data?.tabs && (
+                <div className="mx-4 mb-4 p-3 bg-[#1d2024] border border-[#4a4e54] rounded-md">
+                  <div className="flex items-center gap-2 text-[#e5e5e5] font-semibold text-sm mb-2">
+                    📑 {t("nodes.config.tab_list_title", {
+                      count: action.data.result.data.tabs.length,
+                    })}
+                  </div>
+                  <div className="space-y-2">
+                    {action.data.result.data.tabs.map((tab, index) => (
+                      <div
+                        key={index}
+                        className={cn(
+                          "p-2 rounded text-xs font-mono",
+                          tab.active
+                            ? "bg-[#1a73e8]/20 border border-[#1a73e8]"
+                            : "bg-[#0b0c10]"
+                        )}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-[#b0b0b0]">#{index}</span>
+                          <span className="text-[#e5e5e5] truncate flex-1" title={tab.url}>
+                            {tab.url || "about:blank"}
+                          </span>
+                          {tab.active && (
+                            <span className="text-[#1a73e8] text-xs">
+                              {t("nodes.config.active_tab")}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-          <div className="config-footer">
-            <button
-              className={`btn-run ${!canExecute ? "disabled" : ""}`}
+            {/* Screenshot Viewer */}
+            {VISUAL_CHANGE_NODES.has(action?.type) && (
+              <ScreenshotViewer
+                screenshots={action?.data?.screenshots}
+                nodeId={action?.nodeId}
+                isVisible={isVisible}
+              />
+            )}
+          </ScrollArea>
+
+          {/* Footer */}
+          <div className="p-4 border-t border-[#0b0c10] bg-[#25282b] flex gap-2">
+            <Button
               onClick={handleExecute}
               disabled={!canExecute}
+              className="flex-1 bg-[#1a73e8] hover:bg-[#1565c0] text-white h-9"
             >
-              <Play size={18} /> {t("common.run")}
-            </button>
-            <button className="btn-cancel" onClick={handleClose}>
+              <Play size={14} className="mr-2" />
+              {t("common.run")}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleClose}
+              className="border-[#4a4e54] text-[#b0b0b0] hover:bg-[#3c4044] hover:text-white h-9 px-3"
+            >
               {t("common.cancel")}
-            </button>
-            <button className="btn-delete" onClick={handleDelete}>
-              <Trash2 size={18} /> {t("common.delete")}
-            </button>
+            </Button>
+            <Button
+              onClick={handleDelete}
+              className="h-9 px-3"
+              style={{ backgroundColor: "#ef4444", color: "white", border: "none" }}
+            >
+              <Trash2 size={14} className="mr-1" />
+              {t("common.delete")}
+            </Button>
           </div>
         </motion.aside>
       )}
