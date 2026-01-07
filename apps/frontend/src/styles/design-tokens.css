@@ -1,0 +1,260 @@
+/**
+ * HAL-TEST Design Tokens
+ * Clean & Technical Design System
+ * 
+ * This file defines the core design tokens for a professional,
+ * technical-first UI. All color values use semantic naming.
+ */
+
+@layer base {
+  :root {
+    /* ==========================================
+     * SEMANTIC COLORS - SUCCESS (Emerald Scale)
+     * Used for: Passed tests, successful operations
+     * ========================================== */
+    --hal-success-50: 236 253 245;
+    --hal-success-100: 209 250 229;
+    --hal-success-200: 167 243 208;
+    --hal-success-300: 110 231 183;
+    --hal-success-400: 52 211 153;
+    --hal-success-500: 16 185 129;
+    --hal-success-600: 5 150 105;
+    --hal-success-700: 4 120 87;
+    --hal-success-800: 6 95 70;
+    --hal-success-900: 6 78 59;
+    --hal-success-950: 2 44 34;
+
+    /* ==========================================
+     * SEMANTIC COLORS - ERROR (Rose Scale)
+     * Used for: Failed tests, errors, destructive actions
+     * ========================================== */
+    --hal-error-50: 255 241 242;
+    --hal-error-100: 255 228 230;
+    --hal-error-200: 254 205 211;
+    --hal-error-300: 253 164 175;
+    --hal-error-400: 251 113 133;
+    --hal-error-500: 244 63 94;
+    --hal-error-600: 225 29 72;
+    --hal-error-700: 190 18 60;
+    --hal-error-800: 159 18 57;
+    --hal-error-900: 136 19 55;
+    --hal-error-950: 76 5 25;
+
+    /* ==========================================
+     * SEMANTIC COLORS - WARNING (Amber Scale)
+     * Used for: Warnings, flaky tests, pending states
+     * ========================================== */
+    --hal-warning-50: 255 251 235;
+    --hal-warning-100: 254 243 199;
+    --hal-warning-200: 253 230 138;
+    --hal-warning-300: 252 211 77;
+    --hal-warning-400: 251 191 36;
+    --hal-warning-500: 245 158 11;
+    --hal-warning-600: 217 119 6;
+    --hal-warning-700: 180 83 9;
+    --hal-warning-800: 146 64 14;
+    --hal-warning-900: 120 53 15;
+    --hal-warning-950: 69 26 3;
+
+    /* ==========================================
+     * SEMANTIC COLORS - PRIMARY (Indigo Scale)
+     * Used for: Primary actions, links, focus states
+     * ========================================== */
+    --hal-primary-50: 238 242 255;
+    --hal-primary-100: 224 231 255;
+    --hal-primary-200: 199 210 254;
+    --hal-primary-300: 165 180 252;
+    --hal-primary-400: 129 140 248;
+    --hal-primary-500: 99 102 241;
+    --hal-primary-600: 79 70 229;
+    --hal-primary-700: 67 56 202;
+    --hal-primary-800: 55 48 163;
+    --hal-primary-900: 49 46 129;
+    --hal-primary-950: 30 27 75;
+
+    /* ==========================================
+     * NEUTRAL COLORS (Zinc Scale)
+     * Used for: Backgrounds, borders, text, technical UI
+     * ========================================== */
+    --hal-neutral-50: 250 250 250;
+    --hal-neutral-100: 244 244 245;
+    --hal-neutral-200: 228 228 231;
+    --hal-neutral-300: 212 212 216;
+    --hal-neutral-400: 161 161 170;
+    --hal-neutral-500: 113 113 122;
+    --hal-neutral-600: 82 82 91;
+    --hal-neutral-700: 63 63 70;
+    --hal-neutral-800: 39 39 42;
+    --hal-neutral-900: 24 24 27;
+    --hal-neutral-950: 9 9 11;
+
+    /* ==========================================
+     * TYPOGRAPHY
+     * Modern sans-serif (Inter) + Technical monospace (JetBrains Mono)
+     * ========================================== */
+    --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+    --font-mono: "JetBrains Mono", "Fira Code", "Consolas", monospace;
+
+    /* Font Sizes - Technical Scale */
+    --text-xs: 0.6875rem;
+    /* 11px - hints, labels */
+    --text-sm: 0.8125rem;
+    /* 13px - secondary text */
+    --text-base: 0.9375rem;
+    /* 15px - body text */
+    --text-lg: 1.0625rem;
+    /* 17px - emphasized text */
+    --text-xl: 1.25rem;
+    /* 20px - titles */
+    --text-2xl: 1.5rem;
+    /* 24px - section headers */
+    --text-3xl: 1.875rem;
+    /* 30px - page headers */
+
+    /* Line Heights */
+    --leading-tight: 1.25;
+    --leading-normal: 1.5;
+    --leading-relaxed: 1.75;
+
+    /* Font Weights */
+    --font-normal: 400;
+    --font-medium: 500;
+    --font-semibold: 600;
+    --font-bold: 700;
+
+    /* ==========================================
+     * SPACING SCALE
+     * Consistent spacing system
+     * ========================================== */
+    --space-1: 0.25rem;
+    /* 4px */
+    --space-2: 0.5rem;
+    /* 8px */
+    --space-3: 0.75rem;
+    /* 12px */
+    --space-4: 1rem;
+    /* 16px */
+    --space-5: 1.25rem;
+    /* 20px */
+    --space-6: 1.5rem;
+    /* 24px */
+    --space-8: 2rem;
+    /* 32px */
+    --space-10: 2.5rem;
+    /* 40px */
+    --space-12: 3rem;
+    /* 48px */
+    --space-16: 4rem;
+    /* 64px */
+    --space-20: 5rem;
+    /* 80px */
+
+    /* ==========================================
+     * BORDER RADIUS
+     * Technical feel - subtle curves
+     * ========================================== */
+    --radius-sm: 0.25rem;
+    /* 4px */
+    --radius-md: 0.5rem;
+    /* 8px */
+    --radius-lg: 0.75rem;
+    /* 12px */
+    --radius-xl: 1rem;
+    /* 16px */
+
+    /* ==========================================
+     * SHADOWS
+     * Subtle depth for technical UI
+     * ========================================== */
+    --shadow-subtle: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-medium:
+      0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-strong:
+      0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+
+    /* ==========================================
+     * TRANSITIONS
+     * Smooth, technical feel
+     * ========================================== */
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Easing curves */
+    --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-out: cubic-bezier(0, 0, 0.2, 1);
+    --ease-in: cubic-bezier(0.4, 0, 1, 1);
+
+    /* ==========================================
+     * Z-INDEX SCALE
+     * Layering system
+     * ========================================== */
+    --z-base: 0;
+    --z-dropdown: 1000;
+    --z-sticky: 1100;
+    --z-fixed: 1200;
+    --z-modal-backdrop: 1300;
+    --z-modal: 1400;
+    --z-popover: 1500;
+    --z-tooltip: 1600;
+  }
+
+  /* ==========================================
+    * UTILITY CLASSES (Pure CSS due to Tailwind v4 @apply limitations)
+    * ========================================== */
+  @layer utilities {
+    /* Technical input field - Deep sunken appearance */
+    .input-technical {
+      background-color: rgb(var(--hal-neutral-950));
+      border: 1px solid rgb(var(--hal-neutral-800));
+      color: rgb(var(--hal-neutral-100));
+      transition: all var(--transition-normal);
+      box-shadow: var(--shadow-inner);
+    }
+
+    .input-technical:focus {
+      outline: none;
+      box-shadow: 0 0 0 1px rgb(var(--hal-primary-500));
+      border-color: rgb(var(--hal-primary-500));
+    }
+
+    /* Technical card - Subtle glassmorphism */
+    .card-technical {
+      background-color: rgba(var(--hal-neutral-900), 0.4);
+      backdrop-filter: blur(4px);
+      border: 1px solid rgb(var(--hal-neutral-800));
+      border-radius: var(--radius-lg);
+    }
+
+    /* Monospace technical text */
+    .text-technical {
+      font-family: var(--font-mono);
+      color: rgb(var(--hal-neutral-300));
+    }
+
+    /* Success state */
+    .state-success {
+      border-color: rgb(var(--hal-success-500));
+      color: rgb(var(--hal-success-500));
+    }
+
+    /* Error state */
+    .state-error {
+      border-color: rgb(var(--hal-error-500));
+      color: rgb(var(--hal-error-500));
+    }
+
+    /* Warning state */
+    .state-warning {
+      border-color: rgb(var(--hal-warning-500));
+      color: rgb(var(--hal-warning-500));
+    }
+
+    /* Primary state */
+    .state-primary {
+      border-color: rgb(var(--hal-primary-500));
+      color: rgb(var(--hal-primary-500));
+    }
+  }
+}

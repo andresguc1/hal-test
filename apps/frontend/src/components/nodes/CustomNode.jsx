@@ -1,12 +1,14 @@
 /**
  * Custom Node Component for ReactFlow
  * Memoized to prevent unnecessary re-renders
+ * Refactored to use design tokens and Tailwind for consistency
  */
 
 import React, { memo } from "react";
 import { Handle, Position } from "@xyflow/react";
 import { CheckCircle, XCircle, Clock, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { cn } from "@/lib/utils";
 import {
   NODE_STATES,
   PROFESSIONAL_COLORS,
@@ -27,10 +29,8 @@ import "./CustomNode.css";
 function CustomNode({ data, selected }) {
   const { t } = useTranslation();
   const state = data?.state || NODE_STATES.DEFAULT;
-  const colors =
-    PROFESSIONAL_COLORS[state] || PROFESSIONAL_COLORS[NODE_STATES.DEFAULT];
 
-  // Determine category icon
+  // Determine category
   const categoryKey = NODE_TYPE_TO_CATEGORY[data?.type] || "default";
   const categoryColor = CATEGORY_COLORS[categoryKey] || CATEGORY_COLORS.default;
 
@@ -41,144 +41,108 @@ function CustomNode({ data, selected }) {
   const getStateBadge = () => {
     switch (state) {
       case NODE_STATES.EXECUTING:
-        return <Loader2 size={14} className="node-badge-icon animate-spin" />;
+        return <Loader2 size={14} className="text-white animate-spin" />;
       case NODE_STATES.SUCCESS:
-        return <CheckCircle size={14} className="node-badge-icon" />;
+        return <CheckCircle size={14} className="text-white" />;
       case NODE_STATES.ERROR:
-        return <XCircle size={14} className="node-badge-icon" />;
+        return <XCircle size={14} className="text-white" />;
       default:
         return null;
     }
   };
 
-  // Define state colors for enhanced visual effect
-  const stateColors = {
-    [NODE_STATES.DEFAULT]: {
-      border: "#CBD5E1",
-      shadow: "#64748B",
-      glow: "rgba(203, 213, 225, 0.5)",
-    },
-    [NODE_STATES.EXECUTING]: {
-      border: "#F59E0B",
-      shadow: "#D97706",
-      glow: "rgba(245, 158, 11, 0.4)",
-    },
-    [NODE_STATES.SUCCESS]: {
-      border: "#10B981",
-      shadow: "#059669",
-      glow: "rgba(16, 185, 129, 0.4)",
-    },
-    [NODE_STATES.ERROR]: {
-      border: "#EF4444",
-      shadow: "#DC2626",
-      glow: "rgba(239, 68, 68, 0.4)",
-    },
-    [NODE_STATES.SKIPPED]: {
-      border: "#94A3B8",
-      shadow: "#64748B",
-      glow: "rgba(148, 163, 184, 0.3)",
-    },
+  // Get state-specific Tailwind classes
+  const getStateClasses = () => {
+    switch (state) {
+      case NODE_STATES.SUCCESS:
+        return "border-t-hal-success-500 border-r-hal-success-500 border-b-hal-success-500 shadow-[0_4px_0_rgb(var(--hal-success-700))] hover:shadow-[0_0_12px_rgba(16,185,129,0.4)]";
+      case NODE_STATES.ERROR:
+        return "border-t-hal-error-500 border-r-hal-error-500 border-b-hal-error-500 shadow-[0_4px_0_rgb(var(--hal-error-700))] hover:shadow-[0_0_12px_rgba(244,63,94,0.4)] animate-shake-error";
+      case NODE_STATES.EXECUTING:
+        return "border-t-hal-warning-500 border-r-hal-warning-500 border-b-hal-warning-500 shadow-[0_4px_0_rgb(var(--hal-warning-700))] animate-pulse-technical";
+      case NODE_STATES.SKIPPED:
+        return "border-t-hal-neutral-600 border-r-hal-neutral-600 border-b-hal-neutral-600 shadow-[0_4px_0_rgb(var(--hal-neutral-700))] opacity-60";
+      default:
+        return "border-t-hal-neutral-700 border-r-hal-neutral-700 border-b-hal-neutral-700 shadow-[0_4px_0_rgb(var(--hal-neutral-800))]";
+    }
   };
 
-  const currentStateColor =
-    stateColors[state] || stateColors[NODE_STATES.DEFAULT];
-  const borderColor = selected ? "#FF8C32" : currentStateColor.border;
-  const shadowColor = currentStateColor.shadow;
+  // Selected state classes
+  const selectedClasses = selected
+    ? "shadow-[0_6px_0_rgb(var(--hal-warning-600)),0_0_0_3px_rgba(245,158,11,0.4)] scale-105"
+    : "";
 
-  const nodeStyle = {
-    background: `linear-gradient(135deg, ${colors.background} 0%, ${colors.background}f0 100%)`,
-    borderTop: `2px solid ${borderColor}`,
-    borderRight: `2px solid ${borderColor}`,
-    borderBottom: `3px solid ${borderColor}`,
-    borderLeft: `5px solid ${categoryColor}`, // Category accent
-    color: colors.text,
-    padding: "12px 14px",
-    borderRadius: "12px",
-    width: "200px",
-    minHeight: "70px",
-    display: "flex",
-    flexDirection: "column",
-    gap: "8px",
-    boxShadow: selected
-      ? `0 6px 0 ${shadowColor}, 0 0 0 3px ${currentStateColor.glow}`
-      : `0 4px 0 ${shadowColor}`,
-    transform: "translateY(0)",
-    cursor: "pointer",
-    overflow: "visible",
-    transition: "all 0.2s ease",
-  };
-
-  const headerStyle = {
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    flex: 1,
-  };
-
-  const labelStyle = {
-    fontSize: "14px",
-    fontWeight: 600,
-    lineHeight: "1.2",
-    flex: 1,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    display: "-webkit-box",
-    WebkitLineClamp: 2,
-    WebkitBoxOrient: "vertical",
-  };
-
-  const badgeContainerStyle = {
-    position: "absolute",
-    top: -6,
-    right: -6,
-    background:
-      state === NODE_STATES.SUCCESS
-        ? "#10B981"
-        : state === NODE_STATES.ERROR
-          ? "#EF4444"
-          : state === NODE_STATES.EXECUTING
-            ? "#F59E0B"
-            : "transparent",
-    borderRadius: "50%",
-    padding: "4px",
-    boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: "white",
+  // Badge background color
+  const getBadgeColor = () => {
+    switch (state) {
+      case NODE_STATES.SUCCESS:
+        return "bg-hal-success-500";
+      case NODE_STATES.ERROR:
+        return "bg-hal-error-500";
+      case NODE_STATES.EXECUTING:
+        return "bg-hal-warning-500";
+      default:
+        return "bg-transparent";
+    }
   };
 
   return (
     <div
-      style={nodeStyle}
-      className="custom-node"
+      className={cn(
+        // Base styles
+        "custom-node relative",
+        "bg-gradient-to-br from-hal-neutral-900 to-hal-neutral-950",
+        "border-2 border-t-2 border-r-2 border-b-[3px]",
+        "rounded-xl p-3",
+        "w-[200px] min-h-[70px]",
+        "flex flex-col gap-2",
+        "cursor-pointer overflow-visible",
+        "transition-all duration-200 ease-in-out",
+        "text-hal-neutral-100",
+        // State-specific styling
+        getStateClasses(),
+        // Selected state
+        selectedClasses
+      )}
+      style={{
+        borderLeftWidth: "5px",
+        borderLeftColor: categoryColor,
+      }}
       title={data?.label + (data?.description ? `\n${data.description}` : "")}
     >
       {/* Input Handle - Left */}
       <Handle
         type="target"
         position={Position.Left}
-        style={{
-          background: categoryColor,
-          width: 10,
-          height: 10,
-          border: "2px solid white",
-        }}
+        className="w-[10px] h-[10px] border-2 border-white"
+        style={{ background: categoryColor }}
       />
 
       {/* State Badge */}
       {getStateBadge() && (
-        <div style={badgeContainerStyle}>{getStateBadge()}</div>
+        <div
+          className={cn(
+            "absolute -top-1.5 -right-1.5",
+            "w-[26px] h-[26px]",
+            "rounded-full",
+            "flex items-center justify-center",
+            "shadow-md",
+            getBadgeColor()
+          )}
+        >
+          {getStateBadge()}
+        </div>
       )}
 
       {/* Node Header with Icon and Label */}
-      <div style={headerStyle}>
+      <div className="flex items-center gap-2.5 flex-1">
         <NodeIconComponent
           size={20}
           strokeWidth={2.5}
-          style={{ color: categoryColor, flexShrink: 0 }}
+          className="flex-shrink-0"
+          style={{ color: categoryColor }}
         />
-        <span style={labelStyle}>
+        <span className="text-sm font-semibold leading-tight flex-1 overflow-hidden text-ellipsis line-clamp-2">
           {t(`nodes.labels.${data?.type}`) || data?.label || "Node"}
         </span>
       </div>
@@ -187,12 +151,8 @@ function CustomNode({ data, selected }) {
       <Handle
         type="source"
         position={Position.Right}
-        style={{
-          background: categoryColor,
-          width: 10,
-          height: 10,
-          border: "2px solid white",
-        }}
+        className="w-[10px] h-[10px] border-2 border-white"
+        style={{ background: categoryColor }}
       />
     </div>
   );

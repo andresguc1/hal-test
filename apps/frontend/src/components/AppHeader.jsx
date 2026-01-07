@@ -4,7 +4,7 @@ import "./styles/AppHeader.css";
 import UserMenu from "./UserMenu";
 import { ModeToggle } from "./mode-toggle";
 
-export default function AppHeader() {
+export default function AppHeader({ onOpenSettings }) {
   return (
     <motion.header
       initial={{ y: -20, opacity: 0 }}
@@ -16,13 +16,13 @@ export default function AppHeader() {
         initial={{ x: -20, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         transition={{ delay: 0.2, duration: 0.5 }}
-        className="app-title"
+        className="app-title font-bold text-hal-neutral-950"
       >
         HAL-TEST
       </motion.h1>
       <div className="header-actions">
         <ModeToggle />
-        <UserMenu />
+        <UserMenu onOpenSettings={onOpenSettings} />
       </div>
     </motion.header>
   );

@@ -1,46 +1,6 @@
 import { useTranslation } from "react-i18next";
-import "./styles/AppFooter.css";
-
-// ========================================
-// ICONOS SVG
-// ========================================
-
-const IconExecute = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-    <path fill="currentColor" d="M2 21l21-9L2 3v7l15 2-15 2v7z" />
-  </svg>
-);
-
-const IconSave = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-    <path
-      fill="currentColor"
-      d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4zM12 19a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm5-11H7V5h10v3z"
-    />
-  </svg>
-);
-
-const IconExport = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-    <path
-      fill="currentColor"
-      d="M5 20h14v-2H5v2zm7-18L5.33 9h3.84v6h5.66V9h3.84L12 2z"
-    />
-  </svg>
-);
-
-const IconImport = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-    <path
-      fill="currentColor"
-      d="M19 3H5a2 2 0 0 0-2 2v12h2V5h14V3zm-7 5l-5 5h3v4h4v-4h3l-5-5z"
-    />
-  </svg>
-);
-
-// ========================================
-// COMPONENTE PRINCIPAL
-// ========================================
+import { Play, Save, Download, Upload } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function AppFooter({
   onExecuteFlow,
@@ -50,47 +10,45 @@ export default function AppFooter({
 }) {
   const { t } = useTranslation();
   return (
-    <footer className="footer" role="contentinfo">
-      <div className="footer-left">
-        <button
-          type="button"
-          className="btn btn-execute"
+    <footer className="fixed bottom-0 left-0 right-0 z-10 flex h-14 items-center justify-between border-t border-hal-neutral-800 bg-hal-neutral-950 px-5 shadow-[0_-5px_20px_rgba(0,0,0,0.5)]">
+      <div className="flex items-center gap-3">
+        <Button
           onClick={onExecuteFlow}
+          className="bg-hal-warning-500 text-hal-neutral-950 hover:bg-hal-warning-600 border-none shadow-[0_0_8px_rgba(245,158,11,0.4)] hover:shadow-[0_0_12px_rgba(245,158,11,0.6)] font-semibold gap-2 px-4 transition-all duration-200"
           title={t("common.execute_flow_tooltip")}
         >
-          <IconExecute />
+          <Play size={16} fill="currentColor" />
           <span>{t("common.execute_flow")}</span>
-        </button>
+        </Button>
       </div>
 
-      <div className="footer-right">
-        <button
-          type="button"
-          className="btn btn-save"
+      <div className="flex items-center gap-3">
+        <Button
           onClick={onSave}
+          className="bg-hal-neutral-800 border border-hal-neutral-700 text-hal-neutral-100 hover:bg-hal-neutral-700 hover:border-hal-neutral-600 hover:shadow-[0_0_8px_rgba(161,161,170,0.3)] gap-2 px-4 font-medium transition-all duration-200"
           title={t("common.save_flow_tooltip")}
         >
-          <IconSave />
+          <Save size={16} />
           <span>{t("common.save")}</span>
-        </button>
-        <button
-          type="button"
-          className="btn btn-secondary"
+        </Button>
+        <Button
+          variant="secondary"
           onClick={onExport}
+          className="bg-hal-neutral-900 border border-hal-neutral-800 text-hal-neutral-400 hover:bg-hal-neutral-800 hover:text-hal-neutral-100 hover:border-hal-neutral-700 gap-2 px-4 font-medium transition-all duration-200"
           title={t("common.export_flow_tooltip")}
         >
-          <IconExport />
+          <Download size={16} />
           <span>{t("common.export")}</span>
-        </button>
-        <button
-          type="button"
-          className="btn btn-secondary"
+        </Button>
+        <Button
+          variant="secondary"
           onClick={onImport}
+          className="bg-hal-neutral-900 border border-hal-neutral-800 text-hal-neutral-400 hover:bg-hal-neutral-800 hover:text-hal-neutral-100 hover:border-hal-neutral-700 gap-2 px-4 font-medium transition-all duration-200"
           title={t("common.import_flow_tooltip")}
         >
-          <IconImport />
+          <Upload size={16} />
           <span>{t("common.import")}</span>
-        </button>
+        </Button>
       </div>
     </footer>
   );

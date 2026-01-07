@@ -10,18 +10,10 @@ import {
   Redo2,
   MousePointer2,
 } from "lucide-react";
-import "./styles/ContextMenu.css";
+import { cn } from "@/lib/utils";
 
 /**
- * ContextMenu Component
- *
- * @param {Object} props
- * @param {number} props.x - X position
- * @param {number} props.y - Y position
- * @param {string} props.type - Type of context ('canvas', 'node', 'edge')
- * @param {Object} props.data - Data of the element (node or edge)
- * @param {Function} props.onClose - Function to close the menu
- * @param {Object} props.actions - Map of action handlers
+ * ContextMenu Component (Refactored to match Shadcn/UI style manually)
  */
 const ContextMenu = ({ x, y, type, data, onClose, actions }) => {
   const menuRef = useRef(null);
@@ -83,7 +75,11 @@ const ContextMenu = ({ x, y, type, data, onClose, actions }) => {
     disabled = false,
   }) => (
     <button
-      className={`menu-item ${danger ? "danger" : ""} ${disabled ? "disabled" : ""}`}
+      className={cn(
+        "relative flex w-full cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors",
+        disabled ? "pointer-events-none opacity-50" : "hover:bg-[#2c2f33] hover:text-white cursor-pointer focus:bg-[#2c2f33] focus:text-white",
+        danger && !disabled && "text-red-500 hover:text-red-500 focus:text-red-500 hover:bg-red-900/20 focus:bg-red-900/20"
+      )}
       onClick={(e) => {
         e.stopPropagation();
         if (!disabled) {
@@ -94,27 +90,36 @@ const ContextMenu = ({ x, y, type, data, onClose, actions }) => {
       disabled={disabled}
       role="menuitem"
     >
-      <div className="item-icon">
+      <div className="mr-2 flex h-4 w-4 items-center justify-center">
         <Icon size={14} />
       </div>
-      <span className="item-label">{label}</span>
-      {shortcut && <span className="item-shortcut">{shortcut}</span>}
+      <span className="flex-1 text-left text-gray-200">{label}</span>
+      {shortcut && <span className="ml-auto text-xs tracking-widest text-gray-500">{shortcut}</span>}
     </button>
   );
 
-  const renderDivider = () => <div className="menu-divider" role="separator" />;
+  const renderDivider = () => <div className="my-1 h-px bg-[#2c2f33]" role="separator" />;
+
+  const renderHeader = (title) => (
+    <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+      {title}
+    </div>
+  );
 
   return (
     <div
       ref={menuRef}
-      className="context-menu"
+      className={cn(
+        "fixed z-50 min-w-[12rem] overflow-hidden rounded-md border border-[#2c2f33] bg-[#1d2024] p-1 shadow-md animate-in fade-in-80 zoom-in-95 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 slide-in-from-top-2"
+      )}
       style={{ left: x, top: y }}
       role="menu"
       aria-label="Context Menu"
     >
       {type === "node" && (
         <>
-          <div className="menu-header">{data?.data?.label || "Nodo"}</div>
+          {renderHeader(data?.data?.label || "Nodo")}
+          {renderDivider()}
           {renderItem({
             icon: Copy,
             label: "Copiar",
@@ -146,9 +151,8 @@ const ContextMenu = ({ x, y, type, data, onClose, actions }) => {
 
       {type === "selection" && (
         <>
-          <div className="menu-header">
-            Selección ({data?.nodes?.length || 0})
-          </div>
+          {renderHeader(`Selección (${data?.nodes?.length || 0})`)}
+          {renderDivider()}
           {renderItem({
             icon: Copy,
             label: "Copiar",
@@ -180,7 +184,8 @@ const ContextMenu = ({ x, y, type, data, onClose, actions }) => {
 
       {type === "edge" && (
         <>
-          <div className="menu-header">Conexión</div>
+          {renderHeader("Conexión")}
+          {renderDivider()}
           {renderItem({
             icon: Trash2,
             label: "Eliminar",
@@ -193,7 +198,8 @@ const ContextMenu = ({ x, y, type, data, onClose, actions }) => {
 
       {type === "canvas" && (
         <>
-          <div className="menu-header">Canvas</div>
+          {renderHeader("Canvas")}
+          {renderDivider()}
           {renderItem({
             icon: PlusCircle,
             label: "Agregar Nodo",

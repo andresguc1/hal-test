@@ -17,6 +17,9 @@ import CustomConnectionLine from "./components/CustomConnectionLine";
 import ProgressBar from "./components/ProgressBar";
 import ImportDialog from "./components/ImportDialog";
 import ExportDialog from "./components/ExportDialog";
+{
+  /* SettingsDialog removed in favor of internal panel navigation */
+}
 import ContextMenu from "./components/ContextMenu";
 
 import { colors } from "./components/styles/colors";
@@ -454,7 +457,7 @@ export default function App() {
       connectionLineComponent: CustomConnectionLine,
       connectionLineStyle: {
         strokeWidth: 2.5,
-        stroke: '#ff8c32', // hal-orange
+        stroke: "#ff8c32", // hal-orange
       },
     }),
     [
@@ -480,7 +483,12 @@ export default function App() {
   // ========================================
 
   return (
-    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} storageKey="vite-ui-theme">
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="dark"
+      enableSystem={false}
+      storageKey="vite-ui-theme"
+    >
       <div className="app-container">
         {/* Status Indicator */}
         {/* Status Indicator removed */}

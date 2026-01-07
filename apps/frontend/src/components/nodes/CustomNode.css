@@ -2,32 +2,10 @@
 
 .custom-node {
   position: relative;
-  transition:
-    transform 0.1s ease,
-    box-shadow 0.1s ease;
 }
 
-/* 3D Click Animation */
+/* 3D Click Animation - Collapses shadow on active */
 .custom-node:active {
   transform: translateY(4px) !important;
   box-shadow: 0 0 0 0 !important;
-  /* Shadow collapses */
-}
-
-.node-icon {
-  flex-shrink: 0;
-}
-
-.node-icon.spinning {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
 }

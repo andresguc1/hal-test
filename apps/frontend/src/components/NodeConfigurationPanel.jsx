@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { XCircle, Play, Trash2, AlertCircle, Settings } from "lucide-react";
 import { useTranslation } from "react-i18next";
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from "motion/react";
 import { panelVariants } from "../utils/motion-variants";
 import { NODE_FIELD_CONFIGS, VISUAL_CHANGE_NODES } from "./hooks/constants";
@@ -294,7 +295,7 @@ function NodeConfigurationPanel({
       logger.debug(
         "Performing fetch POST",
         { url: urlToCall, payload },
-        "NodeConfigPanel"
+        "NodeConfigPanel",
       );
 
       const resp = await fetch(urlToCall, {
@@ -308,7 +309,7 @@ function NodeConfigurationPanel({
           t("nodes.config.request_error", {
             status: resp.status,
             statusText: resp.statusText,
-          })
+          }),
         );
         return;
       }
@@ -369,20 +370,25 @@ function NodeConfigurationPanel({
 
     if (type === "select") {
       return (
-        <div key={name} className="group relative pb-8 mb-8 last:border-0 border-b border-solid border-[#3a3f47]/50">
-          <Label className="text-white text-sm font-semibold block mb-4">
+        <div
+          key={name}
+          className="group relative pb-8 mb-8 last:border-0 border-b border-solid border-hal-neutral-800/50"
+        >
+          <Label className="text-hal-neutral-100 text-sm font-semibold block mb-4">
             {t(`nodes.fields.${name}`, fieldConfig.label)}
-            {fieldConfig.required && <span className="text-[#ff6b6b] ml-1">*</span>}
+            {fieldConfig.required && (
+              <span className="text-hal-error-500 ml-1">*</span>
+            )}
           </Label>
           <Select
             value={value || ""}
             onValueChange={(val) => handleChange(name, val)}
           >
-            <SelectTrigger className="w-full bg-[#15181c] border-[#3a3f47] text-[#e5e5e5] focus:ring-[#1a73e8] focus:border-[#1a73e8] !h-16 !text-lg [&>span]:whitespace-normal [&>span]:text-left">
+            <SelectTrigger className="w-full bg-hal-neutral-950 border-hal-neutral-800 text-hal-neutral-100 focus:ring-hal-primary-500 focus:border-hal-primary-500 !h-16 !text-lg [&>span]:whitespace-normal [&>span]:text-left transition-all duration-200 hover:border-hal-neutral-700">
               <SelectValue placeholder={t("common.select_default")} />
             </SelectTrigger>
             <SelectContent
-              className="bg-[#15181c] border-[#3a3f47] rounded-lg max-h-[200px] overflow-auto w-[var(--radix-select-trigger-width)]"
+              className="bg-hal-neutral-950 border-hal-neutral-800 rounded-lg max-h-[200px] overflow-auto w-[var(--radix-select-trigger-width)]"
               position="popper"
               sideOffset={4}
               align="start"
@@ -392,7 +398,7 @@ function NodeConfigurationPanel({
                 <SelectItem
                   key={opt.value}
                   value={opt.value}
-                  className="text-[#e5e5e5] focus:bg-[#2a2f37] focus:text-white rounded py-2 text-base"
+                  className="text-hal-neutral-100 focus:bg-hal-neutral-800 focus:text-white rounded py-2 text-base"
                 >
                   {t(`nodes.options.${name}.${opt.value}`, opt.label)}
                 </SelectItem>
@@ -400,12 +406,12 @@ function NodeConfigurationPanel({
             </SelectContent>
           </Select>
           {hintText && (
-            <p className="text-[11px] text-[#6b7280] italic mt-3 leading-relaxed">
+            <p className="text-[11px] text-hal-neutral-500 italic mt-3 leading-relaxed">
               {hintText}
             </p>
           )}
           {error && (
-            <div className="flex items-center gap-1 text-[#ff6b6b] text-xs mt-2">
+            <div className="flex items-center gap-1 text-hal-error-500 text-xs mt-2">
               <AlertCircle size={14} /> {error}
             </div>
           )}
@@ -415,13 +421,19 @@ function NodeConfigurationPanel({
 
     if (type === "checkbox" || type === "boolean") {
       return (
-        <div key={name} className="group relative pb-8 mb-8 last:border-0 border-b border-solid border-[#3a3f47]/50 flex flex-row items-center justify-between gap-4">
+        <div
+          key={name}
+          className="group relative pb-8 mb-8 last:border-0 border-b border-solid border-hal-neutral-800/50 flex flex-row items-center justify-between gap-4"
+        >
           <div className="flex-1 space-y-1">
-            <Label htmlFor={name} className="text-white text-sm font-semibold cursor-pointer">
+            <Label
+              htmlFor={name}
+              className="text-hal-neutral-100 text-sm font-semibold cursor-pointer"
+            >
               {t(`nodes.fields.${name}`, fieldConfig.label)}
             </Label>
             {hintText && (
-              <p className="text-[11px] text-[#6b7280] italic leading-relaxed">
+              <p className="text-[11px] text-hal-neutral-500 italic leading-relaxed">
                 {hintText}
               </p>
             )}
@@ -430,7 +442,7 @@ function NodeConfigurationPanel({
             id={name}
             checked={!!value}
             onCheckedChange={(checked) => handleChange(name, checked)}
-            className="data-[state=checked]:bg-[#1a73e8] data-[state=unchecked]:bg-[#3a3f47]"
+            className="data-[state=checked]:bg-hal-primary-500 data-[state=unchecked]:bg-hal-neutral-700"
           />
         </div>
       );
@@ -438,10 +450,15 @@ function NodeConfigurationPanel({
 
     if (type === "number") {
       return (
-        <div key={name} className="group relative pb-8 mb-8 last:border-0 border-b border-solid border-[#3a3f47]/50">
-          <Label className="text-white text-sm font-semibold block mb-4">
+        <div
+          key={name}
+          className="group relative pb-8 mb-8 last:border-0 border-b border-solid border-hal-neutral-800/50"
+        >
+          <Label className="text-hal-neutral-100 text-sm font-semibold block mb-4">
             {t(`nodes.fields.${name}`, fieldConfig.label)}
-            {fieldConfig.required && <span className="text-[#ff6b6b] ml-1">*</span>}
+            {fieldConfig.required && (
+              <span className="text-hal-error-500 ml-1">*</span>
+            )}
           </Label>
           <Input
             type="number"
@@ -452,17 +469,17 @@ function NodeConfigurationPanel({
             min={min}
             max={max}
             className={cn(
-              "w-full bg-[#15181c] border-[#3a3f47] text-[#e5e5e5] focus-visible:ring-[#1a73e8] focus-visible:border-[#1a73e8] !h-16 !text-lg",
-              error && "border-[#ff6b6b]"
+              "w-full bg-hal-neutral-950 border-hal-neutral-800 text-hal-neutral-100 focus-visible:ring-hal-primary-500 focus-visible:border-hal-primary-500 !h-16 !text-lg font-mono transition-all duration-200",
+              error && "border-hal-error-500",
             )}
           />
           {hintText && (
-            <p className="text-[11px] text-[#6b7280] italic mt-3 leading-relaxed">
+            <p className="text-[11px] text-hal-neutral-500 italic mt-3 leading-relaxed">
               {hintText}
             </p>
           )}
           {error && (
-            <div className="flex items-center gap-1 text-[#ff6b6b] text-xs mt-2">
+            <div className="flex items-center gap-1 text-hal-error-500 text-xs mt-2">
               <AlertCircle size={14} /> {error}
             </div>
           )}
@@ -472,10 +489,15 @@ function NodeConfigurationPanel({
 
     if (type === "textarea") {
       return (
-        <div key={name} className="group relative pb-8 mb-8 last:border-0 border-b border-solid border-[#3a3f47]/50">
-          <Label className="text-white text-sm font-semibold block mb-4">
+        <div
+          key={name}
+          className="group relative pb-8 mb-8 last:border-0 border-b border-solid border-hal-neutral-800/50"
+        >
+          <Label className="text-hal-neutral-100 text-sm font-semibold block mb-4">
             {t(`nodes.fields.${name}`, fieldConfig.label)}
-            {fieldConfig.required && <span className="text-[#ff6b6b] ml-1">*</span>}
+            {fieldConfig.required && (
+              <span className="text-hal-error-500 ml-1">*</span>
+            )}
           </Label>
           <textarea
             name={name}
@@ -484,17 +506,17 @@ function NodeConfigurationPanel({
             placeholder={t(`nodes.placeholders.${name}`, placeholder)}
             rows={5}
             className={cn(
-              "w-full rounded-lg bg-[#15181c] border border-[#3a3f47] text-[#e5e5e5] p-4 text-base focus:outline-none focus:ring-2 focus:ring-[#1a73e8] focus:border-[#1a73e8] resize-y min-h-[120px] transition-colors",
-              error && "border-[#ff6b6b]"
+              "w-full rounded-lg bg-hal-neutral-950 border border-hal-neutral-800 text-hal-neutral-100 p-4 text-base font-mono focus:outline-none focus:ring-2 focus:ring-hal-primary-500 focus:border-hal-primary-500 resize-y min-h-[120px] transition-all duration-200",
+              error && "border-hal-error-500",
             )}
           />
           {hintText && (
-            <p className="text-[11px] text-[#6b7280] italic mt-2 leading-relaxed">
+            <p className="text-[11px] text-hal-neutral-500 italic mt-2 leading-relaxed">
               {hintText}
             </p>
           )}
           {error && (
-            <div className="flex items-center gap-1 text-[#ff6b6b] text-xs mt-2">
+            <div className="flex items-center gap-1 text-hal-error-500 text-xs mt-2">
               <AlertCircle size={14} /> {error}
             </div>
           )}
@@ -504,10 +526,15 @@ function NodeConfigurationPanel({
 
     // default text
     return (
-      <div key={name} className="group relative pb-8 mb-8 last:border-0 border-b border-solid border-[#3a3f47]/50">
-        <Label className="text-white text-sm font-semibold block mb-4">
+      <div
+        key={name}
+        className="group relative pb-8 mb-8 last:border-0 border-b border-solid border-hal-neutral-800/50"
+      >
+        <Label className="text-hal-neutral-100 text-sm font-semibold block mb-4">
           {t(`nodes.fields.${name}`, fieldConfig.label)}
-          {fieldConfig.required && <span className="text-[#ff6b6b] ml-1">*</span>}
+          {fieldConfig.required && (
+            <span className="text-hal-error-500 ml-1">*</span>
+          )}
         </Label>
         <Input
           type="text"
@@ -516,17 +543,17 @@ function NodeConfigurationPanel({
           onChange={handleInputChange}
           placeholder={t(`nodes.placeholders.${name}`, placeholder)}
           className={cn(
-            "w-full bg-[#15181c] border-[#3a3f47] text-[#e5e5e5] focus-visible:ring-[#1a73e8] focus-visible:border-[#1a73e8] !h-16 !text-lg",
-            error && "border-[#ff6b6b]"
+            "w-full bg-hal-neutral-950 border-hal-neutral-800 text-hal-neutral-100 focus-visible:ring-hal-primary-500 focus-visible:border-hal-primary-500 !h-16 !text-lg font-mono transition-all duration-200",
+            error && "border-hal-error-500",
           )}
         />
         {hintText && (
-          <p className="text-[11px] text-[#6b7280] italic mt-3 leading-relaxed">
+          <p className="text-[11px] text-hal-neutral-500 italic mt-3 leading-relaxed">
             {hintText}
           </p>
         )}
         {error && (
-          <div className="flex items-center gap-1 text-[#ff6b6b] text-xs mt-2">
+          <div className="flex items-center gap-1 text-hal-error-500 text-xs mt-2">
             <AlertCircle size={14} /> {error}
           </div>
         )}
@@ -561,9 +588,24 @@ function NodeConfigurationPanel({
                   align="start"
                   side="bottom"
                 >
-                  <SelectItem value="chromium" className="text-[#e5e5e5] focus:bg-[#2a2f37] focus:text-white rounded py-2 text-base">chromium</SelectItem>
-                  <SelectItem value="firefox" className="text-[#e5e5e5] focus:bg-[#2a2f37] focus:text-white rounded py-2 text-base">firefox</SelectItem>
-                  <SelectItem value="webkit" className="text-[#e5e5e5] focus:bg-[#2a2f37] focus:text-white rounded py-2 text-base">webkit</SelectItem>
+                  <SelectItem
+                    value="chromium"
+                    className="text-[#e5e5e5] focus:bg-[#2a2f37] focus:text-white rounded py-2 text-base"
+                  >
+                    chromium
+                  </SelectItem>
+                  <SelectItem
+                    value="firefox"
+                    className="text-[#e5e5e5] focus:bg-[#2a2f37] focus:text-white rounded py-2 text-base"
+                  >
+                    firefox
+                  </SelectItem>
+                  <SelectItem
+                    value="webkit"
+                    className="text-[#e5e5e5] focus:bg-[#2a2f37] focus:text-white rounded py-2 text-base"
+                  >
+                    webkit
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -585,7 +627,9 @@ function NodeConfigurationPanel({
               </Label>
               <Switch
                 checked={!!formData.maximizeWindow}
-                onCheckedChange={(checked) => handleChange("maximizeWindow", checked)}
+                onCheckedChange={(checked) =>
+                  handleChange("maximizeWindow", checked)
+                }
                 className="data-[state=checked]:bg-[#1a73e8] data-[state=unchecked]:bg-[#3a3f47]"
               />
             </div>
@@ -649,7 +693,7 @@ function NodeConfigurationPanel({
                 placeholder="https://www.google.com"
                 className={cn(
                   "w-full bg-[#15181c] border-[#3a3f47] text-[#e5e5e5] focus-visible:ring-[#1a73e8] focus-visible:border-[#1a73e8] !h-16 !text-lg",
-                  errors.url && "border-red-500"
+                  errors.url && "border-red-500",
                 )}
               />
               {errors.url && (
@@ -671,10 +715,30 @@ function NodeConfigurationPanel({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-[#1d2024] border-[#2c2f33]">
-                  <SelectItem value="load" className="text-[#e5e5e5] focus:bg-[#2a2f37] focus:text-white rounded py-2 text-base">load</SelectItem>
-                  <SelectItem value="domcontentloaded" className="text-[#e5e5e5] focus:bg-[#2a2f37] focus:text-white rounded py-2 text-base">domcontentloaded</SelectItem>
-                  <SelectItem value="networkidle0" className="text-[#e5e5e5] focus:bg-[#2a2f37] focus:text-white rounded py-2 text-base">networkidle0</SelectItem>
-                  <SelectItem value="networkidle2" className="text-[#e5e5e5] focus:bg-[#2a2f37] focus:text-white rounded py-2 text-base">networkidle2</SelectItem>
+                  <SelectItem
+                    value="load"
+                    className="text-[#e5e5e5] focus:bg-[#2a2f37] focus:text-white rounded py-2 text-base"
+                  >
+                    load
+                  </SelectItem>
+                  <SelectItem
+                    value="domcontentloaded"
+                    className="text-[#e5e5e5] focus:bg-[#2a2f37] focus:text-white rounded py-2 text-base"
+                  >
+                    domcontentloaded
+                  </SelectItem>
+                  <SelectItem
+                    value="networkidle0"
+                    className="text-[#e5e5e5] focus:bg-[#2a2f37] focus:text-white rounded py-2 text-base"
+                  >
+                    networkidle0
+                  </SelectItem>
+                  <SelectItem
+                    value="networkidle2"
+                    className="text-[#e5e5e5] focus:bg-[#2a2f37] focus:text-white rounded py-2 text-base"
+                  >
+                    networkidle2
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -724,10 +788,30 @@ function NodeConfigurationPanel({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-[#1d2024] border-[#2c2f33]">
-                  <SelectItem value="new" className="text-[#e5e5e5] focus:bg-[#2a2f37] focus:text-white rounded py-2 text-base">new</SelectItem>
-                  <SelectItem value="switch" className="text-[#e5e5e5] focus:bg-[#2a2f37] focus:text-white rounded py-2 text-base">switch</SelectItem>
-                  <SelectItem value="close" className="text-[#e5e5e5] focus:bg-[#2a2f37] focus:text-white rounded py-2 text-base">close</SelectItem>
-                  <SelectItem value="list" className="text-[#e5e5e5] focus:bg-[#2a2f37] focus:text-white rounded py-2 text-base">list</SelectItem>
+                  <SelectItem
+                    value="new"
+                    className="text-[#e5e5e5] focus:bg-[#2a2f37] focus:text-white rounded py-2 text-base"
+                  >
+                    new
+                  </SelectItem>
+                  <SelectItem
+                    value="switch"
+                    className="text-[#e5e5e5] focus:bg-[#2a2f37] focus:text-white rounded py-2 text-base"
+                  >
+                    switch
+                  </SelectItem>
+                  <SelectItem
+                    value="close"
+                    className="text-[#e5e5e5] focus:bg-[#2a2f37] focus:text-white rounded py-2 text-base"
+                  >
+                    close
+                  </SelectItem>
+                  <SelectItem
+                    value="list"
+                    className="text-[#e5e5e5] focus:bg-[#2a2f37] focus:text-white rounded py-2 text-base"
+                  >
+                    list
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -785,7 +869,10 @@ function NodeConfigurationPanel({
       return (
         <div className="space-y-4">
           {Object.keys(formData).map((k) => (
-            <div key={k} className="group relative pb-8 mb-8 last:border-0 border-b border-solid border-[#3a3f47]/50">
+            <div
+              key={k}
+              className="group relative pb-8 mb-8 last:border-0 border-b border-solid border-[#3a3f47]/50"
+            >
               <Label className="text-white text-sm font-semibold block mb-4">
                 {k}
               </Label>
@@ -818,7 +905,7 @@ function NodeConfigurationPanel({
           initial="initial"
           animate="animate"
           exit="exit"
-          style={{ right: 0, left: 'auto' }}
+          style={{ right: 0, left: "auto" }}
           className="fixed top-[56px] h-[calc(100vh-56px-120px)] w-[360px] bg-[#22262b] border-l border-[#1a1d21] z-20 flex flex-col shadow-[-4px_0_15px_rgba(0,0,0,0.5)]"
           role="complementary"
         >
@@ -875,7 +962,8 @@ function NodeConfigurationPanel({
               action?.data?.result?.data?.tabs && (
                 <div className="mx-4 mb-4 p-3 bg-[#1d2024] border border-[#4a4e54] rounded-md">
                   <div className="flex items-center gap-2 text-[#e5e5e5] font-semibold text-sm mb-2">
-                    📑 {t("nodes.config.tab_list_title", {
+                    📑{" "}
+                    {t("nodes.config.tab_list_title", {
                       count: action.data.result.data.tabs.length,
                     })}
                   </div>
@@ -887,12 +975,15 @@ function NodeConfigurationPanel({
                           "p-2 rounded text-xs font-mono",
                           tab.active
                             ? "bg-[#1a73e8]/20 border border-[#1a73e8]"
-                            : "bg-[#0b0c10]"
+                            : "bg-[#0b0c10]",
                         )}
                       >
                         <div className="flex items-center gap-2">
                           <span className="text-[#b0b0b0]">#{index}</span>
-                          <span className="text-[#e5e5e5] truncate flex-1" title={tab.url}>
+                          <span
+                            className="text-[#e5e5e5] truncate flex-1"
+                            title={tab.url}
+                          >
                             {tab.url || "about:blank"}
                           </span>
                           {tab.active && (
@@ -937,7 +1028,11 @@ function NodeConfigurationPanel({
             <Button
               onClick={handleDelete}
               className="h-9 px-3"
-              style={{ backgroundColor: "#ef4444", color: "white", border: "none" }}
+              style={{
+                backgroundColor: "#ef4444",
+                color: "white",
+                border: "none",
+              }}
             >
               <Trash2 size={14} className="mr-1" />
               {t("common.delete")}

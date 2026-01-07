@@ -19,8 +19,9 @@ import { CSS } from "@dnd-kit/utilities";
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from "motion/react";
 import { tabVariants } from "../utils/motion-variants";
-import "./styles/FlowTabs.css";
+import { Plus, X, Copy, Pencil, Trash2 } from "lucide-react"; // Icons
 import ProjectSelector from "./ProjectSelector";
+import { cn } from "@/lib/utils";
 
 // ========================================
 // SORTABLE TAB COMPONENT
@@ -67,7 +68,10 @@ const SortableTab = ({
       initial="initial"
       animate="animate"
       exit="exit"
-      className={`flow-tab ${isActive ? "active" : ""}`}
+      className={cn(
+        "group relative flex items-center min-w-[120px] max-w-[200px] h-full px-3 py-1.5 mr-0.5 rounded-t bg-[#2d2d2d] text-gray-400 text-xs transition-colors hover:bg-[#3d3d3d] hover:text-white select-none",
+        isActive && "bg-[#1e1e1e] text-white border-b-2 border-orange-500 hover:bg-[#1e1e1e]" // Active state
+      )}
       onClick={() => onSwitch(flow.id)}
       onContextMenu={(e) => onContextMenu(e, flow)}
       onDoubleClick={() => onDoubleClick(flow)}
@@ -82,24 +86,19 @@ const SortableTab = ({
           onChange={(e) => setEditName(e.target.value)}
           onBlur={onEditSubmit}
           onKeyDown={onKeyDown}
-          className="flow-tab-edit-input"
-          style={{
-            background: "transparent",
-            border: "none",
-            color: "white",
-            width: "100%",
-            outline: "none",
-            fontFamily: "inherit",
-            fontSize: "inherit",
-          }}
+          className="w-full bg-transparent border-none text-white outline-none font-inherit text-xs p-0 m-0"
           onClick={(e) => e.stopPropagation()}
         />
       ) : (
-        <span className="flow-tab-label">{flow.name}</span>
+        <span className="truncate flex-grow mr-2">{flow.name}</span>
       )}
 
+      {/* Close Button (Hidden unless hover or active? Original was visible on hover) */}
       <span
-        className="flow-tab-close"
+        className={cn(
+          "ml-auto p-0.5 rounded-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#444] hover:text-red-400",
+          isActive && "opacity-100" // Always show on active? Optional.
+        )}
         onClick={(e) => {
           e.stopPropagation();
           if (
@@ -109,7 +108,7 @@ const SortableTab = ({
           }
         }}
       >
-        ×
+        <X size={12} />
       </span>
     </motion.div>
   );
@@ -218,7 +217,7 @@ const FlowTabs = ({
   };
 
   return (
-    <div className="flow-tabs-container">
+    <div className="fixed bottom-[56px] left-0 right-0 h-[40px] bg-[#1e1e1e] border-t border-[#333] flex items-center px-2 z-20 shadow-md">
       {/* Project Selector */}
       <ProjectSelector
         projects={projects || []}
@@ -229,14 +228,7 @@ const FlowTabs = ({
       />
 
       {/* Separator */}
-      <div
-        style={{
-          width: "1px",
-          height: "24px",
-          backgroundColor: "#444",
-          margin: "0 8px",
-        }}
-      />
+      <div className="w-px h-6 bg-[#444] mx-3" />
 
       {/* Flow Tabs with DND */}
       <DndContext
@@ -248,67 +240,78 @@ const FlowTabs = ({
           items={flows.map((f) => f.id)}
           strategy={horizontalListSortingStrategy}
         >
-          <AnimatePresence mode="popLayout">
-            {flows.map((flow) => (
-              <SortableTab
-                key={flow.id}
-                flow={flow}
-                isActive={flow.id === activeFlowId}
-                onSwitch={onSwitchFlow}
-                onContextMenu={handleContextMenu}
-                onDoubleClick={startEditing}
-                onDelete={onDeleteFlow}
-                isEditing={editingFlowId === flow.id}
-                editName={editName}
-                setEditName={setEditName}
-                onEditSubmit={handleEditSubmit}
-                onKeyDown={handleKeyDown}
-                editInputRef={editInputRef}
-                t={t}
-              />
-            ))}
-          </AnimatePresence>
+          <div className="flex flex-1 h-full items-end overflow-x-auto no-scrollbar">
+            <AnimatePresence mode="popLayout">
+              {flows.map((flow) => (
+                <SortableTab
+                  key={flow.id}
+                  flow={flow}
+                  isActive={flow.id === activeFlowId}
+                  onSwitch={onSwitchFlow}
+                  onContextMenu={handleContextMenu}
+                  onDoubleClick={startEditing}
+                  onDelete={onDeleteFlow}
+                  isEditing={editingFlowId === flow.id}
+                  editName={editName}
+                  setEditName={setEditName}
+                  onEditSubmit={handleEditSubmit}
+                  onKeyDown={handleKeyDown}
+                  editInputRef={editInputRef}
+                  t={t}
+                />
+              ))}
+            </AnimatePresence>
+          </div>
         </SortableContext>
       </DndContext>
 
-      <div
-        className="flow-tab-add"
+      <button
+        className="ml-1 w-8 h-8 flex items-center justify-center rounded text-gray-400 hover:bg-[#333] hover:text-white transition-colors"
         onClick={() => onCreateFlow(t("common.new_flow"))}
         title={t("common.create_new_flow")}
       >
-        +
-      </div>
+        <Plus size={18} />
+      </button>
 
+      {/* Context Menu (Custom Implementation to match Shadcn style) */}
       {contextMenu && (
         <div
-          className="flow-tab-context-menu"
+          className="fixed z-50 min-w-[160px] bg-[#252526] border border-[#454545] rounded-md shadow-lg py-1 text-gray-200 text-sm animate-in fade-in zoom-in-95 cursor-default"
           style={{ top: contextMenu.y, left: contextMenu.x }}
+          onClick={(e) => e.stopPropagation()} // Prevent closing immediately? Wrapper closes it.
         >
           <div
-            className="context-menu-item"
+            className="px-3 py-2 hover:bg-[#094771] hover:text-white cursor-pointer flex items-center gap-2"
             onClick={() =>
               startEditing(flows.find((f) => f.id === contextMenu.flowId))
             }
           >
+            <Pencil size={14} />
             {t("common.rename")}
           </div>
           {onDuplicateFlow && (
             <div
-              className="context-menu-item"
-              onClick={() => onDuplicateFlow(contextMenu.flowId)}
+              className="px-3 py-2 hover:bg-[#094771] hover:text-white cursor-pointer flex items-center gap-2"
+              onClick={() => {
+                onDuplicateFlow(contextMenu.flowId);
+                setContextMenu(null);
+              }}
             >
+              <Copy size={14} />
               {t("common.duplicate")}
             </div>
           )}
-          <div className="context-menu-separator"></div>
+          <div className="h-px bg-[#454545] my-1"></div>
           <div
-            className="context-menu-item delete"
+            className="px-3 py-2 hover:bg-[#2d2d2d] text-red-400 hover:text-red-500 cursor-pointer flex items-center gap-2"
             onClick={() => {
+              setContextMenu(null);
               if (window.confirm(t("common.delete_flow_simple_confirm"))) {
                 onDeleteFlow(contextMenu.flowId);
               }
             }}
           >
+            <Trash2 size={14} />
             {t("common.delete")}
           </div>
         </div>
