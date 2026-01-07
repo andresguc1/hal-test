@@ -65,8 +65,9 @@ const ProjectSelector = ({
           {projects.map((project) => (
             <div
               key={project.id}
-              className={`relative flex items-center justify-between rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-[#2a2d2e] ${currentProject?.id === project.id ? "bg-[#37373d]" : ""
-                }`}
+              className={`relative flex items-center justify-between rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-[#2a2d2e] ${
+                currentProject?.id === project.id ? "bg-[#37373d]" : ""
+              }`}
             >
               <div
                 className="flex flex-1 flex-col cursor-pointer overflow-hidden"
@@ -77,7 +78,7 @@ const ProjectSelector = ({
                 </span>
                 <span className="text-[10px] text-gray-400">
                   {new Date(project.updatedAt).toLocaleDateString(
-                    i18n.language === "es" ? "es-ES" : "en-US"
+                    i18n.language === "es" ? "es-ES" : "en-US",
                   )}
                 </span>
               </div>
@@ -91,7 +92,7 @@ const ProjectSelector = ({
                       window.confirm(
                         t("common.delete_project_confirm", {
                           name: project.name,
-                        })
+                        }),
                       )
                     ) {
                       onDeleteProject(project.id);

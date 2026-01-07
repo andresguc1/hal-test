@@ -98,7 +98,9 @@ function ScreenshotViewer({ screenshots, nodeId, isVisible = true }) {
   return (
     <>
       <div className="screenshot-section">
-        <h3 className="screenshot-title">📸 {t("screenshots.title", "Screenshots")}</h3>
+        <h3 className="screenshot-title">
+          📸 {t("screenshots.title", "Screenshots")}
+        </h3>
 
         <div className="screenshot-container">
           {loadedImages.after ? (

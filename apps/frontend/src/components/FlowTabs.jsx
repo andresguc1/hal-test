@@ -70,7 +70,8 @@ const SortableTab = ({
       exit="exit"
       className={cn(
         "group relative flex items-center min-w-[120px] max-w-[200px] h-full px-3 py-1.5 mr-0.5 rounded-t bg-[#2d2d2d] text-gray-400 text-xs transition-colors hover:bg-[#3d3d3d] hover:text-white select-none",
-        isActive && "bg-[#1e1e1e] text-white border-b-2 border-orange-500 hover:bg-[#1e1e1e]" // Active state
+        isActive &&
+          "bg-[#1e1e1e] text-white border-b-2 border-orange-500 hover:bg-[#1e1e1e]", // Active state
       )}
       onClick={() => onSwitch(flow.id)}
       onContextMenu={(e) => onContextMenu(e, flow)}
@@ -97,7 +98,7 @@ const SortableTab = ({
       <span
         className={cn(
           "ml-auto p-0.5 rounded-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#444] hover:text-red-400",
-          isActive && "opacity-100" // Always show on active? Optional.
+          isActive && "opacity-100", // Always show on active? Optional.
         )}
         onClick={(e) => {
           e.stopPropagation();

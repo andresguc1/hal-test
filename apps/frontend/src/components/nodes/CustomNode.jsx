@@ -102,7 +102,7 @@ function CustomNode({ data, selected }) {
         // State-specific styling
         getStateClasses(),
         // Selected state
-        selectedClasses
+        selectedClasses,
       )}
       style={{
         borderLeftWidth: "5px",
@@ -127,7 +127,7 @@ function CustomNode({ data, selected }) {
             "rounded-full",
             "flex items-center justify-center",
             "shadow-md",
-            getBadgeColor()
+            getBadgeColor(),
           )}
         >
           {getStateBadge()}

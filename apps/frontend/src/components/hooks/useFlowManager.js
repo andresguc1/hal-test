@@ -33,7 +33,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const API_BASE_URL = import.meta.env.PROD
   ? "https://hal-test-backend.onrender.com/api/actions"
-  : (import.meta.env?.VITE_API_BASE || "/api/actions");
+  : import.meta.env?.VITE_API_BASE || "/api/actions";
 
 // ========================================
 // OPTIMIZACIÓN 1: Funciones puras fuera del hook
@@ -63,14 +63,14 @@ const createExecutedLabel = (action) => {
 const DEFAULT_EDGE_OPTIONS = {
   animated: true,
   style: {
-    stroke: '#ff8c32', // hal-orange
+    stroke: "#ff8c32", // hal-orange
     strokeWidth: 2,
   },
   markerEnd: {
-    type: 'arrowclosed',
+    type: "arrowclosed",
     width: 20,
     height: 20,
-    color: '#ff8c32', // hal-orange to match theme
+    color: "#ff8c32", // hal-orange to match theme
   },
   // Hacer los edges seleccionables y eliminables
   focusable: true,
@@ -735,17 +735,17 @@ export const useFlowManager = (currentProject, currentFlowId) => {
 
           // Inject AI Keys from settings
           // Inject AI Keys from settings
-          const openaiKey = localStorage.getItem('hal_openai_key');
-          const googleKey = localStorage.getItem('hal_google_key');
-          const anthropicKey = localStorage.getItem('hal_anthropic_key');
+          const openaiKey = localStorage.getItem("hal_openai_key");
+          const googleKey = localStorage.getItem("hal_google_key");
+          const anthropicKey = localStorage.getItem("hal_anthropic_key");
 
           const headers = {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
           };
 
-          if (openaiKey) headers['x-openai-key'] = openaiKey;
-          if (googleKey) headers['x-google-key'] = googleKey;
-          if (anthropicKey) headers['x-anthropic-key'] = anthropicKey;
+          if (openaiKey) headers["x-openai-key"] = openaiKey;
+          if (googleKey) headers["x-google-key"] = googleKey;
+          if (anthropicKey) headers["x-anthropic-key"] = anthropicKey;
 
           const response = await fetch(endpoint, {
             method: "POST",
@@ -798,10 +798,17 @@ export const useFlowManager = (currentProject, currentFlowId) => {
 
               return {
                 ...node,
-                data: { ...node.data, configuration: newConfig, executed: true, state: NODE_STATES.SUCCESS, result, executionTime: duration },
-                style: getNodeStyle(NODE_STATES.SUCCESS)
+                data: {
+                  ...node.data,
+                  configuration: newConfig,
+                  executed: true,
+                  state: NODE_STATES.SUCCESS,
+                  result,
+                  executionTime: duration,
+                },
+                style: getNodeStyle(NODE_STATES.SUCCESS),
               };
-            })
+            }),
           );
 
           setApiStatus({
@@ -835,16 +842,19 @@ export const useFlowManager = (currentProject, currentFlowId) => {
               explicitScreenshot,
             );
             updateNodeScreenshot(nodeId, "after", screenshotMetadata);
-          }
-          else if (shouldAutoCapture) {
+          } else if (shouldAutoCapture) {
             updateNodeState(nodeId, NODE_STATES.CAPTURING_AFTER);
-            await captureScreenshot({ nodeId, timing: "after", browserId, nodeType: type });
+            await captureScreenshot({
+              nodeId,
+              timing: "after",
+              browserId,
+              nodeType: type,
+            });
             updateNodeState(nodeId, NODE_STATES.SUCCESS);
           }
 
           setIsLoading(false);
           return { success: true, result, duration, instanceId };
-
         } catch (error) {
           const isNetworkError =
             error.name === "AbortError" ||
@@ -1217,7 +1227,9 @@ export const useFlowManager = (currentProject, currentFlowId) => {
           if (browserId) {
             try {
               console.log(`🧹 Cleaning up browser ${browserId}...`);
-              const apiBase = import.meta.env.PROD ? "https://hal-test-backend.onrender.com" : "http://localhost:2001";
+              const apiBase = import.meta.env.PROD
+                ? "https://hal-test-backend.onrender.com"
+                : "http://localhost:2001";
               await fetch(`${apiBase}/api/actions/close_browser`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
