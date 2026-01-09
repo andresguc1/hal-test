@@ -7,13 +7,20 @@
   transform: translateX(-50%);
   width: 400px;
   max-width: 90vw;
-  background: rgba(44, 47, 51, 0.98);
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
   border-radius: 12px;
   padding: 16px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
   z-index: 9999;
   backdrop-filter: blur(10px);
   animation: slideDown 0.3s ease-out;
+}
+
+.dark .progress-bar-container {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
 @keyframes slideDown {
@@ -38,7 +45,11 @@
 .progress-bar-text {
   font-size: 14px;
   font-weight: 500;
-  color: #e5e5e5;
+  color: #334155;
+}
+
+.dark .progress-bar-text {
+  color: #e2e8f0;
 }
 
 .progress-bar-cancel {
@@ -103,6 +114,10 @@
 .progress-bar-status {
   margin-top: 8px;
   font-size: 12px;
-  color: #b0b0b0;
+  color: #64748b;
   text-align: center;
+}
+
+.dark .progress-bar-status {
+  color: #94a3b8;
 }

@@ -13,9 +13,31 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
+import { Button } from "@/components/ui-custom/Button";
+import { Label } from "@/components/ui-custom/Label";
+import { Select, SelectItem } from "@/components/ui-custom/Select";
+import { Input } from "@/components/ui-custom/Input";
+
+// Simple Avatar replacement for Zero-Dependency
+const CustomAvatar = ({ src, fallback, className }) => {
+  return (
+    <div
+      className={cn(
+        "relative overflow-hidden rounded-full shrink-0",
+        className,
+      )}
+    >
+      {src ? (
+        <img src={src} alt="Avatar" className="h-full w-full object-cover" />
+      ) : (
+        <div className="h-full w-full flex items-center justify-center bg-hal-neutral-800 text-hal-neutral-500">
+          {fallback}
+        </div>
+      )}
+    </div>
+  );
+};
 
 /**
  * Reusable PasswordInput Component with deep black styling
@@ -24,20 +46,16 @@ const PasswordInput = React.forwardRef(({ className, ...props }, ref) => {
   const [show, setShow] = useState(false);
   return (
     <div className="relative w-full">
-      <input
+      <Input
         type={show ? "text" : "password"}
         ref={ref}
-        className={cn(
-          "bg-hal-neutral-950 border border-hal-neutral-800 text-hal-neutral-100 h-10 rounded-md px-3 w-full text-sm font-mono placeholder:text-hal-neutral-600 focus:outline-none focus:ring-1 focus:ring-hal-primary-500 focus:border-hal-primary-500 pr-10 transition-all duration-200",
-          className,
-        )}
-        style={{ boxShadow: "var(--shadow-inner)" }}
+        className={cn("pr-10", className)}
         {...props}
       />
       <button
         type="button"
         onClick={() => setShow(!show)}
-        className="absolute right-3 top-1/2 -translate-y-1/2 text-hal-neutral-500 hover:text-hal-neutral-300 transition-colors duration-200"
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-hal-neutral-500 hover:text-hal-neutral-300 transition-colors duration-200 focus:outline-none"
       >
         {show ? <EyeOff size={16} /> : <Eye size={16} />}
       </button>
@@ -45,30 +63,6 @@ const PasswordInput = React.forwardRef(({ className, ...props }, ref) => {
   );
 });
 PasswordInput.displayName = "PasswordInput";
-
-/**
- * Custom Select component with deep black styling
- */
-const DarkSelect = ({ value, onChange, options }) => {
-  return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="bg-hal-neutral-950 border border-hal-neutral-800 text-hal-neutral-100 h-10 rounded-md px-3 w-full text-sm placeholder:text-hal-neutral-600 focus:outline-none focus:ring-1 focus:ring-hal-primary-500 focus:border-hal-primary-500 appearance-none cursor-pointer transition-all duration-200 hover:border-hal-neutral-700"
-      style={{ boxShadow: "var(--shadow-inner)" }}
-    >
-      {options.map((opt) => (
-        <option
-          key={opt.value}
-          value={opt.value}
-          className="bg-hal-neutral-900"
-        >
-          {opt.label}
-        </option>
-      ))}
-    </select>
-  );
-};
 
 export default function SettingsPage({ onBack }) {
   const [isLoading, setIsLoading] = useState(false);
@@ -137,9 +131,9 @@ export default function SettingsPage({ onBack }) {
 
   return (
     // Full-screen overlay on top of everything
-    <div className="fixed inset-0 z-50 bg-hal-neutral-950 flex flex-col">
+    <div className="fixed inset-0 z-50 bg-hal-neutral-950/95 backdrop-blur-md flex flex-col">
       {/* Header - Fixed Top */}
-      <header className="flex items-center gap-4 px-6 py-4 border-b border-hal-neutral-800 shrink-0 bg-hal-neutral-950">
+      <header className="flex items-center gap-4 px-6 py-4 border-b border-hal-neutral-800 shrink-0 bg-hal-neutral-950/50 backdrop-blur-md">
         <Button
           variant="ghost"
           size="icon"
@@ -163,12 +157,11 @@ export default function SettingsPage({ onBack }) {
                 Profile Picture
               </div>
               <div className="relative mb-4">
-                <Avatar className="h-24 w-24 bg-hal-neutral-800 border-2 border-hal-neutral-700 hover:border-hal-primary-500 transition-colors duration-200">
-                  <AvatarImage src={avatarPreview} />
-                  <AvatarFallback className="bg-hal-neutral-800 text-hal-neutral-500 flex items-center justify-center">
-                    <User size={32} />
-                  </AvatarFallback>
-                </Avatar>
+                <CustomAvatar
+                  src={avatarPreview}
+                  className="h-24 w-24 border-2 border-hal-neutral-700 hover:border-hal-primary-500 transition-colors duration-200"
+                  fallback={<User size={32} />}
+                />
                 <input
                   type="file"
                   className="absolute inset-0 opacity-0 cursor-pointer"
@@ -210,11 +203,13 @@ export default function SettingsPage({ onBack }) {
                 name="selectedModel"
                 control={control}
                 render={({ field }) => (
-                  <DarkSelect
-                    value={field.value}
-                    onChange={field.onChange}
-                    options={modelOptions}
-                  />
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    {modelOptions.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </Select>
                 )}
               />
               <p className="text-[10px] text-hal-neutral-500 italic">

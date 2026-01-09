@@ -30,11 +30,15 @@ export function useProjectManager() {
       queryFn: () => projectManager.getProject(currentProjectId),
       enabled: !!currentProjectId,
       onSuccess: (project) => {
-        if (project && !currentFlowId) {
-          if (project.activeFlowId) {
-            setCurrentFlowId(project.activeFlowId);
-          } else if (project.flows && project.flows.length > 0) {
+        // Auto-select first flow if none selected
+        if (
+          project &&
+          (!currentFlowId || !project.flows.find((f) => f.id === currentFlowId))
+        ) {
+          if (project.flows && project.flows.length > 0) {
             setCurrentFlowId(project.flows[0].id);
+          } else {
+            setCurrentFlowId(null);
           }
         }
       },
@@ -50,9 +54,29 @@ export function useProjectManager() {
   const createProjectMutation = useMutation({
     mutationFn: ({ name, description }) =>
       projectManager.createProject(name, description),
-    onSuccess: (newProject) => {
+    onSuccess: (response) => {
+      const { project, flow } = response; // Destructure new backend response
+
+      // 1. Immediate UI Update
+      queryClient.setQueryData(["project", project.id], {
+        ...project,
+        flows: [flow],
+      }); // Inject flow into project cache
+      queryClient.setQueryData(["projects"], (old) => [
+        ...(old || []),
+        project,
+      ]);
+
+      // 2. Auto-Select Project
+      setCurrentProjectId(project.id);
+
+      // 3. Auto-Select Default Flow
+      if (flow) {
+        setCurrentFlowId(flow.id);
+      }
+
+      // 4. Ensure consistency
       queryClient.invalidateQueries({ queryKey: ["projects"] });
-      setCurrentProjectId(newProject.id);
     },
   });
 
@@ -83,9 +107,16 @@ export function useProjectManager() {
   const createFlowMutation = useMutation({
     mutationFn: ({ projectId, name }) =>
       projectManager.createFlow(projectId, name),
-    onSuccess: (flow, { projectId }) => {
+    onSuccess: (response, { projectId }) => {
+      // Adapt response depending on API (the user mentioned createFlow returns { flow, project } or just flow)
+      // Based on router.js: res.json({ flow: mapFlowData(flow), project: updatedProject })
+      const newFlow = response.flow || response;
+
+      // 1. Invalidates to fetch fresh project structure
       queryClient.invalidateQueries({ queryKey: ["project", projectId] });
-      setCurrentFlowId(flow.id);
+
+      // 2. Auto-Select
+      setCurrentFlowId(newFlow.id);
     },
   });
 
@@ -172,8 +203,16 @@ export function useProjectManager() {
       queryClient.invalidateQueries({ queryKey: ["projects"] }),
     createProject: (name, description) =>
       createProjectMutation.mutateAsync({ name, description }),
-    loadProject: (projectId) => setCurrentProjectId(projectId),
+    loadProject: (projectId) => {
+      setCurrentProjectId(projectId);
+      setCurrentFlowId(null); // Reset flow when switching projects
+    },
     deleteProject: (projectId) => deleteProjectMutation.mutateAsync(projectId),
+    renameProject: (projectId, newName) =>
+      updateProjectMutation.mutateAsync({
+        projectId,
+        updates: { name: newName },
+      }),
 
     createFlow: (name) =>
       createFlowMutation.mutateAsync({ projectId: currentProjectId, name }),

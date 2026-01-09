@@ -1,10 +1,191 @@
 /**
  * HAL-TEST Design Tokens
- * Clean & Technical Design System
+ * Apple Human Interface Guidelines (HIG) System
  * 
- * This file defines the core design tokens for a professional,
- * technical-first UI. All color values use semantic naming.
+ * Features:
+ * - Native System Fonts (SF Pro)
+ * - Semantic System Colors (Light/Dark adaptive)
+ * - Glassmorphism support
  */
+
+@layer base {
+  :root {
+    /* ==========================================
+     * TYPOGRAPHY - Apple System Fonts
+     * ========================================== */
+    --font-sans:
+      "SF Pro Display", "SF Pro Text", "Inter", -apple-system,
+      BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: "SF Mono", "Menlo", "Monaco", "Courier New", monospace;
+
+    /* ==========================================
+     * IOS ALIASES (User Phase 0)
+     * ========================================== */
+    --ios-bg: rgb(var(--system-background));
+    --ios-card: rgb(var(--system-grouped-content));
+    --ios-text: rgb(var(--label-primary));
+    --ios-subtext: rgb(var(--label-secondary));
+    --ios-border: rgba(var(--separator) / 0.3);
+
+    /* ==========================================
+     * SYSTEM COLORS - BASE (Light Mode Default)
+     * ========================================== */
+    /* Grouped Backgrounds (for lists/cards) */
+    --system-background: 245 245 247;
+    /* #F5F5F7 (macOS Background) */
+    --system-grouped-background: 242 242 247;
+    /* #F2F2F7 */
+    --system-grouped-content: 255 255 255;
+    /* #FFFFFF */
+
+    /* Text */
+    --label-primary: 0 0 0;
+    /* #000000 */
+    --label-secondary: 60 60 67;
+    /* #3C3C43 (60% opacity) */
+    --label-tertiary: 60 60 67;
+    /* #3C3C43 (30% opacity) */
+    --label-quaternary: 60 60 67;
+    /* #3C3C43 (18% opacity) */
+
+    /* Separators */
+    --separator: 0 0 0;
+    /* Alpha 0.05 */
+    --separator-opaque: 0 0 0;
+    /* Alpha 0.1 for structural */
+
+    /* Fills & Overlays */
+    --fill-primary: 120 120 128;
+    /* Alpha 0.2 */
+    --fill-secondary: 120 120 128;
+    /* Alpha 0.16 */
+    --fill-tertiary: 118 118 128;
+    /* Alpha 0.12 */
+
+    /* ==========================================
+     * TINT COLORS (Apple Standard)
+     * ========================================== */
+    --tint-blue: 0 122 255;
+    /* #007AFF */
+    --tint-green: 52 199 89;
+    /* #34C759 */
+    --tint-indigo: 88 86 214;
+    /* #5856D6 */
+    --tint-orange: 255 149 0;
+    /* #FF9500 */
+    --tint-pink: 255 45 85;
+    /* #FF2D55 */
+    --tint-purple: 175 82 222;
+    /* #AF52DE */
+    --tint-red: 255 59 48;
+    /* #FF3B30 */
+    --tint-teal: 90 200 250;
+    /* #5AC8FA */
+    --tint-yellow: 255 204 0;
+    /* #FFCC00 */
+    --tint-gray: 142 142 147;
+    /* #8E8E93 */
+
+    /* Semantic Aliases */
+    --color-primary: var(--tint-blue);
+    --color-success: var(--tint-green);
+    --color-warning: var(--tint-orange);
+    --color-danger: var(--tint-red);
+    --color-info: var(--tint-teal);
+
+    /* ==========================================
+     * GEOMETRY
+     * ========================================== */
+    --radius-sm: 4px;
+    /* 4px */
+    --radius-md: 6px;
+    /* 6px (Standard Input) */
+    --radius-lg: 8px;
+    /* 8px (Cards) */
+    --radius-xl: 12px;
+    /* 12px (Panels) */
+    --radius-full: 9999px;
+
+    /* ==========================================
+     * SHADOWS
+     * Soft, diffused Apple-style shadows
+     * ========================================== */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-md:
+      0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg:
+      0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow-xl:
+      0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    --shadow-depth: 0 8px 40px rgba(0, 0, 0, 0.12);
+    /* Modal/Popover depth */
+  }
+
+  /* ==========================================
+   * DARK MODE OVERRIDES
+   * ========================================== */
+  .dark {
+    /* Backgrounds */
+    --system-background: 0 0 0;
+    /* #000000 */
+    --system-background-secondary: 28 28 30;
+    /* #1C1C1E (System Gray 6) */
+    --system-background-tertiary: 44 44 46;
+    /* #2C2C2E */
+
+    /* Grouped Backgrounds */
+    --system-grouped-background: 0 0 0;
+    /* #000000 */
+    --system-grouped-content: 28 28 30;
+    /* #1C1C1E */
+
+    /* Text */
+    --label-primary: 255 255 255;
+    /* #FFFFFF */
+    --label-secondary: 235 235 245;
+    /* #EBEBF5 (60% opacity) */
+    --label-tertiary: 235 235 245;
+    /* #EBEBF5 (30% opacity) */
+    --label-quaternary: 235 235 245;
+    /* #EBEBF5 (18% opacity) */
+
+    /* Separators */
+    --separator: 84 84 88;
+    /* Alpha 0.6 */
+    --separator-opaque: 56 56 58;
+    /* #38383A */
+
+    /* Fills */
+    --fill-primary: 120 120 128;
+    /* Alpha 0.36 */
+    --fill-secondary: 120 120 128;
+    /* Alpha 0.32 */
+    --fill-tertiary: 118 118 128;
+    /* Alpha 0.24 */
+
+    /* Tint Colors (Dark Mode Vibrancy) */
+    --tint-blue: 10 132 255;
+    /* #0A84FF */
+    --tint-green: 48 209 88;
+    /* #30D158 */
+    --tint-indigo: 94 92 230;
+    /* #5E5CE6 */
+    --tint-orange: 255 159 10;
+    /* #FF9F0A */
+    --tint-pink: 255 55 95;
+    /* #FF375F */
+    --tint-purple: 191 90 242;
+    /* #BF5AF2 */
+    --tint-red: 255 69 58;
+    /* #FF453A */
+    --tint-teal: 100 210 255;
+    /* #64D2FF */
+    --tint-yellow: 255 214 10;
+    /* #FFD60A */
+    --tint-gray: 142 142 147;
+    /* #8E8E93 */
+  }
+}
 
 @layer base {
   :root {

@@ -1,47 +1,38 @@
-/**
- * React Flow Custom Theme
- * Enhances controls, minimap, and edges for better UX
- */
-
-/* ========================================
-   BACKGROUND (THEME SUPPORT)
-   ======================================== */
-.react-flow__background {
-  background-color: hsl(var(--background)) !important;
-}
-
-/* Dots color */
-.react-flow__background pattern circle,
-.react-flow__background pattern path {
-  fill: hsl(var(--foreground)) !important;
-  opacity: 0.2;
-}
-
 /* ========================================
    REACT FLOW CONTROLS
    ======================================== */
 .react-flow__controls {
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
   overflow: hidden;
-  background: hsl(var(--card));
-  border: 1px solid hsl(var(--border));
 }
 
 .react-flow__controls-button {
-  background: hsl(var(--card));
-  border-bottom: 1px solid hsl(var(--border));
+  background: #ffffff;
+  border-bottom: 1px solid #cbd5e1;
   border-radius: 0;
-  color: hsl(var(--foreground));
+  color: #334155;
   width: 36px;
   height: 36px;
   transition: all 0.2s ease;
 }
 
+.dark .react-flow__controls-button {
+  background: #1e293b;
+  border-bottom: 1px solid #334155;
+  color: #cbd5e1;
+}
+
 .react-flow__controls-button:hover {
-  background: hsl(var(--accent));
-  color: hsl(var(--accent-foreground));
-  transform: scale(1.05);
+  background: #f1f5f9;
+  color: #2563eb;
+  border-color: #3b82f6;
+}
+
+.dark .react-flow__controls-button:hover {
+  background: #334155;
+  color: #60a5fa;
+  border-color: #3b82f6;
 }
 
 .react-flow__controls-button svg {

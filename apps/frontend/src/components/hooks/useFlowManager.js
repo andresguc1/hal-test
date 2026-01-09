@@ -1725,6 +1725,14 @@ export const useFlowManager = (currentProject, currentFlowId) => {
       return newNodes.length + newEdges.length;
     }, [clipboard, saveToHistory]),
 
+    clearFlow: useCallback(() => {
+      saveToHistory();
+      setNodes([]);
+      setEdges([]);
+      setSelectedNodeId(null);
+      setApiStatus({ state: "idle", message: "Canvas cleared" });
+    }, [saveToHistory]),
+
     duplicateElements: useCallback(() => {
       const selectedNodes = nodesRef.current.filter((n) => n.selected);
       const selectedEdges = edgesRef.current.filter((e) => e.selected);

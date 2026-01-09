@@ -86,6 +86,7 @@ export default function UserMenu({
   // Initial check
   useEffect(() => {
     checkApiStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiUrl]);
 
   const handleLanguageChange = (val) => {
@@ -95,17 +96,14 @@ export default function UserMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          className="relative h-8 w-8 rounded-full focus-visible:ring-1 focus-visible:ring-offset-0 ring-offset-background focus:outline-none"
-        >
-          <Avatar className="h-9 w-9 border border-border/50 hover:border-primary transition-colors">
+        <button className="relative h-8 w-8 rounded-lg overflow-hidden ring-1 ring-gray-200 dark:ring-white/10 hover:ring-gray-300 dark:hover:ring-white/20 active:scale-95 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30">
+          <Avatar className="h-full w-full">
             <AvatarImage src={profilePic} alt="User" className="object-cover" />
-            <AvatarFallback className="bg-muted text-muted-foreground">
-              <User size={18} />
+            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white text-xs font-medium">
+              <User size={14} strokeWidth={2} />
             </AvatarFallback>
           </Avatar>
-        </Button>
+        </button>
       </DropdownMenuTrigger>
 
       <DropdownMenuContent

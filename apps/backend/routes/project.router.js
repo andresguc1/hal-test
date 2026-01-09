@@ -51,21 +51,37 @@ router.get('/projects', async (req, res) => {
 
 // Create project
 router.post('/projects', async (req, res) => {
+    const transaction = await sequelize.transaction();
     try {
         const { name, description } = req.body;
-        const project = await Project.create({ name, description });
+        const project = await Project.create({ name, description }, { transaction });
 
-        // Return project with flows (even if empty initially)
-        const newProject = await Project.findByPk(project.id, {
-            include: [
-                {
-                    model: Flow,
-                    as: 'flows',
-                },
-            ],
+        // Create default flow
+        await Flow.create(
+            {
+                name: 'Main Flow',
+                projectId: project.id,
+                viewport: { x: 0, y: 0, zoom: 1 },
+            },
+            { transaction },
+        );
+
+        // Set active flow
+        // The default flow creation triggers the association, but we might want to be explicit if we added logic later
+
+        await transaction.commit();
+
+        // Return plain objects to avoid circular references or strict Sequelize instances if needed
+        const projectResponse = await Project.findByPk(project.id);
+        const flowRef = await Flow.findOne({ where: { projectId: project.id } }); // Get the created flow
+
+        // 3. Devolver AMBOS al frontend (User Pattern)
+        res.status(201).json({
+            project: projectResponse,
+            flow: flowRef,
         });
-        res.status(201).json(newProject);
     } catch (error) {
+        if (transaction) await transaction.rollback();
         res.status(400).json({ error: error.message });
     }
 });

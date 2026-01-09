@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import {
   ChevronLeft,
-  Menu,
   Globe,
   Pointer,
   Code,
@@ -18,27 +17,18 @@ import {
   GripVertical,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-// eslint-disable-next-line no-unused-vars
-import { motion, AnimatePresence } from "motion/react";
-import { panelVariants } from "../utils/motion-variants";
-import SettingsPage from "./SettingsPage";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import SettingsPage from "./SettingsPage";
 
-import "./styles/NodeCreationPanel.css";
+/**
+ * MAREA DESIGN SYSTEM - LEFT SIDEBAR (TOOLBOX)
+ * Glass accordion panel for node selection.
+ */
 
-// Definición de categorías y nodos (convertidos a claves de i18n para etiquetas)
+// Node categories with icons
 const NODE_CATEGORIES = {
   browser_management: {
-    icon: <Globe size={18} />,
+    icon: <Globe size={16} />,
     nodes: [
       { id: "launch_browser" },
       { id: "open_url" },
@@ -50,7 +40,7 @@ const NODE_CATEGORIES = {
     ],
   },
   dom_manipulation: {
-    icon: <Code size={18} />,
+    icon: <Code size={16} />,
     nodes: [
       { id: "find_element" },
       { id: "get_set_content" },
@@ -59,7 +49,7 @@ const NODE_CATEGORIES = {
     ],
   },
   user_simulation: {
-    icon: <Pointer size={18} />,
+    icon: <Pointer size={16} />,
     nodes: [
       { id: "click" },
       { id: "type_text" },
@@ -71,7 +61,7 @@ const NODE_CATEGORIES = {
     ],
   },
   synchronization: {
-    icon: <Clock size={18} />,
+    icon: <Clock size={16} />,
     nodes: [
       { id: "wait_visible" },
       { id: "wait_navigation" },
@@ -80,7 +70,7 @@ const NODE_CATEGORIES = {
     ],
   },
   diagnostics: {
-    icon: <Camera size={18} />,
+    icon: <Camera size={16} />,
     nodes: [
       { id: "take_screenshot" },
       { id: "save_dom" },
@@ -89,7 +79,7 @@ const NODE_CATEGORIES = {
     ],
   },
   network_control: {
-    icon: <Cable size={18} />,
+    icon: <Cable size={16} />,
     nodes: [
       { id: "intercept_request" },
       { id: "wait_network" },
@@ -103,7 +93,7 @@ const NODE_CATEGORIES = {
     ],
   },
   session_management: {
-    icon: <Cookie size={18} />,
+    icon: <Cookie size={16} />,
     nodes: [
       { id: "manage_cookies" },
       { id: "manage_storage" },
@@ -112,7 +102,7 @@ const NODE_CATEGORIES = {
     ],
   },
   test_execution: {
-    icon: <CheckSquare size={18} />,
+    icon: <CheckSquare size={16} />,
     nodes: [
       { id: "create_context" },
       { id: "cleanup_state" },
@@ -121,7 +111,7 @@ const NODE_CATEGORIES = {
     ],
   },
   file_data: {
-    icon: <Folder size={18} />,
+    icon: <Folder size={16} />,
     nodes: [
       { id: "read_data" },
       { id: "save_results" },
@@ -129,7 +119,7 @@ const NODE_CATEGORIES = {
     ],
   },
   execution_interface: {
-    icon: <Terminal size={18} />,
+    icon: <Terminal size={16} />,
     nodes: [
       { id: "run_tests" },
       { id: "cli_params" },
@@ -138,7 +128,7 @@ const NODE_CATEGORIES = {
     ],
   },
   flow_control: {
-    icon: <Settings2 size={18} />,
+    icon: <Settings2 size={16} />,
     nodes: [
       { id: "variable" },
       { id: "conditional" },
@@ -149,7 +139,7 @@ const NODE_CATEGORIES = {
     ],
   },
   llm_ai: {
-    icon: <Sparkles className="w-5 h-5 text-purple-400" />,
+    icon: <Sparkles size={16} className="text-purple-400" />,
     nodes: [
       { id: "call_llm" },
       { id: "generate_data" },
@@ -160,135 +150,135 @@ const NODE_CATEGORIES = {
 
 export default function NodeCreationPanel({
   addNode,
-  isVisible,
-  togglePanel /* onOpenSettings prop ignored in favor of internal view */,
+  isVisible /*, togglePanel */,
 }) {
   const { t } = useTranslation();
-  const [view, setView] = useState("nodes"); // "nodes" | "settings"
+  const [view, setView] = useState("nodes");
+  const [openCategories, setOpenCategories] = useState(["browser_management"]);
 
-  // Set default open item (e.g., first category)
-  const defaultOpen = "browser_management";
+  const toggleCategory = (category) => {
+    setOpenCategories((prev) =>
+      prev.includes(category)
+        ? prev.filter((c) => c !== category)
+        : [...prev, category],
+    );
+  };
+
+  if (!isVisible) return null;
 
   return (
-    <div className="panel-wrapper-burger">
-      {/* Botón Toggle */}
-      <Button
-        variant="default"
-        size="icon"
-        className={cn(
-          "fixed top-[76px] left-[20px] z-30 shadow-lg transition-all duration-300",
-          isVisible && "left-[280px]",
-        )}
-        onClick={togglePanel}
-        aria-label={isVisible ? t("common.hide_panel") : t("common.show_panel")}
-      >
-        {isVisible ? <ChevronLeft size={20} /> : <Menu size={20} />}
-      </Button>
+    <aside
+      className={cn(
+        "absolute left-4 top-16 bottom-20 w-64 z-30 select-none flex flex-col", // Floating Position
+        "bg-slate-800/90 backdrop-blur-xl", // Heavy Glass & Contrast Fix
+        "border border-white/10 rounded-2xl", // Distinct Borders
+        "shadow-2xl overflow-hidden", // Shadow & Clip
+      )}
+    >
+      {view === "settings" ? (
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <SettingsPage onBack={() => setView("nodes")} />
+        </div>
+      ) : (
+        <>
+          {/* Header / Title (Optional) */}
+          <div className="px-4 py-3 border-b border-white/5">
+            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+              {t("common.toolbox", "Toolbox")}
+            </h2>
+          </div>
 
-      {/* Panel lateral con AnimatePresence */}
-      <AnimatePresence>
-        {isVisible && (
-          <motion.aside
-            key="node-creation-panel"
-            variants={panelVariants.left}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            className="fixed top-[56px] left-0 h-[calc(100vh-56px-60px)] w-[280px] bg-hal-neutral-900 border-r border-hal-neutral-950 z-20 flex flex-col shadow-[2px_0_10px_rgba(0,0,0,0.7)]"
-            role="complementary"
-          >
-            {view === "settings" ? (
-              <div className="flex-1 flex flex-col bg-hal-neutral-900 overflow-hidden">
-                <SettingsPage onBack={() => setView("nodes")} />
-              </div>
-            ) : (
-              <>
-                <div className="p-4 border-b border-hal-neutral-950">
-                  <h2 className="text-lg font-bold text-hal-primary-500 font-mono tracking-wider uppercase flex items-center gap-2">
-                    <Terminal className="w-5 h-5" />
-                    {t("app.library_title")}
-                  </h2>
-                </div>
-
-                <ScrollArea className="flex-1 bg-hal-neutral-900">
-                  <div className="p-3">
-                    <Accordion
-                      type="single"
-                      collapsible
-                      defaultValue={defaultOpen}
-                      className="w-full flex flex-col gap-1"
-                    >
-                      {Object.entries(NODE_CATEGORIES).map(
-                        ([key, category]) => (
-                          <AccordionItem
-                            key={key}
-                            value={key}
-                            className="border-b border-hal-neutral-950 last:border-0 data-[state=open]:bg-hal-neutral-800 rounded-md transition-colors duration-200"
-                          >
-                            <AccordionTrigger className="hover:no-underline py-3 px-3 !bg-transparent hover:!bg-white/5 data-[state=open]:!bg-white/5 rounded-t-md">
-                              <div className="flex items-center gap-5 text-sm font-medium font-mono text-hal-neutral-100">
-                                <span className="text-hal-neutral-400 group-hover:text-hal-warning-500 transition-colors">
-                                  {category.icon}
-                                </span>
-                                <span className="uppercase tracking-wide text-xs">
-                                  {t(`nodes.categories.${key}`)}
-                                </span>
-                              </div>
-                            </AccordionTrigger>
-                            <AccordionContent className="bg-hal-neutral-950 rounded-b-md">
-                              <div className="flex flex-col gap-2 p-3">
-                                {category.nodes.map((node) => (
-                                  <div
-                                    key={node.id}
-                                    draggable
-                                    onDragStart={(e) => {
-                                      e.dataTransfer.setData(
-                                        "application/reactflow",
-                                        node.id,
-                                      );
-                                      e.dataTransfer.effectAllowed = "move";
-                                    }}
-                                    className="w-full"
-                                  >
-                                    <Button
-                                      variant="secondary"
-                                      className="w-full justify-start h-9 text-xs font-mono !bg-hal-neutral-800 hover:!bg-hal-primary-500 text-hal-neutral-100 border border-hal-neutral-700 hover:border-hal-primary-500 shadow-sm transition-all duration-200"
-                                      onClick={() => addNode(node.id)}
-                                    >
-                                      <GripVertical className="mr-2 h-3 w-3 text-hal-neutral-400" />
-                                      {t(`nodes.labels.${node.id}`)}
-                                    </Button>
-                                  </div>
-                                ))}
-                              </div>
-                            </AccordionContent>
-                          </AccordionItem>
-                        ),
-                      )}
-                    </Accordion>
-                  </div>
-                </ScrollArea>
-
-                <div className="p-3 border-t border-hal-neutral-950 mt-auto bg-hal-neutral-800">
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start h-11 px-3 gap-3 !bg-transparent text-hal-neutral-400 hover:!bg-hal-neutral-700 hover:text-hal-neutral-100 transition-all rounded-md group"
-                    onClick={() => setView("settings")}
+          {/* Categories and Nodes - Scrollable */}
+          <div className="flex-1 overflow-y-auto scrollbar-hide py-2">
+            <div className="px-2 space-y-1">
+              {Object.entries(NODE_CATEGORIES).map(([key, category]) => (
+                <div key={key} className="mb-1">
+                  {/* Category Header */}
+                  <button
+                    onClick={() => toggleCategory(key)}
+                    className={cn(
+                      "w-full flex items-center justify-between px-3 py-2",
+                      "text-[11px] font-bold uppercase tracking-wider",
+                      "text-slate-500 hover:text-slate-200", // Light hover text
+                      "hover:bg-white/5 rounded-md transition-all duration-200",
+                      openCategories.includes(key) && "text-slate-200",
+                    )}
                   >
-                    <Settings
-                      size={18}
-                      className="text-hal-neutral-400 group-hover:text-hal-neutral-100 transition-colors"
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={cn(
+                          "opacity-70",
+                          openCategories.includes(key) ? "text-blue-400" : "",
+                        )}
+                      >
+                        {category.icon}
+                      </span>
+                      <span>{t(`nodes.categories.${key}`)}</span>
+                    </div>
+                    <ChevronLeft
+                      size={12}
+                      className={cn(
+                        "transition-transform duration-200 opacity-50",
+                        openCategories.includes(key) && "-rotate-90",
+                      )}
                     />
-                    <span className="text-sm font-medium leading-none">
-                      {t("settings.title", "Settings")}
-                    </span>
-                  </Button>
+                  </button>
+
+                  {/* Node Items (Draggable) */}
+                  {openCategories.includes(key) && (
+                    <div className="mt-1 ml-2 pl-2 border-l border-white/5 space-y-0.5">
+                      {category.nodes.map((node) => (
+                        <div
+                          key={node.id}
+                          draggable
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData(
+                              "application/reactflow",
+                              node.id,
+                            );
+                            e.dataTransfer.effectAllowed = "move";
+                          }}
+                          onClick={() => addNode(node.id)}
+                          className={cn(
+                            "flex items-center gap-2 px-3 py-1.5 rounded-md group cursor-grab active:cursor-grabbing",
+                            "text-[13px] font-medium text-slate-400",
+                            "hover:bg-white/5 hover:text-white hover:translate-x-1",
+                            "transition-all duration-200",
+                          )}
+                        >
+                          <span className="flex-1 truncate">
+                            {t(`nodes.labels.${node.id}`)}
+                          </span>
+                          <GripVertical
+                            size={12}
+                            className="text-slate-600 group-hover:text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              </>
-            )}
-          </motion.aside>
-        )}
-      </AnimatePresence>
-    </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Settings Button - Bottom */}
+          <div className="p-3 border-t border-white/5 bg-slate-900/50">
+            <button
+              onClick={() => setView("settings")}
+              className={cn(
+                "w-full flex items-center gap-3 px-3 py-2 rounded-lg",
+                "text-sm font-medium text-slate-400 hover:text-white",
+                "bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10",
+                "transition-all duration-200",
+              )}
+            >
+              <Settings size={14} />
+              <span>{t("settings.title", "Settings")}</span>
+            </button>
+          </div>
+        </>
+      )}
+    </aside>
   );
 }

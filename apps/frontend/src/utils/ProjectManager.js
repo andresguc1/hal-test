@@ -8,19 +8,18 @@ class ProjectManager {
 
   async createProject(name, description = "") {
     try {
-      const project = await api.post("/projects", { name, description });
-      // When creating a project in backend, we might want to also create an initial flow
-      const flow = await this.createFlow(project.id, "Main Flow");
-      project.flows = [flow];
-      project.activeFlowId = flow.id;
-      await this.updateProject(project.id, { activeFlowId: flow.id });
+      // Backend now creates the project AND the default flow and returns { project, flow }
+      const response = await api.post("/projects", { name, description });
+      // Destructure to ensure we have the right shape, although api.post returns the json directly
+      const { project, flow } = response;
 
       logger.info(
         "Project created",
-        { id: project.id, name },
+        { id: project?.id, name },
         "ProjectManager",
       );
-      return { ...project, flows: [flow] };
+
+      return { project, flow };
     } catch (err) {
       logger.error("Failed to create project", err, "ProjectManager");
       throw err;

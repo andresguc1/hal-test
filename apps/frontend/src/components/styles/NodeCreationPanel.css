@@ -46,7 +46,8 @@ body {
   padding: 20px;
 }
 
-/* Panel lateral */
+/* Panel lateral - DISABLED: Now using Tailwind classes in JSX */
+/*
 .panel-left {
   width: 280px;
   background-color: var(--tech-gray);
@@ -58,15 +59,14 @@ body {
   position: fixed;
   top: var(--header-height);
   left: 0;
-  /* Changed: Always at left when mounted */
   height: calc(100vh - var(--header-height));
-  /* Removed transition - Motion handles this now */
   z-index: 20;
   box-sizing: border-box;
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.7);
   border-radius: 0 8px 8px 0;
   overflow: hidden;
 }
+*/
 
 /* Removed .hidden class - AnimatePresence handles visibility */
 

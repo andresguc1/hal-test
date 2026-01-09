@@ -20,7 +20,8 @@ const variableManager = new VariableManager();
 // CONFIGURATION AND CONSTANTS
 // ==========================================================
 
-const storageDir = path.resolve('./storages');
+// Storage directory for artifacts (disabled)
+// const storageDir = path.resolve('./storages');
 
 // ==========================================================
 // BASIC UTILITIES
@@ -277,24 +278,7 @@ export const launchBrowserAction = async (req, res) => {
 
         console.log(`[SUCCESS] Browser launched with ID: ${browserId}`);
 
-        // Save initial metadata
-        setImmediate(async () => {
-            try {
-                await fsp.mkdir(storageDir, { recursive: true });
-                const data = {
-                    browserId,
-                    status: 'open',
-                    launchedAt: new Date().toISOString(),
-                    launchMethod: 'launch',
-                    headless: req.body.headless || false,
-                    requestData: req.body || {},
-                };
-                const filePath = path.join(storageDir, `${browserId}.json`);
-                await fsp.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8');
-            } catch (err) {
-                console.error('[WARN] Error saving metadata:', err.message);
-            }
-        });
+        // Debug storage writing disabled per user request
 
         traceService.add({ action: 'launch_browser', browserId, status: 'success' });
 

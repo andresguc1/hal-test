@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, memo } from "react";
 import { useTranslation } from "react-i18next";
 import {
   DndContext,
@@ -19,9 +19,14 @@ import { CSS } from "@dnd-kit/utilities";
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from "motion/react";
 import { tabVariants } from "../utils/motion-variants";
-import { Plus, X, Copy, Pencil, Trash2 } from "lucide-react"; // Icons
-import ProjectSelector from "./ProjectSelector";
+import { Plus, X, Copy, Pencil, Trash2, FolderGit2 } from "lucide-react";
+
 import { cn } from "@/lib/utils";
+
+/**
+ * MAREA DESIGN SYSTEM - FLOW TABS
+ * "Chrome-like" glass tabs for flow navigation.
+ */
 
 // ========================================
 // SORTABLE TAB COMPONENT
@@ -69,9 +74,14 @@ const SortableTab = ({
       animate="animate"
       exit="exit"
       className={cn(
-        "group relative flex items-center min-w-[120px] max-w-[200px] h-full px-3 py-1.5 mr-0.5 rounded-t bg-[#2d2d2d] text-gray-400 text-xs transition-colors hover:bg-[#3d3d3d] hover:text-white select-none",
-        isActive &&
-          "bg-[#1e1e1e] text-white border-b-2 border-orange-500 hover:bg-[#1e1e1e]", // Active state
+        "group relative flex items-center min-w-[120px] max-w-[180px] h-full px-3 py-1.5 mr-1 rounded-t-lg text-[11px] font-medium transition-all select-none border-t border-x border-transparent",
+
+        // MAREA: Tab States
+        isActive
+          ? "bg-[#0f172a] text-blue-400 border-t-blue-500/50 border-x-white/5 shadow-[0_-4px_10px_-5px_rgba(59,130,246,0.1)]"
+          : "bg-transparent text-slate-500 hover:text-slate-300 hover:bg-white/5",
+
+        isDragging && "scale-105 shadow-xl z-50 bg-slate-800",
       )}
       onClick={() => onSwitch(flow.id)}
       onContextMenu={(e) => onContextMenu(e, flow)}
@@ -79,26 +89,50 @@ const SortableTab = ({
       {...attributes}
       {...listeners}
     >
-      {isEditing ? (
-        <input
-          ref={editInputRef}
-          type="text"
-          value={editName}
-          onChange={(e) => setEditName(e.target.value)}
-          onBlur={onEditSubmit}
-          onKeyDown={onKeyDown}
-          className="w-full bg-transparent border-none text-white outline-none font-inherit text-xs p-0 m-0"
-          onClick={(e) => e.stopPropagation()}
-        />
-      ) : (
-        <span className="truncate flex-grow mr-2">{flow.name}</span>
+      {/* Active Indicator Line (Top) */}
+      {isActive && (
+        <div className="absolute top-0 left-0 right-0 h-[2px] bg-blue-500 shadow-[0_0_8px_2px_rgba(59,130,246,0.5)]" />
       )}
 
-      {/* Close Button (Hidden unless hover or active? Original was visible on hover) */}
-      <span
+      {/* Content */}
+      <div className="flex items-center gap-2 w-full overflow-hidden">
+        {/* Icon based on type (generic for now) */}
+        {!isEditing && (
+          <div
+            className={cn(
+              "w-1.5 h-1.5 rounded-full shrink-0",
+              isActive
+                ? "bg-blue-500 shadow-[0_0_5px_rgba(59,130,246,0.8)]"
+                : "bg-slate-600",
+            )}
+          />
+        )}
+
+        {isEditing ? (
+          <input
+            ref={editInputRef}
+            type="text"
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            onBlur={onEditSubmit}
+            onKeyDown={onKeyDown}
+            className="w-full bg-transparent border-none text-white outline-none font-mono text-[11px] p-0 m-0 placeholder:text-slate-600"
+            onClick={(e) => e.stopPropagation()}
+            autoFocus
+          />
+        ) : (
+          <span className="truncate flex-grow font-mono tracking-tight">
+            {flow.name}
+          </span>
+        )}
+      </div>
+
+      {/* Close Button */}
+      <button
         className={cn(
-          "ml-auto p-0.5 rounded-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#444] hover:text-red-400",
-          isActive && "opacity-100", // Always show on active? Optional.
+          "ml-1 p-0.5 rounded-md opacity-0 group-hover:opacity-100 transition-all duration-200",
+          "hover:bg-red-500/20 hover:text-red-400 text-slate-500",
+          isActive && "opacity-0 group-hover:opacity-100", // Only show on hover even if active for clean look
         )}
         onClick={(e) => {
           e.stopPropagation();
@@ -109,8 +143,8 @@ const SortableTab = ({
           }
         }}
       >
-        <X size={12} />
-      </span>
+        <X size={12} strokeWidth={2.5} />
+      </button>
     </motion.div>
   );
 };
@@ -123,17 +157,17 @@ const FlowTabs = ({
   flows,
   activeFlowId,
   onSwitchFlow,
-  onCreateFlow,
   onRenameFlow,
   onDeleteFlow,
   onDuplicateFlow,
   onReorderFlows,
-  // Project selector props
-  projects,
-  currentProject,
-  onSelectProject,
-  onCreateProject,
-  onDeleteProject,
+  // Unused props commented out
+  // onCreateFlow,
+  // projects,
+  // currentProject,
+  // onSelectProject,
+  // onCreateProject,
+  // onDeleteProject,
 }) => {
   const { t } = useTranslation();
   const [contextMenu, setContextMenu] = useState(null);
@@ -141,11 +175,10 @@ const FlowTabs = ({
   const [editName, setEditName] = useState("");
   const editInputRef = useRef(null);
 
-  // DND Sensors
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 5, // 5px movement before drag starts (allows clicks)
+        distance: 5,
       },
     }),
     useSensor(KeyboardSensor, {
@@ -153,14 +186,12 @@ const FlowTabs = ({
     }),
   );
 
-  // Close context menu on click outside
   useEffect(() => {
     const handleClick = () => setContextMenu(null);
     document.addEventListener("click", handleClick);
     return () => document.removeEventListener("click", handleClick);
   }, []);
 
-  // Focus input when editing starts
   useEffect(() => {
     if (editingFlowId && editInputRef.current) {
       editInputRef.current.focus();
@@ -207,7 +238,6 @@ const FlowTabs = ({
 
       const newFlows = arrayMove(flows, oldIndex, newIndex);
 
-      // Create orders array for backend
       const orders = newFlows.map((flow, index) => ({
         id: flow.id,
         order: index,
@@ -218,20 +248,8 @@ const FlowTabs = ({
   };
 
   return (
-    <div className="fixed bottom-[56px] left-0 right-0 h-[40px] bg-[#1e1e1e] border-t border-[#333] flex items-center px-2 z-20 shadow-md">
-      {/* Project Selector */}
-      <ProjectSelector
-        projects={projects || []}
-        currentProject={currentProject}
-        onSelectProject={onSelectProject}
-        onCreateProject={onCreateProject}
-        onDeleteProject={onDeleteProject}
-      />
-
-      {/* Separator */}
-      <div className="w-px h-6 bg-[#444] mx-3" />
-
-      {/* Flow Tabs with DND */}
+    <div className="h-[40px] flex items-center px-4 relative z-20 select-none pointer-events-auto">
+      {/* Flow Tabs */}
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
@@ -241,7 +259,7 @@ const FlowTabs = ({
           items={flows.map((f) => f.id)}
           strategy={horizontalListSortingStrategy}
         >
-          <div className="flex flex-1 h-full items-end overflow-x-auto no-scrollbar">
+          <div className="flex flex-1 h-full items-end overflow-x-auto no-scrollbar pt-1">
             <AnimatePresence mode="popLayout">
               {flows.map((flow) => (
                 <SortableTab
@@ -266,45 +284,40 @@ const FlowTabs = ({
         </SortableContext>
       </DndContext>
 
-      <button
-        className="ml-1 w-8 h-8 flex items-center justify-center rounded text-gray-400 hover:bg-[#333] hover:text-white transition-colors"
-        onClick={() => onCreateFlow(t("common.new_flow"))}
-        title={t("common.create_new_flow")}
-      >
-        <Plus size={18} />
-      </button>
-
-      {/* Context Menu (Custom Implementation to match Shadcn style) */}
+      {/* Context Menu (Glass styled) */}
       {contextMenu && (
         <div
-          className="fixed z-50 min-w-[160px] bg-[#252526] border border-[#454545] rounded-md shadow-lg py-1 text-gray-200 text-sm animate-in fade-in zoom-in-95 cursor-default"
+          className="fixed z-50 min-w-[160px] bg-slate-900/90 backdrop-blur-xl border border-white/10 rounded-lg shadow-2xl py-1 transform -translate-y-full"
           style={{ top: contextMenu.y, left: contextMenu.x }}
-          onClick={(e) => e.stopPropagation()} // Prevent closing immediately? Wrapper closes it.
+          onClick={(e) => e.stopPropagation()}
         >
           <div
-            className="px-3 py-2 hover:bg-[#094771] hover:text-white cursor-pointer flex items-center gap-2"
+            className="px-3 py-2 text-slate-300 hover:bg-blue-500/20 hover:text-blue-200 cursor-pointer flex items-center gap-2 text-xs font-medium transition-colors"
             onClick={() =>
               startEditing(flows.find((f) => f.id === contextMenu.flowId))
             }
           >
-            <Pencil size={14} />
+            <Pencil size={12} />
             {t("common.rename")}
           </div>
+
           {onDuplicateFlow && (
             <div
-              className="px-3 py-2 hover:bg-[#094771] hover:text-white cursor-pointer flex items-center gap-2"
+              className="px-3 py-2 text-slate-300 hover:bg-blue-500/20 hover:text-blue-200 cursor-pointer flex items-center gap-2 text-xs font-medium transition-colors"
               onClick={() => {
                 onDuplicateFlow(contextMenu.flowId);
                 setContextMenu(null);
               }}
             >
-              <Copy size={14} />
+              <Copy size={12} />
               {t("common.duplicate")}
             </div>
           )}
-          <div className="h-px bg-[#454545] my-1"></div>
+
+          <div className="h-px bg-white/5 my-1" />
+
           <div
-            className="px-3 py-2 hover:bg-[#2d2d2d] text-red-400 hover:text-red-500 cursor-pointer flex items-center gap-2"
+            className="px-3 py-2 text-red-400 hover:bg-red-500/10 hover:text-red-300 cursor-pointer flex items-center gap-2 text-xs font-medium transition-colors"
             onClick={() => {
               setContextMenu(null);
               if (window.confirm(t("common.delete_flow_simple_confirm"))) {
@@ -312,7 +325,7 @@ const FlowTabs = ({
               }
             }}
           >
-            <Trash2 size={14} />
+            <Trash2 size={12} />
             {t("common.delete")}
           </div>
         </div>
@@ -321,4 +334,4 @@ const FlowTabs = ({
   );
 };
 
-export default FlowTabs;
+export default memo(FlowTabs);

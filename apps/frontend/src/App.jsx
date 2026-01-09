@@ -1,5 +1,11 @@
 import React, { useState, useCallback, useMemo, useEffect } from "react";
-import { ReactFlow, Controls, Background, useReactFlow } from "@xyflow/react";
+import {
+  ReactFlow,
+  Controls,
+  Background,
+  useReactFlow,
+  MarkerType,
+} from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import "./components/styles/App.css";
 import "./components/styles/reactflow-theme.css";
@@ -11,9 +17,11 @@ import AppFooter from "./components/AppFooter";
 import StyledMiniMap from "./components/StyledMiniMap";
 import { nodeTypes } from "./components/nodes";
 import CustomConnectionLine from "./components/CustomConnectionLine";
-{
-  /* Status Indicator removed */
-}
+import CustomEdge from "./components/edges/CustomEdge";
+
+const edgeTypes = {
+  custom: CustomEdge,
+};
 import ProgressBar from "./components/ProgressBar";
 import ImportDialog from "./components/ImportDialog";
 import ExportDialog from "./components/ExportDialog";
@@ -21,25 +29,28 @@ import ExportDialog from "./components/ExportDialog";
   /* SettingsDialog removed in favor of internal panel navigation */
 }
 import ContextMenu from "./components/ContextMenu";
+import CreationModal from "./components/CreationModal";
 
-import { colors } from "./components/styles/colors";
+// import { colors } from "./components/styles/colors"; // Unused
 import { useFlowManager } from "./components/hooks/useFlowManager.js";
 import { useProjectManager } from "./components/hooks/useProjectManager.js";
 import { migrateFromLegacy } from "./utils/migration";
-import FlowTabs from "./components/FlowTabs";
+
 import { useFlowShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useToast } from "./hooks/useToast";
 import { useFigmaInteraction } from "./hooks/useFigmaInteraction";
 import { useTranslation } from "react-i18next";
-import { AnimatePresence } from "motion/react";
 import { ThemeProvider } from "./components/theme-provider";
+// import { useTheme } from "next-themes"; // Unused
 
 // ========================================
-// COMPONENTE PRINCIPAL
+// COMPONENTE PRINCIPAL (MAREA REFACTOR)
 // ========================================
 
 export default function App() {
   const { t } = useTranslation();
+
+  // Theme
   // Toast notifications
   const toast = useToast();
 
@@ -59,7 +70,7 @@ export default function App() {
     switchFlow,
     deleteFlow,
     renameFlow,
-    reorderFlows,
+    renameProject,
   } = useProjectManager();
 
   // Migration Effect
@@ -99,6 +110,10 @@ export default function App() {
   const [isCreationPanelVisible, setIsCreationPanelVisible] = useState(true);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
+  const [creationModal, setCreationModal] = useState({
+    isOpen: false,
+    type: "project",
+  });
 
   // Execution state for progress bar
   const [executionProgress, setExecutionProgress] = useState({
@@ -136,6 +151,7 @@ export default function App() {
     cutElements,
     duplicateElements,
     clipboard,
+    // clearFlow, // Unused
   } = useFlowManager(currentProject, currentFlowId);
 
   // Computed values
@@ -188,16 +204,18 @@ export default function App() {
     }
   }, [saveFlow, toast, t]);
 
+  // Export/Import Flow handlers (currently unused)
+  /* 
   const handleExportFlow = useCallback(() => {
     setIsExportDialogOpen(true);
   }, []);
 
-  const handleExportDialogClose = useCallback(() => {
-    setIsExportDialogOpen(false);
-  }, []);
-
   const handleImportFlow = useCallback(() => {
     setIsImportDialogOpen(true);
+  }, []); 
+  */
+  const handleExportDialogClose = useCallback(() => {
+    setIsExportDialogOpen(false);
   }, []);
 
   const handleImportDialogClose = useCallback(() => {
@@ -326,6 +344,7 @@ export default function App() {
         type: "canvas",
         x: event.clientX,
         y: event.clientY,
+        data: { nodes: [] }, // Provide empty selection data for robustness
       });
     },
     [setMenu],
@@ -362,15 +381,11 @@ export default function App() {
       const type = event.dataTransfer.getData("application/reactflow");
       if (!type) return;
 
-      // Get ReactFlow bounds
-      const reactFlowBounds = reactFlowWrapper.current.getBoundingClientRect();
-      const position = {
-        x: event.clientX - reactFlowBounds.left,
-        y: event.clientY - reactFlowBounds.top,
-      };
-
       // Convert screen coordinates to flow coordinates
-      const flowPosition = screenToFlowPosition(position);
+      const flowPosition = screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
 
       // Add node at the drop position
       addNode(type, flowPosition);
@@ -411,7 +426,6 @@ export default function App() {
       defaultViewport: { x: 0, y: 0, zoom: 0.6 },
       snapToGrid: true,
       snapGrid: [15, 15],
-      style: { backgroundColor: colors.deepSpace },
       // Habilitar selección y eliminación de edges
       edgesFocusable: true,
       edgesReconnectable: true,
@@ -453,6 +467,7 @@ export default function App() {
       onDrop,
       onDragOver,
       nodeTypes, // Custom node types for optimized rendering
+      edgeTypes, // Custom edge types with animations
       // Visual feedback for connections
       connectionLineComponent: CustomConnectionLine,
       connectionLineStyle: {
@@ -479,7 +494,7 @@ export default function App() {
   );
 
   // ========================================
-  // RENDER
+  // RENDER - MAREA LAYOUT
   // ========================================
 
   return (
@@ -489,10 +504,7 @@ export default function App() {
       enableSystem={false}
       storageKey="vite-ui-theme"
     >
-      <div className="app-container">
-        {/* Status Indicator */}
-        {/* Status Indicator removed */}
-
+      <div className="relative h-screen w-screen flex flex-col overflow-hidden bg-[#0f172a] text-slate-200 antialiased font-sans selection:bg-cyan-500/30 m-0 p-0 border-none">
         {/* Progress Bar */}
         {executionProgress.total > 0 && (
           <ProgressBar
@@ -505,123 +517,159 @@ export default function App() {
           />
         )}
 
-        {/* Header */}
-        <AppHeader />
+        {/* 1. Header (MAREA Refactored) */}
+        <AppHeader onOpenSettings={() => setIsCreationPanelVisible(true)} />
 
-        {/* Panel izquierdo */}
-        <NodeCreationPanel
-          addNode={addNode}
-          isVisible={isCreationPanelVisible}
-          togglePanel={toggleCreationPanel}
-        />
+        {/* 2. Content Wrapper */}
+        <div className="flex-1 flex flex-row overflow-hidden relative">
+          {/* SIDEBAR IZQUIERDO */}
+          <NodeCreationPanel
+            addNode={addNode}
+            isVisible={isCreationPanelVisible}
+            togglePanel={toggleCreationPanel}
+          />
 
-        {/* Área principal */}
-        <div
-          ref={reactFlowWrapper}
-          className={`main-content 
-            ${isCreationPanelVisible ? "shifted-left" : ""} 
-            ${isConfigurationPanelVisible ? "shifted-right" : ""}`}
-        >
-          <ReactFlow {...flowConfig}>
-            <StyledMiniMap />
-            <Controls />
-            <Background
-              className="react-flow-background"
-              variant="dots"
-              gap={20}
-              size={1.5}
-            />
-          </ReactFlow>
+          {/* LIENZO (CANVAS - Abyss Blue Environment) */}
+          <main className="flex-1 bg-[#0f172a] relative">
+            <div ref={reactFlowWrapper} className="w-full h-full relative">
+              <ReactFlow {...flowConfig}>
+                <StyledMiniMap />
+                <Controls />
 
-          {/* Context Menu Overlay */}
-          {menu && (
-            <ContextMenu
-              x={menu.x}
-              y={menu.y}
-              type={menu.type}
-              data={menu.data}
-              onClose={() => setMenu(null)}
-              actions={{
-                copy: handleCopy,
-                paste: handlePaste,
-                cut: handleCut,
-                delete: () => {
-                  if (menu.type === "node") deleteNode(menu.id);
-                  if (menu.type === "edge") {
-                    setEdges((eds) => eds.filter((e) => e.id !== menu.id));
-                  }
-                  if (menu.type === "selection") {
-                    handleDeleteSelected();
-                  }
-                },
-                duplicate: handleDuplicateNodes,
-                addNode: () => setIsCreationPanelVisible(true),
-                selectAll: handleSelectAll,
-                undo: undo,
-                redo: redo,
-                canUndo: canUndo,
-                canRedo: canRedo,
-                canPaste:
-                  clipboard.nodes.length > 0 || clipboard.edges.length > 0,
-              }}
-            />
-          )}
+                <Background
+                  className="react-flow-background"
+                  variant="dots"
+                  gap={24}
+                  size={1}
+                  color="#334155" // Slate 700
+                />
+
+                {/* VIGNETTE OVERLAY (For depth) */}
+                <div
+                  className="absolute inset-0 pointer-events-none z-[1] mix-blend-multiply"
+                  style={{
+                    background:
+                      "radial-gradient(circle at center, transparent 0%, rgba(15, 23, 42, 0.4) 100%)",
+                  }}
+                />
+
+                {/* Context Menu Overlay */}
+                {menu && (
+                  <ContextMenu
+                    x={menu.x}
+                    y={menu.y}
+                    type={menu.type}
+                    data={menu.data}
+                    onClose={() => setMenu(null)}
+                    actions={{
+                      copy: handleCopy,
+                      paste: handlePaste,
+                      cut: handleCut,
+                      delete: () => {
+                        if (menu.type === "node") deleteNode(menu.id);
+                        if (menu.type === "edge") {
+                          setEdges((eds) =>
+                            eds.filter((e) => e.id !== menu.id),
+                          );
+                        }
+                        if (menu.type === "selection") {
+                          handleDeleteSelected();
+                        }
+                      },
+                      duplicate: handleDuplicateNodes,
+                      addNode: () => setIsCreationPanelVisible(true),
+                      selectAll: handleSelectAll,
+                      undo: undo,
+                      redo: redo,
+                      canUndo: canUndo,
+                      canRedo: canRedo,
+                      canPaste:
+                        clipboard.nodes.length > 0 ||
+                        clipboard.edges.length > 0,
+                    }}
+                  />
+                )}
+              </ReactFlow>
+            </div>
+          </main>
+
+          {/* PANEL DERECHO (CONFIGURACIÓN) */}
+          <NodeConfigurationPanel
+            action={selectedAction}
+            isVisible={isConfigurationPanelVisible}
+            onExecute={executeStep}
+            onClose={closeConfiguration}
+            onDeleteNode={deleteNode}
+            updateNodeConfiguration={updateNodeConfiguration}
+            nodes={nodes}
+          />
         </div>
 
-        {/* Panel derecho */}
-        <NodeConfigurationPanel
-          action={selectedAction}
-          isVisible={isConfigurationPanelVisible}
-          onExecute={executeStep}
-          onClose={closeConfiguration}
-          onDeleteNode={deleteNode}
-          updateNodeConfiguration={updateNodeConfiguration}
-          nodes={nodes}
-        />
-
-        {/* Flow Tabs - Above Footer */}
-        {currentProject && (
-          <FlowTabs
-            flows={currentProject.flows || []}
-            activeFlowId={currentFlowId}
-            onSwitchFlow={switchFlow}
-            onCreateFlow={createFlow}
-            onRenameFlow={renameFlow}
-            onDeleteFlow={deleteFlow}
-            onReorderFlows={reorderFlows}
-            onDuplicateFlow={() => {
-              // TODO: Implement duplicate
-              toast.info(`${t("common.coming_soon")}`);
-            }}
-            projects={projects}
-            currentProject={currentProject}
-            onSelectProject={loadProject}
-            onCreateProject={createProject}
-            onDeleteProject={deleteProject}
-          />
-        )}
-
-        {/* Footer */}
-        <AppFooter
-          onExecuteFlow={handleExecuteFlow}
-          onSave={handleSaveFlow}
-          onExport={handleExportFlow}
-          onImport={handleImportFlow}
-        />
-
-        {/* Import Dialog */}
+        {/* Modals/Dialogs */}
         <ImportDialog
           isOpen={isImportDialogOpen}
           onClose={handleImportDialogClose}
           onImport={handleImport}
         />
 
-        {/* Export Dialog */}
         <ExportDialog
           isOpen={isExportDialogOpen}
           onClose={handleExportDialogClose}
           nodes={nodes}
           edges={edges}
+        />
+
+        {/* FLOATING COMMAND CENTER (Footer) - Positioned Absolutely */}
+        <AppFooter
+          // Project Props
+          projectName={currentProject?.name || "No Project"}
+          projects={projects}
+          onSwitchProject={(p) => loadProject(p.id)}
+          onNewProject={() =>
+            setCreationModal({ isOpen: true, type: "project" })
+          }
+          onRenameProject={(p, newName) => renameProject(p.id, newName)}
+          onDeleteProject={(p) => deleteProject(p.id)}
+          // Flow Props
+          flowName={
+            currentProject?.flows?.find((f) => f.id === currentFlowId)?.name ||
+            "No Flow Selected"
+          }
+          flows={currentProject?.flows || []}
+          onSwitchFlow={(f) => switchFlow(f.id)}
+          onNewFlow={() => setCreationModal({ isOpen: true, type: "flow" })}
+          onRenameFlow={(f, newName) => renameFlow(f.id, newName)}
+          onDeleteFlow={(f) => deleteFlow(f.id)}
+          // Global Props
+          version="v1.0.2"
+          isReadOnly={false}
+          isRunning={executionProgress.status === "running"}
+          onRun={handleExecuteFlow}
+          onSave={handleSaveFlow}
+        />
+
+        <CreationModal
+          isOpen={creationModal.isOpen}
+          title={
+            creationModal.type === "project"
+              ? t("common.new_project")
+              : t("common.new_flow")
+          }
+          placeholder={
+            creationModal.type === "project"
+              ? "Project Name..."
+              : "Flow Name..."
+          }
+          onClose={() =>
+            setCreationModal((prev) => ({ ...prev, isOpen: false }))
+          }
+          onConfirm={(name) => {
+            if (creationModal.type === "project") {
+              createProject(name);
+            } else {
+              createFlow(name);
+            }
+          }}
         />
       </div>
     </ThemeProvider>

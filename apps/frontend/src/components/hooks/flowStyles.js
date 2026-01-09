@@ -14,68 +14,49 @@ export const NODE_STATES = {
   SKIPPED: "skipped",
 };
 
-/**
- * Colores y estilos profesionales para estados de nodos con apariencia de botón.
- */
 export const PROFESSIONAL_COLORS = {
   [NODE_STATES.DEFAULT]: {
-    background: "#f8f9fa", // Fondo claro, apariencia de botón normal
-    border: "#ced4da",
-    text: "#212529",
-    shadow: "0 2px 4px rgba(0,0,0,0.1)",
+    background: "var(--system-background)",
+    border: "#94a3b8", // slate-400
+    text: "var(--label-primary)",
+    shadow: "0 1px 2px rgba(0,0,0,0.05)",
     borderWidth: "1px",
   },
   [NODE_STATES.EXECUTING]: {
-    background: "#fff3e0", // Naranja claro (animación)
-    border: "#ff9800",
-    text: "#e65100",
-    shadow: "0 0 12px rgba(255,152,0,0.4)",
+    background: "#eff6ff", // blue-50
+    border: "#2563eb", // blue-600
+    text: "#1e40af", // blue-800
+    shadow: "0 0 12px rgba(37,99,235,0.2)",
     animate: true,
     borderWidth: "2px",
   },
   [NODE_STATES.SUCCESS]: {
-    background: "#d4edda", // Verde claro
-    border: "#28a745",
-    text: "#155724",
-    shadow: "0 2px 8px rgba(40,167,69,0.3)",
+    background: "#f0fdf4", // green-50
+    border: "#16a34a", // green-600
+    text: "#166534", // green-800
+    shadow: "0 2px 8px rgba(22,163,74,0.15)",
     borderWidth: "1px",
   },
   [NODE_STATES.ERROR]: {
-    background: "#f8d7da", // Rojo claro
-    border: "#dc3545",
-    text: "#721c24",
-    shadow: "0 2px 8px rgba(220,53,69,0.4)",
+    background: "#fef2f2", // red-50
+    border: "#dc2626", // red-600
+    text: "#991b1b", // red-800
+    shadow: "0 2px 8px rgba(220,38,38,0.2)",
     borderWidth: "2px",
   },
   [NODE_STATES.WARNING]: {
-    background: "#fff9c4", // Amarillo claro
-    border: "#ffc107",
-    text: "#856404",
-    shadow: "0 2px 6px rgba(255,193,7,0.3)",
+    background: "#fffbeb", // amber-50
+    border: "#d97706", // amber-600
+    text: "#92400e", // amber-800
+    shadow: "0 2px 6px rgba(217,119,6,0.15)",
     borderWidth: "1px",
   },
   [NODE_STATES.SKIPPED]: {
-    background: "#e9ecef", // Gris muy claro
-    border: "#adb5bd",
-    text: "#495057",
-    shadow: "0 1px 3px rgba(0,0,0,0.1)",
+    background: "#f8fafc", // slate-50
+    border: "#cbd5e1", // slate-300
+    text: "#64748b", // slate-500
+    shadow: "0 1px 2px rgba(0,0,0,0.05)",
     borderWidth: "1px",
-  },
-  [NODE_STATES.CAPTURING_BEFORE]: {
-    background: "#f3e8ff", // Púrpura claro
-    border: "#9333ea",
-    text: "#581c87",
-    shadow: "0 0 12px rgba(147,51,234,0.4)",
-    animate: true,
-    borderWidth: "2px",
-  },
-  [NODE_STATES.CAPTURING_AFTER]: {
-    background: "#cffafe", // Cyan claro
-    border: "#06b6d4",
-    text: "#164e63",
-    shadow: "0 0 12px rgba(6,182,212,0.4)",
-    animate: true,
-    borderWidth: "2px",
   },
 };
 
@@ -83,25 +64,17 @@ export const PROFESSIONAL_COLORS = {
  * Obtiene el objeto de estilo para un nodo con apariencia de botón.
  */
 export const getNodeStyle = (state, customStyle = {}) => {
-  const colorConfig =
-    PROFESSIONAL_COLORS[state] || PROFESSIONAL_COLORS[NODE_STATES.DEFAULT];
+  // const colorConfig = PROFESSIONAL_COLORS[state] || PROFESSIONAL_COLORS[NODE_STATES.DEFAULT];
   return {
-    background: colorConfig.background,
-    color: colorConfig.text,
-    border: `${colorConfig.borderWidth || "2px"} solid ${colorConfig.border}`,
-    padding: "10px 15px", // Tamaño de botón
-    borderRadius: "8px", // Esquinas redondeadas
-    fontSize: "14px",
-    fontWeight: "600", // Texto audaz
-    boxShadow: colorConfig.shadow,
-    transition: "all 0.2s ease-in-out", // Transición suave
-    minWidth: "180px",
-    textAlign: "center",
-    cursor: "pointer", // Indica interactividad
-    // La animación 'pulse' necesita CSS global
-    ...(colorConfig.animate && {
-      animation: "pulse 1.5s infinite",
-    }),
+    background: "transparent", // Let the component handle it
+    color: "transparent", // Let the component handle it
+    border: "none", // Let the component handle it
+    padding: "0",
+    borderRadius: "12px",
+    boxShadow: "none",
+    transition: "all 0.2s ease-in-out",
+    minWidth: "200px",
+    cursor: "pointer",
     ...customStyle,
   };
 };

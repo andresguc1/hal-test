@@ -5,13 +5,13 @@ import Node from './models/Node.js';
 import Edge from './models/Edge.js';
 
 // Define associations
-Project.hasMany(Flow, { as: 'flows', foreignKey: 'projectId', onDelete: 'CASCADE' });
+Project.hasMany(Flow, { as: 'flows', foreignKey: 'projectId', onDelete: 'CASCADE', hooks: true });
 Flow.belongsTo(Project, { as: 'project', foreignKey: 'projectId' });
 
-Flow.hasMany(Node, { as: 'nodes', foreignKey: 'flowId', onDelete: 'CASCADE' });
+Flow.hasMany(Node, { as: 'nodes', foreignKey: 'flowId', onDelete: 'CASCADE', hooks: true });
 Node.belongsTo(Flow, { as: 'flow', foreignKey: 'flowId' });
 
-Flow.hasMany(Edge, { as: 'edges', foreignKey: 'flowId', onDelete: 'CASCADE' });
+Flow.hasMany(Edge, { as: 'edges', foreignKey: 'flowId', onDelete: 'CASCADE', hooks: true });
 Edge.belongsTo(Flow, { as: 'flow', foreignKey: 'flowId' });
 
 export const initDb = async (_force = false) => {

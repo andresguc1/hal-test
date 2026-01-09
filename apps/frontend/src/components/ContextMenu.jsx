@@ -79,10 +79,10 @@ const ContextMenu = ({ x, y, type, data, onClose, actions }) => {
         "relative flex w-full cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors",
         disabled
           ? "pointer-events-none opacity-50"
-          : "hover:bg-[#2c2f33] hover:text-white cursor-pointer focus:bg-[#2c2f33] focus:text-white",
+          : "hover:bg-slate-100 dark:hover:bg-slate-700/50 hover:text-slate-900 dark:hover:text-white cursor-pointer focus:bg-slate-100 dark:focus:bg-slate-700/50 focus:text-slate-900 dark:focus:text-white",
         danger &&
           !disabled &&
-          "text-red-500 hover:text-red-500 focus:text-red-500 hover:bg-red-900/20 focus:bg-red-900/20",
+          "text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 focus:bg-red-50 dark:focus:bg-red-900/20",
       )}
       onClick={(e) => {
         e.stopPropagation();
@@ -94,12 +94,14 @@ const ContextMenu = ({ x, y, type, data, onClose, actions }) => {
       disabled={disabled}
       role="menuitem"
     >
-      <div className="mr-2 flex h-4 w-4 items-center justify-center">
+      <div className="mr-2 flex h-4 w-4 items-center justify-center text-slate-500 dark:text-slate-400">
         <Icon size={14} />
       </div>
-      <span className="flex-1 text-left text-gray-200">{label}</span>
+      <span className="flex-1 text-left text-slate-700 dark:text-slate-200">
+        {label}
+      </span>
       {shortcut && (
-        <span className="ml-auto text-xs tracking-widest text-gray-500">
+        <span className="ml-auto text-xs tracking-widest text-slate-400 dark:text-slate-500">
           {shortcut}
         </span>
       )}
@@ -107,11 +109,14 @@ const ContextMenu = ({ x, y, type, data, onClose, actions }) => {
   );
 
   const renderDivider = () => (
-    <div className="my-1 h-px bg-[#2c2f33]" role="separator" />
+    <div
+      className="my-1 h-px bg-slate-200 dark:bg-slate-700"
+      role="separator"
+    />
   );
 
   const renderHeader = (title) => (
-    <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+    <div className="px-2 py-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
       {title}
     </div>
   );
@@ -120,7 +125,7 @@ const ContextMenu = ({ x, y, type, data, onClose, actions }) => {
     <div
       ref={menuRef}
       className={cn(
-        "fixed z-50 min-w-[12rem] overflow-hidden rounded-md border border-[#2c2f33] bg-[#1d2024] p-1 shadow-md animate-in fade-in-80 zoom-in-95 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 slide-in-from-top-2",
+        "fixed z-50 min-w-[12rem] overflow-hidden rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#1E293B] p-1 shadow-md animate-in fade-in-80 zoom-in-95 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 slide-in-from-top-2",
       )}
       style={{ left: x, top: y }}
       role="menu"

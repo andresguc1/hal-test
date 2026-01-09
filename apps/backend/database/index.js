@@ -24,7 +24,16 @@ if (isProduction && process.env.DATABASE_URL) {
     sequelize = new Sequelize({
         dialect: 'sqlite',
         storage: path.join(__dirname, '../database.sqlite'),
-        logging: false, // Set to console.log to see SQL queries
+        logging: false,
+        dialectOptions: {
+            // Enable Foreign Keys in SQLite
+            mode: 2, // SQLITE_OPEN_READWRITE
+        },
+    });
+
+    // Enforce FKs after connection
+    sequelize.beforeConnect(async (config) => {
+        config.foreign_keys = true;
     });
 }
 

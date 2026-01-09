@@ -1,18 +1,15 @@
 /* ==========================================
- * GOOGLE FONTS IMPORT
- * Inter (Sans-serif) + JetBrains Mono (Monospace)
+ * TYPOGRAPHY - FORCE INTER FONT
  * ========================================== */
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap");
+@import url("https://rsms.me/inter/inter.css");
 
 /* ==========================================
  * DESIGN TOKENS
- * Import our custom design system
  * ========================================== */
 @import "./styles/design-tokens.css";
 
 /* ==========================================
  * TAILWIND BASE DIRECTIVES
- * Must come after @import statements
  * ========================================== */
 @tailwind base;
 @tailwind components;
@@ -20,220 +17,112 @@
 
 @layer base {
   :root {
-    /* shadcn/ui compatibility - Light mode (kept for compatibility) */
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 99 102 241;
-    /* Indigo-500 from our tokens */
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 244 63 94;
-    /* Rose-500 from our tokens */
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 99 102 241;
-    /* Indigo-500 */
-    --radius: 0.5rem;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
+    --background: 210 40% 98%;
+    /* slate-50 */
+    --foreground: 222 47% 11%;
+    /* slate-950 */
   }
 
   .dark {
-    /* Dark mode - using our semantic tokens */
-    --background: 9 9 11;
-    /* neutral-950 */
-    --foreground: 244 244 245;
-    /* neutral-100 */
-    --card: 24 24 27;
-    /* neutral-900 */
-    --card-foreground: 244 244 245;
-    /* neutral-100 */
-    --popover: 24 24 27;
-    /* neutral-900 */
-    --popover-foreground: 244 244 245;
-    /* neutral-100 */
-    --primary: 99 102 241;
-    /* primary-500 (indigo) */
-    --primary-foreground: 250 250 250;
-    /* neutral-50 */
-    --secondary: 63 63 70;
-    /* neutral-700 */
-    --secondary-foreground: 244 244 245;
-    /* neutral-100 */
-    --muted: 39 39 42;
-    /* neutral-800 */
-    --muted-foreground: 161 161 170;
-    /* neutral-400 */
-    --accent: 63 63 70;
-    /* neutral-700 */
-    --accent-foreground: 244 244 245;
-    /* neutral-100 */
-    --destructive: 244 63 94;
-    /* error-500 (rose) */
-    --destructive-foreground: 250 250 250;
-    /* neutral-50 */
-    --border: 39 39 42;
-    /* neutral-800 */
-    --input: 39 39 42;
-    /* neutral-800 */
-    --ring: 99 102 241;
-    /* primary-500 */
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    --background: 222 84% 5%;
+    /* #020617 (Enterprise Tech Canvas) */
+    --foreground: 210 40% 98%;
+    /* slate-50 */
   }
-}
 
-@layer base {
-  * {
-    border-color: hsl(var(--border));
+  /* CRITICAL: Force Sans-Serif EVERYWHERE - NO SERIF ALLOWED */
+  :root,
+  html,
+  body,
+  #root,
+  .font-sans,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  p,
+  span,
+  div,
+  a,
+  button,
+  input,
+  textarea,
+  select,
+  label,
+  *,
+  *::before,
+  *::after {
+    font-family:
+      "Inter",
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      Roboto,
+      Helvetica,
+      Arial,
+      sans-serif !important;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    letter-spacing: -0.015em;
+    /* Tracking tight estilo Apple */
   }
 
   body {
+    margin: 0;
+    padding: 0;
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  /* Selection styles */
+  ::selection {
+    background-color: rgba(37, 99, 235, 0.2);
+    /* blue-600 */
+    color: #2563eb;
+  }
+
+  /* Scrollbars Minimalistas (Estilo Mac) */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: rgba(156, 163, 175, 0.5);
+    /* Slate-400 semi-transparent */
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(100, 116, 139, 0.8);
   }
 }
 
-/* LEgacy Styles below */
-/*
- * =========================================
- * 1. NORMALIZE/RESET BÁSICO
- * Asegura la consistencia entre navegadores y elimina márgenes por defecto.
- * =========================================
- */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-/* Elimina el margen por defecto en el body */
-body {
-  margin: 0;
-  /* Elimina el padding y margen por defecto de los elementos */
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-/*
- * =========================================
- * 2. VARIABLES Y ESQUEMA DE COLOR ROOT
- * Variables centralizadas para fácil theming.
- * =========================================
- */
-:root {
-  /* Tipografía */
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-
-  /* Variables de color (Modo Oscuro por defecto) */
-  --color-text-primary: rgba(255, 255, 255, 0.87);
-  --color-background: #242424;
-  --color-accent: #646cff;
-  /* Color principal de enlaces/botones */
-  --color-accent-hover: #535bf2;
-
-  color-scheme: light dark;
-}
-
-/*
- * =========================================
- * 3. ESTILOS BASE DEL DOCUMENTO
- * Optimización del body para contener la aplicación de pantalla completa.
- * =========================================
- */
-body {
-  /* Usa las variables de color */
-  color: var(--color-text-primary);
-  background-color: var(--color-background);
-
-  /* Asegura que el body ocupe toda la ventana para la aplicación Flow */
-  min-width: 320px;
-  min-height: 100vh;
-  /* El body debe contener la aplicación, no necesariamente centrar items si la app es de ancho completo */
-}
-
-/*
- * =========================================
- * 4. ESTILOS DE ELEMENTOS (Enlaces, Títulos, Botones)
- * Utiliza las variables para consistencia.
- * =========================================
- */
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-a {
-  font-weight: 500;
-  color: var(--color-accent);
-  text-decoration: inherit;
-  transition: color 0.25s;
-  /* Animación para el color */
-}
-
-a:hover {
-  color: var(--color-accent-hover);
-}
-
-/* Commented out to avoid conflicts with Tailwind/shadcn button styles in dark mode
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-
-button:hover {
-  border-color: var(--color-accent);
-}
-
-button:focus,
-button:focus-visible {
-  outline: 4px auto var(--color-accent);
-}
-*/
-
-/*
- * =========================================
- * 5. MEDIA QUERY (Modo Claro)
- * =========================================
- */
-@media (prefers-color-scheme: light) {
-  :root {
-    /* Sobrescribir variables para el modo claro */
-    --color-text-primary: #213547;
-    --color-background: #ffffff;
-    --color-accent-hover: #747bff;
+@layer utilities {
+  /* Smooth Scrolling */
+  .smooth-scroll {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
   }
 
-  /* Commented out - conflicts with dark mode UI
-  button {
-    background-color: #f9f9f9;
+  /* No Scrollbar */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
   }
-  */
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }

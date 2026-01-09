@@ -1,4 +1,4 @@
-import * as fsp from 'fs/promises';
+// import * as fsp from 'fs/promises'; // Removed per user request
 import * as path from 'path';
 
 const STORAGE_DIR = path.resolve('./storages');
@@ -40,30 +40,9 @@ class TraceService {
      * Escribe las trazas pendientes en disco.
      */
     async flush() {
-        if (this.buffer.length === 0) return;
-
-        const traces = [...this.buffer];
+        // Debug file writing disabled per user request
         this.buffer = [];
         this.lastFlush = Date.now();
-
-        // Usar setImmediate para no bloquear el event loop principal
-        setImmediate(async () => {
-            try {
-                await fsp.mkdir(STORAGE_DIR, { recursive: true });
-                await Promise.allSettled(
-                    traces.map((trace, idx) => {
-                        const filename = `trace_${trace.action || 'unknown'}_${Date.now()}_${idx}.json`;
-                        return fsp.writeFile(
-                            path.join(STORAGE_DIR, filename),
-                            JSON.stringify(trace, null, 2),
-                            'utf8',
-                        );
-                    }),
-                );
-            } catch (err) {
-                console.error('[TraceService] Error flushing traces:', err.message);
-            }
-        });
     }
 }
 
