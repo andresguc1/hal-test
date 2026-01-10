@@ -467,7 +467,7 @@ export const useFlowManager = (currentProject, currentFlowId) => {
 
       const newNode = {
         id,
-        type: "custom", // Use custom memoized node type
+        type: typeKey, // Explicitly use the registered node type (maps to AbyssNode)
         position: nodePosition,
         data: {
           label, // Only show user-friendly label

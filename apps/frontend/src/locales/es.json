@@ -1,12 +1,18 @@
 {
   "app": {
     "title": "HAL-TEST",
+    "subtitle": "IDE DE AUTOMATIZACIÓN",
     "library_title": "Biblioteca de Nodos",
     "profile": "Perfil",
     "settings": "Configuración",
     "logout": "Cerrar sesión",
     "user": "Usuario",
     "unknown_user": "Usuario Desconocido"
+  },
+  "header": {
+    "select_flow": "Selecciona un flujo",
+    "no_project": "-- Sin Proyecto --",
+    "switch_theme": "Cambiar Tema"
   },
   "common": {
     "save": "Guardar",

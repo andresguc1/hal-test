@@ -1,367 +1,195 @@
-// NodeConfigurationPanel.jsx - Refactored with MAREA Glass Overlay
-import React, { useState, useEffect } from "react";
-import {
-  X,
-  Play,
-  Trash2,
-  AlertCircle,
-  Settings2,
-  ChevronDown,
-} from "lucide-react";
+import React from "react";
+import { motion as Motion, AnimatePresence } from "motion/react";
+import { X, Play, Info } from "lucide-react";
 import { useTranslation } from "react-i18next";
-// eslint-disable-next-line no-unused-vars
-import { motion, AnimatePresence } from "motion/react";
-import { NODE_FIELD_CONFIGS } from "./hooks/constants";
-// import { logger } from "../utils/logger"; // Unused
 import { cn } from "@/lib/utils";
-
-// ===============================================
-// CUSTOM UI COMPONENTS (MAREA STYLE)
-// ===============================================
-
-const MareaLabel = ({ children, required }) => (
-  <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">
-    {children}
-    {required && <span className="text-blue-400 ml-0.5">*</span>}
-  </label>
-);
-
-const MareaInput = ({ className, error, ...props }) => (
-  <input
-    className={cn(
-      "w-full bg-transparent border-b border-slate-700 text-slate-200 text-sm py-1 px-0",
-      "focus:outline-none focus:border-blue-400 transition-colors placeholder:text-slate-600 rounded-none",
-      error && "border-red-500 focus:border-red-500",
-      className,
-    )}
-    {...props}
-  />
-);
-
-const MareaSelect = ({ value, onChange, options, placeholder }) => (
-  <div className="relative">
-    <select
-      value={value || ""}
-      onChange={onChange}
-      className="w-full bg-transparent border-b border-slate-700 text-slate-200 text-sm py-1 pr-6 pl-0 appearance-none focus:outline-none focus:border-blue-400 rounded-none cursor-pointer"
-    >
-      <option value="" disabled className="bg-slate-900 text-slate-500">
-        {placeholder}
-      </option>
-      {options.map((opt) => (
-        <option
-          key={opt.value}
-          value={opt.value}
-          className="bg-slate-900 text-slate-200"
-        >
-          {opt.label}
-        </option>
-      ))}
-    </select>
-    <ChevronDown
-      size={14}
-      className="absolute right-0 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"
-    />
-  </div>
-);
-
-const MareaSwitch = ({ checked, onChange }) => (
-  <button
-    type="button"
-    onClick={() => onChange(!checked)}
-    className={cn(
-      "relative w-8 h-4 rounded-full transition-colors duration-200",
-      checked
-        ? "bg-blue-500/50 border border-blue-400"
-        : "bg-slate-800 border border-slate-700",
-    )}
-  >
-    <div
-      className={cn(
-        "absolute top-0.5 left-0.5 w-2.5 h-2.5 rounded-full bg-white transition-transform duration-200 shadow-sm",
-        checked ? "translate-x-4" : "translate-x-0",
-      )}
-    />
-  </button>
-);
-
-// ===============================================
-// MAIN COMPONENT
-// ===============================================
+import { CATEGORY_STYLES, NODE_TYPE_MAP } from "@/config/nodeConstants";
 
 export default function NodeConfigurationPanel({
-  action,
   isVisible,
-  onExecute,
+  action, // The selected node data
   onClose,
-  onDeleteNode,
+  onExecute,
   updateNodeConfiguration,
+  onDeleteNode,
 }) {
   const { t } = useTranslation();
-  const [formData, setFormData] = useState({});
-  const [errors, setErrors] = useState({});
-  const [isDirty, setIsDirty] = useState(false);
 
-  // Initialize form data
-  useEffect(() => {
-    if (!action?.nodeId) {
-      setFormData({});
-      setErrors({});
-      setIsDirty(false);
-      return;
-    }
-    const currentData = action.currentData || {};
-    const fields = NODE_FIELD_CONFIGS[action.type] || [];
+  if (!isVisible || !action) return null;
 
-    const initialData = {};
-    if (fields.length === 0) {
-      // Fallback or specific hardcoded nodes (like launch_browser which might not be config based yet)
-      // For simplicity, copying raw data
-      Object.assign(initialData, currentData);
-    } else {
-      fields.forEach((field) => {
-        let value = currentData[field.name];
-        if (
-          (field.type === "text" || field.type === "args") &&
-          Array.isArray(value)
-        ) {
-          value = value.join(" ");
-        }
-        initialData[field.name] =
-          value ??
-          field.defaultValue ??
-          (field.type === "checkbox" ? false : "");
-      });
-    }
+  // 1. RESOLVE CONFIGURATION (Single Source of Truth)
+  // Logic matches AbyssNode to ensure 1:1 visual parity
+  const nodeKey = action.data?.subType || action.type;
+  const config = NODE_TYPE_MAP[nodeKey] || NODE_TYPE_MAP.launch_browser;
+  const safeConfig = config || { category: "default", color: "slate" };
 
-    setFormData(initialData);
-    setErrors({});
-    setIsDirty(false);
-  }, [action?.nodeId, action?.type, action?.currentData]);
+  // 2. GET THEME
+  const colorKey = safeConfig.color;
+  const themeConfig =
+    CATEGORY_STYLES[colorKey]?.panel || CATEGORY_STYLES.slate.panel;
 
-  // Validation logic (currently unused but kept for reference)
-  /*
-  const validateField = (fieldConfig, value) => {
-    if (!fieldConfig) return null;
-    if (
-      fieldConfig.required &&
-      (value === "" || value === undefined || value === null)
-    ) {
-      return `${t(`nodes.fields.${fieldConfig.name}`)} ${t("common.required_field")}`;
-    }
-    return null;
-  }; 
-  */
-
-  const handleChange = (name, value) => {
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    setIsDirty(true);
-    if (errors[name]) {
-      setErrors((prev) => {
-        const c = { ...prev };
-        delete c[name];
-        return c;
-      });
-    }
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    const newValue = type === "checkbox" ? checked : value;
-    handleChange(name, newValue);
-  };
-
-  const handleSave = async () => {
-    const normalized = { ...formData };
-    // Number conversion logic here if needed
-    if (updateNodeConfiguration && action?.nodeId) {
-      updateNodeConfiguration(action.nodeId, normalized);
-      setIsDirty(false);
-    }
-  };
-
-  // Auto-save debounce
-  useEffect(() => {
-    if (!action?.nodeId || !isDirty) return;
-    const timer = setTimeout(() => handleSave(), 500);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData, isDirty, action?.nodeId]);
-
-  const renderField = (fieldConfig) => {
-    // Conditional logic
-    if (fieldConfig.conditional) {
-      const { field, is } = fieldConfig.conditional;
-      const dependentValue = formData[field];
-      if (is === null && dependentValue) return null;
-      if (is !== null && dependentValue !== is) return null;
-    }
-
-    const { name, type, placeholder, options } = fieldConfig;
-    const value = formData[name];
-    const error = errors[name];
-
-    if (type === "select") {
-      return (
-        <div key={name} className="mb-5">
-          <MareaLabel required={fieldConfig.required}>
-            {t(`nodes.fields.${name}`, fieldConfig.label)}
-          </MareaLabel>
-          <MareaSelect
-            value={value}
-            onChange={(e) => handleChange(name, e.target.value)}
-            options={
-              options?.map((o) => ({
-                value: o.value,
-                label: t(`nodes.options.${name}.${o.value}`, o.label),
-              })) || []
-            }
-            placeholder={t("common.select_default")}
-          />
-          {error && <p className="text-[10px] text-red-400 mt-1">{error}</p>}
-        </div>
-      );
-    }
-
-    if (type === "checkbox" || type === "boolean") {
-      return (
-        <div key={name} className="mb-5 flex items-center justify-between">
-          <MareaLabel required={fieldConfig.required}>
-            {t(`nodes.fields.${name}`, fieldConfig.label)}
-          </MareaLabel>
-          <MareaSwitch
-            checked={!!value}
-            onChange={(v) => handleChange(name, v)}
-          />
-        </div>
-      );
-    }
-
-    if (type === "textarea") {
-      return (
-        <div key={name} className="mb-5">
-          <MareaLabel required={fieldConfig.required}>
-            {t(`nodes.fields.${name}`, fieldConfig.label)}
-          </MareaLabel>
-          <textarea
-            name={name}
-            value={value || ""}
-            onChange={handleInputChange}
-            placeholder={t(`nodes.placeholders.${name}`, placeholder)}
-            rows={4}
-            className={cn(
-              "w-full bg-slate-900/50 border border-slate-700 text-slate-200 text-sm p-2 rounded-md",
-              "focus:outline-none focus:border-blue-400 transition-all font-mono placeholder:text-slate-600",
-              error && "border-red-500",
-            )}
-          />
-        </div>
-      );
-    }
-
-    // Default Input
+  // 3. Dynamic Button Gradient (Derived from theme header classes roughly or hardcoded map)
+  // Simplifying to basic tailwind colors for button to match theme
+  const getButtonClass = (color) => {
+    const map = {
+      cyan: "from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 shadow-cyan-500/20",
+      blue: "from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 shadow-blue-500/20",
+      indigo:
+        "from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 shadow-indigo-500/20",
+      violet:
+        "from-violet-600 to-violet-500 hover:from-violet-500 hover:to-violet-400 shadow-violet-500/20",
+      purple:
+        "from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 shadow-purple-500/20",
+      fuchsia:
+        "from-fuchsia-600 to-fuchsia-500 hover:from-fuchsia-500 hover:to-fuchsia-400 shadow-fuchsia-500/20",
+      amber:
+        "from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 shadow-amber-500/20",
+      emerald:
+        "from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 shadow-emerald-500/20",
+      rose: "from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 shadow-rose-500/20",
+      red: "from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 shadow-red-500/20",
+      orange:
+        "from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400 shadow-orange-500/20",
+      lime: "from-lime-600 to-lime-500 hover:from-lime-500 hover:to-lime-400 shadow-lime-500/20",
+      yellow:
+        "from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 shadow-yellow-500/20",
+    };
     return (
-      <div key={name} className="mb-5">
-        <MareaLabel required={fieldConfig.required}>
-          {t(`nodes.fields.${name}`, fieldConfig.label)}
-        </MareaLabel>
-        <MareaInput
-          type={type === "number" ? "number" : "text"}
-          name={name}
-          value={value || ""}
-          onChange={handleInputChange}
-          placeholder={t(`nodes.placeholders.${name}`, placeholder)}
-          error={error}
-        />
-        {error && <p className="text-[10px] text-red-400 mt-1">{error}</p>}
-      </div>
+      map[color] ||
+      "from-slate-600 to-slate-500 hover:from-slate-500 hover:to-slate-400 shadow-slate-500/20"
     );
   };
 
   return (
     <AnimatePresence>
-      {isVisible && action && (
-        <motion.div
-          initial={{ x: "100%" }}
-          animate={{ x: 0 }}
-          exit={{ x: "100%" }}
-          transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          style={{
-            right: 0,
-            top: "56px",
-            bottom: 0,
-            left: "auto",
-            position: "fixed",
-            height: "calc(100vh - 56px)",
-          }} // Offset for Header (h-14 = 56px)
+      {isVisible && (
+        <Motion.div
+          initial={{ x: 320, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          exit={{ x: 320, opacity: 0 }}
+          transition={{ type: "spring", damping: 25, stiffness: 200 }}
           className={cn(
-            "w-[350px] h-screen z-[10000] flex flex-col pointer-events-auto", // Fixed Dimensions & Layering
-            "bg-[#1e1e1e]", // Solid Dark Background
-            "border-l border-[#444] shadow-2xl", // Left Border Separator
+            "w-80 h-full bg-[#0f172a]/70 backdrop-blur-xl border-l z-40 flex flex-col shadow-2xl",
+            themeConfig.border,
+            themeConfig.shadow,
           )}
         >
-          {/* Header */}
-          <div className="h-14 shrink-0 border-b border-[#333] flex items-center justify-between px-4 bg-[#1e1e1e]">
-            <div className="flex items-center gap-2 overflow-hidden">
-              <Settings2 size={18} className="text-blue-400 shrink-0" />
-              <span className="text-sm font-bold text-slate-200 uppercase tracking-wider truncate">
-                {t(`nodes.labels.${action.type}`, action.type)}
+          {/* 1. DYNAMIC HEADER */}
+          <div
+            className={cn(
+              "h-16 shrink-0 flex items-center justify-between px-5 border-b border-white/5",
+              themeConfig.header, // Applies specific bg-color text-white
+            )}
+          >
+            <div className="flex flex-col">
+              <span className="text-[10px] uppercase tracking-widest opacity-80 font-bold">
+                {safeConfig.category.replace("_", " ")}
               </span>
+              <h2 className="text-sm font-bold truncate pr-2">
+                {action.data?.label || safeConfig.label}
+              </h2>
             </div>
-            <div className="flex items-center gap-1">
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-md hover:bg-white/20 text-white/70 hover:text-white transition-colors"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          {/* 2. SCROLLABLE CONTENT (Form) */}
+          <div className="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar">
+            {/* Node ID (Subtle) */}
+            <div className="group relative p-2 rounded bg-black/20 border border-white/5 flex items-center justify-between">
+              <span className="text-[10px] text-slate-500 font-mono">
+                ID: {(action.id || "").substring(0, 12)}...
+              </span>
+              <Info size={12} className="text-slate-600" />
+            </div>
+
+            {/* RENDER FORM FIELDS HERE */}
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-300 ml-1">
+                  Label / Name
+                </label>
+                <input
+                  type="text"
+                  value={action.data?.label || ""}
+                  onChange={(e) =>
+                    updateNodeConfiguration(action.id, {
+                      label: e.target.value,
+                    })
+                  }
+                  className="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-white/20 transition-all placeholder:text-slate-600"
+                  placeholder="Name your step..."
+                />
+              </div>
+
+              {/* GENERIC INPUT FOR SELECTOR (Demo) */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-300 ml-1 flex items-center gap-2">
+                  Target Selector{" "}
+                  <span className="opacity-50 text-[10px]">(CSS/XPath)</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={action.data?.selector || ""}
+                    onChange={(e) =>
+                      updateNodeConfiguration(action.id, {
+                        selector: e.target.value,
+                      })
+                    }
+                    className="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 pl-3 pr-8 text-xs text-indigo-300 font-mono focus:outline-none focus:border-white/20 transition-all"
+                    placeholder=".btn-primary"
+                  />
+                  <div
+                    className={cn(
+                      "absolute right-2 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full animate-pulse",
+                      `bg-${colorKey}-500/50`,
+                    )}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Context Box */}
+            <div className="p-3 rounded-lg border border-white/10 bg-white/5 text-slate-300 text-[11px] leading-relaxed">
+              <div className="flex items-center gap-2 mb-1 opacity-80 font-semibold">
+                <Info size={12} />
+                <span>Context</span>
+              </div>
+              Editing {safeConfig.label} settings.
+            </div>
+          </div>
+
+          {/* 3. FOOTER ACTIONS */}
+          <div className="p-4 border-t border-white/5 bg-[#0f172a]/80 shrink-0 space-y-3">
+            {/* Primary Action */}
+            <button
+              onClick={() => onExecute(action)}
+              className={cn(
+                "w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wide transition-all",
+                "bg-gradient-to-r text-white shadow-lg active:scale-[0.98]",
+                getButtonClass(colorKey),
+              )}
+            >
+              <Play size={14} fill="currentColor" />
+              {t("common.run_node", "Test Action")}
+            </button>
+
+            {/* Secondary Actions */}
+            <div className="flex items-center justify-between gap-2">
               <button
-                onClick={onClose}
-                className="p-2 hover:bg-white/5 rounded-md text-slate-400 hover:text-white transition-colors"
+                onClick={() => onDeleteNode(action.id)}
+                className="flex-1 py-2 rounded-lg border border-red-500/20 text-red-400 hover:bg-red-500/10 text-xs font-medium transition-colors"
               >
-                <X size={16} />
+                Delete
               </button>
             </div>
           </div>
-
-          {/* Content */}
-          <div className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent flex flex-col gap-4 pb-24">
-            {/* ID Display */}
-            <div className="opacity-50 hover:opacity-100 transition-opacity">
-              <label className="text-[10px] uppercase tracking-widest text-[#666] font-bold block mb-1">
-                Node ID
-              </label>
-              <p className="font-mono text-[11px] text-[#888] select-all bg-black/20 p-1 rounded">
-                {action.nodeId}
-              </p>
-            </div>
-
-            <div className="h-px bg-[#333] w-full my-2" />
-
-            {/* Fields */}
-            {NODE_FIELD_CONFIGS[action.type] ? (
-              NODE_FIELD_CONFIGS[action.type].map(renderField)
-            ) : (
-              <div className="text-xs text-slate-500 italic p-4 border border-dashed border-slate-700 rounded text-center">
-                {t("nodes.config.no_configuration")}
-              </div>
-            )}
-          </div>
-
-          {/* Footer Actions */}
-          <div className="p-4 border-t border-[#333] bg-[#1e1e1e] flex gap-3">
-            <button
-              onClick={onExecute}
-              className="flex-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold py-3 rounded shadow-lg shadow-blue-900/20 active:scale-95 transition-all flex items-center justify-center gap-2 uppercase tracking-wide"
-            >
-              <Play size={14} fill="currentColor" />
-              {t("common.test_node")}
-            </button>
-            <button
-              onClick={() => {
-                if (window.confirm(t("common.delete_confirm")))
-                  onDeleteNode(action.nodeId);
-              }}
-              className="p-3 bg-slate-800 hover:bg-red-900/30 text-slate-400 hover:text-red-400 rounded border border-slate-700 hover:border-red-800 transition-colors"
-            >
-              <Trash2 size={16} />
-            </button>
-          </div>
-        </motion.div>
+        </Motion.div>
       )}
     </AnimatePresence>
   );

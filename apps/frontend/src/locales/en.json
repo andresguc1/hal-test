@@ -1,12 +1,18 @@
 {
   "app": {
     "title": "HAL-TEST",
+    "subtitle": "AUTOMATION IDE",
     "library_title": "Node Library",
     "profile": "Profile",
     "settings": "Settings",
     "logout": "Logout",
     "user": "User",
     "unknown_user": "Unknown User"
+  },
+  "header": {
+    "select_flow": "Select a flow",
+    "no_project": "-- No Project --",
+    "switch_theme": "Switch Theme"
   },
   "common": {
     "save": "Save",
@@ -16,6 +22,8 @@
     "loading": "Loading...",
     "success": "Success",
     "error": "Error",
+    "toolbox": "TOOLBOX",
+    "coming_soon": "Coming Soon",
     "hide_panel": "Hide panel",
     "show_panel": "Show panel",
     "close_panel": "Close panel",
@@ -26,7 +34,7 @@
     "run": "Run",
     "required_field": "is required",
     "invalid_url": "Invalid URL. Must include http:// or https://",
-    "select_default": "Select...",
+    "select_default": "Search tools...",
     "optional": "optional",
     "description": "Description",
     "path": "Path",

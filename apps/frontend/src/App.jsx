@@ -11,7 +11,7 @@ import "./components/styles/App.css";
 import "./components/styles/reactflow-theme.css";
 
 import AppHeader from "./components/AppHeader";
-import NodeCreationPanel from "./components/NodeCreationPanel";
+import Toolbox from "./components/Toolbox";
 import NodeConfigurationPanel from "./components/NodeConfigurationPanel";
 import AppFooter from "./components/AppFooter";
 import StyledMiniMap from "./components/StyledMiniMap";
@@ -166,10 +166,6 @@ export default function App() {
     closeConfiguration();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentFlowId]);
-
-  const toggleCreationPanel = useCallback(() => {
-    setIsCreationPanelVisible((prev) => !prev);
-  }, []);
 
   const closeConfiguration = useCallback(() => {
     if (setSelectedAction) {
@@ -421,8 +417,6 @@ export default function App() {
   const staticFlowProps = useMemo(
     () => ({
       // Disable automatic fitView on mount – we will control zoom ourselves
-      fitView: false,
-      // Sensible defaults with zoomed out view to see more nodes
       defaultViewport: { x: 0, y: 0, zoom: 0.6 },
       snapToGrid: true,
       snapGrid: [15, 15],
@@ -471,8 +465,8 @@ export default function App() {
       // Visual feedback for connections
       connectionLineComponent: CustomConnectionLine,
       connectionLineStyle: {
-        strokeWidth: 2.5,
-        stroke: "#ff8c32", // hal-orange
+        strokeWidth: 2,
+        stroke: "#6366f1", // Indigo-500
       },
     }),
     [
@@ -518,19 +512,21 @@ export default function App() {
         )}
 
         {/* 1. Header (MAREA Refactored) */}
-        <AppHeader onOpenSettings={() => setIsCreationPanelVisible(true)} />
+        <AppHeader
+          onOpenSettings={() => setIsCreationPanelVisible(true)}
+          selectedProject={currentProject}
+          selectedFlow={currentProject?.flows?.find(
+            (f) => f.id === currentFlowId,
+          )}
+        />
 
         {/* 2. Content Wrapper */}
         <div className="flex-1 flex flex-row overflow-hidden relative">
           {/* SIDEBAR IZQUIERDO */}
-          <NodeCreationPanel
-            addNode={addNode}
-            isVisible={isCreationPanelVisible}
-            togglePanel={toggleCreationPanel}
-          />
+          {isCreationPanelVisible && <Toolbox addNode={addNode} />}
 
           {/* LIENZO (CANVAS - Abyss Blue Environment) */}
-          <main className="flex-1 bg-[#0f172a] relative">
+          <main className="flex-1 relative kanban-board-bg">
             <div ref={reactFlowWrapper} className="w-full h-full relative">
               <ReactFlow {...flowConfig}>
                 <StyledMiniMap />
@@ -541,7 +537,7 @@ export default function App() {
                   variant="dots"
                   gap={24}
                   size={1}
-                  color="#334155" // Slate 700
+                  color="#262626" // Grid dots color
                 />
 
                 {/* VIGNETTE OVERLAY (For depth) */}

@@ -9,11 +9,9 @@
 @import "./styles/design-tokens.css";
 
 /* ==========================================
- * TAILWIND BASE DIRECTIVES
+ * TAILWIND CSS v4
  * ========================================== */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 @layer base {
   :root {
@@ -125,4 +123,28 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+}
+
+/* ==========================================
+ * CANVAS & NODE STYLING (Dark Neutral Card Theme)
+ * ========================================== */
+
+/* 1. Canvas Container - Neutral Dark with Dot Grid */
+.react-flow__pane,
+.canvas-container {
+  background-color: #0f0f10 !important;
+  /* Deep neutral dark */
+  background-image: radial-gradient(#262626 1px, transparent 1px);
+  background-size: 20px 20px;
+  /* Spacing between dots */
+}
+
+/* 4. Minimap Fix - Position Absolute */
+.react-flow__minimap {
+  position: absolute !important;
+  bottom: 20px;
+  right: 20px;
+  background-color: #1e1e1e !important;
+  border: 1px solid #333 !important;
+  border-radius: 8px;
 }

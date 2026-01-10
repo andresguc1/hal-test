@@ -1,446 +1,270 @@
-import React, { useState, useEffect } from "react";
+import React, { memo, useState, useRef, useEffect } from "react";
+import {
+  Play,
+  Save,
+  Folder,
+  GitBranch,
+  ChevronDown,
+  Plus,
+  Check,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { motion as Motion, AnimatePresence } from "motion/react";
 
-const AppFooter = ({
-  projectName,
-  projects = [],
-  onSwitchProject,
-  onNewProject,
-  onDeleteProject,
-  onRenameProject,
-  flowName,
-  flows = [],
-  onSwitchFlow,
-  onNewFlow,
-  onDeleteFlow,
-  onRenameFlow,
-  version = "v1.0.2",
-  // isReadOnly, isRunning, // Unused props
-  onRun,
-  onSave,
+const FooterButton = ({
+  icon: Icon,
+  label,
+  onClick,
+  variant = "ghost",
+  className,
 }) => {
-  const [activeMenu, setActiveMenu] = useState(null);
-  const [toast, setToast] = useState(null);
-  const [editingId, setEditingId] = useState(null);
-  const [editName, setEditName] = useState("");
+  const baseStyles =
+    "flex items-center gap-2 px-3 py-1.5 rounded-full transition-all text-xs font-medium select-none";
 
-  // Close menu on outside click
-  useEffect(() => {
-    const close = () => setActiveMenu(null);
-    if (activeMenu) window.addEventListener("click", close);
-    return () => window.removeEventListener("click", close);
-  }, [activeMenu]);
-
-  // Toast Timer
-  useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => setToast(null), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
-
-  const showNotification = (msg) => setToast({ msg });
-
-  // --- ACTIONS WRAPPERS ---
-  const handleNewProject = () => {
-    onNewProject();
-    showNotification("✨ New Project Created");
+  const variants = {
+    ghost: "text-slate-400 hover:text-white hover:bg-white/5 active:scale-95",
+    primary:
+      "bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-lg shadow-indigo-500/20 active:scale-95",
+    outline:
+      "border border-white/10 text-slate-300 hover:bg-white/5 active:scale-95",
   };
-  const handleNewFlow = () => {
-    onNewFlow();
-    showNotification("✨ New Flow Added");
-  };
-
-  // --- RENAME LOGIC ---
-  const startEditing = (item, e) => {
-    e.stopPropagation(); // Stop menu from closing
-    setEditingId(item.id);
-    setEditName(item.name);
-  };
-
-  const saveEdit = (originalItem, isProject) => {
-    if (editName.trim() && editName !== originalItem.name) {
-      if (isProject) onRenameProject(originalItem, editName);
-      else onRenameFlow(originalItem, editName);
-      showNotification("✏️ Renamed successfully");
-    }
-    setEditingId(null);
-  };
-
-  const handleKeyDown = (e, item, isProject) => {
-    if (e.key === "Enter") saveEdit(item, isProject);
-    if (e.key === "Escape") setEditingId(null);
-  };
-
-  // --- DELETE HANDLER (FIXED) ---
-  const requestDelete = (e, item, isProject) => {
-    e.stopPropagation(); // <--- CRITICAL: Prevents row click
-    e.preventDefault();
-
-    // Correct String Interpolation using backticks
-    const message = `Delete ${isProject ? "Project" : "Flow"} "${item.name}"?`;
-
-    if (window.confirm(message)) {
-      if (isProject) onDeleteProject(item);
-      else onDeleteFlow(item);
-      showNotification("🗑 Deleted successfully");
-    }
-  };
-
-  // --- STYLES ---
-  const styles = {
-    container: {
-      position: "fixed",
-      bottom: "20px",
-      left: "50%",
-      transform: "translateX(-50%)",
-      display: "flex",
-      alignItems: "center",
-      padding: "8px 12px",
-      minWidth: "850px",
-      backgroundColor: "rgba(30, 30, 30, 0.85)",
-      backdropFilter: "blur(12px)",
-      borderRadius: "16px",
-      border: "1px solid rgba(255, 255, 255, 0.1)",
-      boxShadow: "0 20px 50px rgba(0, 0, 0, 0.6)",
-      zIndex: 20000,
-      color: "#eee",
-      fontFamily: "sans-serif",
-      userSelect: "none",
-    },
-    menuPopup: {
-      position: "absolute",
-      bottom: "50px",
-      left: "0",
-      minWidth: "280px",
-      maxHeight: "300px",
-      overflowY: "auto",
-      backgroundColor: "rgba(20, 20, 20, 0.95)",
-      border: "1px solid rgba(255,255,255,0.1)",
-      borderRadius: "12px",
-      boxShadow: "0 10px 40px rgba(0,0,0,0.5)",
-      padding: "6px",
-      zIndex: 20001,
-      display: "flex",
-      flexDirection: "column",
-      gap: "2px",
-    },
-    menuItem: {
-      padding: "8px 12px",
-      fontSize: "0.85rem",
-      color: "#ccc",
-      cursor: "pointer",
-      borderRadius: "6px",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      transition: "background 0.2s",
-      position: "relative",
-    },
-    itemContent: {
-      display: "flex",
-      alignItems: "center",
-      gap: "8px",
-      flex: 1,
-      overflow: "hidden",
-    },
-    inputEdit: {
-      background: "#333",
-      border: "1px solid #555",
-      color: "white",
-      borderRadius: "4px",
-      padding: "2px 5px",
-      width: "100%",
-      fontSize: "0.85rem",
-      outline: "none",
-    },
-    deleteBtn: {
-      color: "#ef4444",
-      opacity: 0.6,
-      fontSize: "0.9rem",
-      padding: "4px 8px",
-      cursor: "pointer",
-      fontWeight: "bold",
-      marginLeft: "10px",
-      borderRadius: "4px",
-      border: "1px solid transparent",
-    },
-  };
-
-  // --- RENDER HELPERS ---
-  const renderList = (items, isProject) => (
-    <div style={styles.menuPopup} onClick={(e) => e.stopPropagation()}>
-      <div
-        style={{
-          padding: "6px 10px",
-          fontSize: "0.7rem",
-          color: "#666",
-          fontWeight: "bold",
-          letterSpacing: "1px",
-        }}
-      >
-        {isProject ? "YOUR PROJECTS" : "FLOWS IN PROJECT"}
-      </div>
-      {items.map((item, index) => (
-        <div
-          key={item.id || index}
-          className="menu-item-hover"
-          style={styles.menuItem}
-          onClick={() => {
-            if (editingId) return;
-            if (isProject) onSwitchProject(item);
-            else onSwitchFlow(item);
-            setActiveMenu(null);
-          }}
-        >
-          <div style={styles.itemContent}>
-            <span>{isProject ? "📁" : "📄"}</span>
-
-            {editingId === item.id ? (
-              <input
-                autoFocus
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                onBlur={() => saveEdit(item, isProject)}
-                onKeyDown={(e) => handleKeyDown(e, item, isProject)}
-                onClick={(e) => e.stopPropagation()}
-                style={styles.inputEdit}
-              />
-            ) : (
-              <span
-                title="Double click to rename"
-                onDoubleClick={(e) => startEditing(item, e)}
-                style={{
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  color: (
-                    isProject
-                      ? item.name === projectName
-                      : item.name === flowName
-                  )
-                    ? "#4ade80"
-                    : "inherit",
-                  fontWeight: (
-                    isProject
-                      ? item.name === projectName
-                      : item.name === flowName
-                  )
-                    ? "600"
-                    : "400",
-                  fontStyle: item.name ? "normal" : "italic",
-                  opacity: item.name ? 1 : 0.5,
-                }}
-              >
-                {item.name ||
-                  (isProject ? "Untitled Project" : "Untitled Flow")}
-              </span>
-            )}
-          </div>
-
-          {!editingId && (
-            <div
-              className="delete-btn-hover"
-              style={styles.deleteBtn}
-              title="Delete"
-              onClick={(e) => requestDelete(e, item, isProject)}
-            >
-              ✕
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  );
 
   return (
-    <>
-      <style>{`
-        .menu-item-hover:hover { background: rgba(255,255,255,0.08); }
-        .action-btn-hover { opacity: 0.4; transition: all 0.2s; }
-        .menu-item-hover:hover .action-btn-hover { opacity: 0.7; }
-        .action-btn-hover:hover { opacity: 1 !important; transform: scale(1.1); }
-        .delete-btn-hover:hover { color: #ef4444 !important; }
-        .footer-btn:hover { transform: translateY(-2px); }
-        @keyframes slideUp { from { opacity: 0; transform: translate(-50%, 20px); } to { opacity: 1; transform: translate(-50%, 0); } }
-      `}</style>
-
-      {toast && (
-        <div
-          style={{
-            position: "fixed",
-            bottom: "100px",
-            left: "50%",
-            transform: "translateX(-50%)",
-            padding: "8px 20px",
-            background: "#10b981",
-            color: "white",
-            borderRadius: "30px",
-            animation: "slideUp 0.3s",
-            zIndex: 20002,
-          }}
-        >
-          <span>🔔</span> {toast.msg}
-        </div>
-      )}
-
-      <div style={styles.container}>
-        {/* PROJECT SECTION */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            position: "relative",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-              cursor: "pointer",
-              padding: "6px 10px",
-            }}
-            onClick={(e) => {
-              e.stopPropagation();
-              setActiveMenu(activeMenu === "project" ? null : "project");
-            }}
-          >
-            <div
-              style={{ filter: "drop-shadow(0 0 5px rgba(168,85,247,0.5))" }}
-            >
-              📁
-            </div>
-            <span style={{ fontSize: "0.9rem", fontWeight: "500" }}>
-              {projectName}
-            </span>
-            <span style={{ fontSize: "0.6rem", opacity: 0.5 }}>▼</span>
-          </div>
-          <button
-            style={{
-              background: "transparent",
-              border: "1px solid #555",
-              color: "#aaa",
-              borderRadius: "4px",
-              marginLeft: "5px",
-              cursor: "pointer",
-            }}
-            onClick={handleNewProject}
-          >
-            +
-          </button>
-          {activeMenu === "project" && renderList(projects, true)}
-        </div>
-
-        <div
-          style={{
-            width: "1px",
-            height: "24px",
-            background: "rgba(255,255,255,0.1)",
-            margin: "0 15px",
-          }}
-        ></div>
-
-        {/* FLOW SECTION */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            position: "relative",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-              cursor: "pointer",
-              padding: "6px 10px",
-            }}
-            onClick={(e) => {
-              e.stopPropagation();
-              setActiveMenu(activeMenu === "flow" ? null : "flow");
-            }}
-          >
-            <div>📄</div>
-            <span style={{ fontSize: "0.85rem", color: "#ccc" }}>
-              {flowName}
-            </span>
-            <span style={{ fontSize: "0.6rem", opacity: 0.5 }}>▼</span>
-          </div>
-          <button
-            style={{
-              background: "transparent",
-              border: "1px solid #555",
-              color: "#aaa",
-              borderRadius: "4px",
-              marginLeft: "5px",
-              cursor: "pointer",
-            }}
-            onClick={handleNewFlow}
-          >
-            +
-          </button>
-          {activeMenu === "flow" && renderList(flows, false)}
-        </div>
-
-        {/* ACTIONS & STATUS */}
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            justifyContent: "center",
-            gap: "10px",
-          }}
-        >
-          <button
-            onClick={onRun}
-            className="footer-btn"
-            style={{
-              background: "#2563eb",
-              border: "none",
-              padding: "6px 15px",
-              borderRadius: "6px",
-              color: "white",
-            }}
-          >
-            ▶ RUN
-          </button>
-          <button
-            onClick={onSave}
-            className="footer-btn"
-            style={{
-              background: "transparent",
-              border: "1px solid #444",
-              padding: "6px 12px",
-              borderRadius: "6px",
-              color: "white",
-            }}
-          >
-            💾
-          </button>
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-            paddingLeft: "15px",
-            borderLeft: "1px solid rgba(255,255,255,0.1)",
-          }}
-        >
-          <div
-            style={{
-              width: "8px",
-              height: "8px",
-              borderRadius: "50%",
-              background: "#4ade80",
-            }}
-          ></div>
-          <span style={{ fontSize: "0.75rem", color: "#666" }}>{version}</span>
-        </div>
-      </div>
-    </>
+    <button
+      onClick={onClick}
+      className={cn(baseStyles, variants[variant], className)}
+    >
+      {Icon && <Icon size={14} />}
+      {label && <span>{label}</span>}
+    </button>
   );
 };
-export default AppFooter;
+
+const SelectorButton = ({ icon: _Icon, label, subLabel, onClick, isActive }) => (
+  <button
+    onClick={onClick}
+    className={cn(
+      "relative flex items-center gap-3 px-4 py-2 hover:bg-white/5 transition-colors group h-full focus:outline-none",
+      isActive && "bg-white/5",
+    )}
+  >
+    <div
+      className={cn(
+        "p-1.5 rounded-full transition-colors",
+        isActive
+          ? "bg-indigo-500/20 text-indigo-300"
+          : "bg-indigo-500/10 text-indigo-400 group-hover:bg-indigo-500/20 group-hover:text-indigo-300",
+      )}
+    >
+      <_Icon size={14} />
+    </div>
+    <div className="flex flex-col items-start gap-0.5">
+      <span className="text-[10px] text-slate-500 font-mono uppercase tracking-wider leading-none">
+        {label}
+      </span>
+      <div className="flex items-center gap-1 text-xs font-medium text-slate-200 group-hover:text-white">
+        <span className="max-w-[100px] truncate">{subLabel}</span>
+        <ChevronDown
+          size={10}
+          className={cn(
+            "opacity-50 transition-transform duration-200",
+            isActive && "rotate-180",
+          )}
+        />
+      </div>
+    </div>
+  </button>
+);
+
+const GlassMenu = ({ items, onItemClick, activeId, type, onNew }) => (
+  <Motion.div
+    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+    animate={{ opacity: 1, y: 0, scale: 1 }}
+    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+    transition={{ type: "spring", stiffness: 300, damping: 25 }}
+    className="absolute bottom-20 left-0 bg-[#0f172a]/90 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden min-w-[240px] z-50 flex flex-col p-1"
+  >
+    <div className="max-h-[200px] overflow-y-auto custom-scrollbar p-1 space-y-0.5">
+      {items && items.length > 0 ? (
+        items.map((item) => (
+          <button
+            key={item.id}
+            onClick={() => onItemClick(item)}
+            className={cn(
+              "w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-colors group",
+              item.id === activeId
+                ? "bg-indigo-500/20 text-indigo-300"
+                : "text-slate-300 hover:bg-white/5 hover:text-white",
+            )}
+          >
+            <span className="truncate">{item.name}</span>
+            {item.id === activeId && (
+              <Check size={12} className="text-indigo-400" />
+            )}
+          </button>
+        ))
+      ) : (
+        <div className="px-3 py-4 text-center text-xs text-slate-500 italic">
+          No {type}s found
+        </div>
+      )}
+    </div>
+
+    {/* Footer for 'New' action */}
+    <div className="border-t border-white/10 mt-1 pt-1 p-1">
+      <button
+        onClick={onNew}
+        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-indigo-400 hover:bg-indigo-500/10 hover:text-indigo-300 transition-colors"
+      >
+        <div className="p-0.5 rounded border border-indigo-500/30">
+          <Plus size={10} />
+        </div>
+        <span>Create New {type}...</span>
+      </button>
+    </div>
+  </Motion.div>
+);
+
+function AppFooter({
+  projectName,
+  projects = [], // Array of projects
+  onSwitchProject,
+  onNewProject,
+  flowName,
+  flows = [], // Array of flows
+  onSwitchFlow,
+  onNewFlow,
+  onRun,
+  onSave,
+  version = "v1.0.0",
+}) {
+  const [activeMenu, setActiveMenu] = useState(null); // 'project' | 'flow' | null
+  const containerRef = useRef(null);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target)
+      ) {
+        setActiveMenu(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const toggleMenu = (menu) => {
+    setActiveMenu((prev) => (prev === menu ? null : menu));
+  };
+
+  const handleProjectSwitch = (p) => {
+    onSwitchProject(p);
+    setActiveMenu(null);
+  };
+
+  const handleFlowSwitch = (f) => {
+    onSwitchFlow(f);
+    setActiveMenu(null);
+  };
+
+  // Find active IDs safely
+  const activeProjectId = projects?.find((p) => p.name === projectName)?.id;
+  const activeFlowId = flows?.find((f) => f.name === flowName)?.id;
+
+  return (
+    <div
+      ref={containerRef}
+      className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center"
+    >
+      {/* MENUS POPUP ABOVE */}
+      <AnimatePresence>
+        {activeMenu === "project" && (
+          <GlassMenu
+            type="Project"
+            items={projects}
+            activeId={activeProjectId}
+            onItemClick={handleProjectSwitch}
+            onNew={() => {
+              onNewProject?.();
+              setActiveMenu(null);
+            }}
+          />
+        )}
+        {activeMenu === "flow" && (
+          <GlassMenu
+            type="Flow"
+            items={flows}
+            activeId={activeFlowId}
+            onItemClick={handleFlowSwitch}
+            onNew={() => {
+              onNewFlow?.();
+              setActiveMenu(null);
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      <div
+        className={cn(
+          "flex items-center h-16 pl-2 pr-4 rounded-full border border-white/10",
+          "bg-[#0f172a]/80 backdrop-blur-xl shadow-2xl shadow-black/50 relative z-50",
+        )}
+      >
+        {/* SECTION 1: PROJECT SELECTOR */}
+        <SelectorButton
+          icon={Folder}
+          label="Project"
+          subLabel={projectName}
+          isActive={activeMenu === "project"}
+          onClick={() => toggleMenu("project")}
+        />
+
+        {/* DIVIDER */}
+        <div className="h-8 w-px bg-white/10 mx-1" />
+
+        {/* SECTION 2: FLOW SELECTOR */}
+        <SelectorButton
+          icon={GitBranch}
+          label="Flow"
+          subLabel={flowName}
+          isActive={activeMenu === "flow"}
+          onClick={() => toggleMenu("flow")}
+        />
+
+        {/* DIVIDER */}
+        <div className="h-8 w-px bg-white/10 mx-4" />
+
+        {/* SECTION 3: ACTIONS */}
+        <div className="flex items-center gap-3">
+          <FooterButton
+            icon={Play}
+            label="RUN"
+            variant="primary"
+            onClick={onRun}
+            className="pl-4 pr-5 py-2" // Bigger click area
+          />
+
+          <button
+            onClick={onSave}
+            className="p-2.5 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition-all active:scale-95 border border-transparent hover:border-white/5"
+            title="Save Flow (Ctrl+S)"
+          >
+            <Save size={18} />
+          </button>
+        </div>
+
+        {/* SECTION 4: STATUS (Right Edge) */}
+        <div className="ml-6 flex items-center gap-2 pl-6 border-l border-white/5 h-full opacity-50 hover:opacity-100 transition-opacity select-none">
+          <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse" />
+          <span className="text-[10px] font-mono text-slate-400">
+            {version}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default memo(AppFooter);

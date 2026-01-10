@@ -1,10 +1,9 @@
-import React from "react";
-import { BaseEdge, getBezierPath, useReactFlow } from "@xyflow/react";
+import React, { memo } from "react";
+import { BaseEdge, getBezierPath, EdgeLabelRenderer } from "@xyflow/react";
 import { cn } from "@/lib/utils";
-import { NODE_STATES } from "../hooks/flowStyles";
 
 const CustomEdge = ({
-  // id,
+  id,
   sourceX,
   sourceY,
   targetX,
@@ -13,9 +12,9 @@ const CustomEdge = ({
   targetPosition,
   style = {},
   markerEnd,
-  source,
-  // data,
+  selected,
 }) => {
+  // 1. Calcular la ruta curva suave (Bezier)
   const [edgePath] = getBezierPath({
     sourceX,
     sourceY,
@@ -25,45 +24,61 @@ const CustomEdge = ({
     targetPosition,
   });
 
-  // Get source node state to trigger animations
-  const { getNode } = useReactFlow();
-  const sourceNode = getNode(source);
-  const isRunning = sourceNode?.data?.state === NODE_STATES.EXECUTING; // Or use data.isRunning if passed
-  const isError = sourceNode?.data?.state === NODE_STATES.ERROR;
+  // 2. Definir estilos dinámicos
+  // Si está seleccionado, brilla más y es más grueso.
+  // 2. Definir estilos dinámicos
+  // Si está seleccionado, brilla más y es más grueso.
+  const strokeWidth = selected ? 3 : 2;
 
   return (
     <>
+      {/* Defines the gradient for the flow animation */}
+      <svg style={{ position: "absolute", width: 0, height: 0 }}>
+        <defs>
+          <linearGradient id="edge-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#6366f1" /> {/* Indigo */}
+            <stop offset="100%" stopColor="#06b6d4" /> {/* Cyan */}
+          </linearGradient>
+        </defs>
+      </svg>
+
+      {/* SHADOW PATH (Para darle profundidad/borde oscuro alrededor de la línea) */}
       <BaseEdge
+        path={edgePath}
+        style={{
+          stroke: "#0f172a", // Fondo oscuro para recortar cruces
+          strokeWidth: strokeWidth + 2,
+        }}
+      />
+
+      {/* MAIN PATH (La línea visible) */}
+      <BaseEdge
+        id={id} // Added ID to support mpath if needed, though path={edgePath} handles geometry
         path={edgePath}
         markerEnd={markerEnd}
         style={{
           ...style,
-          strokeWidth: 2,
-          stroke: isError ? "#ef4444" : isRunning ? "#06b6d4" : "#64748b", // Red, Cyan, or Slate-500
-          strokeDasharray: isRunning ? "5,5" : "none",
-          animation: isRunning ? "dashdraw 0.5s linear infinite" : "none",
+          strokeWidth,
+          stroke: selected ? "url(#edge-gradient)" : "#475569", // Gradiente si select, gris si no
+          strokeDasharray: selected ? "none" : "5, 5", // Punteada si normal, sólida si select
+          animation: selected ? "dashdraw 0.5s linear infinite" : "none", // Animación futura
+          opacity: 0.8,
         }}
-        className={cn("react-flow__edge-path", isRunning && "animate-pulse")}
+        className={cn(
+          "transition-all duration-300",
+          selected && "filter drop-shadow-[0_0_3px_rgba(99,102,241,0.5)]",
+        )}
       />
 
-      {/* Particle Animation (Data Packet) */}
-      {isRunning && (
-        <circle r="4" fill="#06b6d4">
-          <animateMotion dur="1s" repeatCount="indefinite" path={edgePath} />
-        </circle>
-      )}
-
-      {/* Inject Keyframes style for dashdraw if not present globally */}
-      <style>
-        {`
-           @keyframes dashdraw {
-             from { stroke-dashoffset: 10; }
-             to { stroke-dashoffset: 0; }
-           }
-         `}
-      </style>
+      {/* ANIMATED PARTICLE (La "gota" de luz que viaja) */}
+      {/* Solo mostramos la animación si el edge no está seleccionado (o siempre, según gusto) */}
+      <circle r="3" fill="#38bdf8">
+        <animateMotion dur="2s" repeatCount="indefinite" path={edgePath}>
+          {/* mpath removed as path attribute is sufficient and avoids ID conflicts if id is not unique in DOM */}
+        </animateMotion>
+      </circle>
     </>
   );
 };
 
-export default CustomEdge;
+export default memo(CustomEdge);

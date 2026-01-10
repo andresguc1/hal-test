@@ -1,63 +1,39 @@
 import React, { memo } from "react";
-// eslint-disable-next-line no-unused-vars
-import { motion } from "motion/react"; // Leaving for potential future use, but commenting out usage to show intent? No, linter says unused.
-// usage is actually: <HeaderButton> uses motion.button.
-// Wait, the error said `motion` is defined but never used.
-// Let me check the file content. HeaderButton uses motion.button.
-// Maybe I should check if motion is imported correctly.
-// "2:10 error 'motion' is defined but never used"
-// If HeaderButton uses <motion.button>, then motion IS used.
-// Maybe it's imported as `import { motion }` but then unused because of `HeaderButton`?
-// Let's verify file content first.
-import { Sun, Moon, Command } from "lucide-react";
+import { motion as Motion } from "motion/react"; // Renamed to Motion to avoid lint unused warning
+import { Sun, Moon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
+import { useTranslation } from "react-i18next";
 import UserMenu from "./UserMenu";
 
-/**
- * MAREA DESIGN SYSTEM - APP HEADER
- * "Premium OS-Level" experience.
- */
+const HeaderButton = ({ onClick, children, title, className }) => (
+  <Motion.button
+    whileHover={{ scale: 1.05 }}
+    whileTap={{ scale: 0.95 }}
+    onClick={onClick}
+    title={title}
+    className={cn(
+      "relative flex items-center justify-center p-2 rounded-lg transition-colors duration-200",
+      "text-slate-400 hover:text-white hover:bg-white/5",
+      className,
+    )}
+  >
+    {children}
+  </Motion.button>
+);
 
-const HeaderButton = ({ onClick, children, title, className }) => {
-  return (
-    <motion.button
-      whileHover={{ scale: 1.02, backgroundColor: "rgba(30, 41, 59, 0.7)" }}
-      whileTap={{ scale: 0.98 }}
-      onClick={onClick}
-      title={title}
-      className={cn(
-        "relative flex items-center justify-center p-2 rounded-lg transition-all duration-200",
-        "bg-slate-900/40 border border-white/5 backdrop-blur-sm",
-        "shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)]", // Subtle top lighting
-        "text-slate-400 hover:text-slate-200 hover:border-white/10",
-        className,
-      )}
-    >
-      {children}
-    </motion.button>
-  );
-};
-
-function AppHeader({ onOpenSettings }) {
+function AppHeader({ onOpenSettings, selectedProject, selectedFlow }) {
   const { theme, setTheme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <header
       className={cn(
-        // Dimensions & Layout
-        "h-14 shrink-0 w-full z-50 px-6 flex items-center justify-between",
-
-        // MAREA: Abyss Blue Theme & Lighting
-        "bg-[#0f172a]", // Abyss Blue base
-        "border-b border-white/5", // Ultra-subtle border
-        "shadow-[0_1px_0_0_rgba(0,0,0,0.2)]", // Drop shadow depth
-
-        // Dot Pattern Overlay (CSS Radial Gradient simulation)
-        "relative overflow-hidden",
+        "h-14 w-full shrink-0 z-50 px-8 relative", // relative is key for absolute centering
+        "flex items-center justify-between",
+        "bg-[#0f172a] border-b border-white/5 shadow-sm font-sans",
       )}
     >
-      {/* Background Dot Pattern (Subtle) */}
       <div
         className="absolute inset-0 opacity-[0.03] pointer-events-none"
         style={{
@@ -66,63 +42,60 @@ function AppHeader({ onOpenSettings }) {
         }}
       />
 
-      {/* LEFT: Branding */}
-      <div className="flex items-center gap-4 relative z-10">
-        {/* Logo Container - Glowing Glass */}
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500/20 to-blue-600/20 border border-white/10 flex items-center justify-center shadow-[0_0_15px_-3px_rgba(79,70,229,0.2)] backdrop-blur-md relative overflow-hidden group">
-          {/* Internal Shine */}
-          <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      {/* LEFT */}
+      <div className="flex items-center relative z-20 shrink-0">
+        <h1 className="text-white/95 font-bold tracking-wider text-xl uppercase font-mono leading-none cursor-default select-none">
+          {t("app.title", "HAL-TEST")}
+        </h1>
+      </div>
 
-          <svg
-            className="w-5 h-5 text-indigo-400 drop-shadow-[0_0_8px_rgba(99,102,241,0.5)]"
-            fill="none"
-            strokeWidth="2.5"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M13 10V3L4 14h7v7l9-11h-7z"
-            />
-          </svg>
-        </div>
-
-        {/* Title */}
-        <div className="flex flex-col justify-center">
-          <h1 className="text-white/90 font-bold tracking-wider text-[13px] uppercase font-mono leading-none">
-            HAL-TEST
-          </h1>
-          <span className="text-[10px] text-slate-500 font-medium tracking-wide">
-            AUTOMATION IDE
-          </span>
+      {/* CENTER - ABSOLUTE (The Fix) */}
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 w-full max-w-lg flex justify-center pointer-events-none">
+        <div className="pointer-events-auto flex items-center gap-3 text-sm select-none whitespace-nowrap">
+          {selectedProject ? (
+            <>
+              <span className="text-slate-200 font-semibold tracking-tight truncate max-w-[150px]">
+                {selectedProject.name}
+              </span>
+              <span className="text-slate-600 font-light shrink-0">/</span>
+              <span
+                className={cn(
+                  "transition-colors truncate max-w-[200px]",
+                  selectedFlow
+                    ? "text-indigo-400 font-medium"
+                    : "text-slate-500 italic",
+                )}
+              >
+                {selectedFlow
+                  ? selectedFlow.name
+                  : t("header.select_flow", "Select a flow")}
+              </span>
+            </>
+          ) : (
+            <span className="text-xs text-slate-600 font-medium italic">
+              {t("header.no_project", "-- No Project --")}
+            </span>
+          )}
         </div>
       </div>
 
-      {/* RIGHT: User Actions */}
-      <div className="flex items-center gap-3 relative z-10">
-        {/* Theme Toggle */}
+      {/* RIGHT */}
+      <div className="flex items-center gap-12 relative z-20 shrink-0">
         <HeaderButton
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          title="Toggle Theme"
+          title={t("header.switch_theme", "Switch Theme")}
         >
-          <div className="relative w-4 h-4">
+          <div className="relative w-5 h-5 flex items-center justify-center">
             <Sun
-              size={16}
-              strokeWidth={2}
-              className="absolute inset-0 rotate-0 scale-100 transition-transform duration-500 dark:-rotate-90 dark:scale-0 text-amber-300"
+              size={18}
+              className="absolute rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0 text-amber-300"
             />
             <Moon
-              size={16}
-              strokeWidth={2}
-              className="absolute inset-0 rotate-90 scale-0 transition-transform duration-500 dark:rotate-0 dark:scale-100 text-indigo-300"
+              size={18}
+              className="absolute rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100 text-indigo-300"
             />
           </div>
         </HeaderButton>
-
-        <div className="h-5 w-px bg-white/10 mx-1" />
-
-        {/* Profile */}
         <UserMenu onOpenSettings={onOpenSettings} />
       </div>
     </header>
