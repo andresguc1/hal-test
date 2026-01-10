@@ -179,23 +179,40 @@ const ToolboxCategory = ({
   // Explicit group-hover classes for JIT
   const getIconHoverClass = () => {
     switch (color) {
-      case "cyan": return "group-hover:text-cyan-400";
-      case "blue": return "group-hover:text-blue-400";
-      case "indigo": return "group-hover:text-indigo-400";
-      case "violet": return "group-hover:text-violet-400";
-      case "purple": return "group-hover:text-purple-400";
-      case "fuchsia": return "group-hover:text-fuchsia-400";
-      case "pink": return "group-hover:text-pink-400";
-      case "rose": return "group-hover:text-rose-400";
-      case "red": return "group-hover:text-red-400";
-      case "orange": return "group-hover:text-orange-400";
-      case "amber": return "group-hover:text-amber-400";
-      case "yellow": return "group-hover:text-yellow-400";
-      case "lime": return "group-hover:text-lime-400";
-      case "green": return "group-hover:text-green-400";
-      case "emerald": return "group-hover:text-emerald-400";
-      case "teal": return "group-hover:text-teal-400";
-      default: return "group-hover:text-slate-300";
+      case "cyan":
+        return "group-hover:text-cyan-400";
+      case "blue":
+        return "group-hover:text-blue-400";
+      case "indigo":
+        return "group-hover:text-indigo-400";
+      case "violet":
+        return "group-hover:text-violet-400";
+      case "purple":
+        return "group-hover:text-purple-400";
+      case "fuchsia":
+        return "group-hover:text-fuchsia-400";
+      case "pink":
+        return "group-hover:text-pink-400";
+      case "rose":
+        return "group-hover:text-rose-400";
+      case "red":
+        return "group-hover:text-red-400";
+      case "orange":
+        return "group-hover:text-orange-400";
+      case "amber":
+        return "group-hover:text-amber-400";
+      case "yellow":
+        return "group-hover:text-yellow-400";
+      case "lime":
+        return "group-hover:text-lime-400";
+      case "green":
+        return "group-hover:text-green-400";
+      case "emerald":
+        return "group-hover:text-emerald-400";
+      case "teal":
+        return "group-hover:text-teal-400";
+      default:
+        return "group-hover:text-slate-300";
     }
   };
 
@@ -267,23 +284,40 @@ export default function ToolboxPanel({ addNode }) {
   // Helper for JIT-safe hover colors in collapsed sidebar
   const getSidebarHoverColor = (color) => {
     switch (color) {
-      case "cyan": return "hover:text-cyan-400";
-      case "blue": return "hover:text-blue-400";
-      case "indigo": return "hover:text-indigo-400";
-      case "violet": return "hover:text-violet-400";
-      case "purple": return "hover:text-purple-400";
-      case "fuchsia": return "hover:text-fuchsia-400";
-      case "pink": return "hover:text-pink-400";
-      case "rose": return "hover:text-rose-400";
-      case "red": return "hover:text-red-400";
-      case "orange": return "hover:text-orange-400";
-      case "amber": return "hover:text-amber-400";
-      case "yellow": return "hover:text-yellow-400";
-      case "lime": return "hover:text-lime-400";
-      case "green": return "hover:text-green-400";
-      case "emerald": return "hover:text-emerald-400";
-      case "teal": return "hover:text-teal-400";
-      default: return "hover:text-slate-300";
+      case "cyan":
+        return "hover:text-cyan-400";
+      case "blue":
+        return "hover:text-blue-400";
+      case "indigo":
+        return "hover:text-indigo-400";
+      case "violet":
+        return "hover:text-violet-400";
+      case "purple":
+        return "hover:text-purple-400";
+      case "fuchsia":
+        return "hover:text-fuchsia-400";
+      case "pink":
+        return "hover:text-pink-400";
+      case "rose":
+        return "hover:text-rose-400";
+      case "red":
+        return "hover:text-red-400";
+      case "orange":
+        return "hover:text-orange-400";
+      case "amber":
+        return "hover:text-amber-400";
+      case "yellow":
+        return "hover:text-yellow-400";
+      case "lime":
+        return "hover:text-lime-400";
+      case "green":
+        return "hover:text-green-400";
+      case "emerald":
+        return "hover:text-emerald-400";
+      case "teal":
+        return "hover:text-teal-400";
+      default:
+        return "hover:text-slate-300";
     }
   };
 
@@ -352,7 +386,7 @@ export default function ToolboxPanel({ addNode }) {
               <div className="flex items-center gap-2 mb-3 px-1">
                 <Sparkles size={14} className="text-amber-300" />
                 <span className="text-xs font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-orange-400">
-                  AI COPILOT
+                  Hal-9001
                 </span>
               </div>
               <div className="bg-gradient-to-b from-slate-900/80 to-slate-900/40 border border-white/10 rounded-xl p-0 relative group overflow-hidden flex flex-col h-36 shadow-lg">

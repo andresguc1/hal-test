@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -13,7 +12,7 @@ import {
   ChevronRight,
   Play,
   Globe,
-  LayoutGrid
+  LayoutGrid,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NODE_CATEGORIES } from "../config/nodeConstants";
@@ -32,7 +31,7 @@ const ContextMenuItem = ({
   onMouseEnter,
   isActive = false, // Highlight state for submenu parent
   iconClassName, // NEW: Custom color support
-  className // Support custom class override
+  className, // Support custom class override
 }) => (
   <button
     onMouseEnter={onMouseEnter}
@@ -42,12 +41,12 @@ const ContextMenuItem = ({
         ? "pointer-events-none opacity-40"
         : cn(
           "hover:bg-[#27272a] hover:text-white cursor-pointer",
-          isActive && "bg-[#27272a] text-white"
+          isActive && "bg-[#27272a] text-white",
         ),
       danger &&
       !disabled &&
       "text-rose-500 hover:text-rose-400 hover:bg-rose-500/10",
-      className
+      className,
     )}
     onClick={(e) => {
       e.stopPropagation();
@@ -57,12 +56,14 @@ const ContextMenuItem = ({
     }}
     disabled={disabled}
   >
-    <div className={cn(
-      "mr-2 flex h-4 w-4 items-center justify-center",
-      danger ? "text-rose-500" : "text-zinc-400 group-hover:text-zinc-300",
-      isActive && "text-zinc-300",
-      iconClassName // Apply custom color if provided
-    )}>
+    <div
+      className={cn(
+        "mr-2 flex h-4 w-4 items-center justify-center",
+        danger ? "text-rose-500" : "text-zinc-400 group-hover:text-zinc-300",
+        isActive && "text-zinc-300",
+        iconClassName, // Apply custom color if provided
+      )}
+    >
       {Icon && <Icon size={15} />}
     </div>
 
@@ -77,7 +78,10 @@ const ContextMenuItem = ({
     )}
 
     {hasSubmenu && (
-      <ChevronRight size={14} className="ml-auto text-zinc-500 group-hover:text-zinc-300" />
+      <ChevronRight
+        size={14}
+        className="ml-auto text-zinc-500 group-hover:text-zinc-300"
+      />
     )}
   </button>
 );
@@ -88,7 +92,14 @@ const Divider = () => <div className="my-1 h-px bg-zinc-800" />;
 // 2. COMPONENT: SUB-MENU
 // ==========================================
 
-const SmartMenuPanel = ({ children, triggerRect, triggerRef, level = 1, onMouseEnter, onMouseLeave }) => {
+const SmartMenuPanel = ({
+  children,
+  triggerRect,
+  triggerRef,
+  level = 1,
+  onMouseEnter,
+  onMouseLeave,
+}) => {
   // Use State instead of Ref to ensure we capture the element mount
   const [panelEl, setPanelEl] = useState(null);
   const [style, setStyle] = useState({ opacity: 0 });
@@ -119,7 +130,7 @@ const SmartMenuPanel = ({ children, triggerRect, triggerRef, level = 1, onMouseE
         // Try flipping left
         const leftPos = rectBase.left - rect.width + 10;
         // Verify if flipping left is actually better (doesn't overflow left too badly)
-        if (leftPos > 0 || (winWidth - left) < (leftPos + rect.width)) {
+        if (leftPos > 0 || winWidth - left < leftPos + rect.width) {
           left = leftPos;
         }
       }
@@ -128,7 +139,7 @@ const SmartMenuPanel = ({ children, triggerRect, triggerRef, level = 1, onMouseE
       let top = rectBase.top;
       if (top + rect.height > winHeight) {
         // Shift up to fit
-        const overflowY = (top + rect.height) - winHeight + 10;
+        const overflowY = top + rect.height - winHeight + 10;
         top = top - overflowY;
       }
 
@@ -136,14 +147,19 @@ const SmartMenuPanel = ({ children, triggerRect, triggerRef, level = 1, onMouseE
       left = Math.max(10, left);
       top = Math.max(10, top);
 
-      console.log(`[SmartMenu L${level}] Pos:`, { left, top, w: rect.width, trigger: rectBase });
+      console.log(`[SmartMenu L${level}] Pos:`, {
+        left,
+        top,
+        w: rect.width,
+        trigger: rectBase,
+      });
 
       setStyle({
-        position: 'fixed',
+        position: "fixed",
         zIndex: 99999 + level,
         left: `${left}px`,
         top: `${top}px`,
-        opacity: 1
+        opacity: 1,
       });
     }
   }, [triggerRect, triggerRef, level, panelEl]); // Depend on panelEl
@@ -164,12 +180,18 @@ const SmartMenuPanel = ({ children, triggerRect, triggerRef, level = 1, onMouseE
         {children}
       </div>
     </div>,
-    document.body
+    document.body,
   );
 };
 
 // Simplified Category Item handling overflow internally
-const CategoryItem = ({ category, actions, parentMouseEnter, parentMouseLeave, onClose }) => {
+const CategoryItem = ({
+  category,
+  actions,
+  parentMouseEnter,
+  parentMouseLeave,
+  onClose,
+}) => {
   const [isHovered, setIsHovered] = useState(false);
   const [isLocked, setIsLocked] = useState(false); // CLICK-TO-LOCK State
   const [triggerRect, setTriggerRect] = useState(null);
@@ -179,9 +201,11 @@ const CategoryItem = ({ category, actions, parentMouseEnter, parentMouseLeave, o
   // Rect Stability Check helper
   const areRectsDifferent = (r1, r2) => {
     if (!r1 || !r2) return true;
-    return Math.abs(r1.top - r2.top) > 1 ||
+    return (
+      Math.abs(r1.top - r2.top) > 1 ||
       Math.abs(r1.left - r2.left) > 1 ||
-      Math.abs(r1.width - r2.width) > 1;
+      Math.abs(r1.width - r2.width) > 1
+    );
   };
 
   const handleMouseEnter = (e) => {
@@ -212,7 +236,8 @@ const CategoryItem = ({ category, actions, parentMouseEnter, parentMouseLeave, o
     // Ensure hover is true so it opens immediately
     if (!isLocked) {
       setIsHovered(true);
-      if (e.currentTarget) setTriggerRect(e.currentTarget.getBoundingClientRect());
+      if (e.currentTarget)
+        setTriggerRect(e.currentTarget.getBoundingClientRect());
     }
   };
 
@@ -252,12 +277,14 @@ const CategoryItem = ({ category, actions, parentMouseEnter, parentMouseLeave, o
           onMouseLeave={handlePortalLeave}
         >
           {hasNodes ? (
-            category.nodes.map(nodeType => (
+            category.nodes.map((nodeType) => (
               <ContextMenuItem
                 key={nodeType}
-                label={nodeType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                label={nodeType
+                  .replace(/_/g, " ")
+                  .replace(/\b\w/g, (c) => c.toUpperCase())}
                 icon={category.icon} // REUSE CATEGORY ICON FOR NODES
-                onClick={(e) => {
+                onClick={() => {
                   console.log("Creating Node:", nodeType);
                   actions.createNode(nodeType);
                   onClose?.(); // CLOSE MENU ON SELECTION
@@ -273,17 +300,24 @@ const CategoryItem = ({ category, actions, parentMouseEnter, parentMouseLeave, o
       )}
     </div>
   );
-}
+};
 
-const SubMenu = ({ actions, triggerRef, triggerRect, onMouseEnter, onMouseLeave, onClose }) => {
+const SubMenu = ({
+  actions,
+  triggerRef,
+  triggerRect,
+  onMouseEnter,
+  onMouseLeave,
+  onClose,
+}) => {
   const RELEVANT_CATEGORIES = [
-    'browser_management',
-    'user_simulation',
-    'dom_manipulation',
-    'synchronization',
-    'network_control',
-    'diagnostics',
-    'flow_control'
+    "browser_management",
+    "user_simulation",
+    "dom_manipulation",
+    "synchronization",
+    "network_control",
+    "diagnostics",
+    "flow_control",
   ];
 
   // Level 2: Categories (Now a Portal too!)
@@ -299,7 +333,7 @@ const SubMenu = ({ actions, triggerRef, triggerRect, onMouseEnter, onMouseLeave,
         Node Categories
       </div>
 
-      {RELEVANT_CATEGORIES.map(catKey => {
+      {RELEVANT_CATEGORIES.map((catKey) => {
         const category = NODE_CATEGORIES[catKey];
         if (!category) return null;
         return (
@@ -315,7 +349,7 @@ const SubMenu = ({ actions, triggerRef, triggerRect, onMouseEnter, onMouseLeave,
       })}
     </SmartMenuPanel>
   );
-}
+};
 
 // Helper Component for the Add Node Trigger to manage its own hover state and refs
 const AddNodeTrigger = ({ actions, onClose }) => {
@@ -345,16 +379,23 @@ const AddNodeTrigger = ({ actions, onClose }) => {
     e.stopPropagation();
     e.preventDefault();
     setIsLocked(!isLocked);
-    if (!isLocked) { // If becoming locked, ensure open
+    if (!isLocked) {
+      // If becoming locked, ensure open
       setIsHovered(true);
-      if (e.currentTarget) setTriggerRect(e.currentTarget.getBoundingClientRect());
+      if (e.currentTarget)
+        setTriggerRect(e.currentTarget.getBoundingClientRect());
     }
   };
 
   const isOpen = isHovered || isLocked;
 
   return (
-    <div ref={triggerRef} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} onClick={handleClick}>
+    <div
+      ref={triggerRef}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      onClick={handleClick}
+    >
       <ContextMenuItem
         icon={PlusCircle}
         label="Add Node"
@@ -380,10 +421,17 @@ const AddNodeTrigger = ({ actions, onClose }) => {
 // ==========================================
 import { getNodeConfig } from "../config/nodeConstants";
 
-const ContextMenu = ({ x, y, type, data, onClose, actions, recentNodes = [] }) => {
+const ContextMenu = ({
+  x,
+  y,
+  type,
+  data,
+  onClose,
+  actions,
+  recentNodes = [],
+}) => {
   const menuRef = useRef(null);
   const searchRef = useRef(null);
-  const [activeSubmenu, setActiveSubmenu] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
 
   // Focus search on mount if canvas type
@@ -412,7 +460,8 @@ const ContextMenu = ({ x, y, type, data, onClose, actions, recentNodes = [] }) =
 
   // Close handlers
   useEffect(() => {
-    const handleClick = (e) => !menuRef.current?.contains(e.target) && onClose();
+    const handleClick = (e) =>
+      !menuRef.current?.contains(e.target) && onClose();
     const handleKeyDown = (e) => e.key === "Escape" && onClose();
 
     window.addEventListener("mousedown", handleClick);
@@ -429,13 +478,15 @@ const ContextMenu = ({ x, y, type, data, onClose, actions, recentNodes = [] }) =
     const term = searchTerm.toLowerCase();
     const results = [];
 
-    Object.values(NODE_CATEGORIES).forEach(cat => {
-      cat.nodes.forEach(nodeType => {
+    Object.values(NODE_CATEGORIES).forEach((cat) => {
+      cat.nodes.forEach((nodeType) => {
         if (nodeType.toLowerCase().includes(term)) {
           results.push({
             type: nodeType,
-            label: nodeType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-            category: cat
+            label: nodeType
+              .replace(/_/g, " ")
+              .replace(/\b\w/g, (c) => c.toUpperCase()),
+            category: cat,
           });
         }
       });
@@ -455,17 +506,17 @@ const ContextMenu = ({ x, y, type, data, onClose, actions, recentNodes = [] }) =
       lime: "text-lime-400",
       pink: "text-pink-400",
       indigo: "text-indigo-400",
-      slate: "text-slate-400"
+      slate: "text-slate-400",
     };
     return map[colorName] || "text-zinc-400";
-  }
+  };
 
   return (
     <div
       ref={menuRef}
       className={cn(
         "fixed z-[10001] min-w-[220px] rounded-lg border border-zinc-700 bg-[#18181b]/95 backdrop-blur-xl p-1.5 shadow-2xl",
-        "animate-in fade-in zoom-in-95 origin-top-left"
+        "animate-in fade-in zoom-in-95 origin-top-left",
       )}
       style={{ left: x, top: y }}
     >
@@ -488,7 +539,7 @@ const ContextMenu = ({ x, y, type, data, onClose, actions, recentNodes = [] }) =
       {searchTerm ? (
         <div className="max-h-[300px] overflow-y-auto no-scrollbar">
           {filteredNodes.length > 0 ? (
-            filteredNodes.map(item => (
+            filteredNodes.map((item) => (
               <ContextMenuItem
                 key={item.type}
                 label={item.label}
@@ -515,9 +566,8 @@ const ContextMenu = ({ x, y, type, data, onClose, actions, recentNodes = [] }) =
               <div className="px-2 py-1 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
                 Quick Access
               </div>
-              {recentNodes.map(nodeType => {
+              {recentNodes.map((nodeType) => {
                 const config = getNodeConfig(nodeType);
-                const category = NODE_CATEGORIES[config.category] || NODE_CATEGORIES.default;
                 return (
                   <ContextMenuItem
                     key={nodeType}
@@ -540,12 +590,33 @@ const ContextMenu = ({ x, y, type, data, onClose, actions, recentNodes = [] }) =
                 {data?.data?.label || "Selected Node"}
               </div>
               <Divider />
-              <ContextMenuItem icon={Play} label="Execute from here" onClick={() => { }} disabled />
+              <ContextMenuItem
+                icon={Play}
+                label="Execute from here"
+                onClick={() => { }}
+                disabled
+              />
               <Divider />
-              <ContextMenuItem icon={Copy} label="Copy" shortcut="⌘C" onClick={actions.copy} />
-              <ContextMenuItem icon={CopyPlus} label="Duplicate" shortcut="⌘D" onClick={actions.duplicate} />
+              <ContextMenuItem
+                icon={Copy}
+                label="Copy"
+                shortcut="⌘C"
+                onClick={actions.copy}
+              />
+              <ContextMenuItem
+                icon={CopyPlus}
+                label="Duplicate"
+                shortcut="⌘D"
+                onClick={actions.duplicate}
+              />
               <Divider />
-              <ContextMenuItem icon={Trash2} label="Delete" shortcut="Del" danger onClick={actions.delete} />
+              <ContextMenuItem
+                icon={Trash2}
+                label="Delete"
+                shortcut="Del"
+                danger
+                onClick={actions.delete}
+              />
             </>
           )}
 
@@ -555,13 +626,40 @@ const ContextMenu = ({ x, y, type, data, onClose, actions, recentNodes = [] }) =
               {/* Wrapper for Add Node trigger logic */}
               <AddNodeTrigger actions={actions} onClose={onClose} />
 
-              <ContextMenuItem icon={LayoutGrid} label="Clean Layout" onClick={actions.cleanLayout} />
+              <ContextMenuItem
+                icon={LayoutGrid}
+                label="Clean Layout"
+                onClick={actions.cleanLayout}
+              />
               <Divider />
-              <ContextMenuItem icon={MousePointer2} label="Select All" shortcut="⌘A" onClick={actions.selectAll} />
-              <ContextMenuItem icon={Copy} label="Paste" shortcut="⌘V" onClick={actions.paste} disabled={!actions.canPaste} />
+              <ContextMenuItem
+                icon={MousePointer2}
+                label="Select All"
+                shortcut="⌘A"
+                onClick={actions.selectAll}
+              />
+              <ContextMenuItem
+                icon={Copy}
+                label="Paste"
+                shortcut="⌘V"
+                onClick={actions.paste}
+                disabled={!actions.canPaste}
+              />
               <Divider />
-              <ContextMenuItem icon={Undo2} label="Undo" shortcut="⌘Z" onClick={actions.undo} disabled={!actions.canUndo} />
-              <ContextMenuItem icon={Redo2} label="Redo" shortcut="⌘Y" onClick={actions.redo} disabled={!actions.canRedo} />
+              <ContextMenuItem
+                icon={Undo2}
+                label="Undo"
+                shortcut="⌘Z"
+                onClick={actions.undo}
+                disabled={!actions.canUndo}
+              />
+              <ContextMenuItem
+                icon={Redo2}
+                label="Redo"
+                shortcut="⌘Y"
+                onClick={actions.redo}
+                disabled={!actions.canRedo}
+              />
             </>
           )}
 
@@ -572,14 +670,31 @@ const ContextMenu = ({ x, y, type, data, onClose, actions, recentNodes = [] }) =
                 {data?.nodes?.length} items selected
               </div>
               <Divider />
-              <ContextMenuItem icon={Copy} label="Copy" shortcut="⌘C" onClick={actions.copy} />
-              <ContextMenuItem icon={Trash2} label="Delete" shortcut="Del" danger onClick={actions.delete} />
+              <ContextMenuItem
+                icon={Copy}
+                label="Copy"
+                shortcut="⌘C"
+                onClick={actions.copy}
+              />
+              <ContextMenuItem
+                icon={Trash2}
+                label="Delete"
+                shortcut="Del"
+                danger
+                onClick={actions.delete}
+              />
             </>
           )}
 
           {/* --- EDGE CONTEXT --- */}
           {type === "edge" && (
-            <ContextMenuItem icon={Trash2} label="Delete Connection" shortcut="Del" danger onClick={actions.delete} />
+            <ContextMenuItem
+              icon={Trash2}
+              label="Delete Connection"
+              shortcut="Del"
+              danger
+              onClick={actions.delete}
+            />
           )}
         </>
       )}

@@ -1,8 +1,22 @@
 import React, { memo } from "react";
 import { Handle, Position, useStore } from "@xyflow/react";
-import { Code, Terminal, AlertCircle, Box } from "lucide-react";
+import {
+  Code,
+  Terminal,
+  AlertCircle,
+  Box,
+  AlertTriangle,
+  Globe,
+  MousePointer,
+  CheckCircle,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NODE_TYPE_MAP, CATEGORY_STYLES } from "@/config/nodeConstants";
+import {
+  validateNodeConfig,
+  getSmartLabel,
+  truncate,
+} from "@/config/validationRules";
 
 const AbyssNode = ({ data, selected, type }) => {
   // 1. Determine Node Type & Config
@@ -26,58 +40,36 @@ const AbyssNode = ({ data, selected, type }) => {
   const zoom = useStore((s) => s.transform[2]);
   const showDetails = zoom > 0.5;
 
-  // 4. Styles
-  // Determine Status Color
-  const getStatusColor = (state) => {
-    switch (state) {
-      case "success":
-        return "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]";
-      case "error":
-        return "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]";
-      case "running":
-        return "bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.6)]";
-      default:
-        return "bg-slate-600"; // Idle
-    }
-  };
+  // 4. Validation Logic (SMART NODES)
+  const validation = validateNodeConfig(nodeKey, data.configuration);
+  const isValid = validation.isValid;
 
-  // Determine Handle Visibility
+  // 5. Smart Label Logic
+  const smartLabel = getSmartLabel(nodeKey, data.configuration);
+  const displayLabel = smartLabel || data.label || safeConfig.label;
+
+  // 6. Styles & Status
+
+
   const showInputs = data.configuration?.showInputs !== false;
   const showOutputs = data.configuration?.showOutputs !== false;
 
-  // 4. Styles
-  // Determine Border Color based on Status
-  // Ultra-visible status colors
-  const getStatusStyles = (state) => {
-    switch (state) {
-      case "success":
-        return {
-          color: "#10b981",
-          shadow:
-            "0 0 30px rgba(16,185,129,0.5), inset 0 0 10px rgba(16,185,129,0.2)",
-        };
-      case "error":
-        return {
-          color: "#ef4444",
-          shadow:
-            "0 0 30px rgba(239,68,68,0.5), inset 0 0 10px rgba(239,68,68,0.2)",
-        };
-      case "running":
-        return {
-          color: "#fbbf24",
-          shadow:
-            "0 0 40px rgba(251,191,36,0.6), inset 0 0 15px rgba(251,191,36,0.2)",
-          animation: "animate-pulse",
-        };
-      default:
-        return { color: null, shadow: null };
-    }
-  };
+  const { color: statusColor, shadow: statusShadow } =
+    data.state === "success" || data.state === "error"
+      ? {
+        // Keep existing status styles
+        color: data.state === "success" ? "#10b981" : "#ef4444",
+        shadow:
+          data.state === "success"
+            ? "0 0 30px rgba(16,185,129,0.5)"
+            : "0 0 30px rgba(239,68,68,0.5)",
+      }
+      : { color: null, shadow: null };
 
-  const {
-    color: statusColor,
-    shadow: statusShadow,
-  } = getStatusStyles(data.state);
+  // Determine invalid style
+  const invalidStyle = !isValid
+    ? "shadow-[inset_0_0_10px_rgba(239,68,68,0.4)] border-red-500/50"
+    : "";
 
   return (
     <div
@@ -86,14 +78,15 @@ const AbyssNode = ({ data, selected, type }) => {
         boxShadow: statusShadow || undefined,
       }}
       className={cn(
-        "group relative min-w-[160px] rounded-lg p-3 transition-all duration-500 select-none border-[2px]", // Increased border width base
+        "group relative min-w-[160px] max-w-[300px] rounded-lg p-3 transition-all duration-500 select-none border-[2px]",
         themeParams.base,
+        invalidStyle, // Add validation glow
 
-        // Running Animation
-        data.state === "running" && "ring-4 ring-amber-500/20",
-        data.state === "running" && "animate-pulse",
+        // Running Animation (Breathing Glow using Category Color)
+        data.state === "running" &&
+        `ring-4 ring-${colorKey}-500/20 animate-pulse`,
 
-        // Priority Logic: Status Logic must override Selection
+        // Selection
         selected && statusColor ? "scale-[1.05] z-50 border-[3px]" : "",
         selected && !statusColor ? themeParams.selected : "",
 
@@ -111,25 +104,72 @@ const AbyssNode = ({ data, selected, type }) => {
       )}
 
       {/* HEADER */}
-      {/* Header Overlay for Button Feel */}
       <div className="absolute inset-x-0 top-0 h-9 bg-black/10 rounded-t-lg border-b border-white/10" />
 
-      {/* STATUS LED */}
-      <div
-        className={cn(
-          "absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border border-white/20 transition-colors duration-300 z-10",
-          getStatusColor(data.state),
+      {/* STATUS LED & ICONS */}
+      <div className="absolute -top-2 -right-2 z-20 flex gap-1.5 items-center">
+        {/* VALIDATION WARNING (Priority 1) */}
+        {!isValid && (
+          <div className="bg-red-500 text-white rounded-full p-0.5 shadow-lg border border-red-400 animate-pulse">
+            <AlertTriangle size={12} fill="currentColor" strokeWidth={3} />
+          </div>
         )}
-      />
+
+        {/* Running: Scanning Loader Ring */}
+        {data.state === "running" && (
+          <div
+            className={cn(
+              "w-4 h-4 rounded-full border-2 border-t-transparent animate-spin",
+              `border-${colorKey}-400`,
+            )}
+          />
+        )}
+
+        {/* Success: Checkmark */}
+        {data.state === "success" && (
+          <div className="bg-emerald-500 text-white rounded-full p-0.5 shadow-lg border border-emerald-400">
+            <CheckCircle size={14} strokeWidth={3} />
+          </div>
+        )}
+
+        {/* Error: LED (Only show if valid, otherwise the Triangle is enough) */}
+        {data.state === "error" && isValid && (
+          <div className="w-3 h-3 bg-red-500 rounded-full border border-white shadow-lg animate-pulse" />
+        )}
+
+        {/* Neutral/Ready LED - Only show if NO active state and valid */}
+        {!data.state && isValid && (
+          <div
+            className={cn(
+              "w-2.5 h-2.5 rounded-full border border-white/20 bg-slate-600",
+            )}
+          />
+        )}
+      </div>
+
+      {/* SCANNING EFFECT (Running) */}
+      {data.state === "running" && (
+        <div className="absolute inset-0 rounded-lg overflow-hidden pointer-events-none z-10">
+          <div
+            className={cn(
+              "absolute inset-0 opacity-20 bg-gradient-to-r from-transparent via-white to-transparent -skew-x-12 translate-x-[-100%] animate-[shimmer_1.5s_infinite]",
+              `via-${colorKey}-200`,
+            )}
+          />
+        </div>
+      )}
+
+      {/* ERROR TINT */}
+      {data.state === "error" && (
+        <div className="absolute inset-0 bg-red-500/10 rounded-lg pointer-events-none border border-red-500/30" />
+      )}
 
       <div className="relative flex items-center gap-3 mb-1 pt-1 px-1">
-        {/* Icon - Always White for Contrast */}
         <Icon size={20} className="shrink-0 text-white drop-shadow-sm" />
 
-        {/* Title */}
         <div className="flex flex-col min-w-0">
           <span className="text-sm font-bold truncate leading-tight text-white drop-shadow-sm">
-            {data.label || safeConfig.label}
+            {displayLabel}
           </span>
           {showDetails && (
             <span className="text-[10px] font-mono uppercase tracking-wider text-white/80">
@@ -142,28 +182,50 @@ const AbyssNode = ({ data, selected, type }) => {
       </div>
 
       {/* BODY (Details) */}
-      {showDetails && (data.selector || data.value) && (
+      {showDetails && (
         <div className="mt-2 pt-2 border-t border-white/20 space-y-1">
-          {data.selector && (
-            <div className="flex items-center gap-1.5 text-white/90 text-[11px] truncate">
-              <Code size={12} className="opacity-70" />
-              <span className="font-mono truncate opacity-90">
-                {data.selector}
+          {/* URL (Browser) */}
+          {data.configuration?.url && (
+            <div className="flex items-center gap-1.5 text-white/90 text-[11px]">
+              <Globe size={12} className="opacity-70 shrink-0" />
+              <span
+                className="font-mono opacity-90"
+                title={data.configuration.url}
+              >
+                {truncate(
+                  data.configuration.url.replace(/^https?:\/\//, ""),
+                  28,
+                )}
               </span>
             </div>
           )}
-          {data.value && (
-            <div className="flex items-center gap-1.5 text-white/90 text-[11px] truncate">
-              <Terminal size={12} className="opacity-70" />
-              <span className="font-mono truncate opacity-90">
-                "{data.value}"
+
+          {/* Selector (Interaction) */}
+          {(data.configuration?.selector || data.selector) && (
+            <div className="flex items-center gap-1.5 text-white/90 text-[11px]">
+              <MousePointer size={12} className="opacity-70 shrink-0" />
+              <span
+                className="font-mono opacity-90"
+                title={data.configuration?.selector || data.selector}
+              >
+                {truncate(data.configuration?.selector || data.selector, 25)}
+              </span>
+            </div>
+          )}
+
+          {/* Text Value (Typing) */}
+          {(data.configuration?.text || data.value) && (
+            <div className="flex items-center gap-1.5 text-white/90 text-[11px]">
+              <Terminal size={12} className="opacity-70 shrink-0" />
+              <span className="font-mono opacity-90">
+                "{truncate(data.configuration?.text || data.value, 20)}"
               </span>
             </div>
           )}
         </div>
       )}
 
-      {/* ERROR INDICATOR */}
+      {/* ERROR INDICATOR (Runtime) */}
       {data.error && (
         <div className="absolute -top-2 -right-2 bg-white rounded-full p-0.5 shadow-sm border border-red-500 z-10">
           <AlertCircle size={16} className="text-red-600 fill-current" />

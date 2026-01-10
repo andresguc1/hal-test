@@ -15,6 +15,7 @@ import {
   SCREENSHOT_RECOMMENDATIONS,
   VISUAL_CHANGE_NODES,
 } from "./constants";
+import { CATEGORY_STYLES, NODE_TYPE_MAP } from "../../config/nodeConstants";
 import * as payloadBuilders from "./payloadBuilders";
 import { NODE_STATES, PROFESSIONAL_COLORS, getNodeStyle } from "./flowStyles";
 import {
@@ -978,16 +979,62 @@ export const useFlowManager = (currentProject, currentFlowId) => {
       // Agregar edge con ID único y label
       const edgeId = `edge-${connection.source}-${connection.target}`;
 
-      setEdges((eds) =>
-        addEdge(
+      setEdges((eds) => {
+        // Find source node to determine color
+        const sourceNode = nodes.find((n) => n.id === connection.source);
+        let edgeStyle = { ...DEFAULT_EDGE_OPTIONS };
+
+        if (sourceNode) {
+          const type =
+            sourceNode.data?.subType ||
+            sourceNode.data?.type ||
+            sourceNode.type;
+          const config = NODE_TYPE_MAP[type];
+
+          if (config && config.color && CATEGORY_STYLES[config.color]) {
+            // Extract hex color from theme or map common names
+            // Since theme uses Tailwind classes, we map manual colors or parse if needed.
+            // Simpler: Map our internal color names to HEX values directly or use a helper.
+
+            const colorMap = {
+              blue: "#3b82f6", // Browser
+              cyan: "#06b6d4", // DOM
+              pink: "#ec4899", // User
+              orange: "#f97316", // Sync
+              rose: "#f43f5e", // Diagnostics
+              emerald: "#10b981", // Network
+              indigo: "#6366f1", // Session
+              lime: "#84cc16", // Test
+              yellow: "#eab308", // Files
+              slate: "#64748b", // CLI
+              purple: "#a855f7", // Logic
+            };
+
+            const strokeColor = colorMap[config.color] || "#ff8c32";
+
+            edgeStyle = {
+              ...edgeStyle,
+              style: {
+                ...edgeStyle.style,
+                stroke: strokeColor,
+              },
+              markerEnd: {
+                ...edgeStyle.markerEnd,
+                color: strokeColor,
+              },
+            };
+          }
+        }
+
+        return addEdge(
           {
             ...connection,
             id: edgeId,
-            ...DEFAULT_EDGE_OPTIONS,
+            ...edgeStyle,
           },
           eds,
-        ),
-      );
+        );
+      });
 
       console.log("✅ Edge added successfully");
       logger.debug("Edge added", connection, "useFlowManager");

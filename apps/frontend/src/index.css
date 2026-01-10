@@ -148,3 +148,24 @@
   border: 1px solid #333 !important;
   border-radius: 8px;
 }
+
+/* ==========================================
+ * ANIMATIONS
+ * ========================================== */
+@keyframes progress {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-150%) skewX(-12deg);
+  }
+  100% {
+    transform: translateX(150%) skewX(-12deg);
+  }
+}

@@ -1,7 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { ReactFlowProvider } from "@xyflow/react";
-import { ToastProvider } from "./components/Toast";
+import { ToastProvider, HalToaster } from "./components/Toast";
 import { SettingsProvider } from "./context/SettingsContext";
 import "./index.css";
 import "./i18n";

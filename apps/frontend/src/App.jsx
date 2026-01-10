@@ -144,7 +144,6 @@ export default function App() {
     executeStep,
     executeFlow,
     saveFlow,
-    importFlow,
     undo,
     redo,
     canUndo,
@@ -210,9 +209,10 @@ export default function App() {
         toast.success(`${t("common.flow_exec_success")} (${durationStr}s)`);
       } else {
         // Failure with Count
-        toast.error(`${t("common.flow_exec_error")} (${result.stats.failed} failed)`);
+        toast.error(
+          `${t("common.flow_exec_error")} (${result.stats.failed} failed)`,
+        );
       }
-
     } catch (error) {
       // 3. Unexpected Error
       toast.dismiss(toastId);
@@ -277,16 +277,17 @@ export default function App() {
         // Handle Directory Import (Server-Side Result)
         else if (importData.result) {
           // Logic for directory import result if needed
-          toast.success(`✓ ${importData.result.stats?.successfulConversions || 0} flows imported.`);
+          toast.success(
+            `✓ ${importData.result.stats?.successfulConversions || 0} flows imported.`,
+          );
           setIsImportDialogOpen(false);
         }
-
       } catch (error) {
         console.error("Import Failed:", error);
         toast.error(`Import error: ${error.message}`);
       }
     },
-    [setNodes, setEdges, fitView, toast, t],
+    [setNodes, setEdges, setViewport, fitView, toast, t],
   );
 
   // ========================================
@@ -636,13 +637,18 @@ export default function App() {
                         }
                       },
                       duplicate: handleDuplicateNodes,
-                      duplicate: handleDuplicateNodes,
                       addNode: () => setIsCreationPanelVisible(true), // Legacy: Open Panel
                       createNode: (type) => {
-                        const position = screenToFlowPosition({ x: menu.x, y: menu.y });
+                        const position = screenToFlowPosition({
+                          x: menu.x,
+                          y: menu.y,
+                        });
                         addNode(type, position);
                         // Track usage
-                        setNodeUsage(prev => ({ ...prev, [type]: (prev[type] || 0) + 1 }));
+                        setNodeUsage((prev) => ({
+                          ...prev,
+                          [type]: (prev[type] || 0) + 1,
+                        }));
                       },
                       selectAll: handleSelectAll,
                       undo: undo,

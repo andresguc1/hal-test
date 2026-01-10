@@ -117,7 +117,7 @@ const NODE_INPUTS = {
   ],
 };
 
-export default function NodeConfigurationPanel({
+function NodeConfigurationPanel({
   isVisible,
   action, // The selected node data (initial snapshot)
   nodes, // Live nodes list for real-time updates
@@ -372,3 +372,39 @@ export default function NodeConfigurationPanel({
     </AnimatePresence>
   );
 }
+
+const arePropsEqual = (prev, next) => {
+  // 1. Visibility Check: If both are hidden, NO update needed (even if nodes change)
+  if (!prev.isVisible && !next.isVisible) return true;
+
+  // 2. Visibility Change: If visibility toggles, MUST update
+  if (prev.isVisible !== next.isVisible) return false;
+
+  // 3. Action/Selection Change: If the selected node ID changes, MUST update
+  if (prev.action?.id !== next.action?.id) return false;
+
+  // 4. NODES DEEP CHECK (The Performance fix)
+  // We only care if the *active* node's DATA changed.
+  // We explicitly IGNORE position changes (drags) to prevent jitter.
+
+  if (prev.nodes === next.nodes) return true; // Exact ref match
+
+  const nodeId = next.action?.id;
+  if (!nodeId) return true;
+
+  const prevNode = prev.nodes?.find((n) => n.id === nodeId);
+  const nextNode = next.nodes?.find((n) => n.id === nodeId);
+
+  // If node disappeared or appeared
+  if (!prevNode || !nextNode) return false;
+
+  // Compare DATA only (Ignore .position, .selected, etc.)
+  // JSON stringify is fast enough for just the data object of one node
+  return JSON.stringify(prevNode.data) === JSON.stringify(nextNode.data);
+};
+
+const NodeConfigurationPanelMemo = React.memo(
+  NodeConfigurationPanel,
+  arePropsEqual,
+);
+export default NodeConfigurationPanelMemo;

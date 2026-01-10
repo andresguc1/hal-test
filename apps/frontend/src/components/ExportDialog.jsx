@@ -58,54 +58,52 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges }) => {
     return result;
   }, [nodes]);
 
-  // Handle JSON export
+  // Handle JSON export (Client-Side)
   const handleJsonExport = useCallback(async () => {
     setIsProcessing(true);
     setError(null);
     setProgress({ stage: "preparing", message: t("dialogs.export.preparing") });
 
     try {
-      const flow = convertNodesToFlow();
-
-      setProgress({
-        stage: "sending",
-        message: t("dialogs.export.generating_json"),
-      });
-
-      const response = await fetch("/api/export/json", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ flow }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Error: ${response.statusText}`);
-      }
-
-      // Download the file
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `hal_test_flow_${Date.now()}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
+      // Create the full export payload
+      const exportData = {
+        meta: {
+          version: "1.0.0",
+          timestamp: new Date().toISOString(),
+          source: "hal-9001",
+        },
+        nodes: nodes,
+        edges: edges,
+        viewport: { x: 0, y: 0, zoom: 1 }, // Default viewport for now
+      };
 
       setProgress({
         stage: "complete",
         message: t("common.flow_save_success"),
       });
 
+      // Create blob and download
+      const jsonString = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([jsonString], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `hal_flow_${Date.now()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
       setTimeout(() => {
         handleClose();
-      }, 1500);
+      }, 1000);
     } catch (err) {
       setError(err.message || t("dialogs.export.error_export"));
       setProgress(null);
     } finally {
       setIsProcessing(false);
     }
-  }, [convertNodesToFlow, handleClose, t]);
+  }, [nodes, edges, handleClose, t]);
 
   // Handle code export
   const handleCodeExport = useCallback(async () => {
