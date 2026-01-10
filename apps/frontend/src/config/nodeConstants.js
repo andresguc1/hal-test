@@ -115,7 +115,7 @@ export const NODE_CATEGORIES = {
   },
   file_data: {
     icon: Folder,
-    color: "sky",
+    color: "yellow", // Files = Yellow (High visibility)
     label: "Files / Data",
     nodes: ["read_data", "save_results", "handle_downloads"],
   },
@@ -127,7 +127,7 @@ export const NODE_CATEGORIES = {
   },
   flow_control: {
     icon: Settings2,
-    color: "red", // Logic = Red
+    color: "purple", // Logic = Purple (Distinct from Error/Red)
     label: "Logic / Flow",
     nodes: [
       "variable",

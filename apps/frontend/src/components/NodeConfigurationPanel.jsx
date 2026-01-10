@@ -295,7 +295,8 @@ export default function NodeConfigurationPanel({
           {/* HEADER */}
           <div
             className={cn(
-              "h-14 shrink-0 flex items-center justify-between px-5 border-b border-white/5 bg-gradient-to-r from-white/5 to-transparent",
+              "h-14 shrink-0 flex items-center justify-between px-5 border-b",
+              `border-${colorKey}-500/20 bg-gradient-to-r from-${colorKey}-500/20 to-transparent`,
             )}
           >
             <div className="flex flex-col justify-center">

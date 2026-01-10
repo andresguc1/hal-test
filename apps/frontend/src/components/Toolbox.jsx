@@ -176,12 +176,35 @@ const ToolboxCategory = ({
     }
   };
 
+  // Explicit group-hover classes for JIT
+  const getIconHoverClass = () => {
+    switch (color) {
+      case "cyan": return "group-hover:text-cyan-400";
+      case "blue": return "group-hover:text-blue-400";
+      case "indigo": return "group-hover:text-indigo-400";
+      case "violet": return "group-hover:text-violet-400";
+      case "purple": return "group-hover:text-purple-400";
+      case "fuchsia": return "group-hover:text-fuchsia-400";
+      case "pink": return "group-hover:text-pink-400";
+      case "rose": return "group-hover:text-rose-400";
+      case "red": return "group-hover:text-red-400";
+      case "orange": return "group-hover:text-orange-400";
+      case "amber": return "group-hover:text-amber-400";
+      case "yellow": return "group-hover:text-yellow-400";
+      case "lime": return "group-hover:text-lime-400";
+      case "green": return "group-hover:text-green-400";
+      case "emerald": return "group-hover:text-emerald-400";
+      case "teal": return "group-hover:text-teal-400";
+      default: return "group-hover:text-slate-300";
+    }
+  };
+
   return (
     <div className="mb-3">
       <button
         onClick={onToggle}
         className={cn(
-          "w-full flex items-center justify-between px-2 py-1.5 mb-1 text-xs font-bold uppercase tracking-wider transition-all duration-300 rounded select-none",
+          "w-full flex items-center justify-between px-2 py-1.5 mb-1 text-xs font-bold uppercase tracking-wider transition-all duration-300 rounded select-none group",
           isOpen ? getHeaderColor() : `text-slate-500 ${getHoverColor()}`,
         )}
       >
@@ -192,7 +215,7 @@ const ToolboxCategory = ({
               "transition-colors duration-300",
               isOpen
                 ? getHeaderColor()
-                : `text-slate-600 group-hover:${getHoverColor().replace("hover:", "")}`,
+                : `text-slate-600 ${getIconHoverClass()}`,
             )}
           />
           <span>{t(`nodes.categories.${categoryKey}`)}</span>
@@ -239,6 +262,29 @@ export default function ToolboxPanel({ addNode }) {
 
   const toggleCategory = (cat) => {
     setOpenCategories((prev) => ({ ...prev, [cat]: !prev[cat] }));
+  };
+
+  // Helper for JIT-safe hover colors in collapsed sidebar
+  const getSidebarHoverColor = (color) => {
+    switch (color) {
+      case "cyan": return "hover:text-cyan-400";
+      case "blue": return "hover:text-blue-400";
+      case "indigo": return "hover:text-indigo-400";
+      case "violet": return "hover:text-violet-400";
+      case "purple": return "hover:text-purple-400";
+      case "fuchsia": return "hover:text-fuchsia-400";
+      case "pink": return "hover:text-pink-400";
+      case "rose": return "hover:text-rose-400";
+      case "red": return "hover:text-red-400";
+      case "orange": return "hover:text-orange-400";
+      case "amber": return "hover:text-amber-400";
+      case "yellow": return "hover:text-yellow-400";
+      case "lime": return "hover:text-lime-400";
+      case "green": return "hover:text-green-400";
+      case "emerald": return "hover:text-emerald-400";
+      case "teal": return "hover:text-teal-400";
+      default: return "hover:text-slate-300";
+    }
   };
 
   return (
@@ -342,9 +388,6 @@ export default function ToolboxPanel({ addNode }) {
         ) : (
           <div className="flex flex-col gap-4 items-center mt-2">
             {Object.entries(NODE_CATEGORIES).map(([key, section]) => {
-              const colorClass =
-                CATEGORY_STYLES[section.color]?.icon.split(" ")[0] ||
-                "text-slate-400";
               return (
                 <button
                   key={key}
@@ -355,7 +398,8 @@ export default function ToolboxPanel({ addNode }) {
                   }}
                   className={cn(
                     "w-9 h-9 flex items-center justify-center rounded-lg transition-all bg-white/5 hover:bg-white/10",
-                    colorClass,
+                    "text-slate-400", // Default color
+                    getSidebarHoverColor(section.color),
                   )}
                 >
                   <section.icon size={18} />
