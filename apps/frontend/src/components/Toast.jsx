@@ -1,6 +1,7 @@
 import React from "react";
 import { Toaster, toast as sonnerToast } from "sonner";
 import { ToastContext } from "./toastContext";
+export { ToastContext };
 import {
   CheckCircle,
   XCircle,
