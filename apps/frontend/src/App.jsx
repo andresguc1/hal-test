@@ -40,6 +40,7 @@ import { migrateFromLegacy } from "./utils/migration";
 
 import { useFlowShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useToast } from "./hooks/useToast";
+import { HalToaster } from "./components/Toast";
 import { useFigmaInteraction } from "./hooks/useFigmaInteraction";
 import { useTranslation } from "react-i18next";
 import { ThemeProvider } from "./components/theme-provider";
@@ -110,7 +111,7 @@ export default function App() {
   const { zoomIn, zoomOut, fitView } = handlers;
 
   // Hook de React Flow para acceder a funciones de eliminación
-  const { getNodes, getEdges, deleteElements, setEdges } = useReactFlow();
+  const { getNodes, getEdges, deleteElements, setViewport } = useReactFlow();
 
   // Panel visibility state
   const [isCreationPanelVisible, setIsCreationPanelVisible] = useState(true);
@@ -151,6 +152,7 @@ export default function App() {
     selectedAction,
     setSelectedAction,
     setNodes,
+    setEdges,
     addNode,
     copyElements,
     pasteElements,
@@ -162,6 +164,15 @@ export default function App() {
 
   // Computed values
   const isConfigurationPanelVisible = selectedAction !== null;
+
+  // Track Node Usage for Smart Favorites
+  const [nodeUsage, setNodeUsage] = useState({});
+  const frequentNodes = useMemo(() => {
+    return Object.entries(nodeUsage)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 4)
+      .map(([type]) => type);
+  }, [nodeUsage]);
 
   // ========================================
   // CALLBACKS - UI
@@ -184,12 +195,29 @@ export default function App() {
   // ========================================
 
   const handleExecuteFlow = useCallback(async () => {
+    // 1. Show Loading Toast immediately (Duration 0 = indefinite until dismissed)
+    const toastId = toast.loading(t("common.processing"));
+
     try {
-      await executeFlow();
-      toast.success(`✓ ${t("common.flow_exec_success")}`);
+      const result = await executeFlow(); // Returns { success, stats }
+
+      // 2. Clear loading
+      toast.dismiss(toastId);
+
+      if (result.success) {
+        // Success with Duration
+        const durationStr = (result.stats.duration / 1000).toFixed(2);
+        toast.success(`${t("common.flow_exec_success")} (${durationStr}s)`);
+      } else {
+        // Failure with Count
+        toast.error(`${t("common.flow_exec_error")} (${result.stats.failed} failed)`);
+      }
+
     } catch (error) {
+      // 3. Unexpected Error
+      toast.dismiss(toastId);
       console.error("Error ejecutando flujo:", error);
-      toast.error(`✗ ${t("common.flow_exec_error")}: ` + error.message);
+      toast.error(t("common.flow_exec_error") + ": " + error.message);
     }
   }, [executeFlow, toast, t]);
 
@@ -225,17 +253,40 @@ export default function App() {
   }, []);
 
   const handleImport = useCallback(
-    async (options) => {
+    async (importData) => {
       try {
-        await importFlow(options);
-        toast.success(`✓ ${t("common.flow_import_success")}`);
+        if (!importData) return;
+
+        // Handle File Import (Client-Side)
+        if (importData.mode === "file" && importData.content) {
+          const flowData = JSON.parse(importData.content);
+
+          // Restore state
+          setNodes(flowData.nodes || []);
+          setEdges(flowData.edges || []);
+
+          if (flowData.viewport) {
+            setViewport(flowData.viewport);
+          } else {
+            setTimeout(() => fitView({ duration: 800 }), 100);
+          }
+
+          toast.success(`✓ ${t("common.flow_import_success")}`);
+          setIsImportDialogOpen(false);
+        }
+        // Handle Directory Import (Server-Side Result)
+        else if (importData.result) {
+          // Logic for directory import result if needed
+          toast.success(`✓ ${importData.result.stats?.successfulConversions || 0} flows imported.`);
+          setIsImportDialogOpen(false);
+        }
+
       } catch (error) {
-        console.error("Error importando flujo:", error);
-        toast.error(`✗ ${t("common.flow_import_error")}: ` + error.message);
-        throw error; // Re-throw to let ImportDialog handle it
+        console.error("Import Failed:", error);
+        toast.error(`Import error: ${error.message}`);
       }
     },
-    [importFlow, toast, t],
+    [setNodes, setEdges, fitView, toast, t],
   );
 
   // ========================================
@@ -567,6 +618,7 @@ export default function App() {
                     y={menu.y}
                     type={menu.type}
                     data={menu.data}
+                    recentNodes={frequentNodes} // Pass smart favorites
                     onClose={() => setMenu(null)}
                     actions={{
                       copy: handleCopy,
@@ -584,7 +636,14 @@ export default function App() {
                         }
                       },
                       duplicate: handleDuplicateNodes,
-                      addNode: () => setIsCreationPanelVisible(true),
+                      duplicate: handleDuplicateNodes,
+                      addNode: () => setIsCreationPanelVisible(true), // Legacy: Open Panel
+                      createNode: (type) => {
+                        const position = screenToFlowPosition({ x: menu.x, y: menu.y });
+                        addNode(type, position);
+                        // Track usage
+                        setNodeUsage(prev => ({ ...prev, [type]: (prev[type] || 0) + 1 }));
+                      },
                       selectAll: handleSelectAll,
                       undo: undo,
                       redo: redo,
@@ -683,6 +742,9 @@ export default function App() {
             }
           }}
         />
+
+        {/* TOAST SYSTEM (Positioned relative to Panel) */}
+        <HalToaster offsetRight={isConfigurationPanelVisible ? 350 : 0} />
       </div>
     </ThemeProvider>
   );
