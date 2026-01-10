@@ -167,7 +167,7 @@ export const CATEGORY_STYLES = {
   cyan: {
     card: "bg-cyan-500 text-white hover:brightness-110 border-none shadow-sm",
     icon: "text-white",
-    text: "text-white font-medium",
+    text: "text-white font-medium group-hover:text-cyan-200",
     node: {
       base: "bg-cyan-500 border border-white/20 shadow-md",
       selected:

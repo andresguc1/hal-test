@@ -57,6 +57,14 @@ const createExecutedLabel = (action) => {
   return fullLabel.length > 35 ? `${fullLabel.substring(0, 32)}...` : fullLabel;
 };
 
+// Default configurations for specific node types
+const DEFAULT_NODE_CONFIGS = {
+  open_url: { url: "https://www.google.com" },
+  launch_browser: { headless: false },
+  set_viewport: { width: 1280, height: 720 },
+  wait_for_timeout: { duration: 1000 },
+};
+
 // ========================================
 // OPTIMIZACIÓN 2: Memoización de estilos de edges
 // ========================================
@@ -127,10 +135,11 @@ export const useFlowManager = (currentProject, currentFlowId) => {
     if (!node) return null;
 
     return {
+      id: node.id, // Ensure ID is present for fallback
       type: node.data.type,
       nodeId: node.id,
       currentData: node.data.configuration || {},
-      data: node.data, // Include full node data for screenshots
+      data: node.data, // Include full node data for screenshots & fallback
     };
   }, [selectedNodeId, nodes]);
 
@@ -472,7 +481,7 @@ export const useFlowManager = (currentProject, currentFlowId) => {
         data: {
           label, // Only show user-friendly label
           type: typeKey,
-          configuration: {},
+          configuration: DEFAULT_NODE_CONFIGS[typeKey] || {},
           state: NODE_STATES.DEFAULT,
         },
         style: getNodeStyle(NODE_STATES.DEFAULT),

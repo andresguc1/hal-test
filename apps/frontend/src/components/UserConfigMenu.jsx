@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   User,
   Activity,
@@ -28,159 +28,82 @@ import SettingsPage from "./SettingsPage";
  */
 const UserConfigMenu = ({
   user = { name: "User Name", email: "hal-user@example.com" },
-  apiStatus = "Online",
-  lastChecked = "--:--",
-  onRefresh = () => {},
+  onOpenSettings,
+  onOpenApiKeys,
   onLogout = () => {},
-  currentLanguage = "en",
-  onLanguageChange = () => {},
-  languages = [
-    { label: "English", value: "en" },
-    { label: "Español", value: "es" },
-  ],
   className,
 }) => {
-  const [view, setView] = useState("main"); // "main" | "settings"
-
-  if (view === "settings") {
-    return (
-      <div
-        className={cn(
-          "flex flex-col w-[320px] min-h-[520px] bg-[#1e1e1e] text-[#FFFFFF] rounded-lg border border-[#333] shadow-2xl overflow-hidden",
-          className,
-        )}
-      >
-        <SettingsPage onBack={() => setView("main")} />
-      </div>
-    );
-  }
-
   return (
     <div
       className={cn(
-        "flex flex-col w-[320px] p-4 bg-[#1e1e1e] text-[#FFFFFF] rounded-lg border border-[#333] shadow-2xl",
+        "flex flex-col w-[280px] p-2 bg-[#1e1e1e]/80 backdrop-blur-md text-[#FFFFFF] rounded-xl border border-[#333] shadow-2xl",
         className,
       )}
     >
-      {/* 1. Header (User Profile) */}
-      <div className="flex items-center gap-4 mb-4">
-        <Avatar className="h-10 w-10 border border-[#333]">
+      {/* 1. User Info Section */}
+      <div className="flex flex-col items-center p-4 border-b border-white/5 mb-2">
+        <Avatar className="h-16 w-16 mb-3 ring-2 ring-white/10 shadow-lg">
           <AvatarImage src={user.profilePic} alt={user.name} />
-          <AvatarFallback className="bg-[#ff9f1c] text-[#0b0c10] font-bold">
-            <User size={20} />
+          <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-bold text-lg">
+            {user.name.charAt(0)}
           </AvatarFallback>
         </Avatar>
-        <div className="flex flex-col min-w-0">
-          <span className="text-sm font-medium leading-none text-[#FFFFFF] truncate">
-            {user.name}
-          </span>
-          <span className="text-[11px] text-[#B0B0B0] mt-1 font-mono truncate">
-            {user.email}
-          </span>
-        </div>
+        <span className="text-base font-semibold text-white tracking-tight">
+          {user.name}
+        </span>
+        <span className="text-xs text-slate-400 font-mono mt-0.5">
+          {user.email}
+        </span>
+
+        <Badge
+          variant="outline"
+          className="mt-2 bg-indigo-500/10 text-indigo-300 border-indigo-500/20 text-[10px] uppercase font-bold tracking-wider px-2 py-0.5"
+        >
+          Pro Plan
+        </Badge>
       </div>
 
-      <Separator className="bg-[#333] mb-4" />
-
-      {/* 2. System Status Section */}
-      <div className="flex flex-col gap-4 mb-4">
-        <div className="flex items-center justify-between px-1">
-          <span className="text-xs font-semibold text-[#B0B0B0] tracking-wide">
-            System Status
-          </span>
-          <Badge
-            variant="outline"
-            className={cn(
-              "px-2.5 py-0 h-5 text-[10px] font-bold uppercase tracking-wider border transition-all",
-              apiStatus === "Online"
-                ? "bg-green-500/10 text-green-500 border-green-500/20"
-                : "bg-red-500/10 text-red-500 border-red-500/20",
-            )}
-          >
-            <span
-              className={cn(
-                "mr-1.5 h-1.5 w-1.5 rounded-full",
-                apiStatus === "Online" ? "bg-green-500" : "bg-red-500",
-                apiStatus === "Checking" && "animate-pulse",
-              )}
-            />
-            {apiStatus}
-          </Badge>
-        </div>
-
-        <div className="flex items-center justify-between bg-[#252526] rounded-md border border-[#333] p-3">
-          <div className="flex flex-col gap-0.5">
-            <span className="text-[11px] text-[#B0B0B0]">Last check</span>
-            <span className="text-[12px] text-[#FFFFFF] font-mono leading-none">
-              {lastChecked}
-            </span>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 !bg-transparent text-[#B0B0B0] hover:text-[#FFFFFF] hover:!bg-[#2A2A2A] transition-colors rounded-md border border-transparent hover:border-[#444]"
-            onClick={onRefresh}
-            title="Refresh Status"
-          >
-            <RefreshCw
-              size={14}
-              className={cn(apiStatus === "Checking" && "animate-spin")}
-            />
-          </Button>
-        </div>
-      </div>
-
-      <Separator className="bg-[#333] mb-4" />
-
-      {/* 3. Language Selector */}
-      <div className="px-1 mb-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 text-sm font-medium text-[#FFFFFF]/90">
-            <Globe size={16} className="text-[#B0B0B0]" />
-            <span>Language</span>
-          </div>
-          <Select value={currentLanguage} onValueChange={onLanguageChange}>
-            <SelectTrigger className="h-8 w-28 text-xs font-medium bg-[#252526] border-[#333] hover:bg-[#2A2A2A] text-[#FFFFFF] focus:ring-1 focus:ring-offset-0 ring-[#444]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-[#1e1e1e] border-[#333] text-[#FFFFFF]">
-              {languages.map((lang) => (
-                <SelectItem
-                  key={lang.value}
-                  value={lang.value}
-                  className="text-xs focus:bg-[#2A2A2A] focus:text-[#FFFFFF] cursor-pointer"
-                >
-                  {lang.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <Separator className="bg-[#333] mb-4" />
-
-      {/* 4. Menu Actions */}
-      <div className="flex flex-col gap-2">
+      {/* 2. Menu Actions */}
+      <div className="flex flex-col gap-1 px-1">
+        {/* Manage API Keys */}
         <Button
           variant="ghost"
-          className="w-full justify-start h-11 px-3 gap-3 !bg-transparent text-[#B0B0B0] hover:!bg-[#2A2A2A] hover:text-[#FFFFFF] transition-all rounded-md group"
-          onClick={() => setView("settings")}
+          className="w-full justify-start h-9 px-3 gap-3 !bg-transparent text-slate-300 hover:text-white hover:!bg-white/5 transition-all rounded-lg"
+          onClick={onOpenApiKeys}
         >
-          <Settings
-            size={18}
-            className="text-[#B0B0B0] group-hover:text-[#FFFFFF] transition-colors"
-          />
-          <span className="text-sm font-medium">Settings</span>
+          <div className="p-1 rounded bg-emerald-500/10 text-emerald-400">
+            <Globe size={14} />
+          </div>
+          <span className="text-xs font-medium">Manage API Keys</span>
         </Button>
 
+        {/* Global Settings */}
         <Button
           variant="ghost"
-          className="w-full justify-start h-11 px-3 gap-3 !bg-transparent text-red-500 hover:!bg-red-500/10 hover:text-red-400 transition-all rounded-md"
+          className="w-full justify-start h-9 px-3 gap-3 !bg-transparent text-slate-300 hover:text-white hover:!bg-white/5 transition-all rounded-lg"
+          onClick={onOpenSettings}
+        >
+          <div className="p-1 rounded bg-blue-500/10 text-blue-400">
+            <Settings size={14} />
+          </div>
+          <span className="text-xs font-medium">Global Settings</span>
+        </Button>
+      </div>
+
+      <Separator className="bg-white/5 my-2" />
+
+      <div className="px-1 pb-1">
+        {/* Logout - Subtle Red on Hover */}
+        <Button
+          variant="ghost"
+          className="w-full justify-start h-9 px-3 gap-3 !bg-transparent text-slate-400 hover:!bg-rose-500/10 hover:text-rose-400 transition-all rounded-lg group"
           onClick={onLogout}
         >
-          <LogOut size={18} />
-          <span className="text-sm font-medium">Logout</span>
+          <LogOut
+            size={16}
+            className="group-hover:stroke-rose-400 transition-colors"
+          />
+          <span className="text-xs font-medium">Log Out</span>
         </Button>
       </div>
     </div>

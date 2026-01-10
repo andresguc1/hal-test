@@ -18,6 +18,27 @@ const ToolboxItem = ({ label, nodeId, color, onAdd }) => {
   // Select styles based on color theme, fallback to slate
   const theme = CATEGORY_STYLES[color] || CATEGORY_STYLES.slate;
 
+  // Helper for hover text color (similar to Category)
+  const getHoverText = () => {
+    if (color === "cyan") return "group-hover:text-cyan-400";
+    if (color === "blue") return "group-hover:text-blue-400";
+    if (color === "indigo") return "group-hover:text-indigo-400";
+    if (color === "violet") return "group-hover:text-violet-400";
+    if (color === "purple") return "group-hover:text-purple-400";
+    if (color === "fuchsia") return "group-hover:text-fuchsia-400";
+    if (color === "pink") return "group-hover:text-pink-400";
+    if (color === "rose") return "group-hover:text-rose-400";
+    if (color === "red") return "group-hover:text-red-400";
+    if (color === "orange") return "group-hover:text-orange-400";
+    if (color === "amber") return "group-hover:text-amber-400";
+    if (color === "yellow") return "group-hover:text-yellow-400";
+    if (color === "lime") return "group-hover:text-lime-400";
+    if (color === "green") return "group-hover:text-green-400";
+    if (color === "emerald") return "group-hover:text-emerald-400";
+    if (color === "teal") return "group-hover:text-teal-400";
+    return "group-hover:text-slate-200";
+  };
+
   return (
     <Motion.div
       whileHover={{ y: -1, scale: 1.01 }}
@@ -29,14 +50,14 @@ const ToolboxItem = ({ label, nodeId, color, onAdd }) => {
         e.dataTransfer.effectAllowed = "move";
       }}
       className={cn(
-        "group flex items-center gap-3 p-2 mb-2 rounded-md cursor-grab active:cursor-grabbing transition-all duration-200 border shadow-sm backdrop-blur-[2px]",
+        "group flex items-center gap-3 p-2 mb-2 rounded-md cursor-grab active:cursor-grabbing transition-all duration-300 border shadow-sm backdrop-blur-[2px]",
         theme.card, // Applies the "Tinted Glass" background and border
       )}
     >
       {/* Icon Container */}
       <div
         className={cn(
-          "p-1.5 rounded transition-colors duration-200",
+          "p-1.5 rounded transition-colors duration-300",
           theme.icon,
         )}
       >
@@ -46,8 +67,9 @@ const ToolboxItem = ({ label, nodeId, color, onAdd }) => {
       {/* Label */}
       <span
         className={cn(
-          "flex-1 text-xs font-medium truncate select-none transition-colors",
-          theme.text,
+          "flex-1 text-xs font-medium truncate select-none transition-colors duration-300",
+          "text-white", // Force white initially
+          getHoverText(), // Apply color on hover
         )}
       >
         {label}
@@ -114,19 +136,64 @@ const ToolboxCategory = ({
     }
   };
 
+  // Helper to get hover text color
+  const getHoverColor = () => {
+    switch (color) {
+      case "cyan":
+        return "hover:text-cyan-400";
+      case "blue":
+        return "hover:text-blue-400";
+      case "indigo":
+        return "hover:text-indigo-400";
+      case "violet":
+        return "hover:text-violet-400";
+      case "purple":
+        return "hover:text-purple-400";
+      case "fuchsia":
+        return "hover:text-fuchsia-400";
+      case "pink":
+        return "hover:text-pink-400";
+      case "rose":
+        return "hover:text-rose-400";
+      case "red":
+        return "hover:text-red-400";
+      case "orange":
+        return "hover:text-orange-400";
+      case "amber":
+        return "hover:text-amber-400";
+      case "yellow":
+        return "hover:text-yellow-400";
+      case "lime":
+        return "hover:text-lime-400";
+      case "green":
+        return "hover:text-green-400";
+      case "emerald":
+        return "hover:text-emerald-400";
+      case "teal":
+        return "hover:text-teal-400";
+      default:
+        return "hover:text-slate-300";
+    }
+  };
+
   return (
     <div className="mb-3">
       <button
         onClick={onToggle}
         className={cn(
-          "w-full flex items-center justify-between px-2 py-1.5 mb-1 text-xs font-bold uppercase tracking-wider transition-all rounded select-none",
-          isOpen ? getHeaderColor() : "text-slate-500 hover:text-slate-300",
+          "w-full flex items-center justify-between px-2 py-1.5 mb-1 text-xs font-bold uppercase tracking-wider transition-all duration-300 rounded select-none",
+          isOpen ? getHeaderColor() : `text-slate-500 ${getHoverColor()}`,
         )}
       >
         <div className="flex items-center gap-2">
           <_Icon
             size={14}
-            className={isOpen ? getHeaderColor() : "text-slate-600"}
+            className={cn(
+              "transition-colors duration-300",
+              isOpen
+                ? getHeaderColor()
+                : `text-slate-600 group-hover:${getHoverColor().replace("hover:", "")}`,
+            )}
           />
           <span>{t(`nodes.categories.${categoryKey}`)}</span>
         </div>

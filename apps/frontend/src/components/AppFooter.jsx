@@ -7,6 +7,7 @@ import {
   ChevronDown,
   Plus,
   Check,
+  Share2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion as Motion, AnimatePresence } from "motion/react";
@@ -40,7 +41,13 @@ const FooterButton = ({
   );
 };
 
-const SelectorButton = ({ icon: _Icon, label, subLabel, onClick, isActive }) => (
+const SelectorButton = ({
+  icon: _Icon,
+  label,
+  subLabel,
+  onClick,
+  isActive,
+}) => (
   <button
     onClick={onClick}
     className={cn(
@@ -136,7 +143,8 @@ function AppFooter({
   onNewFlow,
   onRun,
   onSave,
-  version = "v1.0.0",
+  onShowImport,
+  onShowExport,
 }) {
   const [activeMenu, setActiveMenu] = useState(null); // 'project' | 'flow' | null
   const containerRef = useRef(null);
@@ -174,11 +182,8 @@ function AppFooter({
   const activeFlowId = flows?.find((f) => f.name === flowName)?.id;
 
   return (
-    <div
-      ref={containerRef}
-      className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center"
-    >
-      {/* MENUS POPUP ABOVE */}
+    <div className="w-full h-14 bg-[#0f172a] border-t border-white/5 flex items-center justify-between px-4 z-40 relative">
+      {/* MENUS POPUP ABOVE - Adjusted position */}
       <AnimatePresence>
         {activeMenu === "project" && (
           <GlassMenu
@@ -206,12 +211,8 @@ function AppFooter({
         )}
       </AnimatePresence>
 
-      <div
-        className={cn(
-          "flex items-center h-16 pl-2 pr-4 rounded-full border border-white/10",
-          "bg-[#0f172a]/80 backdrop-blur-xl shadow-2xl shadow-black/50 relative z-50",
-        )}
-      >
+      {/* LEFT: Project & Flow Info */}
+      <div className="flex items-center gap-4">
         {/* SECTION 1: PROJECT SELECTOR */}
         <SelectorButton
           icon={Folder}
@@ -221,8 +222,7 @@ function AppFooter({
           onClick={() => toggleMenu("project")}
         />
 
-        {/* DIVIDER */}
-        <div className="h-8 w-px bg-white/10 mx-1" />
+        <div className="h-8 w-px bg-white/10" />
 
         {/* SECTION 2: FLOW SELECTOR */}
         <SelectorButton
@@ -232,36 +232,44 @@ function AppFooter({
           isActive={activeMenu === "flow"}
           onClick={() => toggleMenu("flow")}
         />
+      </div>
 
-        {/* DIVIDER */}
-        <div className="h-8 w-px bg-white/10 mx-4" />
+      {/* CENTER: Status or Empty Space */}
+      <div className="flex-1" />
 
-        {/* SECTION 3: ACTIONS */}
-        <div className="flex items-center gap-3">
-          <FooterButton
-            icon={Play}
-            label="RUN"
-            variant="primary"
-            onClick={onRun}
-            className="pl-4 pr-5 py-2" // Bigger click area
-          />
+      {/* RIGHT: Actions */}
+      <div className="flex items-center gap-3">
+        {/* Import / Export */}
+        <FooterButton
+          icon={Folder} // Using Folder as Import icon for now
+          label="Import"
+          variant="outline"
+          onClick={onShowImport}
+        />
+        <FooterButton
+          icon={Share2} // Requires import
+          label="Export"
+          variant="outline"
+          onClick={onShowExport}
+        />
 
-          <button
-            onClick={onSave}
-            className="p-2.5 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition-all active:scale-95 border border-transparent hover:border-white/5"
-            title="Save Flow (Ctrl+S)"
-          >
-            <Save size={18} />
-          </button>
-        </div>
+        <div className="h-6 w-px bg-white/10 mx-2" />
 
-        {/* SECTION 4: STATUS (Right Edge) */}
-        <div className="ml-6 flex items-center gap-2 pl-6 border-l border-white/5 h-full opacity-50 hover:opacity-100 transition-opacity select-none">
-          <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse" />
-          <span className="text-[10px] font-mono text-slate-400">
-            {version}
-          </span>
-        </div>
+        <FooterButton
+          icon={Play}
+          label="RUN FLOW"
+          variant="primary"
+          onClick={onRun}
+          className="pl-4 pr-5 py-2" // Bigger click area
+        />
+
+        <button
+          onClick={onSave}
+          className="p-2.5 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition-all active:scale-95 border border-transparent hover:border-white/5"
+          title="Save Flow (Ctrl+S)"
+        >
+          <Save size={18} />
+        </button>
       </div>
     </div>
   );

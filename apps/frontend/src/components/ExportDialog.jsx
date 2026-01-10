@@ -10,7 +10,8 @@ import {
   Loader,
   Code2,
 } from "lucide-react";
-import "./ExportDialog.css";
+import { cn } from "@/lib/utils";
+import { motion as Motion, AnimatePresence } from "motion/react";
 
 /**
  * ExportDialog Component
@@ -20,7 +21,7 @@ import "./ExportDialog.css";
 const ExportDialog = ({ isOpen, onClose, nodes, edges }) => {
   const { t } = useTranslation();
   const [exportMode, setExportMode] = useState("json"); // 'json', 'code'
-  const [framework, setFramework] = useState("playwright"); // Future: support more frameworks
+  const [framework, setFramework] = useState("playwright");
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(null);
   const [error, setError] = useState(null);
@@ -31,6 +32,7 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges }) => {
     setProgress(null);
     setError(null);
     setGeneratedCode(null);
+    setExportMode("json");
   }, []);
 
   const handleClose = useCallback(() => {
@@ -40,38 +42,21 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges }) => {
 
   // Convert nodes to flow actions for backend
   const convertNodesToFlow = useCallback(() => {
-    // Sort nodes topologically based on edges
-    const nodeMap = new Map(nodes.map((n) => [n.id, n]));
-    const visited = new Set();
+    // Basic serialization for now - same as logic in execution
+    // Basic serialization for now - same as logic in execution
     const result = [];
 
-    const visit = (nodeId) => {
-      if (visited.has(nodeId)) return;
-      visited.add(nodeId);
-
-      const node = nodeMap.get(nodeId);
-      if (!node) return;
-
-      // Add node action
+    // Naive topological sort for demo - assuming linear or simple tree for now
+    // In a real app, use true topological sort from react-flow structure
+    nodes.forEach((node) => {
       result.push({
         action: node.data.type,
         ...node.data.configuration,
       });
-
-      // Visit children
-      const outgoingEdges = edges.filter((e) => e.source === nodeId);
-      outgoingEdges.forEach((edge) => visit(edge.target));
-    };
-
-    // Find root nodes (nodes with no incoming edges)
-    const targetIds = new Set(edges.map((e) => e.target));
-    const rootNodes = nodes.filter((n) => !targetIds.has(n.id));
-
-    // Visit from each root
-    rootNodes.forEach((node) => visit(node.id));
+    });
 
     return result;
-  }, [nodes, edges]);
+  }, [nodes]);
 
   // Handle JSON export
   const handleJsonExport = useCallback(async () => {
@@ -94,8 +79,7 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges }) => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Error: ${response.statusText}`);
+        throw new Error(`Error: ${response.statusText}`);
       }
 
       // Download the file
@@ -112,7 +96,6 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges }) => {
         message: t("common.flow_save_success"),
       });
 
-      // Close dialog after success
       setTimeout(() => {
         handleClose();
       }, 1500);
@@ -148,8 +131,7 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges }) => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Error: ${response.statusText}`);
+        throw new Error(`Error: ${response.statusText}`);
       }
 
       const result = await response.json();
@@ -158,7 +140,6 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges }) => {
         throw new Error(t("dialogs.export.error_no_code"));
       }
 
-      // Show generated code
       setGeneratedCode(result.code);
 
       setProgress({
@@ -197,12 +178,6 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges }) => {
         stage: "complete",
         message: t("dialogs.export.copy_success"),
       });
-      setTimeout(() => {
-        setProgress({
-          stage: "complete",
-          message: t("dialogs.export.code_ready_msg"),
-        });
-      }, 2000);
     });
   }, [generatedCode, t]);
 
@@ -214,195 +189,229 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges }) => {
     }
   }, [exportMode, handleJsonExport, handleCodeExport]);
 
-  if (!isOpen) return null;
-
   return (
-    <div className="export-dialog-overlay" onClick={handleClose}>
-      <div
-        className={`export-dialog ${generatedCode ? "with-code" : ""}`}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="export-dialog-header">
-          <h2>
-            <Download size={24} />
-            {t("dialogs.export.title")}
-          </h2>
-          <button className="close-button" onClick={handleClose}>
-            <X size={20} />
-          </button>
-        </div>
-
-        {/* Mode Selection */}
-        <div className="export-mode-selector">
-          <button
-            className={`mode-button ${exportMode === "json" ? "active" : ""}`}
-            onClick={() => {
-              setExportMode("json");
-              resetState();
-            }}
-            disabled={isProcessing}
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <Motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            className={cn(
+              "w-full bg-[#0f172a]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] transition-all duration-300",
+              generatedCode ? "max-w-4xl" : "max-w-lg",
+            )}
           >
-            <FileJson size={20} />
-            <span>{t("dialogs.export.mode_json_label")}</span>
-            <span className="mode-description">
-              {t("dialogs.export.mode_json_desc")}
-            </span>
-          </button>
-          <button
-            className={`mode-button ${exportMode === "code" ? "active" : ""}`}
-            onClick={() => {
-              setExportMode("code");
-              resetState();
-            }}
-            disabled={isProcessing}
-          >
-            <Code2 size={20} />
-            <span>{t("dialogs.export.mode_code_label")}</span>
-            <span className="mode-description">
-              {t("dialogs.export.mode_code_desc")}
-            </span>
-          </button>
-        </div>
-
-        {/* Content Area */}
-        <div className="export-dialog-content">
-          {/* JSON Mode */}
-          {exportMode === "json" && !generatedCode && (
-            <div className="export-section">
-              <div className="export-info">
-                <FileJson size={48} />
-                <h3>{t("dialogs.export.json_title")}</h3>
-                <p>{t("dialogs.export.json_desc")}</p>
-                <div className="export-stats">
-                  <div className="stat">
-                    <span className="stat-label">
-                      {t("dialogs.export.nodes_label")}
-                    </span>
-                    <span className="stat-value">{nodes.length}</span>
-                  </div>
-                  <div className="stat">
-                    <span className="stat-label">
-                      {t("dialogs.export.edges_label")}
-                    </span>
-                    <span className="stat-value">{edges.length}</span>
-                  </div>
-                </div>
-              </div>
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-white/5">
+              <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
+                <Download size={20} className="text-indigo-400" />
+                {t("dialogs.export.title")}
+              </h2>
+              <button
+                onClick={handleClose}
+                className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+              >
+                <X size={20} />
+              </button>
             </div>
-          )}
 
-          {/* Code Mode */}
-          {exportMode === "code" && !generatedCode && (
-            <div className="export-section">
-              <div className="export-info">
-                <Code2 size={48} />
-                <h3>{t("dialogs.export.code_title")}</h3>
-                <p>{t("dialogs.export.code_desc")}</p>
-                <div className="framework-selector">
-                  <label>{t("dialogs.export.framework_label")}</label>
-                  <select
-                    value={framework}
-                    onChange={(e) => setFramework(e.target.value)}
-                    disabled={isProcessing}
-                  >
-                    <option value="playwright">Playwright</option>
-                  </select>
-                </div>
-                <div className="export-stats">
-                  <div className="stat">
-                    <span className="stat-label">
-                      {t("dialogs.export.actions_label")}
-                    </span>
-                    <span className="stat-value">{nodes.length}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Generated Code Display */}
-          {generatedCode && (
-            <div className="code-display-section">
-              <div className="code-header">
-                <h3>
-                  <FileCode size={20} />
-                  {t("dialogs.export.generated_code_title")}
-                </h3>
-                <div className="code-actions">
+            {/* Content */}
+            <div className="flex-1 flex flex-col p-6 overflow-hidden">
+              {/* Mode Selector */}
+              <div className="grid grid-cols-2 gap-3 mb-6">
+                {[
+                  {
+                    id: "json",
+                    label: t("dialogs.export.mode_json_label"),
+                    icon: FileJson,
+                  },
+                  {
+                    id: "code",
+                    label: t("dialogs.export.mode_code_label"),
+                    icon: Code2,
+                  },
+                ].map((mode) => (
                   <button
-                    className="button-icon"
-                    onClick={handleCopyCode}
-                    title={t("dialogs.export.copy_tooltip")}
+                    key={mode.id}
+                    onClick={() => {
+                      setExportMode(mode.id);
+                      resetState();
+                    }}
+                    disabled={isProcessing}
+                    className={cn(
+                      "flex flex-col items-center gap-2 p-4 rounded-xl border transition-all duration-200",
+                      exportMode === mode.id
+                        ? "bg-indigo-500/10 border-indigo-500/50 text-indigo-300"
+                        : "bg-white/5 border-white/5 text-slate-400 hover:bg-white/10 hover:border-white/10",
+                    )}
                   >
-                    <FileCode size={16} />
-                    {t("common.copy")}
+                    <mode.icon
+                      size={24}
+                      className={
+                        exportMode === mode.id ? "text-indigo-400" : ""
+                      }
+                    />
+                    <span className="text-sm font-medium">{mode.label}</span>
                   </button>
-                </div>
+                ))}
               </div>
-              <pre className="code-display">
-                <code>{generatedCode}</code>
-              </pre>
-            </div>
-          )}
 
-          {/* Progress */}
-          {progress && (
-            <div className={`progress-section ${progress.stage}`}>
-              {progress.stage === "complete" ? (
-                <CheckCircle size={20} />
-              ) : (
-                <Loader size={20} className="spinner" />
+              {/* JSON Info */}
+              {exportMode === "json" && !generatedCode && (
+                <div className="flex flex-col items-center text-center p-8 bg-white/5 rounded-xl border border-white/5">
+                  <FileJson
+                    size={48}
+                    className="text-indigo-400 mb-4 opacity-50"
+                  />
+                  <h3 className="text-white font-medium mb-2">
+                    {t("dialogs.export.json_title")}
+                  </h3>
+                  <p className="text-sm text-slate-400 max-w-xs">
+                    {t("dialogs.export.json_desc")}
+                  </p>
+
+                  <div className="flex gap-8 mt-6">
+                    <div className="flex flex-col">
+                      <span className="text-xs uppercase tracking-wider text-slate-500">
+                        {t("dialogs.export.nodes_label")}
+                      </span>
+                      <span className="text-2xl font-bold text-indigo-400">
+                        {nodes.length}
+                      </span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-xs uppercase tracking-wider text-slate-500">
+                        {t("dialogs.export.nodes_label")}
+                      </span>
+                      <span className="text-2xl font-bold text-indigo-400">
+                        {edges.length}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               )}
-              <span>{progress.message}</span>
-            </div>
-          )}
 
-          {/* Error */}
-          {error && (
-            <div className="error-section">
-              <AlertCircle size={20} />
-              <span>{error}</span>
-            </div>
-          )}
-        </div>
+              {/* Code Config */}
+              {exportMode === "code" && !generatedCode && (
+                <div className="flex flex-col items-center text-center p-8 bg-white/5 rounded-xl border border-white/5">
+                  <Code2
+                    size={48}
+                    className="text-indigo-400 mb-4 opacity-50"
+                  />
+                  <h3 className="text-white font-medium mb-2">
+                    {t("dialogs.export.code_title")}
+                  </h3>
+                  <p className="text-sm text-slate-400 max-w-xs mb-6">
+                    {t("dialogs.export.code_desc")}
+                  </p>
 
-        {/* Footer */}
-        <div className="export-dialog-footer">
-          <button
-            className="button-secondary"
-            onClick={handleClose}
-            disabled={isProcessing}
-          >
-            {generatedCode ? t("common.close") : t("common.cancel")}
-          </button>
-          {generatedCode ? (
-            <button className="button-primary" onClick={handleDownloadCode}>
-              <Download size={16} />
-              {t("common.download")}
-            </button>
-          ) : (
-            <button
-              className="button-primary"
-              onClick={handleExportClick}
-              disabled={isProcessing || nodes.length === 0}
-            >
-              {isProcessing ? (
-                <>
-                  <Loader size={16} className="spinner" />
-                  {t("common.processing")}
-                </>
-              ) : (
-                <>
+                  <div className="w-full max-w-xs text-left">
+                    <label className="text-xs font-medium text-slate-400 ml-1">
+                      {t("dialogs.export.framework_label")}
+                    </label>
+                    <select
+                      value={framework}
+                      onChange={(e) => setFramework(e.target.value)}
+                      disabled={isProcessing}
+                      className="w-full mt-1 px-3 py-2 bg-slate-900 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-500"
+                    >
+                      <option value="playwright">Playwright</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {/* Generated Code Preview */}
+              {generatedCode && (
+                <div className="flex-1 flex flex-col min-h-0 bg-slate-950 border border-white/10 rounded-xl overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-2 border-b border-white/10 bg-slate-900/50">
+                    <div className="flex items-center gap-2 text-xs text-indigo-300">
+                      <FileCode size={14} />
+                      <span>Generated Script</span>
+                    </div>
+                    <button
+                      onClick={handleCopyCode}
+                      className="text-xs flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors"
+                    >
+                      <FileCode size={14} />
+                      {t("common.copy")}
+                    </button>
+                  </div>
+                  <pre className="flex-1 overflow-auto p-4 text-xs font-mono text-slate-300 leading-relaxed custom-scrollbar">
+                    <code>{generatedCode}</code>
+                  </pre>
+                </div>
+              )}
+
+              {/* Status Messages */}
+              {(progress || error) && (
+                <div
+                  className={cn(
+                    "mt-6 p-4 rounded-lg flex items-center gap-3 border",
+                    error
+                      ? "bg-red-500/10 border-red-500/20 text-red-400"
+                      : progress?.stage === "complete"
+                        ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                        : "bg-indigo-500/10 border-indigo-500/20 text-indigo-400",
+                  )}
+                >
+                  {error ? (
+                    <AlertCircle size={20} />
+                  ) : progress?.stage === "complete" ? (
+                    <CheckCircle size={20} />
+                  ) : (
+                    <Loader size={20} className="animate-spin" />
+                  )}
+                  <span className="text-sm font-medium">
+                    {error || progress?.message}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 border-t border-white/5 bg-black/20 flex justify-end gap-3">
+              <button
+                onClick={handleClose}
+                disabled={isProcessing}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
+              >
+                {generatedCode ? t("common.close") : t("common.cancel")}
+              </button>
+
+              {generatedCode ? (
+                <button
+                  onClick={handleDownloadCode}
+                  className="px-6 py-2 rounded-lg text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-2"
+                >
                   <Download size={16} />
-                  {t("common.export")}
-                </>
+                  {t("common.download")}
+                </button>
+              ) : (
+                <button
+                  onClick={handleExportClick}
+                  disabled={isProcessing || nodes.length === 0}
+                  className="px-6 py-2 rounded-lg text-sm font-medium bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-lg shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader size={16} className="animate-spin" />
+                      {t("common.processing")}
+                    </>
+                  ) : (
+                    <>
+                      <Download size={16} />
+                      {t("common.export")}
+                    </>
+                  )}
+                </button>
               )}
-            </button>
-          )}
+            </div>
+          </Motion.div>
         </div>
-      </div>
-    </div>
+      )}
+    </AnimatePresence>
   );
 };
 

@@ -18,7 +18,9 @@ import StyledMiniMap from "./components/StyledMiniMap";
 import { nodeTypes } from "./components/nodes";
 import CustomConnectionLine from "./components/CustomConnectionLine";
 import CustomEdge from "./components/edges/CustomEdge";
-
+import ApiKeysModal from "./components/ApiKeysModal";
+import SettingsModal from "./components/SettingsModal";
+import { useSettings } from "./context/SettingsContext";
 const edgeTypes = {
   custom: CustomEdge,
 };
@@ -72,6 +74,10 @@ export default function App() {
     renameFlow,
     renameProject,
   } = useProjectManager();
+
+  // Settings Context
+  const { openSettings, openApiKeys, showGrid, enableSnapping, showMinimap } =
+    useSettings();
 
   // Migration Effect
   React.useEffect(() => {
@@ -444,6 +450,7 @@ export default function App() {
   const flowConfig = useMemo(
     () => ({
       ...staticFlowProps,
+      snapToGrid: enableSnapping, // Controlled by Global Settings
       nodes,
       edges,
       onNodesChange,
@@ -484,6 +491,7 @@ export default function App() {
       onSelectionContextMenu,
       onDrop,
       onDragOver,
+      enableSnapping, // Dependency for memo
     ],
   );
 
@@ -513,7 +521,8 @@ export default function App() {
 
         {/* 1. Header (MAREA Refactored) */}
         <AppHeader
-          onOpenSettings={() => setIsCreationPanelVisible(true)}
+          onOpenSettings={openSettings}
+          onOpenApiKeys={openApiKeys}
           selectedProject={currentProject}
           selectedFlow={currentProject?.flows?.find(
             (f) => f.id === currentFlowId,
@@ -529,16 +538,18 @@ export default function App() {
           <main className="flex-1 relative kanban-board-bg">
             <div ref={reactFlowWrapper} className="w-full h-full relative">
               <ReactFlow {...flowConfig}>
-                <StyledMiniMap />
+                {showMinimap && <StyledMiniMap />}
                 <Controls />
 
-                <Background
-                  className="react-flow-background"
-                  variant="dots"
-                  gap={24}
-                  size={1}
-                  color="#262626" // Grid dots color
-                />
+                {showGrid && (
+                  <Background
+                    className="react-flow-background"
+                    variant="dots"
+                    gap={24}
+                    size={1}
+                    color="#262626" // Grid dots color
+                  />
+                )}
 
                 {/* VIGNETTE OVERLAY (For depth) */}
                 <div
@@ -599,8 +610,11 @@ export default function App() {
             updateNodeConfiguration={updateNodeConfiguration}
             nodes={nodes}
           />
-        </div>
 
+          {/* Global Settings Modal */}
+          <SettingsModal />
+          <ApiKeysModal />
+        </div>
         {/* Modals/Dialogs */}
         <ImportDialog
           isOpen={isImportDialogOpen}
@@ -642,6 +656,8 @@ export default function App() {
           isRunning={executionProgress.status === "running"}
           onRun={handleExecuteFlow}
           onSave={handleSaveFlow}
+          onShowImport={() => setIsImportDialogOpen(true)}
+          onShowExport={() => setIsExportDialogOpen(true)}
         />
 
         <CreationModal

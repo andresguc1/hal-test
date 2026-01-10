@@ -12,6 +12,7 @@ import UserConfigMenu from "./UserConfigMenu";
 
 export default function UserMenu({
   onOpenSettings,
+  onOpenApiKeys,
   apiUrl = (import.meta.env.PROD
     ? "https://hal-test-backend.onrender.com"
     : "http://localhost:2001") + "/api/status",
@@ -128,6 +129,7 @@ export default function UserMenu({
           }
           onRefresh={checkApiStatus}
           onOpenSettings={onOpenSettings}
+          onOpenApiKeys={onOpenApiKeys}
           onLogout={() => console.log("Logout triggered")}
           currentLanguage={i18n.language.split("-")[0]}
           onLanguageChange={handleLanguageChange}

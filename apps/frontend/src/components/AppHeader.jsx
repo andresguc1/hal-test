@@ -22,7 +22,12 @@ const HeaderButton = ({ onClick, children, title, className }) => (
   </Motion.button>
 );
 
-function AppHeader({ onOpenSettings, selectedProject, selectedFlow }) {
+function AppHeader({
+  onOpenSettings,
+  onOpenApiKeys,
+  selectedProject,
+  selectedFlow,
+}) {
   const { theme, setTheme } = useTheme();
   const { t } = useTranslation();
 
@@ -96,7 +101,10 @@ function AppHeader({ onOpenSettings, selectedProject, selectedFlow }) {
             />
           </div>
         </HeaderButton>
-        <UserMenu onOpenSettings={onOpenSettings} />
+        <UserMenu
+          onOpenSettings={onOpenSettings}
+          onOpenApiKeys={onOpenApiKeys}
+        />
       </div>
     </header>
   );

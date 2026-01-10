@@ -27,26 +27,100 @@ const AbyssNode = ({ data, selected, type }) => {
   const showDetails = zoom > 0.5;
 
   // 4. Styles
+  // Determine Status Color
+  const getStatusColor = (state) => {
+    switch (state) {
+      case "success":
+        return "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]";
+      case "error":
+        return "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]";
+      case "running":
+        return "bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.6)]";
+      default:
+        return "bg-slate-600"; // Idle
+    }
+  };
+
+  // Determine Handle Visibility
+  const showInputs = data.configuration?.showInputs !== false;
+  const showOutputs = data.configuration?.showOutputs !== false;
+
+  // 4. Styles
+  // Determine Border Color based on Status
+  // Ultra-visible status colors
+  const getStatusStyles = (state) => {
+    switch (state) {
+      case "success":
+        return {
+          color: "#10b981",
+          shadow:
+            "0 0 30px rgba(16,185,129,0.5), inset 0 0 10px rgba(16,185,129,0.2)",
+        };
+      case "error":
+        return {
+          color: "#ef4444",
+          shadow:
+            "0 0 30px rgba(239,68,68,0.5), inset 0 0 10px rgba(239,68,68,0.2)",
+        };
+      case "running":
+        return {
+          color: "#fbbf24",
+          shadow:
+            "0 0 40px rgba(251,191,36,0.6), inset 0 0 15px rgba(251,191,36,0.2)",
+          animation: "animate-pulse",
+        };
+      default:
+        return { color: null, shadow: null };
+    }
+  };
+
+  const {
+    color: statusColor,
+    shadow: statusShadow,
+  } = getStatusStyles(data.state);
+
   return (
     <div
+      style={{
+        borderColor: statusColor || undefined,
+        boxShadow: statusShadow || undefined,
+      }}
       className={cn(
-        "group relative min-w-[160px] rounded-lg p-3 transition-all duration-200 select-none border", // base layout
-        themeParams.base, // Applies BG and Base Border
-        selected ? themeParams.selected : "", // Applies Select Border and Glow
-        selected && "scale-[1.05] z-50", // Helper transform
-        !selected && "shadow-[0_4px_10px_rgba(0,0,0,0.3)]", // Default Shadow
+        "group relative min-w-[160px] rounded-lg p-3 transition-all duration-500 select-none border-[2px]", // Increased border width base
+        themeParams.base,
+
+        // Running Animation
+        data.state === "running" && "ring-4 ring-amber-500/20",
+        data.state === "running" && "animate-pulse",
+
+        // Priority Logic: Status Logic must override Selection
+        selected && statusColor ? "scale-[1.05] z-50 border-[3px]" : "",
+        selected && !statusColor ? themeParams.selected : "",
+
+        // Default Shadow
+        !selected && !statusColor && "shadow-[0_4px_10px_rgba(0,0,0,0.3)]",
       )}
     >
       {/* INPUT HANDLE */}
-      <Handle
-        type="target"
-        position={Position.Left}
-        className="!-left-3 !w-3 !h-3 !bg-white !border-[2px] !border-black/20 transition-colors"
-      />
+      {showInputs && (
+        <Handle
+          type="target"
+          position={Position.Left}
+          className="!-left-3 !w-3 !h-3 !bg-white !border-[2px] !border-black/20 transition-colors"
+        />
+      )}
 
       {/* HEADER */}
       {/* Header Overlay for Button Feel */}
       <div className="absolute inset-x-0 top-0 h-9 bg-black/10 rounded-t-lg border-b border-white/10" />
+
+      {/* STATUS LED */}
+      <div
+        className={cn(
+          "absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border border-white/20 transition-colors duration-300 z-10",
+          getStatusColor(data.state),
+        )}
+      />
 
       <div className="relative flex items-center gap-3 mb-1 pt-1 px-1">
         {/* Icon - Always White for Contrast */}
@@ -97,11 +171,13 @@ const AbyssNode = ({ data, selected, type }) => {
       )}
 
       {/* OUTPUT HANDLE */}
-      <Handle
-        type="source"
-        position={Position.Right}
-        className="!-right-3 !w-3 !h-3 !bg-white !border-[2px] !border-black/20 transition-colors"
-      />
+      {showOutputs && (
+        <Handle
+          type="source"
+          position={Position.Right}
+          className="!-right-3 !w-3 !h-3 !bg-white !border-[2px] !border-black/20 transition-colors"
+        />
+      )}
     </div>
   );
 };
