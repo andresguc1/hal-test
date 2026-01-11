@@ -67,41 +67,67 @@ export async function startInspector(page) {
         });
         document.body.appendChild(highlightEl);
 
+        // Helper to check if ID looks dynamic (e.g., container-1234, uid-abcde)
+        function isDynamicId(id) {
+            if (!id) return false;
+            // Matches: long numbers, GUID-like strings, randomized suffixes
+            return /([0-9]{3,})/.test(id) || /([a-f0-9]{8}-[a-f0-9]{4})/.test(id);
+        }
+
         // Smart Selector Generator
         function generateSelector(el) {
-            // 1. ID (Highest priority)
-            if (el.id) return `#${el.id}`;
+            const candidates = {};
 
-            // 2. Test IDs (Common in testing)
+            // 1. Data-Test Attributes (Gold Standard)
             const testIdAttrs = ['data-testid', 'data-test-id', 'data-test', 'data-cy'];
             for (const attr of testIdAttrs) {
                 if (el.hasAttribute(attr)) {
-                    return `[${attr}="${el.getAttribute(attr)}"]`;
+                    candidates.testId = `[${attr}="${el.getAttribute(attr)}"]`;
+                    break;
                 }
             }
 
-            // 3. Text Content (Great for buttons/links)
-            if (['BUTTON', 'A', 'SPAN', 'DIV'].includes(el.tagName)) {
+            // 2. ID (Attributes) - Only if not dynamic
+            if (el.id && !isDynamicId(el.id)) {
+                candidates.id = `#${el.id}`;
+            }
+
+            // 3. Aria Label (Accessibility)
+            if (el.getAttribute('aria-label')) {
+                candidates.aria = `[aria-label="${el.getAttribute('aria-label')}"]`;
+            }
+
+            // 4. Input Name (Forms)
+            if (el.tagName === 'INPUT' && el.getAttribute('name')) {
+                candidates.name = `input[name="${el.getAttribute('name')}"]`;
+            }
+
+            // 5. Text Content (Buttons/Links) - Contextual
+            if (['BUTTON', 'A', 'SPAN'].includes(el.tagName)) {
                 const text = el.innerText.trim();
-                // Avoid long texts or empty ones
-                if (text && text.length < 50 && !text.includes('\n')) {
-                    // Try to use playwright text selector engine if possible,
-                    // but for raw CSS/XPath we stick to standard attributes for now.
-                    // Returning a specialized object could be better, but we return a primary string for now.
-                    // We'll fallback to generation logic below.
+                // Short, meaningful text, no newlines
+                if (text && text.length < 30 && !text.includes('\n')) {
+                    // Using XPath for text as standard CSS doesn't support text matching seamlessly without :has or special syntax
+                    // We format this as a pseudo-selector for readability or standard xpath
+                    candidates.text = `//${el.tagName.toLowerCase()}[contains(text(), '${text}')]`;
                 }
             }
 
-            // 4. Input attributes (Name, Placeholder, Type)
-            if (el.tagName === 'INPUT') {
-                if (el.getAttribute('name')) return `input[name="${el.getAttribute('name')}"]`;
-                if (el.getAttribute('placeholder'))
-                    return `input[placeholder="${el.getAttribute('placeholder')}"]`;
-                if (el.getAttribute('type')) return `input[type="${el.getAttribute('type')}"]`;
-            }
+            // 6. Full CSS Path (Fallback)
+            candidates.cssPath = getCssPath(el);
 
-            // 5. CSS Path (Fallback)
-            return getCssPath(el);
+            // --- SELECTION STRATEGY ---
+            // Priority: TestID > Stable ID > Input Name > Aria > Text > CSS Path
+
+            if (candidates.testId)
+                return { best: candidates.testId, type: 'test_id', all: candidates };
+            if (candidates.id) return { best: candidates.id, type: 'id', all: candidates };
+            if (candidates.name) return { best: candidates.name, type: 'name', all: candidates };
+            if (candidates.aria)
+                return { best: candidates.aria, type: 'accessibility', all: candidates };
+            if (candidates.text) return { best: candidates.text, type: 'content', all: candidates };
+
+            return { best: candidates.cssPath, type: 'path', all: candidates };
         }
 
         function getCssPath(el) {
@@ -109,7 +135,7 @@ export async function startInspector(page) {
             const path = [];
             while (el.nodeType === Node.ELEMENT_NODE) {
                 let selector = el.nodeName.toLowerCase();
-                if (el.id) {
+                if (el.id && !isDynamicId(el.id)) {
                     selector += '#' + el.id;
                     path.unshift(selector);
                     break;
@@ -149,13 +175,18 @@ export async function startInspector(page) {
             e.stopImmediatePropagation();
 
             const el = e.target;
-            const selector = generateSelector(el);
+            const result = generateSelector(el);
 
             // Clean up
             cleanup();
 
             // Send to backend
-            window.onElementSelected({ selector });
+            // We verify the backend expects 'selector' property for backward compatibility
+            window.onElementSelected({
+                selector: result.best,
+                candidates: result.all,
+                strategy: result.type,
+            });
         }
 
         function cleanup() {
