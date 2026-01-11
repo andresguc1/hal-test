@@ -1,5 +1,3 @@
-// app.js
-// ==========================
 // 🚀 HaltTest Backend Server (Main Orchestrator)
 // ==========================
 

@@ -1,76 +1,97 @@
-import { useEffect, useRef } from 'react';
-import { io } from 'socket.io-client';
+import { useEffect, useRef } from "react";
+import { io } from "socket.io-client";
 
-const SOCKET_URL = 'http://127.0.0.1:2001';
+const SOCKET_URL = "http://127.0.0.1:2001";
 
-export const useHaltestSocket = (setNodes) => {
-    const socketRef = useRef(null);
+export const useHaltestSocket = (setNodes, onElementPicked) => {
+  const socketRef = useRef(null);
+  const onElementPickedRef = useRef(onElementPicked);
 
-    useEffect(() => {
-        if (!setNodes || typeof setNodes !== 'function') {
-            console.error('Haltest Socket: setNodes is missing or invalid');
-            return;
-        }
+  // Update ref when callback changes
+  useEffect(() => {
+    onElementPickedRef.current = onElementPicked;
+  }, [onElementPicked]);
 
-        console.log('Haltest Socket: 🔄 Connecting to', SOCKET_URL);
+  useEffect(() => {
+    if (!setNodes || typeof setNodes !== "function") {
+      console.error("Haltest Socket: setNodes is missing or invalid");
+      return;
+    }
 
-        // Initialize connection
-        socketRef.current = io(SOCKET_URL, {
-            autoConnect: true,
-            reconnection: true,
-            reconnectionAttempts: 10,
-            timeout: 10000
+    console.log("Haltest Socket: 🔄 Connecting to", SOCKET_URL);
+
+    // Initialize connection
+    socketRef.current = io(SOCKET_URL, {
+      autoConnect: true,
+      reconnection: true,
+      reconnectionAttempts: 10,
+      timeout: 10000,
+    });
+
+    const socket = socketRef.current;
+
+    socket.on("connect", () => {
+      console.log(
+        "Haltest Socket: ✅ Connected successfully (ID:",
+        socket.id,
+        ")",
+      );
+    });
+
+    socket.on("connect_error", (error) => {
+      console.error("Haltest Socket: ❌ Connection error:", error.message);
+    });
+
+    socket.on("execution-status", (data) => {
+      if (!data || !data.stepId) {
+        console.warn(
+          "Haltest Socket: Received malformed execution-status event",
+          data,
+        );
+        return;
+      }
+
+      const { stepId, status, error } = data;
+      console.log(`Haltest Socket: ⚡ Event [${stepId}] -> ${status}`);
+
+      setNodes((nds) => {
+        if (!Array.isArray(nds)) return nds;
+        return nds.map((node) => {
+          if (node.id === stepId) {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                state: status,
+                error: error || node.data.error,
+              },
+            };
+          }
+          return node;
         });
+      });
+    });
 
-        const socket = socketRef.current;
+    socket.on("disconnect", (reason) => {
+      console.warn("Haltest Socket: 🔌 Disconnected (Reason:", reason, ")");
+    });
 
-        socket.on('connect', () => {
-            console.log('Haltest Socket: ✅ Connected successfully (ID:', socket.id, ')');
-        });
+    // Listen for Element Picker events
+    socket.on("element_picked", (data) => {
+      console.log("Haltest Socket: 🎯 Element Picked:", data);
+      if (onElementPickedRef.current) {
+        onElementPickedRef.current(data);
+      }
+    });
 
-        socket.on('connect_error', (error) => {
-            console.error('Haltest Socket: ❌ Connection error:', error.message);
-        });
+    // Cleanup on unmount
+    return () => {
+      if (socket) {
+        console.log("Haltest Socket: Cleaning up connection");
+        socket.disconnect();
+      }
+    };
+  }, [setNodes]); // Removed onElementPicked from dependencies to avoid reconnections
 
-        socket.on('execution-status', (data) => {
-            if (!data || !data.stepId) {
-                console.warn('Haltest Socket: Received malformed execution-status event', data);
-                return;
-            }
-
-            const { stepId, status, error } = data;
-            console.log(`Haltest Socket: ⚡ Event [${stepId}] -> ${status}`);
-
-            setNodes((nds) => {
-                if (!Array.isArray(nds)) return nds;
-                return nds.map((node) => {
-                    if (node.id === stepId) {
-                        return {
-                            ...node,
-                            data: {
-                                ...node.data,
-                                state: status,
-                                error: error || node.data.error,
-                            },
-                        };
-                    }
-                    return node;
-                });
-            });
-        });
-
-        socket.on('disconnect', (reason) => {
-            console.warn('Haltest Socket: 🔌 Disconnected (Reason:', reason, ')');
-        });
-
-        // Cleanup on unmount
-        return () => {
-            if (socket) {
-                console.log('Haltest Socket: Cleaning up connection');
-                socket.disconnect();
-            }
-        };
-    }, [setNodes]);
-
-    return socketRef.current;
+  return socketRef.current;
 };

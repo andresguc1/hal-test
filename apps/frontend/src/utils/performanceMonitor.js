@@ -24,7 +24,7 @@ class PerformanceMonitor {
    * @returns {Function} Function to call when render completes
    */
   startRender(componentName) {
-    if (!this.enabled) return () => { };
+    if (!this.enabled) return () => {};
 
     const startTime = performance.now();
     const startMark = `${componentName}_render_start`;

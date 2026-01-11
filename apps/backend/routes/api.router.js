@@ -13,8 +13,15 @@ import * as schemas from '../schemas/index.js';
 import * as actions from '../controllers/action.controller.js';
 import importRouter from './import.router.js';
 import exportRouter from './export.router.js';
+import { startInspectorAction } from '../controllers/inspector.controller.js';
 
 const router = Router();
+
+// ==========================================================
+// INSPECTOR ROUTES
+// ==========================================================
+router.post('/inspector/start', startInspectorAction);
+console.log('✅ Inspector route registered: POST /api/inspector/start');
 
 // ==========================================================
 // DECLARATIVE ROUTE CONFIGURATION

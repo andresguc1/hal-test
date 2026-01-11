@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { motion as Motion, AnimatePresence } from "motion/react";
-import { X, Play, Info } from "lucide-react";
+import { X, Play, Info, Crosshair } from "lucide-react";
+import { useToast } from "@/hooks/useToast";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { CATEGORY_STYLES, NODE_TYPE_MAP } from "@/config/nodeConstants";
@@ -127,6 +128,26 @@ function NodeConfigurationPanel({
   onDeleteNode,
 }) {
   const { t } = useTranslation();
+  const toast = useToast();
+
+  const handleStartInspector = async () => {
+    try {
+      const response = await fetch("/api/inspector/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ browserId: null }), // Use latest/active browser
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success(t("common.inspector_started", "Pick an element..."));
+      } else {
+        toast.error(data.message || "Failed to start inspector");
+      }
+    } catch {
+      toast.error("Network error starting inspector");
+    }
+  };
 
   // Use the live node from the nodes array if available, otherwise fallback to action snapshot
   const activeNode = useMemo(() => {
@@ -253,9 +274,19 @@ function NodeConfigurationPanel({
           <div key={field.key} className="space-y-1.5">
             <label className="text-[10px] uppercase tracking-wider font-semibold text-slate-500 ml-1 flex items-center justify-between">
               {field.label}
-              <span className="text-[9px] text-indigo-400 opacity-70">
-                CSS / XPath
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[9px] text-indigo-400 opacity-70">
+                  CSS / XPath
+                </span>
+                <button
+                  onClick={handleStartInspector}
+                  className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 text-[10px] transition-colors border border-indigo-500/20"
+                  title="Pick Element from Browser"
+                >
+                  <Crosshair size={10} />
+                  <span>Pick</span>
+                </button>
+              </div>
             </label>
             <div className="relative">
               <input

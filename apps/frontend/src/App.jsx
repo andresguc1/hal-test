@@ -163,8 +163,25 @@ export default function App() {
     // clearFlow, // Unused
   } = useFlowManager(currentProject, currentFlowId);
 
-  // Initialize Socket.io connection for real-time updates
-  useHaltestSocket(setNodes);
+  // Element Picker Callback
+  const handleElementPicked = useCallback(
+    (data) => {
+      // If we have an active node being configured, update it
+      if (selectedAction && data.selector) {
+        updateNodeConfiguration(selectedAction.nodeId, {
+          selector: data.selector,
+        });
+        toast.success(t("common.selector_captured", "Target captured!"));
+      } else {
+        // If no node is selected, maybe just notify
+        console.warn("Element picked but no node is being configured.");
+      }
+    },
+    [selectedAction, updateNodeConfiguration, toast, t],
+  );
+
+  // Initialize Socket.io connection for real-time updates and inspector events
+  useHaltestSocket(setNodes, handleElementPicked);
 
   // Computed values
   const isConfigurationPanelVisible = selectedAction !== null;

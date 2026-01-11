@@ -37,3 +37,10 @@ export const emitExecutionStatus = ({ stepId, status, error = null }) => {
         console.warn('⚠️ [Socket.io] Skipping emission: Socket.io server not initialized');
     }
 };
+
+export const emitElementPicked = (selectorData) => {
+    if (io) {
+        console.log(`📡 [Socket.io] Emitting element_picked`, selectorData);
+        io.emit('element_picked', selectorData);
+    }
+};
