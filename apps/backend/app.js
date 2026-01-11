@@ -6,6 +6,8 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import { createServer } from 'http';
+import { init as initSocket } from './socket.js';
 
 // Express Modules and Middlewares
 import { apiLimiter, helmetMiddleware } from './middlewares/security.js';
@@ -19,7 +21,9 @@ import mockRouter from './routes/mock.router.js';
 import projectRouter from './routes/project.router.js';
 
 const app = express();
+const server = createServer(app);
 const PORT = process.env.PORT || 2001;
+initSocket(server);
 
 // --- 1. SECURITY MIDDLEWARES ---
 app.use(helmetMiddleware);
@@ -129,7 +133,7 @@ import { initDb } from './database/init.js';
 
 const startServer = async () => {
     await initDb();
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
         console.log(`\n🚀 ================================`);
         console.log(`   HaltTest Backend Server`);
         console.log(`   Running on: http://localhost:${PORT}`);

@@ -9,6 +9,7 @@ import { traceService } from '../services/trace.service.js';
 import { globalStateManager } from '../services/stateManager.js';
 import VariableManager from '../services/VariableManager.js';
 import aiService from '../services/AIService.js';
+import { emitExecutionStatus } from '../socket.js';
 import { z } from 'zod';
 import * as fsp from 'fs/promises';
 // import * as fs from 'fs';
@@ -178,6 +179,11 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
     const opts = req.body;
     let page, context;
 
+    const nodeId = opts.nodeId;
+    if (nodeId) {
+        emitExecutionStatus({ stepId: nodeId, status: 'running' });
+    }
+
     try {
         // 1. Get resources (browser, page, context)
         const isBrowserAction = ['launch_browser', 'close_browser'].includes(actionName);
@@ -223,6 +229,9 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
         }
 
         // 4. Respond
+        if (nodeId) {
+            emitExecutionStatus({ stepId: nodeId, status: 'success' });
+        }
         return res.status(200).json({
             success: true,
             message: result.message,
@@ -258,6 +267,9 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
         console.error(`[ERROR] ${actionName}:`, errorMessage);
 
         // 6. Respond with Error
+        if (nodeId) {
+            emitExecutionStatus({ stepId: nodeId, status: 'failed', error: errorMessage });
+        }
         return res.status(status).json({
             success: false,
             message: `${req.t('common.error_internal')} (${actionName})`,
@@ -272,11 +284,15 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
 // ==========================================================
 
 export const launchBrowserAction = async (req, res) => {
+    const nodeId = req.body.nodeId;
+    if (nodeId) emitExecutionStatus({ stepId: nodeId, status: 'running' });
+
     try {
         console.log('[ACTION] Starting browser launch...');
         const { browserId } = await browserService.launchBrowser(req.body);
 
         console.log(`[SUCCESS] Browser launched with ID: ${browserId}`);
+        if (nodeId) emitExecutionStatus({ stepId: nodeId, status: 'success' });
 
         // Debug storage writing disabled per user request
 
@@ -290,6 +306,12 @@ export const launchBrowserAction = async (req, res) => {
         });
     } catch (error) {
         console.error('[ERROR] Failed to launch browser:', error.message);
+        if (req.body.nodeId)
+            emitExecutionStatus({
+                stepId: req.body.nodeId,
+                status: 'failed',
+                error: error.message,
+            });
         return res.status(500).json({
             success: false,
             message: req.t('actions.launch_browser.error'),
@@ -302,6 +324,8 @@ export const openUrlAction = async (req, res) => {
     const actionName = 'open_url';
     const start = Date.now();
     let browserId;
+    const nodeId = req.body.nodeId;
+    if (nodeId) emitExecutionStatus({ stepId: nodeId, status: 'running' });
 
     try {
         const { url, waitUntil = 'load', timeout = 30000 } = req.body ?? {};
@@ -356,6 +380,7 @@ export const openUrlAction = async (req, res) => {
         });
 
         console.log(`[SUCCESS] URL opened (${duration}ms): ${url}`);
+        if (nodeId) emitExecutionStatus({ stepId: nodeId, status: 'success' });
 
         return res.status(200).json({
             success: true,
@@ -366,6 +391,12 @@ export const openUrlAction = async (req, res) => {
         });
     } catch (error) {
         console.error(`[ERROR] ${actionName}:`, error.message);
+        if (req.body.nodeId)
+            emitExecutionStatus({
+                stepId: req.body.nodeId,
+                status: 'failed',
+                error: error.message,
+            });
 
         traceService.add({ action: actionName, error: error.message, status: 'error' });
 
@@ -379,7 +410,8 @@ export const openUrlAction = async (req, res) => {
 
 export const closeBrowserAction = async (req, res) => {
     try {
-        let { browserId } = req.body ?? {};
+        let { browserId, nodeId } = req.body ?? {};
+        if (nodeId) emitExecutionStatus({ stepId: nodeId, status: 'running' });
         if (browserId === '' || browserId === null) browserId = undefined;
 
         const validation = validateBrowser(req, browserId);
@@ -396,6 +428,8 @@ export const closeBrowserAction = async (req, res) => {
 
         traceService.add({ action: 'close_browser', browserId, status: 'success' });
 
+        if (nodeId) emitExecutionStatus({ stepId: nodeId, status: 'success' });
+
         return res.status(200).json({
             success: true,
             message: req.t('actions.close_browser.success'),
@@ -403,6 +437,12 @@ export const closeBrowserAction = async (req, res) => {
         });
     } catch (error) {
         console.error('[ERROR] closeBrowserAction:', error.message);
+        if (req.body.nodeId)
+            emitExecutionStatus({
+                stepId: req.body.nodeId,
+                status: 'failed',
+                error: error.message,
+            });
         return res.status(500).json({
             success: false,
             message: req.t('actions.close_browser.error'),

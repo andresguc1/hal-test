@@ -41,6 +41,7 @@ import { migrateFromLegacy } from "./utils/migration";
 import { useFlowShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useToast } from "./hooks/useToast";
 import { HalToaster } from "./components/Toast";
+import { useHaltestSocket } from "./hooks/useHaltestSocket";
 import { useFigmaInteraction } from "./hooks/useFigmaInteraction";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "next-themes";
@@ -161,6 +162,9 @@ export default function App() {
     clipboard,
     // clearFlow, // Unused
   } = useFlowManager(currentProject, currentFlowId);
+
+  // Initialize Socket.io connection for real-time updates
+  useHaltestSocket(setNodes);
 
   // Computed values
   const isConfigurationPanelVisible = selectedAction !== null;

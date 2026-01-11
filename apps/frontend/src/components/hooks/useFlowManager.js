@@ -712,6 +712,8 @@ export const useFlowManager = (currentProject, currentFlowId) => {
         try {
           const builder = payloadBuilders[type];
           bodyToSend = builder ? builder(payload || {}) : payload || {};
+          // Inject nodeId for WebSocket tracking
+          bodyToSend.nodeId = nodeId;
         } catch (builderError) {
           console.error(`Error en payload builder para ${type}:`, builderError);
           const errorMsg = `Payload inválido: ${builderError.message}`;
