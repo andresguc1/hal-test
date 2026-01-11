@@ -99,7 +99,11 @@ export default function UserMenu({
       <DropdownMenuTrigger asChild>
         <button className="relative h-8 w-8 rounded-lg overflow-hidden ring-1 ring-gray-200 dark:ring-white/10 hover:ring-gray-300 dark:hover:ring-white/20 active:scale-95 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30">
           <Avatar className="h-full w-full">
-            <AvatarImage src={profilePic} alt="User" className="object-cover" />
+            <AvatarImage
+              src={profilePic || "/images/haltest_logo.jpeg"}
+              alt="User"
+              className="object-cover"
+            />
             <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white text-xs font-medium">
               <User size={14} strokeWidth={2} />
             </AvatarFallback>
@@ -130,7 +134,6 @@ export default function UserMenu({
           onRefresh={checkApiStatus}
           onOpenSettings={onOpenSettings}
           onOpenApiKeys={onOpenApiKeys}
-          onLogout={() => console.log("Logout triggered")}
           currentLanguage={i18n.language.split("-")[0]}
           onLanguageChange={handleLanguageChange}
           languages={[

@@ -33,17 +33,18 @@ function CustomNode({ data, selected }) {
   const isSuccess = state === NODE_STATES.SUCCESS;
 
   const containerClasses = cn(
-    "relative min-w-[240px] rounded-xl overflow-hidden transition-all duration-300",
-    "bg-slate-900/60 backdrop-blur-xl", // Glass Box
-    "border border-white/10", // Glass Edge
+    "relative min-w-[240px] rounded-xl overflow-hidden",
+    "bg-[var(--bg-node)]/80 backdrop-blur-xl", // Themed Glass Box
+    "border border-[var(--border-ui)]", // Themed Glass Edge
     "shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)]", // Inner Bevel (Lighting)
+    "transition-[background,border,box-shadow,opacity] duration-400 ease", // Targeted transitions (no transform!)
 
     // Hover State
-    "hover:bg-slate-800/60 hover:border-white/20 hover:shadow-lg",
+    "hover:bg-[var(--bg-panel)] hover:border-[var(--border-ui)]/40 hover:shadow-lg",
 
     // Selected State
     selected &&
-      "ring-2 ring-cyan-400 ring-offset-2 ring-offset-[#0f172a] shadow-xl z-50",
+      "ring-2 ring-cyan-400 ring-offset-2 ring-offset-[var(--bg-canvas)] shadow-xl z-50",
 
     // Error State (Overrides everything)
     isError &&
@@ -55,7 +56,13 @@ function CustomNode({ data, selected }) {
   );
 
   return (
-    <div className={containerClasses}>
+    <div
+      className={containerClasses}
+      style={{
+        transition:
+          "background-color 0.4s, border-color 0.4s, box-shadow 0.4s, opacity 0.4s",
+      }}
+    >
       {/* 4. Top Color Strip */}
       <div
         className="h-1 w-full opacity-80"
@@ -66,7 +73,7 @@ function CustomNode({ data, selected }) {
       <div className="p-3 flex items-start gap-3">
         {/* Left Icon Box */}
         <div
-          className="w-12 h-12 rounded-lg flex items-center justify-center shrink-0 bg-white/5 border border-white/5 text-slate-300 backdrop-blur-sm shadow-inner"
+          className="w-12 h-12 rounded-lg flex items-center justify-center shrink-0 bg-[var(--bg-canvas)] border border-[var(--border-ui)] text-[var(--text-muted)] backdrop-blur-sm shadow-inner"
           style={{
             color: isError ? "#ef4444" : isRunning ? "#60a5fa" : categoryColor,
           }}
@@ -83,14 +90,14 @@ function CustomNode({ data, selected }) {
         {/* Text Content */}
         <div className="flex flex-col min-w-0 flex-1">
           {/* Category Label (Small Caps) */}
-          <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500 mb-0.5">
+          <span className="text-[9px] font-bold uppercase tracking-widest text-[var(--text-muted)] mb-0.5 opacity-70">
             {categoryKey.replace(/_/g, " ")}
           </span>
 
           {/* Node Title */}
           <h3
             className={cn(
-              "text-sm font-bold text-slate-200 leading-tight truncate pr-2",
+              "text-sm font-bold text-[var(--text-main)] leading-tight truncate pr-2",
               isError && "text-red-400",
             )}
           >
@@ -100,12 +107,12 @@ function CustomNode({ data, selected }) {
           {/* Dynamic Summary / Subtitle (The "Smart" part) */}
           {data?.subLabel ||
             (data?.url && (
-              <span className="text-[10px] font-mono text-slate-500 mt-1 truncate">
+              <span className="text-[10px] font-mono text-[var(--text-muted)] mt-1 truncate">
                 {data.url}
               </span>
             )) ||
             (data?.selector && (
-              <span className="text-[10px] font-mono text-cyan-400/70 mt-1 truncate max-w-[150px] bg-cyan-950/30 px-1 py-0.5 rounded">
+              <span className="text-[10px] font-mono text-cyan-500/80 mt-1 truncate max-w-[150px] bg-cyan-500/10 px-1 py-0.5 rounded border border-cyan-500/20">
                 {data.selector}
               </span>
             ))}

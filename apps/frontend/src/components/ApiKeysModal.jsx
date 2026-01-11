@@ -75,7 +75,6 @@ export default function ApiKeysModal() {
 
   const handleSave = () => {
     // Here you would normally save to localStorage or backend vault
-    console.log("Saving keys:", keys);
     closeApiKeys();
   };
 

@@ -29,7 +29,7 @@ const CustomConnectionLine = ({
       {/* Main connection line */}
       <path
         d={edgePath}
-        stroke="url(#connectionGradient)"
+        stroke="var(--connection-line)"
         strokeWidth={2.5}
         fill="none"
         strokeDasharray="8 4"

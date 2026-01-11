@@ -43,8 +43,7 @@ import { useToast } from "./hooks/useToast";
 import { HalToaster } from "./components/Toast";
 import { useFigmaInteraction } from "./hooks/useFigmaInteraction";
 import { useTranslation } from "react-i18next";
-import { ThemeProvider } from "./components/theme-provider";
-// import { useTheme } from "next-themes"; // Unused
+import { useTheme } from "next-themes";
 
 // ========================================
 // COMPONENTE PRINCIPAL (MAREA REFACTOR)
@@ -54,6 +53,8 @@ export default function App() {
   const { t } = useTranslation();
 
   // Theme
+  const { theme } = useTheme();
+
   // Toast notifications
   const toast = useToast();
 
@@ -525,7 +526,7 @@ export default function App() {
       connectionLineComponent: CustomConnectionLine,
       connectionLineStyle: {
         strokeWidth: 2,
-        stroke: "#6366f1", // Indigo-500
+        stroke: "var(--connection-line)",
       },
     }),
     [
@@ -552,13 +553,8 @@ export default function App() {
   // ========================================
 
   return (
-    <ThemeProvider
-      attribute="class"
-      defaultTheme="dark"
-      enableSystem={false}
-      storageKey="vite-ui-theme"
-    >
-      <div className="relative h-screen w-screen flex flex-col overflow-hidden bg-[#0f172a] text-slate-200 antialiased font-sans selection:bg-cyan-500/30 m-0 p-0 border-none">
+    <>
+      <div className="relative h-screen w-screen flex flex-col overflow-hidden bg-[var(--bg-canvas)] text-[var(--text-primary)] transition-all duration-400 antialiased font-sans selection:bg-cyan-500/30 m-0 p-0 border-none">
         {/* Progress Bar */}
         {executionProgress.total > 0 && (
           <ProgressBar
@@ -599,16 +595,17 @@ export default function App() {
                     variant="dots"
                     gap={24}
                     size={1}
-                    color="#262626" // Grid dots color
+                    color="var(--grid-dots)"
                   />
                 )}
 
-                {/* VIGNETTE OVERLAY (For depth) */}
+                {/* VIGNETTE OVERLAY (For depth) - Theme Aware */}
                 <div
-                  className="absolute inset-0 pointer-events-none z-[1] mix-blend-multiply"
+                  className="absolute inset-0 pointer-events-none z-[1] mix-blend-multiply transition-opacity duration-400"
                   style={{
                     background:
-                      "radial-gradient(circle at center, transparent 0%, rgba(15, 23, 42, 0.4) 100%)",
+                      "radial-gradient(circle at center, transparent 30%, rgba(0, 0, 0, 0.2) 100%)",
+                    opacity: theme === "dark" ? 0.4 : 0.1,
                   }}
                 />
 
@@ -752,6 +749,6 @@ export default function App() {
         {/* TOAST SYSTEM (Positioned relative to Panel) */}
         <HalToaster offsetRight={isConfigurationPanelVisible ? 350 : 0} />
       </div>
-    </ThemeProvider>
+    </>
   );
 }

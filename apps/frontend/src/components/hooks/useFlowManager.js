@@ -543,11 +543,6 @@ export const useFlowManager = (currentProject, currentFlowId) => {
    * Update node with screenshot data
    */
   const updateNodeScreenshot = useCallback((nodeId, timing, screenshotData) => {
-    console.log("🖼️ updateNodeScreenshot called:", {
-      nodeId,
-      timing,
-      screenshotData,
-    });
     setNodes((nds) =>
       nds.map((node) => {
         if (node.id !== nodeId) return node;
@@ -562,10 +557,6 @@ export const useFlowManager = (currentProject, currentFlowId) => {
             },
           },
         };
-        console.log("🖼️ Updated node:", {
-          nodeId,
-          screenshots: updatedNode.data.screenshots,
-        });
         return updatedNode;
       }),
     );
@@ -676,8 +667,7 @@ export const useFlowManager = (currentProject, currentFlowId) => {
   // OPTIMIZACIÓN 8: Ejecutar paso con mejor manejo de errores
   // ========================================
   const executeStep = useCallback(
-    async (action, options = {}) => {
-      console.log(options);
+    async (action, _options = {}) => {
       if (!action || !action.nodeId) {
         console.error("Acción inválida", action);
         return { success: false, error: "Acción inválida" };
@@ -842,7 +832,7 @@ export const useFlowManager = (currentProject, currentFlowId) => {
           }
 
           if (explicitScreenshot) {
-            console.log(
+            logger.info(
               "📸 Screenshot returned by node, reusing for history...",
             );
             // Save the returned screenshot as the "after" state
@@ -923,10 +913,6 @@ export const useFlowManager = (currentProject, currentFlowId) => {
   // ========================================
   const onConnect = useCallback(
     (connection) => {
-      console.log("🔗 onConnect triggered!", connection);
-      console.log("📊 Current nodes:", nodes.length);
-      console.log("📊 Current edges:", edges.length);
-
       // VALIDACIÓN 1: Prevenir conexiones duplicadas
       const isDuplicate = edges.some(
         (edge) =>
@@ -935,7 +921,6 @@ export const useFlowManager = (currentProject, currentFlowId) => {
       );
 
       if (isDuplicate) {
-        console.log("❌ Duplicate connection detected");
         logger.warn(
           "Duplicate connection rejected",
           connection,
@@ -950,7 +935,6 @@ export const useFlowManager = (currentProject, currentFlowId) => {
 
       // VALIDACIÓN 2: Prevenir auto-conexiones
       if (connection.source === connection.target) {
-        console.log("❌ Self-connection detected");
         setApiStatus({
           state: "warning",
           message: "⚠️ No se puede conectar un nodo consigo mismo",
@@ -960,7 +944,6 @@ export const useFlowManager = (currentProject, currentFlowId) => {
 
       // VALIDACIÓN 3: Validar ciclos antes de agregar edge
       if (wouldCreateCycle(connection, nodes, edges)) {
-        console.log("❌ Cycle detected, rejecting connection");
         logger.warn(
           "Cycle detected, connection rejected",
           connection,
@@ -973,7 +956,6 @@ export const useFlowManager = (currentProject, currentFlowId) => {
         return;
       }
 
-      console.log("✅ Adding edge...");
       saveToHistory();
 
       // Agregar edge con ID único y label
@@ -1036,7 +1018,6 @@ export const useFlowManager = (currentProject, currentFlowId) => {
         );
       });
 
-      console.log("✅ Edge added successfully");
       logger.debug("Edge added", connection, "useFlowManager");
 
       setApiStatus({
@@ -1159,7 +1140,6 @@ export const useFlowManager = (currentProject, currentFlowId) => {
       }
 
       console.group("🚀 Execute Flow - Plan");
-      console.log(`Detected ${connectedComponents.length} independent flows.`);
 
       // Validate cycles in each component
       for (const componentNodes of connectedComponents) {
@@ -1219,8 +1199,7 @@ export const useFlowManager = (currentProject, currentFlowId) => {
         // ISOLATION: Reset runtime context for each flow
         const runtimeContext = {};
         let browserId = null; // Track browser ID for cleanup
-
-        console.log(
+        logger.info(
           `▶ Starting Flow ${flowIndex + 1}/${connectedComponents.length} (${sortedNodes.length} steps)`,
         );
 
@@ -1282,7 +1261,6 @@ export const useFlowManager = (currentProject, currentFlowId) => {
           // CLEANUP: Always close browser if it was opened, even on error
           if (browserId) {
             try {
-              console.log(`🧹 Cleaning up browser ${browserId}...`);
               const apiBase = import.meta.env.PROD
                 ? "https://hal-test-backend.onrender.com"
                 : "http://localhost:2001";
@@ -1291,7 +1269,6 @@ export const useFlowManager = (currentProject, currentFlowId) => {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ browserId }),
               });
-              console.log(`✓ Browser ${browserId} closed successfully`);
             } catch (cleanupError) {
               console.warn(
                 `⚠ Failed to close browser ${browserId}:`,

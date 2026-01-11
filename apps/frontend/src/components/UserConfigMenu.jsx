@@ -106,6 +106,17 @@ const UserConfigMenu = ({
           <span className="text-xs font-medium">Log Out</span>
         </Button>
       </div>
+
+      <div className="mt-1 pb-1 px-3 flex items-center justify-between opacity-20 hover:opacity-100 transition-opacity duration-500">
+        <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-slate-500">
+          HalTest Core
+        </span>
+        <img
+          src="/images/haltest_logo.jpeg"
+          className="w-4 h-4 rounded-sm"
+          alt="logo"
+        />
+      </div>
     </div>
   );
 };

@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { ReactFlowProvider } from "@xyflow/react";
 import { ToastProvider, HalToaster } from "./components/Toast";
 import { SettingsProvider } from "./context/SettingsContext";
+import { ThemeProvider } from "./components/theme-provider";
 import "./index.css";
 import "./i18n";
 import App from "./App";
@@ -23,13 +24,20 @@ const queryClient = new QueryClient({
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <ReactFlowProvider>
-        <ToastProvider>
-          <SettingsProvider>
-            <App />
-          </SettingsProvider>
-        </ToastProvider>
-      </ReactFlowProvider>
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="dark"
+        enableSystem={false}
+        storageKey="haltest-theme"
+      >
+        <ReactFlowProvider>
+          <ToastProvider>
+            <SettingsProvider>
+              <App />
+            </SettingsProvider>
+          </ToastProvider>
+        </ReactFlowProvider>
+      </ThemeProvider>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   </StrictMode>,

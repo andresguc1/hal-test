@@ -50,20 +50,19 @@ const AbyssNode = ({ data, selected, type }) => {
 
   // 6. Styles & Status
 
-
   const showInputs = data.configuration?.showInputs !== false;
   const showOutputs = data.configuration?.showOutputs !== false;
 
   const { color: statusColor, shadow: statusShadow } =
     data.state === "success" || data.state === "error"
       ? {
-        // Keep existing status styles
-        color: data.state === "success" ? "#10b981" : "#ef4444",
-        shadow:
-          data.state === "success"
-            ? "0 0 30px rgba(16,185,129,0.5)"
-            : "0 0 30px rgba(239,68,68,0.5)",
-      }
+          // Keep existing status styles
+          color: data.state === "success" ? "#10b981" : "#ef4444",
+          shadow:
+            data.state === "success"
+              ? "0 0 30px rgba(16,185,129,0.5)"
+              : "0 0 30px rgba(239,68,68,0.5)",
+        }
       : { color: null, shadow: null };
 
   // Determine invalid style
@@ -76,22 +75,26 @@ const AbyssNode = ({ data, selected, type }) => {
       style={{
         borderColor: statusColor || undefined,
         boxShadow: statusShadow || undefined,
+        transition:
+          "background-color 0.4s, border-color 0.4s, box-shadow 0.4s, transform 0s", // CRITICAL: transform 0s
       }}
       className={cn(
-        "group relative min-w-[160px] max-w-[300px] rounded-lg p-3 transition-all duration-500 select-none border-[2px]",
+        "group relative min-w-[160px] max-w-[300px] rounded-lg p-3 transition-[background,border,box-shadow,opacity] duration-400 select-none border-[2px]",
         themeParams.base,
         invalidStyle, // Add validation glow
 
         // Running Animation (Breathing Glow using Category Color)
         data.state === "running" &&
-        `ring-4 ring-${colorKey}-500/20 animate-pulse`,
+          `ring-4 ring-${colorKey}-500/20 animate-pulse`,
 
         // Selection
         selected && statusColor ? "scale-[1.05] z-50 border-[3px]" : "",
         selected && !statusColor ? themeParams.selected : "",
 
         // Default Shadow
-        !selected && !statusColor && "shadow-[0_4px_10px_rgba(0,0,0,0.3)]",
+        !selected &&
+          !statusColor &&
+          "shadow-md dark:shadow-[0_4px_10px_rgba(0,0,0,0.3)]",
       )}
     >
       {/* INPUT HANDLE */}
@@ -103,8 +106,8 @@ const AbyssNode = ({ data, selected, type }) => {
         />
       )}
 
-      {/* HEADER */}
-      <div className="absolute inset-x-0 top-0 h-9 bg-black/10 rounded-t-lg border-b border-white/10" />
+      {/* HEADER TINT (Subtle overlay for depth) */}
+      <div className="absolute inset-x-0 top-0 h-9 bg-black/10 rounded-t-lg border-b border-black/5 dark:border-white/10" />
 
       {/* STATUS LED & ICONS */}
       <div className="absolute -top-2 -right-2 z-20 flex gap-1.5 items-center">
@@ -172,7 +175,7 @@ const AbyssNode = ({ data, selected, type }) => {
             {displayLabel}
           </span>
           {showDetails && (
-            <span className="text-[10px] font-mono uppercase tracking-wider text-white/80">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-white drop-shadow-sm">
               {safeConfig.category === "network_control"
                 ? "NETWORK"
                 : safeConfig.category.replace("_", " ")}

@@ -206,7 +206,6 @@ export const manage_tabs = (payload = {}) => {
  * @returns {object} Un objeto vacío.
  */
 export const go_back = (_payload = {}) => {
-  console.log(_payload);
   return {
     browserId: asString(_payload?.browserId),
   };
@@ -218,7 +217,6 @@ export const go_back = (_payload = {}) => {
  * @returns {object} Un objeto vacío.
  */
 export const go_forward = (_payload = {}) => {
-  console.log(_payload);
   return {
     browserId: asString(_payload?.browserId),
   };

@@ -4,8 +4,8 @@
   position: relative;
 }
 
-/* 3D Click Animation - Collapses shadow on active */
-.custom-node:active {
+/* 3D Click Animation - Collapses shadow on active (DISABLED to prevent dragging jitter) */
+/* .custom-node:active {
   transform: translateY(4px) !important;
   box-shadow: 0 0 0 0 !important;
-}
+} */

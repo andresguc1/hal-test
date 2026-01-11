@@ -136,14 +136,12 @@ function NodeConfigurationPanel({
   }, [action, nodes]);
 
   // Memoize logic to prevent unnecessary re-renders
-  const { safeConfig, themeConfig, definedInputs } = useMemo(() => {
+  const { safeConfig, definedInputs } = useMemo(() => {
     if (!activeNode) return {};
 
     const _nodeKey = activeNode.data?.type || activeNode.type;
     const _config = NODE_TYPE_MAP[_nodeKey] || NODE_TYPE_MAP.launch_browser;
     const _safeConfig = _config || { category: "default", color: "slate" };
-    const _themeConfig =
-      CATEGORY_STYLES[_safeConfig.color]?.panel || CATEGORY_STYLES.slate.panel;
 
     // Fallback to default inputs if explicit mapping doesn't exist, but try to be smart
     let _definedInputs = NODE_INPUTS[_nodeKey];
@@ -163,12 +161,35 @@ function NodeConfigurationPanel({
     return {
       nodeKey: _nodeKey,
       safeConfig: _safeConfig,
-      themeConfig: _themeConfig,
       definedInputs: _definedInputs,
     };
   }, [activeNode]);
 
-  if (!isVisible || !activeNode) return null;
+  if (!isVisible) return null;
+
+  if (!activeNode) {
+    return (
+      <AnimatePresence>
+        <Motion.div
+          initial={{ x: 320, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          exit={{ x: 320, opacity: 0 }}
+          className="w-80 h-full glass-panel z-[var(--z-popover)] flex flex-col items-center justify-center p-8 text-center"
+        >
+          <div className="w-16 h-16 rounded-full bg-slate-500/10 flex items-center justify-center mb-4">
+            <Info size={32} className="text-slate-500 opacity-50" />
+          </div>
+          <h3 className="text-sm font-semibold text-slate-400 mb-2">
+            No Node Selected
+          </h3>
+          <p className="text-xs text-slate-500 leading-relaxed">
+            Select a node on the canvas to configure its settings and
+            parameters.
+          </p>
+        </Motion.div>
+      </AnimatePresence>
+    );
+  }
 
   // Helper to handle partial configuration updates safely
   const handleConfigUpdate = (key, value) => {
@@ -197,15 +218,15 @@ function NodeConfigurationPanel({
         return (
           <label
             key={field.key}
-            className="flex items-center gap-3 p-3 rounded-lg border border-white/5 bg-slate-950/30 cursor-pointer hover:bg-slate-950/50 transition-colors"
+            className="flex items-center gap-3 p-3 rounded-lg border border-[var(--border-ui)] bg-[var(--bg-canvas)]/50 cursor-pointer hover:bg-[var(--bg-canvas)] transition-colors"
           >
             <input
               type="checkbox"
               checked={!!value}
               onChange={(e) => handleConfigUpdate(field.key, e.target.checked)}
-              className="w-4 h-4 rounded border-slate-600 text-indigo-500 focus:ring-offset-0 focus:ring-indigo-500/50 bg-slate-900 !pointer-events-auto !cursor-pointer"
+              className="w-4 h-4 rounded border-[var(--border-ui)] text-indigo-500 focus:ring-offset-0 focus:ring-indigo-500/50 bg-[var(--bg-node)] !pointer-events-auto !cursor-pointer"
             />
-            <span className="text-xs font-medium text-slate-300 select-none">
+            <span className="text-xs font-medium text-[var(--text-main)] select-none">
               {field.label}
             </span>
           </label>
@@ -223,7 +244,7 @@ function NodeConfigurationPanel({
               onChange={(e) =>
                 handleConfigUpdate(field.key, parseFloat(e.target.value))
               }
-              className="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500/50 transition-all placeholder:text-slate-700 !pointer-events-auto !cursor-text !select-text"
+              className="w-full bg-[var(--bg-canvas)]/50 border border-[var(--border-ui)] rounded-lg px-3 py-2 text-xs text-[var(--text-main)] focus:outline-none focus:border-indigo-500/50 transition-all placeholder:text-[var(--text-muted)] opacity-70 !pointer-events-auto !cursor-text !select-text"
             />
           </div>
         );
@@ -243,8 +264,8 @@ function NodeConfigurationPanel({
                 placeholder={field.placeholder}
                 onChange={(e) => handleConfigUpdate(field.key, e.target.value)}
                 className={cn(
-                  "w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 pl-3 pr-8 text-xs font-mono focus:outline-none focus:border-indigo-500/50 transition-all placeholder:text-slate-700 !pointer-events-auto !cursor-text !select-text",
-                  value ? "text-indigo-300" : "text-slate-200",
+                  "w-full bg-[var(--bg-canvas)]/50 border border-[var(--border-ui)] rounded-lg px-3 py-2 pl-3 pr-8 text-xs font-mono focus:outline-none focus:border-indigo-500/50 transition-all placeholder:text-[var(--text-muted)] !pointer-events-auto !cursor-text !select-text",
+                  value ? "text-indigo-400" : "text-[var(--text-main)]",
                 )}
               />
               <div
@@ -287,29 +308,27 @@ function NodeConfigurationPanel({
           onMouseDown={stopPropagation}
           onClick={stopPropagation}
           className={cn(
-            "w-80 h-full bg-[#0f172a]/95 backdrop-blur-xl border-l z-[100] flex flex-col shadow-2xl !pointer-events-auto !cursor-auto !select-text relative",
-            themeConfig.border,
-            themeConfig.shadow,
+            "w-80 h-full glass-panel z-[var(--z-popover)] flex flex-col !pointer-events-auto !cursor-auto !select-text relative",
           )}
         >
           {/* HEADER */}
           <div
             className={cn(
               "h-14 shrink-0 flex items-center justify-between px-5 border-b",
-              `border-${colorKey}-500/20 bg-gradient-to-r from-${colorKey}-500/20 to-transparent`,
+              `border-${colorKey}-500/50 bg-gradient-to-r from-${colorKey}-600/60 via-${colorKey}-600/20 to-transparent`,
             )}
           >
             <div className="flex flex-col justify-center">
               <span
                 className={cn(
                   "text-[10px] uppercase tracking-widest font-bold mb-0.5",
-                  `text-${colorKey}-400`,
+                  `text-${colorKey}-500 dark:text-${colorKey}-400`,
                 )}
               >
                 {safeConfig.category.replace("_", " ")}
               </span>
               <div className="flex items-center gap-2">
-                <h2 className="text-sm font-bold text-slate-100 truncate max-w-[180px]">
+                <h2 className="text-sm font-bold text-[var(--text-main)] dark:text-white truncate max-w-[180px]">
                   {activeNode.data?.label || safeConfig.label}
                 </h2>
               </div>
@@ -345,8 +364,8 @@ function NodeConfigurationPanel({
             </div> */}
           </div>
 
-          {/* FOOTER ACTIONS */}
-          <div className="p-4 border-t border-white/5 bg-[#0f172a]/90 shrink-0 space-y-3">
+          {/* FOOTER ACTIONS (Themed) */}
+          <div className="p-4 border-t border-[var(--border-ui)] bg-[var(--bg-panel)] shrink-0 space-y-3">
             {/* Primary Action */}
             <button
               onClick={() => onExecute(activeNode)}

@@ -25,9 +25,6 @@ const CustomEdge = ({
   });
 
   // 2. Definir estilos dinámicos
-  // Si está seleccionado, brilla más y es más grueso.
-  // 2. Definir estilos dinámicos
-  // Si está seleccionado, brilla más y es más grueso.
   const strokeWidth = selected ? 3 : 2;
 
   return (
@@ -46,22 +43,21 @@ const CustomEdge = ({
       <BaseEdge
         path={edgePath}
         style={{
-          stroke: "#0f172a", // Fondo oscuro para recortar cruces
+          stroke: "var(--bg-canvas)", // Theme-aware background to cut through
           strokeWidth: strokeWidth + 2,
         }}
       />
 
       {/* MAIN PATH (La línea visible) */}
       <BaseEdge
-        id={id} // Added ID to support mpath if needed, though path={edgePath} handles geometry
+        id={id}
         path={edgePath}
         markerEnd={markerEnd}
         style={{
           ...style,
           strokeWidth,
-          stroke: selected ? "url(#edge-gradient)" : "#475569", // Gradiente si select, gris si no
-          strokeDasharray: selected ? "none" : "5, 5", // Punteada si normal, sólida si select
-          animation: selected ? "dashdraw 0.5s linear infinite" : "none", // Animación futura
+          stroke: selected ? "url(#edge-gradient)" : "var(--connection-line)",
+          strokeDasharray: selected ? "none" : "5, 5",
           opacity: 0.8,
         }}
         className={cn(
@@ -70,12 +66,9 @@ const CustomEdge = ({
         )}
       />
 
-      {/* ANIMATED PARTICLE (La "gota" de luz que viaja) */}
-      {/* Solo mostramos la animación si el edge no está seleccionado (o siempre, según gusto) */}
+      {/* ANIMATED PARTICLE */}
       <circle r="3" fill="#38bdf8">
-        <animateMotion dur="2s" repeatCount="indefinite" path={edgePath}>
-          {/* mpath removed as path attribute is sufficient and avoids ID conflicts if id is not unique in DOM */}
-        </animateMotion>
+        <animateMotion dur="2s" repeatCount="indefinite" path={edgePath} />
       </circle>
     </>
   );

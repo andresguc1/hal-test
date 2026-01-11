@@ -24,7 +24,7 @@ class PerformanceMonitor {
    * @returns {Function} Function to call when render completes
    */
   startRender(componentName) {
-    if (!this.enabled) return () => {};
+    if (!this.enabled) return () => { };
 
     const startTime = performance.now();
     const startMark = `${componentName}_render_start`;
@@ -239,8 +239,8 @@ class PerformanceMonitor {
     const stats = this.getStats();
 
     console.group("📊 Performance Report");
-    console.log("Renders:", stats.renders);
-    console.log("Operations:", stats.operations);
+    console.table(stats.renders);
+    console.table(stats.operations);
     console.log("Memory:", stats.memory);
     console.groupEnd();
   }

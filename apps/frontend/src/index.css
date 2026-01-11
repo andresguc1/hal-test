@@ -16,16 +16,59 @@
 @layer base {
   :root {
     --background: 210 40% 98%;
-    /* slate-50 */
     --foreground: 222 47% 11%;
-    /* slate-950 */
+
+    /* THEME VARIABLES (LIGHT - Engineering Blueprint) */
+    --bg-canvas: #f1f5f9;
+    --bg-panel: rgba(255, 255, 255, 0.85);
+    --bg-node: #ffffff;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --border-ui: #e2e8f0;
+    --grid-color: #cbd5e1;
+    --connection-line: #94a3b8;
+    --panel-shadow:
+      0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+
+    /* Back-compat aliases */
+    --text-primary: var(--text-main);
+    --text-secondary: var(--text-muted);
+    --border-color: var(--border-ui);
+    --grid-dots: var(--grid-color);
+
+    /* Z-INDEX HIERARCHY */
+    --z-canvas: 1;
+    --z-nodes: 10;
+    --z-hud: 50;
+    --z-popover: 100;
+    --z-modal: 200;
+
+    /* GLOBAL TRANSITION */
+    --theme-transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .dark {
     --background: 222 84% 5%;
-    /* #020617 (Enterprise Tech Canvas) */
     --foreground: 210 40% 98%;
-    /* slate-50 */
+
+    /* THEME VARIABLES (DARK - HUD/Console) */
+    --bg-canvas: #0f172a;
+    --bg-panel: rgba(15, 23, 42, 0.8);
+    --bg-node: #1e293b;
+    --text-main: #f1f5f9;
+    --text-muted: #94a3b8;
+    --border-ui: rgba(255, 255, 255, 0.05);
+    --grid-color: #334155;
+    --connection-line: #6366f1;
+    --panel-shadow:
+      0 8px 32px 0 rgba(0, 0, 0, 0.3),
+      inset 0 1px 1px 0 rgba(255, 255, 255, 0.05);
+
+    /* Back-compat aliases */
+    --text-primary: var(--text-main);
+    --text-secondary: var(--text-muted);
+    --border-color: var(--border-ui);
+    --grid-dots: var(--grid-color);
   }
 
   /* CRITICAL: Force Sans-Serif EVERYWHERE - NO SERIF ALLOWED */
@@ -70,11 +113,12 @@
   body {
     margin: 0;
     padding: 0;
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
+    background-color: var(--bg-canvas);
+    color: var(--text-main);
     overflow: hidden;
     height: 100vh;
     width: 100vw;
+    transition: var(--theme-transition);
   }
 
   /* Selection styles */
@@ -84,10 +128,10 @@
     color: #2563eb;
   }
 
-  /* Scrollbars Minimalistas (Estilo Mac) */
+  /* Scrollbars Minimalistas (Theme Aware) */
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
   }
 
   ::-webkit-scrollbar-track {
@@ -95,15 +139,22 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background-color: rgba(156, 163, 175, 0.5);
-    /* Slate-400 semi-transparent */
+    background-color: rgba(148, 163, 184, 0.2);
+    /* slate-400/20 */
     border-radius: 9999px;
-    border: 2px solid transparent;
-    background-clip: content-box;
+    transition: background-color 0.2s;
+  }
+
+  .dark ::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.1);
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(100, 116, 139, 0.8);
+    background-color: rgba(148, 163, 184, 0.4);
+  }
+
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 0.2);
   }
 }
 
@@ -123,20 +174,29 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  /* GLOBAL GLASS UI */
+  .glass-panel {
+    border-radius: 12px;
+    backdrop-filter: blur(16px);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    background: var(--bg-panel);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--panel-shadow);
+  }
 }
 
 /* ==========================================
  * CANVAS & NODE STYLING (Dark Neutral Card Theme)
  * ========================================== */
 
-/* 1. Canvas Container - Neutral Dark with Dot Grid */
+/* 1. Canvas Container - Themed with Dot Grid */
 .react-flow__pane,
 .canvas-container {
-  background-color: #0f0f10 !important;
-  /* Deep neutral dark */
-  background-image: radial-gradient(#262626 1px, transparent 1px);
+  background-color: var(--bg-canvas) !important;
+  background-image: radial-gradient(var(--grid-color) 1px, transparent 1px);
   background-size: 20px 20px;
-  /* Spacing between dots */
+  transition: background-color 0.4s ease;
 }
 
 /* 4. Minimap Fix - Position Absolute */
@@ -156,6 +216,7 @@
   from {
     transform: scaleX(1);
   }
+
   to {
     transform: scaleX(0);
   }
@@ -165,6 +226,7 @@
   0% {
     transform: translateX(-150%) skewX(-12deg);
   }
+
   100% {
     transform: translateX(150%) skewX(-12deg);
   }

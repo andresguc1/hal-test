@@ -21,8 +21,6 @@ function ScreenshotViewer({ screenshots, nodeId, isVisible = true }) {
   const [loading, setLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
 
-  console.log("📸 ScreenshotViewer props:", { nodeId, isVisible, screenshots });
-
   // Load screenshots when panel becomes visible
   useEffect(() => {
     if (!isVisible || !screenshots) {

@@ -40,12 +40,12 @@ const ContextMenuItem = ({
       disabled
         ? "pointer-events-none opacity-40"
         : cn(
-          "hover:bg-[#27272a] hover:text-white cursor-pointer",
-          isActive && "bg-[#27272a] text-white",
-        ),
+            "hover:bg-[var(--border-color)] hover:text-[var(--text-main)] cursor-pointer text-[var(--text-main)]",
+            isActive && "bg-[var(--border-color)] text-[var(--text-main)]",
+          ),
       danger &&
-      !disabled &&
-      "text-rose-500 hover:text-rose-400 hover:bg-rose-500/10",
+        !disabled &&
+        "text-rose-500 hover:text-rose-400 hover:bg-rose-500/10",
       className,
     )}
     onClick={(e) => {
@@ -147,13 +147,6 @@ const SmartMenuPanel = ({
       left = Math.max(10, left);
       top = Math.max(10, top);
 
-      console.log(`[SmartMenu L${level}] Pos:`, {
-        left,
-        top,
-        w: rect.width,
-        trigger: rectBase,
-      });
-
       setStyle({
         position: "fixed",
         zIndex: 99999 + level,
@@ -176,7 +169,7 @@ const SmartMenuPanel = ({
       {/* THE INVISIBLE BRIDGE: Connects this panel to its trigger area */}
       <div className="absolute -left-6 top-0 w-6 h-full bg-transparent z-[-1]" />
 
-      <div className="max-h-[60vh] overflow-y-auto no-scrollbar rounded-lg border border-zinc-700 bg-[#18181b]/95 backdrop-blur-xl p-1 shadow-2xl relative">
+      <div className="max-h-[60vh] overflow-y-auto no-scrollbar rounded-lg border border-[var(--border-ui)] bg-[var(--bg-panel)] backdrop-blur-xl p-1 shadow-2xl relative transition-all duration-300">
         {children}
       </div>
     </div>,
@@ -285,7 +278,6 @@ const CategoryItem = ({
                   .replace(/\b\w/g, (c) => c.toUpperCase())}
                 icon={category.icon} // REUSE CATEGORY ICON FOR NODES
                 onClick={() => {
-                  console.log("Creating Node:", nodeType);
                   actions.createNode(nodeType);
                   onClose?.(); // CLOSE MENU ON SELECTION
                 }}
@@ -515,7 +507,7 @@ const ContextMenu = ({
     <div
       ref={menuRef}
       className={cn(
-        "fixed z-[10001] min-w-[220px] rounded-lg border border-zinc-700 bg-[#18181b]/95 backdrop-blur-xl p-1.5 shadow-2xl",
+        "fixed z-[10001] min-w-[220px] rounded-lg border border-[var(--border-ui)] bg-[var(--bg-panel)] backdrop-blur-xl p-1.5 shadow-2xl transition-all duration-400",
         "animate-in fade-in zoom-in-95 origin-top-left",
       )}
       style={{ left: x, top: y }}
@@ -527,7 +519,7 @@ const ContextMenu = ({
             ref={searchRef}
             type="text"
             placeholder="Search node..."
-            className="w-full bg-zinc-900/50 border border-zinc-700 rounded px-2 py-1 text-xs text-zinc-200 focus:outline-none focus:border-zinc-500 placeholder:text-zinc-600"
+            className="w-full bg-[var(--bg-canvas)] border border-[var(--border-ui)] rounded px-2 py-1 text-xs text-[var(--text-main)] focus:outline-none focus:border-indigo-500 placeholder:text-[var(--text-muted)] transition-all duration-300"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             onKeyDown={(e) => e.stopPropagation()}
@@ -552,7 +544,7 @@ const ContextMenu = ({
               />
             ))
           ) : (
-            <div className="px-2 py-2 text-xs text-zinc-500 text-center italic">
+            <div className="px-2 py-2 text-xs text-[var(--text-muted)] text-center italic">
               No nodes found
             </div>
           )}
@@ -563,7 +555,7 @@ const ContextMenu = ({
           {/* --- QUICK ACCESS (RECENT) --- */}
           {type === "canvas" && recentNodes.length > 0 && (
             <>
-              <div className="px-2 py-1 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+              <div className="px-2 py-1 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest opacity-70">
                 Quick Access
               </div>
               {recentNodes.map((nodeType) => {
@@ -585,7 +577,7 @@ const ContextMenu = ({
           {/* --- NODE CONTEXT --- */}
           {type === "node" && (
             <>
-              <div className="px-2 py-1.5 text-xs font-medium text-zinc-500 truncate flex items-center gap-2">
+              <div className="px-2 py-1.5 text-xs font-medium text-[var(--text-muted)] truncate flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-emerald-500" />
                 {data?.data?.label || "Selected Node"}
               </div>
@@ -593,7 +585,7 @@ const ContextMenu = ({
               <ContextMenuItem
                 icon={Play}
                 label="Execute from here"
-                onClick={() => { }}
+                onClick={() => {}}
                 disabled
               />
               <Divider />

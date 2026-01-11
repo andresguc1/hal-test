@@ -68,7 +68,7 @@ const ToolboxItem = ({ label, nodeId, color, onAdd }) => {
       <span
         className={cn(
           "flex-1 text-xs font-medium truncate select-none transition-colors duration-300",
-          "text-white", // Force white initially
+          "text-[var(--text-main)]", // Theme-aware text
           getHoverText(), // Apply color on hover
         )}
       >
@@ -78,7 +78,7 @@ const ToolboxItem = ({ label, nodeId, color, onAdd }) => {
       {/* Drag Handle */}
       <GripVertical
         size={12}
-        className="text-white/20 group-hover:text-white/50"
+        className="text-[var(--text-muted)] opacity-50 group-hover:opacity-100"
       />
     </Motion.div>
   );
@@ -327,12 +327,12 @@ export default function ToolboxPanel({ addNode }) {
       animate={{ width: isCollapsed ? 64 : 280 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
       className={cn(
-        "relative h-full z-40 flex flex-col bg-[#0f172a] shrink-0 font-sans",
-        "border-r border-white/5 shadow-xl",
+        "relative h-full flex flex-col shrink-0 font-sans glass-panel",
+        "z-[var(--z-hud)]",
       )}
     >
       {/* HEADER */}
-      <div className="h-14 flex items-center justify-center px-4 border-b border-white/5 shrink-0 bg-[#0f172a]">
+      <div className="h-14 flex items-center justify-center px-4 border-b border-white/5 shrink-0 bg-[#0f172a]/50">
         {!isCollapsed ? (
           <div className="w-full flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center border border-white/10">
@@ -411,8 +411,8 @@ export default function ToolboxPanel({ addNode }) {
                   />
                   <Send size={12} className="text-slate-600" />
                 </div>
-                <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-[1px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                  <span className="text-[10px] font-bold text-amber-300 border border-amber-500/30 px-3 py-1 rounded-full bg-amber-500/10 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+                <div className="absolute inset-0 bg-[var(--bg-canvas)]/80 backdrop-blur-[1px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 rounded-lg">
+                  <span className="text-[10px] font-bold text-amber-500 border border-amber-500/30 px-3 py-1 rounded-full bg-amber-500/10 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
                     COMING SOON
                   </span>
                 </div>
@@ -445,11 +445,11 @@ export default function ToolboxPanel({ addNode }) {
       </div>
 
       {/* FOOTER */}
-      <div className="p-3 border-t border-white/5 shrink-0 bg-[#0f172a]">
+      <div className="p-3 border-t border-[var(--border-ui)] shrink-0 bg-[var(--bg-panel)]">
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
           className={cn(
-            "w-full flex items-center gap-3 px-2 py-2 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-white/5 transition-all group",
+            "w-full flex items-center gap-3 px-2 py-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-canvas)] transition-all group",
             isCollapsed && "justify-center",
           )}
         >

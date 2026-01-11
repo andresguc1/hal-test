@@ -72,7 +72,7 @@ export default function StyledMiniMap() {
 
   return (
     <MiniMap
-      className="custom-minimap"
+      className="custom-minimap glass-panel z-[var(--z-hud)]"
       nodeStrokeColor={(n) => getNodeColor(n)}
       nodeColor={(n) => getNodeColor(n)}
       nodeBorderRadius={4}
@@ -86,13 +86,9 @@ export default function StyledMiniMap() {
         width: 180,
         bottom: 20,
         right: 20,
-        backgroundColor:
-          currentTheme === "dark"
-            ? "rgba(30, 41, 59, 1)"
-            : "rgba(255, 255, 255, 1)",
-        border: "2px solid rgba(255,255,255,0.1)",
-        borderRadius: "12px",
-        boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+        background: "transparent",
+        border: "none",
+        boxShadow: "none",
       }}
       zoomable={true}
       pannable={true}
