@@ -37,6 +37,10 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Serve screenshots statically for Flight Recorder
+import path from 'path';
+app.use('/screenshots', express.static(path.resolve('logs/screenshots')));
+
 // Integration of i18next middleware for localized responses
 app.use(i18nMiddleware.handle(i18n));
 

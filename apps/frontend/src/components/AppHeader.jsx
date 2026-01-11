@@ -1,6 +1,6 @@
 import React, { memo } from "react";
 import { motion as Motion } from "motion/react"; // Renamed to Motion to avoid lint unused warning
-import { Sun, Moon } from "lucide-react";
+import { Sun, Moon, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
 import { useTranslation } from "react-i18next";
@@ -26,6 +26,7 @@ const HeaderButton = ({ onClick, children, title, className }) => (
 function AppHeader({
   onOpenSettings,
   onOpenApiKeys,
+  onToggleHistory,
   selectedProject,
   selectedFlow,
 }) {
@@ -96,6 +97,13 @@ function AppHeader({
 
       {/* RIGHT */}
       <div className="flex items-center gap-12 relative z-20 shrink-0">
+        <HeaderButton
+          onClick={onToggleHistory}
+          title="Execution History"
+        >
+          <History size={18} />
+        </HeaderButton>
+
         <HeaderButton
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
           title={

@@ -14,6 +14,7 @@ import { z } from 'zod';
 import * as fsp from 'fs/promises';
 // import * as fs from 'fs';
 import * as path from 'path';
+import { executionLogger } from '../services/ExecutionLogger.js';
 
 // Create Variable Manager instance
 const variableManager = new VariableManager();
@@ -176,6 +177,8 @@ async function getActivePage(req, browserId) {
 async function executePlaywrightAction(req, res, actionName, actionLogic) {
     let targetBrowserId;
     const start = Date.now();
+    const runId = req.body.runId; // Extract runId if present
+
     const opts = req.body;
     let page, context;
 
@@ -228,6 +231,21 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
             });
         }
 
+        // --- FLIGHT RECORDER: Log Success ---
+        if (runId && nodeId) {
+            executionLogger.logStep(
+                runId,
+                { id: nodeId, type: actionName },
+                {
+                    status: 'success',
+                    duration,
+                    input: opts,
+                    output: result.data || result.traceDetails,
+                },
+            );
+        }
+        // ------------------------------------
+
         // 4. Respond
         if (nodeId) {
             emitExecutionStatus({ stepId: nodeId, status: 'success' });
@@ -243,6 +261,7 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
     } catch (error) {
         const errorMessage = error?.message || String(error);
         const status = error.status || 500;
+        const duration = Date.now() - start;
 
         // Clean up the browser if the error is connection/closed related
         if (
@@ -263,6 +282,38 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
             error: errorMessage,
             selector: opts.selector,
         });
+
+        // --- FLIGHT RECORDER: Log Failure & Screenshot ---
+        let screenshotPath = null;
+        if (page && !page.isClosed()) {
+            try {
+                const screenshotsDir = path.resolve('logs/screenshots');
+                await fsp.mkdir(screenshotsDir, { recursive: true });
+                const filename = `${runId || 'nocode'}_${nodeId || 'unknown'}_${Date.now()}.png`;
+                screenshotPath = path.join('logs/screenshots', filename);
+                await page.screenshot({ path: path.join(screenshotsDir, filename) });
+            } catch (err) {
+                console.warn(
+                    '[WARN] FlightRecorder: Failed to capture failure screenshot',
+                    err.message,
+                );
+            }
+        }
+
+        if (runId && nodeId) {
+            executionLogger.logStep(
+                runId,
+                { id: nodeId, type: actionName },
+                {
+                    status: 'failed',
+                    error: errorMessage,
+                    duration,
+                    input: opts,
+                    screenshot: screenshotPath,
+                },
+            );
+        }
+        // ------------------------------------------------
 
         console.error(`[ERROR] ${actionName}:`, errorMessage);
 

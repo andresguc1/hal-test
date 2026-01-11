@@ -3,6 +3,8 @@ import Project from './models/Project.js';
 import Flow from './models/Flow.js';
 import Node from './models/Node.js';
 import Edge from './models/Edge.js';
+import Run from './models/Run.js';
+import StepResult from './models/StepResult.js';
 
 // Define associations
 Project.hasMany(Flow, { as: 'flows', foreignKey: 'projectId', onDelete: 'CASCADE', hooks: true });
@@ -13,6 +15,10 @@ Node.belongsTo(Flow, { as: 'flow', foreignKey: 'flowId' });
 
 Flow.hasMany(Edge, { as: 'edges', foreignKey: 'flowId', onDelete: 'CASCADE', hooks: true });
 Edge.belongsTo(Flow, { as: 'flow', foreignKey: 'flowId' });
+
+// Execution History Associations
+Run.hasMany(StepResult, { as: 'steps', foreignKey: 'run_id', onDelete: 'CASCADE', hooks: true });
+StepResult.belongsTo(Run, { as: 'run', foreignKey: 'run_id' });
 
 export const initDb = async (_force = false) => {
     try {
@@ -65,4 +71,4 @@ export const initDb = async (_force = false) => {
     }
 };
 
-export { Project, Flow, Node, Edge };
+export { Project, Flow, Node, Edge, Run, StepResult };

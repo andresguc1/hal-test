@@ -1143,6 +1143,25 @@ export const useFlowManager = (currentProject, currentFlowId) => {
 
       console.group("🚀 Execute Flow - Plan");
 
+      // --- FLIGHT RECORDER: Start Run ---
+      let runId = null;
+      try {
+        const apiBase = API_BASE_URL.replace('/actions', '');
+        const runRes = await fetch(`${apiBase}/runs/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ flowId: currentFlowId, trigger: 'manual' })
+        });
+        const runData = await runRes.json();
+        if (runData.success) {
+          runId = runData.runId;
+          logger.info(`Run started: ${runId}`, null, "useFlowManager");
+        }
+      } catch (e) {
+        logger.error("Failed to start run logger", e, "useFlowManager");
+      }
+      // ----------------------------------
+
       // Validate cycles in each component
       for (const componentNodes of connectedComponents) {
         const componentEdges = edges.filter(
@@ -1215,6 +1234,7 @@ export const useFlowManager = (currentProject, currentFlowId) => {
             const payload = {
               ...(node.data.configuration || {}),
               ...runtimeContext,
+              runId, // Inject runId for Flight Recorder
             };
 
             const action = {
@@ -1285,6 +1305,22 @@ export const useFlowManager = (currentProject, currentFlowId) => {
       setExecutionStats(globalStats);
 
       const allSuccess = globalStats.failed === 0;
+
+      // --- FLIGHT RECORDER: End Run ---
+      if (runId) {
+        try {
+          const apiBase = API_BASE_URL.replace('/actions', '');
+          await fetch(`${apiBase}/runs/${runId}/end`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: allSuccess ? 'completed' : 'failed' })
+          });
+        } catch (e) {
+          logger.error("Failed to end run logger", e, "useFlowManager");
+        }
+      }
+      // --------------------------------
+
       setApiStatus({
         state: allSuccess ? "success" : "warning",
         message: allSuccess
@@ -1303,6 +1339,7 @@ export const useFlowManager = (currentProject, currentFlowId) => {
       executeStep,
       resetNodeStates,
       validateFlow,
+      currentFlowId,
     ],
   );
 

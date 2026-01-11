@@ -45,6 +45,8 @@ import { useHaltestSocket } from "./hooks/useHaltestSocket";
 import { useFigmaInteraction } from "./hooks/useFigmaInteraction";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "next-themes";
+import RunHistoryPanel from "./components/RunHistoryPanel";
+import { api } from "./utils/api";
 
 // ========================================
 // COMPONENTE PRINCIPAL (MAREA REFACTOR)
@@ -133,6 +135,9 @@ export default function App() {
   const [_isSaving, setIsSaving] = useState(false);
   const [menu, setMenu] = useState(null);
 
+  // History Panel State
+  const [isHistoryPanelVisible, setIsHistoryPanelVisible] = useState(false);
+
   // Custom hook para manejar el flujo
   const {
     nodes,
@@ -179,6 +184,42 @@ export default function App() {
     },
     [selectedAction, updateNodeConfiguration, toast, t],
   );
+
+  const handleSelectRun = useCallback(async (runBasic) => {
+    try {
+      const res = await api.get(`/runs/${runBasic.id}`);
+      if (res.success) {
+        const run = res.data;
+        toast.success(`Loaded run from ${new Date(run.started_at).toLocaleTimeString()}`);
+
+        setNodes((nds) => nds.map((node) => {
+          const step = run.steps.find((s) => s.node_id === node.id);
+          if (step) {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                state: step.status,
+                error: step.error,
+              }
+            };
+          }
+          // Reset others
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              state: 'idle',
+              error: null,
+            }
+          };
+        }));
+      }
+    } catch (error) {
+      console.error("Failed to load run details:", error);
+      toast.error("Failed to load run history");
+    }
+  }, [setNodes, toast]);
 
   // Initialize Socket.io connection for real-time updates and inspector events
   useHaltestSocket(setNodes, handleElementPicked);
@@ -592,10 +633,18 @@ export default function App() {
         <AppHeader
           onOpenSettings={openSettings}
           onOpenApiKeys={openApiKeys}
+          onToggleHistory={() => setIsHistoryPanelVisible((v) => !v)}
           selectedProject={currentProject}
           selectedFlow={currentProject?.flows?.find(
             (f) => f.id === currentFlowId,
           )}
+        />
+
+        {/* History Panel (Overlay) */}
+        <RunHistoryPanel
+          isOpen={isHistoryPanelVisible}
+          onClose={() => setIsHistoryPanelVisible(false)}
+          onSelectRun={handleSelectRun}
         />
 
         {/* 2. Content Wrapper */}
