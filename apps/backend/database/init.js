@@ -26,8 +26,10 @@ export const initDb = async (_force = false) => {
         await sequelize.authenticate();
         console.log('Connection has been established successfully.');
 
+        // Note: SQLite has limited ALTER TABLE support.
+        // For schema changes, delete the database file and restart.
         await sequelize.sync();
-        console.log(`Database synchronized`);
+        console.log('Database synchronized');
 
         // Seed initial project if empty
         const count = await Project.count();

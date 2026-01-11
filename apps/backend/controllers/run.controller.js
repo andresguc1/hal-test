@@ -3,8 +3,8 @@ import { Run, StepResult } from '../database/init.js';
 
 export const startRunAction = async (req, res) => {
     try {
-        const { flowId, trigger } = req.body;
-        const runId = await executionLogger.startRun(flowId, { trigger });
+        const { flowId, flowName, trigger } = req.body;
+        const runId = await executionLogger.startRun(flowId, { flowName, trigger });
 
         if (!runId) {
             return res.status(500).json({ success: false, message: 'Failed to start run' });

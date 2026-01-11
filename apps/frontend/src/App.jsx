@@ -633,24 +633,31 @@ export default function App() {
         <AppHeader
           onOpenSettings={openSettings}
           onOpenApiKeys={openApiKeys}
-          onToggleHistory={() => setIsHistoryPanelVisible((v) => !v)}
+          onToggleHistory={() => {
+            setIsHistoryPanelVisible((v) => !v);
+            setIsCreationPanelVisible(false); // Close toolbox when opening history
+          }}
           selectedProject={currentProject}
           selectedFlow={currentProject?.flows?.find(
             (f) => f.id === currentFlowId,
           )}
         />
 
-        {/* History Panel (Overlay) */}
-        <RunHistoryPanel
-          isOpen={isHistoryPanelVisible}
-          onClose={() => setIsHistoryPanelVisible(false)}
-          onSelectRun={handleSelectRun}
-        />
-
         {/* 2. Content Wrapper */}
         <div className="flex-1 flex flex-row overflow-hidden relative">
-          {/* SIDEBAR IZQUIERDO */}
-          {isCreationPanelVisible && <Toolbox addNode={addNode} />}
+          {/* SIDEBAR IZQUIERDO - Either Toolbox OR History Panel */}
+          {isHistoryPanelVisible ? (
+            <RunHistoryPanel
+              isOpen={true}
+              onClose={() => {
+                setIsHistoryPanelVisible(false);
+                setIsCreationPanelVisible(true); // Restore toolbox
+              }}
+              onSelectRun={handleSelectRun}
+            />
+          ) : (
+            isCreationPanelVisible && <Toolbox addNode={addNode} />
+          )}
 
           {/* LIENZO (CANVAS - Abyss Blue Environment) */}
           <main className="flex-1 relative kanban-board-bg">

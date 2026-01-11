@@ -11,6 +11,7 @@ class ExecutionLogger {
         try {
             const run = await Run.create({
                 flow_id: flowId,
+                flow_name: metadata.flowName || null,
                 status: 'running',
                 trigger: metadata.trigger || 'manual',
             });

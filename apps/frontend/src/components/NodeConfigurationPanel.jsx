@@ -23,6 +23,7 @@ const NODE_INPUTS = {
       type: "number",
       placeholder: "30000",
     },
+    { key: "takeScreenshot", label: "📸 Take Screenshot", type: "checkbox" },
   ],
   launch_browser: [
     { key: "headless", label: "Headless Mode", type: "checkbox" },
@@ -47,6 +48,7 @@ const NODE_INPUTS = {
       type: "number",
       placeholder: "30000",
     },
+    { key: "takeScreenshot", label: "📸 Take Screenshot", type: "checkbox" },
   ],
   type_text: [
     {
@@ -62,6 +64,7 @@ const NODE_INPUTS = {
       placeholder: "Hello World",
     },
     { key: "delay", label: "Delay (ms)", type: "number", placeholder: "0" },
+    { key: "takeScreenshot", label: "📸 Take Screenshot", type: "checkbox" },
   ],
   hover: [
     {
@@ -70,6 +73,7 @@ const NODE_INPUTS = {
       type: "selector",
       placeholder: ".menu-item",
     },
+    { key: "takeScreenshot", label: "📸 Take Screenshot", type: "checkbox" },
   ],
 
   // Sync

@@ -231,6 +231,25 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
             });
         }
 
+        // --- FLIGHT RECORDER: Optional Screenshot on Success ---
+        let screenshotPath = null;
+        if (opts.takeScreenshot && page && !page.isClosed() && runId && nodeId) {
+            try {
+                const screenshotsDir = path.resolve(`storage/runs/${runId}`);
+                await fsp.mkdir(screenshotsDir, { recursive: true });
+                const filename = `step_${Date.now()}_${nodeId}.png`;
+                const fullPath = path.join(screenshotsDir, filename);
+                await page.screenshot({ path: fullPath });
+                screenshotPath = `storage/runs/${runId}/${filename}`;
+                console.log(`[FlightRecorder] Screenshot saved: ${screenshotPath}`);
+            } catch (err) {
+                console.warn(
+                    '[WARN] FlightRecorder: Failed to capture success screenshot',
+                    err.message,
+                );
+            }
+        }
+
         // --- FLIGHT RECORDER: Log Success ---
         if (runId && nodeId) {
             executionLogger.logStep(
@@ -241,6 +260,7 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
                     duration,
                     input: opts,
                     output: result.data || result.traceDetails,
+                    screenshot: screenshotPath,
                 },
             );
         }
@@ -283,15 +303,19 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
             selector: opts.selector,
         });
 
-        // --- FLIGHT RECORDER: Log Failure & Screenshot ---
-        let screenshotPath = null;
+        // --- FLIGHT RECORDER: Forensic Capture (Auto-error Screenshot) ---
+        let errorScreenshotPath = null;
         if (page && !page.isClosed()) {
             try {
-                const screenshotsDir = path.resolve('logs/screenshots');
+                // Use structured storage: storage/runs/{runId}/error_{nodeId}_{timestamp}.png
+                const runFolder = runId || 'orphan';
+                const screenshotsDir = path.resolve(`storage/runs/${runFolder}`);
                 await fsp.mkdir(screenshotsDir, { recursive: true });
-                const filename = `${runId || 'nocode'}_${nodeId || 'unknown'}_${Date.now()}.png`;
-                screenshotPath = path.join('logs/screenshots', filename);
-                await page.screenshot({ path: path.join(screenshotsDir, filename) });
+                const filename = `error_${Date.now()}_${nodeId || 'unknown'}.png`;
+                const fullPath = path.join(screenshotsDir, filename);
+                await page.screenshot({ path: fullPath });
+                errorScreenshotPath = `storage/runs/${runFolder}/${filename}`;
+                console.log(`[FlightRecorder] Forensic screenshot saved: ${errorScreenshotPath}`);
             } catch (err) {
                 console.warn(
                     '[WARN] FlightRecorder: Failed to capture failure screenshot',
@@ -309,7 +333,7 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
                     error: errorMessage,
                     duration,
                     input: opts,
-                    screenshot: screenshotPath,
+                    screenshot: errorScreenshotPath,
                 },
             );
         }

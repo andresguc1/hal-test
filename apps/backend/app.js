@@ -37,9 +37,11 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve screenshots statically for Flight Recorder
+// Serve storage folder statically for Flight Recorder screenshots
+// Screenshots are stored at: storage/runs/{runId}/{filename}.png
+// Accessible via: http://localhost:2001/storage/runs/{runId}/{filename}.png
 import path from 'path';
-app.use('/screenshots', express.static(path.resolve('logs/screenshots')));
+app.use('/storage', express.static(path.resolve('storage')));
 
 // Integration of i18next middleware for localized responses
 app.use(i18nMiddleware.handle(i18n));

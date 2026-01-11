@@ -27,7 +27,8 @@ if (isProduction && process.env.DATABASE_URL) {
         logging: false,
         dialectOptions: {
             // Enable Foreign Keys in SQLite
-            mode: 2, // SQLITE_OPEN_READWRITE
+            // mode: 6 = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE
+            mode: 6,
         },
     });
 

@@ -13,6 +13,10 @@ const Run = sequelize.define(
             type: DataTypes.STRING,
             allowNull: true, // Allow null to not block execution if flowId is missing
         },
+        flow_name: {
+            type: DataTypes.STRING,
+            allowNull: true,
+        },
         status: {
             type: DataTypes.ENUM('running', 'completed', 'failed'),
             defaultValue: 'running',

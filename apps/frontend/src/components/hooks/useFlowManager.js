@@ -25,6 +25,7 @@ import {
 } from "../../utils/flowUtils";
 import { logger } from "../../utils/logger";
 import screenshotManager from "../../utils/ScreenshotManager";
+import { api } from "../../utils/api";
 
 const MAX_RETRIES = 3;
 const RETRY_BASE_MS = 1000;
@@ -1146,13 +1147,15 @@ export const useFlowManager = (currentProject, currentFlowId) => {
       // --- FLIGHT RECORDER: Start Run ---
       let runId = null;
       try {
-        const apiBase = API_BASE_URL.replace('/actions', '');
-        const runRes = await fetch(`${apiBase}/runs/start`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ flowId: currentFlowId, trigger: 'manual' })
+        // Get flow name from currentProject
+        const currentFlow = currentProject?.flows?.find((f) => f.id === currentFlowId);
+        const flowName = currentFlow?.name || 'Unknown Flow';
+
+        const runData = await api.post('/runs/start', {
+          flowId: currentFlowId,
+          flowName,
+          trigger: 'manual'
         });
-        const runData = await runRes.json();
         if (runData.success) {
           runId = runData.runId;
           logger.info(`Run started: ${runId}`, null, "useFlowManager");
@@ -1309,12 +1312,7 @@ export const useFlowManager = (currentProject, currentFlowId) => {
       // --- FLIGHT RECORDER: End Run ---
       if (runId) {
         try {
-          const apiBase = API_BASE_URL.replace('/actions', '');
-          await fetch(`${apiBase}/runs/${runId}/end`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: allSuccess ? 'completed' : 'failed' })
-          });
+          await api.post(`/runs/${runId}/end`, { status: allSuccess ? 'completed' : 'failed' });
         } catch (e) {
           logger.error("Failed to end run logger", e, "useFlowManager");
         }
@@ -1340,6 +1338,7 @@ export const useFlowManager = (currentProject, currentFlowId) => {
       resetNodeStates,
       validateFlow,
       currentFlowId,
+      currentProject,
     ],
   );
 
