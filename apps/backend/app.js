@@ -25,7 +25,7 @@ initSocket(server);
 
 // --- 1. SECURITY MIDDLEWARES ---
 app.use(helmetMiddleware);
-app.use(apiLimiter);
+app.use('/api', apiLimiter);
 
 // --- 2. FORMAT MIDDLEWARES ---
 app.use(
