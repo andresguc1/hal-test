@@ -87,7 +87,14 @@ const publicPath = path.resolve('public');
 
 // 1. Serve Frontend App at /app
 app.use('/app', express.static(path.join(publicPath, 'app')));
-app.get(/\/app\/.*/, (req, res) => {
+
+// Explicitly handle /app to redirect to /app/ (trailing slash) to ensure relative assets work
+app.get('/app', (req, res) => {
+    res.redirect('/app/');
+});
+
+// SPA Fallback for any /app/* request not caught by static middleware
+app.get(/\/app\/?(?!api).*/, (req, res) => {
     res.sendFile(path.join(publicPath, 'app', 'index.html'));
 });
 
