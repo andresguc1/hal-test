@@ -17,6 +17,8 @@
         "dev:backend": "turbo dev --filter @halt-test/backend",
         "dev:frontend": "turbo dev --filter @halt-test/frontend",
         "build": "turbo build",
+        "build:monolith": "pnpm --filter @halt-test/web build --outDir ../backend/public/web --emptyOutDir && pnpm --filter @halt-test/frontend build --outDir ../backend/public/app --emptyOutDir",
+        "start": "NODE_ENV=production node apps/backend/app.js",
         "test": "turbo test",
         "lint": "turbo lint",
         "lint:fix": "turbo lint:fix",

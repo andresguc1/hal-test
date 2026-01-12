@@ -642,7 +642,8 @@ export default function App() {
           onOpenApiKeys={openApiKeys}
           onToggleHistory={() => {
             setIsHistoryPanelVisible((prev) => {
-              if (!prev) setIsCreationPanelVisible(false); // If opening history, close toolbox
+              if (!prev)
+                setIsCreationPanelVisible(false); // If opening history, close toolbox
               else setIsCreationPanelVisible(true); // If closing history, show toolbox
               return !prev;
             });

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hal-Test | AI Testing Platform</title>
+
+    <!-- Favicon -->
+    <link rel="icon" href="./images/haltest_logo.ico" type="image/x-icon">
+
+    <!-- Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono&display=swap"
+        rel="stylesheet">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="./styles.css">
+
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body class="canvas-dots">
+
+    <!-- NAV -->
+    <nav>
+        <div class="logo">
+            <div class="logo-icon-wrapper">
+                <img src="./images/haltest_logo.jpeg" alt="HAL-TEST">
+                <div class="logo-glow"></div>
+            </div>
+            <h1 class="logo-text">
+                <span class="text-hal">HAL</span>
+                <span class="text-separator">-</span>
+                <span class="text-test">TEST</span>
+            </h1>
+        </div>
+
+        <div class="nav-actions">
+            <a href="https://github.com/andresguc1/hal-test" target="_blank" class="nav-link github-link">
+                <i data-lucide="github" width="18"></i>
+                <span class="github-text">Star on GitHub</span>
+            </a>
+            <a href="#" class="nav-link">Docs</a>
+            <a href="https://hal-test-frontend.vercel.app/" class="btn-primary small">
+                Entrar <i data-lucide="arrow-right" size="16"></i>
+            </a>
+        </div>
+    </nav>
+
+    <!-- HERO -->
+    <header class="hero">
+
+        <!-- VIDEO BACKGROUND (FUNCIONA) -->
+        <img src="./video/base1.gif" alt="Hero Background" class="hero-video-bg">
+
+        <div class="hero-glow"></div>
+
+        <div class="badge-status">v1.3.0 · Open Source</div>
+
+        <h1 class="hero-title">
+            Visual Browser<br>Automation
+        </h1>
+
+        <p class="hero-subtitle">
+            Orchestrate Playwright workflows with a modern drag-and-drop interface. Built for developers and QA.
+        </p>
+
+        <div class="hero-actions">
+            <a href="https://hal-test-frontend.vercel.app/" class="btn-primary">Empezar gratis</a>
+            <a href="#" onclick="openDemo(event)" class="btn-secondary">
+                <i data-lucide="play" size="16"></i> Ver demo
+            </a>
+        </div>
+
+    </header>
+
+    <!-- FEATURES -->
+    <main>
+        <section class="grid-features">
+
+            <div class="feature-node trigger">
+                <span class="node-tag">/ VISUAL_FLOW</span>
+                <i data-lucide="workflow"></i>
+                <h3>Visual Flow Editor</h3>
+                <p>Drag-and-drop interface with 50+ specialized nodes.</p>
+            </div>
+
+            <div class="feature-node">
+                <span class="node-tag">/ NETWORK_OPS</span>
+                <i data-lucide="network"></i>
+                <h3>Network Control</h3>
+                <p>Intercept, mock, and modify network requests.</p>
+            </div>
+
+            <div class="feature-node">
+                <span class="node-tag">/ AI_CORE</span>
+                <i data-lucide="sparkles"></i>
+                <h3>AI Integration</h3>
+                <p>LLM-powered test generation and semantic validation.</p>
+            </div>
+
+        </section>
+    </main>
+
+    <footer>
+        © 2024 Hal-Test · Built for modern QA teams
+    </footer>
+
+    <!-- DEMO MODAL -->
+    <div id="demo-modal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeDemo()">&times;</button>
+            <img src="./video/base1.gif" alt="Demo Preview">
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        function openDemo(e) {
+            e.preventDefault();
+            const modal = document.getElementById('demo-modal');
+            modal.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeDemo() {
+            const modal = document.getElementById('demo-modal');
+            modal.classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        // Close on backdrop click
+        document.getElementById('demo-modal').addEventListener('click', function (e) {
+            if (e.target === this) {
+                closeDemo();
+            }
+        });
+
+        // Close on Escape key
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                closeDemo();
+            }
+        });
+    </script>
+
+</body>
+
+</html>

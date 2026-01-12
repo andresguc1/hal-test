@@ -79,7 +79,30 @@ app.use('/api', apiRouter);
 app.use('/api', mockRouter);
 
 // Project and Flow management routes
+// Project and Flow management routes
 app.use('/api', projectRouter);
+
+// --- STATIC FILES SERVING (Production) ---
+const publicPath = path.resolve('public');
+
+// 1. Serve Frontend App at /app
+app.use('/app', express.static(path.join(publicPath, 'app')));
+app.get(/\/app\/.*/, (req, res) => {
+    res.sendFile(path.join(publicPath, 'app', 'index.html'));
+});
+
+// 2. Serve Landing Page at / (Root)
+app.use('/', express.static(path.join(publicPath, 'web')));
+app.get(/.*/, (req, res, next) => {
+    // If it's an API call that wasn't handled, let it pass to 404 handler
+    if (req.path.startsWith('/api') || req.path.startsWith('/storage')) {
+        return next();
+    }
+    // Otherwise serve Landing Page (SPA support)
+    res.sendFile(path.join(publicPath, 'web', 'index.html'), (err) => {
+        if (err) next(); // If no index.html (e.g. dev mode), pass to 404
+    });
+});
 
 // General status/health check route
 /**

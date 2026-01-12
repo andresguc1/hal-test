@@ -6,7 +6,7 @@ import globals from 'globals';
 
 export default [
     {
-        ignores: ['tests/'],
+        ignores: ['tests/', 'public/'],
     },
     {
         // 1. Configuración de Archivos y Entornos
