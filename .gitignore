@@ -11,6 +11,7 @@ build/
 out/
 
 # Local database and storages
+apps/backend/**/*.sqlite
 apps/backend/storages/*.sqlite
 apps/backend/storages/screenshots/*
 apps/backend/storages/dom_snapshots/*
@@ -42,8 +43,12 @@ yarn-error.log*
 apps/backend/test-results/
 apps/backend/playwright-report/
 apps/frontend/playwright-report/
+coverage/
+.nyc_output/
 
-# Misc
+# System
+.DS_Store
+Thumbs.db
 .gemini/
 temp/
 tmp/
