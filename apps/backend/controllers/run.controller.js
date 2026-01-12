@@ -3,8 +3,9 @@ import { Run, StepResult } from '../database/init.js';
 
 export const startRunAction = async (req, res) => {
     try {
-        const { flowId, flowName, trigger } = req.body;
-        const runId = await executionLogger.startRun(flowId, { flowName, trigger });
+        const { flowId, flowName, trigger, nodes, edges } = req.body;
+        const flowSnapshot = JSON.stringify({ nodes, edges });
+        const runId = await executionLogger.startRun(flowId, { flowName, trigger, flowSnapshot });
 
         if (!runId) {
             return res.status(500).json({ success: false, message: 'Failed to start run' });
@@ -51,6 +52,30 @@ export const getRunDetailsAction = async (req, res) => {
         }
 
         return res.status(200).json({ success: true, data: run });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+export const deleteRunAction = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const deleted = await Run.destroy({ where: { id } });
+
+        if (!deleted) {
+            return res.status(404).json({ success: false, message: 'Run not found' });
+        }
+
+        return res.status(200).json({ success: true, message: 'Run deleted successfully' });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+export const clearHistoryAction = async (req, res) => {
+    try {
+        await Run.destroy({ where: {}, truncate: false }); // truncate: false is safer for SQLite sometimes, but generic delete all works
+        return res.status(200).json({ success: true, message: 'History cleared successfully' });
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
     }

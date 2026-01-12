@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev": "node --watch app.js",
+    "dev": "node --watch-path=controllers --watch-path=services --watch-path=middlewares --watch-path=routes --watch-path=database --watch app.js",
     "start": "node app.js",
     "test": "vitest",
     "lint": "eslint .",

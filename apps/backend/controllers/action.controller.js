@@ -183,6 +183,9 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
     let page, context;
 
     const nodeId = opts.nodeId;
+    console.log(
+        `[FlightRecorder DEBUG] runId=${runId}, nodeId=${nodeId}, actionName=${actionName}`,
+    );
     if (nodeId) {
         emitExecutionStatus({ stepId: nodeId, status: 'running' });
     }
@@ -252,7 +255,7 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
 
         // --- FLIGHT RECORDER: Log Success ---
         if (runId && nodeId) {
-            executionLogger.logStep(
+            await executionLogger.logStep(
                 runId,
                 { id: nodeId, type: actionName },
                 {
@@ -282,6 +285,21 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
         const errorMessage = error?.message || String(error);
         const status = error.status || 500;
         const duration = Date.now() - start;
+
+        // --- FLIGHT RECORDER: Log Failure ---
+        if (runId && nodeId) {
+            await executionLogger.logStep(
+                runId,
+                { id: nodeId, type: actionName },
+                {
+                    status: 'failed',
+                    duration,
+                    input: opts,
+                    error: errorMessage,
+                },
+            );
+        }
+        // ------------------------------------
 
         // Clean up the browser if the error is connection/closed related
         if (
@@ -360,16 +378,37 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
 
 export const launchBrowserAction = async (req, res) => {
     const nodeId = req.body.nodeId;
+    const runId = req.body.runId;
+    const start = Date.now();
     if (nodeId) emitExecutionStatus({ stepId: nodeId, status: 'running' });
 
     try {
         console.log('[ACTION] Starting browser launch...');
+        console.log(
+            `[FlightRecorder DEBUG] runId=${runId}, nodeId=${nodeId}, actionName=launch_browser`,
+        );
         const { browserId } = await browserService.launchBrowser(req.body);
+        const duration = Date.now() - start;
 
         console.log(`[SUCCESS] Browser launched with ID: ${browserId}`);
         if (nodeId) emitExecutionStatus({ stepId: nodeId, status: 'success' });
 
-        // Debug storage writing disabled per user request
+        // --- FLIGHT RECORDER: Log Success ---
+        if (runId && nodeId) {
+            console.log(`[FlightRecorder] Saving step result for run ${runId}, node ${nodeId}`);
+            await executionLogger.logStep(
+                runId,
+                { id: nodeId, type: 'launch_browser' },
+                {
+                    status: 'success',
+                    duration,
+                    input: req.body,
+                    output: { browserId },
+                },
+            );
+            console.log(`[FlightRecorder] Step result saved successfully`);
+        }
+        // ------------------------------------
 
         traceService.add({ action: 'launch_browser', browserId, status: 'success' });
 
@@ -380,13 +419,30 @@ export const launchBrowserAction = async (req, res) => {
             headless: req.body.headless || false,
         });
     } catch (error) {
+        const duration = Date.now() - start;
         console.error('[ERROR] Failed to launch browser:', error.message);
-        if (req.body.nodeId)
+        if (nodeId)
             emitExecutionStatus({
-                stepId: req.body.nodeId,
+                stepId: nodeId,
                 status: 'failed',
                 error: error.message,
             });
+
+        // --- FLIGHT RECORDER: Log Failure ---
+        if (runId && nodeId) {
+            executionLogger.logStep(
+                runId,
+                { id: nodeId, type: 'launch_browser' },
+                {
+                    status: 'failed',
+                    duration,
+                    input: req.body,
+                    error: error.message,
+                },
+            );
+        }
+        // ------------------------------------
+
         return res.status(500).json({
             success: false,
             message: req.t('actions.launch_browser.error'),
@@ -400,6 +456,7 @@ export const openUrlAction = async (req, res) => {
     const start = Date.now();
     let browserId;
     const nodeId = req.body.nodeId;
+    const runId = req.body.runId;
     if (nodeId) emitExecutionStatus({ stepId: nodeId, status: 'running' });
 
     try {
@@ -457,6 +514,21 @@ export const openUrlAction = async (req, res) => {
         console.log(`[SUCCESS] URL opened (${duration}ms): ${url}`);
         if (nodeId) emitExecutionStatus({ stepId: nodeId, status: 'success' });
 
+        // --- FLIGHT RECORDER: Log Success ---
+        if (runId && nodeId) {
+            await executionLogger.logStep(
+                runId,
+                { id: nodeId, type: actionName },
+                {
+                    status: 'success',
+                    duration,
+                    input: req.body,
+                    output: { url, browserId },
+                },
+            );
+        }
+        // ------------------------------------
+
         return res.status(200).json({
             success: true,
             message: req.t('actions.open_url.success'),
@@ -465,15 +537,31 @@ export const openUrlAction = async (req, res) => {
             browserId,
         });
     } catch (error) {
+        const duration = Date.now() - start;
         console.error(`[ERROR] ${actionName}:`, error.message);
-        if (req.body.nodeId)
+        if (nodeId)
             emitExecutionStatus({
-                stepId: req.body.nodeId,
+                stepId: nodeId,
                 status: 'failed',
                 error: error.message,
             });
 
         traceService.add({ action: actionName, error: error.message, status: 'error' });
+
+        // --- FLIGHT RECORDER: Log Failure ---
+        if (runId && nodeId) {
+            await executionLogger.logStep(
+                runId,
+                { id: nodeId, type: actionName },
+                {
+                    status: 'failed',
+                    duration,
+                    input: req.body,
+                    error: error.message,
+                },
+            );
+        }
+        // ------------------------------------
 
         return res.status(error.status || 500).json({
             success: false,
@@ -484,8 +572,9 @@ export const openUrlAction = async (req, res) => {
 };
 
 export const closeBrowserAction = async (req, res) => {
+    const start = Date.now();
     try {
-        let { browserId, nodeId } = req.body ?? {};
+        let { browserId, nodeId, runId } = req.body ?? {}; // Extract runId
         if (nodeId) emitExecutionStatus({ stepId: nodeId, status: 'running' });
         if (browserId === '' || browserId === null) browserId = undefined;
 
@@ -500,10 +589,26 @@ export const closeBrowserAction = async (req, res) => {
         console.log(`[INFO] Closing browser ${browserId}...`);
 
         await browserService.delete(browserId);
+        const duration = Date.now() - start;
 
         traceService.add({ action: 'close_browser', browserId, status: 'success' });
 
         if (nodeId) emitExecutionStatus({ stepId: nodeId, status: 'success' });
+
+        // --- FLIGHT RECORDER: Log Success ---
+        if (runId && nodeId) {
+            await executionLogger.logStep(
+                runId,
+                { id: nodeId, type: 'close_browser' },
+                {
+                    status: 'success',
+                    duration,
+                    input: req.body,
+                    output: { browserId, closed: true },
+                },
+            );
+        }
+        // ------------------------------------
 
         return res.status(200).json({
             success: true,
@@ -511,13 +616,32 @@ export const closeBrowserAction = async (req, res) => {
             browserId,
         });
     } catch (error) {
+        const duration = Date.now() - start;
         console.error('[ERROR] closeBrowserAction:', error.message);
-        if (req.body.nodeId)
+        const { nodeId, runId } = req.body ?? {};
+
+        if (nodeId)
             emitExecutionStatus({
-                stepId: req.body.nodeId,
+                stepId: nodeId,
                 status: 'failed',
                 error: error.message,
             });
+
+        // --- FLIGHT RECORDER: Log Failure ---
+        if (runId && nodeId) {
+            await executionLogger.logStep(
+                runId,
+                { id: nodeId, type: 'close_browser' },
+                {
+                    status: 'failed',
+                    duration,
+                    input: req.body,
+                    error: error.message,
+                },
+            );
+        }
+        // ------------------------------------
+
         return res.status(500).json({
             success: false,
             message: req.t('actions.close_browser.error'),

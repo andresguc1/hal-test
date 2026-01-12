@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../utils/api";
 import { cn } from "../lib/utils";
-import { History, X, RefreshCw } from "lucide-react";
+import { History, X, RefreshCw, Trash2 } from "lucide-react";
 
 export default function RunHistoryPanel({ isOpen, onClose, onSelectRun }) {
   const [runs, setRuns] = useState([]);
@@ -33,6 +33,50 @@ export default function RunHistoryPanel({ isOpen, onClose, onSelectRun }) {
     onSelectRun(run);
   };
 
+  const handleDeleteRun = async (e, runId) => {
+    e.stopPropagation(); // Prevent selection
+    if (!window.confirm("¿Estás seguro de que quieres eliminar este run?"))
+      return;
+
+    try {
+      setLoading(true);
+      const res = await api.delete(`/runs/${runId}`);
+      if (res.success) {
+        setRuns((prev) => prev.filter((r) => r.id !== runId));
+        if (selectedRunId === runId) {
+          setSelectedRunId(null);
+          // Optional: clear canvas or notify parent
+        }
+      }
+    } catch (error) {
+      console.error("Failed to delete run:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClearHistory = async () => {
+    if (
+      !window.confirm(
+        "¿Estás seguro de que quieres borrar TODO el historial? Esta acción no se puede deshacer.",
+      )
+    )
+      return;
+
+    try {
+      setLoading(true);
+      const res = await api.delete("/runs");
+      if (res.success) {
+        setRuns([]);
+        setSelectedRunId(null);
+      }
+    } catch (error) {
+      console.error("Failed to clear history:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -48,6 +92,15 @@ export default function RunHistoryPanel({ isOpen, onClose, onSelectRun }) {
           </span>
         </div>
         <div className="flex items-center gap-2">
+          {runs.length > 0 && (
+            <button
+              onClick={handleClearHistory}
+              className="p-1.5 hover:bg-red-500/20 rounded-md text-slate-400 hover:text-red-400 transition-colors"
+              title="Clear All History"
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
           <button
             onClick={loadRuns}
             className="p-1.5 hover:bg-white/10 rounded-md text-slate-400 hover:text-slate-200 transition-colors"
@@ -82,16 +135,16 @@ export default function RunHistoryPanel({ isOpen, onClose, onSelectRun }) {
         ) : (
           <div className="space-y-2">
             {runs.map((run) => (
-              <button
+              <div
                 key={run.id}
-                onClick={() => handleRunClick(run)}
                 className={cn(
-                  "w-full text-left p-3 rounded-lg transition-all border",
+                  "group relative w-full text-left p-3 rounded-lg transition-all border cursor-pointer", // Changed to div for nested button support
                   "bg-slate-900/50 hover:bg-slate-800/50",
                   selectedRunId === run.id
                     ? "border-emerald-500/50 bg-emerald-500/5"
                     : "border-white/5 hover:border-white/10",
                 )}
+                onClick={() => handleRunClick(run)}
               >
                 <div className="flex items-center justify-between mb-2">
                   <span
@@ -106,11 +159,20 @@ export default function RunHistoryPanel({ isOpen, onClose, onSelectRun }) {
                   >
                     {run.status}
                   </span>
-                  <span className="text-[10px] text-slate-500">
-                    {run.duration_ms
-                      ? `${(run.duration_ms / 1000).toFixed(1)}s`
-                      : "-"}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-slate-500">
+                      {run.duration_ms
+                        ? `${(run.duration_ms / 1000).toFixed(1)}s`
+                        : "-"}
+                    </span>
+                    <button
+                      onClick={(e) => handleDeleteRun(e, run.id)}
+                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/20 rounded text-slate-500 hover:text-red-400 transition-all"
+                      title="Delete Run"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
                 </div>
                 {run.flow_name && (
                   <div className="text-xs font-medium text-slate-200 mb-1 truncate">
@@ -123,7 +185,7 @@ export default function RunHistoryPanel({ isOpen, onClose, onSelectRun }) {
                 <div className="text-[10px] text-slate-600">
                   {run.trigger} • {run.id.slice(0, 8)}
                 </div>
-              </button>
+              </div>
             ))}
           </div>
         )}

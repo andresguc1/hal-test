@@ -713,8 +713,15 @@ export const useFlowManager = (currentProject, currentFlowId) => {
         try {
           const builder = payloadBuilders[type];
           bodyToSend = builder ? builder(payload || {}) : payload || {};
-          // Inject nodeId for WebSocket tracking
+          // Inject nodeId and runId for WebSocket tracking and Flight Recorder
           bodyToSend.nodeId = nodeId;
+          if (payload?.runId) {
+            bodyToSend.runId = payload.runId;
+            console.log(
+              "[FlightRecorder Frontend] runId injected:",
+              payload.runId,
+            );
+          }
         } catch (builderError) {
           console.error(`Error en payload builder para ${type}:`, builderError);
           const errorMsg = `Payload inválido: ${builderError.message}`;
@@ -749,6 +756,11 @@ export const useFlowManager = (currentProject, currentFlowId) => {
           if (openaiKey) headers["x-openai-key"] = openaiKey;
           if (googleKey) headers["x-google-key"] = googleKey;
           if (anthropicKey) headers["x-anthropic-key"] = anthropicKey;
+
+          console.log(
+            "[FlightRecorder Frontend] bodyToSend before fetch:",
+            JSON.stringify(bodyToSend),
+          );
 
           const response = await fetch(endpoint, {
             method: "POST",
@@ -1157,6 +1169,8 @@ export const useFlowManager = (currentProject, currentFlowId) => {
           flowId: currentFlowId,
           flowName,
           trigger: "manual",
+          nodes, // Save current nodes for visual replay
+          edges, // Save current edges for visual replay
         });
         if (runData.success) {
           runId = runData.runId;
@@ -1207,121 +1221,126 @@ export const useFlowManager = (currentProject, currentFlowId) => {
       });
 
       // 2. Execute each flow sequentially
-      for (
-        let flowIndex = 0;
-        flowIndex < connectedComponents.length;
-        flowIndex++
-      ) {
-        const flowNodes = connectedComponents[flowIndex];
-        const flowEdges = edges.filter(
-          (e) =>
-            flowNodes.some((n) => n.id === e.source) &&
-            flowNodes.some((n) => n.id === e.target),
-        );
+      try {
+        for (
+          let flowIndex = 0;
+          flowIndex < connectedComponents.length;
+          flowIndex++
+        ) {
+          const flowNodes = connectedComponents[flowIndex];
+          const flowEdges = edges.filter(
+            (e) =>
+              flowNodes.some((n) => n.id === e.source) &&
+              flowNodes.some((n) => n.id === e.target),
+          );
 
-        // Sort nodes for this specific flow
-        const sortedNodes = topologicalSort(flowNodes, flowEdges);
+          // Sort nodes for this specific flow
+          const sortedNodes = topologicalSort(flowNodes, flowEdges);
 
-        // ISOLATION: Reset runtime context for each flow
-        const runtimeContext = {};
-        let browserId = null; // Track browser ID for cleanup
-        logger.info(
-          `▶ Starting Flow ${flowIndex + 1}/${connectedComponents.length} (${sortedNodes.length} steps)`,
-        );
+          // ISOLATION: Reset runtime context for each flow
+          const runtimeContext = {};
+          let browserId = null; // Track browser ID for cleanup
+          logger.info(
+            `▶ Starting Flow ${flowIndex + 1}/${connectedComponents.length} (${sortedNodes.length} steps)`,
+          );
 
-        try {
-          for (let i = 0; i < sortedNodes.length; i++) {
-            if (executionAbortController.current?.signal.aborted) break;
+          try {
+            for (let i = 0; i < sortedNodes.length; i++) {
+              if (executionAbortController.current?.signal.aborted) break;
 
-            const node = sortedNodes[i];
+              const node = sortedNodes[i];
 
-            // Merge runtime context (e.g., browserId) into the payload
-            const payload = {
-              ...(node.data.configuration || {}),
-              ...runtimeContext,
-              runId, // Inject runId for Flight Recorder
-            };
+              // Merge runtime context (e.g., browserId) into the payload
+              const payload = {
+                ...(node.data.configuration || {}),
+                ...runtimeContext,
+                runId, // Inject runId for Flight Recorder
+              };
 
-            const action = {
-              nodeId: node.id,
-              type: node.data.type,
-              payload,
-            };
+              const action = {
+                nodeId: node.id,
+                type: node.data.type,
+                payload,
+              };
 
-            const result = await executeStep(action, options);
+              const result = await executeStep(action, options);
 
-            // Update runtime context with new instanceId/browserId if available
-            if (result.success && result.instanceId) {
-              browserId = result.instanceId; // Track for cleanup
-              runtimeContext.browserId = result.instanceId;
-              runtimeContext.instanceId = result.instanceId;
-            }
-
-            if (result.skipped) {
-              globalStats.skipped++;
-            } else if (result.success) {
-              globalStats.successful++;
-            } else {
-              globalStats.failed++;
-              if (stopOnError) {
-                globalStats.duration = Date.now() - startTime;
-                setExecutionStats({ ...globalStats });
-                setApiStatus({
-                  state: "error",
-                  message: `✗ Flujo detenido en paso ${i + 1}/${sortedNodes.length} del Flujo ${flowIndex + 1}`,
-                  details: globalStats,
-                });
-                // Browser cleanup will happen in finally block
-                return { success: false, stats: globalStats };
+              // Update runtime context with new instanceId/browserId if available
+              if (result.success && result.instanceId) {
+                browserId = result.instanceId; // Track for cleanup
+                runtimeContext.browserId = result.instanceId;
+                runtimeContext.instanceId = result.instanceId;
               }
-            }
 
-            setApiStatus({
-              state: "loading",
-              message: `Flujo ${flowIndex + 1}/${connectedComponents.length}: Paso ${i + 1}/${sortedNodes.length} (${globalStats.successful} OK, ${globalStats.failed} Err)`,
-            });
-          }
-        } catch (error) {
-          console.error(`Error in flow ${flowIndex + 1}:`, error);
-          globalStats.failed++;
-        } finally {
-          // CLEANUP: Always close browser if it was opened, even on error
-          if (browserId) {
-            try {
-              const apiBase = import.meta.env.PROD
-                ? "https://hal-test-backend.onrender.com"
-                : "http://localhost:2001";
-              await fetch(`${apiBase}/api/actions/close_browser`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ browserId }),
+              if (result.skipped) {
+                globalStats.skipped++;
+              } else if (result.success) {
+                globalStats.successful++;
+              } else {
+                globalStats.failed++;
+                if (stopOnError) {
+                  globalStats.duration = Date.now() - startTime;
+                  setExecutionStats({ ...globalStats });
+                  setApiStatus({
+                    state: "error",
+                    message: `✗ Flujo detenido en paso ${i + 1}/${sortedNodes.length} del Flujo ${flowIndex + 1}`,
+                    details: globalStats,
+                  });
+                  // Browser cleanup will happen in finally block
+                  return { success: false, stats: globalStats };
+                }
+              }
+
+              setApiStatus({
+                state: "loading",
+                message: `Flujo ${flowIndex + 1}/${connectedComponents.length}: Paso ${i + 1}/${sortedNodes.length} (${globalStats.successful} OK, ${globalStats.failed} Err)`,
               });
-            } catch (cleanupError) {
-              console.warn(
-                `⚠ Failed to close browser ${browserId}:`,
-                cleanupError,
-              );
+            }
+          } catch (error) {
+            console.error(`Error in flow ${flowIndex + 1}:`, error);
+            globalStats.failed++;
+          } finally {
+            // CLEANUP: Always close browser if it was opened, even on error
+            if (browserId) {
+              try {
+                const apiBase = import.meta.env.PROD
+                  ? "https://hal-test-backend.onrender.com"
+                  : "http://localhost:2001";
+                await fetch(`${apiBase}/api/actions/close_browser`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ browserId }),
+                });
+              } catch (cleanupError) {
+                console.warn(
+                  `⚠ Failed to close browser ${browserId}:`,
+                  cleanupError,
+                );
+              }
             }
           }
         }
+      } finally {
+        // --- FLIGHT RECORDER: End Run (Always called) ---
+        if (runId) {
+          try {
+            // Determine status based on stats at this point
+            // If returning early due to error, failed > 0
+            const finalSuccess = globalStats.failed === 0;
+            await api.post(`/runs/${runId}/end`, {
+              status: finalSuccess ? "completed" : "failed",
+            });
+          } catch (e) {
+            logger.error("Failed to end run logger", e, "useFlowManager");
+          }
+        }
+        // -----------------------------------------------
       }
 
       globalStats.duration = Date.now() - startTime;
       setExecutionStats(globalStats);
 
       const allSuccess = globalStats.failed === 0;
-
-      // --- FLIGHT RECORDER: End Run ---
-      if (runId) {
-        try {
-          await api.post(`/runs/${runId}/end`, {
-            status: allSuccess ? "completed" : "failed",
-          });
-        } catch (e) {
-          logger.error("Failed to end run logger", e, "useFlowManager");
-        }
-      }
-      // --------------------------------
 
       setApiStatus({
         state: allSuccess ? "success" : "warning",

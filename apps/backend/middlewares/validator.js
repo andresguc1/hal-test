@@ -67,14 +67,19 @@ const validate = (schemas) => (req, res, next) => {
 
     // 6. If validation is successful, replace request data with cleaned data.
     // Only properties existing in 'value' (and thus in 'schemas') will be replaced.
-    // 🛡️ PRESERVE nodeId: Socket.io uses this field for real-time tracking,
-    // allowing it to bypass 'stripUnknown: true' without modifying every schema.
+    // 🛡️ PRESERVE nodeId and runId: Socket.io uses nodeId for real-time tracking,
+    // and Flight Recorder uses runId for step result logging.
+    // This allows them to bypass 'stripUnknown: true' without modifying every schema.
     const originalNodeId = req.body && req.body.nodeId;
+    const originalRunId = req.body && req.body.runId;
 
     if (value.body) {
         req.body = value.body;
         if (originalNodeId) {
             req.body.nodeId = originalNodeId;
+        }
+        if (originalRunId) {
+            req.body.runId = originalRunId;
         }
     }
     if (value.params) {

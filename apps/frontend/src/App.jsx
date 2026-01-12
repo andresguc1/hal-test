@@ -46,6 +46,7 @@ import { useFigmaInteraction } from "./hooks/useFigmaInteraction";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "next-themes";
 import RunHistoryPanel from "./components/RunHistoryPanel";
+import StepDetailsModal from "./components/StepDetailsModal";
 import { api } from "./utils/api";
 
 // ========================================
@@ -138,6 +139,12 @@ export default function App() {
   // History Panel State
   const [isHistoryPanelVisible, setIsHistoryPanelVisible] = useState(false);
 
+  // Step Details Modal State (for replay mode)
+  const [stepDetailsModal, setStepDetailsModal] = useState({
+    isOpen: false,
+    nodeData: null,
+  });
+
   // Custom hook para manejar el flujo
   const {
     nodes,
@@ -185,6 +192,18 @@ export default function App() {
     [selectedAction, updateNodeConfiguration, toast, t],
   );
 
+  // Map backend step status to frontend NODE_STATES
+  const mapBackendStatusToFrontend = (backendStatus) => {
+    const statusMap = {
+      pending: "default",
+      running: "executing",
+      success: "success",
+      failed: "error",
+      skipped: "skipped",
+    };
+    return statusMap[backendStatus] || "default";
+  };
+
   const handleSelectRun = useCallback(
     async (runBasic) => {
       try {
@@ -195,30 +214,88 @@ export default function App() {
             `Loaded run from ${new Date(run.started_at).toLocaleTimeString()}`,
           );
 
-          setNodes((nds) =>
-            nds.map((node) => {
+          // RESTORE SNAPSHOT IF AVAILABLE
+          let nodesToRender = [];
+          if (run.flow_snapshot) {
+            try {
+              const snapshot = JSON.parse(run.flow_snapshot);
+              setEdges(snapshot.edges || []);
+              nodesToRender = snapshot.nodes || [];
+              toast.info("Visual state restored from snapshot");
+            } catch (e) {
+              console.error("Failed to parse flow snapshot", e);
+              nodesToRender = []; // Fallback will use current nodes below (in setNodes) if empty?
+              // Actually, if snapshot fails or doesn't exist, we should use current 'nodes' state?
+              // But 'nodes' state is not accessible easily inside setNodes callback if we want to combine logic.
+              // Let's split strictly.
+            }
+          }
+
+          if (nodesToRender.length > 0) {
+            // APPLY STATES TO SNAPSHOT NODES
+            const processedNodes = nodesToRender.map((node) => {
               const step = run.steps.find((s) => s.node_id === node.id);
               if (step) {
                 return {
                   ...node,
                   data: {
                     ...node.data,
-                    state: step.status,
+                    state: mapBackendStatusToFrontend(step.status),
                     error: step.error,
+                    replayData: {
+                      duration_ms: step.duration_ms,
+                      screenshot_path: step.screenshot_path,
+                      input_data: step.input_data,
+                      output_data: step.output_data,
+                    },
                   },
                 };
               }
-              // Reset others
               return {
                 ...node,
                 data: {
                   ...node.data,
-                  state: "idle",
+                  state: "default",
                   error: null,
+                  replayData: null,
                 },
               };
-            }),
-          );
+            });
+            setNodes(processedNodes);
+          } else {
+            // LEGACY: APPLY STATES TO CURRENT NODES
+            setNodes((nds) =>
+              nds.map((node) => {
+                const step = run.steps.find((s) => s.node_id === node.id);
+                if (step) {
+                  return {
+                    ...node,
+                    data: {
+                      ...node.data,
+                      state: mapBackendStatusToFrontend(step.status),
+                      error: step.error,
+                      replayData: {
+                        duration_ms: step.duration_ms,
+                        screenshot_path: step.screenshot_path,
+                        input_data: step.input_data,
+                        output_data: step.output_data,
+                      },
+                    },
+                  };
+                }
+                // Reset others (not part of this run)
+                return {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    state: "default",
+                    error: null,
+                    replayData: null,
+                  },
+                };
+              }),
+            );
+          }
         }
       } catch (error) {
         console.error("Failed to load run details:", error);
@@ -583,6 +660,14 @@ export default function App() {
         closeConfiguration();
         setMenu(null);
       },
+      onNodeDoubleClick: (event, node) => {
+        // Open Step Details Modal on double-click
+        console.log("[DEBUG] Node double-clicked:", node.id, node.data);
+        setStepDetailsModal({
+          isOpen: true,
+          nodeData: node.data,
+        });
+      },
       onNodeContextMenu,
       onEdgeContextMenu,
       onPaneContextMenu,
@@ -832,6 +917,13 @@ export default function App() {
               createFlow(name);
             }
           }}
+        />
+
+        {/* STEP DETAILS MODAL (Replay Mode) */}
+        <StepDetailsModal
+          isOpen={stepDetailsModal.isOpen}
+          onClose={() => setStepDetailsModal({ isOpen: false, nodeData: null })}
+          nodeData={stepDetailsModal.nodeData}
         />
 
         {/* TOAST SYSTEM (Positioned relative to Panel) */}

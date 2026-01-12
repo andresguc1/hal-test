@@ -37,6 +37,10 @@ const Run = sequelize.define(
             type: DataTypes.STRING,
             defaultValue: 'manual',
         },
+        flow_snapshot: {
+            type: DataTypes.TEXT, // Stores JSON string of { nodes, edges }
+            allowNull: true,
+        },
     },
     {
         timestamps: true,

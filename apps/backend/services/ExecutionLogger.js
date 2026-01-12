@@ -14,6 +14,7 @@ class ExecutionLogger {
                 flow_name: metadata.flowName || null,
                 status: 'running',
                 trigger: metadata.trigger || 'manual',
+                flow_snapshot: metadata.flowSnapshot || null,
             });
             return run.id;
         } catch (error) {
@@ -29,9 +30,14 @@ class ExecutionLogger {
      * @param {object} result - { status, error, input, output, duration, screenshot }
      */
     async logStep(runId, nodeData, result) {
-        if (!runId) return;
+        console.log('[ExecutionLogger.logStep] CALLED with runId:', runId, 'nodeId:', nodeData?.id);
+        if (!runId) {
+            console.log('[ExecutionLogger.logStep] No runId, skipping');
+            return;
+        }
 
         try {
+            console.log('[ExecutionLogger.logStep] Creating StepResult in DB...');
             await StepResult.create({
                 run_id: runId,
                 node_id: nodeData.id,
@@ -43,6 +49,7 @@ class ExecutionLogger {
                 output_data: result.output,
                 duration_ms: result.duration,
             });
+            console.log('[ExecutionLogger.logStep] StepResult created successfully');
         } catch (error) {
             console.error('[ExecutionLogger] Failed to log step:', error);
         }

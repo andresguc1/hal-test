@@ -30,9 +30,9 @@ const UserConfigMenu = ({
   user = { name: "User Name", email: "hal-user@example.com" },
   onOpenSettings,
   onOpenApiKeys,
-  onLogout = () => { },
+  onLogout = () => {},
   currentLanguage = "en",
-  onLanguageChange = () => { },
+  onLanguageChange = () => {},
   languages = [],
   className,
 }) => {
@@ -99,7 +99,9 @@ const UserConfigMenu = ({
               <div className="p-1 rounded bg-purple-500/10 text-purple-400">
                 <Globe size={14} />
               </div>
-              <span className="text-xs font-medium text-slate-300">Language</span>
+              <span className="text-xs font-medium text-slate-300">
+                Language
+              </span>
             </div>
             <Select value={currentLanguage} onValueChange={onLanguageChange}>
               <SelectTrigger className="w-[80px] h-7 text-xs bg-white/5 border-white/10">

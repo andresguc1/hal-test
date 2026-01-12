@@ -66714,13 +66714,11 @@ var Bue = class extends ud {
             const o = this.options;
             ((this.options = this.#e.defaultMutationOptions(t)),
                 vy(this.options, o) ||
-                    this.#e
-                        .getMutationCache()
-                        .notify({
-                            type: 'observerOptionsUpdated',
-                            mutation: this.#n,
-                            observer: this,
-                        }),
+                    this.#e.getMutationCache().notify({
+                        type: 'observerOptionsUpdated',
+                        mutation: this.#n,
+                        observer: this,
+                    }),
                 o?.mutationKey &&
                 this.options.mutationKey &&
                 cc(o.mutationKey) !== cc(this.options.mutationKey)
