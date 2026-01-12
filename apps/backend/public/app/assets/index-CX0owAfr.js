@@ -26720,7 +26720,7 @@ function S2(e, t, o, s, i, l, c) {
         }
         const E = XS(b.nodeElement),
             C = _.measured.width !== E.width || _.measured.height !== E.height;
-        if (E.width && E.height && (C || !_.internals.handleBounds || b.force)) {
+        if (!!(E.width && E.height && (C || !_.internals.handleBounds || b.force))) {
             const j = b.nodeElement.getBoundingClientRect(),
                 T = Ku(_.extent) ? _.extent : l;
             let { positionAbsolute: A } = _.internals;
@@ -66714,11 +66714,13 @@ var Bue = class extends ud {
             const o = this.options;
             ((this.options = this.#e.defaultMutationOptions(t)),
                 vy(this.options, o) ||
-                    this.#e.getMutationCache().notify({
-                        type: 'observerOptionsUpdated',
-                        mutation: this.#n,
-                        observer: this,
-                    }),
+                    this.#e
+                        .getMutationCache()
+                        .notify({
+                            type: 'observerOptionsUpdated',
+                            mutation: this.#n,
+                            observer: this,
+                        }),
                 o?.mutationKey &&
                 this.options.mutationKey &&
                 cc(o.mutationKey) !== cc(this.options.mutationKey)
@@ -71110,7 +71112,7 @@ function mfe() {
                                               {
                                                   fileName:
                                                       '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/App.jsx',
-                                                  lineNumber: 660,
+                                                  lineNumber: 661,
                                                   columnNumber: 13,
                                               },
                                               this,
@@ -71124,7 +71126,7 @@ function mfe() {
                                               {
                                                   fileName:
                                                       '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/App.jsx',
-                                                  lineNumber: 669,
+                                                  lineNumber: 670,
                                                   columnNumber: 39,
                                               },
                                               this,
@@ -71152,7 +71154,7 @@ function mfe() {
                                                                         {
                                                                             fileName:
                                                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/App.jsx',
-                                                                            lineNumber: 676,
+                                                                            lineNumber: 677,
                                                                             columnNumber: 33,
                                                                         },
                                                                         this,
@@ -71165,7 +71167,7 @@ function mfe() {
                                                                     {
                                                                         fileName:
                                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/App.jsx',
-                                                                        lineNumber: 677,
+                                                                        lineNumber: 678,
                                                                         columnNumber: 17,
                                                                     },
                                                                     this,
@@ -71186,7 +71188,7 @@ function mfe() {
                                                                         {
                                                                             fileName:
                                                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/App.jsx',
-                                                                            lineNumber: 680,
+                                                                            lineNumber: 681,
                                                                             columnNumber: 19,
                                                                         },
                                                                         this,
@@ -71210,7 +71212,7 @@ function mfe() {
                                                                     {
                                                                         fileName:
                                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/App.jsx',
-                                                                        lineNumber: 690,
+                                                                        lineNumber: 691,
                                                                         columnNumber: 17,
                                                                     },
                                                                     this,
@@ -71294,7 +71296,7 @@ function mfe() {
                                                                         {
                                                                             fileName:
                                                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/App.jsx',
-                                                                            lineNumber: 701,
+                                                                            lineNumber: 702,
                                                                             columnNumber: 19,
                                                                         },
                                                                         this,
@@ -71306,7 +71308,7 @@ function mfe() {
                                                         {
                                                             fileName:
                                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/App.jsx',
-                                                            lineNumber: 675,
+                                                            lineNumber: 676,
                                                             columnNumber: 15,
                                                         },
                                                         this,
@@ -71317,7 +71319,7 @@ function mfe() {
                                                 {
                                                     fileName:
                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/App.jsx',
-                                                    lineNumber: 674,
+                                                    lineNumber: 675,
                                                     columnNumber: 13,
                                                 },
                                                 this,
@@ -71328,7 +71330,7 @@ function mfe() {
                                         {
                                             fileName:
                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/App.jsx',
-                                            lineNumber: 673,
+                                            lineNumber: 674,
                                             columnNumber: 11,
                                         },
                                         this,
@@ -71349,7 +71351,7 @@ function mfe() {
                                         {
                                             fileName:
                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/App.jsx',
-                                            lineNumber: 753,
+                                            lineNumber: 754,
                                             columnNumber: 11,
                                         },
                                         this,
@@ -71362,7 +71364,7 @@ function mfe() {
                                         {
                                             fileName:
                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/App.jsx',
-                                            lineNumber: 764,
+                                            lineNumber: 765,
                                             columnNumber: 11,
                                         },
                                         this,
@@ -71375,7 +71377,7 @@ function mfe() {
                                         {
                                             fileName:
                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/App.jsx',
-                                            lineNumber: 765,
+                                            lineNumber: 766,
                                             columnNumber: 11,
                                         },
                                         this,
@@ -71387,7 +71389,7 @@ function mfe() {
                             {
                                 fileName:
                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/App.jsx',
-                                lineNumber: 657,
+                                lineNumber: 658,
                                 columnNumber: 9,
                             },
                             this,
@@ -71400,7 +71402,7 @@ function mfe() {
                             {
                                 fileName:
                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/App.jsx',
-                                lineNumber: 768,
+                                lineNumber: 769,
                                 columnNumber: 9,
                             },
                             this,
@@ -71413,7 +71415,7 @@ function mfe() {
                             {
                                 fileName:
                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/App.jsx',
-                                lineNumber: 774,
+                                lineNumber: 775,
                                 columnNumber: 9,
                             },
                             this,
@@ -71447,7 +71449,7 @@ function mfe() {
                             {
                                 fileName:
                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/App.jsx',
-                                lineNumber: 782,
+                                lineNumber: 783,
                                 columnNumber: 9,
                             },
                             this,
@@ -71472,7 +71474,7 @@ function mfe() {
                             {
                                 fileName:
                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/App.jsx',
-                                lineNumber: 812,
+                                lineNumber: 813,
                                 columnNumber: 9,
                             },
                             this,
@@ -71485,7 +71487,7 @@ function mfe() {
                             {
                                 fileName:
                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/App.jsx',
-                                lineNumber: 837,
+                                lineNumber: 838,
                                 columnNumber: 9,
                             },
                             this,
@@ -73845,7 +73847,7 @@ var Nme = (e, t = !1) => {
                 return (
                     this.#c
                         ? (y = this.#c)
-                        : ((y = Hfe(() => yfe(() => import('./CDWEKZTF-GaaQlfCl.js'), []))),
+                        : ((y = Hfe(() => yfe(() => import('./CDWEKZTF-oRQJCBqZ.js'), []))),
                           (this.#c = y)),
                     Fhe(this.#a, this.#i),
                     kfe(

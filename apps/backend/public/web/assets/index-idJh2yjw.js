@@ -14997,11 +14997,7 @@ const DS = ({ scrollProgress: e }) => {
                                         borderColor: 'var(--hal-primary-500)',
                                     },
                                     whileTap: { scale: 0.95 },
-                                    onClick: () =>
-                                        window.open(
-                                            'https://hal-test-frontend.vercel.app/',
-                                            '_blank',
-                                        ),
+                                    onClick: () => window.open('/app', '_blank'),
                                     className:
                                         'border border-white/20 bg-hal-primary-500/20 text-white px-12 py-4 rounded-full text-lg uppercase font-bold transition-colors backdrop-blur-md hover:bg-hal-primary-500',
                                     children: 'Launch App',
