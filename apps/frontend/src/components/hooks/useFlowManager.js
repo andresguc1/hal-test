@@ -1148,13 +1148,15 @@ export const useFlowManager = (currentProject, currentFlowId) => {
       let runId = null;
       try {
         // Get flow name from currentProject
-        const currentFlow = currentProject?.flows?.find((f) => f.id === currentFlowId);
-        const flowName = currentFlow?.name || 'Unknown Flow';
+        const currentFlow = currentProject?.flows?.find(
+          (f) => f.id === currentFlowId,
+        );
+        const flowName = currentFlow?.name || "Unknown Flow";
 
-        const runData = await api.post('/runs/start', {
+        const runData = await api.post("/runs/start", {
           flowId: currentFlowId,
           flowName,
-          trigger: 'manual'
+          trigger: "manual",
         });
         if (runData.success) {
           runId = runData.runId;
@@ -1312,7 +1314,9 @@ export const useFlowManager = (currentProject, currentFlowId) => {
       // --- FLIGHT RECORDER: End Run ---
       if (runId) {
         try {
-          await api.post(`/runs/${runId}/end`, { status: allSuccess ? 'completed' : 'failed' });
+          await api.post(`/runs/${runId}/end`, {
+            status: allSuccess ? "completed" : "failed",
+          });
         } catch (e) {
           logger.error("Failed to end run logger", e, "useFlowManager");
         }

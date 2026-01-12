@@ -97,10 +97,7 @@ function AppHeader({
 
       {/* RIGHT */}
       <div className="flex items-center gap-12 relative z-20 shrink-0">
-        <HeaderButton
-          onClick={onToggleHistory}
-          title="Execution History"
-        >
+        <HeaderButton onClick={onToggleHistory} title="Execution History">
           <History size={18} />
         </HeaderButton>
 

@@ -185,41 +185,48 @@ export default function App() {
     [selectedAction, updateNodeConfiguration, toast, t],
   );
 
-  const handleSelectRun = useCallback(async (runBasic) => {
-    try {
-      const res = await api.get(`/runs/${runBasic.id}`);
-      if (res.success) {
-        const run = res.data;
-        toast.success(`Loaded run from ${new Date(run.started_at).toLocaleTimeString()}`);
+  const handleSelectRun = useCallback(
+    async (runBasic) => {
+      try {
+        const res = await api.get(`/runs/${runBasic.id}`);
+        if (res.success) {
+          const run = res.data;
+          toast.success(
+            `Loaded run from ${new Date(run.started_at).toLocaleTimeString()}`,
+          );
 
-        setNodes((nds) => nds.map((node) => {
-          const step = run.steps.find((s) => s.node_id === node.id);
-          if (step) {
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                state: step.status,
-                error: step.error,
+          setNodes((nds) =>
+            nds.map((node) => {
+              const step = run.steps.find((s) => s.node_id === node.id);
+              if (step) {
+                return {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    state: step.status,
+                    error: step.error,
+                  },
+                };
               }
-            };
-          }
-          // Reset others
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              state: 'idle',
-              error: null,
-            }
-          };
-        }));
+              // Reset others
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  state: "idle",
+                  error: null,
+                },
+              };
+            }),
+          );
+        }
+      } catch (error) {
+        console.error("Failed to load run details:", error);
+        toast.error("Failed to load run history");
       }
-    } catch (error) {
-      console.error("Failed to load run details:", error);
-      toast.error("Failed to load run history");
-    }
-  }, [setNodes, toast]);
+    },
+    [setNodes, toast],
+  );
 
   // Initialize Socket.io connection for real-time updates and inspector events
   useHaltestSocket(setNodes, handleElementPicked);
@@ -634,8 +641,11 @@ export default function App() {
           onOpenSettings={openSettings}
           onOpenApiKeys={openApiKeys}
           onToggleHistory={() => {
-            setIsHistoryPanelVisible((v) => !v);
-            setIsCreationPanelVisible(false); // Close toolbox when opening history
+            setIsHistoryPanelVisible((prev) => {
+              if (!prev) setIsCreationPanelVisible(false); // If opening history, close toolbox
+              else setIsCreationPanelVisible(true); // If closing history, show toolbox
+              return !prev;
+            });
           }}
           selectedProject={currentProject}
           selectedFlow={currentProject?.flows?.find(
