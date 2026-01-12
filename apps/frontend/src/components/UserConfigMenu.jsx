@@ -30,7 +30,10 @@ const UserConfigMenu = ({
   user = { name: "User Name", email: "hal-user@example.com" },
   onOpenSettings,
   onOpenApiKeys,
-  onLogout = () => {},
+  onLogout = () => { },
+  currentLanguage = "en",
+  onLanguageChange = () => { },
+  languages = [],
   className,
 }) => {
   return (
@@ -88,6 +91,30 @@ const UserConfigMenu = ({
           </div>
           <span className="text-xs font-medium">Global Settings</span>
         </Button>
+
+        {/* Language Selector */}
+        {languages.length > 0 && (
+          <div className="flex items-center justify-between h-9 px-3 gap-3">
+            <div className="flex items-center gap-3">
+              <div className="p-1 rounded bg-purple-500/10 text-purple-400">
+                <Globe size={14} />
+              </div>
+              <span className="text-xs font-medium text-slate-300">Language</span>
+            </div>
+            <Select value={currentLanguage} onValueChange={onLanguageChange}>
+              <SelectTrigger className="w-[80px] h-7 text-xs bg-white/5 border-white/10">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {languages.map((lang) => (
+                  <SelectItem key={lang.value} value={lang.value}>
+                    {lang.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
       <Separator className="bg-white/5 my-2" />

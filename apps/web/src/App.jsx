@@ -6,6 +6,7 @@ import {
   useSpring,
   AnimatePresence,
 } from "framer-motion";
+import { useTranslation } from "react-i18next";
 
 /**
  * COMPONENTE: ScrollExplodeCanvas
@@ -137,7 +138,7 @@ const ScrollExplodeCanvas = ({ scrollProgress }) => {
  * COMPONENTE: SectionOverlay
  * Controla la visibilidad y animación de los textos según el scroll
  */
-const SectionOverlay = ({ scrollProgress }) => {
+const SectionOverlay = ({ scrollProgress, t }) => {
   // Definición de rangos de visibilidad para cada sección
   const heroOpacity = useTransform(scrollProgress, [0, 0.15], [1, 0]);
   const f1Opacity = useTransform(scrollProgress, [0.2, 0.3, 0.4], [0, 1, 0]);
@@ -156,29 +157,26 @@ const SectionOverlay = ({ scrollProgress }) => {
           <span className="text-white">-</span>
           <span className="text-hal-warning-500">Test</span>
         </h1>
-        <p className="text-lg md:text-xl text-white/60">
-          Modern, visual automation framework.
-        </p>
+        <p className="text-lg md:text-xl text-white/60">{t("hero.subtitle")}</p>
       </motion.div>
 
       {/* FEATURE 1: 30% */}
       <motion.div style={{ opacity: f1Opacity }} className={textStyle}>
         <h2 className="text-3xl md:text-5xl font-bold uppercase mb-4">
-          Visual Flow Editor
+          {t("features.visual_editor.title")}
         </h2>
         <p className="text-lg md:text-xl text-white/60">
-          Orquestación "drag-and-drop" con más de 50 nodos especializados. Sin
-          código.
+          {t("features.visual_editor.description")}
         </p>
       </motion.div>
 
       {/* FEATURE 2: 60% */}
       <motion.div style={{ opacity: f2Opacity }} className={textStyle}>
         <h2 className="text-3xl md:text-5xl font-bold uppercase mb-4">
-          Advanced Control
+          {t("features.advanced_control.title")}
         </h2>
         <p className="text-lg md:text-xl text-white/60">
-          Intercepción de red, integración con IA y gestión de sesiones.
+          {t("features.advanced_control.description")}
         </p>
       </motion.div>
 
@@ -188,7 +186,7 @@ const SectionOverlay = ({ scrollProgress }) => {
         className={`${textStyle} pointer-events-auto`}
       >
         <h2 className="text-4xl md:text-7xl font-bold uppercase mb-8">
-          Open Source & Free
+          {t("cta.open_source")}
         </h2>
         <div className="flex flex-col md:flex-row gap-4 justify-center items-center">
           <motion.button
@@ -201,7 +199,7 @@ const SectionOverlay = ({ scrollProgress }) => {
             onClick={() => window.open("/app", "_blank")}
             className="border border-white/20 bg-hal-primary-500/20 text-white px-12 py-4 rounded-full text-lg uppercase font-bold transition-colors backdrop-blur-md hover:bg-hal-primary-500"
           >
-            Launch App
+            {t("cta.launch_app")}
           </motion.button>
 
           <motion.button
@@ -215,7 +213,7 @@ const SectionOverlay = ({ scrollProgress }) => {
             }
             className="flex items-center gap-2 border border-white/20 bg-black/20 text-white px-8 py-4 rounded-full text-lg uppercase font-bold transition-colors backdrop-blur-md"
           >
-            <span>★</span> Star on GitHub
+            <span>★</span> {t("cta.star_github")}
           </motion.button>
         </div>
       </motion.div>
@@ -225,6 +223,7 @@ const SectionOverlay = ({ scrollProgress }) => {
 
 export default function App() {
   const containerRef = useRef(null);
+  const { t, i18n } = useTranslation();
 
   // Hook de scroll principal (400vh de altura para dar espacio a la secuencia)
   const { scrollYProgress } = useScroll({
@@ -234,6 +233,11 @@ export default function App() {
 
   // Rotación del logo basada en el scroll
   const logoRotation = useTransform(scrollYProgress, [0, 1], [0, 360]);
+
+  const toggleLanguage = () => {
+    const newLang = i18n.language.startsWith("es") ? "en" : "es";
+    i18n.changeLanguage(newLang);
+  };
 
   return (
     <div className="bg-background min-h-screen text-white">
@@ -264,8 +268,16 @@ export default function App() {
             <span className="text-hal-warning-500">TEST</span>
           </div>
         </div>
-        <div className="text-white/40 text-[10px] uppercase">
-          Status: Operating
+        <div className="flex items-center gap-4">
+          <button
+            onClick={toggleLanguage}
+            className="text-white/60 hover:text-white text-[10px] uppercase tracking-wider transition-colors cursor-pointer"
+          >
+            {i18n.language.startsWith("es") ? "EN" : "ES"}
+          </button>
+          <div className="text-white/40 text-[10px] uppercase">
+            {t("nav.status")}
+          </div>
         </div>
       </nav>
 
@@ -296,7 +308,7 @@ export default function App() {
         <ScrollExplodeCanvas scrollProgress={scrollYProgress} />
 
         {/* Content Layers */}
-        <SectionOverlay scrollProgress={scrollYProgress} />
+        <SectionOverlay scrollProgress={scrollYProgress} t={t} />
       </div>
 
       {/* Indicador de Scroll lateral */}
