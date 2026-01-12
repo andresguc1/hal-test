@@ -4,6 +4,8 @@ const API_BASE_URL = import.meta.env.PROD
 
 const getHeaders = () => {
   const headers = { "Content-Type": "application/json" };
+
+  // Legacy keys
   const apiKey = localStorage.getItem("hal_openai_key");
   const googleKey = localStorage.getItem("hal_google_key");
   const anthropicKey = localStorage.getItem("hal_anthropic_key");
@@ -15,6 +17,18 @@ const getHeaders = () => {
   if (anthropicKey) headers["x-anthropic-key"] = anthropicKey;
   if (grokKey) headers["x-grok-key"] = grokKey;
   if (model) headers["x-openai-model"] = model;
+
+  // New Unified Keys (APIKeysModal)
+  const storedKeys = localStorage.getItem("haltest_api_keys");
+  if (storedKeys) {
+    try {
+      const keys = JSON.parse(storedKeys);
+      if (keys.openai) headers["x-openai-key"] = keys.openai;
+      if (keys.anthropic) headers["x-anthropic-key"] = keys.anthropic;
+    } catch (e) {
+      console.error("Error parsing haltest_api_keys", e);
+    }
+  }
 
   return headers;
 };

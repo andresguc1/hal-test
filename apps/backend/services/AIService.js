@@ -1,6 +1,7 @@
 // services/AIService.js
-import { generateText } from 'ai';
+import { generateText, generateObject } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
+import { z } from 'zod';
 
 /**
  * Servicio Central de IA
@@ -92,6 +93,64 @@ class AIService {
         } catch (error) {
             console.error('[AIService] Error generating text:', error);
             throw new Error(`AI Generation failed: ${error.message}`);
+        }
+    }
+    /**
+     * Attempts to "heal" a broken selector by analyzing the screenshot and DOM.
+     * @param {object} params
+     * @param {string} params.screenshotBase64 - Base64 image of the current state
+     * @param {string} params.domSnippet - Simplified HTML snippet around the area
+     * @param {string} params.originalSelector - The selector that failed
+     * @param {string} params.error - The error message
+     * @param {string} params.intent - What the action was trying to do (e.g. "click login button")
+     */
+    async healSelector({ screenshotBase64, domSnippet, originalSelector, error, intent, apiKey }) {
+        try {
+            const providerInstance = this.getProvider('openai', apiKey);
+            const model = providerInstance('gpt-4o'); // Vision capable model required
+
+            const prompt = `
+            The automation failed to find an element.
+            Original Selector: "${originalSelector}"
+            Error: "${error}"
+            Intent: "${intent}"
+
+            Attached is the screenshot of the page and a snippet of the DOM.
+            Analyze the visual elements and the DOM to find the most likely correct selector for the intended element.
+            The original selector might be outdated (ID changed, class changed, etc.).
+            Return a robust CSS selector that targets the visual element described by the intent.
+            `;
+
+            const { object } = await generateObject({
+                model,
+                schema: z.object({
+                    correctedSelector: z
+                        .string()
+                        .describe('The corrected CSS selector found in the DOM/Image'),
+                    confidence: z.number().describe('Confidence score between 0 and 1'),
+                    reasoning: z
+                        .string()
+                        .describe('Explanation of why this element is the correct one'),
+                }),
+                messages: [
+                    {
+                        role: 'user',
+                        content: [
+                            { type: 'text', text: prompt },
+                            {
+                                type: 'text',
+                                text: `DOM Snippet:\n\`\`\`html\n${domSnippet}\n\`\`\``,
+                            },
+                            { type: 'image', image: screenshotBase64 },
+                        ],
+                    },
+                ],
+            });
+
+            return object;
+        } catch (error) {
+            console.error('[AIService] Error healing selector:', error);
+            return { correctedSelector: null, confidence: 0, reasoning: error.message };
         }
     }
 }

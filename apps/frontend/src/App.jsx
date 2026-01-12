@@ -18,7 +18,7 @@ import StyledMiniMap from "./components/StyledMiniMap";
 import { nodeTypes } from "./components/nodes";
 import CustomConnectionLine from "./components/CustomConnectionLine";
 import CustomEdge from "./components/edges/CustomEdge";
-import ApiKeysModal from "./components/ApiKeysModal";
+import ApiKeysModal from "./components/APIKeysModal";
 import SettingsModal from "./components/SettingsModal";
 import { useSettings } from "./context/SettingsContext";
 const edgeTypes = {
@@ -82,8 +82,15 @@ export default function App() {
   } = useProjectManager();
 
   // Settings Context
-  const { openSettings, openApiKeys, showGrid, enableSnapping, showMinimap } =
-    useSettings();
+  const {
+    openSettings,
+    openApiKeys,
+    isApiKeysOpen,
+    closeApiKeys,
+    showGrid,
+    enableSnapping,
+    showMinimap,
+  } = useSettings();
 
   // Migration Effect
   React.useEffect(() => {
@@ -848,7 +855,7 @@ export default function App() {
 
           {/* Global Settings Modal */}
           <SettingsModal />
-          <ApiKeysModal />
+          <ApiKeysModal isOpen={isApiKeysOpen} onClose={closeApiKeys} />
         </div>
         {/* Modals/Dialogs */}
         <ImportDialog

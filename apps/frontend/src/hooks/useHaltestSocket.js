@@ -1,7 +1,9 @@
 import { useEffect, useRef } from "react";
 import { io } from "socket.io-client";
 
-const SOCKET_URL = "http://127.0.0.1:2001";
+const SOCKET_URL = import.meta.env.PROD
+  ? "https://hal-test-backend.onrender.com"
+  : "http://127.0.0.1:2001";
 
 export const useHaltestSocket = (setNodes, onElementPicked) => {
   const socketRef = useRef(null);

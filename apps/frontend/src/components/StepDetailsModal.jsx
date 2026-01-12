@@ -24,7 +24,7 @@ export default function StepDetailsModal({ isOpen, onClose, nodeData }) {
 
   // Build screenshot URL if available
   const screenshotUrl = replayData?.screenshot_path
-    ? `${import.meta.env.PROD ? "" : "http://localhost:2001"}/${replayData.screenshot_path}`
+    ? `${import.meta.env.PROD ? "https://hal-test-backend.onrender.com" : "http://localhost:2001"}/${replayData.screenshot_path}`.replace("//storage", "/storage")
     : null;
 
   return (

@@ -286,6 +286,103 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
         const status = error.status || 500;
         const duration = Date.now() - start;
 
+        // --- SELF-HEALING LOGIC ---
+        // Check if error is "Element not found" or Timeout
+        const isSelectorError =
+            errorMessage.includes('Timeout') ||
+            errorMessage.includes('waiting for selector') ||
+            errorMessage.includes('element is not visible');
+
+        if (isSelectorError && opts.selector && runId) {
+            console.log(`[Self-Healing] Detected selector failure for: ${opts.selector}`);
+
+            try {
+                // 1. Get current page context
+                const page = browserService.getPage(targetBrowserId);
+
+                // 2. Capture Context (Screenshot + Simplified DOM)
+                const screenshotBuffer = await page.screenshot({ encoding: 'base64' });
+                const ScreenshotBase64 = `data:image/png;base64,${screenshotBuffer}`;
+
+                // Simplified DOM strategy: Get body HTML but truncated to avoid context window issues
+                // Ideally we would want a more intelligent snippet around the area, but full body is a start.
+                let domSnippet = await page.content();
+                if (domSnippet.length > 50000) domSnippet = domSnippet.substring(0, 50000); // hard cap
+
+                // 3. Ask AI to Heal
+                const userKey = req.headers['x-openai-key'];
+                const diagnosis = await aiService.healSelector({
+                    screenshotBase64: ScreenshotBase64,
+                    domSnippet,
+                    originalSelector: opts.selector,
+                    error: errorMessage,
+                    intent: actionName, // We could pass a richer intent if available in opts
+                    apiKey: userKey || process.env.OPENAI_API_KEY,
+                });
+
+                // 4. Retry if confidence is high
+                if (diagnosis.correctedSelector && diagnosis.confidence > 0.8) {
+                    console.log(
+                        `[Self-Healing] 🩹 AI Suggests: ${diagnosis.correctedSelector} (Confidence: ${diagnosis.confidence})`,
+                    );
+                    console.log(`[Self-Healing] Reasoning: ${diagnosis.reasoning}`);
+
+                    // Retry action with NEW selector
+                    // We need to clone opts and replace selector
+                    const newOpts = { ...opts, selector: diagnosis.correctedSelector };
+
+                    // RE-RUN LOGIC
+                    // We simply await the actionLogic again.
+                    // Note: Recursion risk if we just called executePlaywrightAction again,
+                    // allowing one retry here is safer.
+
+                    const retryStart = Date.now();
+                    const retryResult = await actionLogic(page, newOpts);
+                    const retryDuration = Date.now() - retryStart;
+
+                    // --- FLIGHT RECORDER: Log Healed Success ---
+                    if (runId && nodeId) {
+                        await executionLogger.logStep(
+                            runId,
+                            { id: nodeId, type: actionName },
+                            {
+                                status: 'success', // It's a success now!
+                                duration: duration + retryDuration, // Total time
+                                input: newOpts,
+                                output: retryResult.data || retryResult.traceDetails,
+                                metadata: {
+                                    healed: true,
+                                    originalError: errorMessage,
+                                    reasoning: diagnosis.reasoning,
+                                },
+                            },
+                        );
+                    }
+
+                    if (nodeId) emitExecutionStatus({ stepId: nodeId, status: 'success' }); // Update frontend
+
+                    return res.status(200).json({
+                        success: true,
+                        message: `Self-Healed: ${retryResult.message}`,
+                        browserId: targetBrowserId,
+                        durationMs: duration + retryDuration,
+                        data: retryResult.data || {},
+                        healed: true,
+                        originalSelector: opts.selector,
+                        newSelector: diagnosis.correctedSelector,
+                    });
+                } else {
+                    console.log(
+                        `[Self-Healing] ❌ AI could not heal (Confidence: ${diagnosis.confidence})`,
+                    );
+                }
+            } catch (healError) {
+                console.error('[Self-Healing] Logic failed:', healError);
+                // Fallthrough to standard error handling
+            }
+        }
+        // --------------------------
+
         // --- FLIGHT RECORDER: Log Failure ---
         if (runId && nodeId) {
             await executionLogger.logStep(

@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import UserConfigMenu from "./UserConfigMenu";
 
+import logo from "@/assets/images/haltest_logo.jpeg";
+
 export default function UserMenu({
   onOpenSettings,
   onOpenApiKeys,
@@ -100,7 +102,7 @@ export default function UserMenu({
         <button className="relative h-8 w-8 rounded-lg overflow-hidden ring-1 ring-gray-200 dark:ring-white/10 hover:ring-gray-300 dark:hover:ring-white/20 active:scale-95 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30">
           <Avatar className="h-full w-full">
             <AvatarImage
-              src={profilePic || "/images/haltest_logo.jpeg"}
+              src={profilePic || logo}
               alt="User"
               className="object-cover"
             />
@@ -110,6 +112,7 @@ export default function UserMenu({
           </Avatar>
         </button>
       </DropdownMenuTrigger>
+      {/* ... rest of render ... */}
 
       <DropdownMenuContent
         className="p-0 border-none shadow-none bg-transparent"
@@ -126,9 +129,9 @@ export default function UserMenu({
           lastChecked={
             apiStatus.lastChecked
               ? apiStatus.lastChecked.toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })
+                hour: "2-digit",
+                minute: "2-digit",
+              })
               : "--:--"
           }
           onRefresh={checkApiStatus}
