@@ -54741,7 +54741,7 @@ function yme({
                                     {
                                         fileName:
                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                        lineNumber: 307,
+                                        lineNumber: 305,
                                         columnNumber: 13,
                                     },
                                     this,
@@ -54758,7 +54758,7 @@ function yme({
                                     {
                                         fileName:
                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                        lineNumber: 313,
+                                        lineNumber: 311,
                                         columnNumber: 13,
                                     },
                                     this,
@@ -54770,7 +54770,7 @@ function yme({
                         {
                             fileName:
                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                            lineNumber: 303,
+                            lineNumber: 301,
                             columnNumber: 11,
                         },
                         this,
@@ -54793,7 +54793,7 @@ function yme({
                                     {
                                         fileName:
                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                        lineNumber: 321,
+                                        lineNumber: 319,
                                         columnNumber: 13,
                                     },
                                     this,
@@ -54813,7 +54813,7 @@ function yme({
                                     {
                                         fileName:
                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                        lineNumber: 324,
+                                        lineNumber: 322,
                                         columnNumber: 13,
                                     },
                                     this,
@@ -54825,7 +54825,7 @@ function yme({
                         {
                             fileName:
                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                            lineNumber: 320,
+                            lineNumber: 318,
                             columnNumber: 11,
                         },
                         this,
@@ -54860,7 +54860,7 @@ function yme({
                                                             {
                                                                 fileName:
                                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                                lineNumber: 341,
+                                                                lineNumber: 339,
                                                                 columnNumber: 17,
                                                             },
                                                             this,
@@ -54881,7 +54881,7 @@ function yme({
                                                                         {
                                                                             fileName:
                                                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                                            lineNumber: 349,
+                                                                            lineNumber: 347,
                                                                             columnNumber: 19,
                                                                         },
                                                                         this,
@@ -54894,7 +54894,7 @@ function yme({
                                                                         {
                                                                             fileName:
                                                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                                            lineNumber: 350,
+                                                                            lineNumber: 348,
                                                                             columnNumber: 19,
                                                                         },
                                                                         this,
@@ -54906,7 +54906,7 @@ function yme({
                                                             {
                                                                 fileName:
                                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                                lineNumber: 344,
+                                                                lineNumber: 342,
                                                                 columnNumber: 17,
                                                             },
                                                             this,
@@ -54918,7 +54918,7 @@ function yme({
                                                 {
                                                     fileName:
                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                    lineNumber: 340,
+                                                    lineNumber: 338,
                                                     columnNumber: 15,
                                                 },
                                                 this,
@@ -54930,7 +54930,7 @@ function yme({
                                     {
                                         fileName:
                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                        lineNumber: 338,
+                                        lineNumber: 336,
                                         columnNumber: 13,
                                     },
                                     this,
@@ -54959,7 +54959,7 @@ function yme({
                                                 {
                                                     fileName:
                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                    lineNumber: 355,
+                                                    lineNumber: 353,
                                                     columnNumber: 15,
                                                 },
                                                 this,
@@ -54979,7 +54979,7 @@ function yme({
                                                 {
                                                     fileName:
                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                    lineNumber: 365,
+                                                    lineNumber: 363,
                                                     columnNumber: 15,
                                                 },
                                                 this,
@@ -54991,7 +54991,7 @@ function yme({
                                     {
                                         fileName:
                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                        lineNumber: 354,
+                                        lineNumber: 352,
                                         columnNumber: 13,
                                     },
                                     this,
@@ -55003,7 +55003,7 @@ function yme({
                         {
                             fileName:
                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                            lineNumber: 337,
+                            lineNumber: 335,
                             columnNumber: 11,
                         },
                         this,
@@ -55026,7 +55026,7 @@ function yme({
                                     {
                                         fileName:
                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                        lineNumber: 379,
+                                        lineNumber: 377,
                                         columnNumber: 13,
                                     },
                                     this,
@@ -55046,7 +55046,7 @@ function yme({
                                     {
                                         fileName:
                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                        lineNumber: 382,
+                                        lineNumber: 380,
                                         columnNumber: 13,
                                     },
                                     this,
@@ -55058,7 +55058,7 @@ function yme({
                         {
                             fileName:
                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                            lineNumber: 378,
+                            lineNumber: 376,
                             columnNumber: 11,
                         },
                         this,
@@ -55110,7 +55110,7 @@ function yme({
                                                         {
                                                             fileName:
                                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                            lineNumber: 421,
+                                                            lineNumber: 419,
                                                             columnNumber: 15,
                                                         },
                                                         this,
@@ -55132,7 +55132,7 @@ function yme({
                                                                 {
                                                                     fileName:
                                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                                    lineNumber: 430,
+                                                                    lineNumber: 428,
                                                                     columnNumber: 17,
                                                                 },
                                                                 this,
@@ -55143,7 +55143,7 @@ function yme({
                                                         {
                                                             fileName:
                                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                            lineNumber: 429,
+                                                            lineNumber: 427,
                                                             columnNumber: 15,
                                                         },
                                                         this,
@@ -55155,7 +55155,7 @@ function yme({
                                             {
                                                 fileName:
                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                lineNumber: 420,
+                                                lineNumber: 418,
                                                 columnNumber: 13,
                                             },
                                             this,
@@ -55174,7 +55174,7 @@ function yme({
                                                     {
                                                         fileName:
                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                        lineNumber: 439,
+                                                        lineNumber: 437,
                                                         columnNumber: 15,
                                                     },
                                                     this,
@@ -55185,7 +55185,7 @@ function yme({
                                             {
                                                 fileName:
                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                lineNumber: 435,
+                                                lineNumber: 433,
                                                 columnNumber: 13,
                                             },
                                             this,
@@ -55197,7 +55197,7 @@ function yme({
                                 {
                                     fileName:
                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                    lineNumber: 414,
+                                    lineNumber: 412,
                                     columnNumber: 11,
                                 },
                                 this,
@@ -55231,7 +55231,7 @@ function yme({
                                                                       {
                                                                           fileName:
                                                                               '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                                          lineNumber: 451,
+                                                                          lineNumber: 449,
                                                                           columnNumber: 19,
                                                                       },
                                                                       this,
@@ -55249,7 +55249,7 @@ function yme({
                                                                       {
                                                                           fileName:
                                                                               '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                                          lineNumber: 452,
+                                                                          lineNumber: 450,
                                                                           columnNumber: 19,
                                                                       },
                                                                       this,
@@ -55261,7 +55261,7 @@ function yme({
                                                           {
                                                               fileName:
                                                                   '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                              lineNumber: 450,
+                                                              lineNumber: 448,
                                                               columnNumber: 17,
                                                           },
                                                           this,
@@ -55272,7 +55272,7 @@ function yme({
                                         {
                                             fileName:
                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                            lineNumber: 446,
+                                            lineNumber: 444,
                                             columnNumber: 13,
                                         },
                                         this,
@@ -55283,7 +55283,7 @@ function yme({
                                 {
                                     fileName:
                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                    lineNumber: 444,
+                                    lineNumber: 442,
                                     columnNumber: 11,
                                 },
                                 this,
@@ -55322,7 +55322,7 @@ function yme({
                                                         {
                                                             fileName:
                                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                            lineNumber: 488,
+                                                            lineNumber: 486,
                                                             columnNumber: 15,
                                                         },
                                                         this,
@@ -55335,7 +55335,7 @@ function yme({
                                             {
                                                 fileName:
                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                lineNumber: 469,
+                                                lineNumber: 467,
                                                 columnNumber: 13,
                                             },
                                             this,
@@ -55353,7 +55353,7 @@ function yme({
                                             {
                                                 fileName:
                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                lineNumber: 492,
+                                                lineNumber: 490,
                                                 columnNumber: 13,
                                             },
                                             this,
@@ -55365,7 +55365,7 @@ function yme({
                                 {
                                     fileName:
                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                    lineNumber: 467,
+                                    lineNumber: 465,
                                     columnNumber: 11,
                                 },
                                 this,
@@ -55377,7 +55377,7 @@ function yme({
                     {
                         fileName:
                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                        lineNumber: 397,
+                        lineNumber: 395,
                         columnNumber: 9,
                     },
                     this,
@@ -55388,7 +55388,7 @@ function yme({
         {
             fileName:
                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-            lineNumber: 395,
+            lineNumber: 393,
             columnNumber: 5,
         },
         this,
@@ -68220,11 +68220,13 @@ var Ige = class extends df {
             const n = this.options;
             ((this.options = this.#e.defaultMutationOptions(t)),
                 Rv(this.options, n) ||
-                    this.#e.getMutationCache().notify({
-                        type: 'observerOptionsUpdated',
-                        mutation: this.#n,
-                        observer: this,
-                    }),
+                    this.#e
+                        .getMutationCache()
+                        .notify({
+                            type: 'observerOptionsUpdated',
+                            mutation: this.#n,
+                            observer: this,
+                        }),
                 n?.mutationKey &&
                 this.options.mutationKey &&
                 Jc(n.mutationKey) !== Jc(this.options.mutationKey)
@@ -82266,7 +82268,7 @@ var v_e = (e, t = !1) => {
                 return (
                     this.#c
                         ? (p = this.#c)
-                        : ((p = l1e(() => Bwe(() => import('./CDWEKZTF-CRmy31zz.js'), []))),
+                        : ((p = l1e(() => Bwe(() => import('./CDWEKZTF-CNICfVOE.js'), []))),
                           (this.#c = p)),
                     pSe(this.#a, this.#i),
                     s1e(

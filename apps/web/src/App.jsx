@@ -1,238 +1,9 @@
-import React, { useEffect, useRef, useState, useMemo } from "react";
-import {
-  motion,
-  useScroll,
-  useTransform,
-  useSpring,
-  AnimatePresence,
-} from "framer-motion";
+import React, { useRef } from "react";
+import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 
-/**
- * COMPONENTE: ScrollExplodeCanvas
- * Maneja la lógica de renderizado de la secuencia de imágenes en el Canvas.
- */
-const ScrollExplodeCanvas = ({ scrollProgress }) => {
-  const canvasRef = useRef(null);
-  const [images, setImages] = useState([]);
-  const [loaded, setLoaded] = useState(false);
-  const [loadingProgress, setLoadingProgress] = useState(0);
-
-  const frameCount = 120;
-
-  // Transformamos el progreso [0, 1] a índice de frame [1, 120]
-  const rawFrameIndex = useTransform(scrollProgress, [0, 1], [1, frameCount]);
-  // Suavizamos el movimiento del frame para 60fps constantes
-  const smoothFrameIndex = useSpring(rawFrameIndex, {
-    stiffness: 300,
-    damping: 30,
-    restDelta: 0.001,
-  });
-
-  // Pre-carga de frames
-  useEffect(() => {
-    let loadedCount = 0;
-    const loadedImages = [];
-
-    const preloadImages = () => {
-      for (let i = 1; i <= frameCount; i++) {
-        const img = new Image();
-        // Construcción de la ruta: hal-Test_frame_0001.webp
-        const frameNumber = i.toString().padStart(4, "0");
-        img.src = `/frames/hal-Test_frame_${frameNumber}.webp`;
-
-        img.onload = () => {
-          loadedCount++;
-          setLoadingProgress(Math.floor((loadedCount / frameCount) * 100));
-          if (loadedCount === frameCount) {
-            setLoaded(true);
-          }
-        };
-        // Fallback para visualización si las imágenes no existen localmente
-        img.onerror = () => {
-          loadedCount++;
-          if (loadedCount === frameCount) setLoaded(true);
-        };
-        loadedImages[i] = img;
-      }
-      setImages(loadedImages);
-    };
-
-    preloadImages();
-  }, []);
-
-  // Loop de renderizado del Canvas
-  useEffect(() => {
-    if (!loaded || !canvasRef.current) return;
-
-    const context = canvasRef.current.getContext("2d");
-
-    const render = () => {
-      const index = Math.floor(smoothFrameIndex.get());
-      const img = images[index];
-
-      if (img && img.complete) {
-        const canvas = canvasRef.current;
-        // Limpiar y dibujar manteniendo el aspect ratio (contain)
-        context.clearRect(0, 0, canvas.width, canvas.height);
-
-        const scale = Math.min(
-          canvas.width / img.width,
-          canvas.height / img.height,
-        );
-        const x = canvas.width / 2 - (img.width / 2) * scale;
-        const y = canvas.height / 2 - (img.height / 2) * scale;
-
-        context.drawImage(img, x, y, img.width * scale, img.height * scale);
-      }
-      requestAnimationFrame(render);
-    };
-
-    const handleResize = () => {
-      if (canvasRef.current) {
-        canvasRef.current.width = window.innerWidth;
-        canvasRef.current.height = window.innerHeight;
-      }
-    };
-
-    window.addEventListener("resize", handleResize);
-    handleResize();
-    const animationId = requestAnimationFrame(render);
-
-    return () => {
-      cancelAnimationFrame(animationId);
-      window.removeEventListener("resize", handleResize);
-    };
-  }, [loaded, images, smoothFrameIndex]);
-
-  return (
-    <div className="fixed inset-0 z-0 flex items-center justify-center bg-transparent">
-      <canvas ref={canvasRef} className="w-full h-full object-contain" />
-
-      {/* Loading Screen */}
-      <AnimatePresence>
-        {!loaded && (
-          <motion.div
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-background font-mono"
-          >
-            <div className="text-white text-xl mb-4 tracking-tighter">
-              INITIALIZING HAL_SYSTEM
-            </div>
-            <div className="w-64 h-[2px] bg-white/10 overflow-hidden">
-              <motion.div
-                className="h-full bg-white"
-                initial={{ width: 0 }}
-                animate={{ width: `${loadingProgress}%` }}
-              />
-            </div>
-            <div className="mt-2 text-white/40 text-xs">{loadingProgress}%</div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-};
-
-/**
- * COMPONENTE: SectionOverlay
- * Controla la visibilidad y animación de los textos según el scroll
- */
-const SectionOverlay = ({ scrollProgress, t }) => {
-  // Definición de rangos de visibilidad para cada sección
-  const heroOpacity = useTransform(scrollProgress, [0, 0.15], [1, 0]);
-  const f1Opacity = useTransform(scrollProgress, [0.2, 0.3, 0.4], [0, 1, 0]);
-  const f2Opacity = useTransform(scrollProgress, [0.5, 0.6, 0.7], [0, 1, 0]);
-  const ctaOpacity = useTransform(scrollProgress, [0.85, 0.95], [0, 1]);
-
-  const textStyle =
-    "text-white font-mono tracking-tight text-center px-6 max-w-4xl select-none";
-
-  return (
-    <div className="fixed inset-0 z-10 pointer-events-none flex items-center justify-center">
-      {/* HERO SECTION */}
-      <motion.div style={{ opacity: heroOpacity }} className={textStyle}>
-        <h1 className="text-5xl md:text-8xl font-bold uppercase mb-4">
-          <span className="text-hal-primary-500">hal</span>
-          <span className="text-white">-</span>
-          <span className="text-hal-warning-500">Test</span>
-        </h1>
-        <p className="text-lg md:text-xl text-white/60">{t("hero.subtitle")}</p>
-      </motion.div>
-
-      {/* FEATURE 1: 30% */}
-      <motion.div style={{ opacity: f1Opacity }} className={textStyle}>
-        <h2 className="text-3xl md:text-5xl font-bold uppercase mb-4">
-          {t("features.visual_editor.title")}
-        </h2>
-        <p className="text-lg md:text-xl text-white/60">
-          {t("features.visual_editor.description")}
-        </p>
-      </motion.div>
-
-      {/* FEATURE 2: 60% */}
-      <motion.div style={{ opacity: f2Opacity }} className={textStyle}>
-        <h2 className="text-3xl md:text-5xl font-bold uppercase mb-4">
-          {t("features.advanced_control.title")}
-        </h2>
-        <p className="text-lg md:text-xl text-white/60">
-          {t("features.advanced_control.description")}
-        </p>
-      </motion.div>
-
-      {/* CTA: 90% */}
-      <motion.div
-        style={{ opacity: ctaOpacity }}
-        className={`${textStyle} pointer-events-auto`}
-      >
-        <h2 className="text-4xl md:text-7xl font-bold uppercase mb-8">
-          {t("cta.open_source")}
-        </h2>
-        <div className="flex flex-col md:flex-row gap-4 justify-center items-center">
-          <motion.button
-            whileHover={{
-              scale: 1.05,
-              backgroundColor: "var(--hal-primary-500)",
-              borderColor: "var(--hal-primary-500)",
-            }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => window.open("/app", "_blank")}
-            className="border border-white/20 bg-hal-primary-500/20 text-white px-12 py-4 rounded-full text-lg uppercase font-bold transition-colors backdrop-blur-md hover:bg-hal-primary-500"
-          >
-            {t("cta.launch_app")}
-          </motion.button>
-
-          <motion.button
-            whileHover={{
-              scale: 1.05,
-              backgroundColor: "rgba(255,255,255,0.1)",
-            }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() =>
-              window.open("https://github.com/andresguc1/hal-test", "_blank")
-            }
-            className="flex items-center gap-2 border border-white/20 bg-black/20 text-white px-8 py-4 rounded-full text-lg uppercase font-bold transition-colors backdrop-blur-md"
-          >
-            <span>★</span> {t("cta.star_github")}
-          </motion.button>
-        </div>
-      </motion.div>
-    </div>
-  );
-};
-
 export default function App() {
-  const containerRef = useRef(null);
   const { t, i18n } = useTranslation();
-
-  // Hook de scroll principal (400vh de altura para dar espacio a la secuencia)
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start start", "end end"],
-  });
-
-  // Rotación del logo basada en el scroll
-  const logoRotation = useTransform(scrollYProgress, [0, 1], [0, 360]);
 
   const toggleLanguage = () => {
     const newLang = i18n.language.startsWith("es") ? "en" : "es";
@@ -240,97 +11,240 @@ export default function App() {
   };
 
   return (
-    <div className="bg-background min-h-screen text-white">
-      {/* Global Styles */}
+    <div className="relative min-h-screen bg-slate-900 text-white overflow-hidden font-mono selection:bg-hal-primary-500/30">
+      {/* Global Styles for fonts/scrollbar */}
       <style
         dangerouslySetInnerHTML={{
           __html: `
         @import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@100..900&display=swap');
-        body { background: #0f172a; margin: 0; cursor: crosshair; }
-        ::-webkit-scrollbar { display: none; }
+        body { margin: 0; cursor: default; }
         .font-mono { font-family: 'Geist Mono', monospace; }
       `,
         }}
       />
 
-      {/* Navbar Minimalista */}
-      <nav className="fixed top-0 left-0 w-full p-8 z-50 flex justify-between items-center mix-blend-difference font-mono">
-        <div className="text-xl font-bold tracking-wider flex items-center gap-3">
-          <motion.img
-            style={{ rotate: logoRotation }}
+      {/* --- BACKGROUND LAYERS --- */}
+      {/* 1. Animated GIF Background (Ambient) */}
+      <div className="absolute inset-0 z-0 opacity-20 pointer-events-none">
+        <img
+          src="/video/base1.gif"
+          alt="Background Animation"
+          className="w-full h-full object-cover"
+        />
+      </div>
+
+      {/* 2. Gradient Overlay (Vignette & Color Tint) */}
+      <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_center,rgba(15,23,42,0.4)_0%,#0f172a_100%)] mix-blend-multiply"></div>
+
+      {/* 3. Grid Pattern Overlay (Tech feel) */}
+      <div
+        className="absolute inset-0 z-0 opacity-10 pointer-events-none"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px)",
+          backgroundSize: "40px 40px",
+        }}
+      ></div>
+
+      {/* --- NAVBAR --- */}
+      <nav className="absolute top-0 left-0 w-full p-6 z-50 flex justify-between items-center">
+        {/* Logo Area */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="flex items-center gap-3"
+        >
+          <img
             src="/images/haltest_logo.jpeg"
-            alt="Hal-Test Logo"
-            className="w-8 h-8 rounded-lg"
+            alt="HAL-TEST"
+            className="w-8 h-8 rounded-md shadow-lg shadow-hal-primary-500/20"
           />
-          <div className="flex items-center gap-2">
-            <span className="text-hal-primary-500">HAL</span>
-            <span className="text-white/50">-</span>
-            <span className="text-hal-warning-500">TEST</span>
+          <div className="text-xl font-bold tracking-widest flex gap-1">
+            <span className="text-hal-primary-400">HAL</span>
+            <span className="text-white/30">-</span>
+            <span className="text-hal-warning-400">TEST</span>
           </div>
-        </div>
-        <div className="flex items-center gap-4">
+        </motion.div>
+
+        {/* Phantom Navigation */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="hidden md:flex items-center gap-8 text-xs font-bold uppercase tracking-widest text-slate-500"
+        >
+          <span className="hover:text-hal-primary-400 cursor-pointer transition-colors">
+            Docs
+          </span>
+          <span className="hover:text-hal-primary-400 cursor-pointer transition-colors">
+            Roadmap
+          </span>
+          <span className="hover:text-hal-primary-400 cursor-pointer transition-colors">
+            Pricing
+          </span>
+        </motion.div>
+
+        {/* Controls */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="flex items-center gap-6"
+        >
           <button
             onClick={toggleLanguage}
-            className="text-white/60 hover:text-white text-[10px] uppercase tracking-wider transition-colors cursor-pointer"
+            className="text-white/50 hover:text-white text-xs uppercase tracking-widest transition-colors"
           >
             {i18n.language.startsWith("es") ? "EN" : "ES"}
           </button>
-          <div className="text-white/40 text-[10px] uppercase">
-            {t("nav.status")}
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10">
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+            <span className="text-[10px] uppercase text-emerald-500/80 font-bold tracking-wider">
+              {t("nav.status") || "ONLINE"}
+            </span>
           </div>
-        </div>
+        </motion.div>
       </nav>
 
-      {/* Contenedor de Scroll */}
-      <div ref={containerRef} className="relative h-[400vh]">
-        {/* Background GIF (Fallback/Ambient) */}
-        <div className="fixed inset-0 z-0 opacity-20 pointer-events-none">
+      {/* --- HERO CONTENT --- */}
+      <main className="relative z-10 flex flex-col items-center justify-center min-h-screen px-4 text-center pt-20">
+        {/* Floating Logo/Icon */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className="mb-8 relative"
+        >
+          <div className="absolute inset-0 bg-hal-primary-500/20 blur-3xl rounded-full"></div>
           <img
-            src="/video/base1.gif"
-            alt="Background Animation"
-            className="w-full h-full object-cover"
-          />
-          {/* Vignette Overlay */}
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#0f172a_100%)]"></div>
-        </div>
-
-        {/* Central Rotating Logo Watermark */}
-        <div className="fixed inset-0 z-0 flex items-center justify-center pointer-events-none">
-          <motion.img
-            style={{ rotate: logoRotation, opacity: 0.1 }}
             src="/images/haltest_logo.jpeg"
-            alt="Hal-Test Logo Watermark"
-            className="w-[50vmin] h-[50vmin] rounded-full mix-blend-overlay blur-sm"
+            alt="Hero Logo"
+            className="w-32 h-32 md:w-32 md:h-32 rounded-2xl shadow-2xl shadow-hal-primary-500/30 relative z-10 border border-white/10"
           />
-        </div>
+        </motion.div>
 
-        {/* Visual Engine */}
-        <ScrollExplodeCanvas scrollProgress={scrollYProgress} />
+        {/* Headline */}
+        <motion.h1
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="text-5xl md:text-7xl font-bold uppercase tracking-tight mb-4 max-w-4xl"
+        >
+          <span className="bg-clip-text text-transparent bg-gradient-to-r from-white via-white to-white/50">
+            The Missing Link
+          </span>
+          <br />
+          <span className="text-hal-primary-400">in Automation</span>
+        </motion.h1>
 
-        {/* Content Layers */}
-        <SectionOverlay scrollProgress={scrollYProgress} t={t} />
-      </div>
+        {/* Main Sub-headline */}
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+          className="text-lg md:text-xl text-slate-300 max-w-2xl mb-4 leading-relaxed font-bold"
+        >
+          No-code flow builder with AI-powered healing
+          <br />
+          and real-time Playwright execution.
+        </motion.p>
 
-      {/* Indicador de Scroll lateral */}
-      <div className="fixed right-8 top-1/2 -translate-y-1/2 flex flex-col gap-4 z-50">
-        {[0, 1, 2, 3].map((i) => (
-          <motion.div
-            key={i}
-            className="w-1 h-8 bg-white/10 rounded-full overflow-hidden"
+        {/* Secondary Description */}
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.35 }}
+          className="text-sm md:text-base text-slate-500 max-w-lg mb-12"
+        >
+          {t("hero.subtitle") ||
+            "Unified platform for visual workflows, mock services, and intelligent testing."}
+        </motion.p>
+
+        {/* Call to Action Buttons */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+          className="flex flex-col sm:flex-row gap-4 items-center mb-16"
+        >
+          {/* Launch App Button */}
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => window.open("/app", "_self")}
+            className="group relative px-8 py-4 bg-hal-primary-600 hover:bg-hal-primary-500 text-white rounded-lg font-bold uppercase tracking-wider overflow-hidden transition-all shadow-lg shadow-hal-primary-900/50"
           >
-            <motion.div
-              className="w-full bg-white h-full origin-top"
-              style={{
-                scaleY: useTransform(
-                  scrollYProgress,
-                  [i * 0.25, (i + 1) * 0.25],
-                  [0, 1],
-                ),
-              }}
-            />
-          </motion.div>
-        ))}
-      </div>
+            <span className="relative z-10 flex items-center gap-2">
+              {t("cta.launch_app") || "Launch App"}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="transform group-hover:translate-x-1 transition-transform"
+              >
+                <path d="M5 12h14" />
+                <path d="m12 5 7 7-7 7" />
+              </svg>
+            </span>
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+          </motion.button>
+
+          {/* Docs / GitHub Button */}
+          <motion.button
+            whileHover={{
+              scale: 1.05,
+              backgroundColor: "rgba(255,255,255,0.05)",
+            }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() =>
+              window.open("https://github.com/andresguc1/hal-test", "_blank")
+            }
+            className="px-8 py-4 border border-white/10 hover:border-white/30 text-slate-300 hover:text-white rounded-lg font-bold uppercase tracking-wider transition-all backdrop-blur-sm"
+          >
+            {t("cta.star_github") || "GitHub"}
+          </motion.button>
+        </motion.div>
+
+        {/* --- SOCIAL PROOF --- */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.5 }}
+          className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-16 border-t border-white/5 pt-8"
+        >
+          <div className="flex flex-col items-center">
+            <span className="text-2xl font-bold text-white">2.5k+</span>
+            <span className="text-[10px] uppercase tracking-widest text-slate-500">
+              Flows Executed
+            </span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="text-2xl font-bold text-white">45+</span>
+            <span className="text-[10px] uppercase tracking-widest text-slate-500">
+              Node Types
+            </span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="text-2xl font-bold text-white">99%</span>
+            <span className="text-[10px] uppercase tracking-widest text-slate-500">
+              Success Rate
+            </span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="text-2xl font-bold text-white">Open</span>
+            <span className="text-[10px] uppercase tracking-widest text-slate-500">
+              Source
+            </span>
+          </div>
+        </motion.div>
+      </main>
     </div>
   );
 }

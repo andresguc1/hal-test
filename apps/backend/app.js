@@ -172,7 +172,7 @@ import { initDb } from './database/init.js';
 
 const startServer = async () => {
     await initDb();
-    server.listen(PORT, () => {
+    server.listen(PORT, '0.0.0.0', () => {
         const baseUrl = `http://localhost:${PORT}`;
         console.log(`\n🚀 =================================================`);
         console.log(`   HaltTest Server is Up & Running!`);
