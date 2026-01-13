@@ -69,6 +69,19 @@ export const initDb = async (_force = false) => {
             });
         }
     } catch (error) {
+        if (error.name === 'SequelizeDatabaseError' && error.original?.code === '42703') {
+            console.warn(
+                '⚠️ Schema mismatch detected (missing column). Attempting auto-fix with { alter: true }...',
+            );
+            try {
+                await sequelize.sync({ alter: true });
+                console.log('✅ Database schema auto-corrected successfully.');
+                return; // Retry success, exit normally
+            } catch (alterError) {
+                console.error('❌ Failed to auto-fix schema:', alterError);
+                throw alterError; // Rethrow if fix fails
+            }
+        }
         console.error('Unable to connect to the database or sync:', error);
         throw error;
     }
