@@ -68220,11 +68220,13 @@ var Ige = class extends df {
             const n = this.options;
             ((this.options = this.#e.defaultMutationOptions(t)),
                 Rv(this.options, n) ||
-                    this.#e.getMutationCache().notify({
-                        type: 'observerOptionsUpdated',
-                        mutation: this.#n,
-                        observer: this,
-                    }),
+                    this.#e
+                        .getMutationCache()
+                        .notify({
+                            type: 'observerOptionsUpdated',
+                            mutation: this.#n,
+                            observer: this,
+                        }),
                 n?.mutationKey &&
                 this.options.mutationKey &&
                 Jc(n.mutationKey) !== Jc(this.options.mutationKey)
@@ -71600,7 +71602,10 @@ function Gy(e, t) {
     );
 }
 Object.assign(Gy, { Manager: yE, Socket: NU, io: Gy, connect: Gy });
-const tH = 'http://127.0.0.1:2001',
+const tH =
+        window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? 'http://127.0.0.1:2001'
+            : window.location.origin,
     aye = (e, t) => {
         const n = x.useRef(null),
             s = x.useRef(t);
@@ -82266,7 +82271,7 @@ var v_e = (e, t = !1) => {
                 return (
                     this.#c
                         ? (p = this.#c)
-                        : ((p = l1e(() => Bwe(() => import('./CDWEKZTF-CNICfVOE.js'), []))),
+                        : ((p = l1e(() => Bwe(() => import('./CDWEKZTF-MdpWbUBc.js'), []))),
                           (this.#c = p)),
                     pSe(this.#a, this.#i),
                     s1e(
