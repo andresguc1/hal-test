@@ -69,7 +69,11 @@ export const initDb = async (_force = false) => {
             });
         }
     } catch (error) {
-        if (error.name === 'SequelizeDatabaseError' && error.original?.code === '42703') {
+        // Check for Postgres "column does not exist" error (42703) in both original and parent
+        if (
+            error.name === 'SequelizeDatabaseError' &&
+            (error.original?.code === '42703' || error.parent?.code === '42703')
+        ) {
             console.warn(
                 '⚠️ Schema mismatch detected (missing column). Attempting auto-fix with { alter: true }...',
             );
