@@ -12,8 +12,6 @@ yarn-error.log*
 # Build / output
 dist/
 build/
-public/app/
-public/web/
 tmp/
 temp/
 
