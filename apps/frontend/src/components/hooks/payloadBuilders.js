@@ -104,7 +104,8 @@ export const launch_browser = (payload) => {
 };
 
 export const open_url = (payload) => {
-  const url = asString(payload?.url);
+  console.log("[DEBUG] open_url payload:", payload);
+  const url = asString(payload?.url ?? payload?.link);
 
   // Validate URL is not empty
   if (!url || url.trim() === "") {
@@ -322,13 +323,18 @@ export const click = (payload = {}) => {
 };
 
 export const type_text = (payload = {}) => {
+  console.log("[DEBUG] type_text payload received:", payload);
   const selector = asString(payload?.selector);
-  const text = payload?.text; // No trimear ni convertir a string aún, para respetar el Joi.
 
-  // Validaciones estrictas del frontend (aunque Joi las repite en backend)
+  // Robust check: try multiple possible keys
+  const text = payload?.textToType ?? payload?.value ?? payload?.text;
+
+  // Validaciones estrictas del frontend
   if (selector === "") {
     throw new Error("El selector es obligatorio.");
   }
+
+  // Allow empty string if it's explicitly defined, but fail on undefined/null
   if (text === null || text === undefined) {
     throw new Error("El texto a ingresar es obligatorio.");
   }
@@ -336,7 +342,7 @@ export const type_text = (payload = {}) => {
   // Construir el payload
   const body = {
     selector: selector,
-    text: asString(text, ""), // El texto se envía, si es string vacío, Joi lo manejará si es necesario
+    text: asString(text, ""),
     clearBeforeType: asBoolean(payload?.clearBeforeType, true), // Default: true (según Joi)
     delay: asNumber(payload?.delay, 0, 0), // Default: 0, Mín: 0 (según Joi)
     timeout: asNumber(payload?.timeout, 30000, 1), // Default: 30000, Mín: 1 (según Joi)

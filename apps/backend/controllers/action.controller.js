@@ -544,6 +544,10 @@ export const launchBrowserAction = async (req, res) => {
             success: false,
             message: req.t('actions.launch_browser.error'),
             error: error.message,
+            hint:
+                error.message.includes('Zygote') || error.message.includes('HistoryService')
+                    ? 'System resource limit or zombie process conflict. Try restarting the application.'
+                    : 'Check if another browser instance is blocking execution.',
         });
     }
 };
@@ -636,11 +640,28 @@ export const openUrlAction = async (req, res) => {
     } catch (error) {
         const duration = Date.now() - start;
         console.error(`[ERROR] ${actionName}:`, error.message);
+
+        let status = error.status || 500;
+        let message = req.t('actions.open_url.error');
+        let hint = null;
+
+        // Handle specific "Target Closed" errors gracefully
+        if (
+            error.message.includes('Target page, context or browser has been closed') ||
+            error.message.includes('Session closed') ||
+            error.message.includes('browser has been closed')
+        ) {
+            status = 400;
+            message =
+                'Browser connection lost. The browser might have been closed manually or crashed.';
+            hint = "Please run the 'Launch Browser' node again to start a new session.";
+        }
+
         if (nodeId)
             emitExecutionStatus({
                 stepId: nodeId,
                 status: 'failed',
-                error: error.message,
+                error: message,
             });
 
         traceService.add({ action: actionName, error: error.message, status: 'error' });
@@ -660,9 +681,10 @@ export const openUrlAction = async (req, res) => {
         }
         // ------------------------------------
 
-        return res.status(error.status || 500).json({
+        return res.status(status).json({
             success: false,
-            message: req.t('actions.open_url.error'),
+            message: message,
+            hint: hint, // Frontend can display this
             error: error.message,
         });
     }

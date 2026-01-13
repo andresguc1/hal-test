@@ -46,7 +46,7 @@ export const helmetMiddleware = helmet({
  */
 export const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutos
-    max: 100, // Limita cada IP a 100 solicitudes por 'window' (ventana de 15 min)
+    max: 2000, // Relaxed limit for dev (was 100)
     standardHeaders: true, // Incluye cabeceras `RateLimit-*`
     legacyHeaders: false, // Deshabilita cabeceras `X-RateLimit-*`
     message: async (req, res) => {

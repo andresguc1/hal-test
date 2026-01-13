@@ -13,6 +13,7 @@ import {
   Play,
   Globe,
   LayoutGrid,
+  Box,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NODE_CATEGORIES } from "../config/nodeConstants";
@@ -662,6 +663,12 @@ const ContextMenu = ({
                 {data?.nodes?.length} items selected
               </div>
               <Divider />
+              <ContextMenuItem
+                icon={Box}
+                label="Group Selection"
+                shortcut="^G"
+                onClick={actions.group}
+              />
               <ContextMenuItem
                 icon={Copy}
                 label="Copy"

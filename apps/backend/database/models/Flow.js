@@ -27,6 +27,15 @@ const Flow = sequelize.define(
             allowNull: false,
             defaultValue: 0,
         },
+        type: {
+            type: DataTypes.STRING, // 'main' or 'component'
+            allowNull: false,
+            defaultValue: 'main',
+        },
+        parentId: {
+            type: DataTypes.STRING,
+            allowNull: true,
+        },
     },
     {
         timestamps: true,

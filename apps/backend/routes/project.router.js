@@ -155,13 +155,47 @@ router.delete('/projects/:id', async (req, res) => {
 
 // Create flow
 router.post('/projects/:projectId/flows', async (req, res) => {
+    const transaction = await sequelize.transaction();
     try {
         const { projectId } = req.params;
-        const { name } = req.body;
-        const flow = await Flow.create({
-            name,
-            projectId,
-        });
+        const { name, type, parentId, nodes, edges } = req.body;
+
+        const flow = await Flow.create(
+            {
+                name,
+                projectId,
+                type: type || 'main',
+                parentId: parentId || null,
+            },
+            { transaction },
+        );
+
+        if (nodes && Array.isArray(nodes)) {
+            await Node.bulkCreate(
+                nodes.map((n) => ({
+                    nodeId: n.id,
+                    type: n.type,
+                    data: n.data,
+                    position: n.position,
+                    flowId: flow.id,
+                })),
+                { transaction },
+            );
+        }
+
+        if (edges && Array.isArray(edges)) {
+            await Edge.bulkCreate(
+                edges.map((e) => ({
+                    edgeId: e.id,
+                    source: e.source,
+                    target: e.target,
+                    flowId: flow.id,
+                })),
+                { transaction },
+            );
+        }
+
+        await transaction.commit();
 
         // Return the updated project with all flows
         const updatedProject = await Project.findByPk(projectId, {
@@ -177,11 +211,20 @@ router.post('/projects/:projectId/flows', async (req, res) => {
             ],
         });
 
+        const createdFlowWithContent = await Flow.findOne({
+            where: { id: flow.id },
+            include: [
+                { model: Node, as: 'nodes' },
+                { model: Edge, as: 'edges' },
+            ],
+        });
+
         res.status(201).json({
-            flow: mapFlowData(flow),
+            flow: mapFlowData(createdFlowWithContent),
             project: updatedProject,
         });
     } catch (error) {
+        if (transaction) await transaction.rollback();
         res.status(400).json({ error: error.message });
     }
 });

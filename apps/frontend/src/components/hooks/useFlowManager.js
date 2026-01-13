@@ -18,14 +18,11 @@ import {
 import { CATEGORY_STYLES, NODE_TYPE_MAP } from "../../config/nodeConstants";
 import * as payloadBuilders from "./payloadBuilders";
 import { NODE_STATES, PROFESSIONAL_COLORS, getNodeStyle } from "./flowStyles";
-import {
-  debounce,
-  wouldCreateCycle,
-  getConnectedComponents,
-} from "../../utils/flowUtils";
+import { debounce, wouldCreateCycle } from "../../utils/flowUtils";
 import { logger } from "../../utils/logger";
 import screenshotManager from "../../utils/ScreenshotManager";
 import { api } from "../../utils/api";
+import { toast } from "sonner";
 
 const MAX_RETRIES = 3;
 const RETRY_BASE_MS = 1000;
@@ -33,9 +30,7 @@ const AUTO_SAVE_INTERVAL = 30000;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export const API_BASE_URL = import.meta.env.PROD
-  ? "https://hal-test-backend.onrender.com/api/actions"
-  : import.meta.env?.VITE_API_BASE || "/api/actions";
+export const API_BASE_URL = "/api/actions";
 
 // ========================================
 // OPTIMIZACIÓN 1: Funciones puras fuera del hook
@@ -93,23 +88,51 @@ const DEFAULT_EDGE_OPTIONS = {
 };
 
 import { projectManager } from "../../utils/ProjectManager";
+import { useSettings } from "../../context/SettingsContext"; // Assuming this is available
 
-export const useFlowManager = (currentProject, currentFlowId) => {
+export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
   const { getViewport } = useReactFlow();
 
-  const [nodes, setNodes] = useState([]);
-  const [edges, setEdges] = useState([]);
-  const [selectedNodeId, setSelectedNodeId] = useState(null);
+  // State for nodes and edges
+  const nodesRef = useRef([]); // To access updated state in callbacks
+  const edgesRef = useRef([]);
+
+  const [nodes, setNodesState] = useState([]);
+  const [edges, setEdgesState] = useState([]);
+
+  // Sync ref with state
+  const setNodes = useCallback((newNodes) => {
+    // Handle function update
+    const resolvedNodes =
+      typeof newNodes === "function" ? newNodes(nodesRef.current) : newNodes;
+
+    nodesRef.current = resolvedNodes;
+    setNodesState(resolvedNodes);
+  }, []);
+
+  const setEdges = useCallback((newEdges) => {
+    const resolvedEdges =
+      typeof newEdges === "function" ? newEdges(edgesRef.current) : newEdges;
+
+    edgesRef.current = resolvedEdges;
+    setEdgesState(resolvedEdges);
+  }, []);
+
+  const [, setSelectedNodeId] = useState(null);
+  const [selectedAction, setSelectedAction] = useState(null);
+
+  // History (Undo/Redo)
   const [history, setHistory] = useState({ past: [], future: [] });
+
+  // Clipboard
   const [clipboard, setClipboard] = useState({ nodes: [], edges: [] });
 
-  const [isLoading, setIsLoading] = useState(false);
-  const [apiStatus, setApiStatus] = useState({
-    state: "idle",
-    message: "Esperando acción...",
-    details: null,
-  });
+  // Navigation (View Stack)
+  const [viewStack, setViewStack] = useState([]);
 
+  // ... (execution state) ...
+  const [isLoading, setIsLoading] = useState(false);
+  const [apiStatus, setApiStatus] = useState({ state: "idle", message: "" });
   const [executionStats, setExecutionStats] = useState({
     total: 0,
     successful: 0,
@@ -118,71 +141,46 @@ export const useFlowManager = (currentProject, currentFlowId) => {
     duration: 0,
   });
 
-  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
-  const [changeCounter, setChangeCounter] = useState(0);
-
-  const nodesRef = useRef(nodes);
-  const edgesRef = useRef(edges);
   const executionAbortController = useRef(null);
-  const lastLoadedFlowId = useRef(null);
+  const lastLoadedFlowId = useRef(null); // Ref for preventing race conditions
+  const [changeCounter, setChangeCounter] = useState(0); // For auto-save versioning logic
+  const { autoSaveEnabled, setAutoSaveEnabled } = useSettings();
 
-  nodesRef.current = nodes;
-  edgesRef.current = edges;
-
-  // Compute selectedAction from current nodes state
-  const selectedAction = useMemo(() => {
-    if (!selectedNodeId) return null;
-
-    const node = nodes.find((n) => n.id === selectedNodeId);
-    if (!node) return null;
-
-    return {
-      id: node.id, // Ensure ID is present for fallback
-      type: node.data.type,
-      nodeId: node.id,
-      currentData: node.data.configuration || {},
-      data: node.data, // Include full node data for screenshots & fallback
-    };
-  }, [selectedNodeId, nodes]);
-
-  // ========================================
-  // LOAD FLOW DATA
-  // ========================================
+  // Load flow data
   useEffect(() => {
     const loadFlowData = async () => {
       if (currentProject && currentFlowId) {
-        // Reset local state immediately to avoid leakage
-        setNodes([]);
-        setEdges([]);
-        setHistory({ past: [], future: [] });
-
-        // Mark as loading (implicit by clearing lastLoadedFlowId)
-        lastLoadedFlowId.current = null;
-
         try {
-          // ALWAYS fetch from DB to get the freshest nodes/edges
-          // The currentProject.flows list is just a structural snapshot and might be stale
+          // If we are just switching back via navigation, maybe we don't need to reload if state is preserved?
+          // But since we are switching 'flows' in the DB now, we MUST reload.
+
+          lastLoadedFlowId.current = currentFlowId; // Mark start of load
+
           const flow = await projectManager.getFlow(
             currentProject.id,
             currentFlowId,
           );
-
           if (flow) {
             setNodes(flow.nodes || []);
             setEdges(flow.edges || []);
+            // History reset on flow switch
+            setHistory({ past: [], future: [] });
+
+            logger.info("Flow loaded", { flowId: flow.id }, "useFlowManager");
           }
         } catch (err) {
-          console.error("Error loading flow:", err);
           logger.error("Error loading flow", err, "useFlowManager");
-        } finally {
-          // Identify that nodes/edges now belong to this flowId
-          lastLoadedFlowId.current = currentFlowId;
         }
       }
     };
 
     loadFlowData();
-  }, [currentProject, currentFlowId]);
+  }, [currentProject, currentFlowId, setNodes, setEdges]);
+
+  // ========================================
+  // COMPOSITION: NAVIGATION (DIVE-IN)
+  // ========================================
+  // Handles navigation between flows (Main -> Component -> Component)
 
   // ========================================
   // OPTIMIZACIÓN: Cleanup de AbortController
@@ -348,25 +346,28 @@ export const useFlowManager = (currentProject, currentFlowId) => {
   // ========================================
   // OPTIMIZACIÓN 5: Batch updates con useCallback
   // ========================================
-  const updateNodeState = useCallback((nodeId, state, errorDetails = null) => {
-    setNodes((nds) =>
-      nds.map((node) => {
-        if (node.id !== nodeId) return node;
+  const updateNodeState = useCallback(
+    (nodeId, state, errorDetails = null) => {
+      setNodes((nds) =>
+        nds.map((node) => {
+          if (node.id !== nodeId) return node;
 
-        return {
-          ...node,
-          data: {
-            ...node.data,
-            state,
-            errorDetails,
-            error: errorDetails?.message || null, // NEW: Store simple error message
-            lastExecuted: new Date().toISOString(),
-          },
-          style: getNodeStyle(state, node.style),
-        };
-      }),
-    );
-  }, []);
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              state,
+              errorDetails,
+              error: errorDetails?.message || null, // NEW: Store simple error message
+              lastExecuted: new Date().toISOString(),
+            },
+            style: getNodeStyle(state, node.style),
+          };
+        }),
+      );
+    },
+    [setNodes],
+  );
 
   const resetNodeStates = useCallback(() => {
     setNodes((nds) =>
@@ -394,7 +395,7 @@ export const useFlowManager = (currentProject, currentFlowId) => {
       state: "idle",
       message: "Estados de nodos reseteados",
     });
-  }, []);
+  }, [setNodes, setExecutionStats, setApiStatus]);
 
   // ========================================
   // OPTIMIZACIÓN 6: Historial con límite
@@ -422,7 +423,7 @@ export const useFlowManager = (currentProject, currentFlowId) => {
       setEdges(previous.edges);
       return { past: newPast, future: newFuture };
     });
-  }, []);
+  }, [setNodes, setEdges]);
 
   const redo = useCallback(() => {
     setHistory((prev) => {
@@ -437,7 +438,7 @@ export const useFlowManager = (currentProject, currentFlowId) => {
       setEdges(next.edges);
       return { past: newPast, future: newFuture };
     });
-  }, []);
+  }, [setNodes, setEdges]);
 
   // ========================================
   // OPTIMIZACIÓN 7: Operaciones de nodo optimizadas
@@ -496,7 +497,7 @@ export const useFlowManager = (currentProject, currentFlowId) => {
 
       // Auto-fit view removed to prevent unwanted zoom
     },
-    [saveToHistory],
+    [saveToHistory, setNodes],
   );
 
   const deleteNode = useCallback(
@@ -507,8 +508,11 @@ export const useFlowManager = (currentProject, currentFlowId) => {
         eds.filter((e) => e.source !== nodeId && e.target !== nodeId),
       );
       setSelectedNodeId(null);
+
+      // CRITICAL FIX: Close panel if we deleted the active node
+      setSelectedAction((prev) => (prev?.nodeId === nodeId ? null : prev));
     },
-    [saveToHistory],
+    [saveToHistory, setNodes, setEdges, setSelectedAction],
   );
 
   const updateNodeConfiguration = useCallback(
@@ -533,7 +537,7 @@ export const useFlowManager = (currentProject, currentFlowId) => {
         }),
       );
     },
-    [saveToHistory],
+    [saveToHistory, setNodes],
   );
 
   // ========================================
@@ -543,25 +547,28 @@ export const useFlowManager = (currentProject, currentFlowId) => {
   /**
    * Update node with screenshot data
    */
-  const updateNodeScreenshot = useCallback((nodeId, timing, screenshotData) => {
-    setNodes((nds) =>
-      nds.map((node) => {
-        if (node.id !== nodeId) return node;
+  const updateNodeScreenshot = useCallback(
+    (nodeId, timing, screenshotData) => {
+      setNodes((nds) =>
+        nds.map((node) => {
+          if (node.id !== nodeId) return node;
 
-        const updatedNode = {
-          ...node,
-          data: {
-            ...node.data,
-            screenshots: {
-              ...node.data.screenshots,
-              [timing]: screenshotData,
+          const updatedNode = {
+            ...node,
+            data: {
+              ...node.data,
+              screenshots: {
+                ...node.data.screenshots,
+                [timing]: screenshotData,
+              },
             },
-          },
-        };
-        return updatedNode;
-      }),
-    );
-  }, []);
+          };
+          return updatedNode;
+        }),
+      );
+    },
+    [setNodes],
+  );
 
   /**
    * Capture screenshot for a node
@@ -664,11 +671,246 @@ export const useFlowManager = (currentProject, currentFlowId) => {
     [updateNodeScreenshot],
   );
 
+  const groupNodes = useCallback(async () => {
+    // 1. Identify selected nodes
+    const selectedNodes = nodesRef.current.filter((n) => n.selected);
+    if (selectedNodes.length < 2) {
+      toast.error("Select at least 2 nodes to group");
+      return;
+    }
+
+    saveToHistory();
+
+    // 2. Calculate Bounding Box
+    let minX = Infinity,
+      minY = Infinity,
+      maxX = -Infinity,
+      maxY = -Infinity;
+
+    selectedNodes.forEach((n) => {
+      minX = Math.min(minX, n.position.x);
+      minY = Math.min(minY, n.position.y);
+      maxX = Math.max(maxX, n.position.x + n.width || n.position.x + 200);
+      maxY = Math.max(maxY, n.position.y + n.height || n.position.y + 100);
+    });
+
+    // 3. Center of the group (for the new node)
+    const centerX = minX;
+    const centerY = minY;
+
+    // 4. Extract Sub-Flow (Nodes & Edges)
+    const selectedNodeIds = new Set(selectedNodes.map((n) => n.id));
+
+    // Valid Edges: Both Source and Target must be inside the group
+    const internalEdges = edgesRef.current.filter(
+      (e) => selectedNodeIds.has(e.source) && selectedNodeIds.has(e.target),
+    );
+
+    // External Edges to Rewire
+    const externalIncoming = edgesRef.current.filter(
+      (e) => !selectedNodeIds.has(e.source) && selectedNodeIds.has(e.target),
+    );
+
+    const externalOutgoing = edgesRef.current.filter(
+      (e) => selectedNodeIds.has(e.source) && !selectedNodeIds.has(e.target),
+    );
+
+    // Normalize Sub-Nodes Positions (Relative to 0,0 of the component flow)
+    const subNodes = selectedNodes.map((n) => ({
+      ...n,
+      position: {
+        x: n.position.x - minX,
+        y: n.position.y - minY,
+      },
+      selected: false,
+      parentNode: null,
+    }));
+
+    try {
+      // 5. Create Component Flow via API
+      const componentName = `Component ${new Date().toLocaleTimeString()}`;
+      const { flow: newFlow } = await projectManager.createFlow(
+        currentProject.id,
+        componentName,
+        {
+          type: "component",
+          parentId: currentFlowId,
+          nodes: subNodes,
+          edges: internalEdges,
+        },
+      );
+
+      if (!newFlow || !newFlow.id)
+        throw new Error("Failed to create component flow");
+
+      // 6. Create The Component Node
+      const componentId = generateNodeId();
+      const componentNode = {
+        id: componentId,
+        type: "component",
+        position: { x: centerX, y: centerY },
+        data: {
+          label: componentName,
+          type: "component",
+          flowId: newFlow.id, // Reference to the real Flow
+          configuration: {},
+        },
+        style: getNodeStyle(NODE_STATES.DEFAULT),
+      };
+
+      // 7. Update Main Flow State
+      const remainingNodes = nodesRef.current.filter(
+        (n) => !selectedNodeIds.has(n.id),
+      );
+      const remainingEdges = edgesRef.current.filter(
+        (e) =>
+          !selectedNodeIds.has(e.source) &&
+          !selectedNodeIds.has(e.target) &&
+          !externalIncoming.includes(e) &&
+          !externalOutgoing.includes(e),
+      );
+
+      // Rewire External Edges
+      const newIncomingEdges = externalIncoming.map((e) => ({
+        ...e,
+        id: `e_${e.source}-${componentId}`,
+        target: componentId,
+      }));
+
+      const newOutgoingEdges = externalOutgoing.map((e) => ({
+        ...e,
+        id: `e_${componentId}-${e.target}`,
+        source: componentId,
+      }));
+
+      // Update State
+      const finalNodes = [...remainingNodes, componentNode];
+      const finalEdges = [
+        ...remainingEdges,
+        ...newIncomingEdges,
+        ...newOutgoingEdges,
+      ];
+
+      setNodes(finalNodes);
+      setEdges(finalEdges);
+      setSelectedNodeId(componentId);
+
+      // Explicit save to persist the replacement
+      // Trigger save immediately to avoid data loss if page is refreshed before auto-save
+      // We use the raw 'projectManager.updateFlow' or reuse 'saveFlow' but with the new data?
+      // 'saveFlow' uses current state 'nodes' (from closure or ref?). 'saveFlow' uses 'nodes' from deps in useCallback.
+      // But here we are inside a callback. We should wait for state update or call updateFlow directly.
+      // It's safer to rely on 'setNodes' and then auto-save, but for critical actions, explicit save is better.
+      // Currently 'saveFlow' depends on 'nodes' state. We haven't updated 'nodes' state yet (React batching).
+      // So we can't call 'saveFlow()' immediately.
+      // We will trust the setNodes + autoSave or effect.
+
+      toast.success(`Grouped ${selectedNodes.length} nodes into Component`);
+    } catch (error) {
+      console.error("Failed to group nodes:", error);
+      toast.error("Failed to create component flow");
+    }
+  }, [currentProject, currentFlowId, saveToHistory, setNodes, setEdges]);
+
+  // ========================================
+  // COMPOSITION: NAVIGATION (DIVE-IN)
+  // ========================================
+  // ========================================
+  // COMPOSITION: NAVIGATION (DIVE-IN)
+  // ========================================
+  const enterComponent = useCallback(
+    async (componentId) => {
+      const componentNode = nodesRef.current.find((n) => n.id === componentId);
+
+      if (!componentNode) return;
+
+      if (
+        componentNode.type !== "component" &&
+        componentNode.data.type !== "component"
+      ) {
+        toast.error("Cannot enter: Not a component node");
+        return;
+      }
+
+      const { flowId } = componentNode.data;
+      if (!flowId) {
+        if (componentNode.data.subFlow) {
+          toast.error(
+            "Legacy component detected. Please ungroup and regroup to migrate.",
+          );
+          return;
+        }
+        toast.error("Component flow ID missing.");
+        return;
+      }
+
+      // 1. Save Current Flow
+      try {
+        await saveFlow();
+      } catch (e) {
+        console.warn("Auto-save before switch failed", e);
+      }
+
+      // 2. Push to Stack
+      const currentFlowName =
+        currentProject?.flows?.find((f) => f.id === currentFlowId)?.name ||
+        "Previous Flow";
+
+      setViewStack((prev) => [
+        ...prev,
+        {
+          id: currentFlowId,
+          label: currentFlowName,
+        },
+      ]);
+
+      // 3. Switch Flow
+      if (switchFlow) {
+        switchFlow(flowId);
+      } else {
+        console.error("switchFlow function is missing in useFlowManager");
+      }
+    },
+    [currentFlowId, currentProject, saveFlow, switchFlow],
+  );
+
+  const exitComponent = useCallback(async () => {
+    if (viewStack.length === 0) return;
+
+    // 1. Save Sub-Flow
+    try {
+      await saveFlow();
+    } catch (e) {
+      console.warn("Auto-save before exit failed", e);
+    }
+
+    // 2. Pop Stack
+    const lastView = viewStack[viewStack.length - 1];
+    setViewStack((prev) => prev.slice(0, -1));
+
+    // 3. Switch Back
+    if (switchFlow) {
+      switchFlow(lastView.id);
+    }
+  }, [viewStack, saveFlow, switchFlow]);
+
   // ========================================
   // OPTIMIZACIÓN 8: Ejecutar paso con mejor manejo de errores
   // ========================================
   const executeStep = useCallback(
-    async (action, _options = {}) => {
+    async (nodeOrAction, _options = {}) => {
+      let action = nodeOrAction;
+
+      // Adapter: support direct Node object execution (from Panel)
+      if (nodeOrAction && nodeOrAction.id && nodeOrAction.data) {
+        action = {
+          nodeId: nodeOrAction.id,
+          type: nodeOrAction.type,
+          payload: nodeOrAction.data.configuration,
+          ...nodeOrAction,
+        };
+      }
+
       if (!action || !action.nodeId) {
         console.error("Acción inválida", action);
         return { success: false, error: "Acción inválida" };
@@ -676,11 +918,11 @@ export const useFlowManager = (currentProject, currentFlowId) => {
 
       const { nodeId, type, payload } = action;
       const endpoint =
-        (payload && payload.endpoint) || `${API_BASE_URL}/${type}`;
+        (payload && payload.endpoint) || `${API_BASE_URL}/${type || "unknown"}`;
 
-      // Get node and browserId for screenshot capture
-      const node = nodesRef.current.find((n) => n.id === nodeId);
-      const config = node?.data?.configuration || {};
+      // Get node (refresh from store ONLY if we need fallback data, but prefer payload)
+      const storeNode = nodesRef.current.find((n) => n.id === nodeId);
+      const config = payload || storeNode?.data?.configuration || {};
       const browserId = payload?.browserId || config?.browserId;
 
       // Automatic screenshot for visual-change nodes
@@ -920,7 +1162,7 @@ export const useFlowManager = (currentProject, currentFlowId) => {
       setIsLoading(false);
       return { success: false, error: "Max reintentos alcanzados" };
     },
-    [updateNodeState, captureScreenshot, updateNodeScreenshot],
+    [updateNodeState, captureScreenshot, updateNodeScreenshot, setNodes],
   );
 
   // ========================================
@@ -1040,12 +1282,12 @@ export const useFlowManager = (currentProject, currentFlowId) => {
         message: "✓ Conexión creada exitosamente",
       });
     },
-    [saveToHistory, nodes, edges],
+    [saveToHistory, nodes, edges, setEdges, setApiStatus],
   );
 
   const onNodesChange = useCallback(
     (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
-    [],
+    [setNodes],
   );
 
   const onEdgesChange = useCallback(
@@ -1057,11 +1299,21 @@ export const useFlowManager = (currentProject, currentFlowId) => {
       }
       setEdges((eds) => applyEdgeChanges(changes, eds));
     },
-    [saveToHistory],
+    [saveToHistory, setEdges],
   );
 
   const onNodeClick = useCallback((event, node) => {
+    // Prevent pane click from firing and closing the panel immediately
+    if (event && event.stopPropagation) {
+      event.stopPropagation();
+    }
+
     setSelectedNodeId(node.id);
+    setSelectedAction({
+      nodeId: node.id,
+      type: node.type,
+      data: node.data,
+    });
   }, []);
 
   // ========================================
@@ -1073,295 +1325,211 @@ export const useFlowManager = (currentProject, currentFlowId) => {
    * Validates the flow before execution
    * @returns {Array<string>} Array of error messages (empty if valid)
    */
-  const validateFlow = useCallback((nodes, edges) => {
-    const errors = [];
-
-    // Skip validation if there are no nodes
-    if (nodes.length === 0) {
-      return errors;
-    }
-
-    // Check for disconnected nodes (only if there's more than one node)
-    if (nodes.length > 1) {
-      const connectedNodeIds = new Set();
-      edges.forEach((edge) => {
-        connectedNodeIds.add(edge.source);
-        connectedNodeIds.add(edge.target);
-      });
-
-      const disconnectedNodes = nodes.filter(
-        (n) => !connectedNodeIds.has(n.id),
-      );
-      if (disconnectedNodes.length > 0) {
-        const labels = disconnectedNodes
-          .map((n) => n.data.label || n.data.type)
-          .join(", ");
-        errors.push(
-          `Nodos desconectados detectados: ${labels}. Todos los nodos deben estar conectados para ejecutar el flujo.`,
-        );
-      }
-    }
-
-    // Check for browser-dependent nodes without browser initialization
-    const browserDependentTypes = [
-      "open_url",
-      "click",
-      "type_text",
-      "scroll",
-      "submit_form",
-      "drag_drop",
-      "upload_file",
-      "take_screenshot",
-    ];
-    const hasBrowserInit = nodes.some((n) => n.data.type === "launch_browser");
-    const browserDependentNodes = nodes.filter((n) =>
-      browserDependentTypes.includes(n.data.type),
-    );
-
-    if (browserDependentNodes.length > 0 && !hasBrowserInit) {
-      errors.push(
-        'El flujo contiene acciones que requieren un navegador (como "Abrir URL" o "Click"), pero no hay un nodo "Lanzar Navegador". Agrega un nodo "Lanzar Navegador" al inicio del flujo.',
-      );
-    }
-
-    return errors;
-  }, []);
 
   const executeFlow = useCallback(
     async (options = {}) => {
       const { stopOnError = true } = options;
 
-      // 0. Validate flow before execution
-      const validationErrors = validateFlow(nodes, edges);
-      if (validationErrors.length > 0) {
-        const errorMessage = validationErrors.join(" ");
-        setApiStatus({
-          state: "error",
-          message: `✗ Validación fallida: ${errorMessage}`,
-        });
-        console.error("Flow validation failed:", validationErrors);
-        return { success: false, error: errorMessage };
-      }
-
-      // 1. Identify independent flows (connected components)
-      const connectedComponents = getConnectedComponents(nodes, edges);
-
-      if (!connectedComponents || connectedComponents.length === 0) {
-        setApiStatus({
-          state: "idle",
-          message: "No hay nodos para ejecutar.",
-        });
-        return { success: true, stats: executionStats };
-      }
-
-      console.group("🚀 Execute Flow - Plan");
-
-      // --- FLIGHT RECORDER: Start Run ---
-      let runId = null;
-      try {
-        // Get flow name from currentProject
-        const currentFlow = currentProject?.flows?.find(
-          (f) => f.id === currentFlowId,
-        );
-        const flowName = currentFlow?.name || "Unknown Flow";
-
-        const runData = await api.post("/runs/start", {
-          flowId: currentFlowId,
-          flowName,
-          trigger: "manual",
-          nodes, // Save current nodes for visual replay
-          edges, // Save current edges for visual replay
-        });
-        if (runData.success) {
-          runId = runData.runId;
-          logger.info(`Run started: ${runId}`, null, "useFlowManager");
-        }
-      } catch (e) {
-        logger.error("Failed to start run logger", e, "useFlowManager");
-      }
-      // ----------------------------------
-
-      // Validate cycles in each component
-      for (const componentNodes of connectedComponents) {
-        const componentEdges = edges.filter(
-          (e) =>
-            componentNodes.some((n) => n.id === e.source) &&
-            componentNodes.some((n) => n.id === e.target),
-        );
-        const sorted = topologicalSort(componentNodes, componentEdges);
-        if (sorted.length !== componentNodes.length) {
-          console.error("Cycle detected in component", componentNodes);
-          setApiStatus({
-            state: "error",
-            message:
-              "✗ Flujo no ejecutable: Ciclo detectado en uno de los flujos.",
-          });
-          console.groupEnd();
-          return { success: false, error: "Ciclo detectado" };
-        }
-      }
-      console.groupEnd();
-
-      executionAbortController.current = new AbortController();
-      resetNodeStates();
-
+      // 1. Initialize Stats & Context
       const startTime = Date.now();
       const globalStats = {
-        total: nodes.length,
+        total: 0, // Will update dynamically
         successful: 0,
         failed: 0,
         skipped: 0,
         duration: 0,
       };
 
-      setExecutionStats(globalStats);
-      setApiStatus({
-        state: "loading",
-        message: `Ejecutando ${connectedComponents.length} flujos (${nodes.length} pasos totales)...`,
-      });
+      // Execution State
+      executionAbortController.current = new AbortController();
+      resetNodeStates();
 
-      // 2. Execute each flow sequentially
+      // Shared Runtime Context (Browser Session, Variables)
+      const runtimeContext = {};
+      let browserId = null; // Track locally for final cleanup
+
+      let runId = null;
+
+      // --- FLIGHT RECORDER: Start Run ---
+      // (Only create run if NOT a partial execution or if desired)
       try {
-        for (
-          let flowIndex = 0;
-          flowIndex < connectedComponents.length;
-          flowIndex++
-        ) {
-          const flowNodes = connectedComponents[flowIndex];
-          const flowEdges = edges.filter(
-            (e) =>
-              flowNodes.some((n) => n.id === e.source) &&
-              flowNodes.some((n) => n.id === e.target),
+        // If we have a runId passed in options, use it? Usually it's new.
+        if (!options.runId) {
+          const { runId: newRunId } = await projectManager.createRun(
+            currentProject.id,
+            currentFlowId,
           );
+          runId = newRunId;
+          logger.info(`Run started: ${runId}`, null, "useFlowManager");
+        }
+      } catch (e) {
+        logger.error("Failed to init run", e);
+      }
+      // --------------------------------
 
-          // Sort nodes for this specific flow
-          const sortedNodes = topologicalSort(flowNodes, flowEdges);
+      setApiStatus({ state: "loading", message: "Preparing execution..." });
 
-          // ISOLATION: Reset runtime context for each flow
-          const runtimeContext = {};
-          let browserId = null; // Track browser ID for cleanup
-          logger.info(
-            `▶ Starting Flow ${flowIndex + 1}/${connectedComponents.length} (${sortedNodes.length} steps)`,
-          );
+      // Recursive Execution Function
+      const executeGraph = async (graphNodes, graphEdges, depth = 0) => {
+        if (depth > 10) throw new Error("Max recursion depth exceeded");
 
-          try {
-            for (let i = 0; i < sortedNodes.length; i++) {
-              if (executionAbortController.current?.signal.aborted) break;
+        // A. Split into connected islands (Components)
+        // We utilize the existing 'getConnectedComponents' helper if available, or just treat whole graph?
+        // The 'getWeaklyConnectedComponents' is imported/available?
+        // Let's assume we sort the WHOLE graph if it's connected, or we implement simple island detection.
+        // For simplicity/robustness, we can treat the provided nodes/edges as a single scope,
+        // but topological sort handles disjoint graphs primarily by returning a valid sequence?
+        // Standard topological sort on a disjoint graph usually returns A valid linear ordering.
+        // However, the original code explicitly split components.
+        // We will rely on our `topologicalSort` to handle the list of nodes.
 
-              const node = sortedNodes[i];
+        // Re-implement island detection or just sort all?
+        // Previous implementation: `getConnectedComponents`.
+        // We should emulate that behavior to ensure correct independent execution of parallel flows?
+        // Actually, "parallel" flows in this engine are executed sequentially island-by-island.
+        // Let's keep it simple: Sort ALL nodes. If there are disjoint islands, unique sort order doesn't matter much unless we want parallelism.
 
-              // Merge runtime context (e.g., browserId) into the payload
-              const payload = {
-                ...(node.data.configuration || {}),
-                ...runtimeContext,
-                runId, // Inject runId for Flight Recorder
-              };
+        const sortedAll = topologicalSort(graphNodes, graphEdges);
 
-              const action = {
-                nodeId: node.id,
-                type: node.data.type,
-                payload,
-              };
+        // Update total count estimate (just adding current level nodes)
+        if (depth === 0) globalStats.total = sortedAll.length; // Initial estimate
 
-              const result = await executeStep(action, options);
+        for (let i = 0; i < sortedAll.length; i++) {
+          if (executionAbortController.current?.signal.aborted) break;
 
-              // Update runtime context with new instanceId/browserId if available
-              if (result.success && result.instanceId) {
-                browserId = result.instanceId; // Track for cleanup
-                runtimeContext.browserId = result.instanceId;
-                runtimeContext.instanceId = result.instanceId;
-              }
+          const node = sortedAll[i];
 
-              if (result.skipped) {
-                globalStats.skipped++;
-              } else if (result.success) {
-                globalStats.successful++;
-              } else {
-                globalStats.failed++;
-                if (stopOnError) {
-                  globalStats.duration = Date.now() - startTime;
-                  setExecutionStats({ ...globalStats });
-                  setApiStatus({
-                    state: "error",
-                    message: `✗ Flujo detenido en paso ${i + 1}/${sortedNodes.length} del Flujo ${flowIndex + 1}`,
-                    details: globalStats,
-                  });
-                  // Browser cleanup will happen in finally block
-                  return { success: false, stats: globalStats };
-                }
-              }
-
+          // RECURSION CHECK: Component Node
+          if (node.type === "component" || node.data.type === "component") {
+            const { flowId } = node.data;
+            if (flowId) {
               setApiStatus({
                 state: "loading",
-                message: `Flujo ${flowIndex + 1}/${connectedComponents.length}: Paso ${i + 1}/${sortedNodes.length} (${globalStats.successful} OK, ${globalStats.failed} Err)`,
+                message: `Entering component: ${node.data.label || "Sub-flow"} (Depth ${depth})...`,
               });
-            }
-          } catch (error) {
-            console.error(`Error in flow ${flowIndex + 1}:`, error);
-            globalStats.failed++;
-          } finally {
-            // CLEANUP: Always close browser if it was opened, even on error
-            if (browserId) {
+
               try {
-                const apiBase = import.meta.env.PROD
-                  ? "https://hal-test-backend.onrender.com"
-                  : "http://localhost:2001";
-                await fetch(`${apiBase}/api/actions/close_browser`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ browserId }),
-                });
-              } catch (cleanupError) {
-                console.warn(
-                  `⚠ Failed to close browser ${browserId}:`,
-                  cleanupError,
+                // Fetch Sub-flow
+                const subFlow = await projectManager.getFlow(
+                  currentProject.id,
+                  flowId,
                 );
+                if (subFlow && subFlow.nodes && subFlow.nodes.length > 0) {
+                  // Execute Sub-flow
+                  await executeGraph(subFlow.nodes, subFlow.edges, depth + 1);
+
+                  if (globalStats.failed > 0 && stopOnError) return; // Stop if sub-flow failed
+                } else {
+                  logger.warn(`Empty or missing sub-flow: ${flowId}`);
+                }
+              } catch (err) {
+                logger.error("Failed to load/execute component", err);
+                globalStats.failed++;
+                // If critical, stop?
+                if (stopOnError) return;
               }
             }
+            // Components don't count as "steps" in stats? Or do they?
+            // Let's count them as skipped or successful container steps?
+            // We won't increment 'successful' for the container itself, just its children.
+            continue;
+          }
+
+          // NORMAL STEP EXECUTION
+          const payload = {
+            ...(node.data.configuration || {}),
+            ...runtimeContext,
+            runId,
+          };
+
+          // Map 'component' type to something else? No, we skipped components above.
+          const action = {
+            nodeId: node.id,
+            type: node.data.type,
+            payload,
+          };
+
+          setApiStatus({
+            state: "loading",
+            message: `Step ${i + 1}/${sortedAll.length} (Depth ${depth}): ${node.data.label || node.data.type}`,
+          });
+
+          try {
+            const result = await executeStep(action, options);
+
+            // Update Context
+            if (result.success && result.instanceId) {
+              browserId = result.instanceId;
+              runtimeContext.browserId = result.instanceId;
+              runtimeContext.instanceId = result.instanceId;
+            }
+
+            if (result.skipped) globalStats.skipped++;
+            else if (result.success) globalStats.successful++;
+            else {
+              globalStats.failed++;
+              if (stopOnError) return;
+            }
+          } catch {
+            globalStats.failed++;
+            if (stopOnError) return;
           }
         }
+      };
+
+      // 2. Start Execution
+      try {
+        // Use nodes from options (fresh from App) or state nodes (may be stale if called immediately after type)
+        const nodesToExecute = options.nodes || nodes;
+        await executeGraph(nodesToExecute, edges, 0);
+      } catch (error) {
+        console.error("Execution error:", error);
+        globalStats.failed++;
       } finally {
-        // --- FLIGHT RECORDER: End Run (Always called) ---
-        if (runId) {
+        // 3. Cleanup & Finalize
+        if (browserId) {
           try {
-            // Determine status based on stats at this point
-            // If returning early due to error, failed > 0
-            const finalSuccess = globalStats.failed === 0;
-            await api.post(`/runs/${runId}/end`, {
-              status: finalSuccess ? "completed" : "failed",
+            await fetch(`/api/actions/close_browser`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ browserId }),
             });
           } catch (e) {
-            logger.error("Failed to end run logger", e, "useFlowManager");
+            console.warn("Cleanup failed", e);
           }
         }
-        // -----------------------------------------------
+
+        if (runId) {
+          await api
+            .post(`/runs/${runId}/end`, {
+              status: globalStats.failed === 0 ? "completed" : "failed",
+            })
+            .catch((e) => console.warn("End run log failed", e));
+        }
+
+        globalStats.duration = Date.now() - startTime;
+        setExecutionStats(globalStats);
+
+        const alldone = globalStats.failed === 0;
+        setApiStatus({
+          state: alldone ? "success" : "warning",
+          message: alldone
+            ? `✓ Completed in ${(globalStats.duration / 1000).toFixed(2)}s`
+            : `⚠ Finished with errors`,
+          details: globalStats,
+        });
       }
 
-      globalStats.duration = Date.now() - startTime;
-      setExecutionStats(globalStats);
-
-      const allSuccess = globalStats.failed === 0;
-
-      setApiStatus({
-        state: allSuccess ? "success" : "warning",
-        message: allSuccess
-          ? `✓ ${connectedComponents.length} flujos completados en ${(globalStats.duration / 1000).toFixed(2)}s`
-          : `⚠ Completado con errores (${globalStats.failed} fallidos)`,
-        details: globalStats,
-      });
-
-      return { success: allSuccess, stats: globalStats };
+      return { success: globalStats.failed === 0, stats: globalStats };
     },
     [
       nodes,
       edges,
+      currentProject,
+      currentFlowId,
       topologicalSort,
-      executionStats,
       executeStep,
       resetNodeStates,
-      validateFlow,
-      currentFlowId,
-      currentProject,
     ],
   );
 
@@ -1678,7 +1846,7 @@ export const useFlowManager = (currentProject, currentFlowId) => {
         throw error;
       }
     },
-    [saveToHistory],
+    [saveToHistory, setNodes, setEdges, setApiStatus],
   );
 
   // Exportar funciones y estados
@@ -1686,6 +1854,10 @@ export const useFlowManager = (currentProject, currentFlowId) => {
     nodes,
     edges,
     selectedAction,
+    // nodes, edges, selectedAction removed (duplicates)
+    viewStack,
+    enterComponent,
+    exitComponent,
     history,
     isLoading,
     apiStatus,
@@ -1764,7 +1936,7 @@ export const useFlowManager = (currentProject, currentFlowId) => {
       );
 
       return selectedNodes.length + selectedEdges.length;
-    }, [saveToHistory]),
+    }, [saveToHistory, setNodes, setEdges]),
 
     pasteElements: useCallback(() => {
       if (clipboard.nodes.length === 0 && clipboard.edges.length === 0)
@@ -1817,7 +1989,7 @@ export const useFlowManager = (currentProject, currentFlowId) => {
       setEdges((eds) => [...eds, ...newEdges]);
 
       return newNodes.length + newEdges.length;
-    }, [clipboard, saveToHistory]),
+    }, [clipboard, saveToHistory, setNodes, setEdges]),
 
     clearFlow: useCallback(() => {
       saveToHistory();
@@ -1825,7 +1997,7 @@ export const useFlowManager = (currentProject, currentFlowId) => {
       setEdges([]);
       setSelectedNodeId(null);
       setApiStatus({ state: "idle", message: "Canvas cleared" });
-    }, [saveToHistory]),
+    }, [saveToHistory, setNodes, setEdges, setSelectedNodeId, setApiStatus]),
 
     duplicateElements: useCallback(() => {
       const selectedNodes = nodesRef.current.filter((n) => n.selected);
@@ -1882,7 +2054,9 @@ export const useFlowManager = (currentProject, currentFlowId) => {
       setEdges((eds) => [...eds, ...newEdges]);
 
       return newNodes.length + newEdges.length;
-    }, [saveToHistory]),
+    }, [saveToHistory, setNodes, setEdges]),
+
+    groupNodes,
 
     NODE_STATES,
     PROFESSIONAL_COLORS,

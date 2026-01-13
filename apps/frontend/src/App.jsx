@@ -119,12 +119,48 @@ export default function App() {
     }
   }, [projects, currentProject, loadProject]);
 
+  // Auto-select first flow if project is loaded but no flow selected
+  React.useEffect(() => {
+    if (
+      currentProject &&
+      currentProject.flows &&
+      currentProject.flows.length > 0 &&
+      !currentFlowId
+    ) {
+      // Prefer "Main Flow" if exists, otherwise first one
+      const mainFlow =
+        currentProject.flows.find((f) => f.name === "Main Flow") ||
+        currentProject.flows[0];
+      if (mainFlow) {
+        switchFlow(mainFlow.id);
+      }
+    }
+  }, [currentProject, currentFlowId, switchFlow]);
+
   // React Flow hooks & Figma Interaction
   const { figmaConfig, handlers } = useFigmaInteraction();
   const { zoomIn, zoomOut, fitView } = handlers;
 
   // Hook de React Flow para acceder a funciones de eliminación
-  const { getNodes, getEdges, deleteElements, setViewport } = useReactFlow();
+  const {
+    getNodes,
+    getEdges,
+    deleteElements,
+    setViewport,
+    fitView: reactFlowFitView,
+  } = useReactFlow();
+
+  // Auto-fit view when flow changes
+  React.useEffect(() => {
+    if (nodes.length > 0) {
+      // Small delay to allow rendering
+      const timer = setTimeout(() => {
+        reactFlowFitView({ duration: 800, padding: 0.2 });
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentFlowId, reactFlowFitView]); // Intentionally omitting nodes.length to avoid re-fitting on every node add
 
   // Panel visibility state
   const [isCreationPanelVisible, setIsCreationPanelVisible] = useState(true);
@@ -181,14 +217,26 @@ export default function App() {
     duplicateElements,
     clipboard,
     // clearFlow, // Unused
-  } = useFlowManager(currentProject, currentFlowId);
+    groupNodes, // Composition feature
+    viewStack, // Nav stack
+    enterComponent,
+    exitComponent,
+  } = useFlowManager(currentProject, currentFlowId, switchFlow);
 
   // Element Picker Callback
   const handleElementPicked = useCallback(
     (data) => {
       // If we have an active node being configured, update it
       if (selectedAction && data.selector) {
+        // ERROR FIX: Find the LIVE node to get latest config (text, etc.)
+        const liveNode = nodes.find((n) => n.id === selectedAction.nodeId);
+        const currentConfig =
+          liveNode?.data?.configuration ||
+          selectedAction?.data?.configuration ||
+          {};
+
         updateNodeConfiguration(selectedAction.nodeId, {
+          ...currentConfig, // Preserve existing text, etc.
           selector: data.selector,
         });
         toast.success(t("common.selector_captured", "Target captured!"));
@@ -197,7 +245,7 @@ export default function App() {
         console.warn("Element picked but no node is being configured.");
       }
     },
-    [selectedAction, updateNodeConfiguration, toast, t],
+    [selectedAction, nodes, updateNodeConfiguration, toast, t],
   );
 
   // Map backend step status to frontend NODE_STATES
@@ -310,7 +358,7 @@ export default function App() {
         toast.error("Failed to load run history");
       }
     },
-    [setNodes, toast],
+    [setEdges, setNodes, toast],
   );
 
   // Initialize Socket.io connection for real-time updates and inspector events
@@ -353,7 +401,7 @@ export default function App() {
     const toastId = toast.loading(t("common.processing"));
 
     try {
-      const result = await executeFlow(); // Returns { success, stats }
+      const result = await executeFlow({ nodes }); // Returns { success, stats }
 
       // 2. Clear loading
       toast.dismiss(toastId);
@@ -374,7 +422,7 @@ export default function App() {
       console.error("Error ejecutando flujo:", error);
       toast.error(t("common.flow_exec_error") + ": " + error.message);
     }
-  }, [executeFlow, toast, t]);
+  }, [executeFlow, toast, t, nodes]);
 
   const handleSaveFlow = useCallback(() => {
     try {
@@ -574,6 +622,32 @@ export default function App() {
   );
 
   // ========================================
+  // KEYBOARD SHORTCUTS (Moved here to access handlers)
+  // ========================================
+  useFlowShortcuts(
+    {
+      onSave: handleSaveFlow,
+      onUndo: undo,
+      onRedo: redo,
+      onExecute: handleExecuteFlow,
+      onDelete: handleDeleteSelected,
+      onSelectAll: handleSelectAll,
+      onDuplicate: handleDuplicateNodes,
+      onDeselect: () => {
+        /* Deselect logic handled by React Flow onClick */
+      },
+      onCopy: handleCopy,
+      onPaste: handlePaste,
+      onCut: handleCut,
+      onZoomIn: zoomIn,
+      onZoomOut: zoomOut,
+      onFitView: fitView,
+      onGroup: groupNodes, // Trigger group logic
+    },
+    !isSettingsOpen, // Disable shortcuts when modal is open
+  );
+
+  // ========================================
   // DRAG & DROP HANDLERS
   // ========================================
   const { screenToFlowPosition } = useReactFlow();
@@ -626,6 +700,23 @@ export default function App() {
   // MEMOIZACIÓN OPTIMIZADA
   // ========================================
 
+  // ========================================
+  // CALLBACKS - Eliminación y Panel Huérfano
+  // ========================================
+  const onNodesDelete = useCallback(
+    (deletedNodes) => {
+      // Check if the currently selected node is among the deleted ones
+      const isCurrentNodeDeleted = deletedNodes.some(
+        (node) => node.id === selectedAction?.nodeId,
+      );
+
+      if (isCurrentNodeDeleted) {
+        closeConfiguration();
+      }
+    },
+    [selectedAction, closeConfiguration],
+  );
+
   // Props estáticas que no cambian
   const staticFlowProps = useMemo(
     () => ({
@@ -668,18 +759,22 @@ export default function App() {
         closeConfiguration();
         setMenu(null);
       },
-      onNodeDoubleClick: (event, node) => {
-        // Open Step Details Modal on double-click
-        console.log("[DEBUG] Node double-clicked:", node.id, node.data);
-        setStepDetailsModal({
-          isOpen: true,
-          nodeData: node.data,
-        });
-      },
       onNodeContextMenu,
       onEdgeContextMenu,
       onPaneContextMenu,
       onSelectionContextMenu,
+      onNodeDoubleClick: (event, node) => {
+        if (node.type === "component") {
+          enterComponent(node.id);
+        } else {
+          // Open Step Details Modal on double-click
+          console.log("[DEBUG] Node double-clicked:", node.id, node.data);
+          setStepDetailsModal({
+            isOpen: true,
+            nodeData: node.data,
+          });
+        }
+      },
       onDrop,
       onDragOver,
       nodeTypes, // Custom node types for optimized rendering
@@ -704,6 +799,7 @@ export default function App() {
       onEdgeContextMenu,
       onPaneContextMenu,
       onSelectionContextMenu,
+      enterComponent,
       onDrop,
       onDragOver,
       enableSnapping, // Dependency for memo
@@ -745,6 +841,8 @@ export default function App() {
           selectedFlow={currentProject?.flows?.find(
             (f) => f.id === currentFlowId,
           )}
+          viewStack={viewStack}
+          onExitComponent={exitComponent}
         />
 
         {/* 2. Content Wrapper */}
@@ -766,7 +864,7 @@ export default function App() {
           {/* LIENZO (CANVAS - Abyss Blue Environment) */}
           <main className="flex-1 relative kanban-board-bg">
             <div ref={reactFlowWrapper} className="w-full h-full relative">
-              <ReactFlow {...flowConfig}>
+              <ReactFlow {...flowConfig} onNodesDelete={onNodesDelete}>
                 {showMinimap && <StyledMiniMap />}
                 <Controls />
 
@@ -814,6 +912,10 @@ export default function App() {
                           handleDeleteSelected();
                         }
                       },
+                      group: () => {
+                        groupNodes();
+                        setMenu(null);
+                      },
                       duplicate: handleDuplicateNodes,
                       addNode: () => setIsCreationPanelVisible(true), // Legacy: Open Panel
                       createNode: (type) => {
@@ -845,6 +947,7 @@ export default function App() {
 
           {/* PANEL DERECHO (CONFIGURACIÓN) */}
           <NodeConfigurationPanel
+            key={selectedAction?.nodeId}
             action={selectedAction}
             isVisible={isConfigurationPanelVisible}
             onExecute={executeStep}

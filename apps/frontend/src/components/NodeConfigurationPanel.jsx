@@ -154,10 +154,13 @@ function NodeConfigurationPanel({
   };
 
   // Use the live node from the nodes array if available, otherwise fallback to action snapshot
+  // Use the live node from the nodes array if available, otherwise fallback to action snapshot
   const activeNode = useMemo(() => {
     if (!action) return null;
     if (!nodes) return action;
-    return nodes.find((n) => n.id === action.id) || action;
+    return (
+      nodes.find((n) => n.id === action.nodeId || n.id === action.id) || action
+    );
   }, [action, nodes]);
 
   // Memoize logic to prevent unnecessary re-renders
@@ -190,6 +193,70 @@ function NodeConfigurationPanel({
     };
   }, [activeNode]);
 
+  // Local state for immediate performance (fix typing lag)
+  const [localConfig, setLocalConfig] = React.useState(
+    activeNode?.data?.configuration || {},
+  );
+  const lastSyncedConfigRef = React.useRef(
+    activeNode?.data?.configuration || {},
+  );
+  const updateTimeoutRef = React.useRef(null);
+
+  // Sync LOCAL <-> GLOBAL
+  // 1. When switching nodes (different ID), hard reset local state.
+  // 2. When external update happens (e.g. Picker updates selector), sync only if different.
+  React.useEffect(() => {
+    if (!activeNode) return;
+
+    const globalConfig = activeNode?.data?.configuration || {};
+
+    // Simple deep comparison (sufficient for config objects)
+    const isDifferent =
+      JSON.stringify(globalConfig) !== JSON.stringify(localConfig);
+    const isJustSynced =
+      JSON.stringify(globalConfig) ===
+      JSON.stringify(lastSyncedConfigRef.current);
+
+    // If global changed and it wasn't just caused by our own debounce update...
+    // Or if we switched nodes entirely...
+    if (
+      activeNode.id !== lastSyncedConfigRef.current.nodeId ||
+      (isDifferent && !isJustSynced)
+    ) {
+      setLocalConfig(globalConfig);
+    }
+
+    // Always update ref to track what node we are on
+    if (activeNode.id !== lastSyncedConfigRef.current.nodeId) {
+      lastSyncedConfigRef.current = { ...globalConfig, nodeId: activeNode.id };
+    }
+  }, [activeNode?.id, activeNode?.data?.configuration]);
+
+  // Helper to handle partial configuration updates safely
+  const handleConfigUpdate = (key, value) => {
+    // 1. Update LOCAL state immediately (Instant Feedback)
+    const newConfig = { ...localConfig, [key]: value };
+    setLocalConfig(newConfig);
+
+    // 2. Debounce update to GLOBAL state (Performance)
+    if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+
+    updateTimeoutRef.current = setTimeout(() => {
+      // Track what we are sending to prevent "loop" in useEffect
+      lastSyncedConfigRef.current = newConfig;
+
+      if (activeNode) {
+        updateNodeConfiguration(activeNode.id, {
+          ...(activeNode.data?.configuration || {}),
+          ...newConfig,
+        });
+      }
+    }, 300);
+  };
+
+  // Cleanup
+  React.useEffect(() => () => clearTimeout(updateTimeoutRef.current), []);
+
   if (!isVisible) return null;
 
   if (!activeNode) {
@@ -216,27 +283,17 @@ function NodeConfigurationPanel({
     );
   }
 
-  // Helper to handle partial configuration updates safely
-  const handleConfigUpdate = (key, value) => {
-    const currentConfig = activeNode.data?.configuration || {};
-    updateNodeConfiguration(activeNode.id, {
-      ...currentConfig,
-      [key]: value,
-    });
-  };
-
   // CRITICAL FIX: Stop event propagation to prevent ReactFlow from stealing focus
   const stopPropagation = (e) => {
     e.stopPropagation();
-    // Also stop immediate propagation just to be safe if multiple handlers exist
     e.nativeEvent.stopImmediatePropagation?.();
   };
 
   const colorKey = safeConfig.color;
 
   const renderInput = (field) => {
-    // Robust access: configuration might be undefined on new nodes
-    const value = activeNode.data?.configuration?.[field.key] ?? "";
+    // Read from LOCAL state for performance
+    const value = localConfig[field.key] ?? "";
 
     switch (field.type) {
       case "checkbox":
@@ -339,7 +396,12 @@ function NodeConfigurationPanel({
           initial={{ x: 320, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           exit={{ x: 320, opacity: 0 }}
-          transition={{ type: "spring", damping: 25, stiffness: 200 }}
+          transition={{
+            type: "spring",
+            damping: 30,
+            stiffness: 400,
+            mass: 0.8,
+          }}
           onMouseDown={stopPropagation}
           onClick={stopPropagation}
           className={cn(
@@ -403,7 +465,18 @@ function NodeConfigurationPanel({
           <div className="p-4 border-t border-[var(--border-ui)] bg-[var(--bg-panel)] shrink-0 space-y-3">
             {/* Primary Action */}
             <button
-              onClick={() => onExecute(activeNode)}
+              onClick={() =>
+                onExecute({
+                  ...activeNode,
+                  data: {
+                    ...activeNode.data,
+                    configuration: {
+                      ...(activeNode.data?.configuration || {}),
+                      ...localConfig,
+                    },
+                  },
+                })
+              }
               className={cn(
                 "w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wide transition-all",
                 "text-white shadow-lg active:scale-[0.98] hover:brightness-110",
@@ -427,38 +500,5 @@ function NodeConfigurationPanel({
   );
 }
 
-const arePropsEqual = (prev, next) => {
-  // 1. Visibility Check: If both are hidden, NO update needed (even if nodes change)
-  if (!prev.isVisible && !next.isVisible) return true;
-
-  // 2. Visibility Change: If visibility toggles, MUST update
-  if (prev.isVisible !== next.isVisible) return false;
-
-  // 3. Action/Selection Change: If the selected node ID changes, MUST update
-  if (prev.action?.id !== next.action?.id) return false;
-
-  // 4. NODES DEEP CHECK (The Performance fix)
-  // We only care if the *active* node's DATA changed.
-  // We explicitly IGNORE position changes (drags) to prevent jitter.
-
-  if (prev.nodes === next.nodes) return true; // Exact ref match
-
-  const nodeId = next.action?.id;
-  if (!nodeId) return true;
-
-  const prevNode = prev.nodes?.find((n) => n.id === nodeId);
-  const nextNode = next.nodes?.find((n) => n.id === nodeId);
-
-  // If node disappeared or appeared
-  if (!prevNode || !nextNode) return false;
-
-  // Compare DATA only (Ignore .position, .selected, etc.)
-  // JSON stringify is fast enough for just the data object of one node
-  return JSON.stringify(prevNode.data) === JSON.stringify(nextNode.data);
-};
-
-const NodeConfigurationPanelMemo = React.memo(
-  NodeConfigurationPanel,
-  arePropsEqual,
-);
-export default NodeConfigurationPanelMemo;
+// Remove React.memo wrapper to rely on internal state and parent keying
+export default NodeConfigurationPanel;

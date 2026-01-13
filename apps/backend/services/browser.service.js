@@ -1,7 +1,7 @@
 import { chromium, firefox, webkit } from 'playwright';
 import { randomUUID } from 'crypto';
 
-const MAX_BROWSERS = 10;
+const MAX_BROWSERS = 3;
 
 class BrowserManager {
     constructor() {

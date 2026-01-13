@@ -484,7 +484,7 @@ export default function SettingsModal({
                             }
                             value={
                               aiConfig.keys[
-                              `${aiConfig.activeProvider}_baseurl`
+                                `${aiConfig.activeProvider}_baseurl`
                               ] || activeProv.defaultBaseUrl
                             }
                             onChange={(e) =>
@@ -511,9 +511,9 @@ export default function SettingsModal({
                           className={cn(
                             "border-slate-700 hover:bg-slate-800 text-slate-300 gap-2 transition-all duration-300",
                             testStatus === "success" &&
-                            "border-green-500/50 bg-green-500/10 text-green-400 hover:bg-green-500/20",
+                              "border-green-500/50 bg-green-500/10 text-green-400 hover:bg-green-500/20",
                             testStatus === "error" &&
-                            "border-red-500/50 bg-red-500/10 text-red-400 hover:bg-red-500/20",
+                              "border-red-500/50 bg-red-500/10 text-red-400 hover:bg-red-500/20",
                           )}
                         >
                           {isTesting ? (

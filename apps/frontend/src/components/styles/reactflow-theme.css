@@ -66,13 +66,14 @@
    EDGES (CONNECTIONS)
    ======================================== */
 .react-flow__edge-path {
-  stroke: hsl(var(--muted-foreground));
+  stroke: var(--connection-line);
   stroke-width: 2.5;
   transition: stroke 0.2s ease;
 }
 
 .react-flow__edge-path:hover {
-  stroke: hsl(var(--primary));
+  stroke: var(--text-muted);
+  /* Fallback or slightly different color */
   stroke-width: 3;
 }
 

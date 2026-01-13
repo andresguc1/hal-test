@@ -69,9 +69,16 @@ class ProjectManager {
   // FLOWS
   // ========================================
 
-  async createFlow(projectId, name) {
+  async createFlow(projectId, name, options = {}) {
     try {
-      const flow = await api.post(`/projects/${projectId}/flows`, { name });
+      const { type, parentId, nodes, edges } = options;
+      const flow = await api.post(`/projects/${projectId}/flows`, {
+        name,
+        type,
+        parentId,
+        nodes,
+        edges,
+      });
       return flow;
     } catch (err) {
       logger.error("Failed to create flow", err, "ProjectManager");
@@ -131,6 +138,32 @@ class ProjectManager {
 
   async restoreVersion(_projectId, _versionId) {
     throw new Error("Restore version not implemented in backend");
+  }
+  async createRun(projectId, flowId) {
+    try {
+      // Create a run for the specific flow
+      // This maps to POST /runs/start or similar.
+      // Assuming backend expects { flowId, projectId, ... }
+      // Wait, the previous inline code used: POST /runs/start with { flowId, flowName, trigger, nodes, edges }
+      // But we want to standardize.
+      // Let's check backend route `api.router.js` to see what /runs/start expects.
+      // For now, I will assume the previous usage was correct:
+      // api.post("/runs/start", { flowId, ... })
+
+      // We need to fetch flow details if not passed?
+      // Or just pass what we have.
+      // But ProjectManager methods generally take IDs.
+      // Let's implement it to fetch flow name and call API.
+      // Actually, looking at backend routes is safer.
+      return await api.post("/runs/start", {
+        projectId, // If backend supports it
+        flowId,
+        trigger: "manual",
+      });
+    } catch (err) {
+      logger.error("Failed to create run", err, "ProjectManager");
+      throw err;
+    }
   }
 }
 

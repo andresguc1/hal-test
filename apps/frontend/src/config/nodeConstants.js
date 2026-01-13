@@ -138,6 +138,12 @@ export const NODE_CATEGORIES = {
       "transform",
     ],
   },
+  composition: {
+    icon: Box,
+    color: "gray", // Components = Gray/Neutral
+    label: "Components",
+    nodes: ["component"],
+  },
 };
 
 // 2. HELPER: MAP NODE TYPE -> CATEGORY INFO
@@ -418,6 +424,22 @@ export const CATEGORY_STYLES = {
       border: "border-slate-500",
       shadow: "shadow-2xl shadow-slate-500/20",
       header: "bg-slate-600 text-white",
+    },
+  },
+  gray: {
+    card: "bg-gray-500 text-white hover:brightness-110 border-none shadow-sm",
+    icon: "text-white",
+    text: "text-white font-medium",
+    node: {
+      base: "bg-gray-600 border border-white/20 shadow-md ring-2 ring-white/10",
+      selected:
+        "!border-[3px] !border-white shadow-[0_0_25px_rgba(107,114,128,0.8)] scale-105",
+      glow: "",
+    },
+    panel: {
+      border: "border-gray-500",
+      shadow: "shadow-2xl shadow-gray-500/20",
+      header: "bg-gray-600 text-white",
     },
   },
   // Fallback

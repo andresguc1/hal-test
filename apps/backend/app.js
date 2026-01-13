@@ -6,6 +6,11 @@ import express from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
 import { init as initSocket } from './socket.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Express Modules and Middlewares
 import { apiLimiter, helmetMiddleware } from './middlewares/security.js';
@@ -24,24 +29,24 @@ const PORT = process.env.PORT || 2001;
 initSocket(server);
 
 // --- 1. SECURITY MIDDLEWARES ---
+// --- 1. SECURITY & CONFIG MIDDLEWARES ---
 app.use(helmetMiddleware);
-app.use('/api', apiLimiter);
-
-// --- 2. FORMAT MIDDLEWARES ---
 app.use(
     cors({
         origin: '*',
         methods: ['GET', 'POST', 'PUT', 'DELETE'],
     }),
 );
+
+app.use('/api', apiLimiter);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Serve storage folder statically for Flight Recorder screenshots
 // Screenshots are stored at: storage/runs/{runId}/{filename}.png
 // Accessible via: http://localhost:2001/storage/runs/{runId}/{filename}.png
-import path from 'path';
-app.use('/storage', express.static(path.resolve('storage')));
+// Accessible via: http://localhost:2001/storage/runs/{runId}/{filename}.png
+app.use('/storage', express.static(path.join(__dirname, 'storage')));
 
 // Integration of i18next middleware for localized responses
 app.use(i18nMiddleware.handle(i18n));
@@ -83,7 +88,7 @@ app.use('/api', mockRouter);
 app.use('/api', projectRouter);
 
 // --- STATIC FILES SERVING (Production) ---
-const publicPath = path.resolve('public');
+const publicPath = path.join(__dirname, 'public');
 
 // 1. Serve Frontend App at /app
 app.use('/app', express.static(path.join(publicPath, 'app')));
@@ -168,13 +173,22 @@ import { initDb } from './database/init.js';
 const startServer = async () => {
     await initDb();
     server.listen(PORT, () => {
-        console.log(`\n🚀 ================================`);
-        console.log(`   HaltTest Backend Server`);
-        console.log(`   Running on: http://localhost:${PORT}`);
-        console.log(`   Documentation: http://localhost:${PORT}/api/docs`);
-        console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
-        console.log(`✅ Server started.`);
-        console.log(`================================\n`);
+        const baseUrl = `http://localhost:${PORT}`;
+        console.log(`\n🚀 =================================================`);
+        console.log(`   HaltTest Server is Up & Running!`);
+        console.log(`   =================================================`);
+        console.log(`   🌍 Landing Page:  ${baseUrl}/`);
+        console.log(`   🖥️  Application:   ${baseUrl}/app/ (Frontend production build)`);
+        console.log(`   -------------------------------------------------`);
+        console.log(`   🚧 Dev App:       http://localhost:5173/ (Hot Reload)`);
+        console.log(`   🚧 Dev Landing:   http://localhost:3000/ (Hot Reload)`);
+        console.log(`   -------------------------------------------------`);
+        console.log(`   📚 API Docs:      ${baseUrl}/api/docs`);
+        console.log(`   🛠️  Environment:   ${process.env.NODE_ENV || 'development'}`);
+        console.log(`   -------------------------------------------------`);
+        console.log(`   🐱 GitHub Repo:   https://github.com/andresguc1/hal-test`);
+        console.log(`   ❤️  Thanks for supporting the project!`);
+        console.log(`   =================================================\n`);
     });
 };
 

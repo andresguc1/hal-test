@@ -15,9 +15,7 @@ import logo from "@/assets/images/haltest_logo.jpeg";
 export default function UserMenu({
   onOpenSettings,
   onOpenApiKeys,
-  apiUrl = (import.meta.env.PROD
-    ? "https://hal-test-backend.onrender.com"
-    : "http://localhost:2001") + "/api/status",
+  apiUrl = "/api/status",
 }) {
   const { i18n } = useTranslation();
   const [profilePic, setProfilePic] = useState(null);

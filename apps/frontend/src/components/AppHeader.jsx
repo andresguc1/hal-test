@@ -23,12 +23,49 @@ const HeaderButton = ({ onClick, children, title, className }) => (
   </Motion.button>
 );
 
+const Breadcrumbs = ({ viewStack, onExit }) => {
+  if (!viewStack || viewStack.length === 0) return null;
+
+  return (
+    <div className="flex items-center gap-1 text-sm select-none">
+      {/* Root Link */}
+      <span
+        onClick={() => onExit()}
+        className="text-[var(--text-secondary)] hover:text-indigo-400 cursor-pointer transition-colors"
+      >
+        Main Flow
+      </span>
+
+      {viewStack.map((view, index) => (
+        <React.Fragment key={view.id}>
+          <span className="text-[var(--text-secondary)] opacity-50">/</span>
+          <span
+            onClick={() => (index < viewStack.length - 1 ? onExit() : null)} // Simple logic: clicking breadcrumb pops one level (not robust for deep nested yet)
+            className={cn(
+              "transition-colors max-w-[150px] truncate",
+              index === viewStack.length - 1
+                ? "text-indigo-500 font-medium"
+                : "text-[var(--text-secondary)] hover:text-indigo-400 cursor-pointer",
+            )}
+          >
+            {view.label}
+          </span>
+        </React.Fragment>
+      ))}
+
+      {/* Current Level (if needed, but usually viewStack includes current level logic) */}
+    </div>
+  );
+};
+
 function AppHeader({
   onOpenSettings,
   onOpenApiKeys,
   onToggleHistory,
   selectedProject,
   selectedFlow,
+  viewStack,
+  onExitComponent,
 }) {
   const { theme, setTheme } = useTheme();
   const { t } = useTranslation();
@@ -66,7 +103,9 @@ function AppHeader({
       {/* CENTER - ABSOLUTE (The Fix) */}
       <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 w-full max-w-lg flex justify-center pointer-events-none">
         <div className="pointer-events-auto flex items-center gap-3 text-sm select-none whitespace-nowrap">
-          {selectedProject ? (
+          {viewStack && viewStack.length > 0 ? (
+            <Breadcrumbs viewStack={viewStack} onExit={onExitComponent} />
+          ) : selectedProject ? (
             <>
               <span className="text-[var(--text-primary)] font-semibold tracking-tight truncate max-w-[150px]">
                 {selectedProject.name}

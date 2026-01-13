@@ -8,7 +8,7 @@ import {
   Code,
   ArrowRight,
 } from "lucide-react";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion as Motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 /**
@@ -24,7 +24,7 @@ export default function StepDetailsModal({ isOpen, onClose, nodeData }) {
 
   // Build screenshot URL if available
   const screenshotUrl = replayData?.screenshot_path
-    ? `${import.meta.env.PROD ? "https://hal-test-backend.onrender.com" : "http://localhost:2001"}/${replayData.screenshot_path}`.replace(
+    ? `${import.meta.env.PROD ? window.location.origin : "http://localhost:2001"}/${replayData.screenshot_path}`.replace(
         "//storage",
         "/storage",
       )
@@ -35,7 +35,7 @@ export default function StepDetailsModal({ isOpen, onClose, nodeData }) {
       {isOpen && (
         <>
           {/* Backdrop */}
-          <motion.div
+          <Motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -44,7 +44,7 @@ export default function StepDetailsModal({ isOpen, onClose, nodeData }) {
           />
 
           {/* Modal */}
-          <motion.div
+          <Motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -191,7 +191,7 @@ export default function StepDetailsModal({ isOpen, onClose, nodeData }) {
                 </div>
               )}
             </div>
-          </motion.div>
+          </Motion.div>
         </>
       )}
     </AnimatePresence>

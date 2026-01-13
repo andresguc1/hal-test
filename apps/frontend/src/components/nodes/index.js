@@ -1,5 +1,5 @@
 import AbyssNode from "./AbyssNode";
-import CustomNode from "./CustomNode";
+import ComponentNode from "./ComponentNode";
 import { NODE_TYPE_MAP } from "@/config/nodeConstants";
 
 // DYNAMIC REGISTRY
@@ -7,7 +7,11 @@ import { NODE_TYPE_MAP } from "@/config/nodeConstants";
 // This ensures that as soon as we add a node to nodeConstants.js, it works in the canvas.
 
 const dynamicNodeTypes = Object.keys(NODE_TYPE_MAP).reduce((acc, type) => {
-  acc[type] = AbyssNode;
+  if (type === "component") {
+    acc[type] = ComponentNode;
+  } else {
+    acc[type] = AbyssNode;
+  }
   return acc;
 }, {});
 

@@ -163,6 +163,7 @@ export function useFlowShortcuts(handlers = {}, enabled = true) {
     "ctrl+-": handlers.onZoomOut,
     "ctrl+_": handlers.onZoomOut,
     "shift+1": handlers.onFitView,
+    "ctrl+g": handlers.onGroup,
   };
 
   // Filter out undefined handlers

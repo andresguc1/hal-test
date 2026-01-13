@@ -61,6 +61,7 @@ export const SettingsProvider = ({ children }) => {
           setEnableSnapping(parsed.enableSnapping ?? true);
           setShowMinimap(parsed.showMinimap ?? true);
           setHighQualityRendering(parsed.highQualityRendering ?? true);
+          setAutoSaveEnabled(parsed.autoSaveEnabled ?? true);
         } catch (e) {
           console.error("Failed to parse settings", e);
         }
@@ -90,6 +91,9 @@ export const SettingsProvider = ({ children }) => {
     };
   }, []);
 
+  // Auto Save
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
+
   useEffect(() => {
     localStorage.setItem(
       "hal_settings",
@@ -98,9 +102,16 @@ export const SettingsProvider = ({ children }) => {
         enableSnapping,
         showMinimap,
         highQualityRendering,
+        autoSaveEnabled,
       }),
     );
-  }, [showGrid, enableSnapping, showMinimap, highQualityRendering]);
+  }, [
+    showGrid,
+    enableSnapping,
+    showMinimap,
+    highQualityRendering,
+    autoSaveEnabled,
+  ]);
 
   return (
     <SettingsContext.Provider
@@ -122,6 +133,8 @@ export const SettingsProvider = ({ children }) => {
         openApiKeys,
         closeApiKeys,
         aiConfig,
+        autoSaveEnabled,
+        setAutoSaveEnabled,
       }}
     >
       {children}

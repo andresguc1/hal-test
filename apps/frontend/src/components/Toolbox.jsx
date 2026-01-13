@@ -447,7 +447,7 @@ export default function ToolboxPanel({ addNode }) {
     <Motion.div
       initial={false}
       animate={{ width: isCollapsed ? 64 : 280 }}
-      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      transition={{ type: "spring", stiffness: 400, damping: 30, mass: 0.8 }}
       className={cn(
         "relative h-full flex flex-col shrink-0 font-sans glass-panel",
         "z-[var(--z-hud)]",
