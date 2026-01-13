@@ -14,6 +14,7 @@ export const useSettings = () => {
 export const SettingsProvider = ({ children }) => {
   // Modal State
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [settingsTab, setSettingsTab] = useState("general");
 
   // Canvas Settings
   const [showGrid, setShowGrid] = useState(true);
@@ -30,7 +31,10 @@ export const SettingsProvider = ({ children }) => {
     ai: { status: "ready", label: "AI Copilot" },
   });
 
-  const openSettings = () => setIsSettingsOpen(true);
+  const openSettings = (tab = "general") => {
+    setSettingsTab(tab);
+    setIsSettingsOpen(true);
+  };
   const closeSettings = () => setIsSettingsOpen(false);
   const toggleGrid = () => setShowGrid((prev) => !prev);
   const toggleSnapping = () => setEnableSnapping((prev) => !prev);
@@ -43,20 +47,47 @@ export const SettingsProvider = ({ children }) => {
   const openApiKeys = () => setIsApiKeysOpen(true);
   const closeApiKeys = () => setIsApiKeysOpen(false);
 
+  // AI Config State
+  const [aiConfig, setAiConfig] = useState(null);
+
   // Persist settings (optional, simple implementation)
   useEffect(() => {
-    const saved = localStorage.getItem("hal_settings");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setShowGrid(parsed.showGrid ?? true);
-        setEnableSnapping(parsed.enableSnapping ?? true);
-        setShowMinimap(parsed.showMinimap ?? true);
-        setHighQualityRendering(parsed.highQualityRendering ?? true);
-      } catch (e) {
-        console.error("Failed to parse settings", e);
+    const loadSettings = () => {
+      const saved = localStorage.getItem("hal_settings");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          setShowGrid(parsed.showGrid ?? true);
+          setEnableSnapping(parsed.enableSnapping ?? true);
+          setShowMinimap(parsed.showMinimap ?? true);
+          setHighQualityRendering(parsed.highQualityRendering ?? true);
+        } catch (e) {
+          console.error("Failed to parse settings", e);
+        }
       }
-    }
+
+      // Load AI Config
+      const savedAi = localStorage.getItem("hal_ai_config");
+      if (savedAi) {
+        try {
+          setAiConfig(JSON.parse(savedAi));
+        } catch (e) {
+          console.error("Failed to parse AI config", e);
+        }
+      }
+    };
+
+    loadSettings();
+
+    // Listen for external updates (e.g. from SettingsModal)
+    window.addEventListener("storage", loadSettings);
+    // Custom event for same-window updates
+    window.addEventListener("hal_ai_config_updated", loadSettings);
+
+    return () => {
+      window.removeEventListener("storage", loadSettings);
+      window.removeEventListener("hal_ai_config_updated", loadSettings);
+    };
   }, []);
 
   useEffect(() => {
@@ -75,6 +106,7 @@ export const SettingsProvider = ({ children }) => {
     <SettingsContext.Provider
       value={{
         isSettingsOpen,
+        settingsTab,
         openSettings,
         closeSettings,
         showGrid,
@@ -89,6 +121,7 @@ export const SettingsProvider = ({ children }) => {
         isApiKeysOpen,
         openApiKeys,
         closeApiKeys,
+        aiConfig,
       }}
     >
       {children}

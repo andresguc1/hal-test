@@ -1,6 +1,7 @@
 import React from "react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
+import logo from "@/assets/images/haltest_logo.jpeg";
 
 const HalLogo = ({ className, isBusy }) => {
   const { theme } = useTheme();
@@ -9,7 +10,7 @@ const HalLogo = ({ className, isBusy }) => {
   return (
     <div className={cn("relative flex items-center justify-center", className)}>
       <img
-        src="/images/haltest_logo.jpeg"
+        src={logo}
         alt="HAL-TEST"
         className={cn(
           "w-full h-full object-contain transition-all duration-500 rounded-lg",

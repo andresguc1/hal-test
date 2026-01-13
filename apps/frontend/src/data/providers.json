@@ -1,0 +1,111 @@
+[
+  {
+    "id": "openai",
+    "name": "OpenAI",
+    "requiresKey": true,
+    "models": [
+      {
+        "id": "gpt-5",
+        "name": "GPT-5 (Agentic)"
+      },
+      {
+        "id": "gpt-5-mini",
+        "name": "GPT-5 Mini (Efficient)"
+      },
+      {
+        "id": "gpt-5-nano",
+        "name": "GPT-5 Nano (Fast)"
+      },
+      {
+        "id": "gpt-4.1",
+        "name": "GPT-4.1 (Legacy)"
+      }
+    ]
+  },
+  {
+    "id": "anthropic",
+    "name": "Anthropic",
+    "requiresKey": true,
+    "models": [
+      {
+        "id": "claude-3-5-sonnet-latest",
+        "name": "Claude 3.5 Sonnet (New)"
+      },
+      {
+        "id": "claude-3-5-haiku-latest",
+        "name": "Claude 3.5 Haiku"
+      },
+      {
+        "id": "claude-3-opus-latest",
+        "name": "Claude 3 Opus"
+      }
+    ]
+  },
+  {
+    "id": "google",
+    "name": "Google Gemini",
+    "requiresKey": true,
+    "models": [
+      {
+        "id": "gemini-3-pro-preview",
+        "name": "Gemini 3 Pro (Preview)"
+      },
+      {
+        "id": "gemini-2.5-pro",
+        "name": "Gemini 2.5 Pro (Stable)"
+      },
+      {
+        "id": "gemini-2.5-flash",
+        "name": "Gemini 2.5 Flash (Fast)"
+      },
+      {
+        "id": "gemini-2.5-flash-preview-09-2025",
+        "name": "Gemini 2.5 Flash (Preview)"
+      }
+    ]
+  },
+  {
+    "id": "ollama",
+    "name": "Ollama (Local)",
+    "requiresKey": false,
+    "requiresBaseUrl": true,
+    "defaultBaseUrl": "http://localhost:11434",
+    "models": [
+      {
+        "id": "qwen2.5-coder",
+        "name": "Qwen 2.5 Coder (Recommended)"
+      },
+      {
+        "id": "deepseek-coder-v2",
+        "name": "DeepSeek Coder V2"
+      },
+      {
+        "id": "llama3.2",
+        "name": "Llama 3.2"
+      },
+      {
+        "id": "codellama",
+        "name": "CodeLlama"
+      }
+    ]
+  },
+  {
+    "id": "groq",
+    "name": "Groq",
+    "requiresKey": true,
+    "models": [
+      {
+        "id": "llama-3.1-70b-versatile",
+        "name": "Llama 3.1 70B"
+      },
+      {
+        "id": "llama-3.1-8b-instant",
+        "name": "Llama 3.1 8B"
+      },
+      {
+        "id": "mixtral-8x7b-32768",
+        "name": "Mixtral 8x7B"
+      }
+    ]
+  }
+]

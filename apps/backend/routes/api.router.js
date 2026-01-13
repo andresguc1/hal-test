@@ -14,6 +14,7 @@ import * as actions from '../controllers/action.controller.js';
 import importRouter from './import.router.js';
 import exportRouter from './export.router.js';
 import runRouter from './run.router.js';
+import aiRouter from './ai.router.js';
 import { startInspectorAction } from '../controllers/inspector.controller.js';
 
 const router = Router();
@@ -532,7 +533,9 @@ router.use('/import', importRouter);
 // Register export router
 router.use('/export', exportRouter);
 
-// Custom Route for AI Validation
-router.post('/ai/validate', actions.validateAICredentials);
+// Register AI router
+router.use('/ai', aiRouter);
+
+// (Removed placeholder ai/validate route)
 
 export default router;

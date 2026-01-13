@@ -18,7 +18,7 @@ import StyledMiniMap from "./components/StyledMiniMap";
 import { nodeTypes } from "./components/nodes";
 import CustomConnectionLine from "./components/CustomConnectionLine";
 import CustomEdge from "./components/edges/CustomEdge";
-import ApiKeysModal from "./components/APIKeysModal";
+// import ApiKeysModal from "./components/APIKeysModal"; // Deprecated
 import SettingsModal from "./components/SettingsModal";
 import { useSettings } from "./context/SettingsContext";
 const edgeTypes = {
@@ -84,9 +84,10 @@ export default function App() {
   // Settings Context
   const {
     openSettings,
+    closeSettings,
+    isSettingsOpen,
+    settingsTab,
     openApiKeys,
-    isApiKeysOpen,
-    closeApiKeys,
     showGrid,
     enableSnapping,
     showMinimap,
@@ -853,9 +854,13 @@ export default function App() {
             nodes={nodes}
           />
 
-          {/* Global Settings Modal */}
-          <SettingsModal />
-          <ApiKeysModal isOpen={isApiKeysOpen} onClose={closeApiKeys} />
+          {/* Global Settings Modal (Unified Hub) */}
+          <SettingsModal
+            isOpen={isSettingsOpen}
+            onClose={closeSettings}
+            initialTab={settingsTab}
+          />
+          {/* <ApiKeysModal /> deprecated - moved to SettingsHub */}
         </div>
         {/* Modals/Dialogs */}
         <ImportDialog

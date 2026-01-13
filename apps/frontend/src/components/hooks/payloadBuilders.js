@@ -96,7 +96,7 @@ const asJsonString = (value, required = false, fieldName = "Campo") => {
 export const launch_browser = (payload) => {
   return {
     browserType: asString(payload?.browserType, "chromium"),
-    headless: asBoolean(payload?.headless, true),
+    headless: asBoolean(payload?.headless, false),
     slowMo: asNumber(payload?.slowMo, 0, 0),
     args: asString(payload?.args, ""),
     maximizeWindow: asBoolean(payload?.maximizeWindow, false),

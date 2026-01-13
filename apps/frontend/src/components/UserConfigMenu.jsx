@@ -1,4 +1,5 @@
 import React from "react";
+import logo from "@/assets/images/haltest_logo.jpeg";
 import {
   User,
   Activity,
@@ -29,11 +30,7 @@ import SettingsPage from "./SettingsPage";
 const UserConfigMenu = ({
   user = { name: "User Name", email: "hal-user@example.com" },
   onOpenSettings,
-  onOpenApiKeys,
   onLogout = () => {},
-  currentLanguage = "en",
-  onLanguageChange = () => {},
-  languages = [],
   className,
 }) => {
   return (
@@ -68,55 +65,17 @@ const UserConfigMenu = ({
 
       {/* 2. Menu Actions */}
       <div className="flex flex-col gap-1 px-1">
-        {/* Manage API Keys */}
+        {/* Unified Settings Hub */}
         <Button
           variant="ghost"
           className="w-full justify-start h-9 px-3 gap-3 !bg-transparent text-slate-300 hover:text-white hover:!bg-white/5 transition-all rounded-lg"
-          onClick={onOpenApiKeys}
-        >
-          <div className="p-1 rounded bg-emerald-500/10 text-emerald-400">
-            <Globe size={14} />
-          </div>
-          <span className="text-xs font-medium">Manage API Keys</span>
-        </Button>
-
-        {/* Global Settings */}
-        <Button
-          variant="ghost"
-          className="w-full justify-start h-9 px-3 gap-3 !bg-transparent text-slate-300 hover:text-white hover:!bg-white/5 transition-all rounded-lg"
-          onClick={onOpenSettings}
+          onClick={() => onOpenSettings("general")}
         >
           <div className="p-1 rounded bg-blue-500/10 text-blue-400">
             <Settings size={14} />
           </div>
-          <span className="text-xs font-medium">Global Settings</span>
+          <span className="text-xs font-medium">Settings</span>
         </Button>
-
-        {/* Language Selector */}
-        {languages.length > 0 && (
-          <div className="flex items-center justify-between h-9 px-3 gap-3">
-            <div className="flex items-center gap-3">
-              <div className="p-1 rounded bg-purple-500/10 text-purple-400">
-                <Globe size={14} />
-              </div>
-              <span className="text-xs font-medium text-slate-300">
-                Language
-              </span>
-            </div>
-            <Select value={currentLanguage} onValueChange={onLanguageChange}>
-              <SelectTrigger className="w-[80px] h-7 text-xs bg-white/5 border-white/10">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {languages.map((lang) => (
-                  <SelectItem key={lang.value} value={lang.value}>
-                    {lang.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
       </div>
 
       <Separator className="bg-white/5 my-2" />
@@ -140,11 +99,7 @@ const UserConfigMenu = ({
         <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-slate-500">
           HalTest Core
         </span>
-        <img
-          src="/images/haltest_logo.jpeg"
-          className="w-4 h-4 rounded-sm"
-          alt="logo"
-        />
+        <img src={logo} className="w-4 h-4 rounded-sm" alt="logo" />
       </div>
     </div>
   );

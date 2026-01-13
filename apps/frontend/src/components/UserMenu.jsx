@@ -35,7 +35,17 @@ export default function UserMenu({
   useEffect(() => {
     const checkProfile = () => {
       const storedPic = localStorage.getItem("hal_user_avatar");
-      if (storedPic) setProfilePic(storedPic);
+      // Aggressively ignore legacy logo paths (both relative and absolute)
+      const isLegacyLogo =
+        storedPic &&
+        (storedPic.includes("haltest_logo.jpeg") ||
+          storedPic === "/images/haltest_logo.jpeg");
+
+      if (storedPic && !isLegacyLogo) {
+        setProfilePic(storedPic);
+      } else {
+        setProfilePic(null); // Force fallback to imported `logo`
+      }
     };
     checkProfile();
     window.addEventListener("storage", checkProfile);
@@ -129,9 +139,9 @@ export default function UserMenu({
           lastChecked={
             apiStatus.lastChecked
               ? apiStatus.lastChecked.toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
               : "--:--"
           }
           onRefresh={checkApiStatus}
