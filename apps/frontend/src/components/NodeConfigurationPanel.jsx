@@ -77,6 +77,25 @@ const NODE_INPUTS = {
   ],
 
   // Sync
+  check: [
+    {
+      key: "selector",
+      label: "Selector",
+      type: "selector",
+      placeholder: ".checkbox",
+    },
+    { key: "takeScreenshot", label: "📸 Take Screenshot", type: "checkbox" },
+  ],
+  uncheck: [
+    {
+      key: "selector",
+      label: "Selector",
+      type: "selector",
+      placeholder: ".checkbox",
+    },
+    { key: "takeScreenshot", label: "📸 Take Screenshot", type: "checkbox" },
+  ],
+
   wait_for_timeout: [
     {
       key: "duration",
@@ -454,11 +473,43 @@ function NodeConfigurationPanel({
               )}
             </div>
 
-            {/* Debug/Info Context - Optional */}
-            {/* <div className="mt-8 pt-4 border-t border-white/5">
-                <div className="text-[10px] font-mono text-slate-600 break-all">
-                    ID: {(activeNode.id || "").substring(0, 12)}...              </div>
-            </div> */}
+            {/* Contextual Result Preview */}
+            {(activeNode.data?.result?.screenshot ||
+              activeNode.data?.screenshots?.after?.path) && (
+                <div className="mt-6 pt-4 border-t border-white/10">
+                  <label className="text-[10px] uppercase tracking-wider font-semibold text-slate-500 mb-2 block flex justify-between">
+                    Latest Result
+                    <span className="text-[9px] opacity-70">
+                      {activeNode.data.result?.timestamp || "Just now"}
+                    </span>
+                  </label>
+                  <div className="relative group rounded-lg overflow-hidden border border-[var(--border-ui)] bg-black/20 aspect-video">
+                    <img
+                      src={`/api/${activeNode.data.result?.screenshot || activeNode.data.screenshots.after.path}?t=${Date.now()}`}
+                      alt="Result Preview"
+                      className="w-full h-full object-contain"
+                      onClick={() =>
+                        window.open(
+                          `/api/${activeNode.data.result?.screenshot || activeNode.data.screenshots.after.path}`,
+                          "_blank",
+                        )
+                      }
+                    />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                      <span className="text-xs text-white bg-black/60 px-2 py-1 rounded">
+                        Click to Expand
+                      </span>
+                    </div>
+                  </div>
+                  {activeNode.data.result?.duration && (
+                    <div className="flex gap-2 mt-2">
+                      <span className="text-[10px] bg-green-500/10 text-green-400 px-1.5 py-0.5 rounded border border-green-500/20">
+                        Success ({activeNode.data.result.duration}ms)
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
           </div>
 
           {/* FOOTER ACTIONS (Themed) */}

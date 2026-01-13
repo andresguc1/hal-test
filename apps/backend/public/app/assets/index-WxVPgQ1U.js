@@ -54536,6 +54536,14 @@ const D3 = {
         { key: 'selector', label: 'Selector', type: 'selector', placeholder: '.menu-item' },
         { key: 'takeScreenshot', label: '📸 Take Screenshot', type: 'checkbox' },
     ],
+    check: [
+        { key: 'selector', label: 'Selector', type: 'selector', placeholder: '.checkbox' },
+        { key: 'takeScreenshot', label: '📸 Take Screenshot', type: 'checkbox' },
+    ],
+    uncheck: [
+        { key: 'selector', label: 'Selector', type: 'selector', placeholder: '.checkbox' },
+        { key: 'takeScreenshot', label: '📸 Take Screenshot', type: 'checkbox' },
+    ],
     wait_for_timeout: [
         { key: 'duration', label: 'Duration (ms)', type: 'number', placeholder: '1000' },
     ],
@@ -54641,7 +54649,7 @@ function yme({
                                         {
                                             fileName:
                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                            lineNumber: 272,
+                                            lineNumber: 291,
                                             columnNumber: 13,
                                         },
                                         this,
@@ -54652,7 +54660,7 @@ function yme({
                                 {
                                     fileName:
                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                    lineNumber: 271,
+                                    lineNumber: 290,
                                     columnNumber: 11,
                                 },
                                 this,
@@ -54668,7 +54676,7 @@ function yme({
                                 {
                                     fileName:
                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                    lineNumber: 274,
+                                    lineNumber: 293,
                                     columnNumber: 11,
                                 },
                                 this,
@@ -54685,7 +54693,7 @@ function yme({
                                 {
                                     fileName:
                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                    lineNumber: 277,
+                                    lineNumber: 296,
                                     columnNumber: 11,
                                 },
                                 this,
@@ -54697,7 +54705,7 @@ function yme({
                     {
                         fileName:
                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                        lineNumber: 265,
+                        lineNumber: 284,
                         columnNumber: 9,
                     },
                     this,
@@ -54708,7 +54716,7 @@ function yme({
             {
                 fileName:
                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                lineNumber: 264,
+                lineNumber: 283,
                 columnNumber: 7,
             },
             this,
@@ -54741,7 +54749,7 @@ function yme({
                                     {
                                         fileName:
                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                        lineNumber: 305,
+                                        lineNumber: 324,
                                         columnNumber: 13,
                                     },
                                     this,
@@ -54758,7 +54766,7 @@ function yme({
                                     {
                                         fileName:
                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                        lineNumber: 311,
+                                        lineNumber: 330,
                                         columnNumber: 13,
                                     },
                                     this,
@@ -54770,7 +54778,7 @@ function yme({
                         {
                             fileName:
                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                            lineNumber: 301,
+                            lineNumber: 320,
                             columnNumber: 11,
                         },
                         this,
@@ -54793,7 +54801,7 @@ function yme({
                                     {
                                         fileName:
                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                        lineNumber: 319,
+                                        lineNumber: 338,
                                         columnNumber: 13,
                                     },
                                     this,
@@ -54813,7 +54821,7 @@ function yme({
                                     {
                                         fileName:
                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                        lineNumber: 322,
+                                        lineNumber: 341,
                                         columnNumber: 13,
                                     },
                                     this,
@@ -54825,7 +54833,7 @@ function yme({
                         {
                             fileName:
                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                            lineNumber: 318,
+                            lineNumber: 337,
                             columnNumber: 11,
                         },
                         this,
@@ -54860,7 +54868,7 @@ function yme({
                                                             {
                                                                 fileName:
                                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                                lineNumber: 339,
+                                                                lineNumber: 358,
                                                                 columnNumber: 17,
                                                             },
                                                             this,
@@ -54881,7 +54889,7 @@ function yme({
                                                                         {
                                                                             fileName:
                                                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                                            lineNumber: 347,
+                                                                            lineNumber: 366,
                                                                             columnNumber: 19,
                                                                         },
                                                                         this,
@@ -54894,7 +54902,7 @@ function yme({
                                                                         {
                                                                             fileName:
                                                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                                            lineNumber: 348,
+                                                                            lineNumber: 367,
                                                                             columnNumber: 19,
                                                                         },
                                                                         this,
@@ -54906,7 +54914,7 @@ function yme({
                                                             {
                                                                 fileName:
                                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                                lineNumber: 342,
+                                                                lineNumber: 361,
                                                                 columnNumber: 17,
                                                             },
                                                             this,
@@ -54918,7 +54926,7 @@ function yme({
                                                 {
                                                     fileName:
                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                    lineNumber: 338,
+                                                    lineNumber: 357,
                                                     columnNumber: 15,
                                                 },
                                                 this,
@@ -54930,7 +54938,7 @@ function yme({
                                     {
                                         fileName:
                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                        lineNumber: 336,
+                                        lineNumber: 355,
                                         columnNumber: 13,
                                     },
                                     this,
@@ -54959,7 +54967,7 @@ function yme({
                                                 {
                                                     fileName:
                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                    lineNumber: 353,
+                                                    lineNumber: 372,
                                                     columnNumber: 15,
                                                 },
                                                 this,
@@ -54979,7 +54987,7 @@ function yme({
                                                 {
                                                     fileName:
                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                    lineNumber: 363,
+                                                    lineNumber: 382,
                                                     columnNumber: 15,
                                                 },
                                                 this,
@@ -54991,7 +54999,7 @@ function yme({
                                     {
                                         fileName:
                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                        lineNumber: 352,
+                                        lineNumber: 371,
                                         columnNumber: 13,
                                     },
                                     this,
@@ -55003,7 +55011,7 @@ function yme({
                         {
                             fileName:
                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                            lineNumber: 335,
+                            lineNumber: 354,
                             columnNumber: 11,
                         },
                         this,
@@ -55026,7 +55034,7 @@ function yme({
                                     {
                                         fileName:
                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                        lineNumber: 377,
+                                        lineNumber: 396,
                                         columnNumber: 13,
                                     },
                                     this,
@@ -55046,7 +55054,7 @@ function yme({
                                     {
                                         fileName:
                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                        lineNumber: 380,
+                                        lineNumber: 399,
                                         columnNumber: 13,
                                     },
                                     this,
@@ -55058,7 +55066,7 @@ function yme({
                         {
                             fileName:
                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                            lineNumber: 376,
+                            lineNumber: 395,
                             columnNumber: 11,
                         },
                         this,
@@ -55110,7 +55118,7 @@ function yme({
                                                         {
                                                             fileName:
                                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                            lineNumber: 419,
+                                                            lineNumber: 438,
                                                             columnNumber: 15,
                                                         },
                                                         this,
@@ -55132,7 +55140,7 @@ function yme({
                                                                 {
                                                                     fileName:
                                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                                    lineNumber: 428,
+                                                                    lineNumber: 447,
                                                                     columnNumber: 17,
                                                                 },
                                                                 this,
@@ -55143,7 +55151,7 @@ function yme({
                                                         {
                                                             fileName:
                                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                            lineNumber: 427,
+                                                            lineNumber: 446,
                                                             columnNumber: 15,
                                                         },
                                                         this,
@@ -55155,7 +55163,7 @@ function yme({
                                             {
                                                 fileName:
                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                lineNumber: 418,
+                                                lineNumber: 437,
                                                 columnNumber: 13,
                                             },
                                             this,
@@ -55174,7 +55182,7 @@ function yme({
                                                     {
                                                         fileName:
                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                        lineNumber: 437,
+                                                        lineNumber: 456,
                                                         columnNumber: 15,
                                                     },
                                                     this,
@@ -55185,7 +55193,7 @@ function yme({
                                             {
                                                 fileName:
                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                lineNumber: 433,
+                                                lineNumber: 452,
                                                 columnNumber: 13,
                                             },
                                             this,
@@ -55197,7 +55205,7 @@ function yme({
                                 {
                                     fileName:
                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                    lineNumber: 412,
+                                    lineNumber: 431,
                                     columnNumber: 11,
                                 },
                                 this,
@@ -55206,84 +55214,257 @@ function yme({
                                 'div',
                                 {
                                     className: 'flex-1 overflow-y-auto p-5 custom-scrollbar',
-                                    children: _.jsxDEV(
-                                        'div',
-                                        {
-                                            className: 'space-y-5',
-                                            children:
-                                                y.length > 0
-                                                    ? y.map(A)
-                                                    : _.jsxDEV(
-                                                          'div',
-                                                          {
-                                                              className:
-                                                                  'p-4 rounded-lg border border-dashed border-white/10 bg-white/5 flex flex-col items-center justify-center text-center',
-                                                              children: [
-                                                                  _.jsxDEV(
-                                                                      uN,
-                                                                      {
-                                                                          size: 20,
-                                                                          className:
-                                                                              'text-slate-500 mb-2',
-                                                                      },
-                                                                      void 0,
-                                                                      !1,
-                                                                      {
-                                                                          fileName:
-                                                                              '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                                          lineNumber: 449,
-                                                                          columnNumber: 19,
-                                                                      },
-                                                                      this,
-                                                                  ),
-                                                                  _.jsxDEV(
-                                                                      'span',
-                                                                      {
-                                                                          className:
-                                                                              'text-xs text-slate-400',
-                                                                          children:
-                                                                              'No configuration options available for this node type.',
-                                                                      },
-                                                                      void 0,
-                                                                      !1,
-                                                                      {
-                                                                          fileName:
-                                                                              '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                                          lineNumber: 450,
-                                                                          columnNumber: 19,
-                                                                      },
-                                                                      this,
-                                                                  ),
-                                                              ],
-                                                          },
-                                                          void 0,
-                                                          !0,
-                                                          {
-                                                              fileName:
-                                                                  '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                              lineNumber: 448,
-                                                              columnNumber: 17,
-                                                          },
-                                                          this,
-                                                      ),
-                                        },
-                                        void 0,
-                                        !1,
-                                        {
-                                            fileName:
-                                                '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                            lineNumber: 444,
-                                            columnNumber: 13,
-                                        },
-                                        this,
-                                    ),
+                                    children: [
+                                        _.jsxDEV(
+                                            'div',
+                                            {
+                                                className: 'space-y-5',
+                                                children:
+                                                    y.length > 0
+                                                        ? y.map(A)
+                                                        : _.jsxDEV(
+                                                              'div',
+                                                              {
+                                                                  className:
+                                                                      'p-4 rounded-lg border border-dashed border-white/10 bg-white/5 flex flex-col items-center justify-center text-center',
+                                                                  children: [
+                                                                      _.jsxDEV(
+                                                                          uN,
+                                                                          {
+                                                                              size: 20,
+                                                                              className:
+                                                                                  'text-slate-500 mb-2',
+                                                                          },
+                                                                          void 0,
+                                                                          !1,
+                                                                          {
+                                                                              fileName:
+                                                                                  '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
+                                                                              lineNumber: 468,
+                                                                              columnNumber: 19,
+                                                                          },
+                                                                          this,
+                                                                      ),
+                                                                      _.jsxDEV(
+                                                                          'span',
+                                                                          {
+                                                                              className:
+                                                                                  'text-xs text-slate-400',
+                                                                              children:
+                                                                                  'No configuration options available for this node type.',
+                                                                          },
+                                                                          void 0,
+                                                                          !1,
+                                                                          {
+                                                                              fileName:
+                                                                                  '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
+                                                                              lineNumber: 469,
+                                                                              columnNumber: 19,
+                                                                          },
+                                                                          this,
+                                                                      ),
+                                                                  ],
+                                                              },
+                                                              void 0,
+                                                              !0,
+                                                              {
+                                                                  fileName:
+                                                                      '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
+                                                                  lineNumber: 467,
+                                                                  columnNumber: 17,
+                                                              },
+                                                              this,
+                                                          ),
+                                            },
+                                            void 0,
+                                            !1,
+                                            {
+                                                fileName:
+                                                    '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
+                                                lineNumber: 463,
+                                                columnNumber: 13,
+                                            },
+                                            this,
+                                        ),
+                                        (p.data?.result?.screenshot ||
+                                            p.data?.screenshots?.after?.path) &&
+                                            _.jsxDEV(
+                                                'div',
+                                                {
+                                                    className: 'mt-6 pt-4 border-t border-white/10',
+                                                    children: [
+                                                        _.jsxDEV(
+                                                            'label',
+                                                            {
+                                                                className:
+                                                                    'text-[10px] uppercase tracking-wider font-semibold text-slate-500 mb-2 block flex justify-between',
+                                                                children: [
+                                                                    'Latest Result',
+                                                                    _.jsxDEV(
+                                                                        'span',
+                                                                        {
+                                                                            className:
+                                                                                'text-[9px] opacity-70',
+                                                                            children:
+                                                                                p.data.result
+                                                                                    ?.timestamp ||
+                                                                                'Just now',
+                                                                        },
+                                                                        void 0,
+                                                                        !1,
+                                                                        {
+                                                                            fileName:
+                                                                                '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
+                                                                            lineNumber: 482,
+                                                                            columnNumber: 21,
+                                                                        },
+                                                                        this,
+                                                                    ),
+                                                                ],
+                                                            },
+                                                            void 0,
+                                                            !0,
+                                                            {
+                                                                fileName:
+                                                                    '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
+                                                                lineNumber: 480,
+                                                                columnNumber: 19,
+                                                            },
+                                                            this,
+                                                        ),
+                                                        _.jsxDEV(
+                                                            'div',
+                                                            {
+                                                                className:
+                                                                    'relative group rounded-lg overflow-hidden border border-[var(--border-ui)] bg-black/20 aspect-video',
+                                                                children: [
+                                                                    _.jsxDEV(
+                                                                        'img',
+                                                                        {
+                                                                            src: `/api/${p.data.result?.screenshot || p.data.screenshots.after.path}?t=${Date.now()}`,
+                                                                            alt: 'Result Preview',
+                                                                            className:
+                                                                                'w-full h-full object-contain',
+                                                                            onClick: () =>
+                                                                                window.open(
+                                                                                    `/api/${p.data.result?.screenshot || p.data.screenshots.after.path}`,
+                                                                                    '_blank',
+                                                                                ),
+                                                                        },
+                                                                        void 0,
+                                                                        !1,
+                                                                        {
+                                                                            fileName:
+                                                                                '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
+                                                                            lineNumber: 487,
+                                                                            columnNumber: 21,
+                                                                        },
+                                                                        this,
+                                                                    ),
+                                                                    _.jsxDEV(
+                                                                        'div',
+                                                                        {
+                                                                            className:
+                                                                                'absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none',
+                                                                            children: _.jsxDEV(
+                                                                                'span',
+                                                                                {
+                                                                                    className:
+                                                                                        'text-xs text-white bg-black/60 px-2 py-1 rounded',
+                                                                                    children:
+                                                                                        'Click to Expand',
+                                                                                },
+                                                                                void 0,
+                                                                                !1,
+                                                                                {
+                                                                                    fileName:
+                                                                                        '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
+                                                                                    lineNumber: 499,
+                                                                                    columnNumber: 23,
+                                                                                },
+                                                                                this,
+                                                                            ),
+                                                                        },
+                                                                        void 0,
+                                                                        !1,
+                                                                        {
+                                                                            fileName:
+                                                                                '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
+                                                                            lineNumber: 498,
+                                                                            columnNumber: 21,
+                                                                        },
+                                                                        this,
+                                                                    ),
+                                                                ],
+                                                            },
+                                                            void 0,
+                                                            !0,
+                                                            {
+                                                                fileName:
+                                                                    '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
+                                                                lineNumber: 486,
+                                                                columnNumber: 19,
+                                                            },
+                                                            this,
+                                                        ),
+                                                        p.data.result?.duration &&
+                                                            _.jsxDEV(
+                                                                'div',
+                                                                {
+                                                                    className: 'flex gap-2 mt-2',
+                                                                    children: _.jsxDEV(
+                                                                        'span',
+                                                                        {
+                                                                            className:
+                                                                                'text-[10px] bg-green-500/10 text-green-400 px-1.5 py-0.5 rounded border border-green-500/20',
+                                                                            children: [
+                                                                                'Success (',
+                                                                                p.data.result
+                                                                                    .duration,
+                                                                                'ms)',
+                                                                            ],
+                                                                        },
+                                                                        void 0,
+                                                                        !0,
+                                                                        {
+                                                                            fileName:
+                                                                                '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
+                                                                            lineNumber: 506,
+                                                                            columnNumber: 23,
+                                                                        },
+                                                                        this,
+                                                                    ),
+                                                                },
+                                                                void 0,
+                                                                !1,
+                                                                {
+                                                                    fileName:
+                                                                        '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
+                                                                    lineNumber: 505,
+                                                                    columnNumber: 21,
+                                                                },
+                                                                this,
+                                                            ),
+                                                    ],
+                                                },
+                                                void 0,
+                                                !0,
+                                                {
+                                                    fileName:
+                                                        '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
+                                                    lineNumber: 479,
+                                                    columnNumber: 17,
+                                                },
+                                                this,
+                                            ),
+                                    ],
                                 },
                                 void 0,
-                                !1,
+                                !0,
                                 {
                                     fileName:
                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                    lineNumber: 442,
+                                    lineNumber: 461,
                                     columnNumber: 11,
                                 },
                                 this,
@@ -55322,7 +55503,7 @@ function yme({
                                                         {
                                                             fileName:
                                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                            lineNumber: 486,
+                                                            lineNumber: 537,
                                                             columnNumber: 15,
                                                         },
                                                         this,
@@ -55335,7 +55516,7 @@ function yme({
                                             {
                                                 fileName:
                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                lineNumber: 467,
+                                                lineNumber: 518,
                                                 columnNumber: 13,
                                             },
                                             this,
@@ -55353,7 +55534,7 @@ function yme({
                                             {
                                                 fileName:
                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                lineNumber: 490,
+                                                lineNumber: 541,
                                                 columnNumber: 13,
                                             },
                                             this,
@@ -55365,7 +55546,7 @@ function yme({
                                 {
                                     fileName:
                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                    lineNumber: 465,
+                                    lineNumber: 516,
                                     columnNumber: 11,
                                 },
                                 this,
@@ -55377,7 +55558,7 @@ function yme({
                     {
                         fileName:
                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                        lineNumber: 395,
+                        lineNumber: 414,
                         columnNumber: 9,
                     },
                     this,
@@ -55388,7 +55569,7 @@ function yme({
         {
             fileName:
                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-            lineNumber: 393,
+            lineNumber: 412,
             columnNumber: 5,
         },
         this,
@@ -66040,6 +66221,7 @@ const bo = new mge(),
                                 Pe =
                                     ge.data?.instanceId ??
                                     ge.data?.browserId ??
+                                    ge.browserId ??
                                     ge.instance?.id ??
                                     null;
                             (p((we) =>
@@ -82271,7 +82453,7 @@ var v_e = (e, t = !1) => {
                 return (
                     this.#c
                         ? (p = this.#c)
-                        : ((p = l1e(() => Bwe(() => import('./CDWEKZTF-MdpWbUBc.js'), []))),
+                        : ((p = l1e(() => Bwe(() => import('./CDWEKZTF-C8E1rwTU.js'), []))),
                           (this.#c = p)),
                     pSe(this.#a, this.#i),
                     s1e(

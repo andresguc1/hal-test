@@ -1035,6 +1035,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
           const instanceId =
             result.data?.instanceId ??
             result.data?.browserId ??
+            result.browserId ?? // Critical Fix: Action controller returns browserId at root
             result.instance?.id ??
             null;
 
