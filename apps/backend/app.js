@@ -30,6 +30,7 @@ initSocket(server);
 
 // --- 1. SECURITY MIDDLEWARES ---
 // --- 1. SECURITY & CONFIG MIDDLEWARES ---
+app.set('trust proxy', 1); // Required for Render/Proxies to work with Rate Limiters
 app.use(helmetMiddleware);
 app.use(
     cors({

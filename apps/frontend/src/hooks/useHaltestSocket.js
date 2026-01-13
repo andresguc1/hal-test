@@ -1,9 +1,11 @@
 import { useEffect, useRef } from "react";
 import { io } from "socket.io-client";
 
-const SOCKET_URL = import.meta.env.PROD
-  ? window.location.origin
-  : "http://127.0.0.1:2001";
+const SOCKET_URL =
+  window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1"
+    ? "http://127.0.0.1:2001"
+    : window.location.origin;
 
 export const useHaltestSocket = (setNodes, onElementPicked) => {
   const socketRef = useRef(null);
