@@ -4,9 +4,8 @@ services:
     runtime: node
     region: oregon
     plan: free
-    buildCommand: pnpm install && cd apps/backend && npx playwright install chromium
-    startCommand: cd apps/backend && npm start
-    preDeployCommand: cd apps/backend && npx playwright install chromium
+    buildCommand: pnpm install && npm run build:monolith && (cd apps/backend && npx playwright install chromium)
+    startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production

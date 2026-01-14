@@ -63,7 +63,7 @@ jobs:
       - name: 📦 Setup pnpm
         uses: pnpm/action-setup@v2
         with:
-          version: 8
+          version: 9.15.4
 
       - name: 🟢 Setup Node.js
         uses: actions/setup-node@v4
@@ -74,15 +74,8 @@ jobs:
       - name: 📥 Install dependencies
         run: pnpm install
 
-      - name: 🏗️ Build frontend
-        run: cd apps/frontend && pnpm build
-
-      - name: 📦 Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-build
-          path: apps/frontend/dist
-          retention-days: 1
+      - name: 🏗️ Build Monolith
+        run: pnpm run build:monolith
 
   # ========================================
   # JOB 3: Deploy to Production
@@ -97,26 +90,21 @@ jobs:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: 🚀 Trigger Netlify Deploy
-        run: |
-          echo "Netlify auto-deploys on push to main"
-          echo "Frontend URL: https://monumental-puffpuff-0cf489.netlify.app"
-
       - name: 🚀 Trigger Render Deploy
         run: |
           echo "Render auto-deploys on push to main"
-          echo "Backend URL: https://hal-test-backend.onrender.com"
+          echo "Public URL: https://hal-test-backend.onrender.com"
+          echo "App Dashboard: https://hal-test-backend.onrender.com/app/"
 
       - name: ⏳ Wait for deployments
         run: sleep 60 # Give services time to deploy
 
-      - name: 🏥 Health check - Backend
+      - name: 🏥 Health check
         run: |
-          echo "Checking backend health..."
+          echo "Checking application health..."
           curl -f https://hal-test-backend.onrender.com/api/status || exit 1
 
       - name: ✅ Deployment successful
         run: |
           echo "::notice::✅ Deployment completed successfully!"
-          echo "Frontend: https://monumental-puffpuff-0cf489.netlify.app"
-          echo "Backend: https://hal-test-backend.onrender.com"
+          echo "Production URL: https://hal-test-backend.onrender.com"
