@@ -957,12 +957,19 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
           bodyToSend = builder ? builder(payload || {}) : payload || {};
           // Inject nodeId and runId for WebSocket tracking and Flight Recorder
           bodyToSend.nodeId = nodeId;
+
+          // Force headless: false in dev for visual debugging
+          if (type === "launch_browser" && import.meta.env.DEV) {
+            bodyToSend.headless = false;
+          }
+
           if (payload?.runId) {
             bodyToSend.runId = payload.runId;
-            console.log(
-              "[FlightRecorder Frontend] runId injected:",
-              payload.runId,
-            );
+          }
+
+          // Inject takeScreenshot if present in payload (Flight Recorder)
+          if (payload?.takeScreenshot !== undefined) {
+            bodyToSend.takeScreenshot = payload.takeScreenshot;
           }
         } catch (builderError) {
           console.error(`Error en payload builder para ${type}:`, builderError);
@@ -998,11 +1005,6 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
           if (openaiKey) headers["x-openai-key"] = openaiKey;
           if (googleKey) headers["x-google-key"] = googleKey;
           if (anthropicKey) headers["x-anthropic-key"] = anthropicKey;
-
-          console.log(
-            "[FlightRecorder Frontend] bodyToSend before fetch:",
-            JSON.stringify(bodyToSend),
-          );
 
           const response = await fetch(endpoint, {
             method: "POST",
@@ -2058,6 +2060,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
     }, [saveToHistory, setNodes, setEdges]),
 
     groupNodes,
+    setSelectedNodeId,
 
     NODE_STATES,
     PROFESSIONAL_COLORS,

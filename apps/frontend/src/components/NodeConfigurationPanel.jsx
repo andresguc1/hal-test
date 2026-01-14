@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { motion as Motion, AnimatePresence } from "motion/react";
 import { X, Play, Info, Crosshair } from "lucide-react";
 import { useToast } from "@/hooks/useToast";
@@ -216,6 +216,7 @@ function NodeConfigurationPanel({
   const [localConfig, setLocalConfig] = React.useState(
     activeNode?.data?.configuration || {},
   );
+  const [lightboxUrl, setLightboxUrl] = useState(null); // Lightbox modal state
   const lastSyncedConfigRef = React.useRef(
     activeNode?.data?.configuration || {},
   );
@@ -315,23 +316,97 @@ function NodeConfigurationPanel({
     const value = localConfig[field.key] ?? "";
 
     switch (field.type) {
-      case "checkbox":
+      case "checkbox": {
+        // Special handling for takeScreenshot: show inline preview if available
+        // Check multiple possible screenshot sources:
+        // 1. result.screenshot - server path from Flight Recorder
+        // 2. screenshots.after.url - Blob URL from ScreenshotManager
+        // 3. screenshots.after.path - legacy server path
+        const screenshotUrl =
+          activeNode.data?.result?.screenshot ||
+          activeNode.data?.screenshots?.after?.url ||
+          activeNode.data?.screenshots?.after?.path;
+        const hasScreenshot = field.key === "takeScreenshot" && screenshotUrl;
+
         return (
-          <label
-            key={field.key}
-            className="flex items-center gap-3 p-3 rounded-lg border border-[var(--border-ui)] bg-[var(--bg-canvas)]/50 cursor-pointer hover:bg-[var(--bg-canvas)] transition-colors"
-          >
-            <input
-              type="checkbox"
-              checked={!!value}
-              onChange={(e) => handleConfigUpdate(field.key, e.target.checked)}
-              className="w-4 h-4 rounded border-[var(--border-ui)] text-indigo-500 focus:ring-offset-0 focus:ring-indigo-500/50 bg-[var(--bg-node)] !pointer-events-auto !cursor-pointer"
-            />
-            <span className="text-xs font-medium text-[var(--text-main)] select-none">
-              {field.label}
-            </span>
-          </label>
+          <div key={field.key} className="space-y-2">
+            <label className="flex items-center gap-3 p-3 rounded-lg border border-[var(--border-ui)] bg-[var(--bg-canvas)]/50 cursor-pointer hover:bg-[var(--bg-canvas)] transition-colors">
+              <input
+                type="checkbox"
+                checked={!!value}
+                onChange={(e) =>
+                  handleConfigUpdate(field.key, e.target.checked)
+                }
+                className="w-4 h-4 rounded border-[var(--border-ui)] text-indigo-500 focus:ring-offset-0 focus:ring-indigo-500/50 bg-[var(--bg-node)] !pointer-events-auto !cursor-pointer"
+              />
+              <span className="text-xs font-medium text-[var(--text-main)] select-none">
+                {field.label}
+              </span>
+            </label>
+
+            {/* BIG EVIDENCE PREVIEW CARD - Only for takeScreenshot checkbox */}
+            {hasScreenshot && (
+              <div className="mt-3 p-3 rounded-xl border border-white/10 bg-gradient-to-br from-slate-800/80 to-slate-900/90 backdrop-blur-sm shadow-lg">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                    <span className="text-[11px] font-semibold text-slate-300 uppercase tracking-wider">
+                      Last Run Evidence
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-slate-500 font-mono">
+                    {activeNode.data.result?.durationMs
+                      ? `${activeNode.data.result.durationMs}ms`
+                      : activeNode.data.result?.duration
+                        ? `${activeNode.data.result.duration}ms`
+                        : "Just now"}
+                  </span>
+                </div>
+
+                <div
+                  className="relative group cursor-zoom-in overflow-hidden rounded-lg border border-white/5 shadow-inner"
+                  onClick={() => {
+                    // Handle different URL types: blob:, data:, or server path
+                    const fullUrl =
+                      screenshotUrl.startsWith("blob:") ||
+                      screenshotUrl.startsWith("data:")
+                        ? screenshotUrl
+                        : `/${screenshotUrl}`;
+                    setLightboxUrl(fullUrl);
+                  }}
+                >
+                  <img
+                    src={
+                      // Blob URLs and data URLs can be used directly
+                      // Server paths need the leading slash and cache-bust
+                      screenshotUrl.startsWith("blob:") ||
+                      screenshotUrl.startsWith("data:")
+                        ? screenshotUrl
+                        : `/${screenshotUrl}?t=${Date.now()}`
+                    }
+                    alt="Execution Evidence"
+                    className="w-full h-[180px] object-cover group-hover:scale-[1.02] transition-transform duration-500 ease-out"
+                  />
+
+                  {/* Hover Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-4">
+                    <span className="text-white text-sm font-medium bg-black/50 px-4 py-2 rounded-full backdrop-blur-sm border border-white/20">
+                      🔍 Click to Expand
+                    </span>
+                  </div>
+                </div>
+
+                {/* Status Badge */}
+                <div className="flex items-center gap-2 mt-3">
+                  <span className="text-[10px] bg-green-500/15 text-green-400 px-2 py-1 rounded-md font-semibold border border-green-500/20">
+                    ✓ Captured Successfully
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
         );
+      }
       case "number":
         return (
           <div key={field.key} className="space-y-1.5">
@@ -472,44 +547,6 @@ function NodeConfigurationPanel({
                 </div>
               )}
             </div>
-
-            {/* Contextual Result Preview */}
-            {(activeNode.data?.result?.screenshot ||
-              activeNode.data?.screenshots?.after?.path) && (
-                <div className="mt-6 pt-4 border-t border-white/10">
-                  <label className="text-[10px] uppercase tracking-wider font-semibold text-slate-500 mb-2 block flex justify-between">
-                    Latest Result
-                    <span className="text-[9px] opacity-70">
-                      {activeNode.data.result?.timestamp || "Just now"}
-                    </span>
-                  </label>
-                  <div className="relative group rounded-lg overflow-hidden border border-[var(--border-ui)] bg-black/20 aspect-video">
-                    <img
-                      src={`/api/${activeNode.data.result?.screenshot || activeNode.data.screenshots.after.path}?t=${Date.now()}`}
-                      alt="Result Preview"
-                      className="w-full h-full object-contain"
-                      onClick={() =>
-                        window.open(
-                          `/api/${activeNode.data.result?.screenshot || activeNode.data.screenshots.after.path}`,
-                          "_blank",
-                        )
-                      }
-                    />
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-                      <span className="text-xs text-white bg-black/60 px-2 py-1 rounded">
-                        Click to Expand
-                      </span>
-                    </div>
-                  </div>
-                  {activeNode.data.result?.duration && (
-                    <div className="flex gap-2 mt-2">
-                      <span className="text-[10px] bg-green-500/10 text-green-400 px-1.5 py-0.5 rounded border border-green-500/20">
-                        Success ({activeNode.data.result.duration}ms)
-                      </span>
-                    </div>
-                  )}
-                </div>
-              )}
           </div>
 
           {/* FOOTER ACTIONS (Themed) */}
@@ -546,6 +583,27 @@ function NodeConfigurationPanel({
             </button>
           </div>
         </Motion.div>
+      )}
+
+      {/* Lightbox Modal */}
+      {lightboxUrl && (
+        <div
+          className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4 backdrop-blur-sm"
+          onClick={() => setLightboxUrl(null)}
+        >
+          <button
+            className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors"
+            onClick={() => setLightboxUrl(null)}
+          >
+            <X size={32} />
+          </button>
+          <img
+            src={lightboxUrl}
+            alt="Fullscreen Evidence"
+            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
       )}
     </AnimatePresence>
   );

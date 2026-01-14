@@ -3,7 +3,7 @@ import { io } from "socket.io-client";
 
 const SOCKET_URL =
   window.location.hostname === "localhost" ||
-    window.location.hostname === "127.0.0.1"
+  window.location.hostname === "127.0.0.1"
     ? "http://127.0.0.1:2001"
     : window.location.origin;
 
@@ -86,6 +86,30 @@ export const useHaltestSocket = (setNodes, onElementPicked) => {
       if (onElementPickedRef.current) {
         onElementPickedRef.current(data);
       }
+    });
+
+    // Listen for Screenshot Ready events (Flight Recorder)
+    socket.on("step_screenshot_ready", (data) => {
+      const { nodeId, screenshotPath } = data;
+
+      setNodes((nds) => {
+        if (!Array.isArray(nds)) return nds;
+        return nds.map((node) => {
+          if (node.id === nodeId) {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                result: {
+                  ...(node.data.result || {}),
+                  screenshot: screenshotPath,
+                },
+              },
+            };
+          }
+          return node;
+        });
+      });
     });
 
     // Cleanup on unmount

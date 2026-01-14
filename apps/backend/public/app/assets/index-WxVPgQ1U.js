@@ -68402,13 +68402,11 @@ var Ige = class extends df {
             const n = this.options;
             ((this.options = this.#e.defaultMutationOptions(t)),
                 Rv(this.options, n) ||
-                    this.#e
-                        .getMutationCache()
-                        .notify({
-                            type: 'observerOptionsUpdated',
-                            mutation: this.#n,
-                            observer: this,
-                        }),
+                    this.#e.getMutationCache().notify({
+                        type: 'observerOptionsUpdated',
+                        mutation: this.#n,
+                        observer: this,
+                    }),
                 n?.mutationKey &&
                 this.options.mutationKey &&
                 Jc(n.mutationKey) !== Jc(this.options.mutationKey)

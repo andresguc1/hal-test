@@ -9,7 +9,7 @@ import { traceService } from '../services/trace.service.js';
 import { globalStateManager } from '../services/stateManager.js';
 import VariableManager from '../services/VariableManager.js';
 import aiService from '../services/AIService.js';
-import { emitExecutionStatus } from '../socket.js';
+import { emitExecutionStatus, emitScreenshotReady } from '../socket.js';
 import { z } from 'zod';
 import * as fsp from 'fs/promises';
 // import * as fs from 'fs';
@@ -183,9 +183,6 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
     let page, context;
 
     const nodeId = opts.nodeId;
-    console.log(
-        `[FlightRecorder DEBUG] runId=${runId}, nodeId=${nodeId}, actionName=${actionName}`,
-    );
     if (nodeId) {
         emitExecutionStatus({ stepId: nodeId, status: 'running' });
     }
@@ -245,6 +242,9 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
                 await page.screenshot({ path: fullPath });
                 screenshotPath = `storage/runs/${runId}/${filename}`;
                 console.log(`[FlightRecorder] Screenshot saved: ${screenshotPath}`);
+
+                // Emit real-time update to frontend
+                emitScreenshotReady({ nodeId, screenshotPath, runId });
             } catch (err) {
                 console.warn(
                     '[WARN] FlightRecorder: Failed to capture success screenshot',
@@ -279,6 +279,7 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
             browserId: targetBrowserId,
             durationMs: duration,
             data: result.data || {},
+            screenshot: screenshotPath, // FIX: Return screenshot path to frontend
             ...result.responseExtra,
         });
     } catch (error) {
@@ -481,9 +482,6 @@ export const launchBrowserAction = async (req, res) => {
 
     try {
         console.log('[ACTION] Starting browser launch...');
-        console.log(
-            `[FlightRecorder DEBUG] runId=${runId}, nodeId=${nodeId}, actionName=launch_browser`,
-        );
         const { browserId } = await browserService.launchBrowser(req.body);
         const duration = Date.now() - start;
 
@@ -615,6 +613,29 @@ export const openUrlAction = async (req, res) => {
         console.log(`[SUCCESS] URL opened (${duration}ms): ${url}`);
         if (nodeId) emitExecutionStatus({ stepId: nodeId, status: 'success' });
 
+        // --- FLIGHT RECORDER: Optional Screenshot on Success ---
+        let screenshotPath = null;
+        const { takeScreenshot } = req.body;
+        if (takeScreenshot && page && !page.isClosed() && runId && nodeId) {
+            try {
+                const screenshotsDir = path.resolve(`storage/runs/${runId}`);
+                await fsp.mkdir(screenshotsDir, { recursive: true });
+                const filename = `step_${Date.now()}_${nodeId}.png`;
+                const fullPath = path.join(screenshotsDir, filename);
+                await page.screenshot({ path: fullPath });
+                screenshotPath = `storage/runs/${runId}/${filename}`;
+                console.log(`[FlightRecorder] Screenshot saved: ${screenshotPath}`);
+
+                // Emit real-time update to frontend
+                emitScreenshotReady({ nodeId, screenshotPath, runId });
+            } catch (err) {
+                console.warn(
+                    '[WARN] FlightRecorder: Failed to capture open_url screenshot',
+                    err.message,
+                );
+            }
+        }
+
         // --- FLIGHT RECORDER: Log Success ---
         if (runId && nodeId) {
             await executionLogger.logStep(
@@ -625,6 +646,7 @@ export const openUrlAction = async (req, res) => {
                     duration,
                     input: req.body,
                     output: { url, browserId },
+                    screenshot: screenshotPath,
                 },
             );
         }
@@ -636,6 +658,7 @@ export const openUrlAction = async (req, res) => {
             url,
             durationMs: duration,
             browserId,
+            screenshot: screenshotPath, // FIX: Return screenshot path to frontend
         });
     } catch (error) {
         const duration = Date.now() - start;

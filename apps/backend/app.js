@@ -8,6 +8,7 @@ import { createServer } from 'http';
 import { init as initSocket } from './socket.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { storageCleanupService } from './services/StorageCleanupService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -173,6 +174,7 @@ import { initDb } from './database/init.js';
 
 const startServer = async () => {
     await initDb();
+    await storageCleanupService.run(); // Auto-cleanup old runs and /tmp
     server.listen(PORT, '0.0.0.0', () => {
         const baseUrl = `http://localhost:${PORT}`;
         console.log(`\n🚀 =================================================`);

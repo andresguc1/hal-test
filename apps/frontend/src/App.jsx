@@ -221,6 +221,7 @@ export default function App() {
     viewStack, // Nav stack
     enterComponent,
     exitComponent,
+    setSelectedNodeId,
   } = useFlowManager(currentProject, currentFlowId, switchFlow);
 
   // Element Picker Callback
@@ -390,7 +391,10 @@ export default function App() {
     if (setSelectedAction) {
       setSelectedAction(null);
     }
-  }, [setSelectedAction]);
+    if (setSelectedNodeId) {
+      setSelectedNodeId(null);
+    }
+  }, [setSelectedAction, setSelectedNodeId]);
 
   // ========================================
   // CALLBACKS - Footer Actions

@@ -44,3 +44,12 @@ export const emitElementPicked = (selectorData) => {
         io.emit('element_picked', selectorData);
     }
 };
+
+export const emitScreenshotReady = ({ nodeId, screenshotPath, runId }) => {
+    if (io) {
+        console.log(
+            `📡 [Socket.io] Emitting step_screenshot_ready: ${nodeId} -> ${screenshotPath}`,
+        );
+        io.emit('step_screenshot_ready', { nodeId, screenshotPath, runId });
+    }
+};

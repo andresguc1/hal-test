@@ -87,6 +87,28 @@ class BrowserManager {
             `[BrowserService] Launching ${browserType} (Headless: ${headless}, Maximize: ${maximizeWindow})`,
         );
 
+        // 4. Inject Stability Flags for Chromium
+        if (browserType === 'chromium') {
+            const stabilityArgs = [
+                '--disable-features=CDPScreenshotNewSurface',
+                '--disable-gpu', // Architect Recommendation for Linux
+            ];
+
+            if (headless) {
+                stabilityArgs.push('--disable-dev-shm-usage', '--no-sandbox');
+            } else {
+                // Headful: Clean conflicting flags
+                launchArgs = launchArgs.filter(
+                    (arg) =>
+                        !arg.includes('--no-sandbox') && !arg.includes('--disable-dev-shm-usage'),
+                );
+            }
+
+            launchArgs.push(...stabilityArgs);
+        }
+
+        console.log(`[BrowserService] Final Launch Args: ${JSON.stringify(launchArgs)}`);
+
         const browser = await browserEngine.launch({
             headless,
             args: launchArgs,

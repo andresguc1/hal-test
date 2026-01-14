@@ -104,7 +104,6 @@ export const launch_browser = (payload) => {
 };
 
 export const open_url = (payload) => {
-  console.log("[DEBUG] open_url payload:", payload);
   const url = asString(payload?.url ?? payload?.link);
 
   // Validate URL is not empty
@@ -124,6 +123,7 @@ export const open_url = (payload) => {
     waitUntil: asString(payload?.waitUntil, "load"),
     timeout: asNumber(payload?.timeout, 30000),
     browserId: asString(payload?.browserId),
+    takeScreenshot: asBoolean(payload?.takeScreenshot, false), // Flight Recorder
   };
 };
 
@@ -317,13 +317,13 @@ export const click = (payload = {}) => {
     selector: selector,
     button: finalButton,
     browserId: asString(payload?.browserId),
+    takeScreenshot: asBoolean(payload?.takeScreenshot, false), // Flight Recorder
   };
 
   return body;
 };
 
 export const type_text = (payload = {}) => {
-  console.log("[DEBUG] type_text payload received:", payload);
   const selector = asString(payload?.selector);
 
   // Robust check: try multiple possible keys
@@ -347,6 +347,7 @@ export const type_text = (payload = {}) => {
     delay: asNumber(payload?.delay, 0, 0), // Default: 0, Mín: 0 (según Joi)
     timeout: asNumber(payload?.timeout, 30000, 1), // Default: 30000, Mín: 1 (según Joi)
     browserId: asString(payload?.browserId),
+    takeScreenshot: asBoolean(payload?.takeScreenshot, false), // Flight Recorder
   };
 
   // browserId no se incluye, ya que lo maneja el backend. -> CORRECCIÓN: SÍ se incluye
