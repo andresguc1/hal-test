@@ -22,7 +22,8 @@ import { debounce, wouldCreateCycle } from "../../utils/flowUtils";
 import { logger } from "../../utils/logger";
 import screenshotManager from "../../utils/ScreenshotManager";
 import { api } from "../../utils/api";
-import { toast } from "sonner";
+import { useToast } from "../../hooks/useToast"; // Use custom hook instead of direct sonner
+import { useTranslation } from "react-i18next";
 
 const MAX_RETRIES = 3;
 const RETRY_BASE_MS = 1000;
@@ -38,6 +39,8 @@ export const API_BASE_URL = "/api/actions";
 const generateNodeId = () => `node_${uuidv4()}`;
 
 const createExecutedLabel = (action) => {
+  if (action?.data?.customLabel) return action.data.customLabel;
+
   const typeLabel = NODE_LABELS[action.type] || action.type;
   const payload = action.payload || action || {};
   let detail = "";
@@ -91,6 +94,8 @@ import { projectManager } from "../../utils/ProjectManager";
 import { useSettings } from "../../context/SettingsContext"; // Assuming this is available
 
 export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
+  const { t } = useTranslation();
+  const toast = useToast(); // Custom HAL Toast
   const { getViewport } = useReactFlow();
 
   // State for nodes and edges
@@ -141,6 +146,9 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
     duration: 0,
   });
 
+  // PERSISTENT SESSION STATE
+  const [activeBrowserId, setActiveBrowserId] = useState(null);
+
   const executionAbortController = useRef(null);
   const lastLoadedFlowId = useRef(null); // Ref for preventing race conditions
   const [changeCounter, setChangeCounter] = useState(0); // For auto-save versioning logic
@@ -162,7 +170,13 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
           );
           if (flow) {
             setNodes(flow.nodes || []);
-            setEdges(flow.edges || []);
+            setEdges(
+              (flow.edges || []).map((e) => ({
+                ...e,
+                type: "custom",
+                animated: true, // Optional: force animation by default
+              })),
+            );
             // History reset on flow switch
             setHistory({ past: [], future: [] });
 
@@ -240,7 +254,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
       const nodeMap = Object.fromEntries(nodesList.map((n) => [n.id, n]));
       return resultIds.map((id) => nodeMap[id]);
     };
-  }, []); // Función pura, no necesita dependencias
+  }, []); // Pure function, no dependencies needed
 
   // ========================================
   // OPTIMIZACIÓN 4: useCallback con deps correctas
@@ -358,15 +372,32 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
               ...node.data,
               state,
               errorDetails,
-              error: errorDetails?.message || null, // NEW: Store simple error message
+              error: errorDetails?.message || null,
               lastExecuted: new Date().toISOString(),
             },
             style: getNodeStyle(state, node.style),
           };
         }),
       );
+
+      // NEW: Also update outgoing edges for visual feedback!
+      setEdges((eds) =>
+        eds.map((edge) => {
+          if (edge.source === nodeId) {
+            return {
+              ...edge,
+              animated: state === "running",
+              data: {
+                ...edge.data,
+                executionState: state, // "running", "success", "error"
+              },
+            };
+          }
+          return edge;
+        }),
+      );
     },
-    [setNodes],
+    [setNodes, setEdges],
   );
 
   const resetNodeStates = useCallback(() => {
@@ -527,7 +558,23 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
             data: {
               ...n.data,
               configuration: newConfig,
-              label: n.data.label || NODE_LABELS[n.data.type] || n.data.type,
+              // LIFT customLabel to top-level data for easy access
+              customLabel:
+                newConfig.customLabel !== undefined
+                  ? newConfig.customLabel
+                  : n.data.customLabel,
+              // Fallback for Component: if passed as label, treat as customLabel?
+              // No, let's stick to explicit customLabel from UI.
+              label:
+                newConfig.label ||
+                n.data.label ||
+                NODE_LABELS[n.data.type] ||
+                n.data.type,
+              // LIFT description to top-level data
+              description:
+                newConfig.description !== undefined
+                  ? newConfig.description
+                  : n.data.description,
             },
           };
 
@@ -675,7 +722,20 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
     // 1. Identify selected nodes
     const selectedNodes = nodesRef.current.filter((n) => n.selected);
     if (selectedNodes.length < 2) {
-      toast.error("Select at least 2 nodes to group");
+      toast.error(
+        t("groups.min_selection", "Select at least 2 nodes to group"),
+      );
+      return;
+    }
+
+    // ⛔ NESTING RULE (V1): Prevent nesting components
+    const hasComponent = selectedNodes.some(
+      (n) => n.type === "component" || n.data?.type === "component",
+    );
+    if (hasComponent) {
+      toast.error(
+        t("groups.no_nesting", "Grouping components is not supported yet"),
+      );
       return;
     }
 
@@ -690,32 +750,37 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
     selectedNodes.forEach((n) => {
       minX = Math.min(minX, n.position.x);
       minY = Math.min(minY, n.position.y);
-      maxX = Math.max(maxX, n.position.x + n.width || n.position.x + 200);
-      maxY = Math.max(maxY, n.position.y + n.height || n.position.y + 100);
+      maxX = Math.max(maxX, n.position.x + (n.width || 200));
+      maxY = Math.max(maxY, n.position.y + (n.height || 100));
     });
 
-    // 3. Center of the group (for the new node)
-    const centerX = minX;
-    const centerY = minY;
+    const groupWidth = maxX - minX;
+    const groupHeight = maxY - minY;
 
-    // 4. Extract Sub-Flow (Nodes & Edges)
+    // 3. Center of the group (for the new node)
+
+
+    // 4. Extract Sub-Flow Logic
     const selectedNodeIds = new Set(selectedNodes.map((n) => n.id));
 
-    // Valid Edges: Both Source and Target must be inside the group
+    // Internal Edges: Both Source and Target inside group (Keep them)
     const internalEdges = edgesRef.current.filter(
       (e) => selectedNodeIds.has(e.source) && selectedNodeIds.has(e.target),
     );
 
-    // External Edges to Rewire
+    // External Incoming: Source OUTSIDE, Target INSIDE (Needs Input Node)
     const externalIncoming = edgesRef.current.filter(
       (e) => !selectedNodeIds.has(e.source) && selectedNodeIds.has(e.target),
     );
 
+    // External Outgoing: Source INSIDE, Target OUTSIDE (Needs Output Node)
     const externalOutgoing = edgesRef.current.filter(
       (e) => selectedNodeIds.has(e.source) && !selectedNodeIds.has(e.target),
     );
 
-    // Normalize Sub-Nodes Positions (Relative to 0,0 of the component flow)
+    // ---------------------------------------------------------
+    // GENERATE SUB-FLOW NODES (Normalized + Boundaries)
+    // ---------------------------------------------------------
     const subNodes = selectedNodes.map((n) => ({
       ...n,
       position: {
@@ -724,7 +789,62 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
       },
       selected: false,
       parentNode: null,
+      extent: undefined, // Clear extent if parent related
     }));
+
+    const finalSubEdges = [...(internalEdges || [])]; // Start with internal edges
+
+    // -> HANDLE INPUT BOUNDARY
+    if (externalIncoming.length > 0) {
+      const inputId = `input_${Date.now()}`;
+      const inputNode = {
+        id: inputId,
+        type: "input",
+        position: { x: -250, y: groupHeight / 2 - 25 }, // Left of content
+        data: { label: "Input" },
+      };
+      subNodes.push(inputNode);
+
+      // Connect Input Node -> Original Targets of incoming edges
+      externalIncoming.forEach((edge) => {
+        // Find which node inside was the target
+        // We create a new edge inside: Input -> TargetNode
+        const newInternalEdge = {
+          id: `e_${inputId}-${edge.target}`,
+          source: inputId,
+          target: edge.target,
+          type: "default",
+          animated: true,
+        };
+        // Avoid duplicates if multiple external edges point to same target?
+        // Actually, logic allows multiple edges from Input.
+        finalSubEdges.push(newInternalEdge);
+      });
+    }
+
+    // -> HANDLE OUTPUT BOUNDARY
+    if (externalOutgoing.length > 0) {
+      const outputId = `output_${Date.now()}`;
+      const outputNode = {
+        id: outputId,
+        type: "output",
+        position: { x: groupWidth + 100, y: groupHeight / 2 - 25 }, // Right of content
+        data: { label: "Output" },
+      };
+      subNodes.push(outputNode);
+
+      // Connect Original Sources -> Output Node
+      externalOutgoing.forEach((edge) => {
+        const newInternalEdge = {
+          id: `e_${edge.source}-${outputId}`,
+          source: edge.source,
+          target: outputId,
+          type: "default",
+          animated: true,
+        };
+        finalSubEdges.push(newInternalEdge);
+      });
+    }
 
     try {
       // 5. Create Component Flow via API
@@ -736,32 +856,36 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
           type: "component",
           parentId: currentFlowId,
           nodes: subNodes,
-          edges: internalEdges,
+          edges: finalSubEdges,
         },
       );
 
       if (!newFlow || !newFlow.id)
         throw new Error("Failed to create component flow");
 
-      // 6. Create The Component Node
+      // 6. Create The Component Node in Main Flow
       const componentId = generateNodeId();
       const componentNode = {
         id: componentId,
         type: "component",
-        position: { x: centerX, y: centerY },
+        position: { x: minX, y: minY }, // Use top-left of group
+        width: groupWidth, // Optional: preserve dimensions?
+        height: groupHeight,
         data: {
           label: componentName,
           type: "component",
-          flowId: newFlow.id, // Reference to the real Flow
+          flowId: newFlow.id,
           configuration: {},
+          subFlow: { nodes: subNodes, edges: finalSubEdges }, // Include edges for stats and restoration
         },
-        style: getNodeStyle(NODE_STATES.DEFAULT),
+        style: getNodeStyle ? getNodeStyle(NODE_STATES.DEFAULT) : {},
       };
 
       // 7. Update Main Flow State
       const remainingNodes = nodesRef.current.filter(
         (n) => !selectedNodeIds.has(n.id),
       );
+
       const remainingEdges = edgesRef.current.filter(
         (e) =>
           !selectedNodeIds.has(e.source) &&
@@ -770,20 +894,21 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
           !externalOutgoing.includes(e),
       );
 
-      // Rewire External Edges
+      // Rewire Main Flow Edges to Component Node
+      // Incoming: Original Source -> Component Node
       const newIncomingEdges = externalIncoming.map((e) => ({
         ...e,
         id: `e_${e.source}-${componentId}`,
         target: componentId,
       }));
 
+      // Outgoing: Component Node -> Original Target
       const newOutgoingEdges = externalOutgoing.map((e) => ({
         ...e,
         id: `e_${componentId}-${e.target}`,
         source: componentId,
       }));
 
-      // Update State
       const finalNodes = [...remainingNodes, componentNode];
       const finalEdges = [
         ...remainingEdges,
@@ -795,22 +920,21 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
       setEdges(finalEdges);
       setSelectedNodeId(componentId);
 
-      // Explicit save to persist the replacement
-      // Trigger save immediately to avoid data loss if page is refreshed before auto-save
-      // We use the raw 'projectManager.updateFlow' or reuse 'saveFlow' but with the new data?
-      // 'saveFlow' uses current state 'nodes' (from closure or ref?). 'saveFlow' uses 'nodes' from deps in useCallback.
-      // But here we are inside a callback. We should wait for state update or call updateFlow directly.
-      // It's safer to rely on 'setNodes' and then auto-save, but for critical actions, explicit save is better.
-      // Currently 'saveFlow' depends on 'nodes' state. We haven't updated 'nodes' state yet (React batching).
-      // So we can't call 'saveFlow()' immediately.
-      // We will trust the setNodes + autoSave or effect.
-
-      toast.success(`Grouped ${selectedNodes.length} nodes into Component`);
+      toast.success(t("groups.success", "Grouped into Component"));
     } catch (error) {
       console.error("Failed to group nodes:", error);
-      toast.error("Failed to create component flow");
+      toast.error(t("groups.error", "Failed to create component"));
     }
-  }, [currentProject, currentFlowId, saveToHistory, setNodes, setEdges]);
+  }, [
+    currentProject,
+    currentFlowId,
+    saveToHistory,
+    setNodes,
+    setEdges,
+    t,
+    setSelectedNodeId,
+    toast,
+  ]);
 
   // ========================================
   // COMPOSITION: NAVIGATION (DIVE-IN)
@@ -871,7 +995,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
         console.error("switchFlow function is missing in useFlowManager");
       }
     },
-    [currentFlowId, currentProject, saveFlow, switchFlow],
+    [currentFlowId, currentProject, saveFlow, switchFlow, toast],
   );
 
   const exitComponent = useCallback(async () => {
@@ -923,7 +1047,10 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
       // Get node (refresh from store ONLY if we need fallback data, but prefer payload)
       const storeNode = nodesRef.current.find((n) => n.id === nodeId);
       const config = payload || storeNode?.data?.configuration || {};
-      const browserId = payload?.browserId || config?.browserId;
+
+      // PRIORITY: Payload > Config > Active Session
+      const browserId =
+        payload?.browserId || config?.browserId || activeBrowserId;
 
       // Automatic screenshot for visual-change nodes
       const shouldAutoCapture = VISUAL_CHANGE_NODES.has(type) && browserId;
@@ -957,6 +1084,11 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
           bodyToSend = builder ? builder(payload || {}) : payload || {};
           // Inject nodeId and runId for WebSocket tracking and Flight Recorder
           bodyToSend.nodeId = nodeId;
+
+          // Inject persistent browserId if available and not overridden
+          if (activeBrowserId && !bodyToSend.browserId) {
+            bodyToSend.browserId = activeBrowserId;
+          }
 
           // Force headless: false in dev for visual debugging
           if (type === "launch_browser" && import.meta.env.DEV) {
@@ -1035,11 +1167,15 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
           const duration = Date.now() - startTime;
 
           const instanceId =
-            result.data?.instanceId ??
             result.data?.browserId ??
             result.browserId ?? // Critical Fix: Action controller returns browserId at root
             result.instance?.id ??
             null;
+
+          // UPDATE PERSISTENT SESSION
+          if (instanceId && !activeBrowserId) {
+            setActiveBrowserId(instanceId);
+          }
 
           // ✨ OPTIMIZACIÓN: Actualización batch
           setNodes((nds) =>
@@ -1165,7 +1301,15 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
       setIsLoading(false);
       return { success: false, error: "Max reintentos alcanzados" };
     },
-    [updateNodeState, captureScreenshot, updateNodeScreenshot, setNodes],
+    [
+      updateNodeState,
+      captureScreenshot,
+      updateNodeScreenshot,
+      setNodes,
+      activeBrowserId,
+      setApiStatus,
+      setIsLoading,
+    ],
   );
 
   // ========================================
@@ -1272,6 +1416,8 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
           {
             ...connection,
             id: edgeId,
+            type: "custom", // Enforce CustomEdge
+            animated: true,
             ...edgeStyle,
           },
           eds,
@@ -1320,6 +1466,48 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
   }, []);
 
   // ========================================
+  // VALIDACIÓN LÓGICA (Incompatibilidades)
+  // ========================================
+
+  const validateLogicalConnection = useCallback((connection, currentNodes) => {
+    const sourceNode = currentNodes.find((n) => n.id === connection.source);
+    const targetNode = currentNodes.find((n) => n.id === connection.target);
+
+    if (!sourceNode || !targetNode) return null;
+
+    const sourceType = sourceNode.data?.subType || sourceNode.type;
+    const targetType = targetNode.data?.subType || targetNode.type;
+
+    // Rule: Type Text without Input Focus
+    if (targetType === "type_text") {
+      const validPredecessors = [
+        "click",
+        "open_url",
+        "wait_visible",
+        "wait_for_element",
+      ];
+      if (!validPredecessors.includes(sourceType)) {
+        return {
+          type: "warning",
+          message:
+            "⚠️ 'Type Text' generalmente requiere un 'Click' o 'Wait Visible' previo para asegurar foco.",
+        };
+      }
+    }
+
+    // Rule: Launch Browser -> Click (Direct connection warning)
+    if (sourceType === "launch_browser" && targetType === "click") {
+      return {
+        type: "warning",
+        message:
+          "⚠️ ¿Falta 'Open URL'? Conectar el navegador directamente a un Click suele fallar si no hay página cargada.",
+      };
+    }
+
+    return null;
+  }, []);
+
+  // ========================================
   // Resto de funciones (executeFlow, etc.)
   // Mantener la lógica existente con las optimizaciones aplicadas
   // ========================================
@@ -1328,10 +1516,122 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
    * Validates the flow before execution
    * @returns {Array<string>} Array of error messages (empty if valid)
    */
+  const validateFlowStructure = useCallback(
+    (nodesToValidate, edgesToValidate) => {
+      const errors = [];
+
+      // 1. Check for empty flow
+      if (nodesToValidate.length === 0) {
+        errors.push("The flow is empty. Add at least one node.");
+        return errors;
+      }
+
+      // 2. Find Root Nodes (nodes with no incoming edges)
+      // We filter out edges that are part of loops to correctly identify roots in cyclical graphs?
+      // For now, strict root definition: No target handles pointing to it.
+      const targets = new Set(edgesToValidate.map((e) => e.target));
+      const roots = nodesToValidate.filter((n) => !targets.has(n.id));
+
+      // 3. Rule: Mandatory Master Node (Launch Browser)
+      // There must be exactly ONE root, and it must be 'launch_browser'
+      if (roots.length === 0) {
+        // Only loops?
+        errors.push(
+          "Invalid Flow: No starting point found (Cycle detected or no roots).",
+        );
+      } else if (roots.length > 1) {
+        // Multiple disconnected starts allowed?
+        // Requirement: "Unicidad del Navegador: No se permite más de un nodo Launch Browser activo por flujo"
+        // Requirement: "Todo flujo debe originarse en un nodo Launch Browser"
+        // Strict V1: Only 1 start node allowed.
+        errors.push(
+          "Invalid Flow: Multiple starting points detected. Only one 'Launch Browser' is allowed as root.",
+        );
+      } else {
+        const root = roots[0];
+        const type = root.type || root.data?.type;
+        if (type !== "launch_browser") {
+          errors.push(
+            "Invalid Start: The first node must be 'Launch Browser'.",
+          );
+        } else {
+          // 4. Rule: Navigation Root (Launch -> Open URL)
+          // Check outgoing edges from root
+          const outgoing = edgesToValidate.filter((e) => e.source === root.id);
+          if (outgoing.length === 0) {
+            errors.push(
+              "Invalid Flow: 'Launch Browser' must connect to 'Open URL'.",
+            );
+          } else {
+            // Check if ANY outgoing connects to 'Open URL' (or a component starting with it)
+            const targets = outgoing.map((e) =>
+              nodesToValidate.find((n) => n.id === e.target),
+            );
+
+            const isOrContainsOpenUrl = (node) => {
+              if (!node) return false;
+              // Direct check
+              if (node.type === "open_url" || node.data?.type === "open_url")
+                return true;
+
+              // Component check (Recursive-ish for V1)
+              if (
+                node.type === "component" ||
+                node.data?.type === "component"
+              ) {
+                const subFlow = node.data?.subFlow;
+                if (!subFlow || !subFlow.nodes || !subFlow.edges) return false;
+
+                // Find internal Input node
+                // Note: Boundary nodes might be named 'input' or have specific type
+                const internalInput = subFlow.nodes.find(
+                  (n) => n.type === "input" || n.data?.type === "input",
+                );
+                if (!internalInput) return false;
+
+                // Find what follows the input
+                const internalEdges = subFlow.edges.filter(
+                  (e) => e.source === internalInput.id,
+                );
+                const firstSteps = internalEdges.map((e) =>
+                  subFlow.nodes.find((n) => n.id === e.target),
+                );
+
+                // Check if any of the first steps is Open URL
+                return firstSteps.some((step) => isOrContainsOpenUrl(step)); // Recursive for nested (future proof)
+              }
+              return false;
+            };
+
+            const hasOpenUrl = targets.some((n) => isOrContainsOpenUrl(n));
+
+            if (!hasOpenUrl) {
+              errors.push(
+                "Invalid Flow: 'Launch Browser' must be followed by 'Open URL' (or a component starting with it).",
+              );
+            }
+          }
+        }
+      }
+
+      // 5. Rule: Browser Uniqueness (Global check)
+      const launchNodes = nodesToValidate.filter(
+        (n) => n.type === "launch_browser" || n.data?.type === "launch_browser",
+      );
+      if (launchNodes.length > 1) {
+        errors.push(
+          "Invalid Flow: Multiple 'Launch Browser' nodes detected. Only one is permitted.",
+        );
+      }
+
+      return errors;
+    },
+    [],
+  );
 
   const executeFlow = useCallback(
     async (options = {}) => {
-      const { stopOnError = true } = options;
+      const { stopOnError = true, keepOpen = true } = options; // Default keepOpen=true for Edit Mode
 
       // 1. Initialize Stats & Context
       const startTime = Date.now();
@@ -1347,9 +1647,30 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
       executionAbortController.current = new AbortController();
       resetNodeStates();
 
+      // VALIDATION STEP
+      // In partial execution (options.nodes provided), we might skip full validation?
+      // User requirement says "Todo flujo debe originarse...", implying full flow validation.
+      // But if user selects 3 nodes to "Run Selection", do we enforce Launch Browser?
+      // Probably not for partial runs (debugging).
+      // Let's enforce ONLY for full runs (when options.nodes is undefined)
+
+      if (!options.nodes) {
+        const validationErrors = validateFlowStructure(nodes, edges);
+        if (validationErrors.length > 0) {
+          const errorMsg = validationErrors[0]; // Show first error
+          // toast.error(errorMsg); // REMOVED: Managed by App.jsx to avoid overlap
+          setApiStatus({
+            state: "error",
+            message: errorMsg,
+            details: { errors: validationErrors },
+          });
+          return { success: false, error: errorMsg };
+        }
+      }
+
       // Shared Runtime Context (Browser Session, Variables)
       const runtimeContext = {};
-      let browserId = null; // Track locally for final cleanup
+      let browserId = activeBrowserId || null; // Start with active session if available
 
       let runId = null;
 
@@ -1402,6 +1723,15 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
 
           const node = sortedAll[i];
 
+          // DEBUG EXECUTION FLOW
+          console.log(`[FlowManager] Processing node ${i}:`, {
+            id: node.id,
+            type: node.type,
+            dataType: node.data?.type,
+            isComponent:
+              node.type === "component" || node.data?.type === "component",
+          });
+
           // RECURSION CHECK: Component Node
           if (node.type === "component" || node.data.type === "component") {
             const { flowId } = node.data;
@@ -1418,10 +1748,25 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
                   flowId,
                 );
                 if (subFlow && subFlow.nodes && subFlow.nodes.length > 0) {
+                  // VISUAL: Set Component Node to RUNNING
+                  updateNodeState(node.id, NODE_STATES.RUNNING);
+
                   // Execute Sub-flow
                   await executeGraph(subFlow.nodes, subFlow.edges, depth + 1);
 
-                  if (globalStats.failed > 0 && stopOnError) return; // Stop if sub-flow failed
+                  // Check if sub-flow had failures
+                  const hadFailures = globalStats.failed > 0;
+
+                  // VISUAL: Set Component Node to SUCCESS or ERROR
+                  updateNodeState(
+                    node.id,
+                    hadFailures ? NODE_STATES.ERROR : NODE_STATES.SUCCESS,
+                    hadFailures
+                      ? { message: "Component execution failed" }
+                      : null,
+                  );
+
+                  if (hadFailures && stopOnError) return; // Stop if sub-flow failed
                 } else {
                   logger.warn(`Empty or missing sub-flow: ${flowId}`);
                 }
@@ -1435,6 +1780,19 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
             // Components don't count as "steps" in stats? Or do they?
             // Let's count them as skipped or successful container steps?
             // We won't increment 'successful' for the container itself, just its children.
+            continue;
+          }
+
+          // CRITICAL FIX: If node type is explicitly "component" but didn't pass the check above (e.g. missing flowId),
+          // we must NOT try to execute it as an API action 'unknown' or 'component'.
+          // Double check to prevent fall-through.
+          if (node.type === "component" || node.data.type === "component") {
+            logger.warn(`Skipping invalid/empty component node: ${node.id}`);
+            continue;
+          }
+
+          // FIX: Skip Boundary Nodes (Input/Output) which are structural only
+          if (node.type === "input" || node.type === "output") {
             continue;
           }
 
@@ -1490,13 +1848,16 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
         globalStats.failed++;
       } finally {
         // 3. Cleanup & Finalize
-        if (browserId) {
+        // Only close if keepOpen is FALSE
+        if (browserId && !keepOpen) {
           try {
             await fetch(`/api/actions/close_browser`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ browserId }),
             });
+            // If we closed the active one (shouldn't happen if keepOpen is true, but just in case)
+            if (browserId === activeBrowserId) setActiveBrowserId(null);
           } catch (e) {
             console.warn("Cleanup failed", e);
           }
@@ -1533,8 +1894,31 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
       topologicalSort,
       executeStep,
       resetNodeStates,
+      activeBrowserId, // Added dependency
     ],
   );
+
+  /**
+   * Manually stop the persistent session
+   */
+  const stopSession = useCallback(async () => {
+    if (!activeBrowserId) return;
+
+    try {
+      setApiStatus({ state: "loading", message: "Stopping session..." });
+      await fetch(`${API_BASE_URL}/close_browser`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ browserId: activeBrowserId }),
+      });
+      setActiveBrowserId(null);
+      setApiStatus({ state: "idle", message: "Session stopped" });
+      toast.success("Browser session closed");
+    } catch (error) {
+      console.error("Failed to stop session:", error);
+      toast.error("Failed to close browser session");
+    }
+  }, [activeBrowserId, setApiStatus]);
 
   // ========================================
   // Export and Import Flow Functions
@@ -1852,6 +2236,146 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
     [saveToHistory, setNodes, setEdges, setApiStatus],
   );
 
+  // ========================================
+  // UNGROUPING LOGIC (Inverse of groupNodes)
+  // ========================================
+
+  const ungroupNodes = useCallback(
+    (componentNodeId) => {
+      const componentNode = nodesRef.current.find(
+        (n) => n.id === componentNodeId,
+      );
+
+      if (!componentNode || componentNode.data?.type !== "component") {
+        return; // Safety check
+      }
+
+      console.log(`[Ungroup] Desagrupando componente: ${componentNodeId}`);
+      saveToHistory();
+
+      const subFlow = componentNode.data.subFlow || { nodes: [], edges: [] };
+      const { nodes: subNodes = [], edges: subEdges = [] } = subFlow;
+
+      // 1. Identify Boundary Nodes
+      const inputNode = subNodes.find((n) => n.type === "input");
+      const outputNode = subNodes.find((n) => n.type === "output");
+
+      // 2. Extract Real Nodes & Calculate New Positions
+      const offsetX = componentNode.position.x;
+      const offsetY = componentNode.position.y;
+
+      const restoredNodes = subNodes
+        .filter((n) => n.type !== "input" && n.type !== "output")
+        .map((n) => ({
+          ...n,
+          data: { ...n.data }, // Deep copy data to avoid ref issues
+          position: {
+            x: n.position.x + offsetX,
+            y: n.position.y + offsetY,
+          },
+          selected: true, // Auto-select extracted nodes
+          parentNode: undefined,
+        }));
+
+      // 3. Prepare Edges (Restoration)
+      const internalEdges = subEdges.filter((e) => {
+        // Keep edge only if neither source nor target are boundary nodes
+        const sourceIsBoundary =
+          (inputNode && e.source === inputNode.id) ||
+          (outputNode && e.source === outputNode.id);
+        const targetIsBoundary =
+          (inputNode && e.target === inputNode.id) ||
+          (outputNode && e.target === outputNode.id);
+        return !sourceIsBoundary && !targetIsBoundary;
+      });
+
+      // 4. Trace & Rewire External Connections
+      let restoredExternalEdges = [];
+
+      // A) Rewire INCOMING (Main -> Component)
+      // Original: MainSrc -> Component
+      // Goal: MainSrc -> InternalTarget
+      // Path: MainSrc -> Component [maps to] InputNode -> InternalTarget
+      const incomingToComponent = edgesRef.current.filter(
+        (e) => e.target === componentNodeId,
+      );
+
+      incomingToComponent.forEach((mainEdge) => {
+        // Find where the InputNode directed this flow inside the component
+        // Note: For V1 assume single input flow or broadcast?
+        // Let's find all edges starting from InputNode inside
+        if (inputNode) {
+          const edgesFromInput = subEdges.filter(
+            (e) => e.source === inputNode.id,
+          );
+          edgesFromInput.forEach((innerEdge) => {
+            // Reconnect Main Source to Internal Target
+            restoredExternalEdges.push({
+              id: `e_${mainEdge.source}-${innerEdge.target}`,
+              source: mainEdge.source,
+              target: innerEdge.target,
+              sourceHandle: mainEdge.sourceHandle,
+              targetHandle: innerEdge.targetHandle,
+              type: "default",
+              animated: true,
+            });
+          });
+        }
+      });
+
+      // B) Rewire OUTGOING (Component -> Main)
+      // Original: Component -> MainTgt
+      // Goal: InternalSrc -> MainTgt
+      // Path: InternalSrc -> OutputNode [maps to] Component -> MainTgt
+      const outgoingFromComponent = edgesRef.current.filter(
+        (e) => e.source === componentNodeId,
+      );
+
+      outgoingFromComponent.forEach((mainEdge) => {
+        // Find which nodes pointed to OutputNode inside
+        if (outputNode) {
+          const edgesToOutput = subEdges.filter(
+            (e) => e.target === outputNode.id,
+          );
+          edgesToOutput.forEach((innerEdge) => {
+            restoredExternalEdges.push({
+              id: `e_${innerEdge.source}-${mainEdge.target}`,
+              source: innerEdge.source,
+              target: mainEdge.target,
+              sourceHandle: innerEdge.sourceHandle,
+              targetHandle: innerEdge.targetHandle,
+              type: "default",
+              animated: true,
+            });
+          });
+        }
+      });
+
+      // 5. Update Global State
+      // Remove Component Node
+      // Add Restored Nodes
+      setNodes((currentNodes) => {
+        const remainingNodes = currentNodes.filter(
+          (n) => n.id !== componentNodeId,
+        );
+        return [...remainingNodes, ...restoredNodes];
+      });
+
+      // Remove Old Edges (connected to component)
+      // Add Internal Restored Edges
+      // Add Rewired External Edges
+      setEdges((currentEdges) => {
+        const remainingEdges = currentEdges.filter(
+          (e) => e.source !== componentNodeId && e.target !== componentNodeId,
+        );
+        return [...remainingEdges, ...internalEdges, ...restoredExternalEdges];
+      });
+
+      toast.success(t("groups.ungrouped", "Group dissolved successfully"));
+    },
+    [setNodes, setEdges, saveToHistory, t, toast],
+  );
+
   // Exportar funciones y estados
   return {
     nodes,
@@ -1869,7 +2393,8 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
 
     setNodes,
     setEdges,
-    setSelectedAction: setSelectedNodeId, // Expose as setSelectedAction for backward compatibility
+    setSelectedAction, // CORRECTED: Expose real setter, not alias to setSelectedNodeId
+    setSelectedNodeId, // Expose this too if needed externally
     setAutoSaveEnabled,
 
     addNode,
@@ -2060,9 +2585,13 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
     }, [saveToHistory, setNodes, setEdges]),
 
     groupNodes,
-    setSelectedNodeId,
+    ungroupNodes,
 
-    NODE_STATES,
+    validateLogicalConnection,
+    validateFlowStructure, // Exposed for external validation
+
     PROFESSIONAL_COLORS,
+    activeBrowserId,
+    stopSession,
   };
 };

@@ -66,6 +66,8 @@ function AppHeader({
   selectedFlow,
   viewStack,
   onExitComponent,
+  activeBrowserId,
+  onStopSession,
 }) {
   const { theme, setTheme } = useTheme();
   const { t } = useTranslation();
@@ -98,6 +100,31 @@ function AppHeader({
             TEST
           </span>
         </h1>
+
+        {/* SESSION INDICATOR */}
+        {activeBrowserId && (
+          <Motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="flex items-center gap-2 ml-4 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full"
+          >
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span className="text-xs font-medium text-emerald-500">
+              Session Active
+            </span>
+
+            <button
+              onClick={onStopSession}
+              className="ml-2 hover:bg-emerald-500/20 p-1 rounded transition-colors text-emerald-600 hover:text-emerald-400"
+              title="Stop Session & Close Browser"
+            >
+              <div className="w-2.5 h-2.5 bg-current rounded-[1px]" />
+            </button>
+          </Motion.div>
+        )}
       </div>
 
       {/* CENTER - ABSOLUTE (The Fix) */}

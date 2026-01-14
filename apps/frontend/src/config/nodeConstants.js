@@ -142,7 +142,7 @@ export const NODE_CATEGORIES = {
     icon: Box,
     color: "gray", // Components = Gray/Neutral
     label: "Components",
-    nodes: ["component"],
+    nodes: ["component", "input", "output"],
   },
 };
 
@@ -150,6 +150,10 @@ export const NODE_CATEGORIES = {
 export const NODE_TYPE_MAP = Object.entries(NODE_CATEGORIES).reduce(
   (acc, [catKey, catData]) => {
     catData.nodes.forEach((nodeType) => {
+      // Define specific overrides
+      const overrides = {};
+      if (nodeType === "close_browser") overrides.terminal = true;
+
       acc[nodeType] = {
         category: catKey,
         color: catData.color,
@@ -158,6 +162,7 @@ export const NODE_TYPE_MAP = Object.entries(NODE_CATEGORIES).reduce(
           .split("_")
           .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
           .join(" "),
+        ...overrides,
       };
     });
     return acc;

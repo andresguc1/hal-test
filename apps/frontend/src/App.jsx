@@ -48,6 +48,7 @@ import { useTheme } from "next-themes";
 import RunHistoryPanel from "./components/RunHistoryPanel";
 import StepDetailsModal from "./components/StepDetailsModal";
 import { api } from "./utils/api";
+import { NODE_STATES } from "./components/hooks/flowStyles";
 
 // ========================================
 // COMPONENTE PRINCIPAL (MAREA REFACTOR)
@@ -218,17 +219,52 @@ export default function App() {
     clipboard,
     // clearFlow, // Unused
     groupNodes, // Composition feature
+    ungroupNodes,
     viewStack, // Nav stack
     enterComponent,
     exitComponent,
     setSelectedNodeId,
+    validateFlowStructure,
+    updateNodeState,
+    activeBrowserId,
+    stopSession,
   } = useFlowManager(currentProject, currentFlowId, switchFlow);
+
+  // Element Picker Callback (Previously handleElementPicked was here, we will replace the mess)
+
+  // START PICKING HANDLER (Visual Feedback + API)
+  const handleStartPicking = useCallback(async () => {
+    if (!selectedAction) return;
+
+    // 1. Visual Feedback: Set node to "PICKING" state
+    updateNodeState(selectedAction.nodeId, NODE_STATES.PICKING);
+    toast.info(
+      t("common.inspector_started", "Pick an element in the browser..."),
+    );
+
+    // 2. Start Inspector API
+    try {
+      const response = await fetch("/api/inspector/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ browserId: null }),
+      });
+      const data = await response.json();
+      if (!data.success) {
+        toast.error(data.message || "Failed to start inspector");
+        updateNodeState(selectedAction.nodeId, NODE_STATES.DEFAULT); // Revert on failure
+      }
+    } catch {
+      toast.error("Network error starting inspector");
+      updateNodeState(selectedAction.nodeId, NODE_STATES.DEFAULT); // Revert on failure
+    }
+  }, [selectedAction, updateNodeState, toast, t]);
 
   // Element Picker Callback
   const handleElementPicked = useCallback(
     (data) => {
       // If we have an active node being configured, update it
-      if (selectedAction && data.selector) {
+      if (selectedAction) {
         // ERROR FIX: Find the LIVE node to get latest config (text, etc.)
         const liveNode = nodes.find((n) => n.id === selectedAction.nodeId);
         const currentConfig =
@@ -236,17 +272,32 @@ export default function App() {
           selectedAction?.data?.configuration ||
           {};
 
+        // PRIORITY STRATEGY: ID > Data Attr > CSS > XPath
+        let finalSelector = data.selector; // Default fallback
+
+        if (data.selectors) {
+          if (data.selectors.id) finalSelector = data.selectors.id;
+          else if (data.selectors.dataAttribute)
+            finalSelector = data.selectors.dataAttribute;
+          else if (data.selectors.css) finalSelector = data.selectors.css;
+          else if (data.selectors.xpath) finalSelector = data.selectors.xpath;
+        }
+
         updateNodeConfiguration(selectedAction.nodeId, {
           ...currentConfig, // Preserve existing text, etc.
-          selector: data.selector,
+          selector: finalSelector,
         });
+
+        // Reset visual state
+        updateNodeState(selectedAction.nodeId, NODE_STATES.DEFAULT); // Or SUCCESS temporarily?
+
         toast.success(t("common.selector_captured", "Target captured!"));
       } else {
         // If no node is selected, maybe just notify
         console.warn("Element picked but no node is being configured.");
       }
     },
-    [selectedAction, nodes, updateNodeConfiguration, toast, t],
+    [selectedAction, nodes, updateNodeConfiguration, updateNodeState, toast, t],
   );
 
   // Map backend step status to frontend NODE_STATES
@@ -363,7 +414,7 @@ export default function App() {
   );
 
   // Initialize Socket.io connection for real-time updates and inspector events
-  useHaltestSocket(setNodes, handleElementPicked);
+  useHaltestSocket(setNodes, setEdges, handleElementPicked);
 
   // Computed values
   const isConfigurationPanelVisible = selectedAction !== null;
@@ -401,24 +452,41 @@ export default function App() {
   // ========================================
 
   const handleExecuteFlow = useCallback(async () => {
+    // 0. DRY RUN VALIDATION (Clean UX: No loading toast for instant validation)
+    const validationErrors = validateFlowStructure(nodes, edges);
+    if (validationErrors.length > 0) {
+      toast.error(validationErrors[0], {
+        duration: 5000,
+        style: { border: "1px solid #ef4444", color: "#ef4444" },
+      });
+      return; // Stop here, no processing toast shown.
+    }
+
     // 1. Show Loading Toast immediately (Duration 0 = indefinite until dismissed)
     const toastId = toast.loading(t("common.processing"));
 
     try {
-      const result = await executeFlow({ nodes }); // Returns { success, stats }
+      const result = await executeFlow(); // Returns { success, stats }
 
       // 2. Clear loading
       toast.dismiss(toastId);
 
       if (result.success) {
         // Success with Duration
-        const durationStr = (result.stats.duration / 1000).toFixed(2);
+        const durationStr = (result.stats?.duration / 1000).toFixed(2);
         toast.success(`${t("common.flow_exec_success")} (${durationStr}s)`);
       } else {
-        // Failure with Count
-        toast.error(
-          `${t("common.flow_exec_error")} (${result.stats.failed} failed)`,
-        );
+        // General Failure
+        // Validation errors should be caught above, but if executeFlow fails internally (e.g. max retries):
+        if (result.error && !result.stats) {
+          if (result.error !== "Max reintentos alcanzados") {
+            toast.error(result.error);
+          }
+        } else {
+          // Failure with Count (Run happened)
+          const failedCount = result.stats?.failed || 0;
+          toast.error(`${t("common.flow_exec_error")} (${failedCount} failed)`);
+        }
       }
     } catch (error) {
       // 3. Unexpected Error
@@ -426,7 +494,47 @@ export default function App() {
       console.error("Error ejecutando flujo:", error);
       toast.error(t("common.flow_exec_error") + ": " + error.message);
     }
-  }, [executeFlow, toast, t, nodes]);
+  }, [executeFlow, validateFlowStructure, toast, t, nodes, edges]);
+
+  // AI Generation Handler
+  const handleAIFlowGeneration = useCallback(
+    async (prompt) => {
+      const toastId = toast.info(
+        t("ai.generating", "Generating flow with AI... ✨"),
+        { duration: 5000 },
+      );
+      try {
+        // 1. Call AI Endpoint
+        const { data } = await api.post("/ai/generate-flow", { prompt });
+
+        // 2. Create Container Flow
+        const flowName = `AI: ${prompt.slice(0, 20)}...`;
+        const response = await createFlow(flowName);
+        const newFlowId = response.flow?.id || response.id; // defensive
+
+        if (newFlowId && currentProject?.id) {
+          // 3. Save Generated Content
+          await api.put(`/projects/${currentProject.id}/flows/${newFlowId}`, {
+            nodes: data.nodes,
+            edges: data.edges,
+            viewport: { x: 0, y: 0, zoom: 1 },
+          });
+
+          toast.dismiss(toastId);
+          toast.success(t("ai.success", "Flow generated successfully! 🧠"));
+
+          // Force local update if we are already on the new flow
+          setNodes(data.nodes);
+          setEdges(data.edges);
+        }
+      } catch (err) {
+        toast.dismiss(toastId);
+        console.error("AI Generation failed", err);
+        toast.error(t("ai.error", "AI Generation failed"));
+      }
+    },
+    [createFlow, currentProject, setNodes, setEdges, toast, t],
+  );
 
   const handleSaveFlow = useCallback(() => {
     try {
@@ -538,6 +646,19 @@ export default function App() {
     }
   }, [duplicateElements, toast, t]);
 
+  const handleUngroup = useCallback(() => {
+    const selected = nodes.filter((n) => n.selected);
+    if (
+      selected.length === 1 &&
+      (selected[0].type === "component" ||
+        selected[0].data?.type === "component")
+    ) {
+      ungroupNodes(selected[0].id);
+    } else {
+      toast.error("Select a single component to ungroup");
+    }
+  }, [nodes, ungroupNodes, toast]);
+
   const handleCopy = useCallback(() => {
     const count = copyElements();
     if (count > 0) {
@@ -647,6 +768,7 @@ export default function App() {
       onZoomOut: zoomOut,
       onFitView: fitView,
       onGroup: groupNodes, // Trigger group logic
+      onUngroup: handleUngroup,
     },
     !isSettingsOpen, // Disable shortcuts when modal is open
   );
@@ -847,6 +969,8 @@ export default function App() {
           )}
           viewStack={viewStack}
           onExitComponent={exitComponent}
+          activeBrowserId={activeBrowserId}
+          onStopSession={stopSession}
         />
 
         {/* 2. Content Wrapper */}
@@ -920,6 +1044,20 @@ export default function App() {
                         groupNodes();
                         setMenu(null);
                       },
+                      ungroup: () => {
+                        // Handle ungrouping via context menu
+                        // Check if the right-clicked node is a component, or if selection contains one
+                        if (
+                          menu.data &&
+                          (menu.data.type === "component" ||
+                            menu.data.data?.type === "component")
+                        ) {
+                          ungroupNodes(menu.data.id);
+                        } else {
+                          handleUngroup(); // Fallback to selection based
+                        }
+                        setMenu(null);
+                      },
                       duplicate: handleDuplicateNodes,
                       addNode: () => setIsCreationPanelVisible(true), // Legacy: Open Panel
                       createNode: (type) => {
@@ -951,14 +1089,15 @@ export default function App() {
 
           {/* PANEL DERECHO (CONFIGURACIÓN) */}
           <NodeConfigurationPanel
-            key={selectedAction?.nodeId}
-            action={selectedAction}
             isVisible={isConfigurationPanelVisible}
-            onExecute={executeStep}
+            action={selectedAction}
+            nodes={nodes}
             onClose={closeConfiguration}
+            onExecute={executeStep}
             onDeleteNode={deleteNode}
             updateNodeConfiguration={updateNodeConfiguration}
-            nodes={nodes}
+            onStartPick={handleStartPicking}
+            onUngroup={ungroupNodes}
           />
 
           {/* Global Settings Modal (Unified Hub) */}
@@ -1029,11 +1168,16 @@ export default function App() {
           onClose={() =>
             setCreationModal((prev) => ({ ...prev, isOpen: false }))
           }
-          onConfirm={(name) => {
+          onConfirm={(result) => {
             if (creationModal.type === "project") {
-              createProject(name);
+              createProject(typeof result === "object" ? result.name : result);
             } else {
-              createFlow(name);
+              const isAI = typeof result === "object" && result.mode === "ai";
+              if (isAI) {
+                handleAIFlowGeneration(result.prompt);
+              } else {
+                createFlow(result);
+              }
             }
           }}
         />

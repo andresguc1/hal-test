@@ -29,6 +29,29 @@ const getHeaders = () => {
     }
   }
 
+  // --- STANDARD AI HEADERS (Hal AI Config) ---
+  const aiConfigStr = localStorage.getItem("hal_ai_config");
+  if (aiConfigStr) {
+    try {
+      const aiConfig = JSON.parse(aiConfigStr);
+      const activeProvider = aiConfig.activeProvider;
+      const activeKey = aiConfig.keys?.[activeProvider];
+      const activeModel = aiConfig.selectedModel;
+
+      if (activeKey) {
+        headers["x-ai-api-key"] = activeKey;
+      }
+      if (activeModel) {
+        headers["x-ai-model"] = activeModel;
+      }
+      if (activeProvider) {
+        headers["x-ai-provider"] = activeProvider;
+      }
+    } catch (e) {
+      console.error("Error parsing hal_ai_config", e);
+    }
+  }
+
   return headers;
 };
 

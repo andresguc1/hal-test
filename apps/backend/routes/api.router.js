@@ -14,7 +14,7 @@ import * as actions from '../controllers/action.controller.js';
 import importRouter from './import.router.js';
 import exportRouter from './export.router.js';
 import runRouter from './run.router.js';
-import aiRouter from './ai.router.js';
+
 import { startInspectorAction } from '../controllers/inspector.controller.js';
 
 const router = Router();
@@ -534,7 +534,8 @@ router.use('/import', importRouter);
 router.use('/export', exportRouter);
 
 // Register AI router
-router.use('/ai', aiRouter);
+// Register AI router (Conflict removed: handled in app.js)
+// router.use('/ai', aiRouter);
 
 // (Removed placeholder ai/validate route)
 

@@ -1,5 +1,5 @@
 import React, { memo } from "react";
-import { BaseEdge, getBezierPath, EdgeLabelRenderer } from "@xyflow/react";
+import { BaseEdge, getBezierPath } from "@xyflow/react";
 import { cn } from "@/lib/utils";
 
 const CustomEdge = ({
@@ -13,6 +13,7 @@ const CustomEdge = ({
   style = {},
   markerEnd,
   selected,
+  data,
 }) => {
   // 1. Calcular la ruta curva suave (Bezier)
   const [edgePath] = getBezierPath({
@@ -25,7 +26,21 @@ const CustomEdge = ({
   });
 
   // 2. Definir estilos dinámicos
-  const strokeWidth = selected ? 3 : 2;
+  const executionState = data?.executionState || "default"; // running, success, error
+  const isRunning = executionState === "running";
+  const isSuccess = executionState === "success";
+  const isError = executionState === "error" || executionState === "failed";
+
+  // Dynamic Stroke Color
+  let strokeColor = "var(--connection-line)";
+  if (selected) strokeColor = "url(#edge-gradient)";
+  else if (isRunning)
+    strokeColor = "#3b82f6"; // Blue-500
+  else if (isSuccess)
+    strokeColor = "#22c55e"; // Green-500
+  else if (isError) strokeColor = "#ef4444"; // Red-500
+
+  const strokeWidth = selected || isRunning ? 3 : 2;
 
   return (
     <>
@@ -56,9 +71,14 @@ const CustomEdge = ({
         style={{
           ...style,
           strokeWidth,
-          stroke: selected ? "url(#edge-gradient)" : "var(--connection-line)",
-          strokeDasharray: selected ? "none" : "5, 5",
-          opacity: 0.8,
+          stroke: strokeColor,
+          strokeDasharray: isRunning ? "5, 5" : "none",
+          animation: isRunning ? "dashdraw 0.5s linear infinite" : "none",
+          opacity: isSuccess ? 1 : 0.8,
+          filter:
+            isRunning || isSuccess
+              ? `drop-shadow(0 0 3px ${strokeColor})`
+              : "none",
         }}
         className={cn(
           "transition-all duration-300",
@@ -67,9 +87,16 @@ const CustomEdge = ({
       />
 
       {/* ANIMATED PARTICLE */}
-      <circle r="3" fill="#38bdf8">
-        <animateMotion dur="2s" repeatCount="indefinite" path={edgePath} />
-      </circle>
+      {(selected || isRunning) && (
+        <circle r={isRunning ? 4 : 3} fill={isRunning ? "#60a5fa" : "#38bdf8"}>
+          <animateMotion
+            dur={isRunning ? "1s" : "2s"}
+            repeatCount="indefinite"
+            path={edgePath}
+            calcMode="linear"
+          />
+        </circle>
+      )}
     </>
   );
 };

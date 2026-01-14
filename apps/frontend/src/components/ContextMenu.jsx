@@ -14,6 +14,7 @@ import {
   Globe,
   LayoutGrid,
   Box,
+  Ungroup,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NODE_CATEGORIES } from "../config/nodeConstants";
@@ -583,6 +584,19 @@ const ContextMenu = ({
                 {data?.data?.label || "Selected Node"}
               </div>
               <Divider />
+              {/* UNGROUP OPTION FOR COMPONENTS */}
+              {(data?.type === "component" ||
+                data?.data?.type === "component") && (
+                <>
+                  <ContextMenuItem
+                    icon={Ungroup}
+                    label="Ungroup"
+                    shortcut="^⇧G"
+                    onClick={() => actions.ungroup?.()}
+                  />
+                  <Divider />
+                </>
+              )}
               <ContextMenuItem
                 icon={Play}
                 label="Execute from here"
@@ -663,11 +677,24 @@ const ContextMenu = ({
                 {data?.nodes?.length} items selected
               </div>
               <Divider />
+              {/* Ungroup if selection has components (simplified: just show if action available) */}
               <ContextMenuItem
                 icon={Box}
                 label="Group Selection"
                 shortcut="^G"
                 onClick={actions.group}
+              />
+              <ContextMenuItem
+                icon={Ungroup}
+                label="Ungroup"
+                shortcut="^⇧G"
+                onClick={() => actions.ungroup?.()}
+              />
+              <ContextMenuItem
+                icon={Ungroup}
+                label="Ungroup"
+                shortcut="^⇧G"
+                onClick={() => actions.ungroup?.()}
               />
               <ContextMenuItem
                 icon={Copy}

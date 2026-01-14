@@ -12,6 +12,7 @@ export const NODE_STATES = {
   ERROR: "error",
   WARNING: "warning",
   SKIPPED: "skipped",
+  PICKING: "picking",
 };
 
 export const PROFESSIONAL_COLORS = {
@@ -21,6 +22,15 @@ export const PROFESSIONAL_COLORS = {
     text: "var(--label-primary)",
     shadow: "0 1px 2px rgba(0,0,0,0.05)",
     borderWidth: "1px",
+  },
+  [NODE_STATES.PICKING]: {
+    background: "#f0f9ff", // sky-50
+    border: "#0ea5e9", // sky-500
+    text: "#0369a1", // sky-700
+    shadow: "0 0 15px rgba(14,165,233,0.3)",
+    animate: true,
+    borderWidth: "2px",
+    customClass: "animate-pulse ring-2 ring-sky-400",
   },
   [NODE_STATES.EXECUTING]: {
     background: "#eff6ff", // blue-50

@@ -23,6 +23,7 @@ import i18n, { middleware as i18nMiddleware } from './config/i18n.js';
 import apiRouter from './routes/api.router.js';
 import mockRouter from './routes/mock.router.js';
 import projectRouter from './routes/project.router.js';
+import aiRouter from './routes/ai.routes.js'; // AI Mock Routes
 
 const app = express();
 const server = createServer(app);
@@ -88,6 +89,9 @@ app.use('/api', mockRouter);
 // Project and Flow management routes
 // Project and Flow management routes
 app.use('/api', projectRouter);
+
+// AI & Copilot routes (Mocks)
+app.use('/api/ai', aiRouter);
 
 // --- STATIC FILES SERVING (Production) ---
 const publicPath = path.join(__dirname, 'public');

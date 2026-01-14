@@ -8,20 +8,32 @@ const CreationModal = ({
   onConfirm,
   placeholder = "Enter name...",
 }) => {
+  const [mode, setMode] = useState("standard"); // standard | ai
   const [name, setName] = useState("");
+  const [prompt, setPrompt] = useState("");
   const inputRef = useRef(null);
 
   useEffect(() => {
     if (isOpen) {
       setName("");
+      setPrompt("");
+      setMode("standard");
       setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [isOpen]);
 
   const handleConfirm = () => {
-    if (name.trim()) {
-      onConfirm(name.trim());
-      onClose();
+    if (mode === "standard") {
+      if (name.trim()) {
+        onConfirm(name.trim());
+        onClose();
+      }
+    } else {
+      if (prompt.trim()) {
+        // Pass object for AI mode
+        onConfirm({ mode: "ai", prompt: prompt.trim() });
+        onClose();
+      }
     }
   };
 
@@ -74,22 +86,85 @@ const CreationModal = ({
           {title}
         </h3>
 
-        <input
-          ref={inputRef}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          style={{
-            background: "#111",
-            border: "1px solid #333",
-            color: "white",
-            padding: "10px 12px",
-            borderRadius: "6px",
-            outline: "none",
-            fontSize: "1rem",
-          }}
-        />
+        <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
+          <button
+            onClick={() => setMode("standard")}
+            style={{
+              flex: 1,
+              padding: "8px",
+              background: mode === "standard" ? "#2563eb" : "#333",
+              color: "white",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
+            }}
+          >
+            Standard
+          </button>
+          <button
+            onClick={() => setMode("ai")}
+            style={{
+              flex: 1,
+              padding: "8px",
+              background: mode === "ai" ? "#7c3aed" : "#333",
+              color: "white",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "6px",
+            }}
+          >
+            <span>✨</span> Generate with AI
+          </button>
+        </div>
+
+        {mode === "standard" ? (
+          <input
+            ref={inputRef}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={placeholder}
+            style={{
+              background: "#111",
+              border: "1px solid #333",
+              color: "white",
+              padding: "10px 12px",
+              borderRadius: "6px",
+              outline: "none",
+              fontSize: "1rem",
+            }}
+          />
+        ) : (
+          <textarea
+            ref={inputRef} // Reuse ref for focus
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleConfirm();
+              }
+              if (e.key === "Escape") onClose();
+            }}
+            placeholder="Describe your flow (e.g., 'Login to Facebook and post a status')..."
+            style={{
+              background: "#111",
+              border: "1px solid #333",
+              color: "white",
+              padding: "10px 12px",
+              borderRadius: "6px",
+              outline: "none",
+              fontSize: "0.9rem",
+              minHeight: "80px",
+              resize: "vertical",
+              fontFamily: "inherit",
+            }}
+          />
+        )}
 
         <div
           style={{
@@ -114,19 +189,30 @@ const CreationModal = ({
           </button>
           <button
             onClick={handleConfirm}
-            disabled={!name.trim()}
+            disabled={mode === "standard" ? !name.trim() : !prompt.trim()}
             style={{
-              background: "#2563eb",
+              background: mode === "ai" ? "#7c3aed" : "#2563eb",
               color: "white",
               border: "none",
               padding: "8px 20px",
               borderRadius: "6px",
               cursor: "pointer",
               fontWeight: "500",
-              opacity: name.trim() ? 1 : 0.5,
+              opacity: (mode === "standard" ? name.trim() : prompt.trim())
+                ? 1
+                : 0.5,
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
             }}
           >
-            Create
+            {mode === "ai" ? (
+              <>
+                <span>✨</span> Generate
+              </>
+            ) : (
+              "Create"
+            )}
           </button>
         </div>
       </div>

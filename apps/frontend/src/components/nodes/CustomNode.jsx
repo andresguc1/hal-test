@@ -31,6 +31,7 @@ function CustomNode({ data, selected }) {
   const isError = state === NODE_STATES.ERROR;
   const isRunning = state === NODE_STATES.EXECUTING;
   const isSuccess = state === NODE_STATES.SUCCESS;
+  const isPicking = state === NODE_STATES.PICKING;
 
   const containerClasses = cn(
     "relative min-w-[240px] rounded-xl overflow-hidden",
@@ -53,6 +54,10 @@ function CustomNode({ data, selected }) {
     // Running State
     isRunning &&
       "border-blue-500/50 shadow-[0_0_15px_-3px_rgba(59,130,246,0.3)]",
+
+    // Picking/Binding State
+    isPicking &&
+      "ring-2 ring-sky-400 bg-sky-500/10 border-sky-500/50 shadow-[0_0_15px_-3px_rgba(14,165,233,0.4)] cursor-crosshair",
   );
 
   return (
@@ -66,7 +71,13 @@ function CustomNode({ data, selected }) {
       {/* 4. Top Color Strip */}
       <div
         className="h-1 w-full opacity-80"
-        style={{ backgroundColor: isError ? "#ef4444" : categoryColor }}
+        style={{
+          backgroundColor: isError
+            ? "#ef4444"
+            : isPicking
+              ? "#0ea5e9"
+              : categoryColor,
+        }}
       />
 
       {/* 5. Main Content Area */}
@@ -75,15 +86,29 @@ function CustomNode({ data, selected }) {
         <div
           className="w-12 h-12 rounded-lg flex items-center justify-center shrink-0 bg-[var(--bg-canvas)] border border-[var(--border-ui)] text-[var(--text-muted)] backdrop-blur-sm shadow-inner"
           style={{
-            color: isError ? "#ef4444" : isRunning ? "#60a5fa" : categoryColor,
+            color: isError
+              ? "#ef4444"
+              : isRunning
+                ? "#60a5fa"
+                : isPicking
+                  ? "#0ea5e9"
+                  : categoryColor,
           }}
         >
           {isRunning ? (
             <Loader2 size={24} className="animate-spin" />
-          ) : isError ? (
+          ) : isPicking ? (
+            <div className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-20"></div>
+          ) : null}
+
+          {isRunning ? null : isError ? ( // Loader already rendered above
             <AlertCircle size={24} />
           ) : (
-            <NodeIconComponent size={24} strokeWidth={1.5} />
+            <NodeIconComponent
+              size={24}
+              strokeWidth={1.5}
+              className={isPicking ? "animate-pulse" : ""}
+            />
           )}
         </div>
 
@@ -91,7 +116,7 @@ function CustomNode({ data, selected }) {
         <div className="flex flex-col min-w-0 flex-1">
           {/* Category Label (Small Caps) */}
           <span className="text-[9px] font-bold uppercase tracking-widest text-[var(--text-muted)] mb-0.5 opacity-70">
-            {categoryKey.replace(/_/g, " ")}
+            {isPicking ? "BINDING MODE" : categoryKey.replace(/_/g, " ")}
           </span>
 
           {/* Node Title */}
@@ -99,6 +124,7 @@ function CustomNode({ data, selected }) {
             className={cn(
               "text-sm font-bold text-[var(--text-main)] leading-tight truncate pr-2",
               isError && "text-red-400",
+              isPicking && "text-sky-400",
             )}
           >
             {t(`nodes.labels.${data?.type}`) || data?.label || "Node"}

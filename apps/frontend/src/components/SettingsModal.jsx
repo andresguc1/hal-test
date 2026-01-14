@@ -39,7 +39,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/useToast";
 import providersData from "@/data/providers.json";
 
 /**
@@ -52,6 +52,7 @@ export default function SettingsModal({
   initialTab = "general",
 }) {
   const { i18n } = useTranslation();
+  const toast = useToast();
   const { theme, setTheme } = useTheme();
   const [activeTab, setActiveTab] = useState(initialTab);
 
@@ -115,9 +116,7 @@ export default function SettingsModal({
     localStorage.setItem("haltest_api_keys", JSON.stringify(aiConfig.keys));
 
     // Notify/Toast
-    toast.success("AI Configuration Saved", {
-      description: "Settings are now active",
-    });
+    toast.success("AI Configuration Saved - Settings are now active");
 
     // Notify other components (like SettingsContext/Toolbox) immediately
     window.dispatchEvent(new Event("hal_ai_config_updated"));
@@ -169,10 +168,9 @@ export default function SettingsModal({
 
       if (response.ok) {
         setTestStatus("success");
-        toast.success("System Online", {
-          description: `Successfully connected to ${activeProv?.name || provider}.`,
-          duration: 3000,
-        });
+        toast.success(
+          `System Online: Successfully connected to ${activeProv?.name || provider}.`,
+        );
       } else {
         setTestStatus("error");
         // Parse common errors
@@ -199,10 +197,7 @@ export default function SettingsModal({
       setTestStatus("error");
       // Clean up error message if it's an object or raw error
       const msg = error.message || "Connection failed";
-      toast.error("Auth Failed", {
-        description: msg,
-        duration: 4000,
-      });
+      toast.error(`Auth Failed: ${msg}`);
     } finally {
       setIsTesting(false);
     }

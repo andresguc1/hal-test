@@ -3,11 +3,11 @@ import { io } from "socket.io-client";
 
 const SOCKET_URL =
   window.location.hostname === "localhost" ||
-  window.location.hostname === "127.0.0.1"
+    window.location.hostname === "127.0.0.1"
     ? "http://127.0.0.1:2001"
     : window.location.origin;
 
-export const useHaltestSocket = (setNodes, onElementPicked) => {
+export const useHaltestSocket = (setNodes, setEdges, onElementPicked) => {
   const socketRef = useRef(null);
   const onElementPickedRef = useRef(onElementPicked);
 
@@ -58,6 +58,7 @@ export const useHaltestSocket = (setNodes, onElementPicked) => {
       const { stepId, status, error } = data;
       console.log(`Haltest Socket: ⚡ Event [${stepId}] -> ${status}`);
 
+      // 1. Update Node Status
       setNodes((nds) => {
         if (!Array.isArray(nds)) return nds;
         return nds.map((node) => {
@@ -74,6 +75,25 @@ export const useHaltestSocket = (setNodes, onElementPicked) => {
           return node;
         });
       });
+
+      // 2. Update Outgoing Edges Status (Visual Feedback on Lines)
+      if (setEdges) {
+        setEdges((eds) => {
+          return eds.map((edge) => {
+            if (edge.source === stepId) {
+              return {
+                ...edge,
+                animated: status === "running", // Native ReactFlow animation support
+                data: {
+                  ...edge.data,
+                  executionState: status, // "running", "success", "error"
+                },
+              };
+            }
+            return edge;
+          });
+        });
+      }
     });
 
     socket.on("disconnect", (reason) => {
@@ -119,7 +139,7 @@ export const useHaltestSocket = (setNodes, onElementPicked) => {
         socket.disconnect();
       }
     };
-  }, [setNodes]); // Removed onElementPicked from dependencies to avoid reconnections
+  }, [setNodes, setEdges]); // Removed onElementPicked from dependencies to avoid reconnections
 
   return socketRef.current;
 };

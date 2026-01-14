@@ -122,6 +122,7 @@ export const HalToaster = ({ offsetRight = 0 }) => {
       expand={true}
       richColors
       theme="system"
+      position="top-center" // Force top-center for better visibility
       style={{
         marginRight: offsetRight,
         transition: "margin-right 0.3s ease-in-out",

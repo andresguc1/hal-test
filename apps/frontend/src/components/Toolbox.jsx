@@ -18,7 +18,7 @@ import { NODE_CATEGORIES, CATEGORY_STYLES } from "@/config/nodeConstants";
 import { useSettings } from "@/context/SettingsContext";
 import { useReactFlow } from "@xyflow/react";
 import { v4 as uuidv4 } from "uuid";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/useToast";
 
 const ToolboxItem = ({ label, nodeId, color, onAdd }) => {
   // Select styles based on color theme, fallback to slate
@@ -278,6 +278,7 @@ const ToolboxCategory = ({
 
 export default function ToolboxPanel({ addNode }) {
   const { t } = useTranslation();
+  const toast = useToast();
   const { aiConfig, openSettings } = useSettings();
   const { addNodes, addEdges } = useReactFlow();
 
@@ -326,7 +327,7 @@ export default function ToolboxPanel({ addNode }) {
       const result = data.data; // { action, message, flow_json }
 
       if (result.action === "text_response") {
-        toast.info("HAL-9001 says:", { description: result.message });
+        toast.info(`HAL-9001 says: ${result.message}`);
         return;
       }
 
@@ -334,7 +335,7 @@ export default function ToolboxPanel({ addNode }) {
         const { nodes, edges } = result.flow_json;
 
         if (!nodes || nodes.length === 0) {
-          toast.warning(result.message || "No flow generated.");
+          toast.info(result.message || "No flow generated.");
           return;
         }
 
@@ -379,13 +380,12 @@ export default function ToolboxPanel({ addNode }) {
         addNodes(hydratedNodes);
         addEdges(hydratedEdges);
 
-        toast.success("Flow Generated!", {
-          description:
-            result.message || `Created ${hydratedNodes.length} nodes.`,
-        });
+        toast.success(
+          `Flow Generated! ${result.message || `Created ${hydratedNodes.length} nodes.`}`,
+        );
       }
     } catch (error) {
-      toast.error("HAL Failed", { description: error.message });
+      toast.error(`HAL Failed: ${error.message}`);
       setChatInput(originalText); // Restore text on error
     } finally {
       setIsGenerating(false);

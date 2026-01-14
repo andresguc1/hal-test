@@ -46,12 +46,15 @@ const AbyssNode = ({ data, selected, type }) => {
 
   // 5. Smart Label Logic
   const smartLabel = getSmartLabel(nodeKey, data.configuration);
-  const displayLabel = smartLabel || data.label || safeConfig.label;
+  // PRIORITY: Custom User Name > Smart Auto-Label > Legacy/Default
+  const displayLabel =
+    data.customLabel || smartLabel || data.label || safeConfig.label;
 
   // 6. Styles & Status
 
   const showInputs = data.configuration?.showInputs !== false;
-  const showOutputs = data.configuration?.showOutputs !== false;
+  const showOutputs =
+    data.configuration?.showOutputs !== false && !safeConfig.terminal;
 
   const { color: statusColor, shadow: statusShadow } =
     data.state === "success" || data.state === "error"
@@ -87,6 +90,10 @@ const AbyssNode = ({ data, selected, type }) => {
         data.state === "running" &&
           `ring-4 ring-${colorKey}-500/20 animate-pulse`,
 
+        // Picking Animation (Targeting)
+        data.state === "picking" &&
+          `ring-4 ring-sky-500/50 animate-pulse border-sky-400 z-50`,
+
         // Selection
         selected && statusColor ? "scale-[1.05] z-50 border-[3px]" : "",
         selected && !statusColor ? themeParams.selected : "",
@@ -108,6 +115,14 @@ const AbyssNode = ({ data, selected, type }) => {
 
       {/* HEADER TINT (Subtle overlay for depth) */}
       <div className="absolute inset-x-0 top-0 h-9 bg-black/10 rounded-t-lg border-b border-black/5 dark:border-white/10" />
+
+      {/* Picking Indicator Badge */}
+      {data.state === "picking" && (
+        <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-sky-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg border border-white animate-bounce z-50 whitespace-nowrap flex items-center gap-1">
+          <MousePointer size={10} />
+          PICKING TARGET
+        </div>
+      )}
 
       {/* STATUS LED & ICONS */}
       <div className="absolute -top-2 -right-2 z-20 flex gap-1.5 items-center">
