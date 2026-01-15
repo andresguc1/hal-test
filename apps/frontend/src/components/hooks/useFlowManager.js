@@ -8,10 +8,10 @@ import {
   applyEdgeChanges,
   useReactFlow,
 } from "@xyflow/react";
+import { useQueryClient } from "@tanstack/react-query";
 import { v4 as uuidv4 } from "uuid";
 import {
   NODE_LABELS,
-  STORAGE_KEYS,
   SCREENSHOT_RECOMMENDATIONS,
   VISUAL_CHANGE_NODES,
 } from "./constants";
@@ -24,6 +24,45 @@ import screenshotManager from "../../utils/ScreenshotManager";
 import { api } from "../../utils/api";
 import { useToast } from "../../hooks/useToast"; // Use custom hook instead of direct sonner
 import { useTranslation } from "react-i18next";
+
+// NEW: Orphan Detection Helper
+const detectOrphans = (nodes, edges) => {
+  if (!nodes || nodes.length === 0) return [];
+
+  // Find all Launch Browser nodes (Roots)
+  const roots = nodes.filter((n) => n.type === "launch_browser");
+  if (roots.length === 0) {
+    // If no launch browser, techincally all are orphans unless it's a component
+    // But for now, let's just return all non-roots
+    return nodes.map((n) => n.id);
+  }
+
+  const visited = new Set();
+  const queue = [...roots.map((n) => n.id)];
+  roots.forEach((n) => visited.add(n.id));
+
+  // Build Adjacency Map
+  const adj = {};
+  edges.forEach((e) => {
+    if (!adj[e.source]) adj[e.source] = [];
+    adj[e.source].push(e.target);
+  });
+
+  // BFS
+  while (queue.length > 0) {
+    const current = queue.shift();
+    const neighbors = adj[current] || [];
+    neighbors.forEach((neighborId) => {
+      if (!visited.has(neighborId)) {
+        visited.add(neighborId);
+        queue.push(neighborId);
+      }
+    });
+  }
+
+  // Orphans are nodes NOT visited
+  return nodes.filter((n) => !visited.has(n.id)).map((n) => n.id);
+};
 
 const MAX_RETRIES = 3;
 const RETRY_BASE_MS = 1000;
@@ -94,6 +133,7 @@ import { projectManager } from "../../utils/ProjectManager";
 import { useSettings } from "../../context/SettingsContext"; // Assuming this is available
 
 export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
+  const queryClient = useQueryClient();
   const { t } = useTranslation();
   const toast = useToast(); // Custom HAL Toast
   const { getViewport } = useReactFlow();
@@ -113,6 +153,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
 
     nodesRef.current = resolvedNodes;
     setNodesState(resolvedNodes);
+    setHasUnsavedChanges(true); // Mark as dirty on ANY node change
   }, []);
 
   const setEdges = useCallback((newEdges) => {
@@ -121,6 +162,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
 
     edgesRef.current = resolvedEdges;
     setEdgesState(resolvedEdges);
+    setHasUnsavedChanges(true); // Mark as dirty on ANY edge change
   }, []);
 
   const [, setSelectedNodeId] = useState(null);
@@ -152,7 +194,14 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
   const executionAbortController = useRef(null);
   const lastLoadedFlowId = useRef(null); // Ref for preventing race conditions
   const [changeCounter, setChangeCounter] = useState(0); // For auto-save versioning logic
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false); // NEW: Unsaved Indicator
   const { autoSaveEnabled, setAutoSaveEnabled } = useSettings();
+
+  // NEW: Read-Only Mode derived from execution status
+  const isReadOnly = useMemo(
+    () => apiStatus.state === "running",
+    [apiStatus.state],
+  );
 
   // Load flow data
   useEffect(() => {
@@ -179,6 +228,20 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
             );
             // History reset on flow switch
             setHistory({ past: [], future: [] });
+            setHasUnsavedChanges(false); // Reset on load
+
+            // NEW: Check for Orphans on Load
+            const orphanIds = detectOrphans(flow.nodes || [], flow.edges || []);
+            if (orphanIds.length > 0) {
+              // Optional: visual indication or toast
+              // toast.warning(t('warnings.orphans_detected', { count: orphanIds.length }));
+              // We could also mark them visually, but let's just log for now
+              logger.warn(
+                "Orphan nodes detected",
+                { count: orphanIds.length },
+                "useFlowManager",
+              );
+            }
 
             logger.info("Flow loaded", { flowId: flow.id }, "useFlowManager");
           }
@@ -189,7 +252,39 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
     };
 
     loadFlowData();
-  }, [currentProject, currentFlowId, setNodes, setEdges]);
+  }, [currentProject, currentProject?.id, currentFlowId, setNodes, setEdges]);
+
+  // MANIFIESTO: Bidirectional Sync (Footer -> Canvas)
+  // If a flow is renamed in the Footer (Global State), update the Node on Canvas
+  useEffect(() => {
+    if (!currentProject?.flows) return;
+
+    setNodes((currentNodes) => {
+      let hasChanges = false;
+      const newNodes = currentNodes.map((n) => {
+        if (n.type === "component" && n.data?.flowId) {
+          const flowRecord = currentProject.flows.find(
+            (f) => f.id === n.data.flowId,
+          );
+          // If flow exists and name is different, sync it
+          if (flowRecord && flowRecord.name !== n.data.label) {
+            hasChanges = true;
+            return {
+              ...n,
+              data: {
+                ...n.data,
+                label: flowRecord.name,
+                customLabel: flowRecord.name,
+              },
+            };
+          }
+        }
+        return n;
+      });
+
+      return hasChanges ? newNodes : currentNodes;
+    });
+  }, [currentProject?.flows, setNodes]);
 
   // ========================================
   // COMPOSITION: NAVIGATION (DIVE-IN)
@@ -279,9 +374,9 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
 
         if (!silent) {
           setApiStatus({
-            state: "success",
             message: "✓ Flujo guardado correctamente",
           });
+          setHasUnsavedChanges(false); // Clear dirty flag
         }
 
         // Increment change counter for versioning
@@ -547,11 +642,24 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
   );
 
   const updateNodeConfiguration = useCallback(
-    (nodeId, newConfig) => {
+    async (nodeId, newConfig) => {
       saveToHistory();
+
+      let targetFlowId = null;
+      let newName = null;
+
       setNodes((nds) =>
         nds.map((n) => {
           if (n.id !== nodeId) return n;
+
+          // Check if this is a component rename
+          if (n.type === "component" || n.data.type === "component") {
+            const proposedName = newConfig.customLabel || newConfig.label;
+            if (proposedName && proposedName !== n.data.label) {
+              targetFlowId = n.data.flowId;
+              newName = proposedName;
+            }
+          }
 
           const updated = {
             ...n,
@@ -583,8 +691,38 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
           return updated;
         }),
       );
+
+      // SYNC COMPONENT NAME TO BACKEND
+      if (targetFlowId && newName && currentProject?.id) {
+        try {
+          // 1. Update Backend
+          await projectManager.updateFlow(currentProject.id, targetFlowId, {
+            name: newName,
+          });
+
+          // 2. Optimistic UI Update (Menu)
+          queryClient.setQueryData(["project", currentProject.id], (old) => {
+            if (!old) return old;
+            return {
+              ...old,
+              flows: old.flows.map((f) =>
+                f.id === targetFlowId ? { ...f, name: newName } : f,
+              ),
+            };
+          });
+          console.log(`[FlowManager] Synced component rename: ${newName}`);
+        } catch (err) {
+          console.error("Failed to sync component name to backend", err);
+          toast.error(
+            t(
+              "errors.rename_failed",
+              "Failed to updates component name on server",
+            ),
+          );
+        }
+      }
     },
-    [saveToHistory, setNodes],
+    [saveToHistory, setNodes, currentProject, queryClient, t, toast],
   );
 
   // ========================================
@@ -759,7 +897,6 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
 
     // 3. Center of the group (for the new node)
 
-
     // 4. Extract Sub-Flow Logic
     const selectedNodeIds = new Set(selectedNodes.map((n) => n.id));
 
@@ -863,6 +1000,15 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
       if (!newFlow || !newFlow.id)
         throw new Error("Failed to create component flow");
 
+      // REFRESH PROJECT DATA (Optimistic Update for Instant UI)
+      queryClient.setQueryData(["project", currentProject.id], (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          flows: [...(old.flows || []), newFlow],
+        };
+      });
+
       // 6. Create The Component Node in Main Flow
       const componentId = generateNodeId();
       const componentNode = {
@@ -918,7 +1064,16 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
 
       setNodes(finalNodes);
       setEdges(finalEdges);
-      setSelectedNodeId(componentId);
+
+      // AUTO-FOCUS: Select Node and Open Inspector
+      setTimeout(() => {
+        setSelectedNodeId(componentId);
+        setSelectedAction({
+          nodeId: componentId,
+          type: "component",
+          data: componentNode.data,
+        });
+      }, 50);
 
       toast.success(t("groups.success", "Grouped into Component"));
     } catch (error) {
@@ -933,7 +1088,9 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
     setEdges,
     t,
     setSelectedNodeId,
+    setSelectedAction,
     toast,
+    queryClient,
   ]);
 
   // ========================================
@@ -1895,6 +2052,8 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
       executeStep,
       resetNodeStates,
       activeBrowserId, // Added dependency
+      updateNodeState,
+      validateFlowStructure
     ],
   );
 
@@ -1918,7 +2077,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
       console.error("Failed to stop session:", error);
       toast.error("Failed to close browser session");
     }
-  }, [activeBrowserId, setApiStatus]);
+  }, [activeBrowserId, setApiStatus, toast]);
 
   // ========================================
   // Export and Import Flow Functions
@@ -2593,5 +2752,12 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
     PROFESSIONAL_COLORS,
     activeBrowserId,
     stopSession,
+
+    // NEW EXPORTS
+
+    isReadOnly,
+    hasUnsavedChanges,
+    detectOrphans: (n, e) => detectOrphans(n || nodes, e || edges),
+    isConfigurationPanelVisible: !!selectedAction, // Derived visibility
   };
 };

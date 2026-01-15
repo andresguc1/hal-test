@@ -92,17 +92,9 @@ class BrowserManager {
             const stabilityArgs = [
                 '--disable-features=CDPScreenshotNewSurface',
                 '--disable-gpu', // Architect Recommendation for Linux
+                '--no-sandbox', // Critical for many server environments
+                '--disable-dev-shm-usage', // Use /tmp instead of /dev/shm
             ];
-
-            if (headless) {
-                stabilityArgs.push('--disable-dev-shm-usage', '--no-sandbox');
-            } else {
-                // Headful: Clean conflicting flags
-                launchArgs = launchArgs.filter(
-                    (arg) =>
-                        !arg.includes('--no-sandbox') && !arg.includes('--disable-dev-shm-usage'),
-                );
-            }
 
             launchArgs.push(...stabilityArgs);
         }

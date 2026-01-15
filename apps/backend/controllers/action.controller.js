@@ -15,6 +15,7 @@ import * as fsp from 'fs/promises';
 // import * as fs from 'fs';
 import * as path from 'path';
 import { executionLogger } from '../services/ExecutionLogger.js';
+import { STORAGE_RUNS_DIR } from '../config/paths.js';
 
 // Create Variable Manager instance
 const variableManager = new VariableManager();
@@ -235,7 +236,7 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
         let screenshotPath = null;
         if (opts.takeScreenshot && page && !page.isClosed() && runId && nodeId) {
             try {
-                const screenshotsDir = path.resolve(`storage/runs/${runId}`);
+                const screenshotsDir = path.join(STORAGE_RUNS_DIR, runId);
                 await fsp.mkdir(screenshotsDir, { recursive: true });
                 const filename = `step_${Date.now()}_${nodeId}.png`;
                 const fullPath = path.join(screenshotsDir, filename);
@@ -425,7 +426,7 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
             try {
                 // Use structured storage: storage/runs/{runId}/error_{nodeId}_{timestamp}.png
                 const runFolder = runId || 'orphan';
-                const screenshotsDir = path.resolve(`storage/runs/${runFolder}`);
+                const screenshotsDir = path.join(STORAGE_RUNS_DIR, runFolder);
                 await fsp.mkdir(screenshotsDir, { recursive: true });
                 const filename = `error_${Date.now()}_${nodeId || 'unknown'}.png`;
                 const fullPath = path.join(screenshotsDir, filename);
@@ -618,7 +619,7 @@ export const openUrlAction = async (req, res) => {
         const { takeScreenshot } = req.body;
         if (takeScreenshot && page && !page.isClosed() && runId && nodeId) {
             try {
-                const screenshotsDir = path.resolve(`storage/runs/${runId}`);
+                const screenshotsDir = path.join(STORAGE_RUNS_DIR, runId);
                 await fsp.mkdir(screenshotsDir, { recursive: true });
                 const filename = `step_${Date.now()}_${nodeId}.png`;
                 const fullPath = path.join(screenshotsDir, filename);

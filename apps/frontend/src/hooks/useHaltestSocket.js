@@ -3,25 +3,24 @@ import { io } from "socket.io-client";
 
 const SOCKET_URL =
   window.location.hostname === "localhost" ||
-    window.location.hostname === "127.0.0.1"
+  window.location.hostname === "127.0.0.1"
     ? "http://127.0.0.1:2001"
     : window.location.origin;
 
 export const useHaltestSocket = (setNodes, setEdges, onElementPicked) => {
   const socketRef = useRef(null);
   const onElementPickedRef = useRef(onElementPicked);
+  const setNodesRef = useRef(setNodes);
+  const setEdgesRef = useRef(setEdges);
 
-  // Update ref when callback changes
+  // Update refs when props change (always keep latest)
   useEffect(() => {
     onElementPickedRef.current = onElementPicked;
-  }, [onElementPicked]);
+    setNodesRef.current = setNodes;
+    setEdgesRef.current = setEdges;
+  }, [onElementPicked, setNodes, setEdges]);
 
   useEffect(() => {
-    if (!setNodes || typeof setNodes !== "function") {
-      console.error("Haltest Socket: setNodes is missing or invalid");
-      return;
-    }
-
     console.log("Haltest Socket: 🔄 Connecting to", SOCKET_URL);
 
     // Initialize connection
@@ -47,46 +46,42 @@ export const useHaltestSocket = (setNodes, setEdges, onElementPicked) => {
     });
 
     socket.on("execution-status", (data) => {
-      if (!data || !data.stepId) {
-        console.warn(
-          "Haltest Socket: Received malformed execution-status event",
-          data,
-        );
-        return;
-      }
+      if (!data || !data.stepId) return;
 
       const { stepId, status, error } = data;
       console.log(`Haltest Socket: ⚡ Event [${stepId}] -> ${status}`);
 
-      // 1. Update Node Status
-      setNodes((nds) => {
-        if (!Array.isArray(nds)) return nds;
-        return nds.map((node) => {
-          if (node.id === stepId) {
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                state: status,
-                error: error || node.data.error,
-              },
-            };
-          }
-          return node;
+      // 1. Update Node Status using REF
+      if (setNodesRef.current) {
+        setNodesRef.current((nds) => {
+          if (!Array.isArray(nds)) return nds;
+          return nds.map((node) => {
+            if (node.id === stepId) {
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  state: status,
+                  error: error || node.data.error,
+                },
+              };
+            }
+            return node;
+          });
         });
-      });
+      }
 
-      // 2. Update Outgoing Edges Status (Visual Feedback on Lines)
-      if (setEdges) {
-        setEdges((eds) => {
+      // 2. Update Outgoing Edges using REF
+      if (setEdgesRef.current) {
+        setEdgesRef.current((eds) => {
           return eds.map((edge) => {
             if (edge.source === stepId) {
               return {
                 ...edge,
-                animated: status === "running", // Native ReactFlow animation support
+                animated: status === "running",
                 data: {
                   ...edge.data,
-                  executionState: status, // "running", "success", "error"
+                  executionState: status,
                 },
               };
             }
@@ -108,28 +103,29 @@ export const useHaltestSocket = (setNodes, setEdges, onElementPicked) => {
       }
     });
 
-    // Listen for Screenshot Ready events (Flight Recorder)
+    // Listen for Screenshot Ready events
     socket.on("step_screenshot_ready", (data) => {
       const { nodeId, screenshotPath } = data;
-
-      setNodes((nds) => {
-        if (!Array.isArray(nds)) return nds;
-        return nds.map((node) => {
-          if (node.id === nodeId) {
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                result: {
-                  ...(node.data.result || {}),
-                  screenshot: screenshotPath,
+      if (setNodesRef.current) {
+        setNodesRef.current((nds) => {
+          if (!Array.isArray(nds)) return nds;
+          return nds.map((node) => {
+            if (node.id === nodeId) {
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  result: {
+                    ...(node.data.result || {}),
+                    screenshot: screenshotPath,
+                  },
                 },
-              },
-            };
-          }
-          return node;
+              };
+            }
+            return node;
+          });
         });
-      });
+      }
     });
 
     // Cleanup on unmount
@@ -139,7 +135,7 @@ export const useHaltestSocket = (setNodes, setEdges, onElementPicked) => {
         socket.disconnect();
       }
     };
-  }, [setNodes, setEdges]); // Removed onElementPicked from dependencies to avoid reconnections
+  }, []); // Empty dependency array = connect ONCE
 
   return socketRef.current;
 };

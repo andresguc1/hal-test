@@ -6,8 +6,9 @@
 import * as fs from 'fs';
 import * as fsp from 'fs/promises';
 import * as path from 'path';
+import { STORAGE_RUNS_DIR } from '../config/paths.js';
 
-const STORAGE_RUNS_DIR = path.resolve('storage/runs');
+// Storage runs directory is handled via paths.js
 const TMP_DIR = '/tmp';
 const MAX_AGE_HOURS = 24;
 const MAX_SIZE_MB = 100;

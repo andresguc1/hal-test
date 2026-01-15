@@ -4,14 +4,12 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import fs from 'fs';
 import { createServer } from 'http';
 import { init as initSocket } from './socket.js';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { storageCleanupService } from './services/StorageCleanupService.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { STORAGE_DIR, PUBLIC_DIR } from './config/paths.js';
 
 // Express Modules and Middlewares
 import { apiLimiter, helmetMiddleware } from './middlewares/security.js';
@@ -49,7 +47,7 @@ app.use(express.urlencoded({ extended: true }));
 // Screenshots are stored at: storage/runs/{runId}/{filename}.png
 // Accessible via: http://localhost:2001/storage/runs/{runId}/{filename}.png
 // Accessible via: http://localhost:2001/storage/runs/{runId}/{filename}.png
-app.use('/storage', express.static(path.join(__dirname, 'storage')));
+app.use('/storage', express.static(STORAGE_DIR));
 
 // Integration of i18next middleware for localized responses
 app.use(i18nMiddleware.handle(i18n));
@@ -94,10 +92,10 @@ app.use('/api', projectRouter);
 app.use('/api/ai', aiRouter);
 
 // --- STATIC FILES SERVING (Production) ---
-const publicPath = path.join(__dirname, 'public');
+// Using PUBLIC_DIR from paths.js
 
 // 1. Serve Frontend App at /app
-app.use('/app', express.static(path.join(publicPath, 'app')));
+app.use('/app', express.static(path.join(PUBLIC_DIR, 'app')));
 
 // Explicitly handle /app to redirect to /app/ (trailing slash) to ensure relative assets work
 app.get('/app', (req, res) => {
@@ -106,18 +104,18 @@ app.get('/app', (req, res) => {
 
 // SPA Fallback for any /app/* request not caught by static middleware
 app.get(/\/app\/?(?!api).*/, (req, res) => {
-    res.sendFile(path.join(publicPath, 'app', 'index.html'));
+    res.sendFile(path.join(PUBLIC_DIR, 'app', 'index.html'));
 });
 
 // 2. Serve Landing Page at / (Root)
-app.use('/', express.static(path.join(publicPath, 'web')));
+app.use('/', express.static(path.join(PUBLIC_DIR, 'web')));
 app.get(/.*/, (req, res, next) => {
     // If it's an API call that wasn't handled, let it pass to 404 handler
     if (req.path.startsWith('/api') || req.path.startsWith('/storage')) {
         return next();
     }
     // Otherwise serve Landing Page (SPA support)
-    res.sendFile(path.join(publicPath, 'web', 'index.html'), (err) => {
+    res.sendFile(path.join(PUBLIC_DIR, 'web', 'index.html'), (err) => {
         if (err) next(); // If no index.html (e.g. dev mode), pass to 404
     });
 });
@@ -178,6 +176,13 @@ import { initDb } from './database/init.js';
 
 const startServer = async () => {
     await initDb();
+
+    // Ensure storage directories exist
+    if (!fs.existsSync(STORAGE_DIR)) {
+        fs.mkdirSync(STORAGE_DIR, { recursive: true });
+        console.log(`[INIT] Created storage directory: ${STORAGE_DIR}`);
+    }
+
     await storageCleanupService.run(); // Auto-cleanup old runs and /tmp
     server.listen(PORT, '0.0.0.0', () => {
         const baseUrl = `http://localhost:${PORT}`;

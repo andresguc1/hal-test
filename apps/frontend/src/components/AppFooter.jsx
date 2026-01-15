@@ -51,6 +51,7 @@ const SelectorButton = ({
   subLabel,
   onClick,
   isActive,
+  hasUnsavedChanges,
 }) => (
   <button
     onClick={onClick}
@@ -59,6 +60,10 @@ const SelectorButton = ({
       isActive && "bg-white/5",
     )}
   >
+    {/* Unsaved Indicator */}
+    {hasUnsavedChanges && (
+      <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)] animate-pulse" />
+    )}
     <div
       className={cn(
         "p-1.5 rounded-full transition-colors",
@@ -335,6 +340,7 @@ function AppFooter({
   onSave,
   onShowImport,
   onShowExport,
+  hasUnsavedChanges,
 }) {
   const [activeMenu, setActiveMenu] = useState(null); // 'project' | 'flow' | null
   const containerRef = useRef(null);
@@ -454,6 +460,7 @@ function AppFooter({
             subLabel={flowName}
             isActive={activeMenu === "flow"}
             onClick={() => toggleMenu("flow")}
+            hasUnsavedChanges={hasUnsavedChanges}
           />
         </div>
       </div>

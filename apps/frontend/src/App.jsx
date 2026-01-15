@@ -228,6 +228,9 @@ export default function App() {
     updateNodeState,
     activeBrowserId,
     stopSession,
+    // NEW
+    hasUnsavedChanges,
+    detectOrphans,
   } = useFlowManager(currentProject, currentFlowId, switchFlow);
 
   // Element Picker Callback (Previously handleElementPicked was here, we will replace the mess)
@@ -576,6 +579,20 @@ export default function App() {
         if (importData.mode === "file" && importData.content) {
           const flowData = JSON.parse(importData.content);
 
+          // VERSION CHECK
+          if (flowData.meta && flowData.meta.version) {
+            const version = flowData.meta.version;
+            if (version.startsWith("1.")) {
+              toast("Importing legacy flow (v1.x)", { icon: "ℹ️" });
+            }
+          }
+
+          // ORPHAN DETECTION (Pre-checks)
+          const orphans = detectOrphans(
+            flowData.nodes || [],
+            flowData.edges || [],
+          );
+
           // Restore state
           setNodes(flowData.nodes || []);
           setEdges(flowData.edges || []);
@@ -586,8 +603,22 @@ export default function App() {
             setTimeout(() => fitView({ duration: 800 }), 100);
           }
 
-          toast.success(`✓ ${t("common.flow_import_success")}`);
+          if (orphans.length > 0) {
+            toast.warning(
+              `Imported with warnings: ${orphans.length} orphan nodes detected.`,
+            );
+          } else {
+            toast.success(`✓ ${t("common.flow_import_success")}`);
+          }
+
           setIsImportDialogOpen(false);
+          // Reset unsaved changes since we just loaded a fresh flow?
+          // Actually, loading a flow IS a change unless we consider it "saved" immediately.
+          // Usually, opening a file means it is saved content.
+          // useFlowManager handles this in setNodes? No, setNodes sets it to true.
+          // We might want to force reset it only if it's a full replace.
+          // But sticking to default behavior (dirty) is safer unless we sync with backend immediately.
+          // For now, let it be dirty until user hits Save (which persists to backend).
         }
         // Handle Directory Import (Server-Side Result)
         else if (importData.result) {
@@ -602,7 +633,7 @@ export default function App() {
         toast.error(`Import error: ${error.message}`);
       }
     },
-    [setNodes, setEdges, setViewport, fitView, toast, t],
+    [setNodes, setEdges, setViewport, fitView, toast, t, detectOrphans],
   );
 
   // ========================================
@@ -1123,6 +1154,8 @@ export default function App() {
         />
 
         {/* FLOATING COMMAND CENTER (Footer) - Positioned Absolutely */}
+        {/* MANIFIESTO DE REACTIVIDAD: Derived State for Flows */}
+        {/* We merge persistent flows (DB) with live component nodes (Canvas) to ensure instant updates */}
         <AppFooter
           // Project Props
           projectName={currentProject?.name || "No Project"}
@@ -1135,10 +1168,45 @@ export default function App() {
           onDeleteProject={(p) => deleteProject(p.id)}
           // Flow Props
           flowName={
+            // Prefer live node label if available, otherwise DB name
+            nodes.find(
+              (n) => n.type === "component" && n.data.flowId === currentFlowId,
+            )?.data?.label ||
             currentProject?.flows?.find((f) => f.id === currentFlowId)?.name ||
             "No Flow Selected"
           }
-          flows={currentProject?.flows || []}
+          flows={useMemo(() => {
+            const dbFlows = currentProject?.flows || [];
+
+            // 1. Extract Live Components from Canvas
+            const liveComponentFlows = nodes
+              .filter(
+                (n) =>
+                  (n.type === "component" || n.data?.type === "component") &&
+                  n.data?.flowId,
+              )
+              .map((n) => ({
+                id: n.data.flowId,
+                name:
+                  n.data.label || n.data.customLabel || "Untitled Component",
+                type: "component",
+                isLive: true, // Flag for styling if needed
+              }));
+
+            // 2. Filter out DB flows that are currently represented by live nodes (to avoid duplicates)
+            //    OR merge them updating the name.
+            //    Strategy: Keep DB flows but valid ONLY non-components or components NOT on canvas?
+            //    Actually, if we are in Main Flow, 'dbFlows' has all components.
+            //    We want to OVERRIDE the DB flow entry with the Live Node entry if IDs match.
+
+            const liveIds = new Set(liveComponentFlows.map((f) => f.id));
+
+            const nonLiveFlows = dbFlows.filter((f) => !liveIds.has(f.id));
+
+            // 3. Combine: Active Live Components + Other Flows (Main, or Components not on current canvas)
+            //    Note: This creates a view where "Components on Canvas" are shown with their LIVE names.
+            return [...nonLiveFlows, ...liveComponentFlows];
+          }, [currentProject?.flows, nodes])}
           onSwitchFlow={(f) => switchFlow(f.id)}
           onNewFlow={() => setCreationModal({ isOpen: true, type: "flow" })}
           onRenameFlow={(f, newName) => renameFlow(f.id, newName)}
@@ -1151,6 +1219,7 @@ export default function App() {
           onSave={handleSaveFlow}
           onShowImport={() => setIsImportDialogOpen(true)}
           onShowExport={() => setIsExportDialogOpen(true)}
+          hasUnsavedChanges={hasUnsavedChanges}
         />
 
         <CreationModal

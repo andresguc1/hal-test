@@ -160,6 +160,19 @@ router.post('/projects/:projectId/flows', async (req, res) => {
         const { projectId } = req.params;
         const { name, type, parentId, nodes, edges } = req.body;
 
+        // Check for duplicate flow name in the same project
+        const existingFlow = await Flow.findOne({
+            where: {
+                projectId,
+                name,
+            },
+            transaction,
+        });
+
+        if (existingFlow) {
+            throw new Error(`Flow with name "${name}" already exists in this project.`);
+        }
+
         const flow = await Flow.create(
             {
                 name,
@@ -274,6 +287,24 @@ router.put('/projects/:projectId/flows/:flowId', async (req, res) => {
                 `[ProjectRouter] Flow NOT FOUND for update: ID=${flowId}, ProjectID=${projectId}`,
             );
             return res.status(404).json({ error: 'Flow not found' });
+        }
+
+        // Check for duplicate name if name is being changed
+        if (name && name !== flow.name) {
+            const existingFlow = await Flow.findOne({
+                where: {
+                    projectId,
+                    name,
+                },
+                transaction,
+            });
+
+            if (existingFlow) {
+                await transaction.rollback();
+                return res
+                    .status(409)
+                    .json({ error: `Flow with name "${name}" already exists in this project.` });
+            }
         }
 
         await flow.update({ name, viewport }, { transaction });

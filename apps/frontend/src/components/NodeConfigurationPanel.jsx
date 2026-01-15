@@ -517,7 +517,7 @@ function NodeConfigurationPanel({
                   "w-full bg-[var(--bg-canvas)]/50 border border-[var(--border-ui)] rounded-lg px-3 py-2 pl-3 pr-8 text-xs font-mono focus:outline-none focus:border-indigo-500/50 transition-all placeholder:text-[var(--text-muted)] !pointer-events-auto !cursor-text !select-text",
                   value ? "text-indigo-400" : "text-[var(--text-main)]",
                   error &&
-                  "border-red-500/50 focus:border-red-500 bg-red-500/5",
+                    "border-red-500/50 focus:border-red-500 bg-red-500/5",
                 )}
               />
               <div
@@ -606,21 +606,28 @@ function NodeConfigurationPanel({
                   type="text"
                   value={localLabel}
                   placeholder={activeNode.data?.label || safeConfig.label}
-                  onChange={(e) => setLocalLabel(e.target.value)}
-                  onBlur={() => {
-                    // Update Global State on Blur
-                    const finalLabel =
-                      localLabel.trim() === "" ? null : localLabel;
-                    if (finalLabel !== activeNode.data?.customLabel) {
-                      updateNodeConfiguration(activeNode.id, {
-                        ...(activeNode.data?.configuration || {}),
-                        customLabel: finalLabel, // Pass to useFlowManager
-                      });
-                    }
-                  }}
                   className={cn(
                     "bg-transparent border-transparent hover:border-white/10 focus:border-white/20 border-b-2 text-sm font-bold text-[var(--text-main)] dark:text-white w-full focus:outline-none transition-colors placeholder:text-white/30 placeholder:font-normal",
                   )}
+                  onChange={(e) => {
+                    setLocalLabel(e.target.value);
+
+                    // MANIFIESTO: Live Update (Debounced)
+                    if (updateTimeoutRef.current)
+                      clearTimeout(updateTimeoutRef.current);
+
+                    updateTimeoutRef.current = setTimeout(() => {
+                      const finalLabel =
+                        e.target.value.trim() === "" ? null : e.target.value;
+                      if (finalLabel !== activeNode.data?.customLabel) {
+                        updateNodeConfiguration(activeNode.id, {
+                          ...(activeNode.data?.configuration || {}),
+                          customLabel: finalLabel,
+                        });
+                      }
+                    }, 300); // 300ms debounce for typing comfort
+                  }}
+                  // onBlur removed - handled by debounce
                 />
               </div>
             </div>
@@ -636,7 +643,7 @@ function NodeConfigurationPanel({
           <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
             {/* Dynamic Content Switch */}
             {safeConfig.nodeKey === "component" ||
-              activeNode.type === "component" ? (
+            activeNode.type === "component" ? (
               // --- COMPONENT DASHBOARD ---
               <div className="space-y-6">
                 {/* Description Card */}

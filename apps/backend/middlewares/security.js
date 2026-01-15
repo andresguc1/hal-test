@@ -23,9 +23,9 @@ export const helmetMiddleware = helmet({
             scriptSrc: ["'self'", "'unsafe-inline'"], // Necesario si usas scripts inline
             styleSrc: ["'self'", "'unsafe-inline'", 'https://rsms.me'],
             fontSrc: ["'self'", 'https://rsms.me'],
-            imgSrc: ["'self'", 'data:', 'https:'],
+            imgSrc: ["'self'", 'data:', 'https:', 'blob:'],
             // Conectar a Playwright o a otros servicios
-            connectSrc: ["'self'", 'ws:', 'wss:', 'http:', 'https:'],
+            connectSrc: ["'self'", 'ws:', 'wss:', 'http:', 'https:', 'blob:'],
         },
     },
     // Configuración HSTS (HTTP Strict Transport Security)

@@ -66,15 +66,31 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges }) => {
 
     try {
       // Create the full export payload
+      // Create the full export payload
       const exportData = {
         meta: {
-          version: "1.0.0",
+          version: "2.1.0", // Bumped version
           timestamp: new Date().toISOString(),
           source: "hal-9001",
+          flowName:
+            nodes.find((n) => n.type === "launch_browser")?.data?.label ||
+            "Untitled Flow",
         },
-        nodes: nodes,
+        nodes: nodes.map((n) => {
+          // Deep copy to avoid mutation
+          const node = JSON.parse(JSON.stringify(n));
+          // Sanitization: Remove API Keys if they exist in configuration
+          if (node.data?.configuration?.apiKey) {
+            delete node.data.configuration.apiKey;
+          }
+          // Remove execution state
+          if (node.data?.state) delete node.data.state;
+          if (node.data?.replayData) delete node.data.replayData;
+
+          return node;
+        }),
         edges: edges,
-        viewport: { x: 0, y: 0, zoom: 1 }, // Default viewport for now
+        viewport: { x: 0, y: 0, zoom: 1 },
       };
 
       setProgress({
