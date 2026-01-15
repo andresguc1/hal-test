@@ -4,6 +4,8 @@ import { ExternalLink, X } from "lucide-react";
 const EvidenceCard = ({ screenshotUrl, durationMs, timestamp }) => {
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
+  const [hasError, setHasError] = useState(false);
+
   // Handle URL formatting (blob, data, or server path)
   const getFullUrl = (url) => {
     if (!url) return "";
@@ -26,7 +28,8 @@ const EvidenceCard = ({ screenshotUrl, durationMs, timestamp }) => {
 
   const displayUrl = getFullUrl(screenshotUrl);
 
-  if (!screenshotUrl) return null;
+  // If no URL or if verified broken, don't render
+  if (!screenshotUrl || hasError) return null;
 
   return (
     <>
@@ -55,6 +58,7 @@ const EvidenceCard = ({ screenshotUrl, durationMs, timestamp }) => {
             alt="Execution Evidence"
             className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500 ease-out"
             loading="lazy"
+            onError={() => setHasError(true)} // HIDE ON ERROR
           />
 
           {/* Hover Overlay */}

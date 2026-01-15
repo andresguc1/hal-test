@@ -44,11 +44,10 @@ const launchBrowserBodySchema = Joi.object({
     }),
 
     // 6. maximizeWindow (Opcional)
+    // 6. maximizeWindow (Opcional)
     maximizeWindow: Joi.boolean().default(false).optional().messages({
         'boolean.base': 'maximizeWindow debe ser un valor booleano.',
     }),
-
-    // ⚠️ Deshabilita la opción 'unknown' para solo permitir los campos definidos
-});
+}).unknown(true);
 
 export default launchBrowserBodySchema;

@@ -3,7 +3,7 @@ import { io } from "socket.io-client";
 
 const SOCKET_URL =
   window.location.hostname === "localhost" ||
-  window.location.hostname === "127.0.0.1"
+    window.location.hostname === "127.0.0.1"
     ? "http://127.0.0.1:2001"
     : window.location.origin;
 
@@ -63,6 +63,9 @@ export const useHaltestSocket = (setNodes, setEdges, onElementPicked) => {
                   ...node.data,
                   state: status,
                   error: error || node.data.error,
+                  // Merge result/output if provided (Fixes missing screenshots/status)
+                  result: data.result ? { ...node.data.result, ...data.result } : node.data.result,
+                  formattedOutput: data.output || node.data.formattedOutput,
                 },
               };
             }

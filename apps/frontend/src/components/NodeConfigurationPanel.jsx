@@ -10,6 +10,7 @@ import {
   FileText,
   ArrowLeftRight,
   Sparkles,
+  Trash2,
 } from "lucide-react";
 import { useToast } from "@/hooks/useToast";
 import { useTranslation } from "react-i18next";
@@ -158,11 +159,14 @@ function NodeConfigurationPanel({
   action, // The selected node data (initial snapshot)
   nodes, // Live nodes list for real-time updates
   onClose,
-  onExecute,
   updateNodeConfiguration,
   onDeleteNode,
   onStartPick, // New Prop from App.jsx
   onUngroup, // New Prop for Ungrouping
+  _projectPath, // Unused
+  _isReadOnly, // Unused
+  onRunNode, // Added ATOMIC EXECUTION
+  onExecute, // Restore
 }) {
   const { t } = useTranslation();
   const toast = useToast();
@@ -227,34 +231,39 @@ function NodeConfigurationPanel({
   // Sync LOCAL <-> GLOBAL
   // 1. When switching nodes (different ID), hard reset local state.
   // 2. When external update happens (e.g. Picker updates selector), sync only if different.
+  // Sync LOCAL <-> GLOBAL
+  // 1. When switching nodes (different ID), hard reset local state.
+  // 2. When external update happens (e.g. Picker updates selector), sync only if it's a NEW value from outside.
   React.useEffect(() => {
     if (!activeNode) return;
 
+    // A. Detect Node Switch
+    if (activeNode.id !== lastSyncedConfigRef.current.nodeId) {
+      const freshConfig = activeNode?.data?.configuration || {};
+      setLocalConfig(freshConfig);
+      setLocalLabel(activeNode.data?.customLabel || activeNode.data?.label || "");
+
+      lastSyncedConfigRef.current = { ...freshConfig, nodeId: activeNode.id };
+      return;
+    }
+
+    // B. Detect External Updates (e.g. from Picker, Undo/Redo, or AI)
     const globalConfig = activeNode?.data?.configuration || {};
 
-    // Simple deep comparison (sufficient for config objects)
-    const isDifferent =
-      JSON.stringify(globalConfig) !== JSON.stringify(localConfig);
-    const isJustSynced =
-      JSON.stringify(globalConfig) ===
-      JSON.stringify(lastSyncedConfigRef.current);
+    // We compare what we have LOCALLY vs what is coming in.
+    // We ONLY update local state if the global state is DIFFERENT from what we expected (our last sync).
+    // This prevents "echoes" of our own updates from overwriting pending typing.
+    const isEcho = JSON.stringify(globalConfig) === JSON.stringify(lastSyncedConfigRef.current);
 
-    // If global changed and it wasn't just caused by our own debounce update...
-    // Or if we switched nodes entirely...
-    if (
-      activeNode.id !== lastSyncedConfigRef.current.nodeId ||
-      (isDifferent && !isJustSynced)
-    ) {
+    if (!isEcho) {
+      // It's a true external change (or we messed up tracking). 
+      // We accept it, BUT we risk losing typing if this happens exactly during typing.
+      // However, typical external updates (Picking) happen when user is NOT typing.
       setLocalConfig(globalConfig);
+      lastSyncedConfigRef.current = { ...globalConfig, nodeId: activeNode.id };
     }
 
-    // Always update ref to track what node we are on
-    if (activeNode.id !== lastSyncedConfigRef.current.nodeId) {
-      lastSyncedConfigRef.current = { ...globalConfig, nodeId: activeNode.id };
-      // Reset label on node switch
-      setLocalLabel(activeNode.data?.customLabel || "");
-    }
-  }, [activeNode, localConfig]);
+  }, [activeNode?.id, activeNode?.data?.configuration, activeNode?.data?.customLabel]); // DEPENDENCIES: Only specific fields, not full object!
 
   // Helper to handle partial configuration updates safely
   const handleConfigUpdate = (key, value) => {
@@ -517,7 +526,7 @@ function NodeConfigurationPanel({
                   "w-full bg-[var(--bg-canvas)]/50 border border-[var(--border-ui)] rounded-lg px-3 py-2 pl-3 pr-8 text-xs font-mono focus:outline-none focus:border-indigo-500/50 transition-all placeholder:text-[var(--text-muted)] !pointer-events-auto !cursor-text !select-text",
                   value ? "text-indigo-400" : "text-[var(--text-main)]",
                   error &&
-                    "border-red-500/50 focus:border-red-500 bg-red-500/5",
+                  "border-red-500/50 focus:border-red-500 bg-red-500/5",
                 )}
               />
               <div
@@ -627,23 +636,40 @@ function NodeConfigurationPanel({
                       }
                     }, 300); // 300ms debounce for typing comfort
                   }}
-                  // onBlur removed - handled by debounce
+                // onBlur removed - handled by debounce
                 />
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="p-1.5 rounded-md hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
-            >
-              <X size={16} />
-            </button>
+
+
+            {/* HEADER ACTIONS */}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => {
+                  if (confirm(t("common.confirm_delete", "Delete this node?"))) {
+                    onDeleteNode(activeNode.id);
+                  }
+                }}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                title={t("common.delete_node", "Delete Node")}
+              >
+                <Trash2 size={16} />
+              </button>
+              <div className="w-[1px] h-4 bg-white/10 mx-1" />
+              <button
+                onClick={onClose}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
           </div>
 
           {/* SCROLLABLE CONTENT */}
           <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
             {/* Dynamic Content Switch */}
             {safeConfig.nodeKey === "component" ||
-            activeNode.type === "component" ? (
+              activeNode.type === "component" ? (
               // --- COMPONENT DASHBOARD ---
               <div className="space-y-6">
                 {/* Description Card */}
@@ -797,13 +823,6 @@ function NodeConfigurationPanel({
             >
               <Play size={14} fill="currentColor" />
               {t("common.run_node", "Run Node")}
-            </button>
-
-            <button
-              onClick={() => onDeleteNode(activeNode.id)}
-              className="w-full py-2 rounded-lg border border-red-500/10 text-red-400 hover:bg-red-500/10 text-xs font-medium transition-colors"
-            >
-              Delete Node
             </button>
           </div>
         </Motion.div>

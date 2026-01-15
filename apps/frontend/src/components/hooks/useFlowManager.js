@@ -1247,6 +1247,9 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
             bodyToSend.browserId = activeBrowserId;
           }
 
+          // Persistent Browser: Allow reuse and prevent auto-close in Editor
+          bodyToSend.debugMode = true;
+
           // Force headless: false in dev for visual debugging
           if (type === "launch_browser" && import.meta.env.DEV) {
             bodyToSend.headless = false;
@@ -1785,6 +1788,34 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
     },
     [],
   );
+
+  /**
+   * ATOMIC EXECUTION (Debug Mode)
+   * Executes a single node with the specific configuration passed from the UI
+   * @param {Object} nodeWithOverrides - The node object with current panel configuration
+   */
+  const executeSingleNode = useCallback(async (nodeWithOverrides) => {
+    // 1. Validar que recibimos un objeto válido
+    if (!nodeWithOverrides || !nodeWithOverrides.id) {
+      console.error("executeSingleNode: Invalid Argument", nodeWithOverrides);
+      toast.error("Error interal: Invalid node data for execution");
+      return;
+    }
+
+    const { id, type, data } = nodeWithOverrides;
+    const config = data?.configuration || {};
+
+    // 2. Visual Feedback & State Update (Optimistic)
+    updateNodeState(id, NODE_STATES.EXECUTING);
+
+    // 3. Delegation to executeStep
+    // executeStep(nodeId, type, payload, browserId, runId)
+    // Note: runId is null for atomic debug to avoid polluting history or tracking as flow run
+    const result = await executeStep(id, type, config);
+
+    // 4. Feedback is handled inside executeStep (Socket events)
+    return result;
+  }, [executeStep, updateNodeState]);
 
   const executeFlow = useCallback(
     async (options = {}) => {
@@ -2751,7 +2782,9 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
 
     PROFESSIONAL_COLORS,
     activeBrowserId,
+    activeBrowserId,
     stopSession,
+    executeSingleNode, // Export atomic executor
 
     // NEW EXPORTS
 

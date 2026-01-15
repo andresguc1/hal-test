@@ -188,6 +188,32 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
         emitExecutionStatus({ stepId: nodeId, status: 'running' });
     }
 
+    // --- IMPLICIT LAUNCH (Debug Mode) ---
+    // If running in debug mode (Run Node) and no browser is open, launch one automatically.
+    if (
+        actionName !== 'launch_browser' &&
+        opts.debugMode &&
+        !opts.browserId &&
+        Array.from(browserService.keys()).length === 0
+    ) {
+        console.log(
+            '[Implicit Launch] Debug mode detected with no active browser. Launching default...',
+        );
+        try {
+            const { browserId } = await browserService.launchBrowser({
+                ...opts,
+                headless: false, // Default to visible for debug
+            });
+            opts.browserId = browserId;
+            req.body.browserId = browserId; // Propagate to validation
+            targetBrowserId = browserId;
+        } catch (err) {
+            console.error('[Implicit Launch] Failed:', err);
+            // Fallthrough to normal validation which will likely error
+        }
+    }
+    // ------------------------------------
+
     try {
         // 1. Get resources (browser, page, context)
         const isBrowserAction = ['launch_browser', 'close_browser'].includes(actionName);
@@ -482,6 +508,28 @@ export const launchBrowserAction = async (req, res) => {
     if (nodeId) emitExecutionStatus({ stepId: nodeId, status: 'running' });
 
     try {
+        // --- PERSISTENT BROWSER (Debug Mode) ---
+        const { debugMode } = req.body;
+        if (debugMode) {
+            const latestBrowser = browserService.getLatest();
+            // Reuse if exists and is connected
+            if (latestBrowser && latestBrowser.browser.isConnected()) {
+                console.log('[ACTION] Reusing existing browser (Debug Mode)');
+                // Retrieve ID
+                const browserId = Array.from(browserService.keys()).pop();
+
+                if (nodeId) emitExecutionStatus({ stepId: nodeId, status: 'success' });
+                return res.status(200).json({
+                    success: true,
+                    message: 'Browser reused (Debug Mode)',
+                    browserId,
+                    reused: true,
+                    headless: latestBrowser.options.headless || false,
+                });
+            }
+        }
+        // ---------------------------------------
+
         console.log('[ACTION] Starting browser launch...');
         const { browserId } = await browserService.launchBrowser(req.body);
         const duration = Date.now() - start;
@@ -729,6 +777,25 @@ export const closeBrowserAction = async (req, res) => {
         }
 
         browserId = validation.browserId;
+
+        // --- PERSISTENT BROWSER (Debug Mode) ---
+        const { debugMode } = req.body;
+        if (debugMode) {
+            console.log(`[INFO] Skipping browser close for ${browserId} (Debug Mode Active)`);
+            if (nodeId) emitExecutionStatus({ stepId: nodeId, status: 'success' });
+
+            // Trace still needed to show it "ran"
+            traceService.add({ action: 'close_browser', browserId, status: 'success' });
+
+            return res.status(200).json({
+                success: true,
+                message: 'Browser kept open (Debug Mode)',
+                browserId,
+                closed: false,
+            });
+        }
+        // ---------------------------------------
+
         console.log(`[INFO] Closing browser ${browserId}...`);
 
         await browserService.delete(browserId);

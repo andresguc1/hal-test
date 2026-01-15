@@ -59,13 +59,13 @@ const AbyssNode = ({ data, selected, type }) => {
   const { color: statusColor, shadow: statusShadow } =
     data.state === "success" || data.state === "error"
       ? {
-          // Keep existing status styles
-          color: data.state === "success" ? "#10b981" : "#ef4444",
-          shadow:
-            data.state === "success"
-              ? "0 0 30px rgba(16,185,129,0.5)"
-              : "0 0 30px rgba(239,68,68,0.5)",
-        }
+        // Keep existing status styles
+        color: data.state === "success" ? "#10b981" : "#ef4444",
+        shadow:
+          data.state === "success"
+            ? "0 0 30px rgba(16,185,129,0.5)"
+            : "0 0 30px rgba(239,68,68,0.5)",
+      }
       : { color: null, shadow: null };
 
   // Determine invalid style
@@ -88,11 +88,11 @@ const AbyssNode = ({ data, selected, type }) => {
 
         // Running Animation (Breathing Glow using Category Color)
         data.state === "running" &&
-          `ring-4 ring-${colorKey}-500/20 animate-pulse`,
+        `ring-4 ring-${colorKey}-500/20 animate-pulse`,
 
         // Picking Animation (Targeting)
         data.state === "picking" &&
-          `ring-4 ring-sky-500/50 animate-pulse border-sky-400 z-50`,
+        `ring-4 ring-sky-500/50 animate-pulse border-sky-400 z-50`,
 
         // Selection
         selected && statusColor ? "scale-[1.05] z-50 border-[3px]" : "",
@@ -100,8 +100,8 @@ const AbyssNode = ({ data, selected, type }) => {
 
         // Default Shadow
         !selected &&
-          !statusColor &&
-          "shadow-md dark:shadow-[0_4px_10px_rgba(0,0,0,0.3)]",
+        !statusColor &&
+        "shadow-md dark:shadow-[0_4px_10px_rgba(0,0,0,0.3)]",
       )}
     >
       {/* INPUT HANDLE */}
@@ -262,4 +262,15 @@ const AbyssNode = ({ data, selected, type }) => {
   );
 };
 
-export default memo(AbyssNode);
+/**
+ * Performance Optimization
+ */
+function arePropsEqual(prevProps, nextProps) {
+  return (
+    prevProps.id === nextProps.id &&
+    prevProps.selected === nextProps.selected &&
+    prevProps.data === nextProps.data // Strict usage of immutable data
+  );
+}
+
+export default memo(AbyssNode, arePropsEqual);

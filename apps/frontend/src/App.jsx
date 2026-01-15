@@ -202,6 +202,7 @@ export default function App() {
     deleteNode,
     executeStep,
     executeFlow,
+    executeSingleNode, // Destructure new function
     saveFlow,
     undo,
     redo,
@@ -231,6 +232,8 @@ export default function App() {
     // NEW
     hasUnsavedChanges,
     detectOrphans,
+    projectPath, // Added from useFlowManager
+    isReadOnly, // Added from useFlowManager
   } = useFlowManager(currentProject, currentFlowId, switchFlow);
 
   // Element Picker Callback (Previously handleElementPicked was here, we will replace the mess)
@@ -466,9 +469,31 @@ export default function App() {
     }
 
     // 1. Show Loading Toast immediately (Duration 0 = indefinite until dismissed)
+    // 1. Show Loading Toast immediately (Duration 0 = indefinite until dismissed)
     const toastId = toast.loading(t("common.processing"));
 
     try {
+      // --- EXECUTION ISOLATION (Debug vs E2E) ---
+      if (activeBrowserId) {
+        if (
+          confirm(
+            t(
+              "common.confirm_close_debug",
+              "Active debug session detected. Close it to ensure a clean E2E run?"
+            )
+          )
+        ) {
+          toast.loading("Closing debug session...", { id: toastId });
+          await stopSession();
+        } else {
+          // If user refuses to close, we abort to prevent collisions
+          toast.dismiss(toastId);
+          toast.info("Execution cancelled to preserve debug session.");
+          return;
+        }
+      }
+      // ------------------------------------------
+
       const result = await executeFlow(); // Returns { success, stats }
 
       // 2. Clear loading
@@ -896,6 +921,13 @@ export default function App() {
       zoomOnScroll: true, // Zoom con scroll
       zoomOnPinch: true, // Zoom con pinch en trackpad
       zoomOnDoubleClick: false, // Deshabilitar zoom con doble click
+
+      // OPTIMIZATION: Performance Overhaul
+      minZoom: 0.2, // Allow zooming out far
+      maxZoom: 4, // Prevent excessive zoom in
+      onlyRenderVisibleElements: true, // Critical for performance
+      translateExtent: [[-5000, -5000], [5000, 5000]], // Dynamic Extent (Large enough)
+
       ...figmaConfig, // Use Figma configuration
     }),
     [figmaConfig],
@@ -1119,18 +1151,30 @@ export default function App() {
           </main>
 
           {/* PANEL DERECHO (CONFIGURACIÓN) */}
-          <NodeConfigurationPanel
-            isVisible={isConfigurationPanelVisible}
-            action={selectedAction}
-            nodes={nodes}
-            onClose={closeConfiguration}
-            onExecute={executeStep}
-            onDeleteNode={deleteNode}
-            updateNodeConfiguration={updateNodeConfiguration}
-            onStartPick={handleStartPicking}
-            onUngroup={ungroupNodes}
-          />
-
+          {isConfigurationPanelVisible && selectedAction && (
+            <NodeConfigurationPanel
+              isVisible={isConfigurationPanelVisible}
+              action={selectedAction} // Restored
+              nodes={nodes} // Restored
+              nodeId={selectedAction.nodeId}
+              type={selectedAction.type}
+              initialData={selectedAction.data}
+              onClose={() => {
+                setSelectedAction(null);
+                setSelectedNodeId(null);
+              }}
+              onExecute={executeSingleNode} // ATOMIC EXECUTION (Run Node)
+              onRunNode={executeSingleNode} // Redundant but kept for safety if header used it
+              updateNodeConfiguration={(nodeId, newData) =>
+                updateNodeConfiguration(nodeId, newData)
+              }
+              onDeleteNode={deleteNode}
+              projectPath={projectPath}
+              isReadOnly={isReadOnly}
+              onStartPick={handleStartPicking}
+              onUngroup={ungroupNodes}
+            />
+          )}
           {/* Global Settings Modal (Unified Hub) */}
           <SettingsModal
             isOpen={isSettingsOpen}

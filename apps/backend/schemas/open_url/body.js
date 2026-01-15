@@ -45,6 +45,6 @@ const openUrlBodySchema = Joi.object({
         .messages({
             'string.base': 'browserId debe ser una cadena de texto (el ID único del navegador).',
         }),
-});
+}).unknown(true);
 // Rechazar campos desconocidos para mantener consistencia y seguridad
 export default openUrlBodySchema;

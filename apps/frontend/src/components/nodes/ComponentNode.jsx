@@ -84,4 +84,16 @@ const ComponentNode = ({ data, selected }) => {
   );
 };
 
-export default memo(ComponentNode);
+/**
+ * Performance Optimization
+ */
+function arePropsEqual(prevProps, nextProps) {
+  return (
+    prevProps.id === nextProps.id &&
+    prevProps.selected === nextProps.selected &&
+    prevProps.data?.label === nextProps.data?.label && // Component label often changes on rename
+    prevProps.data?.subFlow === nextProps.data?.subFlow
+  );
+}
+
+export default memo(ComponentNode, arePropsEqual);

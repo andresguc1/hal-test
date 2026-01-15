@@ -24,9 +24,10 @@ const closeBrowserBodySchema = Joi.object({
     }),
 
     // 3. clearContext (Opcional)
+    // 3. clearContext (Opcional)
     clearContext: Joi.boolean().default(true).optional().messages({
         'boolean.base': 'El campo clearContext debe ser un valor booleano (true/false).',
     }),
-});
+}).unknown(true);
 // Bloquea campos extra no definidos
 export default closeBrowserBodySchema;
