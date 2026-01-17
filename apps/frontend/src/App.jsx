@@ -47,6 +47,8 @@ import { useTranslation } from "react-i18next";
 import { useTheme } from "next-themes";
 import RunHistoryPanel from "./components/RunHistoryPanel";
 import StepDetailsModal from "./components/StepDetailsModal";
+import { ExportModal } from "./components/modals/ExportModal";
+import { ImportModal } from "./components/modals/ImportModal";
 import { api } from "./utils/api";
 import { NODE_STATES } from "./components/hooks/flowStyles";
 
@@ -167,6 +169,7 @@ export default function App() {
   const [isCreationPanelVisible, setIsCreationPanelVisible] = useState(true);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
+  const [isHistoryPanelVisible, setIsHistoryPanelVisible] = useState(false); // HISTORY PANEL
   const [creationModal, setCreationModal] = useState({
     isOpen: false,
     type: "project",
@@ -180,9 +183,11 @@ export default function App() {
   });
   const [_isSaving, setIsSaving] = useState(false);
   const [menu, setMenu] = useState(null);
+  /* --- MODAL STATES --- */
+  // Unused placeholder states removed
+  // const [currentNodeId, setCurrentNodeId] = useState(null);
 
   // History Panel State
-  const [isHistoryPanelVisible, setIsHistoryPanelVisible] = useState(false);
 
   // Step Details Modal State (for replay mode)
   const [stepDetailsModal, setStepDetailsModal] = useState({
@@ -200,7 +205,7 @@ export default function App() {
     onNodeClick,
     updateNodeConfiguration,
     deleteNode,
-    executeStep,
+    // executeStep, // Removed unused
     executeFlow,
     executeSingleNode, // Destructure new function
     saveFlow,
@@ -234,6 +239,8 @@ export default function App() {
     detectOrphans,
     projectPath, // Added from useFlowManager
     isReadOnly, // Added from useFlowManager
+    replayRun, // HISTORY
+    resetNodeStates, // HISTORY
   } = useFlowManager(currentProject, currentFlowId, switchFlow);
 
   // Element Picker Callback (Previously handleElementPicked was here, we will replace the mess)
@@ -306,20 +313,13 @@ export default function App() {
     [selectedAction, nodes, updateNodeConfiguration, updateNodeState, toast, t],
   );
 
-  // Map backend step status to frontend NODE_STATES
-  const mapBackendStatusToFrontend = (backendStatus) => {
-    const statusMap = {
-      pending: "default",
-      running: "executing",
-      success: "success",
-      failed: "error",
-      skipped: "skipped",
-    };
-    return statusMap[backendStatus] || "default";
-  };
-
   const handleSelectRun = useCallback(
     async (runBasic) => {
+      if (!runBasic) {
+        resetNodeStates();
+        return;
+      }
+
       try {
         const res = await api.get(`/runs/${runBasic.id}`);
         if (res.success) {
@@ -327,96 +327,14 @@ export default function App() {
           toast.success(
             `Loaded run from ${new Date(run.started_at).toLocaleTimeString()}`,
           );
-
-          // RESTORE SNAPSHOT IF AVAILABLE
-          let nodesToRender = [];
-          if (run.flow_snapshot) {
-            try {
-              const snapshot = JSON.parse(run.flow_snapshot);
-              setEdges(snapshot.edges || []);
-              nodesToRender = snapshot.nodes || [];
-              toast.info("Visual state restored from snapshot");
-            } catch (e) {
-              console.error("Failed to parse flow snapshot", e);
-              nodesToRender = []; // Fallback will use current nodes below (in setNodes) if empty?
-              // Actually, if snapshot fails or doesn't exist, we should use current 'nodes' state?
-              // But 'nodes' state is not accessible easily inside setNodes callback if we want to combine logic.
-              // Let's split strictly.
-            }
-          }
-
-          if (nodesToRender.length > 0) {
-            // APPLY STATES TO SNAPSHOT NODES
-            const processedNodes = nodesToRender.map((node) => {
-              const step = run.steps.find((s) => s.node_id === node.id);
-              if (step) {
-                return {
-                  ...node,
-                  data: {
-                    ...node.data,
-                    state: mapBackendStatusToFrontend(step.status),
-                    error: step.error,
-                    replayData: {
-                      duration_ms: step.duration_ms,
-                      screenshot_path: step.screenshot_path,
-                      input_data: step.input_data,
-                      output_data: step.output_data,
-                    },
-                  },
-                };
-              }
-              return {
-                ...node,
-                data: {
-                  ...node.data,
-                  state: "default",
-                  error: null,
-                  replayData: null,
-                },
-              };
-            });
-            setNodes(processedNodes);
-          } else {
-            // LEGACY: APPLY STATES TO CURRENT NODES
-            setNodes((nds) =>
-              nds.map((node) => {
-                const step = run.steps.find((s) => s.node_id === node.id);
-                if (step) {
-                  return {
-                    ...node,
-                    data: {
-                      ...node.data,
-                      state: mapBackendStatusToFrontend(step.status),
-                      error: step.error,
-                      replayData: {
-                        duration_ms: step.duration_ms,
-                        screenshot_path: step.screenshot_path,
-                        input_data: step.input_data,
-                        output_data: step.output_data,
-                      },
-                    },
-                  };
-                }
-                // Reset others (not part of this run)
-                return {
-                  ...node,
-                  data: {
-                    ...node.data,
-                    state: "default",
-                    error: null,
-                    replayData: null,
-                  },
-                };
-              }),
-            );
-          }
+          replayRun(run);
         }
       } catch (error) {
         console.error("Failed to load run details:", error);
         toast.error("Failed to load run history");
       }
     },
-    [setEdges, setNodes, toast],
+    [replayRun, resetNodeStates, toast],
   );
 
   // Initialize Socket.io connection for real-time updates and inspector events
@@ -479,8 +397,8 @@ export default function App() {
           confirm(
             t(
               "common.confirm_close_debug",
-              "Active debug session detected. Close it to ensure a clean E2E run?"
-            )
+              "Active debug session detected. Close it to ensure a clean E2E run?",
+            ),
           )
         ) {
           toast.loading("Closing debug session...", { id: toastId });
@@ -522,7 +440,16 @@ export default function App() {
       console.error("Error ejecutando flujo:", error);
       toast.error(t("common.flow_exec_error") + ": " + error.message);
     }
-  }, [executeFlow, validateFlowStructure, toast, t, nodes, edges]);
+  }, [
+    executeFlow,
+    validateFlowStructure,
+    toast,
+    t,
+    nodes,
+    edges,
+    activeBrowserId,
+    stopSession,
+  ]);
 
   // AI Generation Handler
   const handleAIFlowGeneration = useCallback(
@@ -926,7 +853,10 @@ export default function App() {
       minZoom: 0.2, // Allow zooming out far
       maxZoom: 4, // Prevent excessive zoom in
       onlyRenderVisibleElements: true, // Critical for performance
-      translateExtent: [[-5000, -5000], [5000, 5000]], // Dynamic Extent (Large enough)
+      translateExtent: [
+        [-5000, -5000],
+        [5000, 5000],
+      ], // Dynamic Extent (Large enough)
 
       ...figmaConfig, // Use Figma configuration
     }),
@@ -1044,9 +974,10 @@ export default function App() {
               isOpen={true}
               onClose={() => {
                 setIsHistoryPanelVisible(false);
-                setIsCreationPanelVisible(true); // Restore toolbox
+                setIsCreationPanelVisible(true);
               }}
               onSelectRun={handleSelectRun}
+              currentFlowId={currentFlowId}
             />
           ) : (
             isCreationPanelVisible && <Toolbox addNode={addNode} />

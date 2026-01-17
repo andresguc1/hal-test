@@ -10,7 +10,7 @@ import { STORAGE_RUNS_DIR } from '../config/paths.js';
 
 // Storage runs directory is handled via paths.js
 const TMP_DIR = '/tmp';
-const MAX_AGE_HOURS = 24;
+const MAX_AGE_HOURS = 72; // 3 Days Retention (Forensic Requirement)
 const MAX_SIZE_MB = 100;
 
 class StorageCleanupService {

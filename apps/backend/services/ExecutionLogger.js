@@ -66,6 +66,10 @@ class ExecutionLogger {
         try {
             const run = await Run.findByPk(runId);
             if (run) {
+                // Aggregation Logic: Fetch all steps for this run
+                const steps = await StepResult.findAll({ where: { run_id: runId } });
+                const executionData = JSON.stringify(steps);
+
                 const finishedAt = new Date();
                 const duration = finishedAt.getTime() - new Date(run.started_at).getTime();
 
@@ -73,6 +77,7 @@ class ExecutionLogger {
                     status,
                     finished_at: finishedAt,
                     duration_ms: duration,
+                    execution_data: executionData,
                 });
             }
         } catch (error) {

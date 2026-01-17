@@ -30,9 +30,20 @@ export const endRunAction = async (req, res) => {
 
 export const getRunsAction = async (req, res) => {
     try {
+        const { flowId, status, limit = 50 } = req.query;
+        const whereClause = {};
+
+        if (flowId) {
+            whereClause.flow_id = flowId;
+        }
+        if (status) {
+            whereClause.status = status;
+        }
+
         const runs = await Run.findAll({
+            where: whereClause,
             order: [['started_at', 'DESC']],
-            limit: 50,
+            limit: parseInt(limit, 10),
         });
         return res.status(200).json({ success: true, data: runs });
     } catch (error) {

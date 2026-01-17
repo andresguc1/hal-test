@@ -259,12 +259,16 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
         }
 
         // --- FLIGHT RECORDER: Optional Screenshot on Success ---
+        console.log(
+            `[FlightRecorder] Check: takeScreenshot=${opts.takeScreenshot}, runId=${runId}, nodeId=${nodeId}`,
+        );
         let screenshotPath = null;
         if (opts.takeScreenshot && page && !page.isClosed() && runId && nodeId) {
             try {
                 const screenshotsDir = path.join(STORAGE_RUNS_DIR, runId);
                 await fsp.mkdir(screenshotsDir, { recursive: true });
-                const filename = `step_${Date.now()}_${nodeId}.png`;
+                // Forensic Standard: {runId}/{nodeId}.png
+                const filename = `${nodeId}.png`;
                 const fullPath = path.join(screenshotsDir, filename);
                 await page.screenshot({ path: fullPath });
                 screenshotPath = `storage/runs/${runId}/${filename}`;
@@ -454,7 +458,8 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
                 const runFolder = runId || 'orphan';
                 const screenshotsDir = path.join(STORAGE_RUNS_DIR, runFolder);
                 await fsp.mkdir(screenshotsDir, { recursive: true });
-                const filename = `error_${Date.now()}_${nodeId || 'unknown'}.png`;
+                // Forensic Standard: {runId}/{nodeId}.png
+                const filename = `${nodeId}.png`;
                 const fullPath = path.join(screenshotsDir, filename);
                 await page.screenshot({ path: fullPath });
                 errorScreenshotPath = `storage/runs/${runFolder}/${filename}`;
@@ -669,7 +674,8 @@ export const openUrlAction = async (req, res) => {
             try {
                 const screenshotsDir = path.join(STORAGE_RUNS_DIR, runId);
                 await fsp.mkdir(screenshotsDir, { recursive: true });
-                const filename = `step_${Date.now()}_${nodeId}.png`;
+                // Forensic Standard: {runId}/{nodeId}.png
+                const filename = `${nodeId}.png`;
                 const fullPath = path.join(screenshotsDir, filename);
                 await page.screenshot({ path: fullPath });
                 screenshotPath = `storage/runs/${runId}/${filename}`;
@@ -771,6 +777,19 @@ export const closeBrowserAction = async (req, res) => {
 
         const validation = validateBrowser(req, browserId);
         if (validation.error) {
+            // Idempotency: If the browser is not found (already closed), consider it a success.
+            if (validation.status === 404) {
+                console.log(
+                    `[INFO] close_browser: ID ${browserId} not found. Assuming already closed. Success.`,
+                );
+                if (nodeId) emitExecutionStatus({ stepId: nodeId, status: 'success' });
+                return res.status(200).json({
+                    success: true,
+                    message: req.t('actions.close_browser.success_already_closed'),
+                    browserId,
+                });
+            }
+
             return res
                 .status(validation.status)
                 .json({ success: false, message: validation.message });

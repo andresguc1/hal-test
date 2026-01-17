@@ -359,8 +359,8 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
       if (!currentProject || !currentFlowId) return;
 
       const flowData = {
-        nodes,
-        edges,
+        nodes: nodesRef.current, // Use Ref for latest state
+        edges: edgesRef.current,
         viewport: getViewport(),
         updatedAt: new Date().toISOString(),
       };
@@ -392,7 +392,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
         return flowData;
       }
     },
-    [nodes, edges, getViewport, currentProject, currentFlowId],
+    [getViewport, currentProject, currentFlowId],
   );
 
   // ========================================
@@ -1065,6 +1065,9 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
       setNodes(finalNodes);
       setEdges(finalEdges);
 
+      // Persist changes immediately to prevent "ungrouping" on reload
+      await saveFlow();
+
       // AUTO-FOCUS: Select Node and Open Inspector
       setTimeout(() => {
         setSelectedNodeId(componentId);
@@ -1248,7 +1251,10 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
           }
 
           // Persistent Browser: Allow reuse and prevent auto-close in Editor
-          bodyToSend.debugMode = true;
+          // EXCEPTION: If the user explicitly uses "Close Browser", let it close.
+          if (type !== "close_browser") {
+            bodyToSend.debugMode = true;
+          }
 
           // Force headless: false in dev for visual debugging
           if (type === "launch_browser" && import.meta.env.DEV) {
@@ -1388,16 +1394,38 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
           }
 
           if (explicitScreenshot) {
-            logger.info(
-              "📸 Screenshot returned by node, reusing for history...",
-            );
-            // Save the returned screenshot as the "after" state
-            const screenshotMetadata = await screenshotManager.saveScreenshot(
-              nodeId,
-              "after",
-              explicitScreenshot,
-            );
-            updateNodeScreenshot(nodeId, "after", screenshotMetadata);
+            // FIX: Check if it's a server path (Forensic) or Base64 (Legacy/Client)
+            const isServerPath =
+              explicitScreenshot.startsWith("storage/") ||
+              explicitScreenshot.startsWith("http");
+
+            if (isServerPath) {
+              // Server-side path: Don't save to Client DB (atob fails). Just update reference.
+              logger.info(
+                "📸 Server-side screenshot detected, linking reference...",
+              );
+              updateNodeScreenshot(nodeId, "after", {
+                url: explicitScreenshot,
+                path: explicitScreenshot,
+                timestamp: Date.now(),
+              });
+            } else {
+              // Base64: Save to Client DB
+              logger.info(
+                "📸 Base64 Screenshot returned, saving to client DB...",
+              );
+              try {
+                const screenshotMetadata =
+                  await screenshotManager.saveScreenshot(
+                    nodeId,
+                    "after",
+                    explicitScreenshot,
+                  );
+                updateNodeScreenshot(nodeId, "after", screenshotMetadata);
+              } catch (err) {
+                console.error("Failed to save base64 screenshot:", err);
+              }
+            }
           } else if (shouldAutoCapture) {
             updateNodeState(nodeId, NODE_STATES.CAPTURING_AFTER);
             await captureScreenshot({
@@ -1794,28 +1822,31 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
    * Executes a single node with the specific configuration passed from the UI
    * @param {Object} nodeWithOverrides - The node object with current panel configuration
    */
-  const executeSingleNode = useCallback(async (nodeWithOverrides) => {
-    // 1. Validar que recibimos un objeto válido
-    if (!nodeWithOverrides || !nodeWithOverrides.id) {
-      console.error("executeSingleNode: Invalid Argument", nodeWithOverrides);
-      toast.error("Error interal: Invalid node data for execution");
-      return;
-    }
+  const executeSingleNode = useCallback(
+    async (nodeWithOverrides) => {
+      // 1. Validar que recibimos un objeto válido
+      if (!nodeWithOverrides || !nodeWithOverrides.id) {
+        console.error("executeSingleNode: Invalid Argument", nodeWithOverrides);
+        toast.error("Error interal: Invalid node data for execution");
+        return;
+      }
 
-    const { id, type, data } = nodeWithOverrides;
-    const config = data?.configuration || {};
+      const { id, type, data } = nodeWithOverrides;
+      const config = data?.configuration || {};
 
-    // 2. Visual Feedback & State Update (Optimistic)
-    updateNodeState(id, NODE_STATES.EXECUTING);
+      // 2. Visual Feedback & State Update (Optimistic)
+      updateNodeState(id, NODE_STATES.EXECUTING);
 
-    // 3. Delegation to executeStep
-    // executeStep(nodeId, type, payload, browserId, runId)
-    // Note: runId is null for atomic debug to avoid polluting history or tracking as flow run
-    const result = await executeStep(id, type, config);
+      // 3. Delegation to executeStep
+      // executeStep(nodeId, type, payload, browserId, runId)
+      // Note: runId is null for atomic debug to avoid polluting history or tracking as flow run
+      const result = await executeStep(id, type, config);
 
-    // 4. Feedback is handled inside executeStep (Socket events)
-    return result;
-  }, [executeStep, updateNodeState]);
+      // 4. Feedback is handled inside executeStep (Socket events)
+      return result;
+    },
+    [executeStep, updateNodeState],
+  );
 
   const executeFlow = useCallback(
     async (options = {}) => {
@@ -1870,6 +1901,17 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
           const { runId: newRunId } = await projectManager.createRun(
             currentProject.id,
             currentFlowId,
+            {
+              // Capture Flow Snapshot for Forensic Replay
+              nodes: nodes.map((n) => ({
+                ...n,
+                data: { ...n.data, result: undefined, replayData: undefined },
+              })), // Clean state
+              edges,
+              flowName: currentProject?.flows?.find(
+                (f) => f.id === currentFlowId,
+              )?.name,
+            },
           );
           runId = newRunId;
           logger.info(`Run started: ${runId}`, null, "useFlowManager");
@@ -2084,7 +2126,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
       resetNodeStates,
       activeBrowserId, // Added dependency
       updateNodeState,
-      validateFlowStructure
+      validateFlowStructure,
     ],
   );
 
@@ -2118,48 +2160,66 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
    * Exports the current flow as a downloadable JSON file
    * @returns {object} The exported flow data
    */
-  const exportFlow = useCallback(() => {
-    const flowData = {
-      nodes,
-      edges,
-      viewport: getViewport(),
-      timestamp: new Date().toISOString(),
-      version: "2.0",
-      stats: executionStats,
-      metadata: {
-        exportedAt: new Date().toISOString(),
-        nodeCount: nodes.length,
-        edgeCount: edges.length,
-      },
-    };
+  /**
+   * Exports the current flow as a downloadable JSON file (Enterprise V2)
+   * Fetches the full package including dependencies and sanitized secrets from backend.
+   */
+  const exportFlow = useCallback(async () => {
+    // Determine context IDs from hook arguments
+    const flowId = currentFlowId;
+    const projectId = currentProject?.id;
 
     try {
-      // Create blob and download
+      if (!flowId || !projectId) {
+        toast.error("Error: Cannot export flow without ID context");
+        console.error("Missing context:", { flowId, projectId });
+        return;
+      }
+
+      setApiStatus({
+        state: "loading",
+        message: "Preparing Enterprise Package...",
+      });
+
+      // Fetch the full export package from backend
+      const response = await fetch(
+        `${API_BASE_URL}/projects/${projectId}/flows/${flowId}/export`,
+      );
+
+      if (!response.ok) {
+        throw new Error(`Export failed: ${response.statusText}`);
+      }
+
+      const flowData = await response.json();
+
+      // Download Trigger
       const blob = new Blob([JSON.stringify(flowData, null, 2)], {
         type: "application/json",
       });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `hal_test_flow_${Date.now()}.json`;
-      a.click();
+      const link = document.createElement("a");
+      link.href = url;
+      // Use flow name in filename, sanitized
+      const safeName = (flowData.flow.name || "flow")
+        .replace(/[^a-z0-9]/gi, "_")
+        .toLowerCase();
+      link.download = `${safeName}_v2.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
       setApiStatus({
         state: "success",
-        message: "✓ Flujo exportado correctamente",
+        message: "✓ Export complete (V2 Package)",
       });
 
       return flowData;
     } catch (error) {
-      console.error("Error al exportar el flujo:", error);
-      setApiStatus({
-        state: "error",
-        message: `✗ Error al exportar: ${error.message}`,
-      });
-      throw error;
+      console.error("Export Error:", error);
+      toast.error(`Export failed: ${error.message}`);
     }
-  }, [nodes, edges, getViewport, executionStats]);
+  }, [currentFlowId, currentProject, setApiStatus]);
 
   /**
    * Enhanced import function supporting multiple modes
@@ -2431,7 +2491,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
   // ========================================
 
   const ungroupNodes = useCallback(
-    (componentNodeId) => {
+    async (componentNodeId) => {
       const componentNode = nodesRef.current.find(
         (n) => n.id === componentNodeId,
       );
@@ -2561,9 +2621,12 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
         return [...remainingEdges, ...internalEdges, ...restoredExternalEdges];
       });
 
+      // Persist immediately
+      await saveFlow();
+
       toast.success(t("groups.ungrouped", "Group dissolved successfully"));
     },
-    [setNodes, setEdges, saveToHistory, t, toast],
+    [setNodes, setEdges, saveToHistory, t, toast, saveFlow],
   );
 
   // Exportar funciones y estados
@@ -2717,6 +2780,155 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
       setApiStatus({ state: "idle", message: "Canvas cleared" });
     }, [saveToHistory, setNodes, setEdges, setSelectedNodeId, setApiStatus]),
 
+    replayRun: useCallback(
+      (runData) => {
+        if (!runData || !runData.steps) {
+          console.warn("Invalid run data for replay");
+          return;
+        }
+
+        // 1. Restore Flow Snapshot (if available and valid)
+        if (runData.flow_snapshot) {
+          try {
+            const snapshot = JSON.parse(runData.flow_snapshot);
+            if (snapshot.nodes && snapshot.edges) {
+              logger.info(
+                "Restoring Flow Snapshot from History...",
+                null,
+                "useFlowManager",
+              );
+              // Update canvas structure first
+              setEdges(snapshot.edges);
+
+              // Map status to restored nodes
+              const restoredNodes = snapshot.nodes;
+              const stepMap = new Map();
+              runData.steps.forEach((step) => {
+                stepMap.set(step.node_id, step);
+              });
+
+              const updatedNodes = restoredNodes.map((node) => {
+                const step = stepMap.get(node.id);
+                if (!step) {
+                  return {
+                    ...node,
+                    data: {
+                      ...node.data,
+                      state: "idle",
+                      executed: false,
+                      result: null,
+                      executionTime: null,
+                      isHistorical: false,
+                      historicalStatus: null,
+                      replayData: null,
+                    },
+                    style: getNodeStyle("idle"),
+                  };
+                }
+
+                let nodeState = "idle";
+                if (step.status === "success") nodeState = "success";
+                else if (step.status === "failed") nodeState = "error";
+                else if (step.status === "running") nodeState = "running";
+
+                return {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    state: nodeState,
+                    executed: true,
+                    result: {
+                      status: step.status,
+                      error: step.error,
+                      screenshot: step.screenshot_path,
+                      input: step.input_data,
+                      output: step.output_data,
+                      duration: step.duration_ms,
+                    },
+                    historicalStatus: step.status,
+                    replayData: step,
+                    isHistorical: true,
+                  },
+                  style: getNodeStyle(nodeState),
+                };
+              });
+
+              setNodes(updatedNodes);
+              return; // Exit early as we handled everything via snapshot
+            }
+          } catch (e) {
+            logger.error("Failed to restore flow snapshot", e);
+          }
+        }
+
+        setNodes((nds) =>
+          nds.map((node) => {
+            const step = runData.steps.find((s) => s.node_id === node.id);
+
+            if (!step) {
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  state: NODE_STATES.IDLE,
+                  executed: false,
+                  result: null,
+                  executionTime: null,
+                  isHistorical: false,
+                  historicalStatus: null, // Reset status
+                  replayData: null,
+                },
+                style: getNodeStyle(NODE_STATES.IDLE),
+              };
+            }
+
+            let nodeState = NODE_STATES.IDLE;
+            if (step.status === "success") nodeState = NODE_STATES.SUCCESS;
+            else if (step.status === "failed") nodeState = NODE_STATES.ERROR;
+            else if (step.status === "skipped") nodeState = NODE_STATES.SKIPPED;
+            else if (step.status === "running") nodeState = NODE_STATES.RUNNING;
+
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                state: nodeState, // VISUAL FEEDBACK: Main color driver
+                historicalStatus: step.status, // REACTIVE UI PROP
+                executed: true,
+                executionTime: step.duration_ms,
+                result: {
+                  // Legacy support for basic view
+                  output: step.output_data,
+                  input: step.input_data,
+                  error: step.error,
+                  screenshot: step.screenshot_path,
+                  durationMs: step.duration_ms,
+                  timestamp: step.created_at || runData.started_at,
+                },
+                execution_data: step, // Raw step data
+                replayData: {
+                  // NEW: Dedicated Historical Data Container
+                  runId: runData.id,
+                  nodeId: node.id,
+                  status: step.status,
+                  duration_ms: step.duration_ms,
+                  screenshot_path: step.screenshot_path,
+                  error: step.error,
+                  timestamp: step.created_at,
+                },
+                isHistorical: true,
+              },
+              style: getNodeStyle(nodeState),
+            };
+          }),
+        );
+        toast.info(
+          `Showing execution from ${new Date(runData.started_at).toLocaleTimeString()}`,
+        );
+      },
+      [setNodes, setEdges, toast],
+    ),
+
     duplicateElements: useCallback(() => {
       const selectedNodes = nodesRef.current.filter((n) => n.selected);
       const selectedEdges = edgesRef.current.filter((e) => e.selected);
@@ -2781,7 +2993,6 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
     validateFlowStructure, // Exposed for external validation
 
     PROFESSIONAL_COLORS,
-    activeBrowserId,
     activeBrowserId,
     stopSession,
     executeSingleNode, // Export atomic executor

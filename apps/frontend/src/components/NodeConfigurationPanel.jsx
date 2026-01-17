@@ -165,7 +165,6 @@ function NodeConfigurationPanel({
   onUngroup, // New Prop for Ungrouping
   _projectPath, // Unused
   _isReadOnly, // Unused
-  onRunNode, // Added ATOMIC EXECUTION
   onExecute, // Restore
 }) {
   const { t } = useTranslation();
@@ -241,7 +240,9 @@ function NodeConfigurationPanel({
     if (activeNode.id !== lastSyncedConfigRef.current.nodeId) {
       const freshConfig = activeNode?.data?.configuration || {};
       setLocalConfig(freshConfig);
-      setLocalLabel(activeNode.data?.customLabel || activeNode.data?.label || "");
+      setLocalLabel(
+        activeNode.data?.customLabel || activeNode.data?.label || "",
+      );
 
       lastSyncedConfigRef.current = { ...freshConfig, nodeId: activeNode.id };
       return;
@@ -253,17 +254,22 @@ function NodeConfigurationPanel({
     // We compare what we have LOCALLY vs what is coming in.
     // We ONLY update local state if the global state is DIFFERENT from what we expected (our last sync).
     // This prevents "echoes" of our own updates from overwriting pending typing.
-    const isEcho = JSON.stringify(globalConfig) === JSON.stringify(lastSyncedConfigRef.current);
+    const isEcho =
+      JSON.stringify(globalConfig) ===
+      JSON.stringify(lastSyncedConfigRef.current);
 
     if (!isEcho) {
-      // It's a true external change (or we messed up tracking). 
+      // It's a true external change (or we messed up tracking).
       // We accept it, BUT we risk losing typing if this happens exactly during typing.
       // However, typical external updates (Picking) happen when user is NOT typing.
       setLocalConfig(globalConfig);
       lastSyncedConfigRef.current = { ...globalConfig, nodeId: activeNode.id };
     }
-
-  }, [activeNode?.id, activeNode?.data?.configuration, activeNode?.data?.customLabel]); // DEPENDENCIES: Only specific fields, not full object!
+  }, [
+    activeNode?.id,
+    activeNode?.data?.configuration,
+    activeNode?.data?.customLabel,
+  ]); // DEPENDENCIES: Only specific fields, not full object!
 
   // Helper to handle partial configuration updates safely
   const handleConfigUpdate = (key, value) => {
@@ -402,10 +408,14 @@ function NodeConfigurationPanel({
       case "checkbox": {
         // ... (existing checkbox logic kept largely same, simplified for clarity here) ...
         // Special handling for takeScreenshot: show inline preview if available
+        // Special handling for takeScreenshot: show inline preview if available
+        // PRIORITIZATION: 1. Historical Replay Data 2. Live Result 3. Legacy
         const screenshotUrl =
+          activeNode.data?.replayData?.screenshot_path ||
           activeNode.data?.result?.screenshot ||
           activeNode.data?.screenshots?.after?.url ||
           activeNode.data?.screenshots?.after?.path;
+
         const hasScreenshot = field.key === "takeScreenshot" && screenshotUrl;
 
         return (
@@ -429,10 +439,11 @@ function NodeConfigurationPanel({
               <EvidenceCard
                 screenshotUrl={screenshotUrl}
                 durationMs={
-                  activeNode.data.result?.durationMs ||
-                  activeNode.data.result?.duration
+                  activeNode.data?.replayData?.duration_ms ||
+                  activeNode.data?.result?.durationMs ||
+                  activeNode.data?.result?.duration
                 }
-                timestamp={Date.now()}
+                timestamp={Date.now()} // Auto-cache bust handled by EvidenceCard
               />
             )}
           </div>
@@ -526,7 +537,7 @@ function NodeConfigurationPanel({
                   "w-full bg-[var(--bg-canvas)]/50 border border-[var(--border-ui)] rounded-lg px-3 py-2 pl-3 pr-8 text-xs font-mono focus:outline-none focus:border-indigo-500/50 transition-all placeholder:text-[var(--text-muted)] !pointer-events-auto !cursor-text !select-text",
                   value ? "text-indigo-400" : "text-[var(--text-main)]",
                   error &&
-                  "border-red-500/50 focus:border-red-500 bg-red-500/5",
+                    "border-red-500/50 focus:border-red-500 bg-red-500/5",
                 )}
               />
               <div
@@ -636,17 +647,18 @@ function NodeConfigurationPanel({
                       }
                     }, 300); // 300ms debounce for typing comfort
                   }}
-                // onBlur removed - handled by debounce
+                  // onBlur removed - handled by debounce
                 />
               </div>
             </div>
-
 
             {/* HEADER ACTIONS */}
             <div className="flex items-center gap-1">
               <button
                 onClick={() => {
-                  if (confirm(t("common.confirm_delete", "Delete this node?"))) {
+                  if (
+                    confirm(t("common.confirm_delete", "Delete this node?"))
+                  ) {
                     onDeleteNode(activeNode.id);
                   }
                 }}
@@ -669,7 +681,7 @@ function NodeConfigurationPanel({
           <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
             {/* Dynamic Content Switch */}
             {safeConfig.nodeKey === "component" ||
-              activeNode.type === "component" ? (
+            activeNode.type === "component" ? (
               // --- COMPONENT DASHBOARD ---
               <div className="space-y-6">
                 {/* Description Card */}

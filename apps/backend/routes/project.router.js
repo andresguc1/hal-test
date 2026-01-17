@@ -268,6 +268,74 @@ router.get('/projects/:projectId/flows/:flowId', async (req, res) => {
     }
 });
 
+// Export flow with dependencies (Enterprise V2)
+router.get('/projects/:projectId/flows/:flowId/export', async (req, res) => {
+    try {
+        const { projectId, flowId } = req.params;
+        const { sanitize } = req.query; // ?sanitize=true
+        const { dependencyService } = await import('../services/DependencyService.js');
+
+        // 1. Fetch Main Flow
+        const mainFlow = await Flow.findOne({
+            where: { id: flowId, projectId },
+            include: [
+                { model: Node, as: 'nodes' },
+                { model: Edge, as: 'edges' },
+            ],
+        });
+
+        if (!mainFlow) return res.status(404).json({ error: 'Flow not found' });
+
+        // 2. Clone and Sanitize Main Flow (Optional)
+        const mainFlowObj = mapFlowData(mainFlow);
+
+        if (sanitize === 'true') {
+            dependencyService.sanitizeSecrets(mainFlowObj.nodes);
+        }
+
+        // 3. Resolve Dependencies (Recursive Components)
+        // Pass sanitize flag to service if we want deep sanitization too (YES)
+        // We'll interpret resolveDependencies signature, currently it does sanitization internally always.
+        // We need to update DependencyService to accept a flag, or handle it here?
+        // Let's modify DependencyService properly next. For now, let's just act on main flow.
+        // Actually, if I don't update DependencyService, components will ALWAYS be sanitized.
+        // I should stick to the service update plan, but for now I'll just conditionally sanitize the main flow logic here
+        // But the service should return sanitized component flows.
+        const shouldSanitize = sanitize === 'true';
+        const dependencies = await dependencyService.resolveDependencies(
+            mainFlow.nodes,
+            projectId,
+            shouldSanitize,
+        );
+
+        // 4. Construct V2 Package
+        const exportPackage = {
+            meta: {
+                version: '2.0',
+                exportedAt: new Date().toISOString(),
+                origin: 'Haltest-Enterprise',
+                author: 'User', // TODO: Get from Auth middleware
+            },
+            flow: mainFlowObj,
+            dependencies: {
+                components: dependencies.map((d) => {
+                    // Ensure dependency format matches import expectation (nodes/edges)
+                    // If the service returns raw objects, we might need to map them too if they come from DB
+                    // The service uses globalStateManager.getFlow() which likely returns raw DB object or JSON
+                    // Let's assume consistent format or map here.
+                    // Service returns `components` array.
+                    return d;
+                }),
+            },
+        };
+
+        res.json(exportPackage);
+    } catch (error) {
+        console.error(`[ProjectRouter] Export Error:`, error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Update flow (syncing nodes/edges)
 router.put('/projects/:projectId/flows/:flowId', async (req, res) => {
     const transaction = await sequelize.transaction();

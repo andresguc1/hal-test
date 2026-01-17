@@ -20,6 +20,27 @@ const EvidenceCard = ({ screenshotUrl, durationMs, timestamp }) => {
     const ts = timestamp || Date.now();
     const separator = url.includes("?") ? "&" : "?";
 
+    // Forensic Logic: Use secure history endpoint if it's a storage run path
+    if (url && url.includes("storage/runs/")) {
+      const match = url.match(/storage\/runs\/([^/]+)\/(.+?)(?:\.png)?$/);
+      if (match) {
+        const [_, runId, rawNodeId] = match;
+        // Strip extension if present in the capture group (regex handles it but being safe)
+        const nodeId = rawNodeId.replace(".png", "");
+
+        // Use the configured API URL
+        // VITE_API_URL usually is "http://localhost:2001/api"
+        // Endpoint is mounted at /api/history/evidence/:runId/:nodeId
+        // So we append /history/evidence...
+        // If apiBase already has /api, we join cleanly.
+
+        // Clean base: remove trailing slash
+        const cleanApiBase = apiBase.replace(/\/$/, "");
+        return `${cleanApiBase}/history/evidence/${runId}/${nodeId}?t=${ts}`;
+      }
+    }
+
+    // Default formatting
     // Ensure path starts with /
     const path = url.startsWith("/") ? url : `/${url}`;
 

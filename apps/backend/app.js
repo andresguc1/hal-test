@@ -40,8 +40,8 @@ app.use(
 );
 
 app.use('/api', apiLimiter);
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Serve storage folder statically for Flight Recorder screenshots
 // Screenshots are stored at: storage/runs/{runId}/{filename}.png
@@ -83,6 +83,10 @@ app.use('/api', apiRouter);
 
 // Mount the Mocks and Node configuration router
 app.use('/api', mockRouter);
+
+// History & Evidence Router
+import historyRouter from './routes/history.router.js';
+app.use('/api/history', historyRouter);
 
 // Project and Flow management routes
 // Project and Flow management routes

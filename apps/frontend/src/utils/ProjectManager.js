@@ -139,26 +139,17 @@ class ProjectManager {
   async restoreVersion(_projectId, _versionId) {
     throw new Error("Restore version not implemented in backend");
   }
-  async createRun(projectId, flowId) {
+  async createRun(projectId, flowId, options = {}) {
     try {
-      // Create a run for the specific flow
-      // This maps to POST /runs/start or similar.
-      // Assuming backend expects { flowId, projectId, ... }
-      // Wait, the previous inline code used: POST /runs/start with { flowId, flowName, trigger, nodes, edges }
-      // But we want to standardize.
-      // Let's check backend route `api.router.js` to see what /runs/start expects.
-      // For now, I will assume the previous usage was correct:
-      // api.post("/runs/start", { flowId, ... })
-
-      // We need to fetch flow details if not passed?
-      // Or just pass what we have.
-      // But ProjectManager methods generally take IDs.
-      // Let's implement it to fetch flow name and call API.
-      // Actually, looking at backend routes is safer.
+      const { flowName, trigger, nodes, edges } = options;
+      // Backend expects { flowId, flowName, trigger, nodes, edges }
       return await api.post("/runs/start", {
-        projectId, // If backend supports it
+        projectId, // Optional, context
         flowId,
-        trigger: "manual",
+        flowName,
+        trigger: trigger || "manual",
+        nodes,
+        edges,
       });
     } catch (err) {
       logger.error("Failed to create run", err, "ProjectManager");
