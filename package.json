@@ -24,6 +24,7 @@
         "lint:fix": "turbo lint:fix",
         "format": "turbo format",
         "clean": "turbo clean && rm -rf node_modules",
+        "stop": "fuser -k 2001/tcp 3000/tcp || echo 'Ports 2001/3000 cleared'",
         "prepare": "husky"
     },
     "devDependencies": {

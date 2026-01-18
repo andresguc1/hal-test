@@ -980,7 +980,9 @@ export default function App() {
               currentFlowId={currentFlowId}
             />
           ) : (
-            isCreationPanelVisible && <Toolbox addNode={addNode} />
+            isCreationPanelVisible && (
+              <Toolbox addNode={addNode} activeBrowserId={activeBrowserId} />
+            )
           )}
 
           {/* LIENZO (CANVAS - Abyss Blue Environment) */}

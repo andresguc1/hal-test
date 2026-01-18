@@ -29,6 +29,7 @@
     "@ai-sdk/openai": "^3.0.1",
     "@babel/parser": "^7.28.5",
     "@babel/traverse": "^7.28.5",
+    "@modelcontextprotocol/sdk": "^1.25.2",
     "@playwright/mcp": "^0.0.44",
     "ai": "^6.0.3",
     "body-parser": "^2.2.0",

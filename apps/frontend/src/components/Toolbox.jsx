@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { motion as Motion, AnimatePresence } from "motion/react";
 import { useTranslation } from "react-i18next";
 import {
@@ -12,12 +12,13 @@ import {
   Box,
   Loader2,
   ChevronDown,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NODE_CATEGORIES, CATEGORY_STYLES } from "@/config/nodeConstants";
 import { useSettings } from "@/context/SettingsContext";
-import { useReactFlow } from "@xyflow/react";
-import { v4 as uuidv4 } from "uuid";
+
+
 import { useToast } from "@/hooks/useToast";
 
 const ToolboxItem = ({ label, nodeId, color, onAdd }) => {
@@ -276,16 +277,50 @@ const ToolboxCategory = ({
   );
 };
 
-export default function ToolboxPanel({ addNode }) {
+export default function ToolboxPanel({ addNode, activeBrowserId }) {
   const { t } = useTranslation();
   const toast = useToast();
-  const { aiConfig, openSettings } = useSettings();
-  const { addNodes, addEdges } = useReactFlow();
+  const { aiConfig, openSettings, vaultKeys } = useSettings();
+
+
+  // Key Selection State
+  const [selectedKeyId, setSelectedKeyId] = useState("default");
+
+  // Filter keys for active provider
+  const availableKeys = useMemo(() => {
+    if (!aiConfig?.activeProvider) return [];
+    return vaultKeys.filter((k) => k.provider === aiConfig.activeProvider);
+  }, [vaultKeys, aiConfig?.activeProvider]);
+
+  // Reset selection when provider changes
+  useEffect(() => {
+    if (availableKeys.length > 0) {
+      setSelectedKeyId(availableKeys[0].id); // Default to first available
+    } else {
+      setSelectedKeyId("default");
+    }
+  }, [availableKeys]);
 
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [openCategories, setOpenCategories] = useState({
     browser_management: true,
   });
+
+  // Get active browser ID from flow manager hook context if available
+  // Since we are inside ToolBox, we need to access the parent state or store
+  // Assuming useFlowManager or similar global state exposes it
+  // But wait, Toolbox is a child. App.jsx has activeBrowserId.
+  // We should probably ask for it as a prop or rely on a context.
+  // For now, let's verify if we can get it from the window or a global store if not passed.
+  // The user hook `useFlowManager` was viewed earlier and returns `activeBrowserId`.
+  // Let's assume we can get it. But Toolbox doesn't import it.
+  // Let's verify App.jsx where Toolbox is used. It might be passed or not.
+  // Actually, we can just fetch it from the API if the backend knows?
+  // No, client must say "I am looking at browser X".
+  // Let's add `activeBrowserId` prop to ToolboxPanel in this edit if possible or just use a placeholder for now.
+  // Wait, I can't edit App.jsx in the same call easily without checking.
+  // Let's check props. `addNode` is passed.
+  // I will add `activeBrowserId` to props in the function signature.
 
   // Chat State
   const [chatInput, setChatInput] = useState("");
@@ -309,11 +344,31 @@ export default function ToolboxPanel({ addNode }) {
     setChatInput(""); // Clear immediately for UX
 
     try {
-      const response = await fetch("/api/ai/generate-flow", {
+      const provider = aiConfig.activeProvider;
+      const model = aiConfig.selectedModel;
+
+      // Decision Logic: Use selected Vault Key OR Fallback to Legacy/Env
+      let apiKeyToSend;
+
+      if (selectedKeyId !== "default") {
+        // Send the Vault ID/Alias
+        apiKeyToSend = selectedKeyId;
+      } else {
+        // Legacy: Send the raw key from config (if exists) or let backend use Env
+        apiKeyToSend = aiConfig.keys?.[provider];
+      }
+
+      const response = await fetch("/api/ai/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-ai-provider": provider,
+          "x-ai-model": model,
+          "x-ai-api-key": apiKeyToSend,
+        },
         body: JSON.stringify({
-          prompt: originalText,
+          messages: [{ role: "user", content: originalText }],
+          browserId: activeBrowserId, // Pass the active browser ID
           aiConfig,
         }),
       });
@@ -324,66 +379,32 @@ export default function ToolboxPanel({ addNode }) {
         throw new Error(data.message || "Generation failed");
       }
 
-      const result = data.data; // { action, message, flow_json }
+      const result = data; // { success, message, toolCalls }
 
-      if (result.action === "text_response") {
-        toast.info(`HAL-9001 says: ${result.message}`);
-        return;
+      if (result.message) {
+        toast.success(`HAL-9001: ${result.message}`);
       }
 
-      if (result.action === "generate_flow" && result.flow_json) {
-        const { nodes, edges } = result.flow_json;
-
-        if (!nodes || nodes.length === 0) {
-          toast.info(result.message || "No flow generated.");
-          return;
-        }
-
-        // --- HYDRATION & LAYOUT ---
-        const idMap = {};
-        const startY = 100;
-        const startX = 250;
-        const GAP_Y = 150;
-
-        const hydratedNodes = nodes.map((node, index) => {
-          // 1. Generate new UUID to avoid collisions
-          const newId = `ai_${uuidv4().slice(0, 8)}`;
-          idMap[node.id] = newId;
-
-          // 2. Simple Vertical Layout
-          const position = {
-            x: startX,
-            y: startY + index * GAP_Y,
-          };
-
-          return {
-            id: newId,
-            type: node.type,
-            position: position,
-            data: {
-              configuration: { ...node.data }, // Nest AI params (url, selector) here for execution
-              type: node.type, // CRITICAL: Required for useFlowManager execution
-              label: node.data?.label || node.type, // Fallback label
-            },
-          };
+      // If tool calls happened, we might want to notify
+      if (result.toolCalls && result.toolCalls.length > 0) {
+        result.toolCalls.forEach((tc) => {
+          if (tc.function.name === "highlight_element") {
+            // Frontend visual feedback? It's already handled by 'highlight_element' in the server execution (via DOM injection)
+            // But maybe we show a toast.
+            toast.info("👁️ AI is inspecting the page...");
+          }
+          if (tc.function.name === "inspect_page") {
+            toast.info("🧠 Analyzing page structure...");
+          }
         });
-
-        const hydratedEdges = edges.map((edge) => ({
-          id: `e_${uuidv4().slice(0, 8)}`,
-          source: idMap[edge.source] || edge.source,
-          target: idMap[edge.target] || edge.target,
-          type: "custom", // Force custom edge type used in app
-          markerEnd: { type: "arrowclosed" },
-        }));
-
-        // 3. Inject into Canvas
-        addNodes(hydratedNodes);
-        addEdges(hydratedEdges);
-
-        toast.success(
-          `Flow Generated! ${result.message || `Created ${hydratedNodes.length} nodes.`}`,
-        );
       }
+
+      // Compatibility: If backend returned generate_flow data (it currently handles chat, but we might want both).
+      // The new chat endpoint returns text + tools.
+      // If we want to support "generate flow", standard chat might return text describing code.
+      // The user prompt was "generate flow".
+      // We might need to handle the JSON flow return in chat too if we want to keep that feature.
+      // For now, we focus on the "Brain" chat.
     } catch (error) {
       toast.error(`HAL Failed: ${error.message}`);
       setChatInput(originalText); // Restore text on error
@@ -505,90 +526,122 @@ export default function ToolboxPanel({ addNode }) {
 
             {/* AI COPILOT */}
             <div className="mt-4 pt-4 border-t border-white/5">
-              <div className="flex items-center gap-2 mb-3 px-1">
-                <Sparkles size={14} className="text-amber-300" />
-                <span className="text-xs font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-orange-400">
-                  Hal-9001
-                </span>
-                {isAiReady && (
-                  <span className="ml-auto text-[10px] text-green-400 font-mono flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                    ONLINE
-                  </span>
-                )}
-              </div>
-              <div className="bg-gradient-to-b from-slate-900/80 to-slate-900/40 border border-white/10 rounded-xl p-0 relative group overflow-hidden flex flex-col h-36 shadow-lg">
-                <div className="flex-1 p-3 overflow-y-auto custom-scrollbar">
-                  <div className="flex gap-3 mb-2">
-                    <div className="w-5 h-5 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0">
-                      <Bot size={12} className="text-indigo-400" />
+              <div className="flex-1 bg-slate-950 flex flex-col min-h-0">
+                {/* Internal Header for AI Chat */}
+                <div className="p-3 border-b border-slate-800 bg-slate-900/50 flex items-center justify-between sticky top-0 z-10">
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-2">
+                      <Sparkles size={14} className="text-purple-400" />
+                      <span className="text-xs font-bold text-slate-300 uppercase tracking-widest">
+                        Hal-9001
+                      </span>
+                      {activeBrowserId && (
+                        <span
+                          className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse"
+                          title="Connected to Browser"
+                        />
+                      )}
                     </div>
-                    <p className="text-[11px] text-slate-300 leading-relaxed mt-0.5">
-                      {isAiReady ? (
-                        <>
-                          Connected to{" "}
-                          <span className="text-indigo-300 font-semibold">
-                            {aiConfig?.activeProvider}
-                          </span>
-                          .
-                          <br />
-                          How can I help you automate today?
-                        </>
-                      ) : (
-                        <>
-                          I can help you build this flow. Try asking:{" "}
-                          <span className="text-indigo-300 italic">
-                            "Go to google.com and search for kittens"
-                          </span>
-                        </>
-                      )}
-                    </p>
+                    {/* Available Keys Selector */}
+                    {availableKeys.length > 0 && (
+                      <div className="mt-1">
+                        <select
+                          className="bg-transparent text-[10px] text-slate-500 border-none outline-none cursor-pointer hover:text-slate-300"
+                          value={selectedKeyId}
+                          onChange={(e) => setSelectedKeyId(e.target.value)}
+                        >
+                          {availableKeys.map((k) => (
+                            <option key={k.id} value={k.id}>
+                              Using: {k.alias}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                   </div>
-                </div>
-                <div className="h-9 border-t border-white/5 bg-white/[0.02] flex items-center px-3 gap-2">
-                  <input
-                    className="bg-transparent border-none text-[11px] text-slate-200 placeholder:text-slate-600 focus:outline-none w-full h-full disabled:opacity-50"
-                    placeholder={
-                      isAiReady
-                        ? isGenerating
-                          ? "HAL is thinking..."
-                          : "Describe a test case..."
-                        : "Configure AI to chat..."
-                    }
-                    disabled={!isAiReady || isGenerating}
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                  />
-                  {isGenerating ? (
-                    <Loader2
-                      size={12}
-                      className="text-indigo-400 animate-spin"
-                    />
-                  ) : (
-                    <Send
-                      size={12}
-                      className={cn(
-                        "transition-colors",
-                        isAiReady
-                          ? "text-indigo-400 cursor-pointer hover:text-indigo-300"
-                          : "text-slate-700",
-                      )}
-                      onClick={handleSendMessage}
-                    />
-                  )}
+
+                  <button
+                    onClick={() => openSettings("integrations")}
+                    className="p-1.5 hover:bg-slate-800 rounded-md text-slate-500 hover:text-slate-300 transition-colors"
+                    title={t("toolbox.configureAI")}
+                  >
+                    <Settings size={14} />
+                  </button>
                 </div>
 
-                {!isAiReady && (
-                  <div
-                    onClick={() => openSettings("integrations")}
-                    className="absolute inset-0 bg-[var(--bg-canvas)]/80 backdrop-blur-[1px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 rounded-lg cursor-pointer"
-                  >
-                    <span className="text-[10px] font-bold text-amber-500 border border-amber-500/30 px-3 py-1 rounded-full bg-amber-500/10 shadow-[0_0_10px_rgba(245,158,11,0.2)] hover:bg-amber-500/20 transition-colors">
-                      SETUP REQUIRED
-                    </span>
+                <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide bg-gradient-to-b from-slate-900/80 to-slate-900/40 border border-white/10 rounded-xl p-0 relative group overflow-hidden flex flex-col h-36 shadow-lg">
+                  <div className="flex-1 p-3 overflow-y-auto custom-scrollbar">
+                    <div className="flex gap-3 mb-2">
+                      <div className="w-5 h-5 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0">
+                        <Bot size={12} className="text-indigo-400" />
+                      </div>
+                      <p className="text-[11px] text-slate-300 leading-relaxed mt-0.5">
+                        {isAiReady ? (
+                          <>
+                            Connected to{" "}
+                            <span className="text-indigo-300 font-semibold">
+                              {aiConfig?.activeProvider}
+                            </span>
+                            .
+                            <br />
+                            How can I help you automate today?
+                          </>
+                        ) : (
+                          <>
+                            I can help you build this flow. Try asking:{" "}
+                            <span className="text-indigo-300 italic">
+                              "Go to google.com and search for kittens"
+                            </span>
+                          </>
+                        )}
+                      </p>
+                    </div>
                   </div>
-                )}
+                  <div className="h-9 border-t border-white/5 bg-white/[0.02] flex items-center px-3 gap-2">
+                    <input
+                      className="bg-transparent border-none text-[11px] text-slate-200 placeholder:text-slate-600 focus:outline-none w-full h-full disabled:opacity-50"
+                      placeholder={
+                        isAiReady
+                          ? isGenerating
+                            ? "HAL is thinking..."
+                            : "Describe a test case..."
+                          : "Configure AI to chat..."
+                      }
+                      disabled={!isAiReady || isGenerating}
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                    />
+                    {isGenerating ? (
+                      <Loader2
+                        size={12}
+                        className="text-indigo-400 animate-spin"
+                      />
+                    ) : (
+                      <Send
+                        size={12}
+                        className={cn(
+                          "transition-colors",
+                          isAiReady
+                            ? "text-indigo-400 cursor-pointer hover:text-indigo-300"
+                            : "text-slate-700",
+                        )}
+                        onClick={handleSendMessage}
+                      />
+                    )}
+                  </div>
+
+                  {!isAiReady && (
+                    <div
+                      onClick={() => openSettings("integrations")}
+                      className="absolute inset-0 bg-[var(--bg-canvas)]/80 backdrop-blur-[1px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 rounded-lg cursor-pointer"
+                    >
+                      <span className="text-[10px] font-bold text-amber-500 border border-amber-500/30 px-3 py-1 rounded-full bg-amber-500/10 shadow-[0_0_10px_rgba(245,158,11,0.2)] hover:bg-amber-500/20 transition-colors">
+                        SETUP REQUIRED
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </>

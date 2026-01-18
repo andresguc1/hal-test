@@ -8,10 +8,10 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+
 import { Label } from "@/components/ui/label";
 // Tabs removed - using custom Sidebar state
-import { Switch } from "@/components/ui/switch";
+
 import {
   Select,
   SelectContent,
@@ -23,24 +23,15 @@ import {
   Settings,
   Layout,
   Cpu,
-  Save,
-  Globe,
-  Monitor,
-  Key,
   HardDrive,
-  Eye,
-  EyeOff,
-  CheckCircle2,
-  Play,
-  Trash2,
-  Loader2,
+  Monitor,
   AlertTriangle,
-  Check,
-  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useToast } from "@/hooks/useToast";
+
+
 import providersData from "@/data/providers.json";
+import { KeyVaultPanel } from "./settings/KeyVaultPanel";
 
 /**
  * SettingsModal (Unified Hub)
@@ -52,7 +43,7 @@ export default function SettingsModal({
   initialTab = "general",
 }) {
   const { i18n } = useTranslation();
-  const toast = useToast();
+
   const { theme, setTheme } = useTheme();
   const [activeTab, setActiveTab] = useState(initialTab);
 
@@ -73,10 +64,7 @@ export default function SettingsModal({
     },
   });
 
-  const [showKeys, setShowKeys] = useState({
-    openai: false,
-    anthropic: false,
-  });
+
 
   // Load configuration on open
   useEffect(() => {
@@ -108,109 +96,20 @@ export default function SettingsModal({
     }
   }, [isOpen]);
 
-  const handleSaveConfig = () => {
-    // 1. Save new unified config
-    localStorage.setItem("hal_ai_config", JSON.stringify(aiConfig));
 
-    // 2. Sync legacy key for backward compatibility (optional but safe)
-    localStorage.setItem("haltest_api_keys", JSON.stringify(aiConfig.keys));
 
-    // Notify/Toast
-    toast.success("AI Configuration Saved - Settings are now active");
 
-    // Notify other components (like SettingsContext/Toolbox) immediately
-    window.dispatchEvent(new Event("hal_ai_config_updated"));
-  };
-
-  const updateKey = (provider, value) => {
-    setAiConfig((prev) => ({
-      ...prev,
-      keys: { ...prev.keys, [provider]: value },
-    }));
-  };
 
   // --- Connection Test Logic ---
-  const [isTesting, setIsTesting] = useState(false);
-  const [testStatus, setTestStatus] = useState("idle"); // idle, success, error
 
-  // Reset status when inputs change
-  useEffect(() => {
-    setTestStatus("idle");
-  }, [aiConfig]);
 
-  const handleTestConnection = async () => {
-    setTestStatus("idle");
-    const provider = aiConfig.activeProvider;
-    const key = aiConfig.keys[provider];
-    const baseUrl = aiConfig.keys[`${provider}_baseurl`];
 
-    // Validation
-    const activeProv = providersData.find((p) => p.id === provider);
-    if (activeProv?.requiresKey && !key) {
-      toast.error(`Please enter an API Key for ${activeProv.name}`);
-      return;
-    }
 
-    setIsTesting(true);
-    try {
-      const response = await fetch("/api/ai/validate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          provider,
-          apiKey: key,
-          model: aiConfig.selectedModel,
-          baseUrl,
-        }),
-      });
 
-      const data = await response.json();
 
-      if (response.ok) {
-        setTestStatus("success");
-        toast.success(
-          `System Online: Successfully connected to ${activeProv?.name || provider}.`,
-        );
-      } else {
-        setTestStatus("error");
-        // Parse common errors
-        let errorMsg = data.message || "Unknown error";
-        if (
-          data.message?.includes("Incorrect API key") ||
-          data.message?.includes("401")
-        ) {
-          errorMsg = "Invalid API Key. Please check your credentials.";
-        } else if (
-          data.message?.includes("429") ||
-          data.message?.toLowerCase().includes("quota exceeded")
-        ) {
-          errorMsg =
-            "Quota exceeded. Your API Key is valid, but you hit the plan limits.";
-        } else if (data.message?.includes("not found")) {
-          errorMsg =
-            "Model not found. Try a different model or check provider settings.";
-        }
 
-        throw new Error(errorMsg);
-      }
-    } catch (error) {
-      setTestStatus("error");
-      // Clean up error message if it's an object or raw error
-      const msg = error.message || "Connection failed";
-      toast.error(`Auth Failed: ${msg}`);
-    } finally {
-      setIsTesting(false);
-    }
-  };
 
-  const clearKey = (keyName) => {
-    updateKey(keyName, "");
-    toast.info("Key cleared");
-  };
 
-  const toggleShowKey = (provider) => {
-    setShowKeys((prev) => ({ ...prev, [provider]: !prev[provider] }));
-  };
 
   // Helper to get models for active provider
   const getActiveModels = () => {
@@ -401,140 +300,21 @@ export default function SettingsModal({
                   if (!activeProv) return null;
 
                   return (
-                    <form
-                      className="space-y-4"
-                      onSubmit={(e) => e.preventDefault()}
-                    >
-                      {/* API Key Input */}
-                      {activeProv.requiresKey && (
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <Label className="text-slate-300 flex items-center gap-2">
-                              <Key size={14} className="text-yellow-500" />
-                              API Key for {activeProv.name}
-                            </Label>
-                            <div className="flex gap-1">
-                              {aiConfig.keys[aiConfig.activeProvider] && (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-6 w-6 text-red-400 hover:text-red-300 hover:bg-red-900/20"
-                                  onClick={() =>
-                                    clearKey(aiConfig.activeProvider)
-                                  }
-                                  title="Clear Key"
-                                >
-                                  <Trash2 size={14} />
-                                </Button>
-                              )}
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 text-slate-500"
-                                onClick={() =>
-                                  toggleShowKey(aiConfig.activeProvider)
-                                }
-                              >
-                                {showKeys[aiConfig.activeProvider] ? (
-                                  <EyeOff size={14} />
-                                ) : (
-                                  <Eye size={14} />
-                                )}
-                              </Button>
-                            </div>
-                          </div>
-                          <Input
-                            type={
-                              showKeys[aiConfig.activeProvider]
-                                ? "text"
-                                : "password"
-                            }
-                            autoComplete="off"
-                            name={`apikey-${aiConfig.activeProvider}`}
-                            placeholder={`sk-...`}
-                            value={aiConfig.keys[aiConfig.activeProvider] || ""}
-                            onChange={(e) =>
-                              updateKey(aiConfig.activeProvider, e.target.value)
-                            }
-                            className="bg-black/40 border-slate-800 font-mono text-sm"
-                          />
+                    <div className="space-y-6">
+                      {/* Secure Wallet Integration */}
+                      <KeyVaultPanel />
+
+                      {/* Legacy Key Warning (if local keys exist) */}
+                      {aiConfig.keys[aiConfig.activeProvider] && (
+                        <div className="p-3 border border-yellow-500/20 bg-yellow-500/5 rounded text-xs text-yellow-300 flex items-center gap-2">
+                          <AlertTriangle size={14} />
+                          <span>
+                            You have a legacy key saved locally. It works, but
+                            we recommend migrating to the Vault.
+                          </span>
                         </div>
                       )}
-
-                      {/* Base URL Input (Ollama / Local) */}
-                      {activeProv.requiresBaseUrl && (
-                        <div className="space-y-2">
-                          <Label className="text-slate-300 flex items-center gap-2">
-                            <Globe size={14} className="text-blue-500" />
-                            Base URL
-                          </Label>
-                          <Input
-                            type="text"
-                            name="baseurl"
-                            placeholder={
-                              activeProv.defaultBaseUrl ||
-                              "http://localhost:11434"
-                            }
-                            value={
-                              aiConfig.keys[
-                                `${aiConfig.activeProvider}_baseurl`
-                              ] || activeProv.defaultBaseUrl
-                            }
-                            onChange={(e) =>
-                              updateKey(
-                                `${aiConfig.activeProvider}_baseurl`,
-                                e.target.value,
-                              )
-                            }
-                            className="bg-black/40 border-slate-800 font-mono text-sm"
-                          />
-                          <p className="text-[12px] text-slate-500">
-                            For local models like Ollama, ensure CORS is enabled
-                            if needed.
-                          </p>
-                        </div>
-                      )}
-
-                      <div className="pt-4 flex justify-between">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={handleTestConnection}
-                          disabled={isTesting}
-                          className={cn(
-                            "border-slate-700 hover:bg-slate-800 text-slate-300 gap-2 transition-all duration-300",
-                            testStatus === "success" &&
-                              "border-green-500/50 bg-green-500/10 text-green-400 hover:bg-green-500/20",
-                            testStatus === "error" &&
-                              "border-red-500/50 bg-red-500/10 text-red-400 hover:bg-red-500/20",
-                          )}
-                        >
-                          {isTesting ? (
-                            <Loader2 size={16} className="animate-spin" />
-                          ) : testStatus === "success" ? (
-                            <Check size={16} />
-                          ) : testStatus === "error" ? (
-                            <X size={16} />
-                          ) : (
-                            <Play size={16} />
-                          )}
-                          {testStatus === "success"
-                            ? "Connected"
-                            : testStatus === "error"
-                              ? "Failed"
-                              : "Test Connection"}
-                        </Button>
-
-                        <Button
-                          onClick={handleSaveConfig}
-                          className="bg-blue-600 hover:bg-blue-500 text-white gap-2 px-6"
-                        >
-                          <Save size={16} /> Save Configuration
-                        </Button>
-                      </div>
-                    </form>
+                    </div>
                   );
                 })()}
 

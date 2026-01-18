@@ -4,6 +4,8 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { z } from 'zod';
+import { playwrightMcpServer } from './PlaywrightMCPServer.js';
+import { llmFactory } from './LLMFactory.js';
 
 /**
  * Servicio Central de IA
@@ -123,6 +125,85 @@ class AIService {
             throw new Error(`AI Generation failed: ${error.message}`);
         }
     }
+
+    /**
+     * Generates text with access to MCP Tools
+     * This is the "Brain" mode for the Chatbot.
+     */
+    async generateTextWithTools({
+        prompt,
+        model,
+        system,
+        provider = 'openai',
+        apiKey,
+        _baseUrl,
+        maxSteps = 5,
+    }) {
+        try {
+            // "apiKey" here might be an Alias now thanks to the new Factory
+            // If the frontend sends an Alias in the headers, we pass it here.
+            // For backward compatibility, if 'apiKey' looks like a sk- key, we might need a bypass?
+            // The Factory currently expects an Alias or falls back to Env.
+            // If the user sends a RAW key (legacy), our factory logic needs to handle it?
+            // For security, we want to STOP sending raw keys.
+            // BUT, for now, let's assume 'apiKey' is the identifier (Alias/ID).
+
+            // Note: The controller extracts 'x-ai-api-key' and passes it as 'apiKey'.
+            // In the new system, this 'apiKey' header should contain the ALIAS/ID.
+
+            // Refactored to pass 'provider' as fallback for Legacy Raw Keys
+            const providerInstance = llmFactory.getProviderInstance(apiKey || provider, provider);
+
+            const modelRef = providerInstance(model);
+
+            // Get tools from our local MCP Server
+            const tools = playwrightMcpServer.getToolDefinitions();
+
+            console.log(`[AIService] Generating with TOOLS (${provider}/${model})`);
+
+            const { text, toolCalls, toolResults, finishReason } = await generateText({
+                model: modelRef,
+                prompt,
+                system:
+                    system ||
+                    "You are Hal-9001, an intelligent automation assistant. You have access to the browser state via tools. Use 'inspect_page' to see the current page, and 'suggest_selector' to help find elements. Always ask for confirmation before taking destructive actions.",
+                tools,
+                maxSteps,
+            });
+
+            return { text, toolCalls, toolResults, finishReason };
+        } catch (error) {
+            console.error('[AIService] Error generating with tools:', error);
+            throw llmFactory.mapError(error);
+        }
+    }
+
+    /**
+     * Validates an API Key by making a lightweight call
+     */
+    async validateKey({ provider, apiKey, baseUrl }) {
+        try {
+            // Check provider validity via basic call
+            const providerInstance = this.getProvider(provider, apiKey, baseUrl);
+
+            // Pick a cheap model for validation
+            let modelId = 'gpt-3.5-turbo';
+            if (provider === 'google') modelId = 'gemini-1.5-flash';
+            if (provider === 'anthropic') modelId = 'claude-3-haiku-20240307';
+            if (provider === 'ollama') modelId = 'llama3'; // User should ensure model exists
+
+            const modelRef = providerInstance(modelId);
+            await generateText({
+                model: modelRef,
+                prompt: 'Hello',
+                maxTokens: 1,
+            });
+            return true;
+        } catch (e) {
+            throw new Error(e.message);
+        }
+    }
+
     /**
      * Attempts to "heal" a broken selector by analyzing the screenshot and DOM.
      * @param {object} params

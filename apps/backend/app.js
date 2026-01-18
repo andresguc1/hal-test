@@ -22,6 +22,7 @@ import apiRouter from './routes/api.router.js';
 import mockRouter from './routes/mock.router.js';
 import projectRouter from './routes/project.router.js';
 import aiRouter from './routes/ai.routes.js'; // AI Mock Routes
+import keysRouter from './routes/keys.routes.js'; // Secure Key Management
 
 const app = express();
 const server = createServer(app);
@@ -94,6 +95,9 @@ app.use('/api', projectRouter);
 
 // AI & Copilot routes (Mocks)
 app.use('/api/ai', aiRouter);
+
+// Key Vault Routes
+app.use('/api/keys', keysRouter);
 
 // --- STATIC FILES SERVING (Production) ---
 // Using PUBLIC_DIR from paths.js

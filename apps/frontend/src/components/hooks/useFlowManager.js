@@ -1094,6 +1094,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
     setSelectedAction,
     toast,
     queryClient,
+    saveFlow,
   ]);
 
   // ========================================
@@ -1845,7 +1846,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
       // 4. Feedback is handled inside executeStep (Socket events)
       return result;
     },
-    [executeStep, updateNodeState],
+    [executeStep, updateNodeState, toast],
   );
 
   const executeFlow = useCallback(
@@ -2219,7 +2220,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
       console.error("Export Error:", error);
       toast.error(`Export failed: ${error.message}`);
     }
-  }, [currentFlowId, currentProject, setApiStatus]);
+  }, [currentFlowId, currentProject, setApiStatus, toast]);
 
   /**
    * Enhanced import function supporting multiple modes

@@ -12,6 +12,7 @@ import {
   Terminal,
   Settings2,
   Box,
+  Brain,
 } from "lucide-react";
 
 // --- GLOBAL ALL-IN-ONE CONFIGURATION ---
@@ -78,6 +79,12 @@ export const NODE_CATEGORIES = {
     label: "Diagnostics",
     nodes: ["take_screenshot", "save_dom", "log_errors", "listen_events"],
   },
+  llm_ai: {
+    icon: Brain,
+    color: "violet", // AI = Violet
+    label: "AI Models",
+    nodes: ["call_llm", "generate_data", "validate_semantic"],
+  },
   network_control: {
     icon: Cable,
     color: "emerald", // Network = Emerald (#10b981)
@@ -89,6 +96,8 @@ export const NODE_CATEGORIES = {
       "modify_headers",
       "set_network_conditions",
       "clear_all_mocks",
+      "wait_for_response",
+      "wait_for_request",
     ],
   },
   session_management: {

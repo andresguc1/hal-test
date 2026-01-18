@@ -1,4 +1,5 @@
 import express from 'express';
+import { chatWithTools } from '../controllers/chat.controller.js';
 
 const router = express.Router();
 
@@ -74,6 +75,14 @@ router.post('/validate', async (req, res) => {
         res.status(401).json({ success: false, message: error.message });
     }
 });
+
+/**
+ * @swagger
+ * /api/ai/chat:
+ *   post:
+ *     summary: Chat with Hal-9001 using MCP Tools
+ */
+router.post('/chat', chatWithTools);
 
 /**
  * @swagger

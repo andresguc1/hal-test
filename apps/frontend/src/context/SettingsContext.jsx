@@ -50,6 +50,30 @@ export const SettingsProvider = ({ children }) => {
   // AI Config State
   const [aiConfig, setAiConfig] = useState(null);
 
+  // Vault Keys State (Centralized)
+  const [vaultKeys, setVaultKeys] = useState([]);
+
+  const loadVaultKeys = async () => {
+    try {
+      const res = await fetch("/api/keys");
+      const data = await res.json();
+      if (data.success) {
+        setVaultKeys(data.data);
+      }
+    } catch (e) {
+      console.error("Failed to load vault keys", e);
+    }
+  };
+
+  // Load keys on mount
+  useEffect(() => {
+    loadVaultKeys();
+    // Listen for updates from other tabs/windows
+    const handleUpdate = () => loadVaultKeys();
+    window.addEventListener("hal_keys_updated", handleUpdate);
+    return () => window.removeEventListener("hal_keys_updated", handleUpdate);
+  }, []);
+
   // Persist settings (optional, simple implementation)
   useEffect(() => {
     const loadSettings = () => {
@@ -133,6 +157,8 @@ export const SettingsProvider = ({ children }) => {
         openApiKeys,
         closeApiKeys,
         aiConfig,
+        vaultKeys,
+        loadVaultKeys,
         autoSaveEnabled,
         setAutoSaveEnabled,
       }}
