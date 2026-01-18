@@ -24,8 +24,14 @@ class KeyVaultService {
     }
 
     ensureFile() {
+        const dir = path.dirname(KEYS_FILE);
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+            console.log(`[KeyVault] Created missing directory: ${dir}`);
+        }
         if (!fs.existsSync(KEYS_FILE)) {
             fs.writeFileSync(KEYS_FILE, JSON.stringify([], null, 2));
+            console.log(`[KeyVault] Created initial keys file: ${KEYS_FILE}`);
         }
     }
 

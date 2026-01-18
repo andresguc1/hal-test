@@ -1,8 +1,16 @@
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "/api" : "/api");
 
-const getHeaders = () => {
+import { supabase } from "./supabaseClient";
+
+const getHeaders = async () => {
   const headers = { "Content-Type": "application/json" };
+
+  // Supabase Auth
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.access_token) {
+    headers["Authorization"] = `Bearer ${session.access_token}`;
+  }
 
   // Legacy keys
   const apiKey = localStorage.getItem("hal_openai_key");
@@ -58,7 +66,7 @@ const getHeaders = () => {
 export const api = {
   async get(endpoint) {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      headers: getHeaders(),
+      headers: await getHeaders(),
     });
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     return await response.json();
@@ -67,7 +75,7 @@ export const api = {
   async post(endpoint, data) {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: "POST",
-      headers: getHeaders(),
+      headers: await getHeaders(),
       body: JSON.stringify(data),
     });
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -77,7 +85,7 @@ export const api = {
   async put(endpoint, data) {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: "PUT",
-      headers: getHeaders(),
+      headers: await getHeaders(),
       body: JSON.stringify(data),
     });
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -87,7 +95,7 @@ export const api = {
   async delete(endpoint) {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: "DELETE",
-      headers: getHeaders(),
+      headers: await getHeaders(),
     });
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     return await response.json();

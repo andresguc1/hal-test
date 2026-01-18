@@ -1,4 +1,8 @@
 import React, { useState, useCallback, useMemo, useEffect } from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Login from "./components/auth/Login";
+import Signup from "./components/auth/Signup";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 import {
   ReactFlow,
   Controls,
@@ -53,10 +57,10 @@ import { api } from "./utils/api";
 import { NODE_STATES } from "./components/hooks/flowStyles";
 
 // ========================================
-// COMPONENTE PRINCIPAL (MAREA REFACTOR)
+// DASHBOARD COMPONENT (Main Work Area)
 // ========================================
 
-export default function App() {
+function Dashboard() {
   const { t } = useTranslation();
 
   // Theme
@@ -1239,5 +1243,28 @@ export default function App() {
         <HalToaster offsetRight={isConfigurationPanelVisible ? 350 : 0} />
       </div>
     </>
+  );
+}
+
+// ========================================
+// MAIN APP COMPONENT (Router Entry)
+// ========================================
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </BrowserRouter>
   );
 }

@@ -21,6 +21,8 @@ const queryClient = new QueryClient({
   },
 });
 
+import { AuthProvider } from "./context/AuthContext";
+
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
@@ -33,7 +35,9 @@ createRoot(document.getElementById("root")).render(
         <ReactFlowProvider>
           <ToastProvider>
             <SettingsProvider>
-              <App />
+              <AuthProvider>
+                <App />
+              </AuthProvider>
             </SettingsProvider>
           </ToastProvider>
         </ReactFlowProvider>
