@@ -15,7 +15,7 @@ First off, thank you for considering contributing to HAL-TEST! It's people like 
 
 ### Pull Requests
 1. **Fork the repository** and create your branch from `main`.
-2. **Setup the environment**: Run `pnpm install` and ensure tests pass.
+2. **Setup the environment**: Configure the `.env` file in the root. You can use **Guest Mode** (`AUTH_ENABLED=false`) for quick local development without needing a Supabase account. See the [README](README.md#setup-environment) for details.
 3. **Coding Standards**:
    - Use clean, modular code.
    - Follow the existing project structure.

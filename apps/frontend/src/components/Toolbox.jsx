@@ -18,7 +18,6 @@ import { cn } from "@/lib/utils";
 import { NODE_CATEGORIES, CATEGORY_STYLES } from "@/config/nodeConstants";
 import { useSettings } from "@/context/SettingsContext";
 
-
 import { useToast } from "@/hooks/useToast";
 
 const ToolboxItem = ({ label, nodeId, color, onAdd }) => {
@@ -281,7 +280,6 @@ export default function ToolboxPanel({ addNode, activeBrowserId }) {
   const { t } = useTranslation();
   const toast = useToast();
   const { aiConfig, openSettings, vaultKeys } = useSettings();
-
 
   // Key Selection State
   const [selectedKeyId, setSelectedKeyId] = useState("default");

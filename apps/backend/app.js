@@ -1,12 +1,14 @@
-// 🚀 HaltTest Backend Server (Main Orchestrator) - Updated: 2026-01-18T14:44:15-05:00
-// ==========================
+import path from 'path';
+import { fileURLToPath } from 'url';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-import 'dotenv/config';
+import dotenv from 'dotenv';
+dotenv.config({ path: path.join(__dirname, '.env') });
+
 import express from 'express';
 import cors from 'cors';
 import fs from 'fs';
 import { createServer } from 'http';
-import path from 'path';
 import { storageCleanupService } from './services/StorageCleanupService.js';
 import { STORAGE_DIR, PUBLIC_DIR } from './config/paths.js';
 import { init as initSocket } from './socket.js';

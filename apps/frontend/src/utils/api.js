@@ -6,10 +6,18 @@ import { supabase } from "./supabaseClient";
 const getHeaders = async () => {
   const headers = { "Content-Type": "application/json" };
 
-  // Supabase Auth
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session?.access_token) {
-    headers["Authorization"] = `Bearer ${session.access_token}`;
+  // Skip Supabase Session if Auth is disabled (ONLY allowed in non-production)
+  const isDev = import.meta.env.DEV || import.meta.env.MODE !== "production";
+  if (isDev && import.meta.env.VITE_AUTH_ENABLED === "false") {
+    headers["Authorization"] = `Bearer local-dev-token`;
+  } else {
+    // Supabase Auth
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      headers["Authorization"] = `Bearer ${session.access_token}`;
+    }
   }
 
   // Legacy keys

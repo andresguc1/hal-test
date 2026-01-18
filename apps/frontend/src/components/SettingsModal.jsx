@@ -29,7 +29,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-
 import providersData from "@/data/providers.json";
 import { KeyVaultPanel } from "./settings/KeyVaultPanel";
 
@@ -64,8 +63,6 @@ export default function SettingsModal({
     },
   });
 
-
-
   // Load configuration on open
   useEffect(() => {
     if (isOpen) {
@@ -96,20 +93,7 @@ export default function SettingsModal({
     }
   }, [isOpen]);
 
-
-
-
-
   // --- Connection Test Logic ---
-
-
-
-
-
-
-
-
-
 
   // Helper to get models for active provider
   const getActiveModels = () => {

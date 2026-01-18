@@ -71,11 +71,15 @@ hal-test/
    pnpm install
    ```
 
-3. **Setup environment** (optional)
+3. **Setup environment**
+   Copy the root `.env` file and configure it:
    ```bash
-   # Copy example env file if it exists
-   cp apps/backend/.env.example apps/backend/.env
+   # In the project root
+   AUTH_ENABLED=false       # Set to 'false' for quick local access (Guest Mode)
+   VITE_AUTH_ENABLED=false  # Must match AUTH_ENABLED
    ```
+   > [!TIP]
+   > Use **Guest Mode** (`AUTH_ENABLED=false`) to run HAL-TEST locally without needing a Supabase account. For production or shared environments, set to `true` and provide Supabase credentials.
 
 4. **Initialize database**
    ```bash
@@ -86,7 +90,7 @@ hal-test/
    ```bash
    pnpm dev
    ```
-   - **Frontend**: http://localhost:5173
+   - **Frontend**: http://localhost:5173/app/
    - **Backend**: http://localhost:2001
 
 ## 📖 Usage
