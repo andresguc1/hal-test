@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/useToast";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { CATEGORY_STYLES, NODE_TYPE_MAP } from "@/config/nodeConstants";
+import { api } from "../utils/api";
 import EvidenceCard from "./EvidenceCard"; // New component import
 
 // --- CONFIGURATION SCHEMA ---
@@ -298,17 +299,12 @@ function NodeConfigurationPanel({
   const handleAutoHeal = async (failedSelector) => {
     const toastId = toast.loading("AI Fixing selector... 🧠");
     try {
-      const response = await fetch("/api/ai/heal-selector", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          failedSelector,
-          nodeType: activeNode.type,
-          // In real implementation, we would send screenshot/DOM
-          error: activeNode.data?.error,
-        }),
+      const data = await api.post("/ai/heal-selector", {
+        failedSelector,
+        nodeType: activeNode.type,
+        // In real implementation, we would send screenshot/DOM
+        error: activeNode.data?.error,
       });
-      const data = await response.json();
 
       if (data.suggestion) {
         handleConfigUpdate("selector", data.suggestion);
@@ -320,9 +316,9 @@ function NodeConfigurationPanel({
         toast.dismiss(toastId);
         toast.error("AI could not find a solution.");
       }
-    } catch {
+    } catch (error) {
       toast.dismiss(toastId);
-      toast.error("AI Service Error");
+      toast.error(error.message || "AI Service Error");
     }
   };
 

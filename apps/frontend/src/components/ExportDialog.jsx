@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion as Motion, AnimatePresence } from "motion/react";
+import { api } from "../utils/api";
 
 /**
  * ExportDialog Component
@@ -135,20 +136,10 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges }) => {
         message: t("dialogs.export.generating_code"),
       });
 
-      const response = await fetch("/api/export/code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          framework,
-          flow,
-        }),
+      const result = await api.post("/export/code", {
+        framework,
+        flow,
       });
-
-      if (!response.ok) {
-        throw new Error(`Error: ${response.statusText}`);
-      }
-
-      const result = await response.json();
 
       if (!result.code) {
         throw new Error(t("dialogs.export.error_no_code"));

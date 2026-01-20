@@ -10,11 +10,10 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if authentication is disabled (ONLY allowed in non-production)
-    const isDev = import.meta.env.DEV || import.meta.env.MODE !== "production";
-    const isAuthDisabled = import.meta.env.VITE_AUTH_ENABLED === "false";
+    const isAuthEnabled = import.meta.env.VITE_AUTH_ENABLED !== "false";
+    const isProd = import.meta.env.MODE === "production";
 
-    if (isDev && isAuthDisabled) {
+    if (!isProd && !isAuthEnabled) {
       setUser({
         id: "local-dev-user",
         email: "local@haltest.dev",
@@ -45,8 +44,9 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const signIn = async (email, password) => {
-    const isDev = import.meta.env.DEV || import.meta.env.MODE !== "production";
-    if (isDev && import.meta.env.VITE_AUTH_ENABLED === "false") {
+    const isProd = import.meta.env.MODE === "production";
+    const isAuthEnabled = import.meta.env.VITE_AUTH_ENABLED !== "false";
+    if (!isProd && !isAuthEnabled) {
       setUser({
         id: "local-dev-user",
         email: "local@haltest.dev",
@@ -67,8 +67,9 @@ export const AuthProvider = ({ children }) => {
   };
 
   const signUp = async (email, password) => {
-    const isDev = import.meta.env.DEV || import.meta.env.MODE !== "production";
-    if (isDev && import.meta.env.VITE_AUTH_ENABLED === "false") {
+    const isProd = import.meta.env.MODE === "production";
+    const isAuthEnabled = import.meta.env.VITE_AUTH_ENABLED !== "false";
+    if (!isProd && !isAuthEnabled) {
       setUser({
         id: "local-dev-user",
         email: "local@haltest.dev",
@@ -83,14 +84,18 @@ export const AuthProvider = ({ children }) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/app/`,
+      },
     });
     if (error) throw error;
     return data;
   };
 
   const signOut = async () => {
-    const isDev = import.meta.env.DEV || import.meta.env.MODE !== "production";
-    if (isDev && import.meta.env.VITE_AUTH_ENABLED === "false") {
+    const isProd = import.meta.env.MODE === "production";
+    const isAuthEnabled = import.meta.env.VITE_AUTH_ENABLED !== "false";
+    if (!isProd && !isAuthEnabled) {
       setUser(null);
       setSession(null);
       return;

@@ -1,5 +1,3 @@
-/* eslint-env vitest */
-
 import { vi } from 'vitest';
 import Joi from 'joi';
 import validate from '../middlewares/validator.js'; // Asegúrate que esta ruta sea correcta

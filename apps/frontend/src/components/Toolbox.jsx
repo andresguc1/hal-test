@@ -19,6 +19,7 @@ import { NODE_CATEGORIES, CATEGORY_STYLES } from "@/config/nodeConstants";
 import { useSettings } from "@/context/SettingsContext";
 
 import { useToast } from "@/hooks/useToast";
+import { api } from "../utils/api";
 
 const ToolboxItem = ({ label, nodeId, color, onAdd }) => {
   // Select styles based on color theme, fallback to slate
@@ -356,26 +357,21 @@ export default function ToolboxPanel({ addNode, activeBrowserId }) {
         apiKeyToSend = aiConfig.keys?.[provider];
       }
 
-      const response = await fetch("/api/ai/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-ai-provider": provider,
-          "x-ai-model": model,
-          "x-ai-api-key": apiKeyToSend,
-        },
-        body: JSON.stringify({
+      const data = await api.post(
+        "/ai/chat",
+        {
           messages: [{ role: "user", content: originalText }],
           browserId: activeBrowserId, // Pass the active browser ID
           aiConfig,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Generation failed");
-      }
+        },
+        {
+          headers: {
+            "x-ai-provider": provider,
+            "x-ai-model": model,
+            "x-ai-api-key": apiKeyToSend,
+          },
+        },
+      );
 
       const result = data; // { success, message, toolCalls }
 

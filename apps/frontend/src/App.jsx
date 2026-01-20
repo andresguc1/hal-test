@@ -261,18 +261,13 @@ function Dashboard() {
 
     // 2. Start Inspector API
     try {
-      const response = await fetch("/api/inspector/start", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ browserId: null }),
-      });
-      const data = await response.json();
+      const data = await api.post("/inspector/start", { browserId: null });
       if (!data.success) {
         toast.error(data.message || "Failed to start inspector");
         updateNodeState(selectedAction.nodeId, NODE_STATES.DEFAULT); // Revert on failure
       }
-    } catch {
-      toast.error("Network error starting inspector");
+    } catch (error) {
+      toast.error(error.message || "Network error starting inspector");
       updateNodeState(selectedAction.nodeId, NODE_STATES.DEFAULT); // Revert on failure
     }
   }, [selectedAction, updateNodeState, toast, t]);

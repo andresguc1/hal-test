@@ -782,17 +782,10 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
           timeout: 30000, // 30 second timeout
         };
 
-        const response = await fetch(`${API_BASE_URL}/take_screenshot`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(screenshotPayload),
-        });
-
-        if (!response.ok) {
-          throw new Error(`Screenshot API error: ${response.statusText}`);
-        }
-
-        const data = await response.json();
+        const data = await api.post(
+          "/actions/take_screenshot",
+          screenshotPayload,
+        );
 
         // Log response for debugging
         logger.debug(
@@ -1293,44 +1286,12 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
 
           // Inject AI Keys from settings
           // Inject AI Keys from settings
-          const openaiKey = localStorage.getItem("hal_openai_key");
-          const googleKey = localStorage.getItem("hal_google_key");
-          const anthropicKey = localStorage.getItem("hal_anthropic_key");
 
-          const headers = {
-            "Content-Type": "application/json",
-          };
-
-          if (openaiKey) headers["x-openai-key"] = openaiKey;
-          if (googleKey) headers["x-google-key"] = googleKey;
-          if (anthropicKey) headers["x-anthropic-key"] = anthropicKey;
-
-          const response = await fetch(endpoint, {
-            method: "POST",
-            headers: headers,
-            body: JSON.stringify(bodyToSend),
+          // api.post handles headers like 'Content-Type' and AI keys automatically
+          const result = await api.post(endpoint, bodyToSend, {
             signal: executionAbortController.current?.signal,
           });
 
-          if (!response.ok) {
-            const text = await response.text().catch(() => "");
-            let errData = null;
-            let errorMessage = `HTTP Error ${response.status}`;
-
-            try {
-              errData = JSON.parse(text);
-              if (errData && errData.message) {
-                errorMessage = errData.message;
-              }
-            } catch {
-              // Ignore parsing error, use text if available
-              if (text && text.length < 200) errorMessage = text;
-            }
-
-            throw new Error(errorMessage);
-          }
-
-          const result = await response.json();
           const duration = Date.now() - startTime;
 
           const instanceId =
@@ -2082,11 +2043,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
         // Only close if keepOpen is FALSE
         if (browserId && !keepOpen) {
           try {
-            await fetch(`/api/actions/close_browser`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ browserId }),
-            });
+            await api.post("/actions/close_browser", { browserId });
             // If we closed the active one (shouldn't happen if keepOpen is true, but just in case)
             if (browserId === activeBrowserId) setActiveBrowserId(null);
           } catch (e) {
@@ -2139,11 +2096,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
 
     try {
       setApiStatus({ state: "loading", message: "Stopping session..." });
-      await fetch(`${API_BASE_URL}/close_browser`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ browserId: activeBrowserId }),
-      });
+      await api.post("/actions/close_browser", { browserId: activeBrowserId });
       setActiveBrowserId(null);
       setApiStatus({ state: "idle", message: "Session stopped" });
       toast.success("Browser session closed");
@@ -2183,15 +2136,9 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
       });
 
       // Fetch the full export package from backend
-      const response = await fetch(
-        `${API_BASE_URL}/projects/${projectId}/flows/${flowId}/export`,
+      const flowData = await api.get(
+        `/projects/${projectId}/flows/${flowId}/export`,
       );
-
-      if (!response.ok) {
-        throw new Error(`Export failed: ${response.statusText}`);
-      }
-
-      const flowData = await response.json();
 
       // Download Trigger
       const blob = new Blob([JSON.stringify(flowData, null, 2)], {
@@ -2362,19 +2309,10 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
           // 1. Analyze the file (if framework not provided)
           let detectedFramework = framework;
           if (!detectedFramework) {
-            const analyzeResponse = await fetch("/api/import/analyze", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ content, filename }),
+            const analysis = await api.post("/import/analyze", {
+              content,
+              filename,
             });
-
-            if (!analyzeResponse.ok) {
-              throw new Error(
-                `Error al analizar el archivo: ${analyzeResponse.statusText}`,
-              );
-            }
-
-            const analysis = await analyzeResponse.json();
 
             if (!analysis.detected) {
               throw new Error("No se pudo detectar el framework de pruebas.");
@@ -2389,22 +2327,10 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
           });
 
           // 2. Convert to Flow
-          const convertResponse = await fetch("/api/import/convert", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              content,
-              framework: detectedFramework,
-            }),
+          const conversion = await api.post("/import/convert", {
+            content,
+            framework: detectedFramework,
           });
-
-          if (!convertResponse.ok) {
-            throw new Error(
-              `Error al convertir el archivo: ${convertResponse.statusText}`,
-            );
-          }
-
-          const conversion = await convertResponse.json();
 
           if (
             !conversion.success ||

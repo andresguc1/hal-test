@@ -22,12 +22,16 @@ import {
 import { useToast } from "@/hooks/useToast";
 import { useSettings } from "@/context/SettingsContext";
 import providersData from "@/data/providers.json";
+import { api } from "../../utils/api";
 
 export function KeyVaultPanel() {
   const { vaultKeys, loadVaultKeys } = useSettings(); // Use context
+  const toast = useToast();
+  const keys = vaultKeys;
   const [isLoading] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
-  const { toast } = useToast();
+  const [isTesting, setIsTesting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Form State
   const [newKey, setNewKey] = useState({
@@ -37,8 +41,58 @@ export function KeyVaultPanel() {
     baseUrl: "",
   });
 
-  // Sync with context keys
-  const keys = vaultKeys;
+  const handleTestConnection = async (e) => {
+    e.preventDefault(); // Prevent form submission if inside form
+    if (!newKey.key) {
+      toast.error("Enter an API Key to test");
+      return;
+    }
+
+    setIsTesting(true);
+    try {
+      // Use the generic validation endpoint
+      const res = await api.post("/ai/validate", {
+        provider: newKey.provider,
+        apiKey: newKey.key,
+        baseUrl: newKey.baseUrl,
+      });
+
+      if (res.success) {
+        toast.success(res.message || "Connection Successful!");
+      } else {
+        toast.error(res.message || "Connection Failed");
+      }
+    } catch (error) {
+      toast.error(error.message || "Validation Error");
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
+  const handleTestExisting = async (k) => {
+    // Test an existing saved key. Note: if the backend stores masked keys and
+    // does not return the raw API key, this endpoint must support validating
+    // by key id. Here we attempt to validate using the `k.key` value returned
+    // by the vault (assumes backend provides a usable value or an id).
+    setIsTesting(true);
+    try {
+      const res = await api.post("/ai/validate", {
+        provider: k.provider,
+        apiKey: k.key,
+        baseUrl: k.baseUrl,
+      });
+
+      if (res && res.success) {
+        toast.success(res.message || "Connection Successful!");
+      } else {
+        toast.error((res && res.message) || "Connection Failed");
+      }
+    } catch (e) {
+      toast.error(e.message || "Validation Error");
+    } finally {
+      setIsTesting(false);
+    }
+  };
 
   const handleAddKey = async () => {
     if (!newKey.alias || !newKey.key) {
@@ -46,13 +100,9 @@ export function KeyVaultPanel() {
       return;
     }
 
+    setIsSaving(true);
     try {
-      const res = await fetch("/api/keys", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newKey),
-      });
-      const data = await res.json();
+      const data = await api.post("/keys", newKey);
 
       if (data.success) {
         toast.success("Key saved to Vault");
@@ -61,22 +111,26 @@ export function KeyVaultPanel() {
         loadVaultKeys(); // Refresh context
         window.dispatchEvent(new Event("hal_keys_updated")); // Notify others
       } else {
+        // Now using specific message from backend response
         toast.error(data.message || "Failed to save key");
       }
-    } catch {
-      toast.error("Error saving key");
+    } catch (error) {
+      // Error is now an Error object with the message from backend
+      toast.error(error.message || "Error saving key");
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleDelete = async (id) => {
     if (!confirm("Are you sure? This action cannot be undone.")) return;
     try {
-      await fetch(`/api/keys/${id}`, { method: "DELETE" });
+      await api.delete(`/keys/${id}`);
       toast.success("Key deleted");
       loadVaultKeys(); // Refresh context
       window.dispatchEvent(new Event("hal_keys_updated")); // Notify others
-    } catch {
-      toast.error("Failed to delete");
+    } catch (error) {
+      toast.error(error.message || "Failed to delete");
     }
   };
 
@@ -146,6 +200,7 @@ export function KeyVaultPanel() {
               <Key size={14} className="absolute left-3 top-3 text-slate-500" />
               <Input
                 type="password"
+                autoComplete="new-password"
                 value={newKey.key}
                 onChange={(e) => setNewKey({ ...newKey, key: e.target.value })}
                 className="bg-slate-950 border-slate-800 pl-9 font-mono text-sm"
@@ -177,12 +232,31 @@ export function KeyVaultPanel() {
             </div>
           )}
 
-          <Button
-            onClick={handleAddKey}
-            className="w-full bg-green-600 hover:bg-green-500"
-          >
-            Save to Vault
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={handleTestConnection}
+              disabled={isTesting || isSaving}
+              className="flex-1 border-slate-700 hover:bg-slate-800"
+            >
+              {isTesting ? (
+                <Loader2 className="animate-spin mr-2" size={16} />
+              ) : (
+                <CheckCircle2 className="mr-2 text-slate-400" size={16} />
+              )}
+              Test Connection
+            </Button>
+            <Button
+              onClick={handleAddKey}
+              disabled={isSaving}
+              className="flex-1 bg-green-600 hover:bg-green-500"
+            >
+              {isSaving ? (
+                <Loader2 className="animate-spin mr-2" size={16} />
+              ) : null}
+              {isSaving ? "Saving..." : "Save to Vault"}
+            </Button>
+          </div>
         </div>
       )}
 
@@ -220,14 +294,30 @@ export function KeyVaultPanel() {
                     </p>
                   </div>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-slate-600 hover:text-red-400 hover:bg-red-900/10"
-                  onClick={() => handleDelete(k.id)}
-                >
-                  <Trash2 size={14} />
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-slate-600 hover:text-green-400 hover:bg-green-900/8"
+                    onClick={() => handleTestExisting(k)}
+                    title="Test connection"
+                  >
+                    {isTesting ? (
+                      <Loader2 className="animate-spin" size={14} />
+                    ) : (
+                      <CheckCircle2 size={14} />
+                    )}
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-slate-600 hover:text-red-400 hover:bg-red-900/10"
+                    onClick={() => handleDelete(k.id)}
+                  >
+                    <Trash2 size={14} />
+                  </Button>
+                </div>
               </div>
             ))}
           </div>

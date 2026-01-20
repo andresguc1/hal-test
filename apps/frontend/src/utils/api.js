@@ -7,8 +7,10 @@ const getHeaders = async () => {
   const headers = { "Content-Type": "application/json" };
 
   // Skip Supabase Session if Auth is disabled (ONLY allowed in non-production)
-  const isDev = import.meta.env.DEV || import.meta.env.MODE !== "production";
-  if (isDev && import.meta.env.VITE_AUTH_ENABLED === "false") {
+  const isProd = import.meta.env.MODE === "production";
+  const isAuthEnabled = import.meta.env.VITE_AUTH_ENABLED !== "false";
+
+  if (!isProd && !isAuthEnabled) {
     headers["Authorization"] = `Bearer local-dev-token`;
   } else {
     // Supabase Auth
@@ -76,7 +78,12 @@ export const api = {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       headers: await getHeaders(),
     });
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`,
+      );
+    }
     return await response.json();
   },
 
@@ -86,7 +93,12 @@ export const api = {
       headers: await getHeaders(),
       body: JSON.stringify(data),
     });
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`,
+      );
+    }
     return await response.json();
   },
 
@@ -96,7 +108,12 @@ export const api = {
       headers: await getHeaders(),
       body: JSON.stringify(data),
     });
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`,
+      );
+    }
     return await response.json();
   },
 
@@ -105,7 +122,12 @@ export const api = {
       method: "DELETE",
       headers: await getHeaders(),
     });
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`,
+      );
+    }
     return await response.json();
   },
 };

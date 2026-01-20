@@ -11,6 +11,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { motion as Motion, AnimatePresence } from "motion/react";
+import { api } from "../utils/api";
 
 /**
  * ImportDialog Component
@@ -53,17 +54,12 @@ const ImportDialog = ({ isOpen, onClose, onImport }) => {
     // Auto-detect framework
     try {
       const content = await file.text();
-      const response = await fetch("/api/import/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content, filename: file.name }),
+      const analysis = await api.post("/import/analyze", {
+        content,
+        filename: file.name,
       });
-
-      if (response.ok) {
-        const analysis = await response.json();
-        if (analysis.detected) {
-          setDetectedFramework(analysis.framework);
-        }
+      if (analysis.detected) {
+        setDetectedFramework(analysis.framework);
       }
     } catch (err) {
       console.error("Error detecting framework:", err);
@@ -138,24 +134,16 @@ const ImportDialog = ({ isOpen, onClose, onImport }) => {
 
       const endpoint =
         importMode === "directory-pom"
-          ? "/api/import/directory-pom"
-          : "/api/import/directory";
+          ? "/import/directory-pom"
+          : "/import/directory";
 
       setProgress({
         stage: "processing",
         message: "Procesando archivos...",
       });
 
-      const response = await fetch(endpoint, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error(`Error del servidor: ${response.statusText}`);
-      }
-
-      const result = await response.json();
+      // api.post handles FormData and sets correct headers
+      const result = await api.post(endpoint, formData);
 
       setProgress({
         stage: "converting",

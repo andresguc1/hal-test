@@ -13,7 +13,10 @@ export default function ProtectedRoute({ children }) {
     );
   }
 
-  if (!user && import.meta.env.VITE_AUTH_ENABLED !== "false") {
+  const isProd = import.meta.env.MODE === "production";
+  const isAuthEnabled = import.meta.env.VITE_AUTH_ENABLED !== "false";
+
+  if (!user && (isProd || isAuthEnabled)) {
     return <Navigate to="/login" replace />;
   }
 

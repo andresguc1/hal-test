@@ -15,9 +15,9 @@ export default function Login() {
   const toast = useToast();
 
   React.useEffect(() => {
-    const isDev = import.meta.env.DEV || import.meta.env.MODE !== "production";
-    const isAuthDisabled = import.meta.env.VITE_AUTH_ENABLED === "false";
-    if ((isDev && isAuthDisabled) || user) {
+    const isProd = import.meta.env.MODE === "production";
+    const isAuthEnabled = import.meta.env.VITE_AUTH_ENABLED !== "false";
+    if ((!isProd && !isAuthEnabled) || user) {
       navigate("/");
     }
   }, [user, navigate]);

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { api } from "../utils/api";
 
 const SettingsContext = createContext();
 
@@ -55,8 +56,7 @@ export const SettingsProvider = ({ children }) => {
 
   const loadVaultKeys = async () => {
     try {
-      const res = await fetch("/api/keys");
-      const data = await res.json();
+      const data = await api.get("/keys");
       if (data.success) {
         setVaultKeys(data.data);
       }

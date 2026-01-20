@@ -14,64 +14,36 @@ import { llmFactory } from './LLMFactory.js';
 class AIService {
     constructor() {
         this.providers = {};
-        // Lazy initialization map
     }
 
-    /**
-     * Get or create a provider instance based on the configuration
-     * @param {string} providerName - 'openai', 'google', 'anthropic', 'grok'
-     * @param {string} apiKey - API Key specifically for this request or from env
-     * @returns {object} - The model provider instance
-     */
     getProvider(providerName, apiKey, baseUrl) {
-        // Validation for key-based providers
         if (
             ['openai', 'google', 'anthropic', 'grok', 'groq'].includes(providerName) &&
             !apiKey &&
             !process.env.OPENAI_API_KEY
         ) {
-            // Only throw if strictly required. Some environments might rely on implicit auth (like vertex) but here we stick to simple API Key checks.
-            // We can relax this check or make it provider specific.
-            // For now, let's just check if apiKey is provided via arguments for dynamic usage.
+            // Validating key existence lazily
         }
 
         const effectiveKey = apiKey || process.env.OPENAI_API_KEY;
 
         switch (providerName) {
-            case 'google': {
-                // Create a custom Google provider instance with the key
-                const google = createGoogleGenerativeAI({
-                    apiKey: effectiveKey,
-                });
-                return google;
-            }
-
-            case 'anthropic': {
-                const anthropic = createAnthropic({
-                    apiKey: effectiveKey,
-                });
-                return anthropic;
-            }
-
+            case 'google':
+                return createGoogleGenerativeAI({ apiKey: effectiveKey });
+            case 'anthropic':
+                return createAnthropic({ apiKey: effectiveKey });
             case 'ollama':
-                // Ollama uses OpenAI compatible interface usually, but we need to point to localhost
                 return createOpenAI({
                     baseURL: baseUrl || 'http://localhost:11434/v1',
-                    apiKey: 'ollama', // Ollama doesn't care about key usually
+                    apiKey: 'ollama',
                 });
-
             case 'groq':
                 return createOpenAI({
                     baseURL: 'https://api.groq.com/openai/v1',
                     apiKey: effectiveKey,
                 });
-
             case 'grok':
-                return createOpenAI({
-                    baseURL: 'https://api.x.ai/v1',
-                    apiKey: effectiveKey,
-                });
-
+                return createOpenAI({ baseURL: 'https://api.x.ai/v1', apiKey: effectiveKey });
             case 'openai':
             default:
                 return createOpenAI({ apiKey: effectiveKey });
@@ -79,94 +51,120 @@ class AIService {
     }
 
     /**
-     * Generates simple text response from an LLM
-     * @param {object} params
-     * @param {string} params.prompt - User prompt
-     * @param {string} params.model - Model ID (e.g. 'gpt-4o')
-     * @param {string} [params.system] - System prompt
-     * @param {number} [params.maxTokens]
-     * @param {number} [params.temperature]
-     * @param {string} [params.provider] - 'openai', 'grok', etc.
-     * @param {string} [params.apiKey] - Optional custom key
+     * Matrix de Selección de Modelos (2026 Standard)
+     * @param {string} taskType - 'coding' | 'massive_context' | 'reasoning' | 'local'
+     * @param {string} [preferredProvider] - Optional override
      */
+    selectBestModel(taskType, preferredProvider) {
+        if (preferredProvider === 'ollama')
+            return { provider: 'ollama', model: 'deepseek-coder-v2' };
+
+        switch (taskType) {
+            case 'coding':
+            case 'refactoring':
+                // Priority #1: Claude 3.5 Sonnet
+                return { provider: 'anthropic', model: 'claude-3-5-sonnet-20240620' };
+
+            case 'massive_context':
+                // Priority #1: Gemini 1.5 Pro (>50k lines)
+                return { provider: 'google', model: 'gemini-1.5-pro' };
+
+            case 'reasoning':
+            case 'planning':
+                // Priority #1: GPT-4o
+                return { provider: 'openai', model: 'gpt-4o' };
+
+            case 'local':
+                return { provider: 'ollama', model: 'deepseek-coder-v2' };
+
+            default:
+                return { provider: 'openai', model: 'gpt-4o' };
+        }
+    }
+
     async generateText({
         prompt,
         model,
         system,
         maxTokens,
-        temperature,
-        provider = 'openai',
+        temperature = 0.7, // Default behavior
+        provider,
         apiKey,
         baseUrl,
+        taskType = 'reasoning', // Default task
     }) {
         try {
-            const providerInstance = this.getProvider(provider, apiKey, baseUrl);
+            // Apply Matrix Logic if no specific model/provider forced
+            let selected = { provider, model };
+            if (!model || !provider) {
+                selected = this.selectBestModel(taskType, provider);
+            }
 
-            // Construct model reference. e.g. openai('gpt-4-turbo')
-            const modelRef = providerInstance(model);
+            // Standards Enforce: Coding temp = 0.2
+            if (taskType === 'coding' || taskType === 'refactoring') {
+                temperature = 0.2;
+            }
 
-            console.log(`[AIService] Generating text with provider: ${provider}, model: ${model}`);
+            const activeProvider = provider || selected.provider;
+            const activeModel = model || selected.model;
+
+            console.log(
+                `[AIService] Generating text. Task: ${taskType} -> Using: ${activeProvider}/${activeModel}, Temp: ${temperature}`,
+            );
+
+            const providerInstance = this.getProvider(activeProvider, apiKey, baseUrl);
+            const modelRef = providerInstance(activeModel);
 
             const { text, usage, finishReason } = await generateText({
                 model: modelRef,
-                prompt: prompt,
-                system: system,
-                maxTokens: maxTokens,
-                temperature: temperature,
+                prompt,
+                system,
+                maxTokens,
+                temperature,
             });
 
-            return {
-                text,
-                usage,
-                finishReason,
-            };
+            return { text, usage, finishReason };
         } catch (error) {
             console.error('[AIService] Error generating text:', error);
-            throw new Error(`AI Generation failed: ${error.message}`);
+            throw new Error(`AI Generation failed (${provider}/${model}): ${error.message}`);
         }
     }
 
-    /**
-     * Generates text with access to MCP Tools
-     * This is the "Brain" mode for the Chatbot.
-     */
     async generateTextWithTools({
         prompt,
         model,
         system,
-        provider = 'openai',
+        provider,
         apiKey,
         _baseUrl,
         maxSteps = 5,
+        taskType = 'reasoning',
     }) {
         try {
-            // "apiKey" here might be an Alias now thanks to the new Factory
-            // If the frontend sends an Alias in the headers, we pass it here.
-            // For backward compatibility, if 'apiKey' looks like a sk- key, we might need a bypass?
-            // The Factory currently expects an Alias or falls back to Env.
-            // If the user sends a RAW key (legacy), our factory logic needs to handle it?
-            // For security, we want to STOP sending raw keys.
-            // BUT, for now, let's assume 'apiKey' is the identifier (Alias/ID).
+            // Apply Matrix
+            let selected = { provider, model };
+            if (!model || !provider) {
+                selected = this.selectBestModel(taskType, provider);
+            }
 
-            // Note: The controller extracts 'x-ai-api-key' and passes it as 'apiKey'.
-            // In the new system, this 'apiKey' header should contain the ALIAS/ID.
+            const activeProvider = provider || selected.provider;
+            const activeModel = model || selected.model;
 
-            // Refactored to pass 'provider' as fallback for Legacy Raw Keys
-            const providerInstance = llmFactory.getProviderInstance(apiKey || provider, provider);
-
-            const modelRef = providerInstance(model);
-
-            // Get tools from our local MCP Server
+            const providerInstance = llmFactory.getProviderInstance(
+                apiKey || activeProvider,
+                activeProvider,
+            );
+            const modelRef = providerInstance(activeModel);
             const tools = playwrightMcpServer.getToolDefinitions();
 
-            console.log(`[AIService] Generating with TOOLS (${provider}/${model})`);
+            console.log(
+                `[AIService] Tools Generation. Task: ${taskType} -> Using: ${activeProvider}/${activeModel}`,
+            );
 
             const { text, toolCalls, toolResults, finishReason } = await generateText({
                 model: modelRef,
                 prompt,
-                system:
-                    system ||
-                    "You are Hal-9001, an intelligent automation assistant. You have access to the browser state via tools. Use 'inspect_page' to see the current page, and 'suggest_selector' to help find elements. Always ask for confirmation before taking destructive actions.",
+                system: system || 'You are Hal-9001.',
                 tools,
                 maxSteps,
             });
@@ -178,19 +176,44 @@ class AIService {
         }
     }
 
-    /**
-     * Validates an API Key by making a lightweight call
-     */
     async validateKey({ provider, apiKey, baseUrl }) {
         try {
-            // Check provider validity via basic call
+            console.log(
+                `[AIService] Validating key for provider: ${provider}, apiKey provided: ${!!apiKey}`,
+            );
             const providerInstance = this.getProvider(provider, apiKey, baseUrl);
 
-            // Pick a cheap model for validation
-            let modelId = 'gpt-3.5-turbo';
-            if (provider === 'google') modelId = 'gemini-1.5-flash';
-            if (provider === 'anthropic') modelId = 'claude-3-haiku-20240307';
-            if (provider === 'ollama') modelId = 'llama3'; // User should ensure model exists
+            // Standard Validation Models (Updated for 2026 Compatibility)
+            let modelId = 'gpt-5-nano'; // User requested specific model test
+            if (provider === 'google') modelId = 'gemini-1.5-flash'; // High availability
+            if (provider === 'anthropic') modelId = 'claude-3-5-sonnet-20240620';
+            if (provider === 'ollama') modelId = 'deepseek-coder-v2';
+
+            // Special handling for gpt-5-nano (Responses API)
+            const effectiveKey = apiKey || process.env.OPENAI_API_KEY;
+            if (modelId === 'gpt-5-nano') {
+                const cleanKey = effectiveKey?.trim();
+                const response = await fetch('https://api.openai.com/v1/responses', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${cleanKey}`,
+                    },
+                    body: JSON.stringify({
+                        model: 'gpt-5-nano',
+                        input: 'Hello',
+                        store: true,
+                    }),
+                });
+
+                if (!response.ok) {
+                    const err = await response.json().catch(() => ({}));
+                    throw new Error(
+                        err.error?.message || `OpenAI Validation Failed: ${response.status}`,
+                    );
+                }
+                return true;
+            }
 
             const modelRef = providerInstance(modelId);
             await generateText({
@@ -200,23 +223,16 @@ class AIService {
             });
             return true;
         } catch (e) {
-            throw new Error(e.message);
+            // Enhanced error mapping recommended by user
+            throw new Error(`Validation Failed: ${e.message}`);
         }
     }
 
-    /**
-     * Attempts to "heal" a broken selector by analyzing the screenshot and DOM.
-     * @param {object} params
-     * @param {string} params.screenshotBase64 - Base64 image of the current state
-     * @param {string} params.domSnippet - Simplified HTML snippet around the area
-     * @param {string} params.originalSelector - The selector that failed
-     * @param {string} params.error - The error message
-     * @param {string} params.intent - What the action was trying to do (e.g. "click login button")
-     */
     async healSelector({ screenshotBase64, domSnippet, originalSelector, error, intent, apiKey }) {
         try {
+            // Vision Task -> Reasoning/Multimodal
             const providerInstance = this.getProvider('openai', apiKey);
-            const model = providerInstance('gpt-4o'); // Vision capable model required
+            const model = providerInstance('gpt-4o');
 
             const prompt = `
             The automation failed to find an element.
@@ -225,21 +241,16 @@ class AIService {
             Intent: "${intent}"
 
             Attached is the screenshot of the page and a snippet of the DOM.
-            Analyze the visual elements and the DOM to find the most likely correct selector for the intended element.
-            The original selector might be outdated (ID changed, class changed, etc.).
-            Return a robust CSS selector that targets the visual element described by the intent.
+            Analyze the visual elements and the DOM to find the most likely correct selector.
+            Return a robust CSS selector.
             `;
 
             const { object } = await generateObject({
                 model,
                 schema: z.object({
-                    correctedSelector: z
-                        .string()
-                        .describe('The corrected CSS selector found in the DOM/Image'),
-                    confidence: z.number().describe('Confidence score between 0 and 1'),
-                    reasoning: z
-                        .string()
-                        .describe('Explanation of why this element is the correct one'),
+                    correctedSelector: z.string(),
+                    confidence: z.number(),
+                    reasoning: z.string(),
                 }),
                 messages: [
                     {
@@ -262,45 +273,30 @@ class AIService {
             return { correctedSelector: null, confidence: 0, reasoning: error.message };
         }
     }
-    /**
-     * Generates a HAL Flow (Nodes + Edges) from a natural language prompt.
-     * @param {string} prompt - The user's intent (e.g. "Login to google")
-     * @param {object} config - { provider, apiKey, model, baseUrl }
-     */
+
     async generateFlow(prompt, config) {
         try {
-            const { provider = 'openai', apiKey, model, baseUrl } = config;
-            const providerInstance = this.getProvider(provider, apiKey, baseUrl);
+            const { provider, apiKey, model, baseUrl } = config;
 
-            // Default models if not specified
-            const modelId = model || (provider === 'google' ? 'gemini-1.5-flash' : 'gpt-4o');
-            const modelRef = providerInstance(modelId);
+            // Matrix Logic: Flow generation is "Reasoning/Planning"
+            let selected = this.selectBestModel('reasoning', provider);
 
-            const systemPrompt = `
-            You are HAL-9001, an expert automation engineer for the "Hal Test" platform.
-            Your goal is to convert natural language instructions into a flow of automation nodes.
+            // Allow override
+            const activeProvider = provider || selected.provider;
+            const activeModel = model || selected.model;
 
-            ### Available Node Types (Use EXACTLY these names):
-            - **launch_browser**: Starts a new browser session. (MANDATORY start).
-            - **open_url**: Navigates to a URL. Data: { url: "https://..." }
-            - **click**: Clicks an element. Data: { selector: "#id" }
-            - **type_text**: Types text. Data: { selector: "#id", text: "hello" }
-            - **wait_visible**: Waits for element. Data: { selector: "#id" }
-            - **take_screenshot**: Captures screen. No data needed.
-            - **close_browser**: Ends the session.
-
-            ### Output Format:
-            Return a JSON object with:
-            - action: "generate_flow" (or "text_response" if you cannot generate a flow).
-            - message: A short explanation of what you built.
-            - flow_json: The nodes and edges.
-            `;
+            const providerInstance = this.getProvider(activeProvider, apiKey, baseUrl);
+            const modelRef = providerInstance(activeModel);
 
             console.log(
-                `[AIService] Generating flow with ${provider}/${modelId} for prompt: "${prompt}"`,
+                `[AIService] Generating Flow. Using Matrix: ${activeProvider}/${activeModel}`,
             );
 
-            // Define valid node types from the project constants
+            const systemPrompt = `
+            You are HAL-9001. Convert Natural Language instructions into a flow of automation nodes.
+            Supported Nodes: launch_browser, open_url, click, type_text, wait_visible, take_screenshot, close_browser.
+            `;
+
             const ValidNodeTypes = z.enum([
                 'launch_browser',
                 'open_url',
@@ -314,13 +310,13 @@ class AIService {
             const { object } = await generateObject({
                 model: modelRef,
                 schema: z.object({
-                    action: z.enum(['text_response', 'generate_flow']).describe('Action to take'),
-                    message: z.string().describe('Message to the user'),
+                    action: z.enum(['text_response', 'generate_flow']),
+                    message: z.string(),
                     flow_json: z
                         .object({
                             nodes: z.array(
                                 z.object({
-                                    id: z.string().describe("Unique ID e.g. 'n1'"),
+                                    id: z.string(),
                                     type: ValidNodeTypes,
                                     data: z
                                         .object({
@@ -340,8 +336,7 @@ class AIService {
                                 }),
                             ),
                         })
-                        .optional()
-                        .describe('The generated flow, required if action is generate_flow'),
+                        .optional(),
                 }),
                 messages: [
                     { role: 'system', content: systemPrompt },

@@ -79,7 +79,11 @@ hal-test/
    VITE_AUTH_ENABLED=false  # Must match AUTH_ENABLED
    ```
    > [!TIP]
-   > Use **Guest Mode** (`AUTH_ENABLED=false`) to run HAL-TEST locally without needing a Supabase account. For production or shared environments, set to `true` and provide Supabase credentials.
+   > Use **Guest Mode** (`AUTH_ENABLED=false`) to run HAL-TEST locally without needing a Supabase account. 
+   > 
+   > **Important Details:**
+   > - **Production Enforcement**: Guest Mode is **hard-disabled** in production builds (port 2001) for security. You must use a Supabase account in production.
+   > - **Logout Content**: In Development with Guest Mode enabled, clicking "Logout" will clear the session but remain in the dashboard, as the system automatically redirects guests to the app. 
 
 4. **Initialize database**
    ```bash

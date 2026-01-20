@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { User } from "lucide-react";
 import {
@@ -9,6 +9,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import UserConfigMenu from "./UserConfigMenu";
+import { useAuth } from "../context/AuthContext";
+import { api } from "../utils/api";
 
 import logo from "@/assets/images/haltest_logo.jpeg";
 
@@ -18,6 +20,7 @@ export default function UserMenu({
   apiUrl = "/api/status",
 }) {
   const { i18n } = useTranslation();
+  const { user, signOut } = useAuth();
   const [profilePic, setProfilePic] = useState(null);
 
   // API Status State
@@ -26,8 +29,6 @@ export default function UserMenu({
     lastChecked: null,
     message: "",
   });
-
-  const abortRef = useRef(null);
 
   // Load profile pic
   useEffect(() => {
@@ -52,43 +53,22 @@ export default function UserMenu({
 
   // Check API Logic
   const checkApiStatus = async () => {
-    if (abortRef.current) abortRef.current.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    setApiStatus((prev) => ({
-      ...prev,
-      state: "Checking",
-      message: "Checking...",
-    }));
-
     try {
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
-      const res = await fetch(apiUrl, {
-        method: "GET",
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
+      // api.get prepends /api by default, so we remove it from the endpoint if it's already there
+      const endpoint = apiUrl.startsWith("/api") ? apiUrl.substring(4) : apiUrl;
+      await api.get(endpoint);
 
-      if (res.ok) {
-        setApiStatus({
-          state: "Online",
-          lastChecked: new Date(),
-          message: "OK",
-        });
-      } else {
-        setApiStatus({
-          state: "Offline",
-          lastChecked: new Date(),
-          message: `HTTP ${res.status}`,
-        });
-      }
+      setApiStatus({
+        state: "Online",
+        lastChecked: new Date(),
+        message: "OK",
+      });
     } catch (e) {
       if (e.name !== "AbortError") {
         setApiStatus({
           state: "Offline",
           lastChecked: new Date(),
-          message: "Conn Error",
+          message: e.message || "Conn Error",
         });
       }
     }
@@ -129,8 +109,8 @@ export default function UserMenu({
       >
         <UserConfigMenu
           user={{
-            name: "User Name", // Potentially fetch from context/storage
-            email: "hal-user@example.com",
+            name: user?.user_metadata?.full_name || "Investigator",
+            email: user?.email || "No session",
             profilePic: profilePic,
           }}
           apiStatus={apiStatus.state}
@@ -145,6 +125,7 @@ export default function UserMenu({
           onRefresh={checkApiStatus}
           onOpenSettings={onOpenSettings}
           onOpenApiKeys={onOpenApiKeys}
+          onLogout={signOut}
           currentLanguage={i18n.language.split("-")[0]}
           onLanguageChange={handleLanguageChange}
           languages={[
