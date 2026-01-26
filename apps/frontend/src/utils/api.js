@@ -1,12 +1,19 @@
 // Utility to normalize URL paths, preventing double slashes or duplicated /api segments
 const normalizeUrl = (base, path) => {
-  const cleanBase = base.endsWith("/") ? base.slice(0, -1) : base;
-  const cleanPath = path.startsWith("/") ? path : `/${path}`;
+  // If path is a full URL, return it as-is
+  if (path.startsWith("http")) return path;
 
-  // If base ends with /api and path starts with /api, remove one
-  if (cleanBase.endsWith("/api") && cleanPath.startsWith("/api/")) {
-    return `${cleanBase}${cleanPath.substring(4)}`;
+  // Clean base: remove trailing slash
+  let cleanBase = base.endsWith("/") ? base.slice(0, -1) : base;
+
+  // Ensure path starts with slash
+  let cleanPath = path.startsWith("/") ? path : `/${path}`;
+
+  // Add /api prefix if not present in base
+  if (!cleanBase.endsWith("/api")) {
+    cleanBase = `${cleanBase}/api`;
   }
+
   return `${cleanBase}${cleanPath}`;
 };
 

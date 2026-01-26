@@ -613,7 +613,7 @@ export const openUrlAction = async (req, res) => {
     if (nodeId) emitExecutionStatus({ stepId: nodeId, status: 'running' });
 
     try {
-        const { url, waitUntil = 'load', timeout = 30000 } = req.body ?? {};
+        const { url, waitUntil = 'domcontentloaded', timeout = 30000 } = req.body ?? {};
 
         if (!url) {
             return res

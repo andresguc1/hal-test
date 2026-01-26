@@ -94,7 +94,14 @@ class BrowserManager {
                 '--disable-gpu', // Architect Recommendation for Linux
                 '--no-sandbox', // Critical for many server environments
                 '--disable-dev-shm-usage', // Use /tmp instead of /dev/shm
+                '--disable-setuid-sandbox', // Additional sandbox bypass
+                '--disable-blink-features=AutomationControlled', // Hide automation
             ];
+
+            // Additional flags for headless mode stability
+            if (headless) {
+                stabilityArgs.push('--disable-software-rasterizer');
+            }
 
             launchArgs.push(...stabilityArgs);
         }

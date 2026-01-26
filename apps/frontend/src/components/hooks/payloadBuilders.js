@@ -108,19 +108,23 @@ export const open_url = (payload) => {
 
   // Validate URL is not empty
   if (!url || url.trim() === "") {
-    throw new Error("La URL es requerida para abrir una página.");
+    throw new Error(
+      "La URL es requerida. Por favor, configura la URL en el nodo (ej: https://example.com)",
+    );
   }
 
   // Validate URL format
   try {
     new URL(url);
   } catch {
-    throw new Error("URL inválida. Debe incluir http:// o https://");
+    throw new Error(
+      `URL inválida: "${url}". Debe incluir http:// o https:// (ej: https://www.tradingview.com)`,
+    );
   }
 
   return {
     url: url,
-    waitUntil: asString(payload?.waitUntil, "load"),
+    waitUntil: asString(payload?.waitUntil, "domcontentloaded"), // Changed default to match backend
     timeout: asNumber(payload?.timeout, 30000),
     browserId: asString(payload?.browserId),
     takeScreenshot: asBoolean(payload?.takeScreenshot, false), // Flight Recorder
