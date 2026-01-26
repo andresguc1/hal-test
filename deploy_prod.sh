@@ -12,15 +12,13 @@ fi
 echo "📦 Starting Deployment Process..."
 echo "📝 Commit Message: $MSG"
 
-# 1. Build Frontend
-echo "🏗️  Building Frontend..."
-cd apps/frontend
-pnpm run build
+# 1. Build Frontend & Landing (Monolith structure)
+echo "🏗️  Building Monolith (Frontend -> Backend Public)..."
+pnpm run build:monolith
 if [ $? -ne 0 ]; then
     echo "❌ Build failed!"
     exit 1
 fi
-cd ../..
 
 # 2. Add Changes
 echo "➕ Staging changes..."
