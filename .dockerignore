@@ -1,0 +1,17 @@
+node_modules
+dist
+.git
+.vscode
+.env
+.env.local
+.env.*.local
+apps/backend/storage/*
+!apps/backend/storage/.gitkeep
+apps/backend/public/app/*
+apps/backend/public/web/*
+.turbo
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*

@@ -3463,8 +3463,8 @@ var Dn = [],
     On = 0,
     hs = null,
     ps = 0,
-    $e = [],
-    He = 0,
+    He = [],
+    Ke = 0,
     fn = null,
     mt = 1,
     gt = '';
@@ -3472,7 +3472,7 @@ function Jt(e, t) {
     ((Dn[On++] = ps), (Dn[On++] = hs), (hs = e), (ps = t));
 }
 function Oh(e, t, n) {
-    (($e[He++] = mt), ($e[He++] = gt), ($e[He++] = fn), (fn = e));
+    ((He[Ke++] = mt), (He[Ke++] = gt), (He[Ke++] = fn), (fn = e));
     var r = mt;
     e = gt;
     var i = 32 - et(r) - 1;
@@ -3493,19 +3493,19 @@ function El(e) {
 function Ll(e) {
     for (; e === hs; ) ((hs = Dn[--On]), (Dn[On] = null), (ps = Dn[--On]), (Dn[On] = null));
     for (; e === fn; )
-        ((fn = $e[--He]),
-            ($e[He] = null),
-            (gt = $e[--He]),
-            ($e[He] = null),
-            (mt = $e[--He]),
-            ($e[He] = null));
+        ((fn = He[--Ke]),
+            (He[Ke] = null),
+            (gt = He[--Ke]),
+            (He[Ke] = null),
+            (mt = He[--Ke]),
+            (He[Ke] = null));
 }
 var Ve = null,
     Me = null,
     Y = !1,
     qe = null;
 function Mh(e, t) {
-    var n = Ke(5, null, null, 0);
+    var n = We(5, null, null, 0);
     ((n.elementType = 'DELETED'),
         (n.stateNode = t),
         (n.return = e),
@@ -3531,7 +3531,7 @@ function hc(e, t) {
                 t !== null
                     ? ((n = fn !== null ? { id: mt, overflow: gt } : null),
                       (e.memoizedState = { dehydrated: t, treeContext: n, retryLane: 1073741824 }),
-                      (n = Ke(18, null, null, 0)),
+                      (n = We(18, null, null, 0)),
                       (n.stateNode = t),
                       (n.return = e),
                       (e.child = n),
@@ -3994,7 +3994,7 @@ function Wn(e, t) {
             e.firstContext !== null &&
             (e.lanes & t && (Re = !0), (e.firstContext = null)));
 }
-function be(e) {
+function Ge(e) {
     var t = e._currentValue;
     if (Al !== e)
         if (((e = { context: e, memoizedValue: t, next: null }), Mn === null)) {
@@ -4336,7 +4336,7 @@ function ot() {
     var e = { memoizedState: null, baseState: null, baseQueue: null, queue: null, next: null };
     return (ce === null ? (ee.memoizedState = ce = e) : (ce = ce.next = e), ce);
 }
-function Ge() {
+function Qe() {
     if (le === null) {
         var e = ee.alternate;
         e = e !== null ? e.memoizedState : null;
@@ -4361,7 +4361,7 @@ function ti(e, t) {
     return typeof t == 'function' ? t(e) : t;
 }
 function To(e) {
-    var t = Ge(),
+    var t = Qe(),
         n = t.queue;
     if (n === null) throw Error(C(311));
     n.lastRenderedReducer = e;
@@ -4422,7 +4422,7 @@ function To(e) {
     return [t.memoizedState, n.dispatch];
 }
 function Eo(e) {
-    var t = Ge(),
+    var t = Qe(),
         n = t.queue;
     if (n === null) throw Error(C(311));
     n.lastRenderedReducer = e;
@@ -4444,7 +4444,7 @@ function Eo(e) {
 function Bh() {}
 function Uh(e, t) {
     var n = ee,
-        r = Ge(),
+        r = Qe(),
         i = t(),
         s = !nt(r.memoizedState, i);
     if (
@@ -4523,14 +4523,14 @@ function ni(e, t, n, r) {
     );
 }
 function Gh() {
-    return Ge().memoizedState;
+    return Qe().memoizedState;
 }
 function Qi(e, t, n, r) {
     var i = ot();
     ((ee.flags |= e), (i.memoizedState = ni(1 | t, n, void 0, r === void 0 ? null : r)));
 }
 function Hs(e, t, n, r) {
-    var i = Ge();
+    var i = Qe();
     r = r === void 0 ? null : r;
     var s = void 0;
     if (le !== null) {
@@ -4577,13 +4577,13 @@ function Zh(e, t, n) {
 }
 function Ul() {}
 function Jh(e, t) {
-    var n = Ge();
+    var n = Qe();
     t = t === void 0 ? null : t;
     var r = n.memoizedState;
     return r !== null && t !== null && Fl(t, r[1]) ? r[0] : ((n.memoizedState = [e, t]), e);
 }
 function qh(e, t) {
-    var n = Ge();
+    var n = Qe();
     t = t === void 0 ? null : t;
     var r = n.memoizedState;
     return r !== null && t !== null && Fl(t, r[1])
@@ -4607,7 +4607,7 @@ function gv(e, t) {
     }
 }
 function tp() {
-    return Ge().memoizedState;
+    return Qe().memoizedState;
 }
 function yv(e, t, n) {
     var r = Bt(e);
@@ -4660,7 +4660,7 @@ function ip(e, t, n) {
     }
 }
 var ws = {
-        readContext: be,
+        readContext: Ge,
         useCallback: ge,
         useContext: ge,
         useEffect: ge,
@@ -4680,11 +4680,11 @@ var ws = {
         unstable_isNewReconciler: !1,
     },
     xv = {
-        readContext: be,
+        readContext: Ge,
         useCallback: function (e, t) {
             return ((ot().memoizedState = [e, t === void 0 ? null : t]), e);
         },
-        useContext: be,
+        useContext: Ge,
         useEffect: xc,
         useImperativeHandle: function (e, t, n) {
             return ((n = n != null ? n.concat([e]) : null), Qi(4194308, 4, Xh.bind(null, t, e), n));
@@ -4769,9 +4769,9 @@ var ws = {
         unstable_isNewReconciler: !1,
     },
     wv = {
-        readContext: be,
+        readContext: Ge,
         useCallback: Jh,
-        useContext: be,
+        useContext: Ge,
         useEffect: Bl,
         useImperativeHandle: Zh,
         useInsertionEffect: Qh,
@@ -4784,12 +4784,12 @@ var ws = {
         },
         useDebugValue: Ul,
         useDeferredValue: function (e) {
-            var t = Ge();
+            var t = Qe();
             return ep(t, le.memoizedState, e);
         },
         useTransition: function () {
             var e = To(ti)[0],
-                t = Ge().memoizedState;
+                t = Qe().memoizedState;
             return [e, t];
         },
         useMutableSource: Bh,
@@ -4798,9 +4798,9 @@ var ws = {
         unstable_isNewReconciler: !1,
     },
     Sv = {
-        readContext: be,
+        readContext: Ge,
         useCallback: Jh,
-        useContext: be,
+        useContext: Ge,
         useEffect: Bl,
         useImperativeHandle: Zh,
         useInsertionEffect: Qh,
@@ -4813,12 +4813,12 @@ var ws = {
         },
         useDebugValue: Ul,
         useDeferredValue: function (e) {
-            var t = Ge();
+            var t = Qe();
             return le === null ? (t.memoizedState = e) : ep(t, le.memoizedState, e);
         },
         useTransition: function () {
             var e = Eo(ti)[0],
-                t = Ge().memoizedState;
+                t = Qe().memoizedState;
             return [e, t];
         },
         useMutableSource: Bh,
@@ -4893,7 +4893,7 @@ function sp(e, t, n) {
         s = t.contextType;
     return (
         typeof s == 'object' && s !== null
-            ? (s = be(s))
+            ? (s = Ge(s))
             : ((i = Ne(t) ? cn : Se.current),
               (r = t.contextTypes),
               (s = (r = r != null) ? Qn(e, i) : Ht)),
@@ -4921,7 +4921,7 @@ function Ta(e, t, n, r) {
     ((i.props = n), (i.state = e.memoizedState), (i.refs = {}), Ml(e));
     var s = t.contextType;
     (typeof s == 'object' && s !== null
-        ? (i.context = be(s))
+        ? (i.context = Ge(s))
         : ((s = Ne(t) ? cn : Se.current), (i.context = Qn(e, s))),
         (i.state = e.memoizedState),
         (s = t.getDerivedStateFromProps),
@@ -5151,7 +5151,7 @@ function Lc(e, t, n, r, i) {
         var l = o.context,
             u = n.contextType;
         typeof u == 'object' && u !== null
-            ? (u = be(u))
+            ? (u = Ge(u))
             : ((u = Ne(n) ? cn : Se.current), (u = Qn(t, u)));
         var c = n.getDerivedStateFromProps,
             f = typeof c == 'function' || typeof o.getSnapshotBeforeUpdate == 'function';
@@ -5192,7 +5192,7 @@ function Lc(e, t, n, r, i) {
             (d = o.context),
             (l = n.contextType),
             typeof l == 'object' && l !== null
-                ? (l = be(l))
+                ? (l = Ge(l))
                 : ((l = Ne(n) ? cn : Se.current), (l = Qn(t, l))));
         var m = n.getDerivedStateFromProps;
         ((c = typeof m == 'function' || typeof o.getSnapshotBeforeUpdate == 'function') ||
@@ -5442,9 +5442,9 @@ function Cv(e, t, n, r, i, s, o) {
           (Y = !0),
           (qe = null),
           e !== null &&
-              (($e[He++] = mt),
-              ($e[He++] = gt),
-              ($e[He++] = fn),
+              ((He[Ke++] = mt),
+              (He[Ke++] = gt),
+              (He[Ke++] = fn),
               (mt = e.id),
               (gt = e.overflow),
               (fn = t)),
@@ -6481,7 +6481,7 @@ function Oc(e) {
             }));
     }
 }
-function Qe(e, t) {
+function Ye(e, t) {
     var n = t.deletions;
     if (n !== null)
         for (var r = 0; r < n.length; r++) {
@@ -6522,7 +6522,7 @@ function wp(e, t) {
         case 11:
         case 14:
         case 15:
-            if ((Qe(t, e), st(e), r & 4)) {
+            if ((Ye(t, e), st(e), r & 4)) {
                 try {
                     (Or(3, e, e.return), Ws(3, e));
                 } catch (v) {
@@ -6536,10 +6536,10 @@ function wp(e, t) {
             }
             break;
         case 1:
-            (Qe(t, e), st(e), r & 512 && n !== null && Vn(n, n.return));
+            (Ye(t, e), st(e), r & 512 && n !== null && Vn(n, n.return));
             break;
         case 5:
-            if ((Qe(t, e), st(e), r & 512 && n !== null && Vn(n, n.return), e.flags & 32)) {
+            if ((Ye(t, e), st(e), r & 512 && n !== null && Vn(n, n.return), e.flags & 32)) {
                 var i = e.stateNode;
                 try {
                     $r(i, '');
@@ -6593,7 +6593,7 @@ function wp(e, t) {
             }
             break;
         case 6:
-            if ((Qe(t, e), st(e), r & 4)) {
+            if ((Ye(t, e), st(e), r & 4)) {
                 if (e.stateNode === null) throw Error(C(162));
                 ((i = e.stateNode), (s = e.memoizedProps));
                 try {
@@ -6604,7 +6604,7 @@ function wp(e, t) {
             }
             break;
         case 3:
-            if ((Qe(t, e), st(e), r & 4 && n !== null && n.memoizedState.isDehydrated))
+            if ((Ye(t, e), st(e), r & 4 && n !== null && n.memoizedState.isDehydrated))
                 try {
                     br(t.containerInfo);
                 } catch (v) {
@@ -6612,10 +6612,10 @@ function wp(e, t) {
                 }
             break;
         case 4:
-            (Qe(t, e), st(e));
+            (Ye(t, e), st(e));
             break;
         case 13:
-            (Qe(t, e),
+            (Ye(t, e),
                 st(e),
                 (i = e.child),
                 i.flags & 8192 &&
@@ -6629,7 +6629,7 @@ function wp(e, t) {
         case 22:
             if (
                 ((c = n !== null && n.memoizedState !== null),
-                e.mode & 1 ? ((xe = (u = xe) || c), Qe(t, e), (xe = u)) : Qe(t, e),
+                e.mode & 1 ? ((xe = (u = xe) || c), Ye(t, e), (xe = u)) : Ye(t, e),
                 st(e),
                 r & 8192)
             ) {
@@ -6719,12 +6719,12 @@ function wp(e, t) {
             }
             break;
         case 19:
-            (Qe(t, e), st(e), r & 4 && Oc(e));
+            (Ye(t, e), st(e), r & 4 && Oc(e));
             break;
         case 21:
             break;
         default:
-            (Qe(t, e), st(e));
+            (Ye(t, e), st(e));
     }
 }
 function st(e) {
@@ -6973,7 +6973,7 @@ function _c(e) {
 var Dv = Math.ceil,
     Ss = Tt.ReactCurrentDispatcher,
     Hl = Tt.ReactCurrentOwner,
-    We = Tt.ReactCurrentBatchConfig,
+    be = Tt.ReactCurrentBatchConfig,
     U = 0,
     fe = null,
     ae = null,
@@ -7236,12 +7236,12 @@ function pn(e) {
     Mt !== null && Mt.tag === 0 && !(U & 6) && bn();
     var t = U;
     U |= 1;
-    var n = We.transition,
+    var n = be.transition,
         r = H;
     try {
-        if (((We.transition = null), (H = 1), e)) return e();
+        if (((be.transition = null), (H = 1), e)) return e();
     } finally {
-        ((H = r), (We.transition = n), (U = t), !(U & 6) && Qt());
+        ((H = r), (be.transition = n), (U = t), !(U & 6) && Qt());
     }
 }
 function Gl() {
@@ -7477,11 +7477,11 @@ function Ep(e) {
 }
 function qt(e, t, n) {
     var r = H,
-        i = We.transition;
+        i = be.transition;
     try {
-        ((We.transition = null), (H = 1), _v(e, t, n, r));
+        ((be.transition = null), (H = 1), _v(e, t, n, r));
     } finally {
-        ((We.transition = i), (H = r));
+        ((be.transition = i), (H = r));
     }
     return null;
 }
@@ -7507,7 +7507,7 @@ function _v(e, t, n, r) {
         (s = (n.flags & 15990) !== 0),
         n.subtreeFlags & 15990 || s)
     ) {
-        ((s = We.transition), (We.transition = null));
+        ((s = be.transition), (be.transition = null));
         var o = H;
         H = 1;
         var a = U;
@@ -7523,7 +7523,7 @@ function _v(e, t, n, r) {
             oy(),
             (U = a),
             (H = o),
-            (We.transition = s));
+            (be.transition = s));
     } else e.current = n;
     if (
         (_i && ((_i = !1), (Mt = e), (Ps = i)),
@@ -7547,10 +7547,10 @@ function _v(e, t, n, r) {
 function bn() {
     if (Mt !== null) {
         var e = oh(Ps),
-            t = We.transition,
+            t = be.transition,
             n = H;
         try {
-            if (((We.transition = null), (H = 16 > e ? 16 : e), Mt === null)) var r = !1;
+            if (((be.transition = null), (H = 16 > e ? 16 : e), Mt === null)) var r = !1;
             else {
                 if (((e = Mt), (Mt = null), (Ps = 0), U & 6)) throw Error(C(331));
                 var i = U;
@@ -7659,7 +7659,7 @@ function bn() {
             }
             return r;
         } finally {
-            ((H = n), (We.transition = t));
+            ((H = n), (be.transition = t));
         }
     }
     return !1;
@@ -7973,7 +7973,7 @@ Rp = function (e, t, n) {
                 (i = t.type),
                 (r = t.pendingProps.children),
                 Wn(t, n),
-                (i = be(i)),
+                (i = Ge(i)),
                 (r = r(i)),
                 (t.flags |= 1),
                 ke(e, t, r, n),
@@ -8031,7 +8031,7 @@ function zv(e, t, n, r) {
         (this.childLanes = this.lanes = 0),
         (this.alternate = null));
 }
-function Ke(e, t, n, r) {
+function We(e, t, n, r) {
     return new zv(e, t, n, r);
 }
 function Yl(e) {
@@ -8049,7 +8049,7 @@ function Ut(e, t) {
     var n = e.alternate;
     return (
         n === null
-            ? ((n = Ke(e.tag, t, e.key, e.mode)),
+            ? ((n = We(e.tag, t, e.key, e.mode)),
               (n.elementType = e.elementType),
               (n.type = e.type),
               (n.stateNode = e.stateNode),
@@ -8087,11 +8087,11 @@ function Ji(e, t, n, r, i, s) {
                 ((o = 8), (i |= 8));
                 break;
             case Yo:
-                return ((e = Ke(12, n, t, i | 2)), (e.elementType = Yo), (e.lanes = s), e);
+                return ((e = We(12, n, t, i | 2)), (e.elementType = Yo), (e.lanes = s), e);
             case Xo:
-                return ((e = Ke(13, n, t, i)), (e.elementType = Xo), (e.lanes = s), e);
+                return ((e = We(13, n, t, i)), (e.elementType = Xo), (e.lanes = s), e);
             case Zo:
-                return ((e = Ke(19, n, t, i)), (e.elementType = Zo), (e.lanes = s), e);
+                return ((e = We(19, n, t, i)), (e.elementType = Zo), (e.lanes = s), e);
             case zd:
                 return Gs(n, i, s, t);
             default:
@@ -8115,14 +8115,14 @@ function Ji(e, t, n, r, i, s) {
                     }
                 throw Error(C(130, e == null ? e : typeof e, ''));
         }
-    return ((t = Ke(o, n, t, i)), (t.elementType = e), (t.type = r), (t.lanes = s), t);
+    return ((t = We(o, n, t, i)), (t.elementType = e), (t.type = r), (t.lanes = s), t);
 }
 function ln(e, t, n, r) {
-    return ((e = Ke(7, e, r, t)), (e.lanes = n), e);
+    return ((e = We(7, e, r, t)), (e.lanes = n), e);
 }
 function Gs(e, t, n, r) {
     return (
-        (e = Ke(22, e, r, t)),
+        (e = We(22, e, r, t)),
         (e.elementType = zd),
         (e.lanes = n),
         (e.stateNode = { isHidden: !1 }),
@@ -8130,11 +8130,11 @@ function Gs(e, t, n, r) {
     );
 }
 function Ao(e, t, n) {
-    return ((e = Ke(6, e, null, t)), (e.lanes = n), e);
+    return ((e = We(6, e, null, t)), (e.lanes = n), e);
 }
 function No(e, t, n) {
     return (
-        (t = Ke(4, e.children !== null ? e.children : [], e.key, t)),
+        (t = We(4, e.children !== null ? e.children : [], e.key, t)),
         (t.lanes = n),
         (t.stateNode = {
             containerInfo: e.containerInfo,
@@ -8170,7 +8170,7 @@ function Xl(e, t, n, r, i, s, o, a, l) {
     return (
         (e = new Uv(e, t, n, a, l)),
         t === 1 ? ((t = 1), s === !0 && (t |= 8)) : (t = 0),
-        (s = Ke(3, null, null, t)),
+        (s = We(3, null, null, t)),
         (e.current = s),
         (s.stateNode = e),
         (s.memoizedState = {
@@ -11898,7 +11898,7 @@ const kf = () => ({ translate: 0, scale: 1, origin: 0, originPoint: 0 }),
     In = () => ({ x: kf(), y: kf() }),
     Pf = () => ({ min: 0, max: 0 }),
     ie = () => ({ x: Pf(), y: Pf() });
-function Ue(e) {
+function $e(e) {
     return [e('x'), e('y')];
 }
 function Gm({ top: e, left: t, right: n, bottom: r }) {
@@ -12018,7 +12018,7 @@ class uw {
                     this.visualElement.projection &&
                         ((this.visualElement.projection.isAnimationBlocked = !0),
                         (this.visualElement.projection.target = void 0)),
-                    Ue((S) => {
+                    $e((S) => {
                         let p = this.getAxisMotionValue(S).get() || 0;
                         if (ft.test(p)) {
                             const { projection: h } = this.visualElement;
@@ -12055,7 +12055,7 @@ class uw {
             },
             a = (c, f) => this.stop(c, f),
             l = () =>
-                Ue((c) => {
+                $e((c) => {
                     var f;
                     return (
                         this.getAnimationState(c) === 'paused' &&
@@ -12123,7 +12123,7 @@ class uw {
                 i &&
                 this.constraints &&
                 !this.hasMutatedConstraints &&
-                Ue((o) => {
+                $e((o) => {
                     this.constraints !== !1 &&
                         this.getAxisMotionValue(o) &&
                         (this.constraints[o] = nw(i.layoutBox[o], this.constraints[o]));
@@ -12153,7 +12153,7 @@ class uw {
                 onDragTransitionEnd: a,
             } = this.getProps(),
             l = this.constraints || {},
-            u = Ue((c) => {
+            u = $e((c) => {
                 if (!zi(c, n, this.currentDirection)) return;
                 let f = (l && l[c]) || {};
                 o && (f = { min: 0, max: 0 });
@@ -12179,10 +12179,10 @@ class uw {
         return (Ha(this.visualElement, t), r.start(Du(t, r, 0, n, this.visualElement, !1)));
     }
     stopAnimation() {
-        Ue((t) => this.getAxisMotionValue(t).stop());
+        $e((t) => this.getAxisMotionValue(t).stop());
     }
     pauseAnimation() {
-        Ue((t) => {
+        $e((t) => {
             var n;
             return (n = this.getAxisMotionValue(t).animation) === null || n === void 0
                 ? void 0
@@ -12202,7 +12202,7 @@ class uw {
         return i || this.visualElement.getValue(t, (r.initial ? r.initial[t] : void 0) || 0);
     }
     snapToCursor(t) {
-        Ue((n) => {
+        $e((n) => {
             const { drag: r } = this.getProps();
             if (!zi(n, r, this.currentDirection)) return;
             const { projection: i } = this.visualElement,
@@ -12220,7 +12220,7 @@ class uw {
         if (!jn(n) || !r || !this.constraints) return;
         this.stopAnimation();
         const i = { x: 0, y: 0 };
-        Ue((o) => {
+        $e((o) => {
             const a = this.getAxisMotionValue(o);
             if (a && this.constraints !== !1) {
                 const l = a.get();
@@ -12232,7 +12232,7 @@ class uw {
             r.root && r.root.updateScroll(),
             r.updateLayout(),
             this.resolveConstraints(),
-            Ue((o) => {
+            $e((o) => {
                 if (!zi(o, t, null)) return;
                 const a = this.getAxisMotionValue(o),
                     { min: l, max: u } = this.constraints[o];
@@ -12258,7 +12258,7 @@ class uw {
             a = i.addEventListener('didUpdate', ({ delta: l, hasLayoutChanged: u }) => {
                 this.isDragging &&
                     u &&
-                    (Ue((c) => {
+                    ($e((c) => {
                         const f = this.getAxisMotionValue(c);
                         f &&
                             ((this.originPoint[c] += l[c].translate),
@@ -13506,13 +13506,13 @@ function Vw(e) {
             { animationType: s } = e.options,
             o = n.source !== e.layout.source;
         s === 'size'
-            ? Ue((f) => {
+            ? $e((f) => {
                   const d = o ? n.measuredBox[f] : n.layoutBox[f],
                       m = Fe(d);
                   ((d.min = r[f].min), (d.max = d.min + m));
               })
             : sg(s, n.layoutBox, r) &&
-              Ue((f) => {
+              $e((f) => {
                   const d = o ? n.measuredBox[f] : n.layoutBox[f],
                       m = Fe(r[f]);
                   ((d.max = d.min + m),
@@ -14197,7 +14197,7 @@ class gS extends lg {
 }
 const yS = (e, t) => (au(e) ? new gS(t) : new mS(t, { allowProjection: e !== N.Fragment })),
     vS = H0({ ...U1, ...aS, ...Xw, ...lS }, yS),
-    Ye = i0(vS),
+    Ue = i0(vS),
     V = (e) => typeof e == 'string',
     vr = () => {
         let e, t;
@@ -16568,7 +16568,79 @@ const lk = (e, t) =>
             });
         return k;
     };
-function dk() {
+/**
+ * @license lucide-react v0.300.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */ var dk = {
+    xmlns: 'http://www.w3.org/2000/svg',
+    width: 24,
+    height: 24,
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 2,
+    strokeLinecap: 'round',
+    strokeLinejoin: 'round',
+};
+/**
+ * @license lucide-react v0.300.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */ const hk = (e) =>
+        e
+            .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+            .toLowerCase()
+            .trim(),
+    pk = (e, t) => {
+        const n = N.forwardRef(
+            (
+                {
+                    color: r = 'currentColor',
+                    size: i = 24,
+                    strokeWidth: s = 2,
+                    absoluteStrokeWidth: o,
+                    className: a = '',
+                    children: l,
+                    ...u
+                },
+                c,
+            ) =>
+                N.createElement(
+                    'svg',
+                    {
+                        ref: c,
+                        ...dk,
+                        width: i,
+                        height: i,
+                        stroke: r,
+                        strokeWidth: o ? (Number(s) * 24) / Number(i) : s,
+                        className: ['lucide', `lucide-${hk(e)}`, a].join(' '),
+                        ...u,
+                    },
+                    [...t.map(([f, d]) => N.createElement(f, d)), ...(Array.isArray(l) ? l : [l])],
+                ),
+        );
+        return ((n.displayName = `${e}`), n);
+    };
+/**
+ * @license lucide-react v0.300.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */ const mk = pk('Slack', [
+    ['rect', { width: '3', height: '8', x: '13', y: '2', rx: '1.5', key: 'diqz80' }],
+    ['path', { d: 'M19 8.5V10h1.5A1.5 1.5 0 1 0 19 8.5', key: '183iwg' }],
+    ['rect', { width: '3', height: '8', x: '8', y: '14', rx: '1.5', key: 'hqg7r1' }],
+    ['path', { d: 'M5 15.5V14H3.5A1.5 1.5 0 1 0 5 15.5', key: '76g71w' }],
+    ['rect', { width: '8', height: '3', x: '14', y: '13', rx: '1.5', key: '1kmz0a' }],
+    ['path', { d: 'M15.5 19H14v1.5a1.5 1.5 0 1 0 1.5-1.5', key: 'jc4sz0' }],
+    ['rect', { width: '8', height: '3', x: '2', y: '8', rx: '1.5', key: '1omvl4' }],
+    ['path', { d: 'M8.5 5H10V3.5A1.5 1.5 0 1 0 8.5 5', key: '16f3cl' }],
+]);
+function gk() {
     const { t: e, i18n: t } = fk(),
         n = () => {
             const r = t.language.startsWith('es') ? 'en' : 'es';
@@ -16611,7 +16683,7 @@ function dk() {
                 className:
                     'absolute top-0 left-0 w-full p-6 z-50 flex justify-between items-center',
                 children: [
-                    A.jsxs(Ye.div, {
+                    A.jsxs(Ue.div, {
                         initial: { opacity: 0, y: -20 },
                         animate: { opacity: 1, y: 0 },
                         transition: { duration: 0.5 },
@@ -16638,7 +16710,7 @@ function dk() {
                             }),
                         ],
                     }),
-                    A.jsxs(Ye.div, {
+                    A.jsxs(Ue.div, {
                         initial: { opacity: 0, y: -20 },
                         animate: { opacity: 1, y: 0 },
                         transition: { duration: 0.5, delay: 0.1 },
@@ -16660,9 +16732,19 @@ function dk() {
                                     'hover:text-hal-primary-400 cursor-pointer transition-colors',
                                 children: 'Pricing',
                             }),
+                            A.jsx('span', {
+                                onClick: () =>
+                                    window.open(
+                                        'https://join.slack.com/t/haltest-talk/shared_invite/zt-3o7wqlt53-tzFebjhK5TxQtYZbwK~f~g',
+                                        '_blank',
+                                    ),
+                                className:
+                                    'hover:text-hal-primary-400 cursor-pointer transition-colors flex items-center gap-2',
+                                children: 'Community',
+                            }),
                         ],
                     }),
-                    A.jsxs(Ye.div, {
+                    A.jsxs(Ue.div, {
                         initial: { opacity: 0, y: -20 },
                         animate: { opacity: 1, y: 0 },
                         transition: { duration: 0.5, delay: 0.2 },
@@ -16697,7 +16779,7 @@ function dk() {
                 className:
                     'relative z-10 flex flex-col items-center justify-center min-h-screen px-4 text-center pt-20',
                 children: [
-                    A.jsxs(Ye.div, {
+                    A.jsxs(Ue.div, {
                         initial: { opacity: 0, scale: 0.8 },
                         animate: { opacity: 1, scale: 1 },
                         transition: { duration: 0.8, ease: 'easeOut' },
@@ -16715,7 +16797,7 @@ function dk() {
                             }),
                         ],
                     }),
-                    A.jsxs(Ye.h1, {
+                    A.jsxs(Ue.h1, {
                         initial: { opacity: 0, y: 20 },
                         animate: { opacity: 1, y: 0 },
                         transition: { duration: 0.6, delay: 0.2 },
@@ -16734,7 +16816,7 @@ function dk() {
                             }),
                         ],
                     }),
-                    A.jsxs(Ye.p, {
+                    A.jsxs(Ue.p, {
                         initial: { opacity: 0, y: 20 },
                         animate: { opacity: 1, y: 0 },
                         transition: { duration: 0.6, delay: 0.3 },
@@ -16746,7 +16828,7 @@ function dk() {
                             'and real-time Playwright execution.',
                         ],
                     }),
-                    A.jsx(Ye.p, {
+                    A.jsx(Ue.p, {
                         initial: { opacity: 0, y: 20 },
                         animate: { opacity: 1, y: 0 },
                         transition: { duration: 0.6, delay: 0.35 },
@@ -16755,13 +16837,13 @@ function dk() {
                             e('hero.subtitle') ||
                             'Unified platform for visual workflows, mock services, and intelligent testing.',
                     }),
-                    A.jsxs(Ye.div, {
+                    A.jsxs(Ue.div, {
                         initial: { opacity: 0, y: 20 },
                         animate: { opacity: 1, y: 0 },
                         transition: { duration: 0.6, delay: 0.4 },
                         className: 'flex flex-col sm:flex-row gap-4 items-center mb-16',
                         children: [
-                            A.jsxs(Ye.button, {
+                            A.jsxs(Ue.button, {
                                 whileHover: { scale: 1.05 },
                                 whileTap: { scale: 0.95 },
                                 onClick: () => window.open('/app', '_self'),
@@ -16797,7 +16879,7 @@ function dk() {
                                     }),
                                 ],
                             }),
-                            A.jsx(Ye.button, {
+                            A.jsx(Ue.button, {
                                 whileHover: {
                                     scale: 1.05,
                                     backgroundColor: 'rgba(255,255,255,0.05)',
@@ -16809,9 +16891,27 @@ function dk() {
                                     'px-8 py-4 border border-white/10 hover:border-white/30 text-slate-300 hover:text-white rounded-lg font-bold uppercase tracking-wider transition-all backdrop-blur-sm',
                                 children: e('cta.star_github') || 'GitHub',
                             }),
+                            A.jsxs(Ue.button, {
+                                whileHover: {
+                                    scale: 1.05,
+                                    backgroundColor: 'rgba(255,255,255,0.05)',
+                                },
+                                whileTap: { scale: 0.95 },
+                                onClick: () =>
+                                    window.open(
+                                        'https://join.slack.com/t/haltest-talk/shared_invite/zt-3o7wqlt53-tzFebjhK5TxQtYZbwK~f~g',
+                                        '_blank',
+                                    ),
+                                className:
+                                    'px-8 py-4 border border-white/10 hover:border-white/30 text-slate-300 hover:text-white rounded-lg font-bold uppercase tracking-wider transition-all backdrop-blur-sm flex items-center gap-2',
+                                children: [
+                                    A.jsx(mk, { size: 18, className: 'text-[#4A154B]' }),
+                                    e('cta.community') || 'Slack',
+                                ],
+                            }),
                         ],
                     }),
-                    A.jsxs(Ye.div, {
+                    A.jsxs(Ue.div, {
                         initial: { opacity: 0, y: 20 },
                         animate: { opacity: 1, y: 0 },
                         transition: { duration: 0.8, delay: 0.5 },
@@ -16881,16 +16981,16 @@ function dk() {
         ],
     });
 }
-const { slice: hk, forEach: pk } = [];
-function mk(e) {
+const { slice: yk, forEach: vk } = [];
+function xk(e) {
     return (
-        pk.call(hk.call(arguments, 1), (t) => {
+        vk.call(yk.call(arguments, 1), (t) => {
             if (t) for (const n in t) e[n] === void 0 && (e[n] = t[n]);
         }),
         e
     );
 }
-function gk(e) {
+function wk(e) {
     return typeof e != 'string'
         ? !1
         : [
@@ -16910,7 +17010,7 @@ function gk(e) {
           ].some((n) => n.test(e));
 }
 const vd = /^[\u0009\u0020-\u007e\u0080-\u00ff]+$/,
-    yk = function (e, t) {
+    Sk = function (e, t) {
         const r = arguments.length > 2 && arguments[2] !== void 0 ? arguments[2] : { path: '/' },
             i = encodeURIComponent(t);
         let s = `${e}=${i}`;
@@ -16959,7 +17059,7 @@ const vd = /^[\u0009\u0020-\u007e\u0080-\u00ff]+$/,
                     : { path: '/', sameSite: 'strict' };
             (n && ((i.expires = new Date()), i.expires.setTime(i.expires.getTime() + n * 60 * 1e3)),
                 r && (i.domain = r),
-                (document.cookie = yk(e, t, i)));
+                (document.cookie = Sk(e, t, i)));
         },
         read(e) {
             const t = `${e}=`,
@@ -16975,7 +17075,7 @@ const vd = /^[\u0009\u0020-\u007e\u0080-\u00ff]+$/,
             this.create(e, '', -1, t);
         },
     };
-var vk = {
+var kk = {
         name: 'cookie',
         lookup(e) {
             let { lookupCookie: t } = e;
@@ -16986,7 +17086,7 @@ var vk = {
             n && typeof document < 'u' && xd.create(n, e, r, i, s);
         },
     },
-    xk = {
+    Pk = {
         name: 'querystring',
         lookup(e) {
             var r;
@@ -17006,7 +17106,7 @@ var vk = {
             return n;
         },
     },
-    wk = {
+    Ck = {
         name: 'hash',
         lookup(e) {
             var i;
@@ -17049,7 +17149,7 @@ const wd = () => {
     }
     return kn;
 };
-var Sk = {
+var Tk = {
     name: 'localStorage',
     lookup(e) {
         let { lookupLocalStorage: t } = e;
@@ -17072,7 +17172,7 @@ const Sd = () => {
     }
     return Pn;
 };
-var kk = {
+var Ek = {
         name: 'sessionStorage',
         lookup(e) {
             let { lookupSessionStorage: t } = e;
@@ -17083,7 +17183,7 @@ var kk = {
             n && Sd() && window.sessionStorage.setItem(n, e);
         },
     },
-    Pk = {
+    Lk = {
         name: 'navigator',
         lookup(e) {
             const t = [];
@@ -17095,7 +17195,7 @@ var kk = {
             return t.length > 0 ? t : void 0;
         },
     },
-    Ck = {
+    Rk = {
         name: 'htmlTag',
         lookup(e) {
             let { htmlTag: t } = e,
@@ -17104,7 +17204,7 @@ var kk = {
             return (r && typeof r.getAttribute == 'function' && (n = r.getAttribute('lang')), n);
         },
     },
-    Tk = {
+    Ak = {
         name: 'path',
         lookup(e) {
             var i;
@@ -17118,7 +17218,7 @@ var kk = {
                 : void 0;
         },
     },
-    Ek = {
+    Nk = {
         name: 'subdomain',
         lookup(e) {
             var i, s;
@@ -17138,7 +17238,7 @@ try {
 } catch {}
 const vg = ['querystring', 'cookie', 'localStorage', 'sessionStorage', 'navigator', 'htmlTag'];
 yg || vg.splice(1, 1);
-const Lk = () => ({
+const Dk = () => ({
     order: vg,
     lookupQuerystring: 'lng',
     lookupCookie: 'i18next',
@@ -17161,22 +17261,22 @@ class xg {
             n = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : {},
             r = arguments.length > 2 && arguments[2] !== void 0 ? arguments[2] : {};
         ((this.services = t),
-            (this.options = mk(n, this.options || {}, Lk())),
+            (this.options = xk(n, this.options || {}, Dk())),
             typeof this.options.convertDetectedLanguage == 'string' &&
                 this.options.convertDetectedLanguage.indexOf('15897') > -1 &&
                 (this.options.convertDetectedLanguage = (i) => i.replace('-', '_')),
             this.options.lookupFromUrlIndex &&
                 (this.options.lookupFromPathIndex = this.options.lookupFromUrlIndex),
             (this.i18nOptions = r),
-            this.addDetector(vk),
-            this.addDetector(xk),
-            this.addDetector(Sk),
             this.addDetector(kk),
             this.addDetector(Pk),
-            this.addDetector(Ck),
             this.addDetector(Tk),
             this.addDetector(Ek),
-            this.addDetector(wk));
+            this.addDetector(Lk),
+            this.addDetector(Rk),
+            this.addDetector(Ak),
+            this.addDetector(Nk),
+            this.addDetector(Ck));
     }
     addDetector(t) {
         return ((this.detectors[t.name] = t), this);
@@ -17192,7 +17292,7 @@ class xg {
                 }
             }),
             (n = n
-                .filter((r) => r != null && !gk(r))
+                .filter((r) => r != null && !wk(r))
                 .map((r) => this.options.convertDetectedLanguage(r))),
             this.services &&
             this.services.languageUtils &&
@@ -17214,7 +17314,7 @@ class xg {
     }
 }
 xg.type = 'languageDetector';
-const Rk = {
+const Ok = {
     en: {
         translation: {
             hero: {
@@ -17237,6 +17337,7 @@ const Rk = {
                 open_source: 'Open Source & Free',
                 launch_app: 'Launch App',
                 star_github: 'Star on GitHub',
+                community: 'Community',
             },
             nav: { status: 'Status: Operating' },
             language: { en: 'English', es: 'Español' },
@@ -17264,6 +17365,7 @@ const Rk = {
                 open_source: 'Open Source y Gratis',
                 launch_app: 'Lanzar App',
                 star_github: 'Estrella en GitHub',
+                community: 'Comunidad',
             },
             nav: { status: 'Estado: Operando' },
             language: { en: 'English', es: 'Español' },
@@ -17273,11 +17375,11 @@ const Rk = {
 Ee.use(xg)
     .use(YS)
     .init({
-        resources: Rk,
+        resources: Ok,
         fallbackLng: 'en',
         interpolation: { escapeValue: !1 },
         detection: { order: ['localStorage', 'navigator'], caches: ['localStorage'] },
     });
 Go.createRoot(document.getElementById('root')).render(
-    A.jsx(jg.StrictMode, { children: A.jsx(dk, {}) }),
+    A.jsx(jg.StrictMode, { children: A.jsx(gk, {}) }),
 );

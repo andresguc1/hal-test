@@ -145,42 +145,46 @@ Launch Browser → Intercept Request → Mock Response → Verify UI
 - Precise positioning
 - Backward compatible (click still works)
 
-## 🤝 Contributing
+## 🤝 Community & Support
+Stay updated and get support from our community:
+- **Slack**: [Join HAL-TEST Talk](https://join.slack.com/t/haltest-talk/shared_invite/zt-3o7wqlt53-tzFebjhK5TxQtYZbwK~f~g)
+- **GitHub Issues**: For bug reports, feature requests, and technical discussions.
 
-We welcome contributions! Please read our [Contributing Guide](CONTRIBUTING.md) before submitting PRs.
+## 🐳 Docker Setup (Recommended)
+Running HAL-TEST in Docker is the **recommended way** for production and testing. It ensures that all Playwright dependencies (system libraries) are correctly installed, preventing "Page Crashed" errors common in Linux environments.
 
-### Development Workflow
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes with clear commit messages
-4. Ensure all tests pass
-5. Submit a Pull Request
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
-
-## 📝 Documentation
-
-- **API Docs**: `apps/backend/API_DOCUMENTATION_GUIDE.md`
-- **Frontend README**: `apps/frontend/README.md`
-- **Backend README**: `apps/backend/README.md`
-
-## 🛠️ Scripts
-
+### 1. Quick Start with Docker Compose
+Ensures your database and screenshots are persisted via volumes.
 ```bash
-# Development
-pnpm dev                    # Start all services
-pnpm --filter frontend dev  # Frontend only
-pnpm --filter backend dev   # Backend only
+# Build the image and start the container in background
+docker compose up -d --build
+```
 
-# Database
-pnpm --filter backend db:init    # Initialize database
-pnpm --filter backend db:reset   # Reset database
+### 2. Access the Application
+Once the container is healthy:
+- **App URL**: [http://localhost:2001/app/](http://localhost:2001/app/)
+- **Landing Page**: [http://localhost:2001/](http://localhost:2001/)
+- **API Docs**: [http://localhost:2001/api/docs](http://localhost:2001/api/docs)
 
-# Build
-pnpm build                  # Build all apps
+### 3. Management
+- **View Logs**: `docker compose logs -f`
+- **Stop**: `docker compose down`
+- **Data Location**: SQLite and screenshots are stored in the `hal_test_data` volume.
 
-# Utilities
-pnpm translate              # Update translations
+## 🚀 Production Deployment
+
+### Monolith Build
+To prepare a production build (Frontend + Web + Backend):
+```bash
+pnpm run build:monolith
+```
+This will compile the frontend and landing page into the `apps/backend/public` folder, allowing the backend to serve the entire application on port 2001.
+
+### Quick Deploy Script
+Use the provided script for automatic building and pushing to origin:
+```bash
+# Recommended for Render or other CI/CD environments
+bash deploy_prod.sh "Your commit message"
 ```
 
 ## 🐛 Troubleshooting
@@ -200,11 +204,9 @@ pnpm --filter backend db:init
 ```
 
 ## 📄 License
-
 This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgements
-
 - [React Flow](https://reactflow.dev/) - Visual node editor
 - [Playwright](https://playwright.dev/) - Browser automation
 - [Motion](https://motion.dev/) - Modern animation library
@@ -212,11 +214,10 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 - [TanStack Query](https://tanstack.com/query) - Data synchronization
 
 ## 🌟 Show Your Support
-
 Give a ⭐️ if this project helped you!
 
 ## 📧 Contact
-
 **Andrés Gutiérrez** - [@andresguc1](https://github.com/andresguc1)
+Join our **Slack Community**: [HAL-TEST Talk](https://join.slack.com/t/haltest-talk/shared_invite/zt-3o7wqlt53-tzFebjhK5TxQtYZbwK~f~g)
 
 Project Link: [https://github.com/andresguc1/hal-test](https://github.com/andresguc1/hal-test)

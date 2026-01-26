@@ -27,6 +27,7 @@ const resources = {
         open_source: "Open Source & Free",
         launch_app: "Launch App",
         star_github: "Star on GitHub",
+        community: "Community",
       },
       nav: {
         status: "Status: Operating",
@@ -60,6 +61,7 @@ const resources = {
         open_source: "Open Source y Gratis",
         launch_app: "Lanzar App",
         star_github: "Estrella en GitHub",
+        community: "Comunidad",
       },
       nav: {
         status: "Estado: Operando",

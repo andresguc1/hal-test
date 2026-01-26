@@ -1,6 +1,7 @@
 import React, { useRef } from "react";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
+import { Slack } from "lucide-react";
 
 export default function App() {
   const { t, i18n } = useTranslation();
@@ -82,6 +83,17 @@ export default function App() {
           </span>
           <span className="hover:text-hal-primary-400 cursor-pointer transition-colors">
             Pricing
+          </span>
+          <span
+            onClick={() =>
+              window.open(
+                "https://join.slack.com/t/haltest-talk/shared_invite/zt-3o7wqlt53-tzFebjhK5TxQtYZbwK~f~g",
+                "_blank",
+              )
+            }
+            className="hover:text-hal-primary-400 cursor-pointer transition-colors flex items-center gap-2"
+          >
+            Community
           </span>
         </motion.div>
 
@@ -209,6 +221,25 @@ export default function App() {
             className="px-8 py-4 border border-white/10 hover:border-white/30 text-slate-300 hover:text-white rounded-lg font-bold uppercase tracking-wider transition-all backdrop-blur-sm"
           >
             {t("cta.star_github") || "GitHub"}
+          </motion.button>
+
+          {/* Community / Slack Button */}
+          <motion.button
+            whileHover={{
+              scale: 1.05,
+              backgroundColor: "rgba(255,255,255,0.05)",
+            }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() =>
+              window.open(
+                "https://join.slack.com/t/haltest-talk/shared_invite/zt-3o7wqlt53-tzFebjhK5TxQtYZbwK~f~g",
+                "_blank",
+              )
+            }
+            className="px-8 py-4 border border-white/10 hover:border-white/30 text-slate-300 hover:text-white rounded-lg font-bold uppercase tracking-wider transition-all backdrop-blur-sm flex items-center gap-2"
+          >
+            <Slack size={18} className="text-[#4A154B]" />
+            {t("cta.community") || "Slack"}
           </motion.button>
         </motion.div>
 
