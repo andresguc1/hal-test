@@ -5,6 +5,7 @@ import { LogIn, Mail, Lock, Loader2 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { useToast } from "../../hooks/useToast";
+import { HalToaster } from "../Toast";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -123,6 +124,7 @@ export default function Login() {
           </div>
         </div>
       </div>
+      <HalToaster />
     </div>
   );
 }

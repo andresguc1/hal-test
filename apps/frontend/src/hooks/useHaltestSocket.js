@@ -2,10 +2,11 @@ import { useEffect, useRef } from "react";
 import { io } from "socket.io-client";
 
 const SOCKET_URL =
-  window.location.hostname === "localhost" ||
+  import.meta.env.VITE_API_URL ||
+  (window.location.hostname === "localhost" ||
   window.location.hostname === "127.0.0.1"
     ? "http://127.0.0.1:2001"
-    : window.location.origin;
+    : window.location.origin);
 
 export const useHaltestSocket = (setNodes, setEdges, onElementPicked) => {
   const socketRef = useRef(null);

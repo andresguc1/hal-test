@@ -93,15 +93,10 @@ export const AuthProvider = ({ children }) => {
   };
 
   const signOut = async () => {
-    const isProd = import.meta.env.MODE === "production";
-    const isAuthEnabled = import.meta.env.VITE_AUTH_ENABLED !== "false";
-    if (!isProd && !isAuthEnabled) {
-      setUser(null);
-      setSession(null);
-      return;
-    }
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    // Force cleanup first
+    setUser(null);
+    setSession(null);
+    await supabase.auth.signOut().catch(console.warn);
   };
 
   const value = {

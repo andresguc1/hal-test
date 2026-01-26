@@ -22,9 +22,14 @@ export default function StepDetailsModal({ isOpen, onClose, nodeData }) {
   const isError = state === "error";
   const isSuccess = state === "success";
 
+  // Determine API Base URL
+  const apiBase =
+    import.meta.env.VITE_API_URL ||
+    (import.meta.env.PROD ? window.location.origin : "http://localhost:2001");
+
   // Build screenshot URL if available
   const screenshotUrl = replayData?.screenshot_path
-    ? `${import.meta.env.PROD ? window.location.origin : "http://localhost:2001"}/${replayData.screenshot_path}`.replace(
+    ? `${apiBase}/${replayData.screenshot_path}`.replace(
         "//storage",
         "/storage",
       )

@@ -184,36 +184,12 @@ class AIService {
             const providerInstance = this.getProvider(provider, apiKey, baseUrl);
 
             // Standard Validation Models (Updated for 2026 Compatibility)
-            let modelId = 'gpt-5-nano'; // User requested specific model test
-            if (provider === 'google') modelId = 'gemini-1.5-flash'; // High availability
+            let modelId = 'gpt-3.5-turbo'; // Fallback to most accessible model
+            if (provider === 'google') modelId = 'gemini-pro'; // High availability fallback
             if (provider === 'anthropic') modelId = 'claude-3-5-sonnet-20240620';
             if (provider === 'ollama') modelId = 'deepseek-coder-v2';
 
-            // Special handling for gpt-5-nano (Responses API)
-            const effectiveKey = apiKey || process.env.OPENAI_API_KEY;
-            if (modelId === 'gpt-5-nano') {
-                const cleanKey = effectiveKey?.trim();
-                const response = await fetch('https://api.openai.com/v1/responses', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: `Bearer ${cleanKey}`,
-                    },
-                    body: JSON.stringify({
-                        model: 'gpt-5-nano',
-                        input: 'Hello',
-                        store: true,
-                    }),
-                });
-
-                if (!response.ok) {
-                    const err = await response.json().catch(() => ({}));
-                    throw new Error(
-                        err.error?.message || `OpenAI Validation Failed: ${response.status}`,
-                    );
-                }
-                return true;
-            }
+            // Special handling removed. Using standard generateText for validation.
 
             const modelRef = providerInstance(modelId);
             await generateText({
@@ -231,8 +207,9 @@ class AIService {
     async healSelector({ screenshotBase64, domSnippet, originalSelector, error, intent, apiKey }) {
         try {
             // Vision Task -> Reasoning/Multimodal
-            const providerInstance = this.getProvider('openai', apiKey);
-            const model = providerInstance('gpt-4o');
+            const selected = this.selectBestModel('reasoning', 'openai');
+            const providerInstance = this.getProvider(selected.provider, apiKey);
+            const model = providerInstance(selected.model);
 
             const prompt = `
             The automation failed to find an element.
