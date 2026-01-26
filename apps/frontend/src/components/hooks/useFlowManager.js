@@ -70,7 +70,8 @@ const AUTO_SAVE_INTERVAL = 30000;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export const API_BASE_URL = "/api/actions";
+// Redundant constant removed - moved to utils/api.js logic
+// export const API_BASE_URL = "/api/actions";
 
 // ========================================
 // OPTIMIZACIÓN 1: Funciones puras fuera del hook
@@ -1196,7 +1197,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
 
       const { nodeId, type, payload } = action;
       const endpoint =
-        (payload && payload.endpoint) || `${API_BASE_URL}/${type || "unknown"}`;
+        (payload && payload.endpoint) || `/actions/${type || "unknown"}`;
 
       // Get node (refresh from store ONLY if we need fallback data, but prefer payload)
       const storeNode = nodesRef.current.find((n) => n.id === nodeId);

@@ -1,5 +1,18 @@
-const API_BASE_URL =
+// Utility to normalize URL paths, preventing double slashes or duplicated /api segments
+const normalizeUrl = (base, path) => {
+  const cleanBase = base.endsWith("/") ? base.slice(0, -1) : base;
+  const cleanPath = path.startsWith("/") ? path : `/${path}`;
+
+  // If base ends with /api and path starts with /api, remove one
+  if (cleanBase.endsWith("/api") && cleanPath.startsWith("/api/")) {
+    return `${cleanBase}${cleanPath.substring(4)}`;
+  }
+  return `${cleanBase}${cleanPath}`;
+};
+
+const ENV_API_URL =
   import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "/api" : "/api");
+const API_BASE_URL = ENV_API_URL;
 
 import { supabase } from "./supabaseClient";
 
@@ -75,7 +88,7 @@ const getHeaders = async () => {
 
 export const api = {
   async get(endpoint) {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetch(normalizeUrl(API_BASE_URL, endpoint), {
       headers: await getHeaders(),
     });
     if (!response.ok) {
@@ -88,7 +101,7 @@ export const api = {
   },
 
   async post(endpoint, data) {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetch(normalizeUrl(API_BASE_URL, endpoint), {
       method: "POST",
       headers: await getHeaders(),
       body: JSON.stringify(data),
@@ -103,7 +116,7 @@ export const api = {
   },
 
   async put(endpoint, data) {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetch(normalizeUrl(API_BASE_URL, endpoint), {
       method: "PUT",
       headers: await getHeaders(),
       body: JSON.stringify(data),
@@ -118,7 +131,7 @@ export const api = {
   },
 
   async delete(endpoint) {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetch(normalizeUrl(API_BASE_URL, endpoint), {
       method: "DELETE",
       headers: await getHeaders(),
     });

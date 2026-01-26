@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "framer-motion": "^11.0.0",
+    "globals": "^16.4.0",
     "i18next": "^25.7.3",
     "i18next-browser-languagedetector": "^8.2.0",
     "lucide-react": "^0.300.0",
