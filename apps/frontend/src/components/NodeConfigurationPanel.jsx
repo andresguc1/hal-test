@@ -472,17 +472,12 @@ function NodeConfigurationPanel({
     );
     const isDrifted = globalConfigStr !== lastSyncedConfigStr;
 
-    if (hasNodeChanged || justFinishedPicking || isDrifted) {
-      console.warn(
-        "[NodeConfig] INTERNAL SYNC. Reason:",
-        hasNodeChanged
-          ? "Node Changed"
-          : justFinishedPicking
-            ? "Pick Done"
-            : "External Change",
-      );
+    console.log("[NodeConfig] Sync Eval:", { nodeId: activeNode.id, nodeState, isDrifted, hasNodeChanged, justFinishedPicking });
 
-      console.log("[NodeConfig] New Configuration from Global:", globalConfig);
+    if (hasNodeChanged || justFinishedPicking || isDrifted) {
+      console.warn("[NodeConfig] 🔄 INTERNAL SYNC TRIGGERED. Reason:", { hasNodeChanged, justFinishedPicking, isDrifted });
+      console.log("[NodeConfig] Global Config:", JSON.stringify(globalConfig));
+      console.log("[NodeConfig] Local Config:", JSON.stringify(localConfig));
 
       // CRITICAL: Clear any pending local updates to prevent overwriting the sync result with stale local state
       if (updateTimeoutRef.current) {
@@ -814,6 +809,7 @@ function NodeConfigurationPanel({
                   CSS / XPath
                 </span>
                 <button
+                  type="button"
                   onClick={() => {
                     if (activeNode?.data?.state === "picking") {
                       console.log("[NodeConfig] User clicked CANCEL picking");

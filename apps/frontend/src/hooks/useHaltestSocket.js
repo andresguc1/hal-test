@@ -1,12 +1,20 @@
 import { useEffect, useRef } from "react";
 import { io } from "socket.io-client";
 
-const SOCKET_URL =
-  import.meta.env.VITE_API_URL ||
-  (window.location.hostname === "localhost" ||
-  window.location.hostname === "127.0.0.1"
+const getSocketURL = () => {
+  const apiUrl = import.meta.env.VITE_API_URL;
+  if (apiUrl) {
+    // Strip trailing /api for socket.io compatibility
+    return apiUrl.replace(/\/api$/, "");
+  }
+
+  return window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1"
     ? "http://127.0.0.1:2001"
-    : window.location.origin);
+    : window.location.origin;
+};
+
+const SOCKET_URL = getSocketURL();
 
 export const useHaltestSocket = (
   setNodes,

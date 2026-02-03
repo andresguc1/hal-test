@@ -300,32 +300,30 @@ function Dashboard() {
 
   // Element Picker Callback
   const handleElementPicked = useCallback(
-    (data) => {
+    async (data) => {
       console.log("[App] 🎯 Element Picked Event Received:", data);
 
-      // 1. SMART RESOLUTION: Find the node that requested this pick.
-      // Priority A: Node specifically in 'PICKING' state (handles lost focus/panel closed)
-      // Priority B: Currently selected node (if state update lagged)
-      let liveNode = nodes.find((n) => n.data?.state === NODE_STATES.PICKING);
-      console.log("[App] 🔍 Node in PICKING state:", liveNode?.id || "NONE");
+      const pickingNodes = nodes.filter((n) => n.data?.state === NODE_STATES.PICKING);
+      console.log("[App] 🔍 Nodes in PICKING state:", pickingNodes.map(n => n.id));
+
+      let liveNode = pickingNodes[0];
 
       if (!liveNode && selectedAction) {
         liveNode = nodes.find((n) => n.id === selectedAction.nodeId);
-        console.log(
-          "[App] 🔍 Fallback to selectedAction node:",
-          liveNode?.id || "NONE",
-        );
+        console.log("[App] 🔍 Fallback to selectedAction node:", liveNode?.id || "NONE");
       }
 
       if (!liveNode) {
-        console.warn(
-          "[App] ❌ Element picked but no candidate node found to update.",
-        );
+        console.error("[App] ❌ CRITICAL: Element picked but no candidate node found to update.", {
+          pickingNodesCount: pickingNodes.length,
+          selectedActionNodeId: selectedAction?.nodeId,
+          allNodeStates: nodes.map(n => ({ id: n.id, state: n.data?.state }))
+        });
         return;
       }
 
-      const kmId = liveNode.id; // Keep ID ref
-      console.log("[App] ✅ Target node identified:", kmId);
+      const kmId = liveNode.id;
+      console.log("[App] ✅ Target node identified for update:", kmId);
 
       try {
         // VALIDATION: Ensure we captured a valid selector
@@ -430,21 +428,20 @@ function Dashboard() {
         );
 
         const newConfig = {
-          ...currentConfig, // Preserve existing text, etc.
+          ...currentConfig,
           selector: finalSelector.trim(),
         };
 
-        console.log("[App] 📝 New configuration to apply:", newConfig);
+        console.log("[App] 📝 Configuration payload prepared:", JSON.stringify(newConfig, null, 2));
 
-        updateNodeConfiguration(kmId, newConfig);
-        console.log(
-          "[App] ✅ updateNodeConfiguration called successfully for nodeId:",
-          kmId,
-        );
+        // CRITICAL: We use await to ensure nodes state is fully processed before we move on
+        // though setNodes is async, updateNodeConfiguration returns after calling setNodes.
+        await updateNodeConfiguration(kmId, newConfig);
+        console.log("[App] ✅ updateNodeConfiguration async call finished for nodeId:", kmId);
 
         // Reset visual state
         updateNodeState(kmId, NODE_STATES.DEFAULT);
-        console.log("[App] ✅ Node state reset to DEFAULT for nodeId:", kmId);
+        console.log("[App] ✅ Node state updated to DEFAULT for nodeId:", kmId);
 
         toast.success(t("common.selector_captured", "Target captured!"));
       } catch (err) {
