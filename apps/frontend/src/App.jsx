@@ -303,22 +303,36 @@ function Dashboard() {
     async (data) => {
       console.log("[App] 🎯 Element Picked Event Received:", data);
 
-      const pickingNodes = nodes.filter((n) => n.data?.state === NODE_STATES.PICKING);
-      console.log("[App] 🔍 Nodes in PICKING state:", pickingNodes.map(n => n.id));
+      const pickingNodes = nodes.filter(
+        (n) => n.data?.state === NODE_STATES.PICKING,
+      );
+      console.log(
+        "[App] 🔍 Nodes in PICKING state:",
+        pickingNodes.map((n) => n.id),
+      );
 
       let liveNode = pickingNodes[0];
 
       if (!liveNode && selectedAction) {
         liveNode = nodes.find((n) => n.id === selectedAction.nodeId);
-        console.log("[App] 🔍 Fallback to selectedAction node:", liveNode?.id || "NONE");
+        console.log(
+          "[App] 🔍 Fallback to selectedAction node:",
+          liveNode?.id || "NONE",
+        );
       }
 
       if (!liveNode) {
-        console.error("[App] ❌ CRITICAL: Element picked but no candidate node found to update.", {
-          pickingNodesCount: pickingNodes.length,
-          selectedActionNodeId: selectedAction?.nodeId,
-          allNodeStates: nodes.map(n => ({ id: n.id, state: n.data?.state }))
-        });
+        console.error(
+          "[App] ❌ CRITICAL: Element picked but no candidate node found to update.",
+          {
+            pickingNodesCount: pickingNodes.length,
+            selectedActionNodeId: selectedAction?.nodeId,
+            allNodeStates: nodes.map((n) => ({
+              id: n.id,
+              state: n.data?.state,
+            })),
+          },
+        );
         return;
       }
 
@@ -432,12 +446,18 @@ function Dashboard() {
           selector: finalSelector.trim(),
         };
 
-        console.log("[App] 📝 Configuration payload prepared:", JSON.stringify(newConfig, null, 2));
+        console.log(
+          "[App] 📝 Configuration payload prepared:",
+          JSON.stringify(newConfig, null, 2),
+        );
 
         // CRITICAL: We use await to ensure nodes state is fully processed before we move on
         // though setNodes is async, updateNodeConfiguration returns after calling setNodes.
         await updateNodeConfiguration(kmId, newConfig);
-        console.log("[App] ✅ updateNodeConfiguration async call finished for nodeId:", kmId);
+        console.log(
+          "[App] ✅ updateNodeConfiguration async call finished for nodeId:",
+          kmId,
+        );
 
         // Reset visual state
         updateNodeState(kmId, NODE_STATES.DEFAULT);

@@ -472,12 +472,12 @@ function NodeConfigurationPanel({
     );
     const isDrifted = globalConfigStr !== lastSyncedConfigStr;
 
-    console.log("[NodeConfig] Sync Eval:", { nodeId: activeNode.id, nodeState, isDrifted, hasNodeChanged, justFinishedPicking });
-
     if (hasNodeChanged || justFinishedPicking || isDrifted) {
-      console.warn("[NodeConfig] 🔄 INTERNAL SYNC TRIGGERED. Reason:", { hasNodeChanged, justFinishedPicking, isDrifted });
-      console.log("[NodeConfig] Global Config:", JSON.stringify(globalConfig));
-      console.log("[NodeConfig] Local Config:", JSON.stringify(localConfig));
+      console.warn("[NodeConfig] 🔄 INTERNAL SYNC TRIGGERED. Reason:", {
+        hasNodeChanged,
+        justFinishedPicking,
+        isDrifted,
+      });
 
       // CRITICAL: Clear any pending local updates to prevent overwriting the sync result with stale local state
       if (updateTimeoutRef.current) {
