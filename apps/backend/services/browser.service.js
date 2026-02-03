@@ -94,6 +94,19 @@ class BrowserManager {
                 '--disable-gpu', // Architect Recommendation for Linux
                 '--no-sandbox', // Critical for many server environments
                 '--disable-dev-shm-usage', // Use /tmp instead of /dev/shm
+                '--no-zygote', // Prevent complex process forks
+                '--disable-gpu-sandbox', // Additional GPU isolation bypass
+                '--disable-accelerated-2d-canvas', // Reduce rendering pressure
+                '--disable-gpu-compositing', // Force software compositing
+                '--font-render-hinting=none', // Prevent font-related crashes on some Linux distros
+                '--disable-background-timer-throttling', // Keep renderer active
+                '--disable-backgrounding-occluded-windows', // Keep active
+                '--disable-renderer-backgrounding', // Keep high priority
+                '--js-flags="--max-old-space-size=4096"', // Increase JS memory limit
+                '--disable-webgl', // Prevent GPU stalls on heavy sites
+                '--disable-webgl2',
+                '--disable-3d-apis',
+                '--mute-audio', // Saves some background resources
                 '--disable-setuid-sandbox', // Additional sandbox bypass
                 '--disable-blink-features=AutomationControlled', // Hide automation
             ];

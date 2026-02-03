@@ -1,6 +1,5 @@
 import React from "react";
 import { cn } from "@/lib/utils";
-// eslint-disable-next-line no-unused-vars
 import { motion } from "motion/react";
 
 const Switch = React.forwardRef(

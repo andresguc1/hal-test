@@ -15,13 +15,27 @@ export async function startInspector(page) {
     // 1. Expose the callback function to Node.js
     // Wrap in try-catch because if it's already exposed, it throws an error
     try {
+        console.log('[Inspector] Exposing onElementSelected function...');
         await page.exposeFunction('onElementSelected', (data) => {
-            console.log('[Inspector] Element selected:', data);
+            console.log(
+                '[Inspector] 🎯 Element selected callback triggered with data:',
+                JSON.stringify(data, null, 2),
+            );
             emitElementPicked(data);
         });
+        console.log('[Inspector] ✅ onElementSelected function exposed successfully.');
     } catch (error) {
-        // Ignore "already has been exposed" error
-        if (!error.message.includes('already has been exposed')) {
+        // Ignore "already has been exposed" or "already has been registered" error
+        const msg = error.message || '';
+        const isAlreadyExposed =
+            msg.includes('already has been exposed') ||
+            msg.includes('change the binding') ||
+            msg.includes('already has been registered') ||
+            msg.includes('already been registered') ||
+            msg.includes('already registered');
+
+        if (!isAlreadyExposed) {
+            console.error('[Inspector] Failed to expose function:', error);
             throw error;
         }
     }
@@ -42,14 +56,18 @@ export async function startInspector(page) {
 
         window.__haltestInspectorActive = true;
 
-        // Cleanup Helper (to be attached to window for potential external use or just internal logic)
-        function existingCleanup() {
+        // Cleanup Helper
+        window.__haltestInspectorCleanup = function () {
             const oldEl = document.getElementById(HIGHLIGHT_ID);
             if (oldEl) oldEl.remove();
-            // We can't remove anonymous event listeners from previous injection easily
-            // unless we stored them on window. Ideally, we should.
-        }
-        existingCleanup();
+
+            // Remove listeners if they were attached to window/document (simulated here by reload/navigation usually,
+            // but we should ideally track them. For now, removing the UI is the main visual reset).
+            window.__haltestInspectorActive = false;
+        };
+
+        // Run once to start fresh
+        window.__haltestInspectorCleanup();
 
         // Create Highlighter Element
         let highlightEl = document.createElement('div');
@@ -169,6 +187,7 @@ export async function startInspector(page) {
         }
 
         function onClick(e) {
+            console.log('[HaltestInspector] Element clicked:', e.target);
             // Prevent default click behavior
             e.preventDefault();
             e.stopPropagation();
@@ -176,17 +195,26 @@ export async function startInspector(page) {
 
             const el = e.target;
             const result = generateSelector(el);
+            console.log('[HaltestInspector] Selection result:', result);
 
             // Clean up
             cleanup();
 
             // Send to backend
             // We verify the backend expects 'selector' property for backward compatibility
-            window.onElementSelected({
-                selector: result.best,
-                candidates: result.all,
-                strategy: result.type,
-            });
+            if (window.onElementSelected) {
+                console.log(
+                    '[HaltestInspector] Sending to backend via window.onElementSelected...',
+                );
+                window.onElementSelected({
+                    selector: result.best,
+                    candidates: result.all,
+                    strategy: result.type,
+                    timestamp: new Date().toISOString(),
+                });
+            } else {
+                console.error('[HaltestInspector] CRITICAL: window.onElementSelected not found!');
+            }
         }
 
         function cleanup() {
@@ -204,5 +232,27 @@ export async function startInspector(page) {
         // For robustness, lets attach to document (capturing) to ensure we get events first.
         document.addEventListener('mouseover', onMouseOver, true);
         document.addEventListener('click', onClick, true);
+
+        // Expose robust cleanup that removes listeners
+        window.__haltestInspectorCleanup = cleanup;
     });
+}
+
+/**
+ * Stops the inspector by calling cleanup on the page.
+ * @param {import('playwright').Page} page
+ */
+export async function stopInspector(page) {
+    if (!page || page.isClosed()) return;
+
+    try {
+        await page.evaluate(() => {
+            if (window.__haltestInspectorCleanup) {
+                window.__haltestInspectorCleanup();
+            }
+        });
+        console.log('[Inspector] Stopped inspection mode.');
+    } catch (error) {
+        console.warn('[Inspector] Error stopping inspector:', error.message);
+    }
 }

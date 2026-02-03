@@ -55,6 +55,8 @@ import { ExportModal } from "./components/modals/ExportModal";
 import { ImportModal } from "./components/modals/ImportModal";
 import { api } from "./utils/api";
 import { NODE_STATES } from "./components/hooks/flowStyles";
+import { useLogs } from "./context/LogContext";
+import TerminalPanel from "./components/TerminalPanel";
 
 // ========================================
 // DASHBOARD COMPONENT (Main Work Area)
@@ -261,55 +263,197 @@ function Dashboard() {
 
     // 2. Start Inspector API
     try {
-      const data = await api.post("/inspector/start", { browserId: null });
+      console.log(
+        "[App] 🚀 Starting inspector on browserId:",
+        activeBrowserId || "LATEST",
+      );
+      const data = await api.post("/inspector/start", {
+        browserId: activeBrowserId || null, // Explicitly pass active session if we have it
+      });
       if (!data.success) {
         toast.error(data.message || "Failed to start inspector");
         updateNodeState(selectedAction.nodeId, NODE_STATES.DEFAULT); // Revert on failure
       }
     } catch (error) {
       toast.error(error.message || "Network error starting inspector");
-      updateNodeState(selectedAction.nodeId, NODE_STATES.DEFAULT); // Revert on failure
+      updateNodeState(selectedAction?.nodeId, NODE_STATES.DEFAULT); // Revert on failure
     }
-  }, [selectedAction, updateNodeState, toast, t]);
+  }, [selectedAction, updateNodeState, toast, t, activeBrowserId]);
+
+  // CANCEL PICKING HANDLER
+  const handleCancelPicking = useCallback(async () => {
+    if (selectedAction) {
+      updateNodeState(selectedAction.nodeId, NODE_STATES.DEFAULT);
+      console.log(
+        "[App] Cancelled picking state for node:",
+        selectedAction.nodeId,
+      );
+    }
+    // Call backend to remove listeners
+    try {
+      await api.post("/inspector/stop", { browserId: null });
+      // Optional: toast.info("Inspector stopped");
+    } catch (e) {
+      console.warn("[App] Failed to stop backend inspector:", e);
+    }
+  }, [selectedAction, updateNodeState]);
 
   // Element Picker Callback
   const handleElementPicked = useCallback(
     (data) => {
-      // If we have an active node being configured, update it
-      if (selectedAction) {
-        // ERROR FIX: Find the LIVE node to get latest config (text, etc.)
-        const liveNode = nodes.find((n) => n.id === selectedAction.nodeId);
-        const currentConfig =
-          liveNode?.data?.configuration ||
-          selectedAction?.data?.configuration ||
-          {};
+      console.log("[App] 🎯 Element Picked Event Received:", data);
+
+      // 1. SMART RESOLUTION: Find the node that requested this pick.
+      // Priority A: Node specifically in 'PICKING' state (handles lost focus/panel closed)
+      // Priority B: Currently selected node (if state update lagged)
+      let liveNode = nodes.find((n) => n.data?.state === NODE_STATES.PICKING);
+      console.log("[App] 🔍 Node in PICKING state:", liveNode?.id || "NONE");
+
+      if (!liveNode && selectedAction) {
+        liveNode = nodes.find((n) => n.id === selectedAction.nodeId);
+        console.log(
+          "[App] 🔍 Fallback to selectedAction node:",
+          liveNode?.id || "NONE",
+        );
+      }
+
+      if (!liveNode) {
+        console.warn(
+          "[App] ❌ Element picked but no candidate node found to update.",
+        );
+        return;
+      }
+
+      const kmId = liveNode.id; // Keep ID ref
+      console.log("[App] ✅ Target node identified:", kmId);
+
+      try {
+        // VALIDATION: Ensure we captured a valid selector
+        const sources = data.candidates || data.selectors || {};
+        console.log("[App] 📦 Selector sources:", sources);
+
+        const isValidSelector =
+          data &&
+          (data.selector || (sources && Object.values(sources).some((v) => v)));
+
+        if (!isValidSelector) {
+          console.warn("[PICKER] ❌ No valid selector in payload", data);
+          toast.error(
+            t(
+              "common.selector_capture_failed",
+              "Failed to capture element. Try again.",
+            ),
+          );
+          updateNodeState(kmId, NODE_STATES.DEFAULT);
+          return;
+        }
+
+        const currentConfig = liveNode.data?.configuration || {};
+        console.log("[App] 📋 Current node configuration:", currentConfig);
 
         // PRIORITY STRATEGY: ID > Data Attr > CSS > XPath
         let finalSelector = data.selector; // Default fallback
+        console.log("[App] 🎯 Initial selector (fallback):", finalSelector);
 
-        if (data.selectors) {
-          if (data.selectors.id) finalSelector = data.selectors.id;
-          else if (data.selectors.dataAttribute)
-            finalSelector = data.selectors.dataAttribute;
-          else if (data.selectors.css) finalSelector = data.selectors.css;
-          else if (data.selectors.xpath) finalSelector = data.selectors.xpath;
+        // Handle candidates/selectors structure
+        if (sources) {
+          // Map standard keys
+          const id = sources.id;
+          const dataAttr = sources.dataAttribute || sources.testId; // Backend might send testId
+          const css = sources.css || sources.cssPath;
+          const xpath = sources.xpath || sources.text;
+
+          console.log("[App] 🔍 Extracted selectors from candidates:", {
+            id,
+            dataAttr,
+            css,
+            xpath,
+          });
+
+          if (id) {
+            finalSelector = id;
+            console.log(
+              "[App] ✅ Priority 1: Using ID selector:",
+              finalSelector,
+            );
+          } else if (dataAttr) {
+            finalSelector = dataAttr;
+            console.log(
+              "[App] ✅ Priority 2: Using Data Attribute selector:",
+              finalSelector,
+            );
+          } else if (css) {
+            finalSelector = css;
+            console.log(
+              "[App] ✅ Priority 3: Using CSS selector:",
+              finalSelector,
+            );
+          } else if (xpath) {
+            finalSelector = xpath;
+            console.log(
+              "[App] ✅ Priority 4: Using XPath selector:",
+              finalSelector,
+            );
+          }
+        } else {
+          console.log(
+            "[App] ℹ️ No candidates provided, using primary selector:",
+            finalSelector,
+          );
         }
 
-        updateNodeConfiguration(selectedAction.nodeId, {
+        // Validate selector is not empty after priority selection
+        if (
+          !finalSelector ||
+          typeof finalSelector !== "string" ||
+          finalSelector.trim() === ""
+        ) {
+          console.warn("[PICKER] ❌ Final selector is empty", {
+            finalSelector,
+            original: data,
+          });
+          toast.error(
+            t(
+              "common.selector_empty",
+              "Selector is empty. Try selecting a different element.",
+            ),
+          );
+          updateNodeState(kmId, NODE_STATES.DEFAULT);
+          return;
+        }
+
+        console.log(
+          "[PICKER] 🚀 Applying selector to node:",
+          kmId,
+          "with value:",
+          finalSelector,
+        );
+
+        const newConfig = {
           ...currentConfig, // Preserve existing text, etc.
-          selector: finalSelector,
-        });
+          selector: finalSelector.trim(),
+        };
+
+        console.log("[App] 📝 New configuration to apply:", newConfig);
+
+        updateNodeConfiguration(kmId, newConfig);
+        console.log(
+          "[App] ✅ updateNodeConfiguration called successfully for nodeId:",
+          kmId,
+        );
 
         // Reset visual state
-        updateNodeState(selectedAction.nodeId, NODE_STATES.DEFAULT); // Or SUCCESS temporarily?
+        updateNodeState(kmId, NODE_STATES.DEFAULT);
+        console.log("[App] ✅ Node state reset to DEFAULT for nodeId:", kmId);
 
         toast.success(t("common.selector_captured", "Target captured!"));
-      } else {
-        // If no node is selected, maybe just notify
-        console.warn("Element picked but no node is being configured.");
+      } catch (err) {
+        console.error("[PICKER] 💥 Error processing picked element:", err);
+        updateNodeState(kmId, NODE_STATES.ERROR);
+        toast.error("Error processing selection");
       }
     },
-    [selectedAction, nodes, updateNodeConfiguration, updateNodeState, toast, t],
+    [nodes, selectedAction, updateNodeConfiguration, updateNodeState, toast, t],
   );
 
   const handleSelectRun = useCallback(
@@ -336,8 +480,11 @@ function Dashboard() {
     [replayRun, resetNodeStates, toast],
   );
 
-  // Initialize Socket.io connection for real-time updates and inspector events
-  useHaltestSocket(setNodes, setEdges, handleElementPicked);
+  // Logs Context
+  const { addLog } = useLogs();
+
+  // Socket setup
+  useHaltestSocket(setNodes, setEdges, handleElementPicked, addLog);
 
   // Computed values
   const isConfigurationPanelVisible = selectedAction !== null;
@@ -1082,6 +1229,9 @@ function Dashboard() {
             </div>
           </main>
 
+          {/* Real-time Execution Terminal */}
+          <TerminalPanel />
+
           {/* PANEL DERECHO (CONFIGURACIÓN) */}
           {isConfigurationPanelVisible && selectedAction && (
             <NodeConfigurationPanel
@@ -1104,6 +1254,7 @@ function Dashboard() {
               projectPath={projectPath}
               isReadOnly={isReadOnly}
               onStartPick={handleStartPicking}
+              onCancelPick={handleCancelPicking}
               onUngroup={ungroupNodes}
             />
           )}

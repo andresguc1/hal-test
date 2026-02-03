@@ -1,17 +1,71 @@
+import { executionService } from '../services/ExecutionService.js';
 import { executionLogger } from '../services/ExecutionLogger.js';
-import { Run, StepResult } from '../database/init.js';
+import { Run, StepResult, Flow } from '../database/init.js';
 
 export const startRunAction = async (req, res) => {
     try {
-        const { flowId, flowName, trigger, nodes, edges } = req.body;
-        const flowSnapshot = JSON.stringify({ nodes, edges });
-        const runId = await executionLogger.startRun(flowId, { flowName, trigger, flowSnapshot });
+        const { flowId, flowName, trigger, nodes, edges, projectId, overrides } = req.body;
 
-        if (!runId) {
-            return res.status(500).json({ success: false, message: 'Failed to start run' });
+        // If nodes/edges are provided, it's a frontend-orchestrated run
+        if (nodes && edges) {
+            const flowSnapshot = JSON.stringify({ nodes, edges });
+            const runId = await executionLogger.startRun(flowId, {
+                flowName,
+                trigger,
+                flowSnapshot,
+            });
+
+            if (!runId) {
+                return res.status(500).json({ success: false, message: 'Failed to start run' });
+            }
+            return res.status(200).json({ success: true, runId });
         }
 
-        return res.status(200).json({ success: true, runId });
+        // If flowId and projectId are provided without snapshot, it's a REMOTE run
+        if (flowId && projectId) {
+            console.log(`[RemoteRun] Resolved flowId: ${flowId}, projectId: ${projectId}`);
+
+            const flow = await Flow.findByPk(flowId);
+            if (!flow) {
+                console.warn(`[RemoteRun] Flow ${flowId} not found in database`);
+            }
+
+            // 2. Create the run record first so we have an ID to return
+            console.log(`[RemoteRun] Initializing run record...`);
+            const runId = await executionLogger.startRun(flowId, {
+                flowName: flow?.name || 'Remote Run',
+                trigger: 'api',
+            });
+
+            if (!runId) {
+                console.error(`[RemoteRun] Failed to create runId`);
+                return res
+                    .status(500)
+                    .json({ success: false, message: 'Failed to initialize run' });
+            }
+
+            console.log(`[RemoteRun] Run created with ID: ${runId}. Triggering execution...`);
+
+            // 3. Trigger execution in the background (DO NOT AWAIT)
+            executionService
+                .executeFlow(flowId, projectId, { overrides, runId })
+                .then(() => console.log(`[RemoteRun] Execution completed for runId: ${runId}`))
+                .catch((err) =>
+                    console.error(`[RemoteExecution] Background task failed: ${err.message}`, err),
+                );
+
+            return res.status(200).json({
+                success: true,
+                runId,
+                message: 'Remote execution initiated in background',
+            });
+        }
+
+        return res.status(400).json({
+            success: false,
+            message:
+                'Incomplete run data. Provide flowId/projectId for remote run, or snapshot for client run.',
+        });
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
     }

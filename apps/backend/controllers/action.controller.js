@@ -9,7 +9,7 @@ import { traceService } from '../services/trace.service.js';
 import { globalStateManager } from '../services/stateManager.js';
 import VariableManager from '../services/VariableManager.js';
 import aiService from '../services/AIService.js';
-import { emitExecutionStatus, emitScreenshotReady } from '../socket.js';
+import { emitExecutionStatus, emitScreenshotReady, emitLog } from '../socket.js';
 import { z } from 'zod';
 import * as fsp from 'fs/promises';
 // import * as fs from 'fs';
@@ -19,6 +19,13 @@ import { STORAGE_RUNS_DIR } from '../config/paths.js';
 
 // Create Variable Manager instance
 const variableManager = new VariableManager();
+
+/**
+ * Smartly emits logs to the frontend via socket
+ */
+const smartEmitLog = (message, type = 'info', nodeId = null) => {
+    emitLog({ message, type, nodeId });
+};
 // ==========================================================
 // CONFIGURATION AND CONSTANTS
 // ==========================================================
@@ -179,13 +186,14 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
     let targetBrowserId;
     const start = Date.now();
     const runId = req.body.runId; // Extract runId if present
+    const nodeId = req.body.nodeId; // Extract nodeId if present
 
     const opts = req.body;
     let page, context;
 
-    const nodeId = opts.nodeId;
     if (nodeId) {
         emitExecutionStatus({ stepId: nodeId, status: 'running' });
+        smartEmitLog(`Executing ${actionName}...`, 'info', nodeId);
     }
 
     // --- IMPLICIT LAUNCH (Debug Mode) ---
@@ -225,6 +233,7 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
             'manage_cookies',
             'manage_storage',
             'modify_headers',
+            'manage_tabs',
         ].includes(actionName);
 
         if (!isBrowserAction && !isContextAction && actionName !== 'open_url') {
@@ -239,6 +248,12 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
             if (!validation.error) {
                 // browser = validation.entry.browser || validation.entry; // Unused
                 targetBrowserId = validation.browserId;
+
+                // Fix: Ensure context is available for context actions
+                if (isContextAction) {
+                    const browserInstance = validation.entry.browser || validation.entry;
+                    context = await getOrCreateContext(req, browserInstance, targetBrowserId);
+                }
             }
         }
 
@@ -258,6 +273,8 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
             });
         }
 
+        smartEmitLog(`${actionName} completed successfully (${duration}ms)`, 'success', nodeId);
+
         // --- FLIGHT RECORDER: Optional Screenshot on Success ---
         console.log(
             `[FlightRecorder] Check: takeScreenshot=${opts.takeScreenshot}, runId=${runId}, nodeId=${nodeId}`,
@@ -270,7 +287,7 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
                 // Forensic Standard: {runId}/{nodeId}.png
                 const filename = `${nodeId}.png`;
                 const fullPath = path.join(screenshotsDir, filename);
-                await page.screenshot({ path: fullPath });
+                await page.screenshot({ path: fullPath, animations: 'disabled' });
                 screenshotPath = `storage/runs/${runId}/${filename}`;
                 console.log(`[FlightRecorder] Screenshot saved: ${screenshotPath}`);
 
@@ -327,19 +344,31 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
 
         if (isSelectorError && opts.selector && runId) {
             console.log(`[Self-Healing] Detected selector failure for: ${opts.selector}`);
-
             try {
-                // 1. Get current page context
-                const page = browserService.getPage(targetBrowserId);
+                // 1. Get current page context (using the standard way within action.controller)
+                const validation = validateBrowser(req, targetBrowserId || opts.browserId);
+                let ScreenshotBase64 = null;
+                let domSnippet = null;
 
-                // 2. Capture Context (Screenshot + Simplified DOM)
-                const screenshotBuffer = await page.screenshot({ encoding: 'base64' });
-                const ScreenshotBase64 = `data:image/png;base64,${screenshotBuffer}`;
+                if (!validation.error) {
+                    const browserInstance = validation.entry.browser || validation.entry;
+                    const browserContexts = browserInstance.contexts();
+                    const pages = browserContexts[0]?.pages() || [];
+                    const page = pages[pages.length - 1];
 
-                // Simplified DOM strategy: Get body HTML but truncated to avoid context window issues
-                // Ideally we would want a more intelligent snippet around the area, but full body is a start.
-                let domSnippet = await page.content();
-                if (domSnippet.length > 50000) domSnippet = domSnippet.substring(0, 50000); // hard cap
+                    if (page && !page.isClosed()) {
+                        // 2. Capture Context (Screenshot + Simplified DOM)
+                        const screenshotBuffer = await page.screenshot({
+                            encoding: 'base64',
+                            animations: 'disabled',
+                        });
+                        ScreenshotBase64 = `data:image/png;base64,${screenshotBuffer}`;
+
+                        // Simplified DOM strategy: Get body HTML but truncated to avoid context window issues
+                        domSnippet = await page.content();
+                        if (domSnippet.length > 50000) domSnippet = domSnippet.substring(0, 50000); // hard cap
+                    }
+                }
 
                 // 3. Ask AI to Heal
                 const userKey = req.headers['x-openai-key'];
@@ -492,10 +521,11 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
         // 6. Respond with Error
         if (nodeId) {
             emitExecutionStatus({ stepId: nodeId, status: 'failed', error: errorMessage });
+            smartEmitLog(`${actionName} failed: ${errorMessage}`, 'error', nodeId);
         }
         return res.status(status).json({
             success: false,
-            message: `${req.t('common.error_internal')} (${actionName})`,
+            message: errorMessage || `${req.t('common.error_internal')} (${actionName})`,
             error: errorMessage,
             selector: opts.selector,
         });
@@ -510,7 +540,10 @@ export const launchBrowserAction = async (req, res) => {
     const nodeId = req.body.nodeId;
     const runId = req.body.runId;
     const start = Date.now();
-    if (nodeId) emitExecutionStatus({ stepId: nodeId, status: 'running' });
+    if (nodeId) {
+        emitExecutionStatus({ stepId: nodeId, status: 'running' });
+        smartEmitLog('Launching browser...', 'info', nodeId);
+    }
 
     try {
         // --- PERSISTENT BROWSER (Debug Mode) ---
@@ -523,6 +556,7 @@ export const launchBrowserAction = async (req, res) => {
                 // Retrieve ID
                 const browserId = Array.from(browserService.keys()).pop();
 
+                smartEmitLog('Reusing existing browser (Debug Mode)', 'info', nodeId);
                 if (nodeId) emitExecutionStatus({ stepId: nodeId, status: 'success' });
                 return res.status(200).json({
                     success: true,
@@ -540,6 +574,7 @@ export const launchBrowserAction = async (req, res) => {
         const duration = Date.now() - start;
 
         console.log(`[SUCCESS] Browser launched with ID: ${browserId}`);
+        smartEmitLog(`Browser launched with ID: ${browserId}`, 'success', nodeId);
         if (nodeId) emitExecutionStatus({ stepId: nodeId, status: 'success' });
 
         // --- FLIGHT RECORDER: Log Success ---
@@ -570,6 +605,7 @@ export const launchBrowserAction = async (req, res) => {
     } catch (error) {
         const duration = Date.now() - start;
         console.error('[ERROR] Failed to launch browser:', error.message);
+        smartEmitLog(`Browser launch failed: ${error.message}`, 'error', nodeId);
         if (nodeId)
             emitExecutionStatus({
                 stepId: nodeId,
@@ -610,7 +646,10 @@ export const openUrlAction = async (req, res) => {
     let browserId;
     const nodeId = req.body.nodeId;
     const runId = req.body.runId;
-    if (nodeId) emitExecutionStatus({ stepId: nodeId, status: 'running' });
+    if (nodeId) {
+        emitExecutionStatus({ stepId: nodeId, status: 'running' });
+        smartEmitLog('Opening URL...', 'info', nodeId);
+    }
 
     try {
         const { url, waitUntil = 'domcontentloaded', timeout = 30000 } = req.body ?? {};
@@ -653,7 +692,19 @@ export const openUrlAction = async (req, res) => {
         }
 
         await page.bringToFront().catch(() => {});
-        await page.goto(url, { waitUntil, timeout });
+
+        try {
+            await page.goto(url, { waitUntil, timeout });
+        } catch (error) {
+            if (error.message.includes('Page crashed') || error.message.includes('Target closed')) {
+                const hint =
+                    "Crucial: El sitio es demasiado pesado para el modo 'load'. Cambia el campo 'Wait Until' a 'domcontentloaded' en la configuración del nodo.";
+                console.error(`[CRASH] ${url}: ${error.message}. Hint: ${hint}`);
+                throw new Error(`${error.message}. HINT: ${hint}`);
+            }
+            throw error;
+        }
+
         const duration = Date.now() - start;
 
         traceService.add({
@@ -665,6 +716,7 @@ export const openUrlAction = async (req, res) => {
         });
 
         console.log(`[SUCCESS] URL opened (${duration}ms): ${url}`);
+        smartEmitLog(`Navigated to ${url} in ${duration}ms`, 'success', nodeId);
         if (nodeId) emitExecutionStatus({ stepId: nodeId, status: 'success' });
 
         // --- FLIGHT RECORDER: Optional Screenshot on Success ---
@@ -718,6 +770,7 @@ export const openUrlAction = async (req, res) => {
     } catch (error) {
         const duration = Date.now() - start;
         console.error(`[ERROR] ${actionName}:`, error.message);
+        smartEmitLog(`Navigation failed: ${error.message}`, 'error', nodeId);
 
         let status = error.status || 500;
         let message = req.t('actions.open_url.error');
@@ -886,6 +939,9 @@ export const closeBrowserAction = async (req, res) => {
 export const clickAction = (req, res) =>
     executePlaywrightAction(req, res, 'click', async (page, opts) => {
         const { selector, button, clickCount, modifiers, timeout, force } = opts;
+
+        if (!selector) throw new Error(req.t('errors.selector_required'));
+
         const clickOptions = { button, clickCount, modifiers, timeout, force };
 
         await page.click(selector, clickOptions);
@@ -899,6 +955,10 @@ export const clickAction = (req, res) =>
 export const typeTextAction = (req, res) =>
     executePlaywrightAction(req, res, 'type_text', async (page, opts) => {
         const { selector, text, clearBeforeType, delay, timeout } = opts;
+
+        if (!selector) throw new Error(req.t('errors.selector_required'));
+        if (text === undefined || text === null) throw new Error(req.t('errors.text_required'));
+
         const actionOptions = { timeout };
 
         // Corrected typing logic
@@ -942,8 +1002,8 @@ export const scrollAction = (req, res) =>
     executePlaywrightAction(req, res, 'scroll', async (page, opts) => {
         const {
             selector,
-            direction,
-            amount,
+            direction = 'down',
+            amount = 300,
             behavior = 'smooth',
             x, // Absolute X coordinate
             y, // Absolute Y coordinate
@@ -959,7 +1019,7 @@ export const scrollAction = (req, res) =>
                 await page.waitForSelector(selector, { state: 'attached', timeout: 5000 });
                 await page.evaluate(
                     ({ selector, x, y, behavior }) => {
-                        const element = document.querySelector(selector); // eslint-disable-line no-undef
+                        const element = document.querySelector(selector);
                         if (!element)
                             throw new Error(`Element not found with selector: ${selector}`);
                         element.scrollTo({ left: x, top: y, behavior });
@@ -969,7 +1029,7 @@ export const scrollAction = (req, res) =>
             } else {
                 await page.evaluate(
                     ({ x, y, behavior }) => {
-                        window.scrollTo({ left: x, top: y, behavior }); // eslint-disable-line no-undef
+                        window.scrollTo({ left: x, top: y, behavior });
                     },
                     { x, y, behavior },
                 );
@@ -997,7 +1057,7 @@ export const scrollAction = (req, res) =>
                 await page.waitForSelector(selector, { state: 'attached', timeout: 5000 });
                 await page.evaluate(
                     ({ selector, dx, dy, behavior }) => {
-                        const element = document.querySelector(selector); // eslint-disable-line no-undef
+                        const element = document.querySelector(selector);
                         if (!element)
                             throw new Error(`Element not found with selector: ${selector}`);
                         element.scrollBy({ left: dx, top: dy, behavior });
@@ -1007,7 +1067,7 @@ export const scrollAction = (req, res) =>
             } else {
                 await page.evaluate(
                     ({ dx, dy, behavior }) => {
-                        window.scrollBy({ left: dx, top: dy, behavior }); // eslint-disable-line no-undef
+                        window.scrollBy({ left: dx, top: dy, behavior });
                     },
                     { dx, dy, behavior },
                 );
@@ -1203,6 +1263,8 @@ export const findElementAction = (req, res) =>
             visible = true,
         } = opts;
 
+        if (!selector) throw new Error(req.t('errors.selector_required'));
+
         // Convert selector based on type
         let playwrightSelector = selector;
         if (selectorType === 'xpath') {
@@ -1239,199 +1301,11 @@ export const findElementAction = (req, res) =>
         };
     });
 
-export const getSetContentAction = (req, res) =>
-    executePlaywrightAction(req, res, 'get_set_content', async (page, opts) => {
-        const {
-            selector,
-            action = 'get',
-            contentType = 'text',
-            attribute,
-            value,
-            clearBeforeSet = true,
-        } = opts;
-
-        // Validations
-        if (!selector) {
-            throw new Error(req.t('errors.selector_required'));
-        }
-
-        if (!['get', 'set'].includes(action)) {
-            throw new Error(req.t('errors.invalid_action'));
-        }
-
-        if (!['text', 'html', 'attribute'].includes(contentType)) {
-            throw new Error(req.t('errors.invalid_content_type'));
-        }
-
-        if (contentType === 'attribute' && !attribute) {
-            throw new Error(
-                "El parametro 'attribute' es obligatorio cuando contentType es 'attribute'.",
-            );
-        }
-
-        if (action === 'set' && value === undefined) {
-            throw new Error("El parametro 'value' es obligatorio para la accion 'set'.");
-        }
-
-        // Esperar que el elemento esté presente
-        await page.waitForSelector(selector, { state: 'attached', timeout: 10000 });
-
-        let result;
-
-        if (action === 'get') {
-            // ========== GET ACTION ==========
-            let content;
-
-            if (contentType === 'attribute') {
-                // Get specific attribute
-                content = await page.getAttribute(selector, attribute);
-                result = {
-                    message: req.t('actions.get_set_content.get_attribute_success', { attribute }),
-                    data: { content, attribute, contentType: 'attribute' },
-                    traceDetails: { selector, action: 'get', contentType, attribute },
-                };
-            } else if (contentType === 'html') {
-                // Get innerHTML
-                content = await page.innerHTML(selector);
-                result = {
-                    message: req.t('actions.get_set_content.get_html_success'),
-                    data: { content, contentType: 'html' },
-                    traceDetails: { selector, action: 'get', contentType },
-                };
-            } else {
-                // Default: get textContent
-                content = await page.textContent(selector);
-                result = {
-                    message: req.t('actions.get_set_content.get_text_success'),
-                    data: { content, contentType: 'text' },
-                    traceDetails: { selector, action: 'get', contentType },
-                };
-            }
-        } else if (action === 'set') {
-            // ========== SET ACTION ==========
-
-            if (contentType === 'attribute') {
-                // Set specific attribute
-                await page.evaluate(
-                    ({ selector, attribute, value }) => {
-                        const element = document.querySelector(selector); // eslint-disable-line no-undef
-                        if (!element) throw new Error(`Element not found: ${selector}`);
-                        element.setAttribute(attribute, value);
-                    },
-                    { selector, attribute, value },
-                );
-
-                result = {
-                    message: req.t('actions.get_set_content.set_attribute_success', { attribute }),
-                    traceDetails: {
-                        selector,
-                        action: 'set',
-                        contentType,
-                        attribute,
-                        value,
-                    },
-                };
-            } else if (contentType === 'html') {
-                // Set innerHTML
-                await page.evaluate(
-                    ({ selector, value, clearBeforeSet }) => {
-                        const element = document.querySelector(selector); // eslint-disable-line no-undef
-                        if (!element) throw new Error(`Element not found: ${selector}`);
-
-                        if (clearBeforeSet) {
-                            element.innerHTML = value;
-                        } else {
-                            element.innerHTML += value;
-                        }
-                    },
-                    { selector, value, clearBeforeSet },
-                );
-
-                result = {
-                    message: req.t('actions.get_set_content.set_html_success'),
-                    traceDetails: {
-                        selector,
-                        action: 'set',
-                        contentType,
-                        clearBeforeSet,
-                    },
-                };
-            } else {
-                // Default: set textContent or input value
-                // Try to determine if it's an input field
-                const tagName = await page.evaluate((sel) => {
-                    const el = document.querySelector(sel); // eslint-disable-line no-undef
-                    return el ? el.tagName.toLowerCase() : null;
-                }, selector);
-
-                const isInputField = ['input', 'textarea', 'select'].includes(tagName);
-
-                if (isInputField) {
-                    // For input fields, use fill/type
-                    if (clearBeforeSet) {
-                        await page.fill(selector, value);
-                    } else {
-                        // Append to existing content
-                        await page.type(selector, value);
-                    }
-                } else {
-                    // For other elements, modify textContent
-                    await page.evaluate(
-                        ({ selector, value, clearBeforeSet }) => {
-                            const element = document.querySelector(selector); // eslint-disable-line no-undef
-                            if (!element) throw new Error(`Element not found: ${selector}`);
-
-                            if (clearBeforeSet) {
-                                element.textContent = value;
-                            } else {
-                                element.textContent += value;
-                            }
-                        },
-                        { selector, value, clearBeforeSet },
-                    );
-                }
-
-                result = {
-                    message: req.t('actions.get_set_content.set_text_success'),
-                    traceDetails: {
-                        selector,
-                        action: 'set',
-                        contentType,
-                        clearBeforeSet,
-                        isInputField,
-                    },
-                };
-            }
-
-            // Captura de screenshot automatica para operaciones SET
-            let screenshotData = null;
-            try {
-                // Pequeña espera para asegurar que el renderizado se actualice
-                await page.waitForTimeout(200);
-                const screenshot = await page.screenshot({
-                    fullPage: false,
-                    type: 'png',
-                });
-                screenshotData = screenshot.toString('base64');
-            } catch (err) {
-                console.warn(
-                    '[WARN] Fallo al tomar screenshot automático en get_set_content:',
-                    err.message,
-                );
-            }
-
-            // Add screenshot to response
-            if (screenshotData) {
-                result.data = { ...(result.data || {}), screenshot: screenshotData };
-            }
-        }
-
-        return result;
-    });
-
 export const selectOptionAction = (req, res) =>
     executePlaywrightAction(req, res, 'select_option', async (page, opts) => {
         const { selector, selectionCriteria, selectionValue, timeout } = opts;
+
+        if (!selector) throw new Error(req.t('errors.selector_required'));
 
         // Base options configuration
         let valuesToSelect = {};
@@ -1516,6 +1390,8 @@ export const selectOptionAction = (req, res) =>
 export const submitFormAction = (req, res) =>
     executePlaywrightAction(req, res, 'submit_form', async (page, opts) => {
         const { selector } = opts;
+
+        if (!selector) throw new Error(req.t('errors.selector_required'));
         await page.locator(selector).press('Enter'); // Or use evaluate for submit()
         return { message: req.t('actions.submit_form.success'), traceDetails: { selector } };
     });
@@ -1619,7 +1495,8 @@ export const takeScreenshotAction = (req, res) =>
         // Playwright options configuration
         const screenshotOptions = {
             type: format,
-            timeout,
+            timeout: fullPage ? Math.max(timeout, 60000) : timeout, // 60s for fullPage
+            animations: 'disabled', // Prevent crashes on high-motion sites
         };
 
         if (format === 'jpeg') {
@@ -1649,6 +1526,7 @@ export const takeScreenshotAction = (req, res) =>
 
         if (selector) {
             // Case 1: Element Capture
+            console.log(`[Screenshot] Element mode: ${selector} (Timeout: ${timeout}ms)`);
             await page.waitForSelector(selector, { state: 'visible', timeout });
             const element = await page.$(selector);
             if (!element) {
@@ -1657,7 +1535,39 @@ export const takeScreenshotAction = (req, res) =>
             screenshotBuffer = await element.screenshot(screenshotOptions);
         } else {
             // Case 2: Full Page / Viewport Capture
+            if (fullPage) {
+                console.log('[Screenshot] Full Page mode (Starting warmup scroll...)');
+                // Optimization: Scroll to bottom and back to wake up lazy-loaded elements
+                try {
+                    // Manual warmup with race to avoid hang
+                    await Promise.race([
+                        page.evaluate(() => {
+                            /* global window, document */
+                            window.scrollTo(0, document.body.scrollHeight / 2);
+                            return new Promise((r) => setTimeout(r, 500)).then(() =>
+                                window.scrollTo(0, 0),
+                            );
+                        }),
+                        new Promise((_, reject) =>
+                            setTimeout(() => reject(new Error('Warmup timeout')), 5000),
+                        ),
+                    ]);
+                    console.log('[Screenshot] Warmup complete.');
+                } catch (e) {
+                    console.warn('[Screenshot] Warmup skipped (timed out or failed):', e.message);
+                }
+                console.log(
+                    `[Screenshot] Executing fullPage capture (Max wait: ${screenshotOptions.timeout}ms)...`,
+                );
+            } else {
+                console.log('[Screenshot] Viewport mode');
+            }
+
             screenshotBuffer = await page.screenshot(screenshotOptions);
+            console.log('[Screenshot] Capture successful.');
+        }
+        if (!screenshotBuffer) {
+            throw new Error('Screenshot operation failed to return a valid image.');
         }
 
         // Return data
@@ -1688,16 +1598,14 @@ export const saveDomAction = (req, res) =>
 
         // 1. Validacion: Se requiere al menos un destino (path o variableName)
         if (!savePath && !variableName) {
-            throw new Error(
-                'Debe proporcionar "path" (archivo) o "variableName" (variable) para guardar el DOM.',
-            );
+            throw new Error(req.t('errors.save_dom_destination_required'));
         }
 
         // 2. Validacion de seguridad para path (si se proporciona)
         let resolvedPath = null;
         if (savePath) {
             if (savePath.includes('..')) {
-                throw new Error('Ruta de archivo no segura: se detectó uso de ".."');
+                throw new Error(req.t('errors.unsafe_file_path'));
             }
             resolvedPath = path.resolve(savePath);
         }
@@ -1741,6 +1649,86 @@ export const saveDomAction = (req, res) =>
                 variableName,
                 selector,
                 contentLength: content.length,
+            },
+        };
+    });
+
+export const getSetContentAction = (req, res) =>
+    executePlaywrightAction(req, res, 'get_set_content', async (page, opts) => {
+        const {
+            selector,
+            action = 'get',
+            contentType = 'text',
+            attribute,
+            value,
+            clearBeforeSet = true,
+            timeout = 30000,
+        } = opts;
+
+        if (!selector) throw new Error(req.t('errors.selector_required'));
+
+        await page.waitForSelector(selector, { state: 'attached', timeout });
+        const element = await page.$(selector);
+        if (!element) {
+            throw new Error(req.t('errors.element_not_found', { selector }));
+        }
+
+        let result;
+        if (action === 'get') {
+            if (contentType === 'text') {
+                result = await element.innerText();
+            } else if (contentType === 'html') {
+                result = await element.innerHTML();
+            } else if (contentType === 'value') {
+                result = await element.inputValue();
+            } else if (contentType === 'attribute' && attribute) {
+                result = await element.getAttribute(attribute);
+            } else {
+                throw new Error(req.t('errors.invalid_content_type', { contentType }));
+            }
+        } else if (action === 'set') {
+            if (value === undefined) {
+                throw new Error(req.t('errors.value_required_for_set'));
+            }
+
+            if (contentType === 'text') {
+                await element.fill(''); // Clear before setting text
+                await element.type(value);
+            } else if (contentType === 'html') {
+                await element.evaluate((el, val) => (el.innerHTML = val), value);
+            } else if (contentType === 'value') {
+                if (clearBeforeSet) {
+                    await element.fill('');
+                }
+                await element.type(value);
+            } else if (contentType === 'attribute' && attribute) {
+                await element.evaluate((el, { attr, val }) => el.setAttribute(attr, val), {
+                    attr: attribute,
+                    val: value,
+                });
+            } else {
+                throw new Error(req.t('errors.invalid_content_type', { contentType }));
+            }
+            result = value; // For set actions, the result is the value that was set
+        } else {
+            throw new Error(req.t('errors.invalid_action', { action }));
+        }
+
+        return {
+            message: req.t(`actions.get_set_content.${action}.success`),
+            data: {
+                selector,
+                action,
+                contentType,
+                attribute,
+                value: result,
+            },
+            traceDetails: {
+                selector,
+                action,
+                contentType,
+                attribute,
+                valueLength: typeof result === 'string' ? result.length : undefined,
             },
         };
     });
@@ -1806,7 +1794,7 @@ export const waitVisibleAction = (req, res) =>
 
                 // Attempt to scroll
                 await page.evaluate((sel) => {
-                    const el = document.querySelector(sel); // eslint-disable-line no-undef
+                    const el = document.querySelector(sel);
                     if (el) el.scrollIntoView({ block: 'center', inline: 'center' });
                 }, selector);
             } catch (err) {
@@ -2004,6 +1992,8 @@ export const interceptRequestAction = (req, res) =>
     executePlaywrightAction(req, res, 'intercept_request', async (page, opts) => {
         const { urlPattern, method, action, responseMock, timeout } = opts;
 
+        if (!urlPattern) throw new Error(req.t('errors.url_pattern_required'));
+
         // Determinar comportamiento
         const handleRoute = async (route) => {
             const request = route.request();
@@ -2106,6 +2096,8 @@ export const blockResourceAction = (req, res) =>
     executePlaywrightAction(req, res, 'block_resource', async (page, opts) => {
         const { urlPattern, resourceType, timeout } = opts;
 
+        if (!urlPattern) throw new Error(req.t('errors.url_pattern_required'));
+
         const handleRoute = async (route) => {
             const request = route.request();
             // Filter by resourceType if specified
@@ -2134,6 +2126,8 @@ export const blockResourceAction = (req, res) =>
 export const modifyHeadersAction = (req, res) =>
     executePlaywrightAction(req, res, 'modify_headers', async (page, opts) => {
         const { urlPattern, headers, method, timeout } = opts;
+
+        if (!urlPattern) throw new Error(req.t('errors.url_pattern_required'));
 
         let headersObj = {};
         try {
@@ -2168,6 +2162,8 @@ export const modifyHeadersAction = (req, res) =>
 export const waitForResponseAction = (req, res) =>
     executePlaywrightAction(req, res, 'wait_for_response', async (page, opts) => {
         const { urlPattern, statusCode, timeout = 30000, saveToVariable } = opts;
+
+        if (!urlPattern) throw new Error(req.t('errors.url_pattern_required'));
 
         let response;
         if (statusCode) {
@@ -2424,7 +2420,7 @@ export const manageStorageAction = (req, res) =>
             const data = await page.evaluate(
                 ({ type, key }) => {
                     const storage =
-                        type === 'session' ? window.sessionStorage : window.localStorage; // eslint-disable-line no-undef
+                        type === 'session' ? window.sessionStorage : window.localStorage;
                     if (key) return storage.getItem(key);
                     return JSON.stringify(storage); // Retorna todo si no hay key
                 },
@@ -2435,7 +2431,7 @@ export const manageStorageAction = (req, res) =>
             await page.evaluate(
                 ({ type, key, value }) => {
                     const storage =
-                        type === 'session' ? window.sessionStorage : window.localStorage; // eslint-disable-line no-undef
+                        type === 'session' ? window.sessionStorage : window.localStorage;
                     storage.setItem(key, value);
                 },
                 { type, key, value },
@@ -2445,7 +2441,7 @@ export const manageStorageAction = (req, res) =>
             await page.evaluate(
                 ({ type, key }) => {
                     const storage =
-                        type === 'session' ? window.sessionStorage : window.localStorage; // eslint-disable-line no-undef
+                        type === 'session' ? window.sessionStorage : window.localStorage;
                     storage.removeItem(key);
                 },
                 { type, key },
@@ -2455,7 +2451,7 @@ export const manageStorageAction = (req, res) =>
             await page.evaluate(
                 ({ type }) => {
                     const storage =
-                        type === 'session' ? window.sessionStorage : window.localStorage; // eslint-disable-line no-undef
+                        type === 'session' ? window.sessionStorage : window.localStorage;
                     storage.clear();
                 },
                 { type },
@@ -2547,12 +2543,12 @@ export const persistSessionAction = (req, res) =>
 
                 if (originState && originState.localStorage && includeLocalStorage) {
                     await page.evaluate((ls) => {
-                        ls.forEach((item) => window.localStorage.setItem(item.name, item.value)); // eslint-disable-line no-undef
+                        ls.forEach((item) => window.localStorage.setItem(item.name, item.value));
                     }, originState.localStorage);
                 }
                 if (originState && originState.sessionStorage && includeSessionStorage) {
                     await page.evaluate((ss) => {
-                        ss.forEach((item) => window.sessionStorage.setItem(item.name, item.value)); // eslint-disable-line no-undef
+                        ss.forEach((item) => window.sessionStorage.setItem(item.name, item.value));
                     }, originState.sessionStorage);
                 }
             }
@@ -2560,8 +2556,8 @@ export const persistSessionAction = (req, res) =>
         } else if (action === 'clear') {
             await context.clearCookies();
             await page.evaluate(() => {
-                window.localStorage.clear(); // eslint-disable-line no-undef
-                window.sessionStorage.clear(); // eslint-disable-line no-undef
+                window.localStorage.clear();
+                window.sessionStorage.clear();
             });
             return { message: 'Sesión limpiada (Cookies y Storage)' };
         } else {
@@ -2589,8 +2585,8 @@ export const cleanupStateAction = (req, res) =>
         // Clear local and session storage
         await page.evaluate(() => {
             try {
-                window.localStorage.clear(); // eslint-disable-line no-undef
-                window.sessionStorage.clear(); // eslint-disable-line no-undef
+                window.localStorage.clear();
+                window.sessionStorage.clear();
             } catch (e) {
                 // Ignore cleanup errors
             }
@@ -2624,11 +2620,10 @@ export const controlExceptionsAction = (req, res) =>
     executePlaywrightAction(req, res, 'control_exceptions', async (page) => {
         // Configure handling of uncaught exceptions on the page
         await page.evaluate(() => {
-            // eslint-disable-next-line no-undef
             window.addEventListener('unhandledrejection', (event) => {
                 console.warn('[PAGE UNHANDLED REJECTION]', event.reason);
             });
-            // eslint-disable-next-line no-undef
+
             window.addEventListener('error', (event) => {
                 console.warn('[PAGE ERROR]', event.message);
             });
@@ -2702,104 +2697,34 @@ export const integrateCIAction = (req, res) =>
     });
 
 // Acciones adicionales del router original
-export const dragDropAction = async (req, res) => {
-    let sourceSelector;
-    let targetSelector;
-    let finalBrowserId;
-
-    try {
-        // Extract and validate parameters
-        const { steps = 10, force = false } = req.body ?? {};
-        ({ sourceSelector, targetSelector } = req.body ?? {});
+export const dragDropAction = (req, res) =>
+    executePlaywrightAction(req, res, 'drag_drop', async (page, opts) => {
+        const { sourceSelector, targetSelector, steps = 10, force = false } = opts;
 
         if (!sourceSelector || !targetSelector) {
-            return res.status(400).json({
-                success: false,
-                message: req.t('errors.source_target_required'),
-            });
+            const error = new Error(req.t('errors.source_target_required'));
+            error.status = 400;
+            throw error;
         }
-
-        // Validate browser and context
-        let { browserId } = req.body ?? {};
-        const validation = validateBrowser(browserId);
-        if (validation.error) {
-            return res.status(validation.status).json({
-                success: false,
-                message: validation.message,
-            });
-        }
-
-        const targetBrowserId = validation.browserId;
-        const browserInstance = validation.entry.browser || validation.entry;
-        const context = await getOrCreateContext(browserInstance, targetBrowserId);
-        const pages = context.pages();
-
-        if (pages.length === 0) {
-            return res.status(400).json({
-                success: false,
-                message: req.t('errors.no_active_pages'),
-            });
-        }
-
-        const page = pages[pages.length - 1];
-        if (page.isClosed && page.isClosed()) {
-            throw new Error(req.t('common.page_closed'));
-        }
-
-        finalBrowserId = targetBrowserId;
-        const start = Date.now();
 
         console.log(
             `[INFO] Dragging ${sourceSelector} to ${targetSelector}. Steps: ${steps}, Force: ${force}`,
         );
 
-        // Perform drag-and-drop action
         await page.dragAndDrop(sourceSelector, targetSelector, {
-            steps: steps,
-            force: force,
+            steps: Number(steps),
+            force,
             timeout: 30000,
         });
 
-        const duration = Date.now() - start;
-
-        traceService.add({
-            action: 'drag_drop',
-            sourceSelector,
-            targetSelector,
-            status: 'success',
-            durationMs: duration,
-            browserId: finalBrowserId,
-        });
-
-        return res.status(200).json({
-            success: true,
+        return {
             message: req.t('actions.drag_drop.success', {
                 source: sourceSelector,
                 target: targetSelector,
             }),
-            durationMs: duration,
-            browserId: finalBrowserId,
-        });
-    } catch (error) {
-        console.error('[ERROR] dragDropAction:', error.message);
-
-        traceService.add({
-            action: 'drag_drop',
-            error: error.message,
-            status: 'error',
-        });
-
-        const status = error.message.includes('No node found') ? 404 : 500;
-
-        return res.status(status).json({
-            success: false,
-            message: req.t('errors.error_dragging'),
-            error: error.message,
-            sourceSelector,
-            targetSelector,
-        });
-    }
-};
+            traceDetails: { sourceSelector, targetSelector, steps, force },
+        };
+    });
 /**
  * Acción genérica de interaccion que despacha a otras acciones según el campo 'action'.
  * Frontend usa esto para nodos genéricos de interaccion.
@@ -2859,57 +2784,23 @@ export async function interactionAction(req, res) {
     });
 }
 
-export const resizeViewportAction = async (req, res) => {
-    try {
-        const { width, height } = req.body;
+export const resizeViewportAction = (req, res) =>
+    executePlaywrightAction(req, res, 'resize_viewport', async (page, opts) => {
+        const { width, height } = opts;
 
         if (!width || !height) {
-            return res.status(400).json({
-                success: false,
-                message: req.t('errors.width_height_required'),
-            });
+            const error = new Error(req.t('errors.width_height_required'));
+            error.status = 400;
+            throw error;
         }
 
-        const validation = validateBrowser(req.body.browserId);
-        if (validation.error) {
-            return res.status(validation.status).json({
-                success: false,
-                message: validation.message,
-            });
-        }
+        await page.setViewportSize({ width: Number(width), height: Number(height) });
 
-        const browserId = validation.browserId;
-        const browserInstance = validation.entry.browser || validation.entry;
-        const context = await getOrCreateContext(browserInstance, browserId);
-        const pages = context.pages();
-
-        if (pages.length === 0) {
-            return res.status(400).json({
-                success: false,
-                message: req.t('errors.no_active_pages'),
-            });
-        }
-
-        const page = pages[pages.length - 1];
-        if (page.isClosed && page.isClosed()) {
-            throw new Error(req.t('common.page_closed'));
-        }
-
-        await page.setViewportSize({ width, height });
-
-        return res.status(200).json({
-            success: true,
+        return {
             message: req.t('actions.resize_viewport.success', { width, height }),
-        });
-    } catch (error) {
-        console.error('[ERROR] resizeViewportAction:', error.message);
-        return res.status(500).json({
-            success: false,
-            message: 'Error resizing viewport.',
-            error: error.message,
-        });
-    }
-};
+            traceDetails: { width, height },
+        };
+    });
 
 // ==========================================================
 // FLOW CONTROL ACTIONS

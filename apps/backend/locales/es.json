@@ -59,9 +59,11 @@
             "get_attribute_success": "Atributo '{{attribute}}' obtenido exitosamente.",
             "get_html_success": "Contenido HTML obtenido exitosamente.",
             "get_text_success": "Contenido de texto obtenido exitosamente.",
+            "get_success": "Contenido obtenido exitosamente.",
             "set_attribute_success": "Atributo '{{attribute}}' establecido exitosamente.",
             "set_html_success": "Contenido HTML establecido exitosamente.",
-            "set_text_success": "Contenido de texto establecido exitosamente."
+            "set_text_success": "Contenido de texto establecido exitosamente.",
+            "set_success": "Contenido actualizado exitosamente."
         },
         "select_option": {
             "success": "Opción seleccionada correctamente."
@@ -250,6 +252,9 @@
         "invalid_persistence_action": "Acción de persistencia no válida: {{action}}.",
         "width_height_required": "Los parámetros width y height son obligatorios.",
         "error_dragging": "Error al ejecutar la acción de arrastrar y soltar.",
-        "source_target_required": "sourceSelector y targetSelector son obligatorios."
+        "source_target_required": "sourceSelector y targetSelector son obligatorios.",
+        "text_required": "El parámetro 'text' es obligatorio.",
+        "value_required_for_set": "El parámetro 'value' es obligatorio para la acción 'set'.",
+        "url_pattern_required": "El patrón de URL (urlPattern) es obligatorio para acciones de red."
     }
 }

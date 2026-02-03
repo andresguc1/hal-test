@@ -1,5 +1,4 @@
-import React, { useRef } from "react";
-import { motion } from "framer-motion";
+import React from "react";
 import { useTranslation } from "react-i18next";
 import { Slack } from "lucide-react";
 

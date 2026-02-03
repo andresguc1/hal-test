@@ -33,6 +33,7 @@ https://github.com/user-attachments/assets/a49ea28d-cf72-44f2-838c-05a96643c69e
 - **Screenshot Automation**: Automatic before/after snapshots with IndexedDB storage
 - **LLM Integration**: AI-powered test generation and semantic validation
 - **Session Management**: Cookie, storage, and token persistence
+- **Remote Runner**: Execute workflows directly in the backend via API or CLI without opening a browser GUI.
 
 ## 🏗️ Architecture
 
@@ -96,6 +97,29 @@ hal-test/
    ```
    - **Frontend**: http://localhost:5173/app/
    - **Backend**: http://localhost:2001
+
+## 💻 Terminal CLI
+
+HAL-TEST comes with a powerful CLI for automation and CI/CD integration.
+
+### Installation
+
+To install the CLI globally:
+```bash
+# From the project root
+cd apps/cli
+npm install -g .
+```
+
+### Key Commands
+
+- **`haltest status`**: Check if the HAL-TEST server is responsive.
+- **`haltest list`**: List all projects and flows with their IDs.
+- **`haltest run <flowId>`**: Execute a flow and stream logs in real-time.
+- **`haltest run <flowId> --headed`**: Run with a visible browser.
+- **`haltest run <flowId> -o report.json`**: Save execution results to a file.
+
+---
 
 ## 📖 Usage
 

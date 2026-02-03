@@ -51,6 +51,6 @@ const manageTabsBodySchema = Joi.object({
         .messages({
             'string.uri': 'URL inválida. Debe incluir http:// o https://.',
         }),
-});
+}).unknown(true);
 
 export default manageTabsBodySchema;

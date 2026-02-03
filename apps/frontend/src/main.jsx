@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { ReactFlowProvider } from "@xyflow/react";
 import { ToastProvider, HalToaster } from "./components/Toast";
 import { SettingsProvider } from "./context/SettingsContext";
+import { LogProvider } from "./context/LogContext";
 import { ThemeProvider } from "./components/theme-provider";
 import "./index.css";
 import "./i18n";
@@ -36,7 +37,9 @@ createRoot(document.getElementById("root")).render(
           <ToastProvider>
             <SettingsProvider>
               <AuthProvider>
-                <App />
+                <LogProvider>
+                  <App />
+                </LogProvider>
               </AuthProvider>
             </SettingsProvider>
           </ToastProvider>

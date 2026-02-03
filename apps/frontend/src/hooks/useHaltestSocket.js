@@ -8,7 +8,12 @@ const SOCKET_URL =
     ? "http://127.0.0.1:2001"
     : window.location.origin);
 
-export const useHaltestSocket = (setNodes, setEdges, onElementPicked) => {
+export const useHaltestSocket = (
+  setNodes,
+  setEdges,
+  onElementPicked,
+  onLogReceived,
+) => {
   const socketRef = useRef(null);
   const onElementPickedRef = useRef(onElementPicked);
   const setNodesRef = useRef(setNodes);
@@ -102,10 +107,14 @@ export const useHaltestSocket = (setNodes, setEdges, onElementPicked) => {
     });
 
     // Listen for Element Picker events
+    console.log("[HaltestSocket] Registering 'element_picked' listener");
     socket.on("element_picked", (data) => {
-      console.log("Haltest Socket: 🎯 Element Picked:", data);
+      console.log("[HaltestSocket] 🎯 Element Picked Event Fired:", data);
       if (onElementPickedRef.current) {
+        console.log("[HaltestSocket] Invoking callback ref...");
         onElementPickedRef.current(data);
+      } else {
+        console.warn("[HaltestSocket] No callback ref found!");
       }
     });
 
@@ -134,6 +143,14 @@ export const useHaltestSocket = (setNodes, setEdges, onElementPicked) => {
       }
     });
 
+    // Listen for Execution Logs
+    socket.on("execution-log", (data) => {
+      const { message, type, nodeId } = data;
+      if (onLogReceived) {
+        onLogReceived(message, type, nodeId);
+      }
+    });
+
     // Cleanup on unmount
     return () => {
       if (socket) {
@@ -141,7 +158,7 @@ export const useHaltestSocket = (setNodes, setEdges, onElementPicked) => {
         socket.disconnect();
       }
     };
-  }, []); // Empty dependency array = connect ONCE
+  }, [onLogReceived]); // Connect once, but update if callback changes (unlikely)
 
   return socketRef.current;
 };

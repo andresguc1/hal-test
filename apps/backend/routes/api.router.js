@@ -15,7 +15,7 @@ import importRouter from './import.router.js';
 import exportRouter from './export.router.js';
 import runRouter from './run.router.js';
 
-import { startInspectorAction } from '../controllers/inspector.controller.js';
+import { startInspectorAction, stopInspectorAction } from '../controllers/inspector.controller.js';
 
 const router = Router();
 
@@ -23,7 +23,8 @@ const router = Router();
 // INSPECTOR ROUTES
 // ==========================================================
 router.post('/inspector/start', startInspectorAction);
-console.log('✅ Inspector route registered: POST /api/inspector/start');
+router.post('/inspector/stop', stopInspectorAction);
+console.log('✅ Inspector routes registered: /start, /stop');
 
 router.use('/runs', runRouter);
 

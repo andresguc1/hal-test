@@ -135,12 +135,229 @@ const NODE_INPUTS = {
 
   // Diagnostics
   take_screenshot: [
+    {
+      key: "selector",
+      label: "Selector (Optional)",
+      type: "selector",
+      placeholder: ".element-to-capture",
+    },
     { key: "fullPage", label: "Full Page", type: "checkbox" },
+    {
+      key: "format",
+      label: "Format",
+      type: "select",
+      options: [
+        { label: "PNG", value: "png" },
+        { label: "JPEG", value: "jpeg" },
+      ],
+    },
+    {
+      key: "quality",
+      label: "Quality (JPEG only)",
+      type: "number",
+      placeholder: "100",
+    },
     {
       key: "path",
       label: "Filename (Optional)",
       type: "text",
       placeholder: "screenshot.png",
+    },
+    {
+      key: "timeout",
+      label: "Timeout (ms)",
+      type: "number",
+      placeholder: "30000",
+    },
+  ],
+
+  // Browser Management
+  manage_tabs: [
+    {
+      key: "action",
+      label: "Action",
+      type: "select",
+      options: [
+        { label: "New Tab", value: "new" },
+        { label: "Switch Tab", value: "switch" },
+        { label: "Close Tab", value: "close" },
+        { label: "List Tabs", value: "list" },
+      ],
+      required: true,
+    },
+    {
+      key: "url",
+      label: "URL (for New Tab)",
+      type: "text",
+      placeholder: "https://example.com",
+    },
+    {
+      key: "tabIndex",
+      label: "Tab Index (for Switch)",
+      type: "number",
+      placeholder: "0",
+    },
+  ],
+
+  // User Actions (Extended)
+  select_option: [
+    {
+      key: "selector",
+      label: "Selector",
+      type: "selector",
+      placeholder: "select#country",
+    },
+    {
+      key: "selectionValue",
+      label: "Value / Label / Index",
+      type: "text",
+      placeholder: "US",
+    },
+    { key: "takeScreenshot", label: "📸 Take Screenshot", type: "checkbox" },
+  ],
+  drag_drop: [
+    {
+      key: "sourceSelector",
+      label: "Source (Drag)",
+      type: "selector",
+      placeholder: "#item-1",
+    },
+    {
+      key: "targetSelector",
+      label: "Target (Drop)",
+      type: "selector",
+      placeholder: "#bin",
+    },
+    { key: "takeScreenshot", label: "📸 Take Screenshot", type: "checkbox" },
+  ],
+  upload_file: [
+    {
+      key: "selector",
+      label: "Input Selector",
+      type: "selector",
+      placeholder: "input[type='file']",
+    },
+    {
+      key: "files",
+      label: "File Paths (JSON Array)",
+      type: "text",
+      placeholder: '["path/to/file.png"]',
+    },
+    { key: "takeScreenshot", label: "📸 Take Screenshot", type: "checkbox" },
+  ],
+  submit_form: [
+    {
+      key: "selector",
+      label: "Form Selector",
+      type: "selector",
+      placeholder: "form#login",
+    },
+    { key: "takeScreenshot", label: "📸 Take Screenshot", type: "checkbox" },
+  ],
+
+  // Code & DOM
+  execute_js: [
+    {
+      key: "script",
+      label: "JavaScript Script",
+      type: "textarea",
+      placeholder: "return document.title;",
+    },
+  ],
+  save_dom: [
+    {
+      key: "selector",
+      label: "Selector (Optional)",
+      type: "selector",
+      placeholder: "body",
+    },
+    {
+      key: "path",
+      label: "File Path",
+      type: "text",
+      placeholder: "page.html",
+    },
+    {
+      key: "variableName",
+      label: "Variable Name",
+      type: "text",
+      placeholder: "domContent",
+    },
+  ],
+
+  // AI
+  call_llm: [
+    {
+      key: "prompt",
+      label: "System Prompt / Instructions",
+      type: "textarea",
+      placeholder: "Extract all prices from this page...",
+    },
+  ],
+  validate_semantic: [
+    {
+      key: "assertion",
+      label: "Semantic Assertion",
+      type: "text",
+      placeholder: "The page should show a confirmation message",
+    },
+  ],
+
+  // Sync (Extended)
+  wait_navigation: [
+    {
+      key: "waitUntil",
+      label: "Wait Until",
+      type: "text",
+      placeholder: "load",
+    },
+  ],
+  wait_network: [
+    {
+      key: "idleTime",
+      label: "Idle Time (ms)",
+      type: "number",
+      placeholder: "500",
+    },
+  ],
+  wait_conditional: [
+    {
+      key: "expression",
+      label: "JS Expression (Truthy)",
+      type: "text",
+      placeholder: "window.ready === true",
+    },
+  ],
+
+  // Network
+  intercept_request: [
+    {
+      key: "urlPattern",
+      label: "URL Pattern (Glob/Regex)",
+      type: "text",
+      placeholder: "**/api/v1/*",
+    },
+  ],
+  mock_response: [
+    {
+      key: "urlPattern",
+      label: "URL Pattern",
+      type: "text",
+      placeholder: "**/users",
+    },
+    {
+      key: "body",
+      label: "Response Body (JSON)",
+      type: "textarea",
+      placeholder: '{"success": true}',
+    },
+  ],
+  block_resource: [
+    {
+      key: "urlPattern",
+      label: "URL Pattern",
+      type: "text",
+      placeholder: "*.google-analytics.com",
     },
   ],
 
@@ -163,6 +380,7 @@ function NodeConfigurationPanel({
   updateNodeConfiguration,
   onDeleteNode,
   onStartPick, // New Prop from App.jsx
+  onCancelPick, // New Prop for Cancel
   onUngroup, // New Prop for Ungrouping
   _projectPath, // Unused
   _isReadOnly, // Unused
@@ -223,55 +441,79 @@ function NodeConfigurationPanel({
   );
 
   const [lightboxUrl, setLightboxUrl] = useState(null); // Lightbox modal state
-  const lastSyncedConfigRef = React.useRef(
-    activeNode?.data?.configuration || {},
-  );
+  const lastSyncedConfigRef = React.useRef({
+    config: activeNode?.data?.configuration || {},
+    nodeId: activeNode?.id,
+    nodeState: activeNode?.data?.state,
+  });
   const updateTimeoutRef = React.useRef(null);
 
   // Sync LOCAL <-> GLOBAL
-  // 1. When switching nodes (different ID), hard reset local state.
-  // 2. When external update happens (e.g. Picker updates selector), sync only if different.
-  // Sync LOCAL <-> GLOBAL
-  // 1. When switching nodes (different ID), hard reset local state.
-  // 2. When external update happens (e.g. Picker updates selector), sync only if it's a NEW value from outside.
+  // Optimized for Element Picker: Ensures picked values are reflected even if local state exists.
   React.useEffect(() => {
     if (!activeNode) return;
 
-    // A. Detect Node Switch
-    if (activeNode.id !== lastSyncedConfigRef.current.nodeId) {
-      const freshConfig = activeNode?.data?.configuration || {};
-      setLocalConfig(freshConfig);
+    const globalConfig = activeNode?.data?.configuration || {};
+    const nodeState = activeNode?.data?.state;
+
+    // A. Detect Node Switch -> Force reset
+    const hasNodeChanged = activeNode.id !== lastSyncedConfigRef.current.nodeId;
+
+    // B. Detect Pick Completion (Captured State change from Picking -> Default/Success)
+    const justFinishedPicking =
+      nodeState !== "picking" &&
+      lastSyncedConfigRef.current.nodeState === "picking";
+
+    // C. Detect Any External Configuration Change (from Undo/Redo, Socket, or AI)
+    // We compare with what we last THOUGHT we synced to detect external drifts.
+    const globalConfigStr = JSON.stringify(globalConfig);
+    const lastSyncedConfigStr = JSON.stringify(
+      lastSyncedConfigRef.current.config,
+    );
+    const isDrifted = globalConfigStr !== lastSyncedConfigStr;
+
+    if (hasNodeChanged || justFinishedPicking || isDrifted) {
+      console.warn(
+        "[NodeConfig] INTERNAL SYNC. Reason:",
+        hasNodeChanged
+          ? "Node Changed"
+          : justFinishedPicking
+            ? "Pick Done"
+            : "External Change",
+      );
+
+      console.log("[NodeConfig] New Configuration from Global:", globalConfig);
+
+      // CRITICAL: Clear any pending local updates to prevent overwriting the sync result with stale local state
+      if (updateTimeoutRef.current) {
+        console.log(
+          "[NodeConfig] Clearing pending local update timeout to prioritize sync.",
+        );
+        clearTimeout(updateTimeoutRef.current);
+      }
+
+      setLocalConfig(globalConfig);
       setLocalLabel(
         activeNode.data?.customLabel || activeNode.data?.label || "",
       );
 
-      lastSyncedConfigRef.current = { ...freshConfig, nodeId: activeNode.id };
+      // Update ref to current state
+      lastSyncedConfigRef.current = {
+        config: globalConfig,
+        nodeId: activeNode.id,
+        nodeState: nodeState,
+      };
       return;
     }
 
-    // B. Detect External Updates (e.g. from Picker, Undo/Redo, or AI)
-    const globalConfig = activeNode?.data?.configuration || {};
-
-    // We compare what we have LOCALLY vs what is coming in.
-    // We ONLY update local state if the global state is DIFFERENT from what we expected (our last sync).
-    // This prevents "echoes" of our own updates from overwriting pending typing.
-    const isEcho =
-      JSON.stringify(globalConfig) ===
-      JSON.stringify(lastSyncedConfigRef.current);
-
-    if (!isEcho) {
-      // It's a true external change (or we messed up tracking).
-      // We accept it, BUT we risk losing typing if this happens exactly during typing.
-      // However, typical external updates (Picking) happen when user is NOT typing.
-      setLocalConfig(globalConfig);
-      lastSyncedConfigRef.current = { ...globalConfig, nodeId: activeNode.id };
-    }
+    // Always update state ref to catch the Picking -> Default transition next time
+    lastSyncedConfigRef.current.nodeState = nodeState;
   }, [
+    activeNode,
     activeNode?.id,
     activeNode?.data?.configuration,
-    activeNode?.data?.customLabel,
-    activeNode,
-  ]); // DEPENDENCIES: Only specific fields, not full object!
+    activeNode?.data?.state,
+  ]);
 
   // Helper to handle partial configuration updates safely
   const handleConfigUpdate = (key, value) => {
@@ -283,8 +525,8 @@ function NodeConfigurationPanel({
     if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
 
     updateTimeoutRef.current = setTimeout(() => {
-      // Track what we are sending to prevent "loop" in useEffect
-      lastSyncedConfigRef.current = newConfig;
+      // Track what we are sending in the ref to avoid "echo" loop in useEffect
+      lastSyncedConfigRef.current.config = newConfig;
 
       if (activeNode) {
         updateNodeConfiguration(activeNode.id, {
@@ -292,7 +534,7 @@ function NodeConfigurationPanel({
           ...newConfig,
         });
       }
-    }, 300);
+    }, 200); // Reduced to 200ms for snappier feel and to reduce race window
   };
 
   // AI AUTO-HEAL HANDLER
@@ -362,6 +604,14 @@ function NodeConfigurationPanel({
   // Cleanup
   React.useEffect(() => () => clearTimeout(updateTimeoutRef.current), []);
 
+  // Determine screenshot URL for nodes that produce captures (used for evidence preview)
+  const nodeScreenshotUrl =
+    activeNode?.data?.replayData?.screenshot_path ||
+    activeNode?.data?.result?.screenshot ||
+    activeNode?.data?.screenshots?.after?.url ||
+    activeNode?.data?.screenshots?.after?.path ||
+    null;
+
   if (!isVisible) return null;
 
   if (!activeNode) {
@@ -402,6 +652,69 @@ function NodeConfigurationPanel({
     const error = validationErrors[field.key];
 
     switch (field.type) {
+      case "select":
+        return (
+          <div key={field.key} className="space-y-1.5">
+            <label className="text-[10px] uppercase tracking-wider font-semibold text-slate-500 ml-1">
+              {t(`nodes.fields.${field.key}`, field.label)}
+            </label>
+            <select
+              value={value}
+              onChange={(e) => handleConfigUpdate(field.key, e.target.value)}
+              className={cn(
+                "w-full bg-[var(--bg-canvas)]/50 border border-[var(--border-ui)] rounded-lg px-3 py-2 text-xs text-[var(--text-main)] focus:outline-none focus:border-indigo-500/50 transition-all !pointer-events-auto !cursor-pointer",
+                error && "border-red-500/50 focus:border-red-500 bg-red-500/5",
+              )}
+            >
+              <option value="" disabled>
+                {t("common.select_default", "Select an option...")}
+              </option>
+              {field.options?.map((opt) => (
+                <option
+                  key={opt.value}
+                  value={opt.value}
+                  className="bg-slate-800 text-white"
+                >
+                  {t(`nodes.options.${field.key}.${opt.value}`, opt.label)}
+                </option>
+              ))}
+            </select>
+            {error && (
+              <span className="text-[10px] text-red-400 font-bold ml-1">
+                {error}
+              </span>
+            )}
+          </div>
+        );
+      case "textarea":
+        return (
+          <div key={field.key} className="space-y-1.5">
+            <div className="flex justify-between items-center">
+              <label className="text-[10px] uppercase tracking-wider font-semibold text-slate-500 ml-1">
+                {t(`nodes.fields.${field.key}`, field.label)}
+              </label>
+              {error && (
+                <span className="text-[10px] text-red-400 font-bold animate-pulse">
+                  {error}
+                </span>
+              )}
+            </div>
+            <textarea
+              value={value}
+              placeholder={t(
+                `nodes.placeholders.${field.key}`,
+                field.placeholder,
+              )}
+              onChange={(e) => handleConfigUpdate(field.key, e.target.value)}
+              className={cn(
+                "w-full bg-[var(--bg-canvas)]/50 border rounded-lg px-3 py-2 text-xs text-[var(--text-main)] focus:outline-none transition-all placeholder:text-[var(--text-muted)] min-h-[100px] font-mono !pointer-events-auto !cursor-text !select-text",
+                error
+                  ? "border-red-500/50 focus:border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)] bg-red-500/5"
+                  : "border-[var(--border-ui)] focus:border-indigo-500/50",
+              )}
+            />
+          </div>
+        );
       case "checkbox": {
         // ... (existing checkbox logic kept largely same, simplified for clarity here) ...
         // Special handling for takeScreenshot: show inline preview if available
@@ -451,7 +764,7 @@ function NodeConfigurationPanel({
           <div key={field.key} className="space-y-1.5">
             <div className="flex justify-between items-center">
               <label className="text-[10px] uppercase tracking-wider font-semibold text-slate-500 ml-1">
-                {field.label}
+                {t(`nodes.fields.${field.key}`, field.label)}
               </label>
               {error && (
                 <span className="text-[10px] text-red-400 font-bold animate-pulse">
@@ -462,7 +775,10 @@ function NodeConfigurationPanel({
             <input
               type="text" // Changet to text to allow {{vars}}
               value={value}
-              placeholder={field.placeholder}
+              placeholder={t(
+                `nodes.placeholders.${field.key}`,
+                field.placeholder,
+              )}
               onChange={(e) => {
                 const val = e.target.value;
                 // Allow empty, numbers, or variable syntax {{...}}
@@ -481,7 +797,7 @@ function NodeConfigurationPanel({
         return (
           <div key={field.key} className="space-y-1.5">
             <label className="text-[10px] uppercase tracking-wider font-semibold text-slate-500 ml-1 flex items-center justify-between">
-              {field.label}
+              {t(`nodes.fields.${field.key}`, field.label)}
               <div className="flex items-center gap-2">
                 {/* AI FIX BUTTON */}
                 {activeNode?.data?.state === "error" && (
@@ -498,27 +814,37 @@ function NodeConfigurationPanel({
                   CSS / XPath
                 </span>
                 <button
-                  onClick={onStartPick}
-                  disabled={activeNode?.data?.state === "picking"}
+                  onClick={() => {
+                    if (activeNode?.data?.state === "picking") {
+                      console.log("[NodeConfig] User clicked CANCEL picking");
+                      onCancelPick && onCancelPick();
+                    } else {
+                      console.log("[NodeConfig] User clicked START picking");
+                      onStartPick && onStartPick();
+                    }
+                  }}
+                  // Enabled even if picking, to allow cancel
+                  disabled={false}
                   className={cn(
                     "flex items-center gap-1 px-1.5 py-0.5 rounded transition-colors border text-[10px]",
                     activeNode?.data?.state === "picking"
-                      ? "bg-sky-500/20 border-sky-500/50 text-sky-400 animate-pulse cursor-wait"
+                      ? "bg-red-500/20 border-red-500/50 text-red-400 hover:bg-red-500/30 cursor-pointer"
                       : "bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border-indigo-500/20",
                   )}
-                  title="Pick Element from Browser"
+                  title={
+                    activeNode?.data?.state === "picking"
+                      ? "Cancel Picking"
+                      : "Pick Element from Browser"
+                  }
                 >
-                  <Crosshair
-                    size={10}
-                    className={
-                      activeNode?.data?.state === "picking"
-                        ? "animate-spin"
-                        : ""
-                    }
-                  />
+                  {activeNode?.data?.state === "picking" ? (
+                    <X size={10} />
+                  ) : (
+                    <Crosshair size={10} />
+                  )}
                   <span>
                     {activeNode?.data?.state === "picking"
-                      ? "Picking..."
+                      ? "Picking... (Cancel)"
                       : "Pick"}
                   </span>
                 </button>
@@ -528,13 +854,16 @@ function NodeConfigurationPanel({
               <input
                 type="text"
                 value={value}
-                placeholder={field.placeholder}
+                placeholder={t(
+                  `nodes.placeholders.${field.key}`,
+                  field.placeholder,
+                )}
                 onChange={(e) => handleConfigUpdate(field.key, e.target.value)}
                 className={cn(
                   "w-full bg-[var(--bg-canvas)]/50 border border-[var(--border-ui)] rounded-lg px-3 py-2 pl-3 pr-8 text-xs font-mono focus:outline-none focus:border-indigo-500/50 transition-all placeholder:text-[var(--text-muted)] !pointer-events-auto !cursor-text !select-text",
                   value ? "text-indigo-400" : "text-[var(--text-main)]",
                   error &&
-                    "border-red-500/50 focus:border-red-500 bg-red-500/5",
+                  "border-red-500/50 focus:border-red-500 bg-red-500/5",
                 )}
               />
               <div
@@ -558,7 +887,7 @@ function NodeConfigurationPanel({
           <div key={field.key} className="space-y-1.5">
             <div className="flex justify-between items-center">
               <label className="text-[10px] uppercase tracking-wider font-semibold text-slate-500 ml-1">
-                {field.label}
+                {t(`nodes.fields.${field.key}`, field.label)}
               </label>
               {error && (
                 <span className="text-[10px] text-red-400 font-bold animate-pulse">
@@ -569,7 +898,10 @@ function NodeConfigurationPanel({
             <input
               type="text"
               value={value}
-              placeholder={field.placeholder}
+              placeholder={t(
+                `nodes.placeholders.${field.key}`,
+                field.placeholder,
+              )}
               onChange={(e) => handleConfigUpdate(field.key, e.target.value)}
               className={cn(
                 "w-full bg-slate-950/50 border rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none transition-all placeholder:text-slate-700 !pointer-events-auto !cursor-text !select-text",
@@ -644,7 +976,7 @@ function NodeConfigurationPanel({
                       }
                     }, 300); // 300ms debounce for typing comfort
                   }}
-                  // onBlur removed - handled by debounce
+                // onBlur removed - handled by debounce
                 />
               </div>
             </div>
@@ -678,7 +1010,7 @@ function NodeConfigurationPanel({
           <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
             {/* Dynamic Content Switch */}
             {safeConfig.nodeKey === "component" ||
-            activeNode.type === "component" ? (
+              activeNode.type === "component" ? (
               // --- COMPONENT DASHBOARD ---
               <div className="space-y-6">
                 {/* Description Card */}
@@ -802,6 +1134,23 @@ function NodeConfigurationPanel({
               </div>
             )}
           </div>
+
+          {/* Evidence preview for screenshot nodes (shown at bottom) */}
+          {activeNode?.type === "take_screenshot" && nodeScreenshotUrl ? (
+            <div className="p-4 border-t border-[var(--border-ui)] bg-[var(--bg-panel)]">
+              <EvidenceCard
+                screenshotUrl={nodeScreenshotUrl}
+                nodeId={activeNode.id}
+                title="Capture Preview"
+                durationMs={
+                  activeNode.data?.replayData?.duration_ms ||
+                  activeNode.data?.result?.durationMs ||
+                  activeNode.data?.result?.duration
+                }
+                timestamp={Date.now()}
+              />
+            </div>
+          ) : null}
 
           {/* FOOTER ACTIONS (Themed) */}
           <div className="p-4 border-t border-[var(--border-ui)] bg-[var(--bg-panel)] shrink-0 space-y-3">

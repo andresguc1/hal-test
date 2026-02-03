@@ -15,6 +15,6 @@ const backForwardBodySchema = Joi.object({
     timeout: Joi.number().integer().min(1).default(30000).optional().messages({
         'number.min': 'El tiempo de espera (timeout) debe ser al menos 1ms.',
     }),
-});
-// Bloquea cualquier campo extra que no esté definido.
+}).unknown(true);
+// Bloquea cualquier campo extra que no esté definido. (Nota: .unknown(true) permite campos adicionales como nodeId, runId, etc.)
 export default backForwardBodySchema;

@@ -53,3 +53,24 @@ export const emitScreenshotReady = ({ nodeId, screenshotPath, runId }) => {
         io.emit('step_screenshot_ready', { nodeId, screenshotPath, runId });
     }
 };
+export const emitLog = ({
+    message,
+    type = 'info',
+    nodeId = null,
+    timestamp = new Date().toISOString(),
+}) => {
+    if (io) {
+        // Log locally too
+        const prefix = nodeId ? `[${nodeId}] ` : '';
+        console.log(`📡 [Socket.io] Emitting execution-log: ${prefix}${message}`);
+
+        io.emit('execution-log', { message, type, nodeId, timestamp });
+    }
+};
+
+export const emitFlowFinished = ({ runId, status, flowId, error = null }) => {
+    if (io) {
+        console.log(`📡 [Socket.io] Emitting flow-finished: ${runId} -> ${status}`);
+        io.emit('flow-finished', { runId, status, flowId, error });
+    }
+};

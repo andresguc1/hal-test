@@ -1,5 +1,6 @@
-import React, { useState } from "react";
-import { ExternalLink, X } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { ExternalLink, X, Download } from "lucide-react";
+import { createPortal } from "react-dom";
 
 const EvidenceCard = ({ screenshotUrl, durationMs, timestamp }) => {
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
@@ -48,6 +49,21 @@ const EvidenceCard = ({ screenshotUrl, durationMs, timestamp }) => {
   };
 
   const displayUrl = getFullUrl(screenshotUrl);
+
+  // Lock scroll and support ESC to close when lightbox is open
+  useEffect(() => {
+    if (!isLightboxOpen) return;
+    const prev = document.body.style.overflow;
+    const onKey = (e) => {
+      if (e.key === "Escape") setIsLightboxOpen(false);
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [isLightboxOpen]);
 
   // If no URL or if verified broken, don't render
   if (!screenshotUrl || hasError) return null;
@@ -100,38 +116,69 @@ const EvidenceCard = ({ screenshotUrl, durationMs, timestamp }) => {
       </div>
 
       {/* LIGHTBOX MODAL */}
-      {isLightboxOpen && (
-        <div
-          className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center p-4 backdrop-blur-md animate-in fade-in duration-200"
-          onClick={() => setIsLightboxOpen(false)}
-        >
-          {/* Close Button */}
-          <button
-            className="absolute top-6 right-6 p-2 rounded-full bg-white/10 text-white/70 hover:text-white hover:bg-white/20 transition-all"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsLightboxOpen(false);
-            }}
-          >
-            <X size={24} />
-          </button>
-
-          {/* Image Container */}
+      {isLightboxOpen &&
+        createPortal(
           <div
-            className="relative max-w-[95vw] max-h-[95vh] rounded-lg overflow-hidden shadow-2xl border border-white/10"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-[99999] bg-black/95 flex items-center justify-center p-4 backdrop-blur-md animate-in fade-in duration-200"
+            onClick={() => setIsLightboxOpen(false)}
+            role="dialog"
+            aria-modal="true"
           >
-            <img
-              src={displayUrl}
-              alt="Fullscreen Evidence"
-              className="max-h-[90vh] w-auto object-contain"
-            />
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-black/60 backdrop-blur-md rounded-full text-white/80 text-xs font-mono border border-white/10">
-              {screenshotUrl}
+            {/* Close Button */}
+            <button
+              className="absolute top-6 right-6 p-2 rounded-full bg-white/10 text-white/70 hover:text-white hover:bg-white/20 transition-all z-50"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsLightboxOpen(false);
+              }}
+              title="Close"
+            >
+              <X size={24} />
+            </button>
+
+            {/* Image Container */}
+            <div
+              className="relative max-w-[98vw] max-h-[98vh] rounded-lg overflow-hidden shadow-2xl border border-white/10 bg-black"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img
+                src={displayUrl}
+                alt="Fullscreen Evidence"
+                className="max-h-[94vh] w-auto max-w-full object-contain bg-black"
+              />
+
+              {/* Top-right actions: open/new tab, download */}
+              <div className="absolute top-4 right-4 flex gap-2 z-50">
+                <a
+                  href={displayUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-md text-xs text-white/90 border border-white/10"
+                  title="Open in new tab"
+                >
+                  <ExternalLink size={12} />
+                  Open
+                </a>
+                <a
+                  href={displayUrl}
+                  download
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-md text-xs text-white/90 border border-white/10"
+                  title="Download image"
+                >
+                  <Download size={12} />
+                  Download
+                </a>
+              </div>
+
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-black/60 backdrop-blur-md rounded-full text-white/80 text-xs font-mono border border-white/10">
+                {screenshotUrl}
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </>
   );
 };

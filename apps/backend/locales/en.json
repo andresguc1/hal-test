@@ -59,9 +59,11 @@
             "get_attribute_success": "Attribute '{{attribute}}' obtained successfully.",
             "get_html_success": "HTML content obtained successfully.",
             "get_text_success": "Text content obtained successfully.",
+            "get_success": "Content obtained successfully.",
             "set_attribute_success": "Attribute '{{attribute}}' set successfully.",
             "set_html_success": "HTML content set successfully.",
-            "set_text_success": "Text content set successfully."
+            "set_text_success": "Text content set successfully.",
+            "set_success": "Content updated successfully."
         },
         "select_option": {
             "success": "Option selected successfully."
@@ -247,6 +249,9 @@
         "invalid_persistence_action": "Invalid persistence action: {{action}}.",
         "width_height_required": "Parameters width and height are required.",
         "error_dragging": "Error executing drag and drop action.",
-        "source_target_required": "sourceSelector and targetSelector are required."
+        "source_target_required": "sourceSelector and targetSelector are required.",
+        "text_required": "The 'text' parameter is required.",
+        "value_required_for_set": "The 'value' parameter is required for the 'set' action.",
+        "url_pattern_required": "The URL pattern (urlPattern) is required for network actions."
     }
 }
