@@ -243,18 +243,88 @@ const NODE_INPUTS = {
     },
     { key: "takeScreenshot", label: "📸 Take Screenshot", type: "checkbox" },
   ],
+  scroll: [
+    {
+      key: "selector",
+      label: "Container Selector (Optional)",
+      type: "selector",
+      placeholder: "body or .scrollable-div",
+    },
+    {
+      key: "scrollToEnd",
+      label: "Scroll to Bottom (Infinite)",
+      type: "checkbox",
+    },
+    {
+      key: "direction",
+      label: "Direction",
+      type: "select",
+      options: [
+        { label: "Down", value: "down" },
+        { label: "Up", value: "up" },
+        { label: "Right", value: "right" },
+        { label: "Left", value: "left" },
+      ],
+      required: true,
+      isVisible: (config) => !config.scrollToEnd,
+    },
+    {
+      key: "amount",
+      label: "Pixels Amount",
+      type: "number",
+      placeholder: "500",
+      isVisible: (config) => !config.scrollToEnd,
+    },
+    {
+      key: "maxScrolls",
+      label: "Max Scroll Attempts",
+      type: "number",
+      placeholder: "50",
+      isVisible: (config) => config.scrollToEnd === true,
+    },
+    {
+      key: "waitTime",
+      label: "Wait Between Scrolls (ms)",
+      type: "number",
+      placeholder: "2000",
+      isVisible: (config) => config.scrollToEnd === true,
+    },
+    {
+      key: "behavior",
+      label: "Behavior",
+      type: "select",
+      options: [
+        { label: "Smooth", value: "smooth" },
+        { label: "Instant (Auto)", value: "auto" },
+      ],
+    },
+    { key: "takeScreenshot", label: "📸 Take Screenshot", type: "checkbox" },
+  ],
   drag_drop: [
     {
       key: "sourceSelector",
       label: "Source (Drag)",
       type: "selector",
       placeholder: "#item-1",
+      required: true,
     },
     {
       key: "targetSelector",
       label: "Target (Drop)",
       type: "selector",
       placeholder: "#bin",
+      required: true,
+    },
+    {
+      key: "steps",
+      label: "Animation Steps",
+      type: "number",
+      placeholder: "10",
+    },
+    {
+      key: "force",
+      label: "Force Action (Skip Checks)",
+      type: "checkbox",
     },
     { key: "takeScreenshot", label: "📸 Take Screenshot", type: "checkbox" },
   ],
@@ -609,10 +679,22 @@ function NodeConfigurationPanel({
 
     // Always update state ref to catch the Picking -> Default transition next time
     lastSyncedConfigRef.current.nodeState = nodeState;
+
+    // Debug: Log what's in the active node configuration
+    console.log("[NodeConfig] 🔍 Active Node Config Check:", {
+      nodeId: activeNode?.id,
+      hasConfig: !!globalConfig,
+      configKeys: Object.keys(globalConfig),
+      selectorValue: globalConfig?.selector,
+      isDrifted,
+      justFinishedPicking,
+    });
   }, [
     activeNode,
     activeNode?.id,
     activeNode?.data?.configuration,
+    activeNode?.data?.customLabel,
+    activeNode?.data?.label,
     activeNode?.data?.state,
   ]);
 
@@ -921,8 +1003,11 @@ function NodeConfigurationPanel({
                       console.log("[NodeConfig] User clicked CANCEL picking");
                       onCancelPick && onCancelPick();
                     } else {
-                      console.log("[NodeConfig] User clicked START picking");
-                      onStartPick && onStartPick();
+                      console.log(
+                        "[NodeConfig] User clicked START picking for field:",
+                        field.key,
+                      );
+                      onStartPick && onStartPick(field.key);
                     }
                   }}
                   // Enabled even if picking, to allow cancel
@@ -965,7 +1050,7 @@ function NodeConfigurationPanel({
                   "w-full bg-[var(--bg-canvas)]/50 border border-[var(--border-ui)] rounded-lg px-3 py-2 pl-3 pr-8 text-xs font-mono focus:outline-none focus:border-indigo-500/50 transition-all placeholder:text-[var(--text-muted)] !pointer-events-auto !cursor-text !select-text",
                   value ? "text-indigo-400" : "text-[var(--text-main)]",
                   error &&
-                  "border-red-500/50 focus:border-red-500 bg-red-500/5",
+                    "border-red-500/50 focus:border-red-500 bg-red-500/5",
                 )}
               />
               <div
@@ -1078,7 +1163,7 @@ function NodeConfigurationPanel({
                       }
                     }, 300); // 300ms debounce for typing comfort
                   }}
-                // onBlur removed - handled by debounce
+                  // onBlur removed - handled by debounce
                 />
               </div>
             </div>
@@ -1112,7 +1197,7 @@ function NodeConfigurationPanel({
           <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
             {/* Dynamic Content Switch */}
             {safeConfig.nodeKey === "component" ||
-              activeNode.type === "component" ? (
+            activeNode.type === "component" ? (
               // --- COMPONENT DASHBOARD ---
               <div className="space-y-6">
                 {/* Description Card */}

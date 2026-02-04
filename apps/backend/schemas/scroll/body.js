@@ -35,6 +35,18 @@ const scrollBodySchema = Joi.object({
     browserId: Joi.string().allow(null, '').optional().messages({
         'string.base': 'browserId debe ser una cadena de texto (el ID único del navegador).',
     }),
+
+    // 6. scrollToEnd (Boolean, Opcional) - Scroll infinito hasta el final
+    scrollToEnd: Joi.boolean().default(false).optional(),
+
+    // 7. maxScrolls (Número, Opcional) - Límite de intentos para scroll infinito
+    maxScrolls: Joi.number().integer().min(1).max(200).default(50).optional(),
+
+    // 8. waitTime (Número, Opcional) - Tiempo de espera entre scrolls en ms
+    waitTime: Joi.number().integer().min(500).max(10000).default(2000).optional(),
+
+    // 9. takeScreenshot (Opcional)
+    takeScreenshot: Joi.boolean().default(false).optional(),
 });
 // Bloquea cualquier campo extra que no esté definido.
 export default scrollBodySchema;

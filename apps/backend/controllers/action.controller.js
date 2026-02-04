@@ -1006,11 +1006,103 @@ export const scrollAction = (req, res) =>
             direction = 'down',
             amount = 300,
             behavior = 'smooth',
+            scrollToEnd = false,
+            maxScrolls = 50,
+            waitTime = 2000,
             x, // Absolute X coordinate
             y, // Absolute Y coordinate
             duration, // Custom duration
         } = opts;
 
+        // NEW: Infinite Scroll Mode
+        if (scrollToEnd) {
+            console.log('[Scroll] Infinite scroll mode enabled');
+            let lastHeight = 0;
+            let currentHeight = 0;
+            let attempts = 0;
+
+            // Get initial height
+            if (selector) {
+                await page.waitForSelector(selector, { state: 'attached', timeout: 5000 });
+                currentHeight = await page.evaluate((sel) => {
+                    const element = document.querySelector(sel);
+                    if (!element) throw new Error(`Element not found: ${sel}`);
+                    return element.scrollHeight;
+                }, selector);
+            } else {
+                currentHeight = await page.evaluate(() => {
+                    return document.body.scrollHeight;
+                });
+            }
+
+            while (attempts < maxScrolls && lastHeight !== currentHeight) {
+                lastHeight = currentHeight;
+
+                // Perform scroll
+                if (selector) {
+                    await page.evaluate(
+                        ({ sel, beh }) => {
+                            const element = document.querySelector(sel);
+                            if (element) {
+                                element.scrollTo({ top: element.scrollHeight, behavior: beh });
+                            }
+                        },
+                        { sel: selector, beh: behavior },
+                    );
+                } else {
+                    await page.evaluate((beh) => {
+                        window.scrollTo({ top: document.body.scrollHeight, behavior: beh });
+                    }, behavior);
+                }
+
+                // Wait for new content to load
+                await page.waitForTimeout(waitTime);
+
+                // Check new height
+                if (selector) {
+                    currentHeight = await page.evaluate((sel) => {
+                        const element = document.querySelector(sel);
+                        if (!element) throw new Error(`Element not found: ${sel}`);
+                        return element.scrollHeight;
+                    }, selector);
+                } else {
+                    currentHeight = await page.evaluate(() => {
+                        return document.body.scrollHeight;
+                    });
+                }
+
+                attempts++;
+                console.log(
+                    `[Scroll] Attempt ${attempts}/${maxScrolls} - Height: ${currentHeight}`,
+                );
+            }
+
+            const finalStatus =
+                lastHeight === currentHeight ? 'Reached end' : 'Max attempts reached';
+
+            return {
+                message:
+                    req.t('actions.scroll.success_infinite', {
+                        attempts,
+                        status: finalStatus,
+                    }) || `Scrolled to end after ${attempts} attempts. ${finalStatus}`,
+                data: {
+                    scrolledHeight: currentHeight,
+                    attempts,
+                    reachedEnd: lastHeight === currentHeight,
+                },
+                traceDetails: {
+                    action: 'scroll_infinite',
+                    selector: selector || 'window',
+                    attempts,
+                    maxScrolls,
+                    waitTime,
+                    finalHeight: currentHeight,
+                },
+            };
+        }
+
+        // EXISTING: Standard scroll logic
         let dx = 0;
         let dy = 0;
 

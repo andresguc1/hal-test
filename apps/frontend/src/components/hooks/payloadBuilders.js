@@ -382,10 +382,14 @@ export const submit_form = (payload) => {
 export const scroll = (payload) => {
   return {
     selector: asString(payload?.selector, ""),
+    scrollToEnd: asBoolean(payload?.scrollToEnd, false),
     direction: asString(payload?.direction, "down"),
     amount: asNumber(payload?.amount, 100),
+    maxScrolls: asNumber(payload?.maxScrolls, 50, 1),
+    waitTime: asNumber(payload?.waitTime, 2000, 500),
     behavior: asString(payload?.behavior, "auto"),
     browserId: asString(payload?.browserId),
+    takeScreenshot: asBoolean(payload?.takeScreenshot, false),
   };
 };
 
@@ -437,6 +441,33 @@ export const upload_file = (payload) => {
     files: pathsArray.join(","),
     timeout: asNumber(payload?.timeout, 30000, 1),
     browserId: asString(payload?.browserId),
+  };
+};
+
+/**
+ * Crea el payload para drag_drop.
+ * @param {object} payload - Datos del formulario
+ * @returns {object} Payload para el backend
+ */
+export const drag_drop = (payload) => {
+  const sourceSelector = asString(payload?.sourceSelector);
+  const targetSelector = asString(payload?.targetSelector);
+
+  if (!sourceSelector) {
+    throw new Error("El selector de origen (source) es obligatorio.");
+  }
+
+  if (!targetSelector) {
+    throw new Error("El selector de destino (target) es obligatorio.");
+  }
+
+  return {
+    sourceSelector,
+    targetSelector,
+    steps: asNumber(payload?.steps, 10, 1),
+    force: asBoolean(payload?.force, false),
+    browserId: asString(payload?.browserId),
+    takeScreenshot: asBoolean(payload?.takeScreenshot, false),
   };
 };
 

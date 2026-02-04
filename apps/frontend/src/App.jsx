@@ -180,6 +180,7 @@ function Dashboard() {
     isOpen: false,
     type: "project",
   });
+  const [pickingField, setPickingField] = useState("selector");
 
   // Execution state for progress bar
   const [executionProgress, setExecutionProgress] = useState({
@@ -252,33 +253,39 @@ function Dashboard() {
   // Element Picker Callback (Previously handleElementPicked was here, we will replace the mess)
 
   // START PICKING HANDLER (Visual Feedback + API)
-  const handleStartPicking = useCallback(async () => {
-    if (!selectedAction) return;
+  const handleStartPicking = useCallback(
+    async (fieldKey = "selector") => {
+      if (!selectedAction) return;
 
-    // 1. Visual Feedback: Set node to "PICKING" state
-    updateNodeState(selectedAction.nodeId, NODE_STATES.PICKING);
-    toast.info(
-      t("common.inspector_started", "Pick an element in the browser..."),
-    );
+      console.log("[App] 📍 Starting picker for field:", fieldKey);
+      setPickingField(fieldKey);
 
-    // 2. Start Inspector API
-    try {
-      console.log(
-        "[App] 🚀 Starting inspector on browserId:",
-        activeBrowserId || "LATEST",
+      // 1. Visual Feedback: Set node to "PICKING" state
+      updateNodeState(selectedAction.nodeId, NODE_STATES.PICKING);
+      toast.info(
+        t("common.inspector_started", "Pick an element in the browser..."),
       );
-      const data = await api.post("/inspector/start", {
-        browserId: activeBrowserId || null, // Explicitly pass active session if we have it
-      });
-      if (!data.success) {
-        toast.error(data.message || "Failed to start inspector");
-        updateNodeState(selectedAction.nodeId, NODE_STATES.DEFAULT); // Revert on failure
+
+      // 2. Start Inspector API
+      try {
+        console.log(
+          "[App] 🚀 Starting inspector on browserId:",
+          activeBrowserId || "LATEST",
+        );
+        const data = await api.post("/inspector/start", {
+          browserId: activeBrowserId || null, // Explicitly pass active session if we have it
+        });
+        if (!data.success) {
+          toast.error(data.message || "Failed to start inspector");
+          updateNodeState(selectedAction.nodeId, NODE_STATES.DEFAULT); // Revert on failure
+        }
+      } catch (error) {
+        toast.error(error.message || "Network error starting inspector");
+        updateNodeState(selectedAction?.nodeId, NODE_STATES.DEFAULT); // Revert on failure
       }
-    } catch (error) {
-      toast.error(error.message || "Network error starting inspector");
-      updateNodeState(selectedAction?.nodeId, NODE_STATES.DEFAULT); // Revert on failure
-    }
-  }, [selectedAction, updateNodeState, toast, t, activeBrowserId]);
+    },
+    [selectedAction, updateNodeState, toast, t, activeBrowserId],
+  );
 
   // CANCEL PICKING HANDLER
   const handleCancelPicking = useCallback(async () => {
@@ -288,6 +295,7 @@ function Dashboard() {
         "[App] Cancelled picking state for node:",
         selectedAction.nodeId,
       );
+      setPickingField("selector");
     }
     // Call backend to remove listeners
     try {
@@ -435,7 +443,7 @@ function Dashboard() {
         }
 
         console.log(
-          "[PICKER] 🚀 Applying selector to node:",
+          `[PICKER] 🚀 Applying selector to field [${pickingField}] in node:`,
           kmId,
           "with value:",
           finalSelector,
@@ -443,7 +451,7 @@ function Dashboard() {
 
         const newConfig = {
           ...currentConfig,
-          selector: finalSelector.trim(),
+          [pickingField]: finalSelector.trim(),
         };
 
         console.log(
@@ -470,7 +478,15 @@ function Dashboard() {
         toast.error("Error processing selection");
       }
     },
-    [nodes, selectedAction, updateNodeConfiguration, updateNodeState, toast, t],
+    [
+      nodes,
+      selectedAction,
+      updateNodeConfiguration,
+      updateNodeState,
+      toast,
+      t,
+      pickingField,
+    ],
   );
 
   const handleSelectRun = useCallback(
@@ -1115,9 +1131,7 @@ function Dashboard() {
             setIsHistoryPanelVisible((prev) => !prev);
           }}
           isToolboxVisible={isCreationPanelVisible}
-          onToggleToolbox={() =>
-            setIsCreationPanelVisible((prev) => !prev)
-          }
+          onToggleToolbox={() => setIsCreationPanelVisible((prev) => !prev)}
           selectedProject={currentProject}
           selectedFlow={currentProject?.flows?.find(
             (f) => f.id === currentFlowId,
