@@ -263,6 +263,8 @@ export const get_set_content = (payload) => {
     body.clearBeforeSet = asBoolean(payload?.clearBeforeSet, true);
   }
 
+  body.takeScreenshot = asBoolean(payload?.takeScreenshot, false);
+
   return body;
 };
 
@@ -445,9 +447,10 @@ export const upload_file = (payload) => {
 export const wait_for_element = (payload) => {
   return {
     selector: asString(payload?.selector),
-    condition: asString(payload?.condition, "hidden"),
-    timeout: asNumber(payload?.timeout, 15000, 0),
+    condition: asString(payload?.condition, "visible"),
+    timeout: asNumber(payload?.timeout, 30000, 0),
     browserId: asString(payload?.browserId),
+    takeScreenshot: asBoolean(payload?.takeScreenshot, false),
   };
 };
 

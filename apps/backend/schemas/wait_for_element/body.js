@@ -31,6 +31,9 @@ const waitForElementBodySchema = Joi.object({
     browserId: Joi.string().allow(null, '').optional().messages({
         'string.base': 'browserId debe ser una cadena de texto.',
     }),
+
+    // 5. takeScreenshot (Opcional)
+    takeScreenshot: Joi.boolean().default(false).optional(),
 });
 
 export default waitForElementBodySchema;

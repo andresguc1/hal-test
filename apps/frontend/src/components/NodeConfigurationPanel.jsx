@@ -47,6 +47,21 @@ const NODE_INPUTS = {
     { key: "height", label: "Height", type: "number", placeholder: "720" },
   ],
 
+  find_element: [
+    {
+      key: "selector",
+      label: "Selector",
+      type: "selector",
+      placeholder: ".my-element",
+    },
+    {
+      key: "timeout",
+      label: "Timeout (ms)",
+      type: "number",
+      placeholder: "30000",
+    },
+    { key: "takeScreenshot", label: "📸 Take Screenshot", type: "checkbox" },
+  ],
   // User Actions
   click: [
     {
@@ -118,7 +133,7 @@ const NODE_INPUTS = {
       placeholder: "1000",
     },
   ],
-  wait_visible: [
+  wait_for_element: [
     {
       key: "selector",
       label: "Selector",
@@ -126,11 +141,24 @@ const NODE_INPUTS = {
       placeholder: ".element",
     },
     {
+      key: "condition",
+      label: "Condition",
+      type: "select",
+      options: [
+        { label: "Visible", value: "visible" },
+        { label: "Hidden", value: "hidden" },
+        { label: "Attached (Exist)", value: "attached" },
+        { label: "Detached (Removed)", value: "detached" },
+      ],
+      required: true,
+    },
+    {
       key: "timeout",
       label: "Timeout (ms)",
       type: "number",
       placeholder: "30000",
     },
+    { key: "takeScreenshot", label: "📸 Take Screenshot", type: "checkbox" },
   ],
 
   // Diagnostics
@@ -261,8 +289,86 @@ const NODE_INPUTS = {
       key: "script",
       label: "JavaScript Script",
       type: "textarea",
-      placeholder: "return document.title;",
+      placeholder: "// Your script here\nreturn document.title;",
+      required: true,
     },
+    {
+      key: "returnValue",
+      label: "Capture Result?",
+      type: "checkbox",
+    },
+    {
+      key: "variableName",
+      label: "Variable Name",
+      type: "text",
+      placeholder: "resultVariableName",
+      isVisible: (config) => config.returnValue === true,
+      required: true,
+    },
+    {
+      key: "args",
+      label: "Arguments (JSON)",
+      type: "text",
+      placeholder: '{"key": "value"}',
+    },
+  ],
+  get_set_content: [
+    {
+      key: "selector",
+      label: "Selector",
+      type: "selector",
+      placeholder: ".element",
+    },
+    {
+      key: "action",
+      label: "Action",
+      type: "select",
+      options: [
+        { label: "Get", value: "get" },
+        { label: "Set", value: "set" },
+      ],
+      required: true,
+    },
+    {
+      key: "contentType",
+      label: "Content Type",
+      type: "select",
+      options: [
+        { label: "Text", value: "text" },
+        { label: "HTML", value: "html" },
+        { label: "Value", value: "value" },
+        { label: "Attribute", value: "attribute" },
+      ],
+      required: true,
+    },
+    {
+      key: "attribute",
+      label: "Attribute Name",
+      type: "text",
+      placeholder: "href",
+      isVisible: (config) => config.contentType === "attribute",
+    },
+    {
+      key: "value",
+      label: "Value to Set",
+      type: "text",
+      placeholder: "New value...",
+      isVisible: (config) => config.action === "set",
+    },
+    {
+      key: "clearBeforeSet",
+      label: "Clear before setting",
+      type: "checkbox",
+      isVisible: (config) =>
+        config.action === "set" && config.contentType === "value",
+    },
+    {
+      key: "timeout",
+      label: "Timeout (ms)",
+      type: "number",
+      placeholder: "30000",
+    },
+    { key: "takeScreenshot", label: "📸 Take Screenshot", type: "checkbox" },
   ],
   save_dom: [
     {
@@ -1118,7 +1224,11 @@ function NodeConfigurationPanel({
               // --- GENERIC INPUTS ---
               <div className="space-y-5">
                 {definedInputs.length > 0 ? (
-                  definedInputs.map(renderInput)
+                  definedInputs
+                    .filter(
+                      (f) => !f.isVisible || f.isVisible(localConfig || {}),
+                    )
+                    .map(renderInput)
                 ) : (
                   <div className="p-4 rounded-lg border border-dashed border-white/10 bg-white/5 flex flex-col items-center justify-center text-center">
                     <Info size={20} className="text-slate-500 mb-2" />

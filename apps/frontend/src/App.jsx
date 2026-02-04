@@ -172,7 +172,7 @@ function Dashboard() {
   }, [currentFlowId, reactFlowFitView]); // Intentionally omitting nodes.length to avoid re-fitting on every node add
 
   // Panel visibility state
-  const [isCreationPanelVisible, setIsCreationPanelVisible] = useState(true);
+  const [isCreationPanelVisible, setIsCreationPanelVisible] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [isHistoryPanelVisible, setIsHistoryPanelVisible] = useState(false); // HISTORY PANEL
@@ -1112,13 +1112,12 @@ function Dashboard() {
           onOpenSettings={openSettings}
           onOpenApiKeys={openApiKeys}
           onToggleHistory={() => {
-            setIsHistoryPanelVisible((prev) => {
-              if (!prev)
-                setIsCreationPanelVisible(false); // If opening history, close toolbox
-              else setIsCreationPanelVisible(true); // If closing history, show toolbox
-              return !prev;
-            });
+            setIsHistoryPanelVisible((prev) => !prev);
           }}
+          isToolboxVisible={isCreationPanelVisible}
+          onToggleToolbox={() =>
+            setIsCreationPanelVisible((prev) => !prev)
+          }
           selectedProject={currentProject}
           selectedFlow={currentProject?.flows?.find(
             (f) => f.id === currentFlowId,
@@ -1143,9 +1142,14 @@ function Dashboard() {
               currentFlowId={currentFlowId}
             />
           ) : (
-            isCreationPanelVisible && (
-              <Toolbox addNode={addNode} activeBrowserId={activeBrowserId} />
-            )
+            <Toolbox
+              addNode={addNode}
+              activeBrowserId={activeBrowserId}
+              isCollapsed={!isCreationPanelVisible}
+              onToggleCollapse={(collapsed) =>
+                setIsCreationPanelVisible(!collapsed)
+              }
+            />
           )}
 
           {/* LIENZO (CANVAS - Abyss Blue Environment) */}

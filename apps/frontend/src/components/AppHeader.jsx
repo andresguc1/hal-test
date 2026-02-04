@@ -1,6 +1,6 @@
 import React, { memo } from "react";
 import { motion as Motion } from "motion/react"; // Renamed to Motion to avoid lint unused warning
-import { Sun, Moon, History } from "lucide-react";
+import { Sun, Moon, History, Layout } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
 import { useTranslation } from "react-i18next";
@@ -62,6 +62,8 @@ function AppHeader({
   onOpenSettings,
   onOpenApiKeys,
   onToggleHistory,
+  isToolboxVisible,
+  onToggleToolbox,
   selectedProject,
   selectedFlow,
   viewStack,
@@ -163,6 +165,14 @@ function AppHeader({
 
       {/* RIGHT */}
       <div className="flex items-center gap-12 relative z-20 shrink-0">
+        <HeaderButton
+          onClick={onToggleToolbox}
+          title={isToolboxVisible ? "Hide Toolbox" : "Show Toolbox"}
+          className={cn(isToolboxVisible && "text-indigo-500 bg-indigo-500/10")}
+        >
+          <Layout size={18} />
+        </HeaderButton>
+
         <HeaderButton onClick={onToggleHistory} title="Execution History">
           <History size={18} />
         </HeaderButton>

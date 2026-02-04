@@ -280,19 +280,20 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
             `[FlightRecorder] Check: takeScreenshot=${opts.takeScreenshot}, runId=${runId}, nodeId=${nodeId}`,
         );
         let screenshotPath = null;
-        if (opts.takeScreenshot && page && !page.isClosed() && runId && nodeId) {
+        if (opts.takeScreenshot && page && !page.isClosed() && nodeId) {
             try {
-                const screenshotsDir = path.join(STORAGE_RUNS_DIR, runId);
+                const effectiveRunId = runId || 'debug';
+                const screenshotsDir = path.join(STORAGE_RUNS_DIR, effectiveRunId);
                 await fsp.mkdir(screenshotsDir, { recursive: true });
                 // Forensic Standard: {runId}/{nodeId}.png
                 const filename = `${nodeId}.png`;
                 const fullPath = path.join(screenshotsDir, filename);
                 await page.screenshot({ path: fullPath, animations: 'disabled' });
-                screenshotPath = `storage/runs/${runId}/${filename}`;
+                screenshotPath = `storage/runs/${effectiveRunId}/${filename}`;
                 console.log(`[FlightRecorder] Screenshot saved: ${screenshotPath}`);
 
                 // Emit real-time update to frontend
-                emitScreenshotReady({ nodeId, screenshotPath, runId });
+                emitScreenshotReady({ nodeId, screenshotPath, runId: effectiveRunId });
             } catch (err) {
                 console.warn(
                     '[WARN] FlightRecorder: Failed to capture success screenshot',

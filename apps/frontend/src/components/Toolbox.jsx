@@ -277,7 +277,12 @@ const ToolboxCategory = ({
   );
 };
 
-export default function ToolboxPanel({ addNode, activeBrowserId }) {
+export default function ToolboxPanel({
+  addNode,
+  activeBrowserId,
+  isCollapsed: controlledIsCollapsed,
+  onToggleCollapse,
+}) {
   const { t } = useTranslation();
   const toast = useToast();
   const { aiConfig, openSettings, vaultKeys } = useSettings();
@@ -300,7 +305,20 @@ export default function ToolboxPanel({ addNode, activeBrowserId }) {
     }
   }, [availableKeys]);
 
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [localIsCollapsed, setLocalIsCollapsed] = useState(false);
+  const isCollapsed =
+    controlledIsCollapsed !== undefined
+      ? controlledIsCollapsed
+      : localIsCollapsed;
+
+  const handleToggleCollapse = (targetState) => {
+    const nextState = targetState !== undefined ? targetState : !isCollapsed;
+    if (onToggleCollapse) {
+      onToggleCollapse(nextState);
+    } else {
+      setLocalIsCollapsed(nextState);
+    }
+  };
   const [openCategories, setOpenCategories] = useState({
     browser_management: true,
   });
@@ -647,7 +665,7 @@ export default function ToolboxPanel({ addNode, activeBrowserId }) {
                   key={key}
                   title={t(`nodes.categories.${key}`)}
                   onClick={() => {
-                    setIsCollapsed(false);
+                    handleToggleCollapse(false);
                     setOpenCategories({ [key]: true });
                   }}
                   className={cn(
@@ -667,7 +685,7 @@ export default function ToolboxPanel({ addNode, activeBrowserId }) {
       {/* FOOTER */}
       <div className="p-3 border-t border-[var(--border-ui)] shrink-0 bg-[var(--bg-panel)]">
         <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
+          onClick={handleToggleCollapse}
           className={cn(
             "w-full flex items-center gap-3 px-2 py-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-canvas)] transition-all group",
             isCollapsed && "justify-center",
