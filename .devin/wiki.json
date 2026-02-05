@@ -1,0 +1,301 @@
+{
+  "repo_notes": [
+    {
+      "content": "HAL-TEST focuses on a visual, node-based approach to browser automation, integrating AI for self-healing and providing a monorepo structure for scalability."
+    }
+  ],
+  "pages": [
+    {
+      "title": "Overview",
+      "purpose": "Introduce HAL-TEST, its purpose as a Visual Browser Automation and AI Testing Platform, and high-level architecture",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Getting Started",
+      "purpose": "Guide users through initial setup and basic usage",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Installation & Setup",
+      "purpose": "Step-by-step installation instructions, environment configuration, and database initialization",
+      "parent": "Getting Started",
+      "page_notes": [
+        {
+          "content": "Include future plans for npx hal-test command for simplified global installation."
+        }
+      ]
+    },
+    {
+      "title": "Development Workflow",
+      "purpose": "Explain the development server setup, monorepo scripts, and local development practices",
+      "parent": "Getting Started",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "CLI Usage",
+      "purpose": "Document the haltest CLI commands for headless execution and workflow management",
+      "parent": "Getting Started",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Architecture",
+      "purpose": "Deep dive into the system architecture and component organization",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Monorepo Structure",
+      "purpose": "Explain the pnpm workspace setup, Turbo orchestration, and package organization",
+      "parent": "Architecture",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Frontend Architecture",
+      "purpose": "Document React Flow integration, component hierarchy, and state management patterns",
+      "parent": "Architecture",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Backend Architecture",
+      "purpose": "Explain Express server setup, API routing, middleware pipeline, and service layer",
+      "parent": "Architecture",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Database & Persistence",
+      "purpose": "Document database models, Sequelize configuration, and dual-database strategy (PostgreSQL/SQLite)",
+      "parent": "Architecture",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Landing Page Application",
+      "purpose": "Explain the marketing site structure, i18n setup, and build integration",
+      "parent": "Architecture",
+      "page_notes": [
+        {
+          "content": "Mention the Cyberpunk/Tech aesthetic and Geist Mono font integration."
+        }
+      ]
+    },
+    {
+      "title": "Core Concepts",
+      "purpose": "Explain the fundamental data models and workflow concepts",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Projects and Flows",
+      "purpose": "Explain the Project/Flow hierarchy, flow types, and lifecycle management",
+      "parent": "Core Concepts",
+      "page_notes": [
+        {
+          "content": "Clarify logic for User > Projects > Canvases > Flows hierarchy."
+        }
+      ]
+    },
+    {
+      "title": "Nodes and Edges",
+      "purpose": "Document the node-based workflow model, node categories, and connection rules",
+      "parent": "Core Concepts",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Flow Execution",
+      "purpose": "Explain the execution pipeline, topological sorting, and step-by-step processing",
+      "parent": "Core Concepts",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Features",
+      "purpose": "Comprehensive guide to all major features and capabilities",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Visual Flow Editor",
+      "purpose": "Document the drag-and-drop interface, canvas controls, and node configuration panel",
+      "parent": "Features",
+      "page_notes": [
+        {
+          "content": "Include the proposed 'Auto-Layout' feature to organize nodes without overlap."
+        }
+      ]
+    },
+    {
+      "title": "Browser Automation",
+      "purpose": "Explain Playwright integration, BrowserManager, and automation action execution",
+      "parent": "Features",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "AI Integration",
+      "purpose": "Document AIService, multi-provider support, self-healing selectors, and AI Copilot",
+      "parent": "Features",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Element Inspector",
+      "purpose": "Explain the interactive element picker and selector generation",
+      "parent": "Features",
+      "page_notes": [
+        {
+          "content": "Address headless production mode limitations and planned Virtual DOM fixes."
+        }
+      ]
+    },
+    {
+      "title": "Execution History & Replay",
+      "purpose": "Document the Flight Recorder pattern and replay functionality",
+      "parent": "Features",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Import & Export",
+      "purpose": "Explain flow import/export and V2 Package format",
+      "parent": "Features",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Component Grouping",
+      "purpose": "Document the component system for reusable flow segments",
+      "parent": "Features",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "API Reference",
+      "purpose": "Complete reference for all APIs and interfaces",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "REST API",
+      "purpose": "Document all HTTP endpoints, schemas, and validation rules",
+      "parent": "API Reference",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "WebSocket API",
+      "purpose": "Document Socket.io events and real-time communication patterns",
+      "parent": "API Reference",
+      "page_notes": [
+        {
+          "content": "Detail the missing real-time log terminal implementation."
+        }
+      ]
+    },
+    {
+      "title": "Node Types Reference",
+      "purpose": "Complete catalog of node types, including critical reviews of 'Execute Javascript' and 'Submit Form'",
+      "parent": "API Reference",
+      "page_notes": [
+        {
+          "content": "Address the 'Take Screenshot' logic bug."
+        }
+      ]
+    },
+    {
+      "title": "Development Guide",
+      "purpose": "Technical documentation for developers extending HAL-TEST",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Auth & Security",
+      "purpose": "Detailed guide on Supabase integration, AuthContext, Protected Routes, and Middleware Security (Helmet/Joi)",
+      "parent": "Development Guide",
+      "page_notes": [
+        {
+          "content": "Consolidated authentication and security protocols for brevity."
+        }
+      ]
+    },
+    {
+      "title": "Roadmap & Status",
+      "purpose": "Outline project phases, critical bug fixes (Screenshot/Picker), and future Performance/Security toolboxes",
+      "page_notes": [
+        {
+          "content": "Focus on public release, npx support, and video generation for flow executions."
+        }
+      ]
+    }
+  ]
+}The content has been copied to your clipboard. Please paste it here to complete the file creation.
