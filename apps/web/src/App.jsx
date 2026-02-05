@@ -1,6 +1,7 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { Slack } from "lucide-react";
+import { motion } from "framer-motion";
 
 export default function App() {
   const { t, i18n } = useTranslation();
@@ -74,10 +75,23 @@ export default function App() {
           transition={{ duration: 0.5, delay: 0.1 }}
           className="hidden md:flex items-center gap-8 text-xs font-bold uppercase tracking-widest text-slate-500"
         >
-          <span className="hover:text-hal-primary-400 cursor-pointer transition-colors">
+          <span
+            onClick={() =>
+              window.open("https://deepwiki.com/andresguc1/hal-test", "_blank")
+            }
+            className="hover:text-hal-primary-400 cursor-pointer transition-colors"
+          >
             Docs
           </span>
-          <span className="hover:text-hal-primary-400 cursor-pointer transition-colors">
+          <span
+            onClick={() =>
+              window.open(
+                "https://github.com/users/andresguc1/projects/8",
+                "_blank",
+              )
+            }
+            className="hover:text-hal-primary-400 cursor-pointer transition-colors"
+          >
             Roadmap
           </span>
           <span className="hover:text-hal-primary-400 cursor-pointer transition-colors">
