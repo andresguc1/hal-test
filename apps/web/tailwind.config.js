@@ -9,19 +9,24 @@ export default {
         "surface-secondary": "#334155",
 
         // Semantic Colors
-        hal: {
-          primary: { 500: "#6366F1" }, // Indigo
-          success: { 500: "#10B981" }, // Emerald
-          error: { 500: "#F43F5E" }, // Rose
-          warning: { 500: "#F59E0B" }, // Amber
-          neutral: { 200: "#E4E4E7", 500: "#71717A" }, // Zinc
-        },
-
         // Apple Tints (Dark Mode)
         apple: {
-          blue: "#0A84FF",
+          blue: {
+            400: "#409eff",
+            500: "#0A84FF",
+          },
           green: "#30D158",
           orange: "#FF9F0A",
+        },
+        hal: {
+          primary: {
+            400: "#818cf8",
+            500: "#6366F1",
+          },
+          success: { 500: "#10B981" },
+          error: { 500: "#F43F5E" },
+          warning: { 500: "#F59E0B" },
+          neutral: { 200: "#E4E4E7", 500: "#71717A" },
         },
       },
       fontFamily: {

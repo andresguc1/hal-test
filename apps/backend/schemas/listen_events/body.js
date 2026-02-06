@@ -2,8 +2,17 @@
 
 import Joi from 'joi';
 
-const allowedEvents = ['click', 'input', 'change', 'submit', 'request', 'response', 'custom'];
-
+const allowedEvents = [
+    'click',
+    'input',
+    'change',
+    'submit',
+    'request',
+    'response',
+    'custom',
+    'dialog',
+    'console',
+];
 const listenEventsBodySchema = Joi.object({
     // 1. eventType (Requerido, Select)
     eventType: Joi.string()
@@ -18,6 +27,21 @@ const listenEventsBodySchema = Joi.object({
     selector: Joi.string().trim().optional().allow(null, '').messages({
         'string.base': 'El selector debe ser una cadena de texto.',
     }),
+
+    // 2.1 urlPattern (Opcional, para red)
+    urlPattern: Joi.string().trim().optional().allow(null, '').messages({
+        'string.base': 'urlPattern debe ser una cadena de texto.',
+    }),
+
+    // 2.2 method (Opcional, para red)
+    method: Joi.string()
+        .uppercase()
+        .valid('', 'GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD')
+        .optional()
+        .allow(null, '')
+        .messages({
+            'any.only': 'El método HTTP no es válido.',
+        }),
 
     // 3. logToFile (Booleano/Checkbox)
     logToFile: Joi.boolean().default(false).optional().messages({

@@ -6,7 +6,6 @@
 // import { callTool } from '../services/mcp.service.js';
 import { browserService } from '../services/browser.service.js';
 import { traceService } from '../services/trace.service.js';
-import { globalStateManager } from '../services/stateManager.js';
 import VariableManager from '../services/VariableManager.js';
 import aiService from '../services/AIService.js';
 import { emitExecutionStatus, emitScreenshotReady, emitLog } from '../socket.js';
@@ -159,12 +158,11 @@ async function getActivePage(req, browserId) {
     }
 
     const context = await getOrCreateContext(req, browserInstance, targetBrowserId);
-    const pages = context.pages();
-
+    let pages = context.pages();
     if (pages.length === 0) {
-        const error = new Error(req.t('errors.no_active_pages'));
-        error.status = 400;
-        throw error;
+        console.log('[getActivePage] No active pages found. Creating new page automatically.');
+        await context.newPage();
+        pages = context.pages();
     }
 
     // Use the last active page as the target
@@ -1498,12 +1496,23 @@ export const uploadFileAction = (req, res) =>
             throw new Error(req.t('errors.selector_required'));
         }
 
-        // Ensure files is an array, handling comma-separated strings
-        const fileArray = Array.isArray(files)
-            ? files
-            : typeof files === 'string'
-              ? files.split(',').map((file) => file.trim())
-              : [];
+        // Ensure files is an array, handling JSON strings or comma-separated strings
+        let fileArray = [];
+        if (Array.isArray(files)) {
+            fileArray = files;
+        } else if (typeof files === 'string') {
+            const trimmedFiles = files.trim();
+            if (trimmedFiles.startsWith('[') && trimmedFiles.endsWith(']')) {
+                try {
+                    fileArray = JSON.parse(trimmedFiles);
+                } catch (e) {
+                    // Fallback to comma-separated if JSON parse fails
+                    fileArray = trimmedFiles.split(',').map((f) => f.trim());
+                }
+            } else {
+                fileArray = trimmedFiles.split(',').map((f) => f.trim());
+            }
+        }
 
         // Validate that files are provided
         if (!fileArray || fileArray.length === 0) {
@@ -1511,9 +1520,7 @@ export const uploadFileAction = (req, res) =>
         }
 
         // Validate that file paths are not dangerous
-        const invalidFiles = fileArray.filter(
-            (file) => file.includes('..') || file.startsWith('/'),
-        );
+        const invalidFiles = fileArray.filter((file) => file.includes('..'));
         if (invalidFiles.length > 0) {
             throw new Error(req.t('errors.unsafe_file_paths', { paths: invalidFiles.join(', ') }));
         }
@@ -1524,6 +1531,22 @@ export const uploadFileAction = (req, res) =>
         return {
             message: req.t('actions.upload_file.success'),
             traceDetails: { selector, filesCount: fileArray.length },
+        };
+    });
+
+export const hoverAction = (req, res) =>
+    executePlaywrightAction(req, res, 'hover', async (page, opts) => {
+        const { selector, timeout = 30000 } = opts;
+
+        if (!selector) {
+            throw new Error(req.t('errors.selector_required'));
+        }
+
+        await page.hover(selector, { timeout });
+
+        return {
+            message: req.t('actions.hover.success', { selector }),
+            traceDetails: { selector, timeout },
         };
     });
 
@@ -1555,7 +1578,7 @@ export const executeJsAction = (req, res) =>
         // 3. Capture return value if requested
         let stored = false;
         if (returnValue && variableName) {
-            globalStateManager.setVariable(variableName, result);
+            variableManager.set(variableName, result, 'flow');
             stored = true;
         }
 
@@ -1730,7 +1753,7 @@ export const saveDomAction = (req, res) =>
 
         // Guardar en Variable
         if (variableName) {
-            globalStateManager.setVariable(variableName, content);
+            variableManager.set(variableName, content, 'flow');
             results.variableStored = variableName;
         }
 
@@ -2029,13 +2052,46 @@ export const logErrorsAction = (req, res) =>
     executePlaywrightAction(req, res, 'log_errors', async (page, opts) => {
         const { enable } = opts;
         if (enable) {
-            page.on('console', (msg) => {
-                if (msg.type() === 'error') console.log(`[PAGE CONSOLE ERROR] ${msg.text()}`);
+            const context = page.context();
+            const attachToPage = (p) => {
+                p.on('console', (msg) => {
+                    if (msg.type() === 'error') {
+                        const message = `[Browser Console] ${msg.text()}`;
+                        console.log(message);
+                        smartEmitLog(message, 'error', opts.nodeId);
+                        // Update node state to warning to give visual feedback
+                        emitExecutionStatus(opts.nodeId, 'warning', {
+                            message: 'Errors detected in console',
+                        });
+                    }
+                });
+                p.on('pageerror', (err) => {
+                    const message = `[Browser Error] ${err.message}`;
+                    console.log(message);
+                    smartEmitLog(message, 'error', opts.nodeId);
+                    emitExecutionStatus(opts.nodeId, 'warning', { message: 'Page error detected' });
+                });
+                p.on('requestfailed', (request) => {
+                    const failure = request.failure();
+                    const message = `[Network Error] Failed to load: ${request.url()} - ${failure?.errorText || 'Unknown error'}`;
+                    console.log(message);
+                    smartEmitLog(message, 'error', opts.nodeId);
+                    emitExecutionStatus(opts.nodeId, 'warning', {
+                        message: 'Network resource failed to load',
+                    });
+                });
+            };
+
+            // Attach to current page
+            attachToPage(page);
+
+            // Attach to all future pages in this context (Persistent Collector)
+            context.on('page', (p) => {
+                console.log('[LogErrors] New page detected, attaching listeners...');
+                attachToPage(p);
             });
-            page.on('pageerror', (err) => {
-                console.log(`[PAGE ERROR] ${err.message}`);
-            });
-            return { message: req.t('actions.log_errors.success') };
+
+            return { message: req.t('actions.log_errors.success') + ' (Monitoring enabled)' };
         } else {
             // Playwright does not have an easy method to "unsubscribe" from all anonymous listeners
             // without saving a reference. For now, this action only enables logging.
@@ -2067,14 +2123,124 @@ export const pauseAction = (req, res) =>
 
 export const listenEventsAction = (req, res) =>
     executePlaywrightAction(req, res, 'listen_events', async (page, opts) => {
-        const { event } = opts; // e.g., 'dialog', 'request', 'response'
-        // This is a basic implementation that only logs.
-        // A real implementation might need WebSocket or SSE to send events to the client.
-        page.on(event, (data) => {
-            console.log(data);
-            console.log(`[EVENT ${event}] Detected`);
-        });
-        return { message: req.t('actions.listen_events.success') };
+        const {
+            eventType,
+            selector,
+            urlPattern,
+            method,
+            logToFile,
+            filePath,
+            timeout = 0,
+            nodeId,
+        } = opts;
+
+        const isNetworkEvent = ['request', 'response'].includes(eventType);
+        const isDomEvent = ['click', 'input', 'change', 'submit'].includes(eventType);
+        const isDialogEvent = eventType === 'dialog';
+        const isConsoleEvent = eventType === 'console';
+
+        const handleEvent = async (data) => {
+            let message = `[EVENT: ${eventType}]`;
+
+            if (isNetworkEvent) {
+                const url = typeof data.url === 'function' ? data.url() : data.url;
+                const reqMethod =
+                    typeof data.method === 'function'
+                        ? data.method()
+                        : data.request
+                          ? data.request().method()
+                          : '';
+
+                // Filter by URL Pattern (Basic glob-like matching if possible, or simple includes)
+                if (urlPattern && !url.includes(urlPattern.replace(/\*/g, ''))) return;
+
+                // Filter by Method
+                if (method && reqMethod.toUpperCase() !== method.toUpperCase()) return;
+
+                message += ` ${reqMethod} ${url}`;
+            } else if (isDialogEvent) {
+                message += ` ${data.type()}: ${data.message()}`;
+                await data.dismiss().catch(() => {}); // Auto-dismiss to prevent hang
+            } else if (isConsoleEvent) {
+                message += ` [${data.type()}] ${data.text()}`;
+            } else if (isDomEvent) {
+                // DOM events are trickier as page.on doesn't have a direct 'click' event usually
+                // unless it's a custom exposed function.
+                message += ` Element interaction detected`;
+                if (selector) message += ` on ${selector}`;
+            }
+
+            smartEmitLog(message, 'info', nodeId);
+
+            if (logToFile && filePath) {
+                try {
+                    const logEntry =
+                        JSON.stringify({
+                            timestamp: new Date().toISOString(),
+                            type: eventType,
+                            details: data.toString?.() || 'Event data captured',
+                        }) + '\n';
+                    await fsp.appendFile(filePath, logEntry);
+                } catch (err) {
+                    console.error('[ERROR] Failed to log to file:', err.message);
+                }
+            }
+        };
+
+        if (isDomEvent) {
+            // For DOM events, we inject a script to listen and report back
+            const exposedName = `__hal_event_${nodeId || Date.now()}`;
+            await page.exposeFunction(exposedName, (info) => {
+                if (!selector || (info.selector && info.selector.includes(selector))) {
+                    handleEvent(info);
+                }
+            });
+
+            await page.addInitScript(
+                ({ eventType, exposedName, selector }) => {
+                    document.addEventListener(
+                        eventType,
+                        (e) => {
+                            const target = e.target;
+
+                            // Client-side filtering if selector is provided
+                            if (selector && !target.matches(selector)) return;
+
+                            const info = {
+                                type: eventType,
+                                tagName: target.tagName,
+                                id: target.id,
+                                className: target.className,
+                            };
+                            window[exposedName](info);
+                        },
+                        true,
+                    );
+                },
+                { eventType, exposedName, selector },
+            );
+
+            smartEmitLog(`Listening for DOM ${eventType} events...`, 'info', nodeId);
+        } else {
+            // Playwright native events
+            page.on(eventType, handleEvent);
+            smartEmitLog(`Listening for Playwright ${eventType} events...`, 'info', nodeId);
+        }
+
+        // Handle unsubscription after timeout
+        if (timeout > 0) {
+            setTimeout(() => {
+                if (!page.isClosed()) {
+                    page.off(eventType, handleEvent);
+                    smartEmitLog(`Stopped listening for ${eventType} (Timeout)`, 'info', nodeId);
+                }
+            }, timeout);
+        }
+
+        return {
+            message: `Listening for ${eventType} events started. ${timeout > 0 ? `(Timeout: ${timeout}ms)` : '(Indefinite)'}`,
+            data: { eventType, timeout, logToFile },
+        };
     });
 
 // ==========================================================
@@ -2296,7 +2462,7 @@ export const waitForResponseAction = (req, res) =>
             } catch (e) {
                 bodyData = await response.text();
             }
-            globalStateManager.setVariable(saveToVariable, bodyData);
+            variableManager.set(saveToVariable, bodyData, 'flow');
         }
 
         return {

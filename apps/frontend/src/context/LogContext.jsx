@@ -22,8 +22,12 @@ export const LogProvider = ({ children }) => {
       return updated;
     });
 
-    if (type === "error") {
+    if (type === "error" || type === "warning") {
       setIsPanelVisible(true);
+      // Note: We don't trigger toast here because App already has a socket listener
+      // or we can use a simpler event emitter if needed.
+      // But actually, the most direct way is to have the socket listener in App or
+      // useHaltestSocket trigger a toast directly.
     }
   }, []);
 

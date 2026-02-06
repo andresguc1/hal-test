@@ -1706,61 +1706,60 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
             "Invalid Start: The first node must be 'Launch Browser'.",
           );
         } else {
-          // 4. Rule: Navigation Root (Launch -> Open URL)
-          // Check outgoing edges from root
-          const outgoing = edgesToValidate.filter((e) => e.source === root.id);
-          if (outgoing.length === 0) {
-            errors.push(
-              "Invalid Flow: 'Launch Browser' must connect to 'Open URL'.",
-            );
-          } else {
-            // Check if ANY outgoing connects to 'Open URL' (or a component starting with it)
-            const targets = outgoing.map((e) =>
-              nodesToValidate.find((n) => n.id === e.target),
-            );
+          // 4. Rule: Navigation Mandatory (Flow must eventually open a URL)
+          const hasReachToOpenUrl = () => {
+            const visited = new Set();
+            const queue = [root.id];
 
             const isOrContainsOpenUrl = (node) => {
               if (!node) return false;
-              // Direct check
               if (node.type === "open_url" || node.data?.type === "open_url")
                 return true;
 
-              // Component check (Recursive-ish for V1)
               if (
                 node.type === "component" ||
                 node.data?.type === "component"
               ) {
                 const subFlow = node.data?.subFlow;
                 if (!subFlow || !subFlow.nodes || !subFlow.edges) return false;
-
-                // Find internal Input node
-                // Note: Boundary nodes might be named 'input' or have specific type
                 const internalInput = subFlow.nodes.find(
                   (n) => n.type === "input" || n.data?.type === "input",
                 );
                 if (!internalInput) return false;
-
-                // Find what follows the input
                 const internalEdges = subFlow.edges.filter(
                   (e) => e.source === internalInput.id,
                 );
                 const firstSteps = internalEdges.map((e) =>
                   subFlow.nodes.find((n) => n.id === e.target),
                 );
-
-                // Check if any of the first steps is Open URL
-                return firstSteps.some((step) => isOrContainsOpenUrl(step)); // Recursive for nested (future proof)
+                return firstSteps.some((step) => isOrContainsOpenUrl(step));
               }
               return false;
             };
 
-            const hasOpenUrl = targets.some((n) => isOrContainsOpenUrl(n));
+            while (queue.length > 0) {
+              const currentId = queue.shift();
+              if (visited.has(currentId)) continue;
+              visited.add(currentId);
 
-            if (!hasOpenUrl) {
-              errors.push(
-                "Invalid Flow: 'Launch Browser' must be followed by 'Open URL' (or a component starting with it).",
+              const node = nodesToValidate.find((n) => n.id === currentId);
+              if (isOrContainsOpenUrl(node)) return true;
+
+              // Add successors to queue
+              const outgoing = edgesToValidate.filter(
+                (e) => e.source === currentId,
               );
+              for (const edge of outgoing) {
+                queue.push(edge.target);
+              }
             }
+            return false;
+          };
+
+          if (!hasReachToOpenUrl()) {
+            errors.push(
+              "Invalid Flow: The flow must eventually include an 'Open URL' node to navigate.",
+            );
           }
         }
       }

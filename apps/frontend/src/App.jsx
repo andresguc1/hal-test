@@ -55,6 +55,20 @@ import { ExportModal } from "./components/modals/ExportModal";
 import { ImportModal } from "./components/modals/ImportModal";
 import { api } from "./utils/api";
 import { NODE_STATES } from "./components/hooks/flowStyles";
+import {
+  Terminal,
+  Settings,
+  History,
+  Sun,
+  Moon,
+  Database,
+  Search,
+  Plus,
+  Trash2,
+  Play,
+  Info,
+  ChevronDown,
+} from "lucide-react";
 import { useLogs } from "./context/LogContext";
 import TerminalPanel from "./components/TerminalPanel";
 
@@ -68,8 +82,9 @@ function Dashboard() {
   // Theme
   const { theme } = useTheme();
 
-  // Toast notifications
   const toast = useToast();
+
+  const { logs, isPanelVisible, togglePanel } = useLogs();
 
   // Refs
   const reactFlowWrapper = React.useRef(null);
@@ -1167,8 +1182,8 @@ function Dashboard() {
           )}
 
           {/* LIENZO (CANVAS - Abyss Blue Environment) */}
-          <main className="flex-1 relative kanban-board-bg">
-            <div ref={reactFlowWrapper} className="w-full h-full relative">
+          <main className="flex-1 relative kanban-board-bg flex flex-col overflow-hidden">
+            <div ref={reactFlowWrapper} className="flex-1 w-full relative">
               <ReactFlow {...flowConfig} onNodesDelete={onNodesDelete}>
                 {showMinimap && <StyledMiniMap />}
                 <Controls />
@@ -1262,10 +1277,21 @@ function Dashboard() {
                 )}
               </ReactFlow>
             </div>
-          </main>
 
-          {/* Real-time Execution Terminal */}
-          <TerminalPanel />
+            {/* Real-time Execution Terminal - Now inside Main Layout */}
+            <TerminalPanel />
+
+            {/* TERMINAL TAG (Vignette) - Only visible when terminal is closed */}
+            {!isPanelVisible && (
+              <button className="terminal-tag" onClick={togglePanel}>
+                <Terminal size={14} className="icon" />
+                <span>Terminal</span>
+                {logs.length > 0 && (
+                  <span className="flex h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse ml-0.5" />
+                )}
+              </button>
+            )}
+          </main>
 
           {/* PANEL DERECHO (CONFIGURACIÓN) */}
           {isConfigurationPanelVisible && selectedAction && (
@@ -1318,6 +1344,8 @@ function Dashboard() {
         {/* FLOATING COMMAND CENTER (Footer) - Positioned Absolutely */}
         {/* MANIFIESTO DE REACTIVIDAD: Derived State for Flows */}
         {/* We merge persistent flows (DB) with live component nodes (Canvas) to ensure instant updates */}
+        {/* TERMINAL TAG (Vignette) - Moved to main container above */}
+
         <AppFooter
           // Project Props
           projectName={currentProject?.name || "No Project"}

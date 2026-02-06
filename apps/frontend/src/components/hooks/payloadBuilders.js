@@ -471,6 +471,26 @@ export const drag_drop = (payload) => {
   };
 };
 
+/**
+ * Crea el payload para hover.
+ * @param {object} payload - Datos del formulario
+ * @returns {object} Payload para el backend
+ */
+export const hover = (payload) => {
+  const selector = asString(payload?.selector);
+
+  if (!selector) {
+    throw new Error("El selector es obligatorio.");
+  }
+
+  return {
+    selector,
+    timeout: asNumber(payload?.timeout, 30000, 1),
+    browserId: asString(payload?.browserId),
+    takeScreenshot: asBoolean(payload?.takeScreenshot, false),
+  };
+};
+
 // ---------------------------------------------
 // Builders (Esperas)
 // ---------------------------------------------
@@ -555,6 +575,7 @@ export const listen_events = (payload) => {
 
 export const log_errors = (payload) => {
   return {
+    enable: asBoolean(payload?.enable, true),
     logToFile: asBoolean(payload?.logToFile, false),
     filePath: asString(payload?.filePath, null),
     timeout: asNumber(payload?.timeout, 0, 0),
@@ -568,6 +589,7 @@ export const save_dom = (payload) => {
     path: asString(payload?.path, null),
     variableName: asString(payload?.variableName, null),
     timeout: asNumber(payload?.timeout, 30000, 1),
+    takeScreenshot: asBoolean(payload?.takeScreenshot, false),
     browserId: asString(payload?.browserId),
   };
 };

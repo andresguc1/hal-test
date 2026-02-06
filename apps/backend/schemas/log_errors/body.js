@@ -3,6 +3,11 @@
 import Joi from 'joi';
 
 const logErrorsBodySchema = Joi.object({
+    // 0. enable (Control maestro)
+    enable: Joi.boolean().default(true).optional().messages({
+        'boolean.base': 'enable debe ser booleano.',
+    }),
+
     // 1. logToFile (Booleano/Checkbox)
     logToFile: Joi.boolean().default(false).optional().messages({
         'boolean.base': 'logToFile debe ser booleano.',

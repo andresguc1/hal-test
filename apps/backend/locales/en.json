@@ -222,6 +222,14 @@
             "success": "CI integration notified (Simulated)."
         }
     },
+    "nodes": {
+        "fields": {
+            "enable": "Enable Logs",
+            "logToFile": "Log to File",
+            "filePath": "File Path",
+            "args": "Extra Browser Arguments"
+        }
+    },
     "errors": {
         "no_active_browsers": "No active browsers. Call launch_browser first.",
         "browser_not_found": "No browser found with ID: {{id}}",

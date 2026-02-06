@@ -22,33 +22,14 @@ export default function TerminalPanel() {
     }
   }, [logs]);
 
-  if (!isPanelVisible) {
-    return (
-      <div className="fixed bottom-12 right-6 z-50">
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={togglePanel}
-          className="flex items-center gap-2 px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg shadow-xl text-slate-300 hover:text-white transition-colors"
-        >
-          <Terminal size={16} className="text-hal-primary-400" />
-          <span className="text-xs font-bold uppercase tracking-wider">
-            Terminal
-          </span>
-          {logs.length > 0 && (
-            <span className="flex h-2 w-2 rounded-full bg-hal-primary-500 animate-pulse"></span>
-          )}
-        </motion.button>
-      </div>
-    );
-  }
+  if (!isPanelVisible) return null;
 
   return (
     <motion.div
-      initial={{ y: 300, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      exit={{ y: 300, opacity: 0 }}
-      className="fixed bottom-0 left-0 right-0 h-[250px] bg-slate-950 border-t border-slate-800 z-[100] flex flex-col shadow-2xl font-mono"
+      initial={{ height: 0, opacity: 0 }}
+      animate={{ height: 250, opacity: 1 }}
+      exit={{ height: 0, opacity: 0 }}
+      className="relative w-full bg-slate-950 border-t border-slate-800 z-10 flex flex-col shadow-2xl font-mono overflow-hidden"
     >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2 bg-slate-900 border-b border-slate-800">

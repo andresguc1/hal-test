@@ -208,6 +208,9 @@
         "drag_drop": {
             "success": "Elemento {{source}} arrastrado y soltado correctamente en {{target}}."
         },
+        "hover": {
+            "success": "Puntero posicionado sobre el elemento '{{selector}}'."
+        },
         "import_router": {
             "content_required": "El contenido es obligatorio.",
             "directory_path_required": "La ruta del directorio es obligatoria.",
@@ -223,6 +226,14 @@
         },
         "integrate_ci": {
             "success": "Integración de CI notificada (Simulada)."
+        }
+    },
+    "nodes": {
+        "fields": {
+            "enable": "Activar Logs",
+            "logToFile": "Registrar a Archivo",
+            "filePath": "Ruta de Archivo",
+            "args": "Argumentos Extra del Navegador"
         }
     },
     "errors": {

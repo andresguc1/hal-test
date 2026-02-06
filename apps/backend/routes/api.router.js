@@ -155,6 +155,12 @@ const actionRoutes = [
         category: 'interaction',
     },
     {
+        path: 'hover',
+        schema: 'hoverBodySchema',
+        action: 'hoverAction',
+        category: 'interaction',
+    },
+    {
         path: 'execute_js',
         schema: 'executeJsBodySchema',
         action: 'executeJsAction',

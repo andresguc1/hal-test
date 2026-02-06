@@ -231,3 +231,37 @@
     transform: translateX(150%) skewX(-12deg);
   }
 }
+
+/* TERMINAL TAG (Vignette Style) */
+.terminal-tag {
+  position: absolute;
+  bottom: 0; /* Inside main, so 0 is right above footer */
+  right: 32px; /* Positioned to the right as requested */
+  padding: 4px 16px;
+  background: #0f172a; /* Slate 900 */
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  color: #94a3b8; /* Slate 400 */
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.terminal-tag:hover {
+  background: #1e293b; /* Slate 800 */
+  color: white;
+  padding-bottom: 6px;
+}
+
+.terminal-tag .icon {
+  color: #6366f1; /* Indigo 500 */
+}

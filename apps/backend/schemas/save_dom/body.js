@@ -35,6 +35,9 @@ const saveDomBodySchema = Joi.object({
     browserId: Joi.string().allow(null, '').optional().messages({
         'string.base': 'browserId debe ser una cadena de texto (el ID único del navegador).',
     }),
+
+    // 6. takeScreenshot (Opcional)
+    takeScreenshot: Joi.boolean().default(false),
 });
 // Bloquea cualquier campo extra que no esté definido.
 export default saveDomBodySchema;
