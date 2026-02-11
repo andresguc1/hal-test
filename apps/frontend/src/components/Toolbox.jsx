@@ -13,6 +13,7 @@ import {
   Loader2,
   ChevronDown,
   Settings,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NODE_CATEGORIES, CATEGORY_STYLES } from "@/config/nodeConstants";
@@ -311,17 +312,62 @@ export default function ToolboxPanel({
       ? controlledIsCollapsed
       : localIsCollapsed;
 
-  const handleToggleCollapse = (targetState) => {
-    const nextState = targetState !== undefined ? targetState : !isCollapsed;
+  const handleToggleCollapse = (eOrValue) => {
+    // If called via onClick, eOrValue is an event object. Use toggle logic.
+    // If called with an explicit boolean, use that value.
+    const nextState = typeof eOrValue === "boolean" ? eOrValue : !isCollapsed;
+
     if (onToggleCollapse) {
       onToggleCollapse(nextState);
     } else {
       setLocalIsCollapsed(nextState);
     }
   };
+
+  const [searchTerm, setSearchTerm] = useState("");
+
   const [openCategories, setOpenCategories] = useState({
     browser_management: true,
   });
+
+  // Filter Logic
+  const filteredCategories = useMemo(() => {
+    if (!searchTerm.trim()) return NODE_CATEGORIES;
+
+    const lowerSearch = searchTerm.toLowerCase();
+    const result = {};
+
+    Object.entries(NODE_CATEGORIES).forEach(([key, section]) => {
+      const matchingNodes = section.nodes.filter((nodeId) => {
+        const label = t(`nodes.labels.${nodeId}`).toLowerCase();
+        return (
+          label.includes(lowerSearch) ||
+          nodeId.toLowerCase().includes(lowerSearch)
+        );
+      });
+
+      if (matchingNodes.length > 0) {
+        result[key] = {
+          ...section,
+          nodes: matchingNodes,
+        };
+      }
+    });
+
+    return result;
+  }, [searchTerm, t]);
+
+  // Auto-expand categories when searching
+  useEffect(() => {
+    if (searchTerm.trim()) {
+      const matches = Object.keys(filteredCategories);
+      setOpenCategories((prev) => {
+        const next = { ...prev };
+        matches.forEach((m) => (next[m] = true));
+        return next;
+      });
+    }
+  }, [filteredCategories, searchTerm]);
 
   // Get active browser ID from flow manager hook context if available
   // Since we are inside ToolBox, we need to access the parent state or store
@@ -514,14 +560,24 @@ export default function ToolboxPanel({
               />
               <input
                 type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder={t("common.select_default", "Search tools...")}
                 className="w-full bg-slate-900/50 border border-white/10 rounded-lg py-2 pl-9 pr-3 text-xs text-slate-300 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition-all shadow-inner"
               />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                >
+                  <X size={12} />
+                </button>
+              )}
             </div>
 
             {/* List */}
             <div className="flex-1">
-              {Object.entries(NODE_CATEGORIES).map(([key, section]) => (
+              {Object.entries(filteredCategories).map(([key, section]) => (
                 <ToolboxCategory
                   key={key}
                   categoryKey={key}

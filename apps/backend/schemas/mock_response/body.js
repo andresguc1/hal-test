@@ -4,7 +4,7 @@ import Joi from 'joi';
 
 const mockResponseBodySchema = Joi.object({
     urlPattern: Joi.string().trim().required(),
-    method: Joi.string().default('GET').uppercase().optional(),
+    method: Joi.string().default('GET').uppercase().optional().allow('', null),
     status: Joi.number().integer().min(100).max(599).default(200),
     responseBody: Joi.alternatives().try(Joi.string(), Joi.object(), Joi.array()).required(),
     headers: Joi.string().optional().allow(null, ''), // JSON string

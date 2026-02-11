@@ -174,26 +174,19 @@ Stay updated and get support from our community:
 - **Slack**: [Join HAL-TEST Talk](https://join.slack.com/t/haltest-talk/shared_invite/zt-3o7wqlt53-tzFebjhK5TxQtYZbwK~f~g)
 - **GitHub Issues**: For bug reports, feature requests, and technical discussions.
 
-## 🐳 Docker Setup (Recommended)
-Running HAL-TEST in Docker is the **recommended way** for production and testing. It ensures that all Playwright dependencies (system libraries) are correctly installed, preventing "Page Crashed" errors common in Linux environments.
+## 🐳 Docker Deployment (Recommended)
+Running HAL-TEST in Docker is the **recommended way** for production and testing. It ensures that all Playwright dependencies (system libraries) are correctly installed.
 
-### 1. Quick Start with Docker Compose
-Ensures your database and screenshots are persisted via volumes.
+### Quick Start
 ```bash
-# Build the image and start the container in background
+# Build and start the container
 docker compose up -d --build
+
+# Access the app
+open http://localhost:2001/app/
 ```
 
-### 2. Access the Application
-Once the container is healthy:
-- **App URL**: [http://localhost:2001/app/](http://localhost:2001/app/)
-- **Landing Page**: [http://localhost:2001/](http://localhost:2001/)
-- **API Docs**: [http://localhost:2001/api/docs](http://localhost:2001/api/docs)
-
-### 3. Management
-- **View Logs**: `docker compose logs -f`
-- **Stop**: `docker compose down`
-- **Data Location**: SQLite and screenshots are stored in the `hal_test_data` volume.
+📚 **For detailed setup, troubleshooting, and production best practices, see [DOCKER.md](./DOCKER.md)**
 
 ## 🚀 Production Deployment
 
@@ -241,7 +234,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 Give a ⭐️ if this project helped you!
 
 ## 📧 Contact
-**Andrés Gutiérrez** - [@andresguc1](https://github.com/andresguc1)
+**Andresguc1** - [@andresguc1](https://github.com/andresguc1)
 Join our **Slack Community**: [HAL-TEST Talk](https://join.slack.com/t/haltest-talk/shared_invite/zt-3o7wqlt53-tzFebjhK5TxQtYZbwK~f~g)
 
 Project Link: [https://github.com/andresguc1/hal-test](https://github.com/andresguc1/hal-test)

@@ -31,6 +31,7 @@ export const NODE_CATEGORIES = {
       "resize_viewport",
       "go_back",
       "go_forward",
+      "wait_navigation",
     ],
   },
   dom_manipulation: {
@@ -40,8 +41,8 @@ export const NODE_CATEGORIES = {
     nodes: [
       "find_element",
       "get_set_content",
-      "wait_for_element",
       "execute_js",
+      "wait_for_element",
     ],
   },
   user_simulation: {
@@ -57,20 +58,6 @@ export const NODE_CATEGORIES = {
       "drag_drop",
       "upload_file",
       "hover",
-    ],
-  },
-  synchronization: {
-    icon: Clock,
-    color: "orange", // Sync = Orange (#f97316)
-    label: "Wait / Sync",
-    nodes: [
-      "wait_visible",
-      "wait_navigation",
-      "wait_conditional",
-      "pause",
-      "wait_for_request",
-      "wait_for_response",
-      "wait_network",
     ],
   },
   diagnostics: {
@@ -90,14 +77,11 @@ export const NODE_CATEGORIES = {
     color: "emerald", // Network = Emerald (#10b981)
     label: "Network",
     nodes: [
-      "intercept_request",
-      "mock_response",
-      "block_resource",
-      "modify_headers",
+      "configure_route",
+      "wait_network_match",
       "set_network_conditions",
       "clear_all_mocks",
-      "wait_for_response",
-      "wait_for_request",
+      "wait_network",
     ],
   },
   session_management: {
@@ -145,6 +129,8 @@ export const NODE_CATEGORIES = {
       "branch",
       "flow_control",
       "transform",
+      "wait_conditional",
+      "pause",
     ],
   },
   composition: {

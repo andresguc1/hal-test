@@ -3,7 +3,7 @@
 import Joi from 'joi';
 
 const clearAllMocksBodySchema = Joi.object({
-    browserId: Joi.any().strip(),
+    browserId: Joi.string().optional().allow(null, ''),
     endpoint: Joi.string().optional().allow(''),
 });
 

@@ -43,11 +43,55 @@ const launchBrowserBodySchema = Joi.object({
         'string.base': 'executablePath debe ser una cadena de texto.',
     }),
 
-    // 6. maximizeWindow (Opcional)
-    // 6. maximizeWindow (Opcional)
     maximizeWindow: Joi.boolean().default(false).optional().messages({
         'boolean.base': 'maximizeWindow debe ser un valor booleano.',
     }),
+
+    devicePreset: Joi.string()
+        .valid(
+            'Desktop',
+            'iPhone SE',
+            'iPhone XR',
+            'iPhone 12 Pro',
+            'iPhone 14 Pro Max',
+            'Pixel 7',
+            'Samsung Galaxy S22',
+            'Samsung Galaxy S20 Ultra',
+            'iPad Mini',
+            'iPad Air',
+            'iPad Pro',
+            'Tablet',
+            'Custom',
+        )
+        .default('Desktop')
+        .optional(),
+
+    // 7. Width & Height (Opcional)
+    width: Joi.number().integer().min(100).optional(),
+    height: Joi.number().integer().min(100).optional(),
+    isMobile: Joi.boolean().optional().default(false),
+    hasTouch: Joi.boolean().optional().default(false),
+
+    // --- Network Conditions (Optional) ---
+    networkProfile: Joi.string()
+        .valid(
+            'No throttling',
+            'WiFi fast',
+            'WiFi slow',
+            '4G',
+            'Fast 3G',
+            'Slow 3G',
+            '2G',
+            'High Latency',
+            'Custom',
+            'Offline',
+            'Slow 4G',
+        )
+        .optional(),
+    offline: Joi.boolean().optional(),
+    latency: Joi.number().min(0).optional(),
+    downloadThroughput: Joi.number().min(-1).optional(),
+    uploadThroughput: Joi.number().min(-1).optional(),
 }).unknown(true);
 
 export default launchBrowserBodySchema;

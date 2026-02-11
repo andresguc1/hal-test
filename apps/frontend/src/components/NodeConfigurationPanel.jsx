@@ -40,6 +40,30 @@ const NODE_INPUTS = {
   ],
   launch_browser: [
     { key: "headless", label: "Headless Mode", type: "checkbox" },
+    {
+      key: "devicePreset",
+      label: "📱 Device Template",
+      type: "select",
+      options: [
+        { label: "🖥️ Desktop (1280x720)", value: "Desktop" },
+        { label: "📱 iPhone SE", value: "iPhone SE" },
+        { label: "📱 iPhone XR", value: "iPhone XR" },
+        { label: "📱 iPhone 12 Pro", value: "iPhone 12 Pro" },
+        { label: "📱 iPhone 14 Pro Max", value: "iPhone 14 Pro Max" },
+        { label: "📱 Pixel 7", value: "Pixel 7" },
+        { label: "📱 Samsung Galaxy S22", value: "Samsung Galaxy S22" },
+        {
+          label: "📱 Samsung Galaxy S20 Ultra",
+          value: "Samsung Galaxy S20 Ultra",
+        },
+        { label: "📟 iPad Mini", value: "iPad Mini" },
+        { label: "📟 iPad Air", value: "iPad Air" },
+        { label: "📟 iPad Pro", value: "iPad Pro" },
+        { label: "📟 Tablet (Generic)", value: "Tablet" },
+        { label: "⚙️ Custom Size", value: "Custom" },
+      ],
+      default: "Desktop",
+    },
     { key: "slowMo", label: "Slow Mo (ms)", type: "number", placeholder: "50" },
     {
       key: "args",
@@ -47,10 +71,122 @@ const NODE_INPUTS = {
       type: "text",
       placeholder: "--enable-logging --v=1",
     },
+    { key: "maximizeWindow", label: "Maximize Window", type: "checkbox" },
+    {
+      key: "width",
+      label: "Viewport Width",
+      type: "number",
+      placeholder: "1280",
+      isVisible: (data) =>
+        !data.maximizeWindow && data.devicePreset === "Custom",
+    },
+    {
+      key: "height",
+      label: "Viewport Height",
+      type: "number",
+      placeholder: "720",
+      isVisible: (data) =>
+        !data.maximizeWindow && data.devicePreset === "Custom",
+    },
+    {
+      key: "isMobile",
+      label: "📱 Is Mobile Simulation",
+      type: "checkbox",
+      isVisible: (data) =>
+        !data.maximizeWindow && data.devicePreset === "Custom",
+    },
+    {
+      key: "hasTouch",
+      label: "👆 Enable Touch Support",
+      type: "checkbox",
+      isVisible: (data) =>
+        !data.maximizeWindow && data.devicePreset === "Custom",
+    },
+    {
+      key: "networkProfile",
+      label: "Initial Throttling Profile",
+      type: "select",
+      options: [
+        { label: "No throttling", value: "No throttling" },
+        { label: "WiFi fast", value: "WiFi fast" },
+        { label: "WiFi slow", value: "WiFi slow" },
+        { label: "4G", value: "4G" },
+        { label: "Fast 3G", value: "Fast 3G" },
+        { label: "Slow 3G", value: "Slow 3G" },
+        { label: "2G", value: "2G" },
+        { label: "High Latency", value: "High Latency" },
+        { label: "Custom", value: "Custom" },
+        { label: "Offline", value: "Offline" },
+      ],
+      default: "No throttling",
+    },
+    {
+      key: "offline",
+      label: "Offline Mode",
+      type: "checkbox",
+      isVisible: (data) => data.networkProfile === "Custom",
+    },
+    {
+      key: "latency",
+      label: "Start-up Latency (ms)",
+      type: "number",
+      placeholder: "e.g. 150",
+      isVisible: (data) => data.networkProfile === "Custom",
+    },
+    {
+      key: "downloadThroughput",
+      label: "Download (Kbps)",
+      type: "number",
+      placeholder: "e.g. 1600",
+      isVisible: (data) => data.networkProfile === "Custom",
+    },
+    {
+      key: "uploadThroughput",
+      label: "Upload (Kbps)",
+      type: "number",
+      placeholder: "e.g. 750",
+      isVisible: (data) => data.networkProfile === "Custom",
+    },
   ],
   resize_viewport: [
-    { key: "width", label: "Width", type: "number", placeholder: "1280" },
-    { key: "height", label: "Height", type: "number", placeholder: "720" },
+    {
+      key: "devicePreset",
+      label: "📱 Device Template",
+      type: "select",
+      options: [
+        { label: "🖥️ Desktop (1280x720)", value: "Desktop" },
+        { label: "📱 iPhone SE", value: "iPhone SE" },
+        { label: "📱 iPhone XR", value: "iPhone XR" },
+        { label: "📱 iPhone 12 Pro", value: "iPhone 12 Pro" },
+        { label: "📱 iPhone 14 Pro Max", value: "iPhone 14 Pro Max" },
+        { label: "📱 Pixel 7", value: "Pixel 7" },
+        { label: "📱 Samsung Galaxy S22", value: "Samsung Galaxy S22" },
+        {
+          label: "📱 Samsung Galaxy S20 Ultra",
+          value: "Samsung Galaxy S20 Ultra",
+        },
+        { label: "📟 iPad Mini", value: "iPad Mini" },
+        { label: "📟 iPad Air", value: "iPad Air" },
+        { label: "📟 iPad Pro", value: "iPad Pro" },
+        { label: "📟 Tablet (Generic)", value: "Tablet" },
+        { label: "⚙️ Custom Size", value: "Custom" },
+      ],
+      default: "Custom",
+    },
+    {
+      key: "width",
+      label: "Width (px)",
+      type: "number",
+      placeholder: "1280",
+      isVisible: (data) => !data.devicePreset || data.devicePreset === "Custom",
+    },
+    {
+      key: "height",
+      label: "Height (px)",
+      type: "number",
+      placeholder: "720",
+      isVisible: (data) => !data.devicePreset || data.devicePreset === "Custom",
+    },
   ],
 
   find_element: [
@@ -163,6 +299,12 @@ const NODE_INPUTS = {
         { label: "Detached (Removed)", value: "detached" },
       ],
       required: true,
+    },
+    {
+      key: "scrollIntoView",
+      label: "Scroll into view?",
+      type: "checkbox",
+      default: false,
     },
     {
       key: "timeout",
@@ -588,10 +730,27 @@ const NODE_INPUTS = {
   // Sync (Extended)
   wait_navigation: [
     {
+      key: "url",
+      label: "Target URL / Pattern (Optional)",
+      type: "text",
+      placeholder: "**/success",
+    },
+    {
       key: "waitUntil",
       label: "Wait Until",
-      type: "text",
-      placeholder: "load",
+      type: "select",
+      options: [
+        { label: "Load", value: "load" },
+        { label: "DOM Content Loaded", value: "domcontentloaded" },
+        { label: "Network Idle", value: "networkidle" },
+      ],
+      required: true,
+    },
+    {
+      key: "timeout",
+      label: "Timeout (ms)",
+      type: "number",
+      default: 30000,
     },
   ],
   wait_network: [
@@ -612,34 +771,155 @@ const NODE_INPUTS = {
   ],
 
   // Network
-  intercept_request: [
-    {
-      key: "urlPattern",
-      label: "URL Pattern (Glob/Regex)",
-      type: "text",
-      placeholder: "**/api/v1/*",
-    },
-  ],
-  mock_response: [
+  // Network Consolidated
+  configure_route: [
     {
       key: "urlPattern",
       label: "URL Pattern",
       type: "text",
-      placeholder: "**/users",
+      placeholder: "**/api/*",
+      required: true,
     },
     {
-      key: "body",
-      label: "Response Body (JSON)",
+      key: "routeAction",
+      label: "Action",
+      type: "select",
+      options: [
+        { label: "Block Request (Abort)", value: "abort" },
+        { label: "Mock Response", value: "mock" },
+        { label: "Modify Headers", value: "modify_headers" },
+        { label: "Log Only", value: "log" },
+      ],
+      default: "abort",
+      required: true,
+    },
+    {
+      key: "method",
+      label: "Method Filter (Optional)",
+      type: "select",
+      options: [
+        { label: "Any", value: "ALL" },
+        { label: "GET", value: "GET" },
+        { label: "POST", value: "POST" },
+        { label: "PUT", value: "PUT" },
+        { label: "DELETE", value: "DELETE" },
+      ],
+    },
+    {
+      key: "statusCode",
+      label: "Mock Status",
+      type: "number",
+      default: 200,
+      isVisible: (data) => data.routeAction === "mock",
+    },
+    {
+      key: "responseBody",
+      label: "Mock Body (JSON/Text)",
       type: "textarea",
       placeholder: '{"success": true}',
+      isVisible: (data) => data.routeAction === "mock",
+    },
+    {
+      key: "headers",
+      label: "Headers (JSON)",
+      type: "textarea",
+      placeholder: '{"Content-Type": "application/json"}',
+      isVisible: (data) =>
+        data.routeAction === "mock" || data.routeAction === "modify_headers",
     },
   ],
-  block_resource: [
+
+  wait_network_match: [
     {
       key: "urlPattern",
       label: "URL Pattern",
       type: "text",
-      placeholder: "*.google-analytics.com",
+      placeholder: "**/api/success",
+      required: true,
+    },
+    {
+      key: "type",
+      label: "Wait For",
+      type: "select",
+      options: [
+        { label: "Response (Complete)", value: "response" },
+        { label: "Request (Sent)", value: "request" },
+      ],
+      default: "response",
+    },
+    {
+      key: "method",
+      label: "Method Filter (Optional)",
+      type: "select",
+      options: [
+        { label: "Any", value: "ALL" },
+        { label: "GET", value: "GET" },
+        { label: "POST", value: "POST" },
+        { label: "PUT", value: "PUT" },
+        { label: "DELETE", value: "DELETE" },
+      ],
+    },
+    {
+      key: "statusCode",
+      label: "Expected Status",
+      type: "number",
+      placeholder: "e.g. 200",
+      isVisible: (data) => data.type === "response",
+    },
+    {
+      key: "timeout",
+      label: "Timeout (ms)",
+      type: "number",
+      default: 30000,
+    },
+  ],
+
+  set_network_conditions: [
+    {
+      key: "profile",
+      label: "Throttling Profile",
+      type: "select",
+      options: [
+        { label: "No throttling", value: "No throttling" },
+        { label: "WiFi fast", value: "WiFi fast" },
+        { label: "WiFi slow", value: "WiFi slow" },
+        { label: "4G", value: "4G" },
+        { label: "Fast 3G", value: "Fast 3G" },
+        { label: "Slow 3G", value: "Slow 3G" },
+        { label: "2G", value: "2G" },
+        { label: "High Latency", value: "High Latency" },
+        { label: "Custom", value: "Custom" },
+        { label: "Offline", value: "Offline" },
+      ],
+      default: "No throttling",
+      required: true,
+    },
+    {
+      key: "offline",
+      label: "Offline Mode",
+      type: "checkbox",
+      isVisible: (data) => data.profile === "Custom",
+    },
+    {
+      key: "latency",
+      label: "Latency (ms)",
+      type: "number",
+      placeholder: "e.g. 150",
+      isVisible: (data) => data.profile === "Custom",
+    },
+    {
+      key: "downloadThroughput",
+      label: "Download (Kbps)",
+      type: "number",
+      placeholder: "e.g. 1600",
+      isVisible: (data) => data.profile === "Custom",
+    },
+    {
+      key: "uploadThroughput",
+      label: "Upload (Kbps)",
+      type: "number",
+      placeholder: "e.g. 750",
+      isVisible: (data) => data.profile === "Custom",
     },
   ],
 

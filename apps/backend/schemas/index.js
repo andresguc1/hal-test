@@ -54,6 +54,8 @@ export { default as waitForResponseBodySchema } from './wait_for_response/body.j
 export { default as waitForRequestBodySchema } from './wait_for_request/body.js';
 export { default as setNetworkConditionsBodySchema } from './set_network_conditions/body.js';
 export { default as clearAllMocksBodySchema } from './clear_all_mocks/body.js';
+export { default as configureRouteBodySchema } from './configure_route/body.js';
+export { default as waitNetworkMatchBodySchema } from './wait_network_match/body.js';
 
 // 🍪 Sesión y Contexto
 export { default as manageCookiesBodySchema } from './manage_cookies/body.js';

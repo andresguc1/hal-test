@@ -97,9 +97,19 @@ export const launch_browser = (payload) => {
   return {
     browserType: asString(payload?.browserType, "chromium"),
     headless: asBoolean(payload?.headless, false),
+    devicePreset: asString(payload?.devicePreset, "Desktop"),
     slowMo: asNumber(payload?.slowMo, 0, 0),
     args: asString(payload?.args, ""),
     maximizeWindow: asBoolean(payload?.maximizeWindow, false),
+    width: asNumber(payload?.width),
+    height: asNumber(payload?.height),
+    isMobile: asBoolean(payload?.isMobile, false),
+    hasTouch: asBoolean(payload?.hasTouch, false),
+    networkProfile: asString(payload?.networkProfile, "No throttling"),
+    offline: asBoolean(payload?.offline, false),
+    latency: asNumber(payload?.latency, 0),
+    downloadThroughput: asNumber(payload?.downloadThroughput, 0),
+    uploadThroughput: asNumber(payload?.uploadThroughput, 0),
   };
 };
 
@@ -140,26 +150,33 @@ export const close_browser = (payload) => {
 };
 
 export const resize_viewport = (payload = {}) => {
-  // --- Manejo de Width ---
-  const width = asNumber(payload.width);
-  if (!Number.isFinite(width) || width <= 0) {
-    throw new Error("Width inválido. Debe ser un número positivo.");
+  const devicePreset = asString(payload?.devicePreset);
+
+  // If no preset, validate width/height
+  if (!devicePreset || devicePreset === "Custom") {
+    const width = asNumber(payload.width);
+    if (!Number.isFinite(width) || width <= 0) {
+      throw new Error("Width inválido o faltante para tamaño personalizado.");
+    }
+
+    const height = asNumber(payload.height);
+    if (!Number.isFinite(height) || height <= 0) {
+      throw new Error("Height inválido o faltante para tamaño personalizado.");
+    }
+
+    return {
+      browserId: asString(payload?.browserId),
+      width,
+      height,
+      devicePreset: "Custom",
+    };
   }
 
-  // --- Manejo de Height ---
-  const height = asNumber(payload.height);
-  if (!Number.isFinite(height) || height <= 0) {
-    throw new Error("Height inválido. Debe ser un número positivo.");
-  }
-
-  // Construir el payload final
-  const body = {
-    width: Math.trunc(width),
-    height: Math.trunc(height),
+  // If preset exists, just send the preset name
+  return {
     browserId: asString(payload?.browserId),
+    devicePreset,
   };
-
-  return body;
 };
 
 export const manage_tabs = (payload = {}) => {
@@ -668,6 +685,12 @@ export const intercept_request = (payload) => {
   };
 };
 
+export const clear_all_mocks = (payload) => {
+  return {
+    browserId: asString(payload?.browserId),
+  };
+};
+
 // ---------------------------------------------
 // Builders (Sesión y Almacenamiento)
 // ---------------------------------------------
@@ -1060,5 +1083,16 @@ export const return_code = (payload) => {
     exitOnFail: asBoolean(payload?.exitOnFail, false),
     customCodes: asJsonString(payload?.customCodes, false, '"customCodes"'),
     verbose: asBoolean(payload?.verbose, false),
+  };
+};
+
+export const set_network_conditions = (payload) => {
+  return {
+    browserId: asString(payload?.browserId),
+    networkProfile: asString(payload?.networkProfile, "No throttling"),
+    offline: asBoolean(payload?.offline, false),
+    latency: asNumber(payload?.latency, 0),
+    downloadThroughput: asNumber(payload?.downloadThroughput, 0),
+    uploadThroughput: asNumber(payload?.uploadThroughput, 0),
   };
 };

@@ -281,6 +281,18 @@ const actionRoutes = [
         category: 'network',
     },
     {
+        path: 'configure_route',
+        schema: 'configureRouteBodySchema',
+        action: 'configureRouteAction',
+        category: 'network',
+    },
+    {
+        path: 'wait_network_match',
+        schema: 'waitNetworkMatchBodySchema',
+        action: 'waitNetworkMatchAction',
+        category: 'network',
+    },
+    {
         path: 'manage_cookies',
         schema: 'manageCookiesBodySchema',
         action: 'manageCookiesAction',

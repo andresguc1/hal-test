@@ -16,7 +16,8 @@ const interceptRequestBodySchema = Joi.object({
         .valid(...allowedMethods)
         .default('POST')
         .uppercase()
-        .optional(),
+        .optional()
+        .allow('', null),
 
     // 3. action (Acción a Realizar: mock | block | modify)
     action: Joi.string()

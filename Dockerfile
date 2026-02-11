@@ -13,10 +13,15 @@ COPY apps/frontend/package.json ./apps/frontend/
 COPY apps/web/package.json ./apps/web/
 
 # Install dependencies
-RUN pnpm install --frozen-lockfile
+ENV HUSKY=0
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
 # Copy the rest of the application
 COPY . .
+
+# Rebuild sqlite3 specifically for the Docker container architecture
+# This ensures native bindings work correctly
+RUN pnpm rebuild sqlite3
 
 # Build the frontend and landing page (monolith structure)
 # This will populate apps/backend/public/app and apps/backend/public/web

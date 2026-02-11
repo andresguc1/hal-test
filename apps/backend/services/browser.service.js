@@ -1,5 +1,6 @@
 import { chromium, firefox, webkit } from 'playwright';
 import { randomUUID } from 'crypto';
+import { DEVICE_PRESETS } from '../utils/constants.js';
 
 const MAX_BROWSERS = 3;
 
@@ -21,6 +22,7 @@ class BrowserManager {
             slowMo,
             args = '',
             maximizeWindow = false,
+            devicePreset = 'Desktop',
             timeout,
         } = options;
 
@@ -54,24 +56,24 @@ class BrowserManager {
             launchArgs = args;
         }
 
-        // 3. Configure Maximize Window
-        // If the user passes --start-maximized, --start-fullscreen or --kiosk manually in args,
-        // we must detect it to ensure the controller applies viewport: null
-        if (
-            launchArgs.includes('--start-maximized') ||
-            launchArgs.includes('--start-fullscreen') ||
-            launchArgs.includes('--kiosk')
-        ) {
-            maximizeWindow = true;
-        }
+        // 3. Configure Window Size and Mobile Simulation
+        const preset = DEVICE_PRESETS[devicePreset] || DEVICE_PRESETS.Desktop;
+        const isActuallyMobile = devicePreset !== 'Desktop' && devicePreset !== 'Custom';
 
-        // To maximize in Chromium/Playwright, --start-maximized and viewport null are typically used
-        if (maximizeWindow) {
+        // If it's a mobile preset, we ALWAYS force the preset size and ignore maximizeWindow
+        const shouldMaximize = maximizeWindow && devicePreset === 'Desktop';
+
+        // Use preset values unless 'Custom' is selected
+        const finalWidth = devicePreset === 'Custom' ? options.width || 1280 : preset.width || 1280;
+        const finalHeight =
+            devicePreset === 'Custom' ? options.height || 720 : preset.height || 720;
+        const isMobile = devicePreset === 'Custom' ? !!options.isMobile : !!preset.isMobile;
+
+        if (shouldMaximize) {
+            console.log('[BrowserService] Maximizing window');
             if (browserType === 'chromium' && !launchArgs.includes('--start-maximized')) {
                 launchArgs.push('--start-maximized');
             } else if (browserType === 'firefox') {
-                // Firefox does not support --start-maximized, we simulate with a large fixed size
-                // Firefox uses single-dash arguments for width/height
                 if (!launchArgs.some((arg) => arg.startsWith('-width'))) {
                     launchArgs.push('-width', '1920');
                 }
@@ -79,39 +81,67 @@ class BrowserManager {
                     launchArgs.push('-height', '1080');
                 }
             }
-            // WebKit handles window size differently,
-            // but viewport: null helps the page take the available size.
+        } else {
+            // For a perfect "Responsive" feel, we use --app mode if it's a mobile preset.
+            // This removes the address bar/tabs, allowing the window to be as thin as needed
+            // without being blocked by Chromium's minimum UI width.
+            const winWidth = finalWidth;
+            const winHeight = finalHeight;
+
+            console.log(
+                `[BrowserService] Responsive Window Mode: ${winWidth}x${winHeight} (No UI bars)`,
+            );
+
+            if (browserType === 'chromium') {
+                launchArgs.push(`--window-size=${winWidth},${winHeight}`);
+
+                if (isActuallyMobile && !headless) {
+                    console.log('[BrowserService] Enabling App Mode for ultra-clean mobile view');
+                    launchArgs.push(
+                        '--app=data:text/html,<html><head><title>HaltTest Mobile</title></head><body></body></html>',
+                    );
+                }
+            } else if (browserType === 'firefox') {
+                launchArgs.push('-width', String(winWidth));
+                launchArgs.push('-height', String(winHeight));
+            }
         }
 
-        console.log(
-            `[BrowserService] Launching ${browserType} (Headless: ${headless}, Maximize: ${maximizeWindow})`,
-        );
+        // Mobile simulation requires a specific User Agent
+        const userAgent = devicePreset === 'Custom' ? null : preset.userAgent;
+        if (isMobile || userAgent) {
+            const finalUA =
+                userAgent ||
+                'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1';
+
+            console.log(`[BrowserService] Applying User Agent: ${finalUA.substring(0, 50)}...`);
+            launchArgs.push(`--user-agent=${finalUA}`);
+        }
 
         // 4. Inject Stability Flags for Chromium
         if (browserType === 'chromium') {
             const stabilityArgs = [
                 '--disable-features=CDPScreenshotNewSurface',
-                '--disable-gpu', // Architect Recommendation for Linux
-                '--no-sandbox', // Critical for many server environments
-                '--disable-dev-shm-usage', // Use /tmp instead of /dev/shm
-                '--no-zygote', // Prevent complex process forks
-                '--disable-gpu-sandbox', // Additional GPU isolation bypass
-                '--disable-accelerated-2d-canvas', // Reduce rendering pressure
-                '--disable-gpu-compositing', // Force software compositing
-                '--font-render-hinting=none', // Prevent font-related crashes on some Linux distros
-                '--disable-background-timer-throttling', // Keep renderer active
-                '--disable-backgrounding-occluded-windows', // Keep active
-                '--disable-renderer-backgrounding', // Keep high priority
-                '--js-flags="--max-old-space-size=4096"', // Increase JS memory limit
-                '--disable-webgl', // Prevent GPU stalls on heavy sites
+                '--disable-gpu',
+                '--no-sandbox',
+                '--disable-dev-shm-usage',
+                '--no-zygote',
+                '--disable-gpu-sandbox',
+                '--disable-accelerated-2d-canvas',
+                '--disable-gpu-compositing',
+                '--font-render-hinting=none',
+                '--disable-background-timer-throttling',
+                '--disable-backgrounding-occluded-windows',
+                '--disable-renderer-backgrounding',
+                '--js-flags="--max-old-space-size=4096"',
+                '--disable-webgl',
                 '--disable-webgl2',
                 '--disable-3d-apis',
-                '--mute-audio', // Saves some background resources
-                '--disable-setuid-sandbox', // Additional sandbox bypass
-                '--disable-blink-features=AutomationControlled', // Hide automation
+                '--mute-audio',
+                '--disable-setuid-sandbox',
+                '--disable-blink-features=AutomationControlled',
             ];
 
-            // Additional flags for headless mode stability
             if (headless) {
                 stabilityArgs.push('--disable-software-rasterizer');
             }
@@ -120,6 +150,13 @@ class BrowserManager {
         }
 
         console.log(`[BrowserService] Final Launch Args: ${JSON.stringify(launchArgs)}`);
+
+        console.log('---------------------------------------------------------');
+        console.log(`[AUDIT] Launching ${browserType.toUpperCase()}`);
+        console.log(`[AUDIT] Target Viewport: ${finalWidth}x${finalHeight}`);
+        console.log(`[AUDIT] Mobile Simulation: ${isMobile ? 'ACTIVE ✅' : 'DISABLED'}`);
+        console.log(`[AUDIT] Device Preset: ${devicePreset}`);
+        console.log('---------------------------------------------------------');
 
         const browser = await browserEngine.launch({
             headless,

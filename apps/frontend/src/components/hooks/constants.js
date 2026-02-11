@@ -39,7 +39,7 @@ export const NODE_LABELS = {
   execute_js: "Execute JavaScript",
   wait_navigation: "Wait Navigation",
   wait_visible: "Wait Element",
-  wait_network: "Network Response",
+  wait_network: "Wait Network Idle",
   wait_for_element: "Wait Element (Adv)",
 
   // Diagnostics

@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Confirma tu registro - HalTest</title>
+    <style>
+        /* Reset básico para clientes de correo */
+        body,
+        table,
+        td,
+        a {
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+        }
+
+        table,
+        td {
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
+        }
+
+        img {
+            -ms-interpolation-mode: bicubic;
+            border: 0;
+            height: auto;
+            line-height: 100%;
+            outline: none;
+            text-decoration: none;
+        }
+
+        /* Estilos generales */
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100% !important;
+            height: 100% !important;
+            background-color: #0f172a;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Contenedor principal */
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #0f172a;
+        }
+
+        /* Header con gradiente */
+        .header {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            padding: 40px 20px;
+            text-align: center;
+            border-bottom: 2px solid rgba(99, 102, 241, 0.3);
+        }
+
+        .logo {
+            max-width: 120px;
+            height: auto;
+            margin-bottom: 20px;
+        }
+
+        .header-title {
+            color: #f1f5f9;
+            font-size: 28px;
+            font-weight: 700;
+            margin: 0;
+            letter-spacing: -0.015em;
+        }
+
+        /* Contenido principal */
+        .content {
+            background-color: #1e293b;
+            padding: 40px 30px;
+            border-left: 1px solid rgba(255, 255, 255, 0.05);
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .greeting {
+            color: #f1f5f9;
+            font-size: 18px;
+            font-weight: 600;
+            margin: 0 0 20px 0;
+        }
+
+        .message {
+            color: #94a3b8;
+            font-size: 15px;
+            line-height: 1.6;
+            margin: 0 0 30px 0;
+        }
+
+        /* Botón de confirmación */
+        .button-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        .confirm-button {
+            display: inline-block;
+            padding: 16px 40px;
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            color: #ffffff !important;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: 0.025em;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        .confirm-button:hover {
+            background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+            box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
+            transform: translateY(-2px);
+        }
+
+        /* Información adicional */
+        .info-box {
+            background-color: rgba(99, 102, 241, 0.1);
+            border-left: 3px solid #6366f1;
+            padding: 16px 20px;
+            margin: 30px 0;
+            border-radius: 4px;
+        }
+
+        .info-box p {
+            color: #cbd5e1;
+            font-size: 14px;
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        /* Link alternativo */
+        .alternative-link {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .alternative-link p {
+            color: #64748b;
+            font-size: 13px;
+            line-height: 1.5;
+            margin: 0 0 10px 0;
+        }
+
+        .link-text {
+            color: #6366f1;
+            word-break: break-all;
+            font-size: 12px;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* Footer */
+        .footer {
+            background-color: #0f172a;
+            padding: 30px 20px;
+            text-align: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .footer p {
+            color: #64748b;
+            font-size: 13px;
+            line-height: 1.6;
+            margin: 0 0 10px 0;
+        }
+
+        .footer-brand {
+            color: #94a3b8;
+            font-weight: 600;
+            font-size: 14px;
+            margin-top: 15px;
+        }
+
+        .footer-tagline {
+            color: #6366f1;
+            font-size: 12px;
+            font-style: italic;
+            margin-top: 5px;
+        }
+
+        /* Responsive */
+        @media only screen and (max-width: 600px) {
+            .email-container {
+                width: 100% !important;
+            }
+
+            .content {
+                padding: 30px 20px !important;
+            }
+
+            .header-title {
+                font-size: 24px !important;
+            }
+
+            .confirm-button {
+                padding: 14px 30px !important;
+                font-size: 15px !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+        style="background-color: #0f172a;">
+        <tr>
+            <td align="center" style="padding: 40px 10px;">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" class="email-container">
+
+                    <!-- Header -->
+                    <tr>
+                        <td class="header">
+                            <img src="https://raw.githubusercontent.com/yourusername/haltest/main/apps/frontend/public/images/haltest_logo.jpeg"
+                                alt="HalTest Logo" class="logo">
+                            <h1 class="header-title">Confirma tu registro</h1>
+                        </td>
+                    </tr>
+
+                    <!-- Contenido Principal -->
+                    <tr>
+                        <td class="content">
+                            <p class="greeting">¡Bienvenido a HalTest! 🚀</p>
+
+                            <p class="message">
+                                Gracias por registrarte en HalTest, la plataforma de automatización de pruebas impulsada
+                                por IA.
+                            </p>
+
+                            <p class="message">
+                                Para completar tu registro y comenzar a crear flujos de pruebas automatizados, por favor
+                                confirma tu dirección de correo electrónico haciendo clic en el botón de abajo:
+                            </p>
+
+                            <!-- Botón de Confirmación -->
+                            <div class="button-container">
+                                <a href="{{ .ConfirmationURL }}" class="confirm-button">
+                                    Confirmar mi correo
+                                </a>
+                            </div>
+
+                            <!-- Info Box -->
+                            <div class="info-box">
+                                <p>
+                                    <strong>⏱️ Este enlace expirará en 24 horas.</strong><br>
+                                    Si no solicitaste este registro, puedes ignorar este correo de forma segura.
+                                </p>
+                            </div>
+
+                            <!-- Link Alternativo -->
+                            <div class="alternative-link">
+                                <p>Si el botón no funciona, copia y pega el siguiente enlace en tu navegador:</p>
+                                <p class="link-text">{{ .ConfirmationURL }}</p>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td class="footer">
+                            <p>¿Necesitas ayuda? Visita nuestra <a href="https://haltest.dev/docs"
+                                    style="color: #6366f1; text-decoration: none;">documentación</a> o contacta con
+                                soporte.</p>
+                            <p class="footer-brand">HalTest</p>
+                            <p class="footer-tagline">Automatización de pruebas inteligente</p>
+                            <p style="color: #475569; font-size: 11px; margin-top: 20px;">
+                                © 2026 HalTest. Todos los derechos reservados.
+                            </p>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+
+</html>

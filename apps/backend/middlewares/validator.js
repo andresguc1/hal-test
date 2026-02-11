@@ -71,6 +71,7 @@ const validate = (schemas) => (req, res, next) => {
     // and Flight Recorder uses runId for step result logging.
     const originalNodeId = req.body && req.body.nodeId;
     const originalRunId = req.body && req.body.runId;
+    const originalBrowserId = req.body && req.body.browserId;
     const originalTakeScreenshot = req.body && req.body.takeScreenshot;
     const originalDebugMode = req.body && req.body.debugMode;
 
@@ -78,6 +79,7 @@ const validate = (schemas) => (req, res, next) => {
         req.body = value.body;
         if (originalNodeId) req.body.nodeId = originalNodeId;
         if (originalRunId) req.body.runId = originalRunId;
+        if (originalBrowserId) req.body.browserId = originalBrowserId;
         if (originalTakeScreenshot !== undefined) req.body.takeScreenshot = originalTakeScreenshot;
         if (originalDebugMode !== undefined) req.body.debugMode = originalDebugMode;
     }

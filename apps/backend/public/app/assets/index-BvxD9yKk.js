@@ -80662,13 +80662,11 @@ var C1e = class extends Dh {
             const n = this.options;
             ((this.options = this.#e.defaultMutationOptions(t)),
                 wx(this.options, n) ||
-                    this.#e
-                        .getMutationCache()
-                        .notify({
-                            type: 'observerOptionsUpdated',
-                            mutation: this.#n,
-                            observer: this,
-                        }),
+                    this.#e.getMutationCache().notify({
+                        type: 'observerOptionsUpdated',
+                        mutation: this.#n,
+                        observer: this,
+                    }),
                 n?.mutationKey &&
                 this.options.mutationKey &&
                 Xu(n.mutationKey) !== Xu(this.options.mutationKey)

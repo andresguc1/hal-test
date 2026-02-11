@@ -25,6 +25,122 @@ const variableManager = new VariableManager();
 const smartEmitLog = (message, type = 'info', nodeId = null) => {
     emitLog({ message, type, nodeId });
 };
+
+// ==========================================================
+import { DEVICE_PRESETS } from '../utils/constants.js';
+
+// ==========================================================
+// NETWORK PRESETS & UTILITIES
+// ==========================================================
+
+const NETWORK_PRESETS = {
+    'No throttling': {
+        offline: false,
+        latency: 0,
+        downloadThroughput: -1,
+        uploadThroughput: -1,
+    },
+    'WiFi fast': {
+        offline: false,
+        latency: 20,
+        downloadThroughput: (50 * 1024 * 1024) / 8,
+        uploadThroughput: (25 * 1024 * 1024) / 8,
+    },
+    'WiFi slow': {
+        offline: false,
+        latency: 80,
+        downloadThroughput: (8 * 1024 * 1024) / 8,
+        uploadThroughput: (2 * 1024 * 1024) / 8,
+    },
+    '4G': {
+        offline: false,
+        latency: 50,
+        downloadThroughput: (20 * 1024 * 1024) / 8,
+        uploadThroughput: (10 * 1024 * 1024) / 8,
+        connectionType: 'cellular4g',
+    },
+    'Fast 3G': {
+        offline: false,
+        latency: 150,
+        downloadThroughput: (1.5 * 1024 * 1024) / 8,
+        uploadThroughput: (750 * 1024) / 8,
+        connectionType: 'cellular3g',
+    },
+    'Slow 3G': {
+        offline: false,
+        latency: 400,
+        downloadThroughput: (400 * 1024) / 8,
+        uploadThroughput: (400 * 1024) / 8,
+        connectionType: 'cellular3g',
+    },
+    '2G': {
+        offline: false,
+        latency: 800,
+        downloadThroughput: (80 * 1024) / 8,
+        uploadThroughput: (30 * 1024) / 8,
+        connectionType: 'cellular2g',
+    },
+    'High Latency': {
+        offline: false,
+        latency: 2000,
+        downloadThroughput: (10 * 1024 * 1024) / 8,
+        uploadThroughput: (5 * 1024 * 1024) / 8,
+        connectionType: 'other',
+    },
+    Offline: {
+        offline: true,
+        latency: 0,
+        downloadThroughput: 0,
+        uploadThroughput: 0,
+    },
+};
+
+/**
+ * Applies network conditions to a page using CDP
+ */
+async function applyNetworkConditions(page, options) {
+    const {
+        networkProfile,
+        offline,
+        latency,
+        downloadThroughput,
+        uploadThroughput,
+        forceThrottling,
+    } = options;
+
+    if (!networkProfile && !forceThrottling) return;
+
+    let conditions = {};
+    if (networkProfile === 'Custom') {
+        conditions = {
+            offline: offline || false,
+            latency: latency || 0,
+            downloadThroughput:
+                downloadThroughput && downloadThroughput > 0 ? (downloadThroughput * 1024) / 8 : -1,
+            uploadThroughput:
+                uploadThroughput && uploadThroughput > 0 ? (uploadThroughput * 1024) / 8 : -1,
+        };
+    } else if (networkProfile) {
+        conditions = NETWORK_PRESETS[networkProfile] || NETWORK_PRESETS['No throttling'];
+    }
+
+    if (Object.keys(conditions).length === 0) return;
+
+    try {
+        const context = page.context();
+        const cdpSession = await context.newCDPSession(page);
+        await cdpSession.send('Network.emulateNetworkConditions', {
+            offline: conditions.offline,
+            latency: conditions.latency,
+            downloadThroughput: conditions.downloadThroughput,
+            uploadThroughput: conditions.uploadThroughput,
+            connectionType: conditions.connectionType || 'cellular4g',
+        });
+        console.log(`[Network] Throttling applied: ${networkProfile || 'Custom'}`);
+    } catch (err) {
+        console.warn('[Network] Failed to apply throttling:', err.message);
+    }
+}
 // ==========================================================
 // CONFIGURATION AND CONSTANTS
 // ==========================================================
@@ -88,33 +204,91 @@ async function getOrCreateContext(req, browser, browserId) {
             if (Array.isArray(contexts) && contexts.length > 0) {
                 const ctx = contexts[0];
                 try {
-                    if (typeof ctx.pages === 'function') {
-                        const pages = ctx.pages();
-                        if (Array.isArray(pages) && pages.length > 0) {
-                            console.log('[INFO] Reusing existing context with active pages');
-                            return ctx;
-                        }
-                    }
+                    // Test context health - this prevents 'guid not bound' errors
+                    await ctx.pages();
+                    return ctx;
                 } catch (err) {
-                    console.log('[WARN] Invalid existing context, creating new:', err.message);
+                    console.log('[WARN] Context unhealthy, closing and creating new:', err.message);
+                    await ctx.close().catch(() => {});
                 }
             }
         }
     } catch (err) {
         console.error('[ERROR] Error verifying contexts:', err.message);
-        throw new Error(`${req.t('common.browser_closed')}: ${err.message}`);
     }
 
     if (typeof browser.newContext === 'function') {
         console.log('[INFO] Creating new navigation context');
         try {
-            // Retrieve launch options to apply viewport settings
+            // Retrieve launch options to apply viewport and mobile settings
             let contextOptions = {};
             if (browserId) {
                 const entry = browserService.get(browserId);
-                if (entry && entry.options && entry.options.maximizeWindow) {
-                    console.log('[INFO] Applying viewport: null to maximize window');
-                    contextOptions.viewport = null;
+                if (entry && entry.options) {
+                    console.log(
+                        '[INFO] Found launch options for browser:',
+                        JSON.stringify(entry.options, null, 2),
+                    );
+
+                    const preset = DEVICE_PRESETS[entry.options.devicePreset] || {};
+                    const isMaximize =
+                        entry.options.maximizeWindow && entry.options.devicePreset === 'Desktop';
+
+                    if (isMaximize) {
+                        console.log('[INFO] Applying viewport: null to maximize window');
+                        contextOptions.viewport = null;
+                    } else {
+                        const devicePreset = entry.options.devicePreset || 'Desktop';
+                        const w = Number(
+                            devicePreset === 'Custom'
+                                ? entry.options.width || 1280
+                                : preset.width || 1280,
+                        );
+                        const h = Number(
+                            devicePreset === 'Custom'
+                                ? entry.options.height || 720
+                                : preset.height || 720,
+                        );
+                        const isMobile =
+                            devicePreset === 'Custom'
+                                ? !!entry.options.isMobile
+                                : !!preset.isMobile;
+                        const hasTouch =
+                            devicePreset === 'Custom'
+                                ? !!entry.options.hasTouch
+                                : !!preset.hasTouch;
+                        const userAgent = devicePreset === 'Custom' ? null : preset.userAgent;
+
+                        const dsf = Number(
+                            entry.options.deviceScaleFactor || preset.deviceScaleFactor || 1,
+                        );
+
+                        console.log('=========================================================');
+                        console.log(`[AUDIT] Creating Context for: ${devicePreset}`);
+                        console.log(`[AUDIT] Effective Viewport: ${w}x${h}`);
+                        console.log(`[AUDIT] Virtual Screen: ${w}x${h}`);
+                        console.log(`[AUDIT] Device Scale Factor: ${dsf}`);
+                        console.log(`[AUDIT] Mobile Mode: ${isMobile ? 'ACTIVE ✅' : 'OFF ❌'}`);
+                        console.log(
+                            `[AUDIT] Touch Events: ${hasTouch ? 'ENABLED 👆' : 'DISABLED'}`,
+                        );
+                        console.log('=========================================================');
+
+                        contextOptions.viewport = { width: w, height: h };
+                        contextOptions.screen = { width: w, height: h };
+                        contextOptions.deviceScaleFactor = dsf;
+                        contextOptions.isMobile = isMobile;
+                        contextOptions.hasTouch = hasTouch;
+
+                        if (userAgent) {
+                            console.log(`[AUDIT] Identity (UA): ${userAgent.substring(0, 50)}...`);
+                            contextOptions.userAgent = userAgent;
+                        } else if (isMobile) {
+                            // Fallback generic mobile UA if custom but mobile
+                            contextOptions.userAgent =
+                                'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1';
+                        }
+                    }
                 }
             }
 
@@ -123,9 +297,6 @@ async function getOrCreateContext(req, browser, browserId) {
             return newContext;
         } catch (err) {
             console.error('[ERROR] Could not create context:', err.message);
-            if (err.message.includes('Browser closed') || err.message.includes('Target closed')) {
-                throw new Error(req.t('common.browser_closed'));
-            }
             throw new Error(`${req.t('actions.launch_browser.error')}: ${err.message}`);
         }
     }
@@ -172,6 +343,14 @@ async function getActivePage(req, browserId) {
         const error = new Error(req.t('common.page_closed'));
         error.status = 400;
         throw error;
+    }
+
+    // --- Apply Launch Network Conditions if present ---
+    if (validation.entry.options && validation.entry.options.networkProfile) {
+        if (!pageInstance._networkConditionsApplied) {
+            await applyNetworkConditions(pageInstance, validation.entry.options);
+            pageInstance._networkConditionsApplied = true;
+        }
     }
 
     return { page: pageInstance, browserId: targetBrowserId, context };
@@ -549,26 +728,56 @@ export const launchBrowserAction = async (req, res) => {
         const { debugMode } = req.body;
         if (debugMode) {
             const latestBrowser = browserService.getLatest();
-            // Reuse if exists and is connected
-            if (latestBrowser && latestBrowser.browser.isConnected()) {
-                console.log('[ACTION] Reusing existing browser (Debug Mode)');
-                // Retrieve ID
-                const browserId = Array.from(browserService.keys()).pop();
+            const latestId = Array.from(browserService.keys()).pop();
 
-                smartEmitLog('Reusing existing browser (Debug Mode)', 'info', nodeId);
-                if (nodeId) emitExecutionStatus({ stepId: nodeId, status: 'success' });
-                return res.status(200).json({
-                    success: true,
-                    message: 'Browser reused (Debug Mode)',
-                    browserId,
-                    reused: true,
-                    headless: latestBrowser.options.headless || false,
-                });
+            // Reuse if exists and is connected, AND options match
+            if (latestBrowser && latestBrowser.browser.isConnected()) {
+                const oldOpts = latestBrowser.options || {};
+                const newOpts = req.body || {};
+
+                // Detect changes that require a browser restart
+                const hasChanges =
+                    oldOpts.devicePreset !== newOpts.devicePreset ||
+                    oldOpts.width !== newOpts.width ||
+                    oldOpts.height !== newOpts.height ||
+                    oldOpts.isMobile !== newOpts.isMobile ||
+                    oldOpts.maximizeWindow !== newOpts.maximizeWindow ||
+                    oldOpts.headless !== newOpts.headless;
+
+                if (!hasChanges) {
+                    console.log('[ACTION] Reusing existing browser (Debug Mode)');
+                    smartEmitLog(
+                        `Reusing browser (${oldOpts.devicePreset || 'Desktop'})`,
+                        'info',
+                        nodeId,
+                    );
+                    if (nodeId) emitExecutionStatus({ stepId: nodeId, status: 'success' });
+                    return res.status(200).json({
+                        success: true,
+                        message: 'Browser reused (Debug Mode)',
+                        browserId: latestId,
+                        reused: true,
+                        headless: latestBrowser.options.headless || false,
+                    });
+                } else {
+                    console.log(
+                        `[ACTION] Options changed (${oldOpts.devicePreset} -> ${newOpts.devicePreset}), restarting browser...`,
+                    );
+                    smartEmitLog(
+                        `Preset changed to ${newOpts.devicePreset}, restarting...`,
+                        'info',
+                        nodeId,
+                    );
+                    await browserService.delete(latestId).catch(() => {});
+                }
             }
         }
         // ---------------------------------------
 
-        console.log('[ACTION] Starting browser launch...');
+        console.log(
+            '[ACTION] Starting browser launch with options:',
+            JSON.stringify(req.body, null, 2),
+        );
         const { browserId } = await browserService.launchBrowser(req.body);
         const duration = Date.now() - start;
 
@@ -1852,9 +2061,22 @@ export const getSetContentAction = (req, res) =>
 // waitForElementAction: Waits for a specific condition on a selector
 export const waitForElementAction = (req, res) =>
     executePlaywrightAction(req, res, 'wait_for_element', async (page, opts) => {
-        const { selector, condition = 'visible', timeout = 30000 } = opts;
+        const { selector, condition = 'visible', timeout = 30000, scrollIntoView = false } = opts;
 
         try {
+            // Scroll if requested
+            if (scrollIntoView) {
+                try {
+                    // First wait for it to be attached (so we can scroll)
+                    await page.waitForSelector(selector, { state: 'attached', timeout });
+                    const el = page.locator(selector).first();
+                    await el.scrollIntoViewIfNeeded({ timeout: 5000 }).catch(() => {});
+                } catch (err) {
+                    // Ignore scroll errors, maybe it's not interpretable yet or will fail in the main wait
+                    console.warn(`[WARN] Scroll attempt failed for '${selector}':`, err.message);
+                }
+            }
+
             // Map condition to Playwright's state
             // Conditions 'visible', 'hidden', 'attached', 'detached' match Playwright states
             const playwrightState = condition;
@@ -1947,7 +2169,7 @@ export const waitVisibleAction = (req, res) =>
 export const waitNavigationAction = (req, res) =>
     executePlaywrightAction(req, res, 'wait_navigation', async (page, opts) => {
         // Extract parameters with safe defaults
-        const { waitUntil = 'networkidle', timeout = 10000 } = opts;
+        const { url, waitUntil = 'load', timeout = 30000 } = opts;
 
         // Validate waitUntil against Playwright's allowed states
         const validStates = ['load', 'domcontentloaded', 'networkidle'];
@@ -1958,11 +2180,16 @@ export const waitNavigationAction = (req, res) =>
         }
 
         try {
-            // Idempotent wait for the desired load state
-            await page.waitForLoadState(waitUntil, { timeout: Number(timeout) });
+            if (url) {
+                // Wait for a specific URL or pattern
+                await page.waitForURL(url, { waitUntil, timeout: Number(timeout) });
+            } else {
+                // Idempotent wait for the desired load state on the current page
+                await page.waitForLoadState(waitUntil, { timeout: Number(timeout) });
+            }
         } catch (error) {
             throw new Error(
-                `Wait navigation failed (state: ${waitUntil}, timeout: ${timeout}ms): ${error.message}`,
+                `Wait navigation failed (url: ${url || 'current'}, state: ${waitUntil}, timeout: ${timeout}ms): ${error.message}`,
             );
         }
 
@@ -2514,103 +2741,17 @@ export const waitForRequestAction = (req, res) =>
 
 export const setNetworkConditionsAction = (req, res) =>
     executePlaywrightAction(req, res, 'set_network_conditions', async (page, opts) => {
-        const { profile, offline, latency, downloadThroughput, uploadThroughput } = opts;
+        const { profile } = opts;
 
-        const context = page.context();
-        const cdpSession = await context.newCDPSession(page);
-
-        // Profile definitions (similar to Chrome DevTools)
-        const PRESETS = {
-            'No throttling': {
-                offline: false,
-                latency: 0,
-                downloadThroughput: -1,
-                uploadThroughput: -1,
-            },
-            'WiFi fast': {
-                offline: false,
-                latency: 20, // 10-30 ms avg
-                downloadThroughput: (50 * 1024 * 1024) / 8, // 50 Mbps avg
-                uploadThroughput: (25 * 1024 * 1024) / 8, // 25 Mbps avg
-            },
-            'WiFi slow': {
-                offline: false,
-                latency: 80, // 50-100 ms avg
-                downloadThroughput: (8 * 1024 * 1024) / 8, // 8 Mbps avg
-                uploadThroughput: (2 * 1024 * 1024) / 8, // 2 Mbps avg
-            },
-            '4G': {
-                offline: false,
-                latency: 50, // 40-80 ms avg
-                downloadThroughput: (20 * 1024 * 1024) / 8, // 20 Mbps avg
-                uploadThroughput: (10 * 1024 * 1024) / 8, // 10 Mbps avg
-                connectionType: 'cellular4g',
-            },
-            'Fast 3G': {
-                offline: false,
-                latency: 150, // ms
-                downloadThroughput: (1.5 * 1024 * 1024) / 8, // 1.6 Mbps -> bytes/s
-                uploadThroughput: (750 * 1024) / 8, // 750 Kbps
-                connectionType: 'cellular3g',
-            },
-            'Slow 3G': {
-                offline: false,
-                latency: 400, // ms
-                downloadThroughput: (400 * 1024) / 8, // 400 Kbps
-                uploadThroughput: (400 * 1024) / 8, // 400 Kbps
-                connectionType: 'cellular3g',
-            },
-            '2G': {
-                offline: false,
-                latency: 800, // 500-1000 ms avg
-                downloadThroughput: (80 * 1024) / 8, // 80 Kbps avg
-                uploadThroughput: (30 * 1024) / 8, // 30 Kbps avg
-                connectionType: 'cellular2g',
-            },
-            'High Latency': {
-                offline: false,
-                latency: 2000, // Very high latency
-                downloadThroughput: (10 * 1024 * 1024) / 8, // 10 Mbps (can be decent throughput but high latency)
-                uploadThroughput: (5 * 1024 * 1024) / 8,
-                connectionType: 'other', // Simulate unstable connection
-            },
-            Offline: {
-                offline: true,
-                latency: 0,
-                downloadThroughput: 0,
-                uploadThroughput: 0,
-            },
-        };
-
-        let conditions = {};
-
-        if (profile === 'Custom') {
-            conditions = {
-                offline: offline || false,
-                latency: latency || 0,
-                downloadThroughput:
-                    downloadThroughput && downloadThroughput > 0
-                        ? (downloadThroughput * 1024) / 8
-                        : -1,
-                uploadThroughput:
-                    uploadThroughput && uploadThroughput > 0 ? (uploadThroughput * 1024) / 8 : -1,
-            };
-        } else {
-            conditions = PRESETS[profile] || PRESETS['Fast 3G'];
-        }
-
-        // Emulate network conditions via CDP
-        await cdpSession.send('Network.emulateNetworkConditions', {
-            offline: conditions.offline,
-            latency: conditions.latency,
-            downloadThroughput: conditions.downloadThroughput,
-            uploadThroughput: conditions.uploadThroughput,
-            connectionType: conditions.connectionType || 'cellular4g',
+        // Map UI field 'profile' to schema field 'networkProfile'
+        await applyNetworkConditions(page, {
+            ...opts,
+            networkProfile: opts.profile,
+            forceThrottling: true,
         });
 
         return {
             message: req.t('actions.set_network_conditions.success', { profile }),
-            data: conditions,
         };
     });
 
@@ -2985,6 +3126,132 @@ export const dragDropAction = (req, res) =>
         };
     });
 /**
+ * Consolidates intercept_request, block_resource, modify_headers, mock_response
+ */
+export const configureRouteAction = (req, res) =>
+    executePlaywrightAction(req, res, 'configure_route', async (page, opts) => {
+        const {
+            urlPattern,
+            routeAction = 'abort',
+            method,
+            statusCode = 200,
+            responseBody,
+            headers,
+            timeout,
+        } = opts;
+        if (!urlPattern) throw new Error(req.t('errors.url_pattern_required'));
+
+        const handleRoute = async (route) => {
+            const request = route.request();
+            const methodFilter =
+                method && method.toUpperCase() !== 'ALL' ? method.toUpperCase() : null;
+            if (methodFilter && request.method().toUpperCase() !== methodFilter) {
+                return route.fallback();
+            }
+
+            try {
+                if (routeAction === 'abort') {
+                    await route.abort();
+                } else if (routeAction === 'mock') {
+                    let finalBody = responseBody;
+                    if (typeof finalBody !== 'string' && finalBody) {
+                        finalBody = JSON.stringify(finalBody);
+                    }
+                    let finalHeaders = {};
+                    if (headers) {
+                        try {
+                            finalHeaders = JSON.parse(headers);
+                        } catch (e) {
+                            console.warn('[WARN] Invalid headers JSON in mock');
+                        }
+                    }
+                    await route.fulfill({
+                        status: Number(statusCode),
+                        body: finalBody,
+                        headers: finalHeaders,
+                        contentType: 'application/json',
+                    });
+                } else if (routeAction === 'modify_headers') {
+                    let headersObj = {};
+                    try {
+                        headersObj = JSON.parse(headers || '{}');
+                    } catch (e) {
+                        throw new Error(req.t('errors.headers_json_required'));
+                    }
+                    const originalHeaders = request.headers();
+                    await route.continue({
+                        headers: { ...originalHeaders, ...headersObj },
+                    });
+                } else if (routeAction === 'log') {
+                    console.log(`[ROUTE LOG] ${request.method()} ${request.url()}`);
+                    await route.continue();
+                } else {
+                    await route.continue();
+                }
+            } catch (err) {
+                console.warn(`[WARN] Route handler error for ${urlPattern}: ${err.message}`);
+            }
+        };
+
+        await page.route(urlPattern, handleRoute);
+        if (timeout > 0) {
+            setTimeout(() => {
+                page.unroute(urlPattern, handleRoute).catch(() => {});
+            }, timeout);
+        }
+        return { message: `Route configured (${routeAction}) for: ${urlPattern}` };
+    });
+
+/**
+ * Consolidates wait_for_request and wait_for_response
+ */
+export const waitNetworkMatchAction = (req, res) =>
+    executePlaywrightAction(req, res, 'wait_network_match', async (page, opts) => {
+        const { type = 'response', urlPattern, method, statusCode, timeout = 30000 } = opts;
+        if (!urlPattern) throw new Error(req.t('errors.url_pattern_required'));
+
+        const createRegex = (str) => {
+            const escaped = str.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
+            return new RegExp(escaped, 'i'); // Case-insensitive and partial match
+        };
+        const regex = createRegex(urlPattern);
+        let data = {};
+
+        if (type === 'request') {
+            const request = await page.waitForRequest(
+                (req) => {
+                    const matchUrl = regex.test(req.url());
+                    const methodFilter =
+                        method && method.toUpperCase() !== 'ALL' ? method.toUpperCase() : null;
+                    const matchMethod =
+                        !methodFilter || req.method().toUpperCase() === methodFilter;
+                    return matchUrl && matchMethod;
+                },
+                { timeout: Number(timeout) },
+            );
+            data = { url: request.url(), method: request.method() };
+        } else {
+            const response = await page.waitForResponse(
+                (resp) => {
+                    const matchUrl = regex.test(resp.url());
+                    const reqMethod = resp.request().method().toUpperCase();
+                    const methodFilter =
+                        method && method.toUpperCase() !== 'ALL' ? method.toUpperCase() : null;
+                    const matchMethod = !methodFilter || reqMethod === methodFilter;
+                    const matchStatus = !statusCode || resp.status() === Number(statusCode);
+                    return matchUrl && matchMethod && matchStatus;
+                },
+                { timeout: Number(timeout) },
+            );
+            data = { url: response.url(), status: response.status() };
+        }
+        return {
+            message: `Waited for ${type} matching ${urlPattern}`,
+            data,
+        };
+    });
+
+/**
  * Acción genérica de interaccion que despacha a otras acciones según el campo 'action'.
  * Frontend usa esto para nodos genéricos de interaccion.
  */
@@ -3015,6 +3282,8 @@ export async function interactionAction(req, res) {
 
     // Mapa de acciones soportadas por el dispatcher
     const actionMap = {
+        configure_route: configureRouteAction,
+        wait_network_match: waitNetworkMatchAction,
         click: clickAction,
         type_text: typeTextAction,
         type: typeTextAction, // Common alias
@@ -3027,6 +3296,16 @@ export async function interactionAction(req, res) {
         open_url: openUrlAction,
         launch_browser: launchBrowserAction,
         close_browser: closeBrowserAction,
+        set_network_conditions: setNetworkConditionsAction,
+        clear_all_mocks: clearAllMocksAction,
+        wait_network: waitNetworkAction,
+        listen_events: listenEventsAction,
+        scroll: scrollAction,
+        hover: hoverAction,
+        upload_file: uploadFileAction,
+        manage_cookies: manageCookiesAction,
+        manage_storage: manageStorageAction,
+        drag_drop: dragDropAction,
     };
 
     const handler = actionMap[action];
@@ -3045,7 +3324,14 @@ export async function interactionAction(req, res) {
 
 export const resizeViewportAction = (req, res) =>
     executePlaywrightAction(req, res, 'resize_viewport', async (page, opts) => {
-        const { width, height } = opts;
+        const { devicePreset } = opts;
+        let { width, height } = opts;
+
+        // If a preset is provided, use its dimensions
+        if (devicePreset && DEVICE_PRESETS[devicePreset]) {
+            width = DEVICE_PRESETS[devicePreset].width;
+            height = DEVICE_PRESETS[devicePreset].height;
+        }
 
         if (!width || !height) {
             const error = new Error(req.t('errors.width_height_required'));
@@ -3053,11 +3339,40 @@ export const resizeViewportAction = (req, res) =>
             throw error;
         }
 
-        await page.setViewportSize({ width: Number(width), height: Number(height) });
+        const w = Number(width);
+        const h = Number(height);
+
+        // 1. Resize Internal Viewport
+        await page.setViewportSize({ width: w, height: h });
+
+        // 2. Attempt to resize physical window if headful
+        try {
+            const browser = page.context().browser();
+            if (browser) {
+                const browserId = req.body.browserId;
+                const entry = browserService.get(browserId);
+
+                // If we are in headful (headless=false), we try to resize the window via CDP or window calls
+                if (entry && !entry.options.headless) {
+                    console.log(`[ResizeViewport] Attempting physical resize to ${w}x${h}`);
+
+                    // Chromium specific: using CDP instance to resize window
+                    const session = await page.context().newCDPSession(page);
+                    const { windowId } = await session.send('Browser.getWindowForTarget');
+                    await session.send('Browser.setWindowBounds', {
+                        windowId,
+                        bounds: { width: w + 20, height: h + 100 }, // Add broad padding for headful UI
+                    });
+                    await session.detach();
+                }
+            }
+        } catch (err) {
+            console.warn('[ResizeViewport] Could not resize physical window:', err.message);
+        }
 
         return {
-            message: req.t('actions.resize_viewport.success', { width, height }),
-            traceDetails: { width, height },
+            message: req.t('actions.resize_viewport.success', { width: w, height: h }),
+            traceDetails: { width: w, height: h, devicePreset },
         };
     });
 

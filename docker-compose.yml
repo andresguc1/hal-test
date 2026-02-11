@@ -4,20 +4,22 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: hal-test-app
-    ports:
-      - "2001:2001"
+    network_mode: host
     volumes:
       - hal-test-storage:/app/apps/backend/storage
     environment:
       - NODE_ENV=production
       - PORT=2001
-      # IMPORTANT: If you need to override these in production, do it here or in .env
       - DATABASE_URL=${DATABASE_URL}
       - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
       - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
       - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
+      - HALTEST_MASTER_ENCRYPTION_KEY=${HALTEST_MASTER_ENCRYPTION_KEY}
     restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
 
 volumes:
   hal-test-storage:
