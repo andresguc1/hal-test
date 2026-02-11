@@ -1,240 +1,103 @@
-# HAL-TEST 🤖
-
-**HAL-TEST** is a modern, visual automation framework for browser orchestration and testing. Built with **React Flow** and **Playwright**, it provides an intuitive drag-and-drop interface for creating complex automation workflows without writing code.
-
-https://github.com/user-attachments/assets/a49ea28d-cf72-44f2-838c-05a96643c69e
-
 <div align="center">
-  <video src="./apps/frontend/public/others/haltest_vid_1.mp4" width="100%" autoplay loop muted></video>
+  <img src="apps/web/public/images/haltest_logo.jpeg" alt="HAL-TEST Logo" width="200" style="border-radius: 20px; margin-bottom: 20px;">
+
+  # HAL-TEST 🤖
+  ### The Missing Link in Browser Automation
+
+  [![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+  [![Playwright](https://img.shields.io/badge/Powered%20by-Playwright-green)](https://playwright.dev/)
+  [![React Flow](https://img.shields.io/badge/UI-React%20Flow-orange)](https://reactflow.dev/)
+  [![Slack](https://img.shields.io/badge/Community-Slack-purple)](https://join.slack.com/t/haltest-talk/shared_invite/zt-3o7wqlt53-tzFebjhK5TxQtYZbwK~f~g)
+
+  **HAL-TEST** is a modern, visual automation framework that bridges the gap between manual QA and technical automation. Built on top of **Playwright**, it provides a high-performance, node-based interface to build, manage, and scale complex browser workflows without writing a single line of boilerplate code.
 </div>
-
-## ✨ Key Features
-
-### Visual Flow Editor
-- **Node-Based Automation**: Build complex workflows using an intuitive drag-and-drop interface
-- **50+ Specialized Nodes**: Browser management, DOM manipulation, network control, AI integration
-- **Smart Connections**: Visual flow logic with animated execution feedback
-- **Drag & Drop**: Directly drag nodes from the library onto the canvas
-
-### Modern UX
-- **Motion Animations**: Smooth, professional animations powered by Motion 12
-- **Enhanced Canvas**: Premium visual design with gradients, shadows, and state badges
-- **Category-Specific Icons**: 50+ unique icons for instant node recognition
-- **Real-Time Feedback**: Live execution status with visual indicators
-
-### Developer Experience
-- **Multilingual Support (i18n)**: Full English/Spanish localization
-- **Project Management**: Multi-project/multi-flow organization with SQLite persistence
-- **Intelligent Clipboard**: Copy/paste/cut with automatic connection mapping
-- **Keyboard Shortcuts**: Complete shortcut system for power users
-
-### Advanced Features
-- **Network Orchestration**: Intercept, mock, and modify network requests
-- **Screenshot Automation**: Automatic before/after snapshots with IndexedDB storage
-- **LLM Integration**: AI-powered test generation and semantic validation
-- **Session Management**: Cookie, storage, and token persistence
-- **Remote Runner**: Execute workflows directly in the backend via API or CLI without opening a browser GUI.
-
-## 🏗️ Architecture
-
-### Tech Stack
-- **Frontend**: React, React Flow, Motion 12, Lucide Icons, TanStack Query
-- **Backend**: Node.js, Express, Sequelize (SQLite), Playwright
-- **Storage**: SQLite (projects/flows) + IndexedDB (screenshots)
-- **Build**: pnpm workspace + Turbo monorepo
-
-### Project Structure
-```
-hal-test/
-├── apps/
-│   ├── backend/          # Express API + Playwright runner
-│   └── frontend/         # React Flow UI
-├── packages/             # Shared utilities (if any)
-└── .github/             # GitHub templates & workflows
-```
-
-## 🚀 Quick Start
-
-### Prerequisites
-- **Node.js** 18+ ([Download](https://nodejs.org/))
-- **pnpm** ([Install](https://pnpm.io/installation))
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/andresguc1/hal-test.git
-   cd hal-test
-   ```
-
-2. **Install dependencies**
-   ```bash
-   pnpm install
-   ```
-
-3. **Setup environment**
-   Copy the root `.env` file and configure it:
-   ```bash
-   # In the project root
-   AUTH_ENABLED=false       # Set to 'false' for quick local access (Guest Mode)
-   VITE_AUTH_ENABLED=false  # Must match AUTH_ENABLED
-   ```
-   > [!TIP]
-   > Use **Guest Mode** (`AUTH_ENABLED=false`) to run HAL-TEST locally without needing a Supabase account. 
-   > 
-   > **Important Details:**
-   > - **Production Enforcement**: Guest Mode is **hard-disabled** in production builds (port 2001) for security. You must use a Supabase account in production.
-   > - **Logout Content**: In Development with Guest Mode enabled, clicking "Logout" will clear the session but remain in the dashboard, as the system automatically redirects guests to the app. 
-
-4. **Initialize database**
-   ```bash
-   pnpm --filter backend db:init
-   ```
-
-5. **Start development servers**
-   ```bash
-   pnpm dev
-   ```
-   - **Frontend**: http://localhost:5173/app/
-   - **Backend**: http://localhost:2001
-
-## 💻 Terminal CLI
-
-HAL-TEST comes with a powerful CLI for automation and CI/CD integration.
-
-### Installation
-
-To install the CLI globally:
-```bash
-# From the project root
-cd apps/cli
-npm install -g .
-```
-
-### Key Commands
-
-- **`haltest status`**: Check if the HAL-TEST server is responsive.
-- **`haltest list`**: List all projects and flows with their IDs.
-- **`haltest run <flowId>`**: Execute a flow and stream logs in real-time.
-- **`haltest run <flowId> --headed`**: Run with a visible browser.
-- **`haltest run <flowId> -o report.json`**: Save execution results to a file.
 
 ---
 
-## 📖 Usage
+## 📺 See it in Action
 
-### Creating Your First Flow
+<div align="center">
+  <img src="apps/web/public/video/base1.gif" width="100%" alt="HAL-TEST Demo">
+  <p><em>Visual node-based logic with real-time execution feedback.</em></p>
+</div>
 
-1. **Create a Project**: Click the project selector and create a new project
-2. **Add Nodes**: Drag nodes from the sidebar or click to add to canvas
-3. **Connect Nodes**: Draw connections between nodes to define execution order
-4. **Configure**: Click nodes to configure their parameters
-5. **Execute**: Click "Run Flow" to execute your automation
+## 🚀 Why HAL-TEST?
 
-### Example Workflows
+Most automation frameworks suffer from **"Framework Fatigue"**: complex YAMLs, brittle selectors, and high barriers to entry. HAL-TEST changes the game:
 
-**Web Scraping**
-```
-Launch Browser → Open URL → Find Element → Get Content → Save Results
-```
+* **Low Code, Pro Power**: Use the full strength of Playwright through a visual canvas.
+* **Zero Vendor Lock-in**: Export your flows or run them via the **HAL-TEST CLI**.
+* **Self-Healing Ready**: Designed to handle dynamic modern web apps with intelligent node logic.
+* **Built for Teams**: Allow manual QAs to build tests that Seniors can audit and scale.
 
-**Form Automation**
-```
-Launch Browser → Open URL → Type Text → Click Submit → Take Screenshot
-```
+## ✨ Key Features
 
-**API Testing with UI**
-```
-Launch Browser → Intercept Request → Mock Response → Verify UI
-```
+### 🧠 Visual Flow Editor
+* **Node-Based Logic**: 50+ specialized nodes for DOM manipulation, network interception, and AI.
+* **Smart Connections**: Animated execution feedback—watch your test run in real-time.
+* **Category-Specific UI**: Glassmorphic design with 50+ unique icons for instant recognition.
 
-## 🎨 Recent Enhancements
+### 🛠️ Developer-First DX
+* **Powerful CLI**: Integrated terminal tool for CI/CD pipelines (GitHub Actions, Jenkins).
+* **Network Orchestration**: Mock, intercept, and modify XHR/Fetch requests visually.
+* **Session Management**: Persist cookies, local storage, and auth tokens between runs.
+* **LLM Integration**: Semantic validation and AI-powered node generation.
 
-### Motion Integration (v1.2.0)
-- Smooth panel slide-in/out animations
-- Animated flow tab transitions
-- Interactive button hover effects
-- Professional entrance animations
+---
 
-### Canvas Visual Upgrade (v1.3.0)
-- Category-specific node icons (50+)
-- Gradient backgrounds & 3D shadows
-- Visual state badges (executing/success/error)
-- Enhanced edge animations
-- Dark gradient background
-- Glassmorphic controls
+## 🏗️ Architecture & Tech Stack
 
-### Drag & Drop (v1.3.0)
-- Direct drag from node library to canvas
-- Precise positioning
-- Backward compatible (click still works)
+- **Frontend**: React 18, React Flow, Motion 12, TanStack Query.
+- **Backend**: Node.js, Express, Playwright.
+- **Database**: SQLite (local persistence) + IndexedDB (client-side screenshots).
+- **Monorepo**: Turbo + pnpm workspaces.
 
-## 🤝 Community & Support
-Stay updated and get support from our community:
-- **Slack**: [Join HAL-TEST Talk](https://join.slack.com/t/haltest-talk/shared_invite/zt-3o7wqlt53-tzFebjhK5TxQtYZbwK~f~g)
-- **GitHub Issues**: For bug reports, feature requests, and technical discussions.
+---
 
-## 🐳 Docker Deployment (Recommended)
-Running HAL-TEST in Docker is the **recommended way** for production and testing. It ensures that all Playwright dependencies (system libraries) are correctly installed.
+## ⚡ Quick Start (Development)
 
-### Quick Start
+### Prerequisites
+- **Node.js** 18+ and **pnpm**
+
+### 1. Setup
 ```bash
-# Build and start the container
-docker compose up -d --build
+git clone [https://github.com/andresguc1/hal-test.git](https://github.com/andresguc1/hal-test.git)
+cd hal-test
+pnpm install
+2. Configure Guest Mode
+For quick local testing without Supabase:
 
-# Access the app
-open http://localhost:2001/app/
-```
-
-📚 **For detailed setup, troubleshooting, and production best practices, see [DOCKER.md](./DOCKER.md)**
-
-## 🚀 Production Deployment
-
-### Monolith Build
-To prepare a production build (Frontend + Web + Backend):
-```bash
-pnpm run build:monolith
-```
-This will compile the frontend and landing page into the `apps/backend/public` folder, allowing the backend to serve the entire application on port 2001.
-
-### Quick Deploy Script
-Use the provided script for automatic building and pushing to origin:
-```bash
-# Recommended for Render or other CI/CD environments
-bash deploy_prod.sh "Your commit message"
-```
-
-## 🐛 Troubleshooting
-
-### Port Already in Use
-```bash
-# Kill processes on ports 5173 or 2001
-lsof -ti:5173 | xargs kill -9
-lsof -ti:2001 | xargs kill -9
-```
-
-### Database Issues
-```bash
-# Reset the database
-pnpm --filter backend db:reset
+Bash
+# Set in your .env
+AUTH_ENABLED=false
+VITE_AUTH_ENABLED=false
+3. Run
+Bash
 pnpm --filter backend db:init
-```
+pnpm dev
+App: http://localhost:5173/app/
 
-## 📄 License
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+Server: http://localhost:2001
 
-## 🙏 Acknowledgements
-- [React Flow](https://reactflow.dev/) - Visual node editor
-- [Playwright](https://playwright.dev/) - Browser automation
-- [Motion](https://motion.dev/) - Modern animation library
-- [Lucide Icons](https://lucide.dev/) - Beautiful icon set
-- [TanStack Query](https://tanstack.com/query) - Data synchronization
+💻 Terminal CLI
+Automate the automation. Install the HAL-TEST CLI to run flows in headless mode:
 
-## 🌟 Show Your Support
-Give a ⭐️ if this project helped you!
+Bash
+cd apps/cli && npm install -g .
 
-## 📧 Contact
-**Andresguc1** - [@andresguc1](https://github.com/andresguc1)
-Join our **Slack Community**: [HAL-TEST Talk](https://join.slack.com/t/haltest-talk/shared_invite/zt-3o7wqlt53-tzFebjhK5TxQtYZbwK~f~g)
+# Run a flow by ID
+haltest run <flow_id> --headed
+🐳 Docker Deployment (Recommended)
+To avoid missing system dependencies for Playwright, use Docker:
 
-Project Link: [https://github.com/andresguc1/hal-test](https://github.com/andresguc1/hal-test)
+Bash
+docker compose up -d --build
+See DOCKER.md for detailed production setup.
+
+🤝 Community & Support
+Join our Slack: HAL-TEST Talk
+
+Star the Repo: If this project helps you, give us a ⭐!
+
+📄 License
+MIT License - Created by Andresguc1
