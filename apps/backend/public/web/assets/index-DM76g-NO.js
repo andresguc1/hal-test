@@ -16939,7 +16939,8 @@ function Tk({ onBack: e }) {
                         viewport: { once: !0 },
                         className: 'text-4xl md:text-5xl font-bold uppercase tracking-tight mb-4',
                         children: [
-                            'Unlock Your ',
+                            'Unlock Your',
+                            ' ',
                             C.jsx('span', {
                                 className: 'text-hal-primary-400',
                                 children: 'Full Potential',
