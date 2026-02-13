@@ -35,13 +35,13 @@ createRoot(document.getElementById("root")).render(
       >
         <ReactFlowProvider>
           <ToastProvider>
-            <SettingsProvider>
-              <AuthProvider>
+            <AuthProvider>
+              <SettingsProvider>
                 <LogProvider>
                   <App />
                 </LogProvider>
-              </AuthProvider>
-            </SettingsProvider>
+              </SettingsProvider>
+            </AuthProvider>
           </ToastProvider>
         </ReactFlowProvider>
       </ThemeProvider>

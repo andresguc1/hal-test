@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { api } from "../utils/api";
+import { supabase } from "../utils/supabaseClient";
 
 const SettingsContext = createContext();
 
@@ -65,13 +66,45 @@ export const SettingsProvider = ({ children }) => {
     }
   };
 
-  // Load keys on mount
+  // Load keys when session changes
   useEffect(() => {
-    loadVaultKeys();
-    // Listen for updates from other tabs/windows
-    const handleUpdate = () => loadVaultKeys();
+    let subscription = null;
+
+    const checkAndReload = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session) {
+        loadVaultKeys();
+      } else {
+        setVaultKeys([]);
+      }
+    };
+
+    checkAndReload();
+
+    // Listen for auth state changes locally within the provider if needed
+    // or just rely on the mount/unmount and parent state.
+    // However, to be extra safe, we listen for keys updated event too.
+    const handleUpdate = () => checkAndReload();
     window.addEventListener("hal_keys_updated", handleUpdate);
-    return () => window.removeEventListener("hal_keys_updated", handleUpdate);
+
+    // Listen for Supabase auth changes
+    const {
+      data: { subscription: authSubscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        loadVaultKeys();
+      } else {
+        setVaultKeys([]);
+      }
+    });
+    subscription = authSubscription;
+
+    return () => {
+      window.removeEventListener("hal_keys_updated", handleUpdate);
+      if (subscription) subscription.unsubscribe();
+    };
   }, []);
 
   // Persist settings (optional, simple implementation)
