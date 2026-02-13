@@ -36,6 +36,7 @@ import ExportDialog from "./components/ExportDialog";
 }
 import ContextMenu from "./components/ContextMenu";
 import CreationModal from "./components/CreationModal";
+import StarterOverlay from "./components/StarterOverlay";
 
 // import { colors } from "./components/styles/colors"; // Unused
 import { useFlowManager } from "./components/hooks/useFlowManager.js";
@@ -157,6 +158,7 @@ function Dashboard() {
         currentProject.flows[0];
       if (mainFlow) {
         switchFlow(mainFlow.id);
+        setIsStarterDismissed(false); // Reset dismissal on flow switch
       }
     }
   }, [currentProject, currentFlowId, switchFlow]);
@@ -203,6 +205,7 @@ function Dashboard() {
     total: 0,
     status: "",
   });
+  const [isStarterDismissed, setIsStarterDismissed] = useState(false);
   const [_isSaving, setIsSaving] = useState(false);
   const [menu, setMenu] = useState(null);
   /* --- MODAL STATES --- */
@@ -263,6 +266,8 @@ function Dashboard() {
     isReadOnly, // Added from useFlowManager
     replayRun, // HISTORY
     resetNodeStates, // HISTORY
+    isStarterTemplate,
+    loadStarterTemplate,
   } = useFlowManager(currentProject, currentFlowId, switchFlow);
 
   // Element Picker Callback (Previously handleElementPicked was here, we will replace the mess)
@@ -1140,6 +1145,7 @@ function Dashboard() {
 
         {/* 1. Header (MAREA Refactored) */}
         <AppHeader
+          isStarterTemplate={isStarterTemplate}
           onOpenSettings={openSettings}
           onOpenApiKeys={openApiKeys}
           onToggleHistory={() => {
@@ -1410,6 +1416,17 @@ function Dashboard() {
           onShowImport={() => setIsImportDialogOpen(true)}
           onShowExport={() => setIsExportDialogOpen(true)}
           hasUnsavedChanges={hasUnsavedChanges}
+        />
+
+        <StarterOverlay
+          isVisible={
+            nodes.length === 0 &&
+            !isStarterDismissed &&
+            !!currentFlowId &&
+            currentProject?.flows?.length === 1
+          }
+          onLoadTemplate={loadStarterTemplate}
+          onDismiss={() => setIsStarterDismissed(true)}
         />
 
         <CreationModal

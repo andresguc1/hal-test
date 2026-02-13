@@ -1,6 +1,6 @@
 import React, { memo } from "react";
 import { motion as Motion } from "motion/react"; // Renamed to Motion to avoid lint unused warning
-import { Sun, Moon, History, Layout } from "lucide-react";
+import { Sun, Moon, History, Layout, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
 import { useTranslation } from "react-i18next";
@@ -70,6 +70,7 @@ function AppHeader({
   onExitComponent,
   activeBrowserId,
   onStopSession,
+  isStarterTemplate,
 }) {
   const { theme, setTheme } = useTheme();
   const { t } = useTranslation();
@@ -159,6 +160,39 @@ function AppHeader({
             <span className="text-xs text-slate-600 font-medium italic">
               {t("header.no_project", "-- No Project --")}
             </span>
+          )}
+
+          {isStarterTemplate && (
+            <div className="group relative flex items-center gap-2 px-2 py-1 rounded bg-indigo-500/10 border border-indigo-500/20 animate-in fade-in slide-in-from-top-1 duration-500">
+              <Info size={14} className="text-indigo-400" />
+              <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-tighter">
+                Starter Template Active
+              </span>
+
+              {/* Educational Tooltip */}
+              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-3 w-72 p-4 bg-slate-900/95 border border-indigo-500/30 rounded-xl shadow-2xl backdrop-blur-md opacity-0 group-hover:opacity-100 transition-all duration-300 scale-95 group-hover:scale-100 origin-top z-[100] pointer-events-none">
+                <div className="flex items-start gap-3 mb-2">
+                  <div className="p-1.5 bg-indigo-500/20 rounded-lg text-indigo-400">
+                    <Layout size={16} />
+                  </div>
+                  <h4 className="text-xs font-bold text-white uppercase tracking-wider pt-1">
+                    Guide: First Steps
+                  </h4>
+                </div>
+                <p className="text-[11px] text-slate-300 leading-relaxed whitespace-normal italic">
+                  This flow demonstrates a complete Google Search and validation
+                  process. Use it to understand how nodes connect.
+                  <br />
+                  <br />
+                  <span className="text-indigo-400 font-bold">Tip:</span> Look
+                  for the pulsing nodes with "GUIDE" labels to learn what each
+                  one does!
+                </p>
+
+                {/* Carrot/Arrow */}
+                <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-slate-900 border-t border-l border-indigo-500/30 rotate-45" />
+              </div>
+            </div>
           )}
         </div>
       </div>

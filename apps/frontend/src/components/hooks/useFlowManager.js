@@ -16,6 +16,7 @@ import {
   VISUAL_CHANGE_NODES,
 } from "./constants";
 import { CATEGORY_STYLES, NODE_TYPE_MAP } from "../../config/nodeConstants";
+import { STARTER_TEMPLATE } from "../../config/starterTemplate";
 import * as payloadBuilders from "./payloadBuilders";
 import { NODE_STATES, PROFESSIONAL_COLORS, getNodeStyle } from "./flowStyles";
 import { debounce, wouldCreateCycle } from "../../utils/flowUtils";
@@ -137,7 +138,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
   const queryClient = useQueryClient();
   const { t } = useTranslation();
   const toast = useToast(); // Custom HAL Toast
-  const { getViewport } = useReactFlow();
+  const { getViewport, fitView } = useReactFlow();
 
   // State for nodes and edges
   const nodesRef = useRef([]); // To access updated state in callbacks
@@ -191,6 +192,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
 
   // PERSISTENT SESSION STATE
   const [activeBrowserId, setActiveBrowserId] = useState(null);
+  const [isStarterTemplate, setIsStarterTemplate] = useState(false);
 
   const executionAbortController = useRef(null);
   const lastLoadedFlowId = useRef(null); // Ref for preventing race conditions
@@ -1195,9 +1197,20 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
         return { success: false, error: "Acción inválida" };
       }
 
-      const { nodeId, type, payload } = action;
-      const endpoint =
-        (payload && payload.endpoint) || `/actions/${type || "unknown"}`;
+      const { nodeId, payload } = action;
+      // Robust type detection: check action.type, then node.data.type, then node.type
+      const type =
+        action.type || storeNode?.data?.type || storeNode?.type || "unknown";
+
+      if (type === "unknown") {
+        logger.error(
+          "No se pudo determinar el tipo de acción para el nodo",
+          { nodeId, actionKeys: Object.keys(action) },
+          "useFlowManager",
+        );
+      }
+
+      const endpoint = (payload && payload.endpoint) || `/actions/${type}`;
 
       // Get node (refresh from store ONLY if we need fallback data, but prefer payload)
       const storeNode = nodesRef.current.find((n) => n.id === nodeId);
@@ -1810,6 +1823,33 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
     [executeStep, updateNodeState, toast],
   );
 
+  const loadStarterTemplate = useCallback(() => {
+    setNodes(STARTER_TEMPLATE.nodes);
+    setEdges(
+      STARTER_TEMPLATE.edges.map((e) => ({
+        ...e,
+        type: "custom",
+        animated: true,
+      })),
+    );
+    setIsStarterTemplate(true);
+    setHasUnsavedChanges(true);
+    toast.success(
+      t("common.starter_template_loaded", "Starter Template loaded!"),
+    );
+
+    // Auto-center after loading (snappy and tight)
+    setTimeout(() => {
+      fitView({
+        duration: 400,
+        padding: { top: 0.1, bottom: 0.1, left: 0.02, right: 0.45 },
+        includeNodes: true,
+        minZoom: 0.1,
+        maxZoom: 0.95,
+      });
+    }, 300);
+  }, [setNodes, setEdges, t, toast, fitView]);
+
   const executeFlow = useCallback(
     async (options = {}) => {
       const { stopOnError = true, keepOpen = true } = options; // Default keepOpen=true for Edit Mode
@@ -1995,10 +2035,12 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
             runId,
           };
 
-          // Map 'component' type to something else? No, we skipped components above.
+          // Robust type detection for graph execution
+          const nodeType = node.data?.type || node.type || "unknown";
+
           const action = {
             nodeId: node.id,
-            type: node.data.type,
+            type: nodeType,
             payload,
           };
 
@@ -2930,5 +2972,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
     hasUnsavedChanges,
     detectOrphans: (n, e) => detectOrphans(n || nodes, e || edges),
     isConfigurationPanelVisible: !!selectedAction, // Derived visibility
+    loadStarterTemplate,
+    isStarterTemplate,
   };
 };

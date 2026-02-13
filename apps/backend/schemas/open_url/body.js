@@ -3,7 +3,13 @@
 import Joi from 'joi';
 
 // Valores válidos para el campo 'waitUntil' según Playwright
-const allowedWaitUntilValues = ['load', 'domcontentloaded', 'networkidle0', 'networkidle2'];
+const allowedWaitUntilValues = [
+    'load',
+    'domcontentloaded',
+    'networkidle',
+    'networkidle0',
+    'networkidle2',
+];
 
 /**
  * Schema para la acción open_url.
@@ -29,7 +35,7 @@ const openUrlBodySchema = Joi.object({
         .optional()
         .messages({
             'any.only':
-                'Valor no válido para "waitUntil". Use load, domcontentloaded, networkidle0 o networkidle2.',
+                'Valor no válido para "waitUntil". Use load, domcontentloaded, networkidle, networkidle0 o networkidle2.',
         }),
 
     // 3. timeout (Tiempo de espera máximo en milisegundos)

@@ -2,7 +2,13 @@
 
 import Joi from 'joi';
 
-const allowedWaitUntilValues = ['load', 'domcontentloaded', 'networkidle'];
+const allowedWaitUntilValues = [
+    'load',
+    'domcontentloaded',
+    'networkidle',
+    'networkidle0',
+    'networkidle2',
+];
 
 const waitNavigationBodySchema = Joi.object({
     // 1. url (URL de Destino Específica, Opcional)
@@ -22,7 +28,8 @@ const waitNavigationBodySchema = Joi.object({
         .required()
         .messages({
             'any.required': 'La condición de fin de navegación es obligatoria.',
-            'any.only': 'La condición debe ser load, domcontentloaded o networkidle.',
+            'any.only':
+                'La condición debe ser load, domcontentloaded, networkidle, networkidle0 o networkidle2.',
         }),
 
     // 4. browserId (ID del navegador objetivo) 🆕

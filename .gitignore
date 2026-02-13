@@ -52,3 +52,10 @@ Thumbs.db
 .gemini/
 temp/
 tmp/
+Issues.md
+.gitignore
+apps/prod_variables.env
+apps/frontend/public/images/haltest_pricing.jpg
+.gitignore
+.gitignore
+.gitignore
