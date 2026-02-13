@@ -46316,7 +46316,7 @@ const zce = 'https://mnnmebuodtdvavvkurwp.supabase.co',
             o = t.startsWith('/') ? t : `/${t}`;
         return (n.endsWith('/api') || (n = `${n}/api`), `${n}${o}`);
     },
-    Fce = 'http://localhost:2001/api',
+    Fce = '/api',
     Hv = Fce,
     Lv = async () => {
         const e = { 'Content-Type': 'application/json' };
@@ -66514,7 +66514,7 @@ const DL = ({ screenshotUrl: e, durationMs: t, timestamp: n }) => {
             d = ((f) => {
                 if (!f) return '';
                 if (f.startsWith('blob:') || f.startsWith('data:')) return f;
-                const p = 'http://localhost:2001/api',
+                const p = '',
                     m = p.replace(/\/api$/, ''),
                     g = n || Date.now(),
                     b = f.includes('?') ? '&' : '?';
@@ -94173,7 +94173,10 @@ function Ob(e, t) {
     );
 }
 Object.assign(Ob, { Manager: ej, Socket: Eq, io: Ob, connect: Ob });
-const Fje = () => 'http://localhost:2001/api'.replace(/\/api$/, ''),
+const Fje = () =>
+        window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? 'http://127.0.0.1:2001'
+            : window.location.origin,
     w4 = Fje(),
     qje = (e, t, n, o) => {
         const i = _.useRef(null),
@@ -95074,7 +95077,7 @@ function Yje({ isOpen: e, onClose: t, nodeData: n }) {
         d = o === 'error',
         f = o === 'success',
         m = a?.screenshot_path
-            ? `http://localhost:2001/api/${a.screenshot_path}`.replace('//storage', '/storage')
+            ? `http://localhost:2001/${a.screenshot_path}`.replace('//storage', '/storage')
             : null;
     return w.jsxDEV(
         j8,
@@ -99960,7 +99963,7 @@ var AAe = (e, t = !1) => {
                 return (
                     this.#c
                         ? (p = this.#c)
-                        : ((p = wCe(() => tCe(() => import('./CDWEKZTF-BSar_t91.js'), []))),
+                        : ((p = wCe(() => tCe(() => import('./CDWEKZTF-rgj_3o22.js'), []))),
                           (this.#c = p)),
                     jPe(this.#a, this.#i),
                     yCe(
