@@ -60,6 +60,8 @@ export const STARTER_TEMPLATE = {
       data: {
         type: "click",
         label: "Click Search",
+        starterHint:
+          "Click actions allow us to submit forms and navigate through the page.",
         configuration: {
           selector:
             "html > body > div:nth-of-type(2) > div:nth-of-type(4) > form > div > div > div:nth-of-type(3) > center > input",

@@ -46316,7 +46316,7 @@ const zce = 'https://mnnmebuodtdvavvkurwp.supabase.co',
             o = t.startsWith('/') ? t : `/${t}`;
         return (n.endsWith('/api') || (n = `${n}/api`), `${n}${o}`);
     },
-    Fce = 'https://hal-test-backend.onrender.com',
+    Fce = 'http://localhost:2001/api',
     Hv = Fce,
     Lv = async () => {
         const e = { 'Content-Type': 'application/json' };
@@ -66514,7 +66514,7 @@ const DL = ({ screenshotUrl: e, durationMs: t, timestamp: n }) => {
             d = ((f) => {
                 if (!f) return '';
                 if (f.startsWith('blob:') || f.startsWith('data:')) return f;
-                const p = 'https://hal-test-backend.onrender.com',
+                const p = 'http://localhost:2001/api',
                     m = p.replace(/\/api$/, ''),
                     g = n || Date.now(),
                     b = f.includes('?') ? '&' : '?';
@@ -71428,7 +71428,7 @@ const xwe = {
                             'div',
                             {
                                 className:
-                                    'absolute -top-28 left-1/2 -translate-x-1/2 z-50 pointer-events-none scale-90',
+                                    'absolute -top-36 left-1/2 -translate-x-1/2 z-50 pointer-events-none scale-90',
                                 children: w.jsxDEV(
                                     'div',
                                     {
@@ -88268,6 +88268,8 @@ const Pb = {
                 data: {
                     type: 'click',
                     label: 'Click Search',
+                    starterHint:
+                        'Click actions allow us to submit forms and navigate through the page.',
                     configuration: {
                         selector:
                             'html > body > div:nth-of-type(2) > div:nth-of-type(4) > form > div > div > div:nth-of-type(3) > center > input',
@@ -94171,7 +94173,7 @@ function Ob(e, t) {
     );
 }
 Object.assign(Ob, { Manager: ej, Socket: Eq, io: Ob, connect: Ob });
-const Fje = () => 'https://hal-test-backend.onrender.com'.replace(/\/api$/, ''),
+const Fje = () => 'http://localhost:2001/api'.replace(/\/api$/, ''),
     w4 = Fje(),
     qje = (e, t, n, o) => {
         const i = _.useRef(null),
@@ -95072,10 +95074,7 @@ function Yje({ isOpen: e, onClose: t, nodeData: n }) {
         d = o === 'error',
         f = o === 'success',
         m = a?.screenshot_path
-            ? `https://hal-test-backend.onrender.com/${a.screenshot_path}`.replace(
-                  '//storage',
-                  '/storage',
-              )
+            ? `http://localhost:2001/api/${a.screenshot_path}`.replace('//storage', '/storage')
             : null;
     return w.jsxDEV(
         j8,
@@ -99961,7 +99960,7 @@ var AAe = (e, t = !1) => {
                 return (
                     this.#c
                         ? (p = this.#c)
-                        : ((p = wCe(() => tCe(() => import('./CDWEKZTF-B1yGSmns.js'), []))),
+                        : ((p = wCe(() => tCe(() => import('./CDWEKZTF-BSar_t91.js'), []))),
                           (this.#c = p)),
                     jPe(this.#a, this.#i),
                     yCe(
