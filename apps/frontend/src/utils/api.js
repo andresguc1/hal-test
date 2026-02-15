@@ -85,6 +85,9 @@ const getHeaders = async () => {
       if (activeProvider) {
         headers["x-ai-provider"] = activeProvider;
       }
+      if (aiConfig.baseUrl) {
+        headers["x-ai-base-url"] = aiConfig.baseUrl;
+      }
     } catch (e) {
       console.error("Error parsing hal_ai_config", e);
     }

@@ -341,6 +341,7 @@ function AppFooter({
   onShowImport,
   onShowExport,
   hasUnsavedChanges,
+  version,
 }) {
   const [activeMenu, setActiveMenu] = useState(null); // 'project' | 'flow' | null
   const containerRef = useRef(null);
@@ -501,6 +502,15 @@ function AppFooter({
         >
           <Save size={18} />
         </button>
+
+        {/* VERSION DISPLAY */}
+        {version && (
+          <div className="ml-2 px-2 py-1 rounded bg-white/5 border border-white/5">
+            <span className="text-[10px] font-mono font-bold text-slate-500 tracking-tighter">
+              {version}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

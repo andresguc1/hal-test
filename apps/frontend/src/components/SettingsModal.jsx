@@ -31,6 +31,7 @@ import { cn } from "@/lib/utils";
 
 import providersData from "@/data/providers.json";
 import { KeyVaultPanel } from "./settings/KeyVaultPanel";
+import { AISettingsPanel } from "./settings/AISettingsPanel";
 
 /**
  * SettingsModal (Unified Hub)
@@ -232,11 +233,17 @@ export default function SettingsModal({
                     onValueChange={(val) => {
                       const firstModel = providersData.find((p) => p.id === val)
                         ?.models[0].id;
-                      setAiConfig((prev) => ({
-                        ...prev,
+                      const updatedConfig = {
+                        ...aiConfig,
                         activeProvider: val,
                         selectedModel: firstModel,
-                      }));
+                      };
+                      setAiConfig(updatedConfig);
+                      localStorage.setItem(
+                        "hal_ai_config",
+                        JSON.stringify(updatedConfig),
+                      );
+                      window.dispatchEvent(new Event("hal_ai_config_updated"));
                     }}
                   >
                     <SelectTrigger className="w-full bg-slate-900/50 border-slate-800 text-slate-200">
@@ -257,9 +264,15 @@ export default function SettingsModal({
                   <Label className="text-slate-300">Default Model</Label>
                   <Select
                     value={aiConfig.selectedModel}
-                    onValueChange={(val) =>
-                      setAiConfig((prev) => ({ ...prev, selectedModel: val }))
-                    }
+                    onValueChange={(val) => {
+                      const updatedConfig = { ...aiConfig, selectedModel: val };
+                      setAiConfig(updatedConfig);
+                      localStorage.setItem(
+                        "hal_ai_config",
+                        JSON.stringify(updatedConfig),
+                      );
+                      window.dispatchEvent(new Event("hal_ai_config_updated"));
+                    }}
                   >
                     <SelectTrigger className="w-full bg-slate-900/50 border-slate-800 text-slate-200">
                       <SelectValue placeholder="Select a model" />
@@ -273,6 +286,14 @@ export default function SettingsModal({
                     </SelectContent>
                   </Select>
                 </div>
+
+                <div className="bg-slate-800/50 h-px w-full my-4" />
+
+                {/* 3. AI Provider Settings (Base URL, Model, Temperature) */}
+                <AISettingsPanel
+                  aiConfig={aiConfig}
+                  setAiConfig={setAiConfig}
+                />
 
                 <div className="bg-slate-800/50 h-px w-full my-4" />
 

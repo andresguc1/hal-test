@@ -1,6 +1,14 @@
 import React, { memo } from "react";
 import { motion as Motion } from "motion/react"; // Renamed to Motion to avoid lint unused warning
-import { Sun, Moon, History, Layout, Info } from "lucide-react";
+import {
+  Sun,
+  Moon,
+  History,
+  Layout,
+  Info,
+  Database,
+  Sparkles,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
 import { useTranslation } from "react-i18next";
@@ -62,8 +70,12 @@ function AppHeader({
   onOpenSettings,
   onOpenApiKeys,
   onToggleHistory,
+  onToggleVariables,
   isToolboxVisible,
+  isVariablesVisible,
   onToggleToolbox,
+  onToggleAskAI,
+  isAskAIVisible,
   selectedProject,
   selectedFlow,
   viewStack,
@@ -209,6 +221,24 @@ function AppHeader({
 
         <HeaderButton onClick={onToggleHistory} title="Execution History">
           <History size={18} />
+        </HeaderButton>
+
+        <HeaderButton
+          onClick={onToggleVariables}
+          title="Variable Explorer"
+          className={cn(
+            isVariablesVisible && "text-emerald-500 bg-emerald-500/10",
+          )}
+        >
+          <Database size={18} />
+        </HeaderButton>
+
+        <HeaderButton
+          onClick={onToggleAskAI}
+          title="Ask AI (Debug Console)"
+          className={cn(isAskAIVisible && "text-indigo-400 bg-indigo-500/10")}
+        >
+          <Sparkles size={18} />
         </HeaderButton>
 
         <HeaderButton

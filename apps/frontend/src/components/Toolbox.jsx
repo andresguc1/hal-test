@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { motion as Motion, AnimatePresence } from "motion/react";
 import { useTranslation } from "react-i18next";
 import {
@@ -14,6 +14,7 @@ import {
   ChevronDown,
   Settings,
   X,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NODE_CATEGORIES, CATEGORY_STYLES } from "@/config/nodeConstants";
@@ -326,6 +327,17 @@ export default function ToolboxPanel({
 
   const [searchTerm, setSearchTerm] = useState("");
 
+  // Chat State
+  const [chatMessages, setChatMessages] = useState([]);
+  const messagesEndRef = useRef(null);
+
+  // Auto-scroll to bottom of chat
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [chatMessages]);
+
   const [openCategories, setOpenCategories] = useState({
     browser_management: true,
   });
@@ -393,8 +405,10 @@ export default function ToolboxPanel({
   const isAiReady = useMemo(() => {
     if (!aiConfig) return false;
     const provider = aiConfig.activeProvider;
+
+    if (provider === "ollama") return true;
+
     const key = aiConfig.keys?.[provider];
-    // Simple check: has provider and key (unless it's ollama which might not strictly need one but usually does in this context)
     return !!(provider && key);
   }, [aiConfig]);
 
@@ -406,6 +420,10 @@ export default function ToolboxPanel({
     const originalText = chatInput;
     setChatInput(""); // Clear immediately for UX
 
+    // Optimistically add user message
+    const newUserMsg = { role: "user", content: originalText };
+    setChatMessages((prev) => [...prev, newUserMsg]);
+
     try {
       const provider = aiConfig.activeProvider;
       const model = aiConfig.selectedModel;
@@ -414,18 +432,22 @@ export default function ToolboxPanel({
       let apiKeyToSend;
 
       if (selectedKeyId !== "default") {
-        // Send the Vault ID/Alias
         apiKeyToSend = selectedKeyId;
       } else {
-        // Legacy: Send the raw key from config (if exists) or let backend use Env
         apiKeyToSend = aiConfig.keys?.[provider];
       }
+
+      // Prepare history for context (optional, but good for chat)
+      const historyToSend = [...chatMessages, newUserMsg].map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
 
       const data = await api.post(
         "/ai/chat",
         {
-          messages: [{ role: "user", content: originalText }],
-          browserId: activeBrowserId, // Pass the active browser ID
+          messages: historyToSend, // Send full history
+          browserId: activeBrowserId,
           aiConfig,
         },
         {
@@ -440,15 +462,17 @@ export default function ToolboxPanel({
       const result = data; // { success, message, toolCalls }
 
       if (result.message) {
-        toast.success(`HAL-9001: ${result.message}`);
+        // Append Assistant Message
+        setChatMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: result.message },
+        ]);
       }
 
       // If tool calls happened, we might want to notify
       if (result.toolCalls && result.toolCalls.length > 0) {
         result.toolCalls.forEach((tc) => {
           if (tc.function.name === "highlight_element") {
-            // Frontend visual feedback? It's already handled by 'highlight_element' in the server execution (via DOM injection)
-            // But maybe we show a toast.
             toast.info("👁️ AI is inspecting the page...");
           }
           if (tc.function.name === "inspect_page") {
@@ -456,16 +480,11 @@ export default function ToolboxPanel({
           }
         });
       }
-
-      // Compatibility: If backend returned generate_flow data (it currently handles chat, but we might want both).
-      // The new chat endpoint returns text + tools.
-      // If we want to support "generate flow", standard chat might return text describing code.
-      // The user prompt was "generate flow".
-      // We might need to handle the JSON flow return in chat too if we want to keep that feature.
-      // For now, we focus on the "Brain" chat.
     } catch (error) {
       toast.error(`HAL Failed: ${error.message}`);
       setChatInput(originalText); // Restore text on error
+      // Optionally remove the failed user message?
+      // For now, keep it.
     } finally {
       setIsGenerating(false);
     }
@@ -628,42 +647,88 @@ export default function ToolboxPanel({
                     )}
                   </div>
 
-                  <button
-                    onClick={() => openSettings("integrations")}
-                    className="p-1.5 hover:bg-slate-800 rounded-md text-slate-500 hover:text-slate-300 transition-colors"
-                    title={t("toolbox.configureAI")}
-                  >
-                    <Settings size={14} />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    {chatMessages.length > 0 && (
+                      <button
+                        onClick={() => setChatMessages([])}
+                        className="p-1.5 hover:bg-slate-800 rounded-md text-slate-500 hover:text-slate-300 transition-colors"
+                        title="Clear History"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => openSettings("integrations")}
+                      className="p-1.5 hover:bg-slate-800 rounded-md text-slate-500 hover:text-slate-300 transition-colors"
+                      title={t("toolbox.configureAI")}
+                    >
+                      <Settings size={14} />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide bg-gradient-to-b from-slate-900/80 to-slate-900/40 border border-white/10 rounded-xl p-0 relative group overflow-hidden flex flex-col h-36 shadow-lg">
-                  <div className="flex-1 p-3 overflow-y-auto custom-scrollbar">
-                    <div className="flex gap-3 mb-2">
-                      <div className="w-5 h-5 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0">
-                        <Bot size={12} className="text-indigo-400" />
+                  <div className="flex-1 p-3 overflow-y-auto custom-scrollbar flex flex-col gap-3">
+                    {chatMessages.length === 0 ? (
+                      <div className="flex gap-3 mb-2">
+                        <div className="w-5 h-5 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0">
+                          <Bot size={12} className="text-indigo-400" />
+                        </div>
+                        <p className="text-[11px] text-slate-300 leading-relaxed mt-0.5">
+                          {isAiReady ? (
+                            <>
+                              Connected to{" "}
+                              <span className="text-indigo-300 font-semibold">
+                                {aiConfig?.activeProvider}
+                              </span>
+                              .
+                              <br />
+                              How can I help you automate today?
+                            </>
+                          ) : (
+                            <>
+                              I can help you build this flow. Try asking:{" "}
+                              <span className="text-indigo-300 italic">
+                                "Go to google.com and search for kittens"
+                              </span>
+                            </>
+                          )}
+                        </p>
                       </div>
-                      <p className="text-[11px] text-slate-300 leading-relaxed mt-0.5">
-                        {isAiReady ? (
-                          <>
-                            Connected to{" "}
-                            <span className="text-indigo-300 font-semibold">
-                              {aiConfig?.activeProvider}
-                            </span>
-                            .
-                            <br />
-                            How can I help you automate today?
-                          </>
-                        ) : (
-                          <>
-                            I can help you build this flow. Try asking:{" "}
-                            <span className="text-indigo-300 italic">
-                              "Go to google.com and search for kittens"
-                            </span>
-                          </>
+                    ) : (
+                      <>
+                        {chatMessages.map((msg, i) => (
+                          <div
+                            key={i}
+                            className={cn(
+                              "flex flex-col gap-1 max-w-[90%]",
+                              msg.role === "user"
+                                ? "self-end items-end"
+                                : "self-start items-start",
+                            )}
+                          >
+                            <div
+                              className={cn(
+                                "p-2 rounded-lg text-[11px] leading-relaxed",
+                                msg.role === "user"
+                                  ? "bg-indigo-600/90 text-white rounded-br-none"
+                                  : "bg-slate-800 text-slate-200 rounded-bl-none border border-slate-700",
+                              )}
+                            >
+                              {msg.content}
+                            </div>
+                          </div>
+                        ))}
+                        {isGenerating && (
+                          <div className="flex items-center gap-2 text-[10px] text-slate-500 ml-1 opacity-70">
+                            <Loader2 size={10} className="animate-spin" />
+                            <span>Thinking...</span>
+                          </div>
                         )}
-                      </p>
-                    </div>
+                        {/* Auto-scroll anchor */}
+                        <div ref={messagesEndRef} />
+                      </>
+                    )}
                   </div>
                   <div className="h-9 border-t border-white/5 bg-white/[0.02] flex items-center px-3 gap-2">
                     <input

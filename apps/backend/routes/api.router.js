@@ -24,6 +24,7 @@ const router = Router();
 // ==========================================================
 router.post('/inspector/start', startInspectorAction);
 router.post('/inspector/stop', stopInspectorAction);
+router.get('/variables', actions.getVariables);
 console.log('✅ Inspector routes registered: /start, /stop');
 
 router.use('/runs', runRouter);
@@ -293,27 +294,15 @@ const actionRoutes = [
         category: 'network',
     },
     {
-        path: 'manage_cookies',
-        schema: 'manageCookiesBodySchema',
-        action: 'manageCookiesAction',
-        category: 'session',
-    },
-    {
-        path: 'manage_storage',
-        schema: 'manageStorageBodySchema',
-        action: 'manageStorageAction',
-        category: 'session',
-    },
-    {
-        path: 'inject_tokens',
-        schema: 'injectTokensBodySchema',
-        action: 'injectTokensAction',
-        category: 'session',
-    },
-    {
         path: 'persist_session',
         schema: 'persistSessionBodySchema',
         action: 'persistSessionAction',
+        category: 'session',
+    },
+    {
+        path: 'manage_session',
+        schema: 'manageSessionBodySchema',
+        action: 'manageSessionAction',
         category: 'session',
     },
 

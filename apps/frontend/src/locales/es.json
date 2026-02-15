@@ -134,6 +134,7 @@
       "manage_cookies": "Gestionar Cookies",
       "manage_storage": "Gestionar Storage",
       "inject_tokens": "Inyectar Tokens",
+      "manage_session": "Gestionar Sesión",
       "persist_session": "Persistir Sesión",
       "create_context": "Crear Contexto",
       "cleanup_state": "Limpiar Estado",

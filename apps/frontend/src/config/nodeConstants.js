@@ -84,22 +84,12 @@ export const NODE_CATEGORIES = {
       "wait_network",
     ],
   },
-  session_management: {
-    icon: Cookie,
-    color: "indigo", // Session = Indigo
-    label: "Session",
-    nodes: [
-      "manage_cookies",
-      "manage_storage",
-      "inject_tokens",
-      "persist_session",
-    ],
-  },
   test_execution: {
     icon: CheckSquare,
     color: "lime",
     label: "Test Execution",
     nodes: [
+      "manage_session",
       "create_context",
       "cleanup_state",
       "handle_hooks",

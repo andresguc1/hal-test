@@ -26,6 +26,29 @@ const smartEmitLog = (message, type = 'info', nodeId = null) => {
     emitLog({ message, type, nodeId });
 };
 
+/**
+ * Returns all captured variables from the manager
+ */
+export const getVariables = (req, res) => {
+    try {
+        const flowVariables = variableManager.getAll('flow');
+        const globalVariables = variableManager.getAll('global');
+
+        res.json({
+            success: true,
+            data: {
+                flow: flowVariables,
+                global: globalVariables,
+            },
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: `Error retrieving variables: ${error.message}`,
+        });
+    }
+};
+
 // ==========================================================
 import { DEVICE_PRESETS } from '../utils/constants.js';
 
@@ -438,6 +461,7 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
         const result = await actionLogic(page, opts, targetBrowserId, context);
 
         const duration = Date.now() - start;
+        const finalMessage = result.message || `${actionName} completed successfully`;
 
         // 3. Register Traceability
         if (actionName !== 'launch_browser' && actionName !== 'open_url') {
@@ -450,7 +474,7 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
             });
         }
 
-        smartEmitLog(`${actionName} completed successfully (${duration}ms)`, 'success', nodeId);
+        smartEmitLog(`${finalMessage} (${duration}ms)`, 'success', nodeId);
 
         // --- FLIGHT RECORDER: Optional Screenshot on Success ---
         console.log(
@@ -2766,138 +2790,6 @@ export const clearAllMocksAction = (req, res) =>
 
         return { message: req.t('actions.clear_all_mocks.success') };
     });
-export const manageCookiesAction = (req, res) =>
-    executePlaywrightAction(req, res, 'manage_cookies', async (page, opts, browserId, context) => {
-        const { action, cookiesData } = opts;
-        let cookies = [];
-
-        // Parse cookiesData if present
-        if (cookiesData) {
-            try {
-                cookies = JSON.parse(cookiesData);
-            } catch (e) {
-                throw new Error('cookiesData debe ser un JSON string válido.');
-            }
-        }
-
-        if (action === 'get') {
-            const currentCookies = await context.cookies();
-            return { message: 'Cookies obtenidas', data: { cookies: currentCookies } };
-        } else if (action === 'set') {
-            if (!Array.isArray(cookies))
-                throw new Error('cookiesData debe ser un array de objetos cookie para "set".');
-            await context.addCookies(cookies);
-            return { message: 'Cookies establecidas correctamente' };
-        } else if (action === 'delete') {
-            if (!Array.isArray(cookies))
-                throw new Error(
-                    'cookiesData debe ser un array de nombres de cookies para "delete".',
-                );
-
-            // Delete specific cookies strategy: Get all, filter keep, clear all, add back keep.
-            const currentCookies = await context.cookies();
-            const namesToDelete = new Set(cookies);
-            const cookiesToKeep = currentCookies.filter((c) => !namesToDelete.has(c.name));
-
-            await context.clearCookies();
-            if (cookiesToKeep.length > 0) {
-                await context.addCookies(cookiesToKeep);
-            }
-            return { message: `Cookies eliminadas: ${cookies.join(', ')}` };
-        } else if (action === 'clear') {
-            await context.clearCookies();
-            return { message: 'Todas las Cookies han sido limpiadas' };
-        } else {
-            throw new Error(`Acción de cookies no válida: ${action}`);
-        }
-    });
-
-export const manageStorageAction = (req, res) =>
-    executePlaywrightAction(req, res, 'manage_storage', async (page, opts) => {
-        const { action, type = 'local', key, value } = opts; // type: 'local' | 'session'
-
-        if (action === 'get') {
-            const data = await page.evaluate(
-                ({ type, key }) => {
-                    const storage =
-                        type === 'session' ? window.sessionStorage : window.localStorage;
-                    if (key) return storage.getItem(key);
-                    return JSON.stringify(storage); // Retorna todo si no hay key
-                },
-                { type, key },
-            );
-            return { message: 'Storage obtenido', data: { value: data } };
-        } else if (action === 'set') {
-            await page.evaluate(
-                ({ type, key, value }) => {
-                    const storage =
-                        type === 'session' ? window.sessionStorage : window.localStorage;
-                    storage.setItem(key, value);
-                },
-                { type, key, value },
-            );
-            return { message: 'Storage actualizado' };
-        } else if (action === 'remove' || action === 'delete') {
-            await page.evaluate(
-                ({ type, key }) => {
-                    const storage =
-                        type === 'session' ? window.sessionStorage : window.localStorage;
-                    storage.removeItem(key);
-                },
-                { type, key },
-            );
-            return { message: 'Propiedad de storage eliminada' };
-        } else if (action === 'clear') {
-            await page.evaluate(
-                ({ type }) => {
-                    const storage =
-                        type === 'session' ? window.sessionStorage : window.localStorage;
-                    storage.clear();
-                },
-                { type },
-            );
-            return { message: 'Storage limpiado' };
-        } else {
-            throw new Error(`Acción de storage no válida: ${action}`);
-        }
-    });
-
-export const injectTokensAction = (req, res) =>
-    executePlaywrightAction(req, res, 'inject_tokens', async (page, opts, browserId, context) => {
-        const { target, key, value } = opts;
-
-        if (target === 'header') {
-            const headers = { [key]: value };
-            await page.setExtraHTTPHeaders(headers);
-            return { message: `Token inyectado en Header: ${key}` };
-        } else if (target === 'cookie') {
-            // Intentar usar URL de la página actual, o fallback a localhost si falla (requerido por Playwright)
-            let url = 'http://localhost';
-            try {
-                url = page.url();
-                if (url === 'about:blank') url = 'http://localhost';
-            } catch (e) {
-                // CORRECCIÓN: Evitar el bloque vacío
-                console.error('Error al obtener URL de la página para cookie:', e); //
-            }
-
-            await context.addCookies([
-                {
-                    name: key,
-                    value: value,
-                    url: url,
-                },
-            ]);
-            return { message: `Token inyectado en Cookie: ${key}` };
-        } else if (target === 'query') {
-            const currentUrl = new URL(page.url());
-            currentUrl.searchParams.set(key, value);
-            await page.goto(currentUrl.toString());
-            return { message: `Token inyectado en Query Param y recargado: ${key}` };
-        } else {
-            throw new Error(`Target de inyección no soportado: ${target}`);
-        }
-    });
 
 export const persistSessionAction = (req, res) =>
     executePlaywrightAction(req, res, 'persist_session', async (page, opts, browserId, context) => {
@@ -2964,6 +2856,158 @@ export const persistSessionAction = (req, res) =>
             throw new Error(`Acción de persistencia no válida: ${action}`);
         }
     });
+
+export const manageSessionAction = (req, res) =>
+    executePlaywrightAction(req, res, 'manage_session', async (page, opts, browserId, context) => {
+        const { target, action, key, value, variableName, cookiesData } = opts;
+
+        // 1. COOKIES
+        if (target === 'cookie') {
+            if (action === 'get') {
+                const cookies = await context.cookies();
+                if (key) {
+                    const cookie = cookies.find((c) => c.name === key);
+                    const val = cookie ? cookie.value : null;
+                    if (variableName) {
+                        variableManager.set(variableName, val, 'flow');
+                    }
+                    return {
+                        message: `Cookie ${key} obtenida: ${val}`,
+                        data: { value: val, cookie, variableStored: variableName },
+                    };
+                }
+                return { message: 'Cookies obtenidas', data: { cookies } };
+            } else if (action === 'set') {
+                let url = 'http://localhost';
+                try {
+                    url = page.url();
+                    if (url === 'about:blank') url = 'http://localhost';
+                } catch (e) {
+                    console.error('Error getting page URL for session cookie:', e);
+                }
+
+                const cookiesToSet = cookiesData
+                    ? JSON.parse(cookiesData)
+                    : [{ name: key, value, url }];
+                await context.addCookies(
+                    Array.isArray(cookiesToSet) ? cookiesToSet : [cookiesToSet],
+                );
+                return { message: 'Cookies establecidas' };
+            } else if (action === 'delete') {
+                const currentCookies = await context.cookies();
+                const namesToDelete = cookiesData
+                    ? new Set(JSON.parse(cookiesData))
+                    : new Set([key]);
+                const cookiesToKeep = currentCookies.filter((c) => !namesToDelete.has(c.name));
+                await context.clearCookies();
+                if (cookiesToKeep.length > 0) await context.addCookies(cookiesToKeep);
+                return { message: 'Cookies eliminadas' };
+            } else if (action === 'clear') {
+                await context.clearCookies();
+                return { message: 'Cookies limpiadas' };
+            }
+        }
+
+        // 2. STORAGE (Local / Session)
+        if (target === 'local_storage' || target === 'session_storage') {
+            const storageType = target === 'session_storage' ? 'session' : 'local';
+            if (action === 'get') {
+                const data = await page.evaluate(
+                    ({ storageType, key }) => {
+                        const storage =
+                            storageType === 'session' ? window.sessionStorage : window.localStorage;
+                        return key ? storage.getItem(key) : JSON.stringify(storage);
+                    },
+                    { storageType, key },
+                );
+                if (variableName) {
+                    variableManager.set(variableName, data, 'flow');
+                }
+                return {
+                    message: `${target} obtenido: ${data}`,
+                    data: { value: data, variableStored: variableName },
+                };
+            } else if (action === 'set') {
+                await page.evaluate(
+                    ({ storageType, key, value }) => {
+                        const storage =
+                            storageType === 'session' ? window.sessionStorage : window.localStorage;
+                        storage.setItem(key, value);
+                    },
+                    { storageType, key, value },
+                );
+                return { message: `${target} actualizado` };
+            } else if (action === 'delete') {
+                await page.evaluate(
+                    ({ storageType, key }) => {
+                        const storage =
+                            storageType === 'session' ? window.sessionStorage : window.localStorage;
+                        storage.removeItem(key);
+                    },
+                    { storageType, key },
+                );
+                return { message: `${target} eliminado` };
+            } else if (action === 'clear') {
+                await page.evaluate(
+                    ({ storageType }) => {
+                        const storage =
+                            storageType === 'session' ? window.sessionStorage : window.localStorage;
+                        storage.clear();
+                    },
+                    { storageType },
+                );
+                return { message: `${target} limpiado` };
+            }
+        }
+
+        // 3. HEADER
+        if (target === 'header') {
+            if (action === 'set') {
+                await page.setExtraHTTPHeaders({ [key]: value });
+                return { message: `Header ${key} inyectado` };
+            }
+            throw new Error(`Acción ${action} no soportada para headers`);
+        }
+
+        // 4. QUERY
+        if (target === 'query') {
+            if (action === 'set') {
+                const currentUrl = new URL(page.url());
+                currentUrl.searchParams.set(key, value);
+                await page.goto(currentUrl.toString());
+                return { message: `Query param ${key} inyectado y página recargada` };
+            }
+            throw new Error(`Acción ${action} no soportada para query params`);
+        }
+
+        throw new Error(`Combinación de target ${target} y acción ${action} no válida`);
+    });
+
+/**
+ * Specialized wrapper for Cookies management
+ */
+export const manageCookiesAction = (req, res) => {
+    req.body.target = 'cookie';
+    return manageSessionAction(req, res);
+};
+
+/**
+ * Specialized wrapper for Local/Session Storage management
+ */
+export const manageStorageAction = (req, res) => {
+    const { storageType } = req.body;
+    req.body.target = storageType === 'session' ? 'session_storage' : 'local_storage';
+    if (req.body.action === 'remove') req.body.action = 'delete'; // Compatibility
+    return manageSessionAction(req, res);
+};
+
+/**
+ * Specialized wrapper for Token injection (Headers, Cookies, Query)
+ */
+export const injectTokensAction = (req, res) => {
+    req.body.action = 'set';
+    return manageSessionAction(req, res);
+};
 
 export const createContextAction = (req, res) =>
     executePlaywrightAction(req, res, 'create_context', async (_page, _opts, browserId) => {

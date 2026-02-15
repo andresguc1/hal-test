@@ -13,7 +13,7 @@ const router = express.Router();
  *     summary: Validates API Key against the provider.
  */
 router.post('/validate', async (req, res) => {
-    const { provider, apiKey, baseUrl } = req.body;
+    const { provider, apiKey, baseUrl, model } = req.body;
 
     // API KEY is strictly required for validation unless it's a "local" check (but even Ollama needs pseudo-auth setup)
     if (!apiKey) {
@@ -21,7 +21,7 @@ router.post('/validate', async (req, res) => {
     }
 
     try {
-        await aiService.validateKey({ provider, apiKey, baseUrl });
+        await aiService.validateKey({ provider, apiKey, baseUrl, model });
         res.json({
             success: true,
             message: `Connected to ${provider} successfully!`,
@@ -53,7 +53,7 @@ router.post('/generate-flow', async (req, res) => {
     const model = req.headers['x-ai-model'];
     const provider = req.headers['x-ai-provider'] || 'openai'; // Allow provider override
 
-    if (!apiKey) {
+    if (!apiKey && provider?.toLowerCase() !== 'ollama') {
         return res
             .status(401)
             .json({ error: 'Missing API configuration. Please set up AI settings.' });
@@ -114,6 +114,132 @@ router.post('/heal-selector', async (req, res) => {
     } catch (error) {
         console.error('AI Heal Error', error);
         res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * @swagger
+ * /api/ai/health:
+ *   get:
+ *     summary: Health check for Ollama (or any local LLM)
+ *     parameters:
+ *       - in: query
+ *         name: baseUrl
+ *         schema:
+ *           type: string
+ *         description: Ollama base URL
+ *       - in: query
+ *         name: model
+ *         schema:
+ *           type: string
+ *         description: Model to check availability for
+ */
+router.get('/health', async (req, res) => {
+    const baseUrl = req.query.baseUrl || 'http://localhost:11434';
+    const model = req.query.model || 'gemma3';
+
+    try {
+        const result = await aiService.healthCheck({ baseUrl, model });
+        res.json({
+            success: result.ollamaRunning && result.modelLoaded,
+            ...result,
+        });
+    } catch (error) {
+        console.error('[AI] Health Check Error:', error);
+        res.status(500).json({
+            success: false,
+            ollamaRunning: false,
+            modelLoaded: false,
+            error: error.message,
+        });
+    }
+});
+
+/**
+ * @swagger
+ * /api/ai/ask:
+ *   post:
+ *     summary: Ask AI - Debug console for testing LLM connectivity
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               prompt:
+ *                 type: string
+ *               model:
+ *                 type: string
+ *               baseUrl:
+ *                 type: string
+ *               temperature:
+ *                 type: number
+ */
+router.post('/ask', async (req, res) => {
+    const { prompt, messages, model, baseUrl, temperature } = req.body;
+
+    if (!prompt && (!messages || messages.length === 0)) {
+        return res.status(400).json({ error: 'Prompt or messages is required' });
+    }
+
+    // Resolve provider/model from headers or body
+    const provider = req.headers['x-ai-provider'] || 'ollama';
+    const activeModel = model || req.headers['x-ai-model'] || 'gemma3';
+    const activeBaseUrl = baseUrl || req.headers['x-ai-base-url'] || 'http://localhost:11434';
+    const apiKey = req.headers['x-ai-api-key'] || 'ollama';
+    const temp = temperature !== undefined ? temperature : 0.7;
+
+    // Construct prompt from history if messages provided
+    let finalPrompt = prompt;
+    if (messages && messages.length > 0) {
+        // Use full history as prompt if prompt is missing, or append prompt to history
+        const historyText = messages
+            .map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
+            .join('\n');
+        finalPrompt = prompt ? `${historyText}\nUser: ${prompt}` : historyText;
+    }
+
+    console.log(`[AI] Ask AI request. Provider: ${provider}, Model: ${activeModel}`);
+
+    try {
+        const result = await aiService.generateText({
+            prompt: finalPrompt,
+            model: activeModel,
+            provider,
+            apiKey,
+            baseUrl: activeBaseUrl,
+            temperature: temp,
+            system: 'You are HAL-9001, a QA automation expert assistant. Answer testing-related queries concisely and accurately.',
+            taskType: 'reasoning',
+        });
+
+        res.json({
+            success: true,
+            text: result.text,
+            usage: result.usage,
+            model: activeModel,
+            provider,
+        });
+    } catch (error) {
+        console.error('[AI] Ask AI Error:', error);
+
+        // Classify errors for better frontend UX
+        const msg = error.message?.toLowerCase() || '';
+        let statusCode = 500;
+        let userMessage = error.message;
+
+        if (msg.includes('econnrefused') || msg.includes('fetch failed')) {
+            statusCode = 503;
+            userMessage = 'Cannot connect to Ollama. Is it running? Start with: ollama serve';
+        } else if (msg.includes('model') && msg.includes('not found')) {
+            statusCode = 404;
+            userMessage = `Model '${activeModel}' not found. Pull it with: ollama pull ${activeModel}`;
+        } else if (msg.includes('timeout')) {
+            statusCode = 504;
+            userMessage = 'Request timed out. The model may be loading or the server is busy.';
+        }
+
+        res.status(statusCode).json({ success: false, error: userMessage });
     }
 });
 

@@ -49,9 +49,7 @@ const {
     modifyHeadersBodySchema,
 
     // Sesión
-    manageCookiesBodySchema,
-    manageStorageBodySchema,
-    injectTokensBodySchema,
+    manageSessionBodySchema,
     persistSessionBodySchema,
     createContextBodySchema,
     closeContextBodySchema,
@@ -226,9 +224,7 @@ const options = {
                 ModifyHeadersBodySchema: convertJoiToOpenApiSchema(modifyHeadersBodySchema),
 
                 // Session Management
-                ManageCookiesBodySchema: convertJoiToOpenApiSchema(manageCookiesBodySchema),
-                ManageStorageBodySchema: convertJoiToOpenApiSchema(manageStorageBodySchema),
-                InjectTokensBodySchema: convertJoiToOpenApiSchema(injectTokensBodySchema),
+                ManageSessionBodySchema: convertJoiToOpenApiSchema(manageSessionBodySchema),
                 PersistSessionBodySchema: convertJoiToOpenApiSchema(persistSessionBodySchema),
                 CreateContextBodySchema: convertJoiToOpenApiSchema(createContextBodySchema),
                 CloseContextBodySchema: convertJoiToOpenApiSchema(closeContextBodySchema),

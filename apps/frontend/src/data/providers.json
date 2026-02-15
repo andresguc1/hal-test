@@ -71,6 +71,10 @@
     "defaultBaseUrl": "http://localhost:11434",
     "models": [
       {
+        "id": "gemma3",
+        "name": "Gemma 3 (Default)"
+      },
+      {
         "id": "qwen2.5-coder",
         "name": "Qwen 2.5 Coder (Recommended)"
       },

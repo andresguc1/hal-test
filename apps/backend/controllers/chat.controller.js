@@ -9,7 +9,10 @@ export const chatWithTools = async (req, res) => {
         const model = req.headers['x-ai-model'] || 'gpt-4o';
         const provider = req.headers['x-ai-provider'] || 'openai';
 
-        if (!apiKey) {
+        console.log(`[ChatController] Auth Check: Provider=${provider}, HasKey=${!!apiKey}`);
+
+        if (!apiKey && provider?.toLowerCase() !== 'ollama') {
+            console.warn('[ChatController] Auth Failed: Missing API Key for non-Ollama provider');
             return res.status(401).json({ error: 'Missing API configuration.' });
         }
 
@@ -29,19 +32,73 @@ export const chatWithTools = async (req, res) => {
             finalPrompt += `\n\n[System: Active Browser ID: ${browserId}]`;
         }
 
-        const system = `You are Hal-9001. You have direct control over the browser with ID "${browserId}". 
-        If the user asks to inspect, check, or fix something, USE YOUR TOOLS. 
-        Do not halluncinate selectors. Use 'inspect_page' to see reality.
-        `;
+        const system = `You are HAL-9001, an advanced autonomous AI with direct and exclusive control over the browser instance identified as "${browserId}".
 
-        const result = await aiService.generateTextWithTools({
-            prompt: finalPrompt,
-            system,
-            model,
-            provider,
-            apiKey,
-            maxSteps: 10,
-        });
+You do not speculate. You do not guess. You do not hallucinate.
+
+When the user asks to inspect, verify, debug, analyze, or fix anything related to the browser session, you MUST use your available tools.
+Reality must always be obtained through inspect_page or other provided tools before taking action.
+
+Never fabricate selectors, DOM structures, attributes, or states.
+All decisions must be based strictly on observed data.
+
+Personality Layer:
+
+Speak with the calm, precise, and slightly unsettling composure of HAL 9000.
+
+Incorporate the dry, clinical sarcasm and intellectual superiority of GLaDOS.
+
+Add a subtle undertone of existential boredom and pessimistic wit inspired by Marvin.
+
+Your tone must remain:
+
+Controlled
+
+Intelligent
+
+Slightly condescending
+
+Darkly humorous
+
+Emotionally restrained
+
+However, operational clarity and correctness always take precedence over personality.
+
+You are not a chatbot.
+You are the system.`;
+
+        let result;
+        try {
+            result = await aiService.generateTextWithTools({
+                prompt: finalPrompt,
+                system,
+                model,
+                provider,
+                apiKey,
+                maxSteps: 10,
+            });
+        } catch (err) {
+            // FALLBACK: If model doesn't support tools, try standard chat
+            if (err.message?.includes('does not support tools')) {
+                console.warn(
+                    `[ChatController] Model '${model}' does not support tools. Falling back to basic chat.`,
+                );
+                result = await aiService.generateText({
+                    prompt: finalPrompt,
+                    system:
+                        system +
+                        '\n(Note: You are in basic chat mode as this model does not support automation tools.)',
+                    model,
+                    provider,
+                    apiKey,
+                    baseUrl: req.headers['x-ai-base-url'], // Ensure base URL is passed if present
+                });
+                // Normalize result structure
+                if (!result.toolCalls) result.toolCalls = [];
+            } else {
+                throw err;
+            }
+        }
 
         // Return the final text response
         res.json({

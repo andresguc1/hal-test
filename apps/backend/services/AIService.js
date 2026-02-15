@@ -32,11 +32,16 @@ class AIService {
                 return createGoogleGenerativeAI({ apiKey: effectiveKey });
             case 'anthropic':
                 return createAnthropic({ apiKey: effectiveKey });
-            case 'ollama':
+            case 'ollama': {
+                let ollamaUrl = baseUrl || 'http://localhost:11434/v1';
+                if (!ollamaUrl.endsWith('/v1')) {
+                    ollamaUrl = `${ollamaUrl.replace(/\/$/, '')}/v1`;
+                }
                 return createOpenAI({
-                    baseURL: baseUrl || 'http://localhost:11434/v1',
+                    baseURL: ollamaUrl,
                     apiKey: 'ollama',
                 });
+            }
             case 'groq':
                 return createOpenAI({
                     baseURL: 'https://api.groq.com/openai/v1',
@@ -56,8 +61,7 @@ class AIService {
      * @param {string} [preferredProvider] - Optional override
      */
     selectBestModel(taskType, preferredProvider) {
-        if (preferredProvider === 'ollama')
-            return { provider: 'ollama', model: 'deepseek-coder-v2' };
+        if (preferredProvider === 'ollama') return { provider: 'ollama', model: 'gemma3' };
 
         switch (taskType) {
             case 'coding':
@@ -75,7 +79,7 @@ class AIService {
                 return { provider: 'openai', model: 'gpt-4o' };
 
             case 'local':
-                return { provider: 'ollama', model: 'deepseek-coder-v2' };
+                return { provider: 'ollama', model: 'gemma3' };
 
             default:
                 return { provider: 'openai', model: 'gpt-4o' };
@@ -176,20 +180,38 @@ class AIService {
         }
     }
 
-    async validateKey({ provider, apiKey, baseUrl }) {
+    async validateKey({ provider, apiKey, baseUrl, model }) {
         try {
             console.log(
                 `[AIService] Validating key for provider: ${provider}, apiKey provided: ${!!apiKey}`,
             );
+
+            // For Ollama, use healthCheck first for better error messages
+            if (provider === 'ollama') {
+                const validationModel = model || 'gemma3';
+                const health = await this.healthCheck({
+                    baseUrl: baseUrl || 'http://localhost:11434',
+                    model: validationModel,
+                });
+                if (!health.ollamaRunning) {
+                    throw new Error(
+                        'Ollama is not running. Please start Ollama with: ollama serve',
+                    );
+                }
+                if (!health.modelLoaded) {
+                    throw new Error(
+                        `Model '${validationModel}' is not available. Pull it with: ollama pull ${validationModel}`,
+                    );
+                }
+                return true;
+            }
+
             const providerInstance = this.getProvider(provider, apiKey, baseUrl);
 
             // Standard Validation Models (Updated for 2026 Compatibility)
             let modelId = 'gpt-3.5-turbo'; // Fallback to most accessible model
             if (provider === 'google') modelId = 'gemini-pro'; // High availability fallback
             if (provider === 'anthropic') modelId = 'claude-3-5-sonnet-20240620';
-            if (provider === 'ollama') modelId = 'deepseek-coder-v2';
-
-            // Special handling removed. Using standard generateText for validation.
 
             const modelRef = providerInstance(modelId);
             await generateText({
@@ -199,8 +221,76 @@ class AIService {
             });
             return true;
         } catch (e) {
-            // Enhanced error mapping recommended by user
+            // Enhanced Ollama-specific error mapping
+            const msg = e.message?.toLowerCase() || '';
+            if (msg.includes('econnrefused') || msg.includes('fetch failed')) {
+                throw new Error(
+                    'Cannot connect to Ollama. Ensure it is running at the specified Base URL.',
+                );
+            }
+            if (msg.includes('model') && msg.includes('not found')) {
+                throw new Error(
+                    'Model not found on Ollama. Pull it first with: ollama pull <model_name>',
+                );
+            }
+            if (msg.includes('timeout') || msg.includes('etimedout')) {
+                throw new Error(
+                    'Connection timed out. Ollama may be loading the model or the server is unresponsive.',
+                );
+            }
             throw new Error(`Validation Failed: ${e.message}`);
+        }
+    }
+
+    /**
+     * Health Check for Ollama
+     * Pings the Ollama API to verify reachability and model availability.
+     * @param {{ baseUrl: string, model: string }} options
+     * @returns {{ ollamaRunning: boolean, modelLoaded: boolean, models: string[], error?: string }}
+     */
+    async healthCheck({ baseUrl = 'http://localhost:11434', model = 'gemma3' }) {
+        const result = {
+            ollamaRunning: false,
+            modelLoaded: false,
+            models: [],
+            error: null,
+        };
+
+        try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 8000);
+
+            const response = await fetch(`${baseUrl}/api/tags`, {
+                signal: controller.signal,
+            });
+            clearTimeout(timeout);
+
+            if (!response.ok) {
+                result.error = `Ollama responded with status ${response.status}`;
+                return result;
+            }
+
+            const data = await response.json();
+            result.ollamaRunning = true;
+            result.models = (data.models || []).map((m) => m.name);
+
+            // Check if target model is available (match by prefix, e.g. 'gemma3' matches 'gemma3:latest')
+            result.modelLoaded = result.models.some(
+                (m) => m === model || m.startsWith(`${model}:`),
+            );
+
+            return result;
+        } catch (e) {
+            const msg = e.message?.toLowerCase() || '';
+            if (msg.includes('abort') || msg.includes('timeout')) {
+                result.error =
+                    'Connection timed out. Ollama may be starting up or is unresponsive.';
+            } else if (msg.includes('econnrefused') || msg.includes('fetch failed')) {
+                result.error = `Ollama is not running at ${baseUrl}. Start it with: ollama serve`;
+            } else {
+                result.error = e.message;
+            }
+            return result;
         }
     }
 

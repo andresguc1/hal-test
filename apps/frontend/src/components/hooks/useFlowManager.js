@@ -1864,6 +1864,16 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
         duration: 0,
       };
 
+      // 0. Safety Check: currentProject must be loaded
+      if (!currentProject) {
+        const errorMsg = t(
+          "common.error_no_project",
+          "No project loaded. Please wait for the project to load or refresh.",
+        );
+        toast.error(errorMsg);
+        return { success: false, error: errorMsg };
+      }
+
       // Execution State
       executionAbortController.current = new AbortController();
       resetNodeStates();
@@ -1900,8 +1910,11 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
       try {
         // If we have a runId passed in options, use it? Usually it's new.
         if (!options.runId) {
+          const projectId = currentProject?.id;
+          if (!projectId) throw new Error("Current Project ID is missing.");
+
           const { runId: newRunId } = await projectManager.createRun(
-            currentProject.id,
+            projectId,
             currentFlowId,
             {
               // Capture Flow Snapshot for Forensic Replay

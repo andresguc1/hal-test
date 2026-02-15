@@ -874,6 +874,60 @@ const NODE_INPUTS = {
     },
   ],
 
+  manage_session: [
+    {
+      key: "target",
+      label: "Target",
+      type: "select",
+      options: [
+        { label: "Cookie", value: "cookie" },
+        { label: "Local Storage", value: "local_storage" },
+        { label: "Session Storage", value: "session_storage" },
+        { label: "HTTP Header", value: "header" },
+        { label: "Query Param", value: "query" },
+      ],
+      default: "cookie",
+      required: true,
+    },
+    {
+      key: "action",
+      label: "Action",
+      type: "select",
+      options: [
+        { label: "Get", value: "get" },
+        { label: "Set", value: "set" },
+        { label: "Delete", value: "delete" },
+        { label: "Clear All", value: "clear" },
+      ],
+      default: "get",
+      required: true,
+    },
+    {
+      key: "key",
+      label: "Key / Name",
+      type: "text",
+      placeholder: "e.g. auth_token",
+      isVisible: (data) => ["get", "set", "delete"].includes(data.action),
+      required: true,
+    },
+    {
+      key: "value",
+      label: "Value",
+      type: "textarea",
+      placeholder: "Enter value or {{variable}}",
+      isVisible: (data) => data.action === "set",
+      required: true,
+    },
+    {
+      key: "variableName",
+      label: "Save to Variable",
+      type: "text",
+      placeholder: "e.g. my_token",
+      isVisible: (data) => data.action === "get",
+      required: true,
+    },
+  ],
+
   set_network_conditions: [
     {
       key: "profile",

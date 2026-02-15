@@ -72,6 +72,8 @@ import {
 } from "lucide-react";
 import { useLogs } from "./context/LogContext";
 import TerminalPanel from "./components/TerminalPanel";
+import VariablePanel from "./components/VariablePanel";
+import AskAIPanel from "./components/AskAIPanel";
 
 // ========================================
 // DASHBOARD COMPONENT (Main Work Area)
@@ -193,6 +195,8 @@ function Dashboard() {
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [isHistoryPanelVisible, setIsHistoryPanelVisible] = useState(false); // HISTORY PANEL
+  const [isVariablePanelVisible, setIsVariablePanelVisible] = useState(false); // VARIABLE EXPLORER
+  const [isAskAIPanelVisible, setIsAskAIPanelVisible] = useState(false); // ASK AI DEBUG CONSOLE
   const [creationModal, setCreationModal] = useState({
     isOpen: false,
     type: "project",
@@ -1150,9 +1154,29 @@ function Dashboard() {
           onOpenApiKeys={openApiKeys}
           onToggleHistory={() => {
             setIsHistoryPanelVisible((prev) => !prev);
+            if (!isHistoryPanelVisible) {
+              setIsVariablePanelVisible(false);
+              setIsCreationPanelVisible(false);
+            }
           }}
+          isVariablesVisible={isVariablePanelVisible}
+          onToggleVariables={() => {
+            setIsVariablePanelVisible((prev) => !prev);
+            if (!isVariablePanelVisible) {
+              setIsHistoryPanelVisible(false);
+              setIsCreationPanelVisible(false);
+            }
+          }}
+          isAskAIVisible={isAskAIPanelVisible}
+          onToggleAskAI={() => setIsAskAIPanelVisible((prev) => !prev)}
           isToolboxVisible={isCreationPanelVisible}
-          onToggleToolbox={() => setIsCreationPanelVisible((prev) => !prev)}
+          onToggleToolbox={() => {
+            setIsCreationPanelVisible((prev) => !prev);
+            if (!isCreationPanelVisible) {
+              setIsHistoryPanelVisible(false);
+              setIsVariablePanelVisible(false);
+            }
+          }}
           selectedProject={currentProject}
           selectedFlow={currentProject?.flows?.find(
             (f) => f.id === currentFlowId,
@@ -1175,6 +1199,14 @@ function Dashboard() {
               }}
               onSelectRun={handleSelectRun}
               currentFlowId={currentFlowId}
+            />
+          ) : isVariablePanelVisible ? (
+            <VariablePanel
+              isOpen={true}
+              onClose={() => {
+                setIsVariablePanelVisible(false);
+                setIsCreationPanelVisible(true);
+              }}
             />
           ) : (
             <Toolbox
@@ -1286,6 +1318,13 @@ function Dashboard() {
 
             {/* Real-time Execution Terminal - Now inside Main Layout */}
             <TerminalPanel />
+
+            {/* Ask AI Debug Console */}
+            <AskAIPanel
+              isVisible={isAskAIPanelVisible}
+              onClose={() => setIsAskAIPanelVisible(false)}
+              onOpenSettings={() => openSettings("integrations")}
+            />
 
             {/* TERMINAL TAG (Vignette) - Only visible when terminal is closed */}
             {!isPanelVisible && (
@@ -1408,7 +1447,7 @@ function Dashboard() {
           onRenameFlow={(f, newName) => renameFlow(f.id, newName)}
           onDeleteFlow={(f) => deleteFlow(f.id)}
           // Global Props
-          version="v1.0.2"
+          version="v1.1.0"
           isReadOnly={false}
           isRunning={executionProgress.status === "running"}
           onRun={handleExecuteFlow}

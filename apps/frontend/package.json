@@ -1,7 +1,7 @@
 {
   "name": "@halt-test/frontend",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.1.0",
   "license": "GPL-3.0-only",
   "author": "andresguc <andresguc@gmail.com>",
   "repository": {
