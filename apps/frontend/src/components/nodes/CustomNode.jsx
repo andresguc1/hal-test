@@ -32,6 +32,7 @@ function CustomNode({ data, selected }) {
   const isRunning = state === NODE_STATES.EXECUTING;
   const isSuccess = state === NODE_STATES.SUCCESS;
   const isPicking = state === NODE_STATES.PICKING;
+  const isHealed = state === NODE_STATES.HEALED;
 
   const containerClasses = cn(
     "relative min-w-[240px] rounded-xl overflow-hidden",
@@ -50,6 +51,10 @@ function CustomNode({ data, selected }) {
     // Error State (Overrides everything)
     isError &&
       "border-red-500/50 bg-red-950/20 animate-shake-error ring-1 ring-red-500/30",
+
+    // Healed State
+    isHealed &&
+      "border-amber-500/50 bg-amber-500/10 shadow-[0_0_15px_-3px_rgba(245,158,11,0.3)]",
 
     // Running State
     isRunning &&
@@ -76,7 +81,9 @@ function CustomNode({ data, selected }) {
             ? "#ef4444"
             : isPicking
               ? "#0ea5e9"
-              : categoryColor,
+              : isHealed
+                ? "#f59e0b"
+                : categoryColor,
         }}
       />
 
@@ -92,16 +99,20 @@ function CustomNode({ data, selected }) {
                 ? "#60a5fa"
                 : isPicking
                   ? "#0ea5e9"
-                  : categoryColor,
+                  : isHealed
+                    ? "#f59e0b"
+                    : categoryColor,
           }}
         >
           {isRunning ? (
             <Loader2 size={24} className="animate-spin" />
           ) : isPicking ? (
             <div className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-20"></div>
+          ) : isHealed ? (
+            <span className="text-2xl">🩹</span>
           ) : null}
 
-          {isRunning ? null : isError ? ( // Loader already rendered above
+          {isRunning || isHealed ? null : isError ? ( // Loader already rendered above
             <AlertCircle size={24} />
           ) : (
             <NodeIconComponent
@@ -116,7 +127,11 @@ function CustomNode({ data, selected }) {
         <div className="flex flex-col min-w-0 flex-1">
           {/* Category Label (Small Caps) */}
           <span className="text-[9px] font-bold uppercase tracking-widest text-[var(--text-muted)] mb-0.5 opacity-70">
-            {isPicking ? "BINDING MODE" : categoryKey.replace(/_/g, " ")}
+            {isPicking
+              ? "BINDING MODE"
+              : isHealed
+                ? "SELF-HEALED"
+                : categoryKey.replace(/_/g, " ")}
           </span>
 
           {/* Node Title */}
@@ -125,6 +140,7 @@ function CustomNode({ data, selected }) {
               "text-sm font-bold text-[var(--text-main)] leading-tight truncate pr-2",
               isError && "text-red-400",
               isPicking && "text-sky-400",
+              isHealed && "text-amber-400",
             )}
           >
             {t(`nodes.labels.${data?.type}`) || data?.label || "Node"}
@@ -138,7 +154,14 @@ function CustomNode({ data, selected }) {
               </span>
             )) ||
             (data?.selector && (
-              <span className="text-[10px] font-mono text-cyan-500/80 mt-1 truncate max-w-[150px] bg-cyan-500/10 px-1 py-0.5 rounded border border-cyan-500/20">
+              <span
+                className={cn(
+                  "text-[10px] font-mono mt-1 truncate max-w-[150px] px-1 py-0.5 rounded border",
+                  isHealed
+                    ? "text-amber-500/80 bg-amber-500/10 border-amber-500/20"
+                    : "text-cyan-500/80 bg-cyan-500/10 border-cyan-500/20",
+                )}
+              >
                 {data.selector}
               </span>
             ))}

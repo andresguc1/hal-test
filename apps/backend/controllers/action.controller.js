@@ -542,102 +542,121 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
         const isSelectorError =
             errorMessage.includes('Timeout') ||
             errorMessage.includes('waiting for selector') ||
-            errorMessage.includes('element is not visible');
+            errorMessage.includes('element is not visible') ||
+            errorMessage.includes('no element found') ||
+            errorMessage.includes('Unexpected token') ||
+            errorMessage.includes('parsing css selector') ||
+            errorMessage.includes('is not a valid selector');
 
-        if (isSelectorError && opts.selector && runId) {
-            console.log(`[Self-Healing] Detected selector failure for: ${opts.selector}`);
+        if (isSelectorError && opts.selector && (runId || opts.debugMode)) {
+            console.log(
+                `[Self-Healing] Detected selector failure for: ${opts.selector}. Starting AI repair...`,
+            );
+            const healingStart = Date.now();
             try {
-                // 1. Get current page context (using the standard way within action.controller)
+                // 1. Get current page context
                 const validation = validateBrowser(req, targetBrowserId || opts.browserId);
-                let ScreenshotBase64 = null;
-                let domSnippet = null;
-
                 if (!validation.error) {
                     const browserInstance = validation.entry.browser || validation.entry;
                     const browserContexts = browserInstance.contexts();
                     const pages = browserContexts[0]?.pages() || [];
-                    const page = pages[pages.length - 1];
+                    const currentPage = pages[pages.length - 1];
 
-                    if (page && !page.isClosed()) {
-                        // 2. Capture Context (Screenshot + Simplified DOM)
-                        const screenshotBuffer = await page.screenshot({
-                            encoding: 'base64',
-                            animations: 'disabled',
+                    if (currentPage && !currentPage.isClosed()) {
+                        // 2. Import Healer (Dynamically or at top)
+                        const { default: selectorHealer } =
+                            await import('../services/SelectorHealer.js');
+
+                        // 3. Ask AI to Heal
+                        const userKey = req.headers['x-openai-key'];
+                        const diagnosis = await selectorHealer.heal({
+                            page: currentPage,
+                            originalSelector: opts.selector,
+                            errorMessage: errorMessage,
+                            actionName: actionName,
+                            timeout: opts.timeout || 30000,
+                            apiKey: userKey || process.env.OPENAI_API_KEY,
                         });
-                        ScreenshotBase64 = `data:image/png;base64,${screenshotBuffer}`;
 
-                        // Simplified DOM strategy: Get body HTML but truncated to avoid context window issues
-                        domSnippet = await page.content();
-                        if (domSnippet.length > 50000) domSnippet = domSnippet.substring(0, 50000); // hard cap
+                        const healingDuration = Date.now() - healingStart;
+                        console.log(`[Self-Healing] AI Repair finished in ${healingDuration}ms`);
+
+                        // --- BROADCAST HEALING STATUS ---
+                        if (runId && opts.nodeId) {
+                            try {
+                                const { emitLog, emitExecutionStatus } =
+                                    await import('../socket.js');
+                                emitExecutionStatus({ stepId: opts.nodeId, status: 'executing' });
+                                emitLog({
+                                    message: `[Self-Healing] AI Repair in progress for ${opts.selector}...`,
+                                    nodeId: opts.nodeId,
+                                    type: 'info',
+                                });
+                            } catch (wsError) {
+                                console.warn(
+                                    '[Self-Healing] Could not broadcast status:',
+                                    wsError.message,
+                                );
+                            }
+                        }
+
+                        // 4. Retry if a new selector was found
+                        if (
+                            diagnosis.correctedSelector &&
+                            diagnosis.correctedSelector !== opts.selector
+                        ) {
+                            console.log(
+                                `[Self-Healing] 🩹 AI Suggests: ${diagnosis.correctedSelector} (Confidence: ${diagnosis.confidence})`,
+                            );
+                            console.log(`[Self-Healing] Reasoning: ${diagnosis.reasoning}`);
+
+                            // Retry action with NEW selector
+                            const newOpts = { ...opts, selector: diagnosis.correctedSelector };
+
+                            const retryStart = Date.now();
+                            const retryResult = await actionLogic(
+                                currentPage,
+                                newOpts,
+                                targetBrowserId,
+                                context,
+                            );
+                            const retryDuration = Date.now() - retryStart;
+
+                            // --- FLIGHT RECORDER: Log Healed Success ---
+                            if (runId && nodeId) {
+                                await executionLogger.logStep(
+                                    runId,
+                                    { id: nodeId, type: actionName },
+                                    {
+                                        status: 'success',
+                                        duration: duration + retryDuration,
+                                        input: newOpts,
+                                        output: retryResult.data || retryResult.traceDetails,
+                                        metadata: {
+                                            healed: true,
+                                            originalSelector: opts.selector,
+                                            originalError: errorMessage,
+                                            reasoning: diagnosis.reasoning,
+                                        },
+                                    },
+                                );
+                            }
+
+                            if (nodeId) emitExecutionStatus({ stepId: nodeId, status: 'healed' });
+
+                            return res.status(200).json({
+                                success: true,
+                                message: `Self-Healed: ${retryResult.message}`,
+                                browserId: targetBrowserId,
+                                durationMs: duration + retryDuration,
+                                data: retryResult.data || {},
+                                healed: true,
+                                originalSelector: opts.selector,
+                                newSelector: diagnosis.correctedSelector,
+                                reasoning: diagnosis.reasoning,
+                            });
+                        }
                     }
-                }
-
-                // 3. Ask AI to Heal
-                const userKey = req.headers['x-openai-key'];
-                const diagnosis = await aiService.healSelector({
-                    screenshotBase64: ScreenshotBase64,
-                    domSnippet,
-                    originalSelector: opts.selector,
-                    error: errorMessage,
-                    intent: actionName, // We could pass a richer intent if available in opts
-                    apiKey: userKey || process.env.OPENAI_API_KEY,
-                });
-
-                // 4. Retry if confidence is high
-                if (diagnosis.correctedSelector && diagnosis.confidence > 0.8) {
-                    console.log(
-                        `[Self-Healing] 🩹 AI Suggests: ${diagnosis.correctedSelector} (Confidence: ${diagnosis.confidence})`,
-                    );
-                    console.log(`[Self-Healing] Reasoning: ${diagnosis.reasoning}`);
-
-                    // Retry action with NEW selector
-                    // We need to clone opts and replace selector
-                    const newOpts = { ...opts, selector: diagnosis.correctedSelector };
-
-                    // RE-RUN LOGIC
-                    // We simply await the actionLogic again.
-                    // Note: Recursion risk if we just called executePlaywrightAction again,
-                    // allowing one retry here is safer.
-
-                    const retryStart = Date.now();
-                    const retryResult = await actionLogic(page, newOpts);
-                    const retryDuration = Date.now() - retryStart;
-
-                    // --- FLIGHT RECORDER: Log Healed Success ---
-                    if (runId && nodeId) {
-                        await executionLogger.logStep(
-                            runId,
-                            { id: nodeId, type: actionName },
-                            {
-                                status: 'success', // It's a success now!
-                                duration: duration + retryDuration, // Total time
-                                input: newOpts,
-                                output: retryResult.data || retryResult.traceDetails,
-                                metadata: {
-                                    healed: true,
-                                    originalError: errorMessage,
-                                    reasoning: diagnosis.reasoning,
-                                },
-                            },
-                        );
-                    }
-
-                    if (nodeId) emitExecutionStatus({ stepId: nodeId, status: 'success' }); // Update frontend
-
-                    return res.status(200).json({
-                        success: true,
-                        message: `Self-Healed: ${retryResult.message}`,
-                        browserId: targetBrowserId,
-                        durationMs: duration + retryDuration,
-                        data: retryResult.data || {},
-                        healed: true,
-                        originalSelector: opts.selector,
-                        newSelector: diagnosis.correctedSelector,
-                    });
-                } else {
-                    console.log(
-                        `[Self-Healing] ❌ AI could not heal (Confidence: ${diagnosis.confidence})`,
-                    );
                 }
             } catch (healError) {
                 console.error('[Self-Healing] Logic failed:', healError);
@@ -1170,7 +1189,8 @@ export const closeBrowserAction = async (req, res) => {
 
 export const clickAction = (req, res) =>
     executePlaywrightAction(req, res, 'click', async (page, opts) => {
-        const { selector, button, clickCount, modifiers, timeout, force } = opts;
+        const { selector, button, clickCount, modifiers, force } = opts;
+        const timeout = opts.timeout ? Number(opts.timeout) : undefined;
 
         if (!selector) throw new Error(req.t('errors.selector_required'));
 
@@ -1186,7 +1206,8 @@ export const clickAction = (req, res) =>
 
 export const typeTextAction = (req, res) =>
     executePlaywrightAction(req, res, 'type_text', async (page, opts) => {
-        const { selector, text, clearBeforeType, delay, timeout } = opts;
+        const { selector, text, clearBeforeType, delay } = opts;
+        const timeout = opts.timeout ? Number(opts.timeout) : undefined;
 
         if (!selector) throw new Error(req.t('errors.selector_required'));
         if (text === undefined || text === null) throw new Error(req.t('errors.text_required'));
@@ -1627,7 +1648,8 @@ export const findElementAction = (req, res) =>
 
 export const selectOptionAction = (req, res) =>
     executePlaywrightAction(req, res, 'select_option', async (page, opts) => {
-        const { selector, selectionCriteria, selectionValue, timeout } = opts;
+        const { selector, selectionCriteria, selectionValue } = opts;
+        const timeout = opts.timeout ? Number(opts.timeout) : undefined;
 
         if (!selector) throw new Error(req.t('errors.selector_required'));
 
@@ -3077,40 +3099,67 @@ export const controlExceptionsAction = (req, res) =>
 
 export const readDataAction = (req, res) =>
     executePlaywrightAction(req, res, 'read_data', async (page, opts) => {
-        const { selector, type = 'text' } = opts; // type: 'text', 'html', 'attributes'
+        const { selector, type = 'text', variableName } = opts; // type: 'text', 'html', 'attributes'
 
+        let data;
         if (type === 'text') {
-            const data = await page.textContent(selector);
-            return { message: req.t('actions.read_data.success'), data: { content: data } };
+            data = await page.textContent(selector);
         } else if (type === 'html') {
-            const data = await page.innerHTML(selector);
-            return { message: req.t('actions.read_data.success'), data: { content: data } };
+            data = await page.innerHTML(selector);
         } else {
             // Implement attribute logic if necessary
             return { message: req.t('actions.read_data.unsupported_type'), data: {} };
         }
+
+        // Persist to variables if requested
+        if (variableName) {
+            variableManager.set(variableName, data, 'flow');
+        }
+
+        return {
+            message: req.t('actions.read_data.success'),
+            data: { content: data, variableName: variableName || undefined },
+        };
     });
 
 export const saveResultsAction = (req, res) =>
     executePlaywrightAction(req, res, 'save_results', async (page, opts) => {
-        const { data, path: savePath } = opts;
+        const { data, path: savePath, variableName } = opts;
         await fsp.writeFile(
             savePath,
             typeof data === 'string' ? data : JSON.stringify(data, null, 2),
         );
-        return { message: req.t('actions.save_results.success'), data: { path: savePath } };
+
+        // Persist path to variable if requested
+        if (variableName) {
+            variableManager.set(variableName, savePath, 'flow');
+        }
+
+        return {
+            message: req.t('actions.save_results.success'),
+            data: { path: savePath, variableName: variableName || undefined },
+        };
     });
 
 export const handleDownloadsAction = (req, res) =>
     executePlaywrightAction(req, res, 'handle_downloads', async (page, opts) => {
-        const { selector, path: savePath } = opts;
+        const { selector, path: savePath, variableName } = opts;
 
         const downloadPromise = page.waitForEvent('download');
         await page.click(selector);
         const download = await downloadPromise;
 
         await download.saveAs(savePath);
-        return { message: req.t('actions.handle_downloads.success'), data: { path: savePath } };
+
+        // Persist path to variable if requested
+        if (variableName) {
+            variableManager.set(variableName, savePath, 'flow');
+        }
+
+        return {
+            message: req.t('actions.handle_downloads.success'),
+            data: { path: savePath, variableName: variableName || undefined },
+        };
     });
 
 export const runTestsAction = (req, res) =>

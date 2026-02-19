@@ -497,6 +497,86 @@ const NODE_INPUTS = {
     },
     { key: "takeScreenshot", label: "📸 Take Screenshot", type: "checkbox" },
   ],
+  read_file: [
+    {
+      key: "selector",
+      label: "Selector",
+      type: "selector",
+      placeholder: ".element-to-read",
+    },
+    {
+      key: "type",
+      label: "Content Type",
+      type: "select",
+      options: [
+        { label: "Text", value: "text" },
+        { label: "HTML", value: "html" },
+      ],
+      default: "text",
+    },
+    {
+      key: "variableName",
+      label: "Variable Name",
+      type: "text",
+      placeholder: "e.g. extractedText",
+    },
+    {
+      key: "timeout",
+      label: "Timeout (ms)",
+      type: "number",
+      placeholder: "30000",
+    },
+  ],
+  write_file: [
+    {
+      key: "path",
+      label: "Save Path",
+      type: "text",
+      placeholder: "./output/results.json",
+      required: true,
+    },
+    {
+      key: "data",
+      label: "Data / Content",
+      type: "textarea",
+      placeholder: "Content or {{variable}}",
+      required: true,
+    },
+    {
+      key: "variableName",
+      label: "Capture Saved Path (Variable Name)",
+      type: "text",
+      placeholder: "e.g. logPath",
+    },
+  ],
+  download_file: [
+    {
+      key: "selector",
+      label: "Download Button Selector",
+      type: "selector",
+      placeholder: ".download-btn",
+      required: true,
+    },
+    {
+      key: "path",
+      label: "Save Path",
+      type: "text",
+      placeholder: "./downloads/report.pdf",
+      required: true,
+    },
+    {
+      key: "variableName",
+      label: "Capture Download Path (Variable Name)",
+      type: "text",
+      placeholder: "e.g. downloadPath",
+    },
+    {
+      key: "timeout",
+      label: "Timeout (ms)",
+      type: "number",
+      placeholder: "30000",
+    },
+  ],
   submit_form: [
     {
       key: "selector",
@@ -1141,6 +1221,7 @@ function NodeConfigurationPanel({
   // Helper to handle partial configuration updates safely
   const handleConfigUpdate = (key, value) => {
     // 1. Update LOCAL state immediately (Instant Feedback)
+    console.log(`[NodeConfig] Updating ${key} to:`, value);
     const newConfig = { ...localConfig, [key]: value };
     setLocalConfig(newConfig);
 
@@ -1162,27 +1243,69 @@ function NodeConfigurationPanel({
 
   // AI AUTO-HEAL HANDLER
   const handleAutoHeal = async (failedSelector) => {
-    const toastId = toast.loading("AI Fixing selector... 🧠");
+    // 1. Create an AbortController specifically for the AI request
+    const aiAbortController = new AbortController();
+
+    // 2. Clear previous toast if any
+    toast.dismiss("ai-heal-toast");
+
+    // 3. Show Loading Toast with Abort Button
+    toast.loading(
+      <div className="flex flex-col gap-1">
+        <span className="font-semibold text-xs text-amber-500">
+          AI Repair Mode (Ollama/Gemma 3) 🧠
+        </span>
+        <span className="text-[10px] opacity-80 leading-tight">
+          Analyzing DOM context... This can take 1-2 mins on local machines.
+        </span>
+      </div>,
+      {
+        id: "ai-heal-toast",
+        duration: Infinity,
+        action: {
+          label: "Cancel",
+          onClick: () => {
+            aiAbortController.abort();
+            toast.dismiss("ai-heal-toast");
+            toast.error("AI Healing cancelled.");
+          },
+        },
+      },
+    );
+
     try {
-      const data = await api.post("/ai/heal-selector", {
-        failedSelector,
-        nodeType: activeNode.type,
-        // In real implementation, we would send screenshot/DOM
-        error: activeNode.data?.error,
-      });
+      console.log(`[AI-Fix] Requesting heal for selector: ${failedSelector}`);
+      const data = await api.post(
+        "/ai/heal-selector",
+        {
+          failedSelector,
+          nodeType: activeNode.type,
+          browserId:
+            activeNode.data?.configuration?.browserId ||
+            localStorage.getItem("lastBrowserId"),
+          error: activeNode.data?.error,
+        },
+        {
+          signal: aiAbortController.signal,
+        },
+      );
+
+      console.log(`[AI-Fix] Response received:`, data);
 
       if (data.suggestion) {
         handleConfigUpdate("selector", data.suggestion);
-        toast.dismiss(toastId);
+        toast.dismiss("ai-heal-toast");
         toast.success(
-          `Selector repaired! (Confidence: ${data.confidence * 100}%)`,
+          `Selector repaired! (Confidence: ${Math.round((data.confidence || 0) * 100)}%)`,
+          { icon: "✨" },
         );
       } else {
-        toast.dismiss(toastId);
+        toast.dismiss("ai-heal-toast");
         toast.error("AI could not find a solution.");
       }
     } catch (error) {
-      toast.dismiss(toastId);
+      if (error.name === "AbortError") return;
+      toast.dismiss("ai-heal-toast");
       toast.error(error.message || "AI Service Error");
     }
   };
@@ -1490,7 +1613,7 @@ function NodeConfigurationPanel({
                   "w-full bg-[var(--bg-canvas)]/50 border border-[var(--border-ui)] rounded-lg px-3 py-2 pl-3 pr-8 text-xs font-mono focus:outline-none focus:border-indigo-500/50 transition-all placeholder:text-[var(--text-muted)] !pointer-events-auto !cursor-text !select-text",
                   value ? "text-indigo-400" : "text-[var(--text-main)]",
                   error &&
-                    "border-red-500/50 focus:border-red-500 bg-red-500/5",
+                  "border-red-500/50 focus:border-red-500 bg-red-500/5",
                 )}
               />
               <div
@@ -1603,7 +1726,7 @@ function NodeConfigurationPanel({
                       }
                     }, 300); // 300ms debounce for typing comfort
                   }}
-                  // onBlur removed - handled by debounce
+                // onBlur removed - handled by debounce
                 />
               </div>
             </div>
@@ -1637,7 +1760,7 @@ function NodeConfigurationPanel({
           <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
             {/* Dynamic Content Switch */}
             {safeConfig.nodeKey === "component" ||
-            activeNode.type === "component" ? (
+              activeNode.type === "component" ? (
               // --- COMPONENT DASHBOARD ---
               <div className="space-y-6">
                 {/* Description Card */}
@@ -1785,6 +1908,59 @@ function NodeConfigurationPanel({
 
           {/* FOOTER ACTIONS (Themed) */}
           <div className="p-4 border-t border-[var(--border-ui)] bg-[var(--bg-panel)] shrink-0 space-y-3">
+            {/* Self-Healing Banner & Action */}
+            {activeNode?.data?.state === "healed" && (
+              <div className="mb-4 bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 space-y-3 shadow-lg shadow-amber-500/5">
+                <div className="flex items-start gap-2">
+                  <div className="p-1.5 bg-amber-500/20 rounded-md shrink-0">
+                    <Sparkles size={14} className="text-amber-400" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[11px] font-bold text-amber-200 leading-tight">
+                      AI Self-Healing Success!
+                    </p>
+                    <p className="text-[10px] text-amber-400/80 leading-relaxed italic">
+                      "{activeNode.data.result?.reasoning}"
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2 bg-black/20 rounded p-2 border border-amber-500/10">
+                  <div className="flex justify-between items-center text-[9px] uppercase tracking-tighter font-bold">
+                    <span className="text-red-400/70">Original</span>
+                    <span className="text-amber-400">→ Suggestion</span>
+                  </div>
+                  <div className="flex items-center gap-2 overflow-hidden">
+                    <span className="text-[10px] font-mono text-red-500/60 truncate line-through max-w-[100px]">
+                      {activeNode.data.result?.originalSelector ||
+                        "No selector"}
+                    </span>
+                    <ArrowRight size={10} className="text-amber-500 shrink-0" />
+                    <span className="text-[10px] font-mono text-amber-400 truncate flex-1">
+                      {activeNode.data.result?.newSelector}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    const newSelector = activeNode.data.result?.newSelector;
+                    if (newSelector) {
+                      updateNodeConfiguration(activeNode.id, {
+                        ...(activeNode.data?.configuration || {}),
+                        selector: newSelector,
+                      });
+                      toast.success("Selector updated permanently!");
+                    }
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-1.5 rounded bg-amber-500 hover:bg-amber-400 text-amber-950 text-[10px] font-bold uppercase tracking-wider transition-colors shadow-sm"
+                >
+                  <Sparkles size={12} fill="currentColor" />
+                  Permanently Update
+                </button>
+              </div>
+            )}
+
             {/* Primary Action */}
             <button
               onClick={() =>

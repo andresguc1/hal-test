@@ -67,9 +67,9 @@ const HalToast = ({ type, message, id }) => {
         <h4 className="text-sm font-bold text-[var(--text-main)] leading-none tracking-wide">
           {t(style.titleKey, { defaultValue: type.toUpperCase() })}
         </h4>
-        <p className="text-xs text-[var(--text-muted)] font-medium leading-relaxed">
+        <div className="text-xs text-[var(--text-muted)] font-medium leading-relaxed">
           {message}
-        </p>
+        </div>
       </div>
 
       {/* CLOSE BUTTON */}

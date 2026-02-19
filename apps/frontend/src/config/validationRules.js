@@ -305,6 +305,59 @@ export const NODE_INPUTS = {
     },
   ],
 
+  // Files & Data
+  read_file: [
+    {
+      key: "selector",
+      label: "Selector",
+      type: "selector",
+      placeholder: ".element-to-read",
+      required: true,
+    },
+    {
+      key: "type",
+      label: "Content Type",
+      type: "select",
+      options: [
+        { label: "Text", value: "text" },
+        { label: "HTML", value: "html" },
+      ],
+      required: true,
+    },
+  ],
+  write_file: [
+    {
+      key: "path",
+      label: "Save Path",
+      type: "text",
+      placeholder: "./output/results.json",
+      required: true,
+    },
+    {
+      key: "data",
+      label: "Data / Content",
+      type: "textarea",
+      placeholder: "Content or {{variable}}",
+      required: true,
+    },
+  ],
+  download_file: [
+    {
+      key: "selector",
+      label: "Download Button Selector",
+      type: "selector",
+      placeholder: ".download-btn",
+      required: true,
+    },
+    {
+      key: "path",
+      label: "Save Path",
+      type: "text",
+      placeholder: "./downloads/report.pdf",
+      required: true,
+    },
+  ],
+
   // Default fallback
   default: [
     {

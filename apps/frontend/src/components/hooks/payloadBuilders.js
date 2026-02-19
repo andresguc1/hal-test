@@ -281,6 +281,7 @@ export const get_set_content = (payload) => {
   }
 
   body.takeScreenshot = asBoolean(payload?.takeScreenshot, false);
+  body.timeout = asNumber(payload?.timeout, 30000, 1);
 
   return body;
 };
@@ -311,10 +312,8 @@ export const execute_js = (payload) => {
   return {
     script: script,
     returnValue: returnValue,
-    variableName: returnValue
-      ? asString(payload?.variableName, "resultado_js")
-      : "",
     args: asString(payload?.args),
+    timeout: asNumber(payload?.timeout, 30000, 1),
     browserId: asString(payload?.browserId),
   };
 };
@@ -340,6 +339,7 @@ export const click = (payload = {}) => {
     selector: selector,
     button: finalButton,
     browserId: asString(payload?.browserId),
+    timeout: asNumber(payload?.timeout, 30000, 1),
     takeScreenshot: asBoolean(payload?.takeScreenshot, false), // Flight Recorder
   };
 
@@ -392,6 +392,7 @@ export const submit_form = (payload) => {
   return {
     selector: asString(payload?.selector),
     waitForNavigation: asBoolean(payload?.waitForNavigation, true),
+    timeout: asNumber(payload?.timeout, 30000, 1),
     browserId: asString(payload?.browserId),
   };
 };
@@ -405,6 +406,7 @@ export const scroll = (payload) => {
     maxScrolls: asNumber(payload?.maxScrolls, 50, 1),
     waitTime: asNumber(payload?.waitTime, 2000, 500),
     behavior: asString(payload?.behavior, "auto"),
+    timeout: asNumber(payload?.timeout, 30000, 1),
     browserId: asString(payload?.browserId),
     takeScreenshot: asBoolean(payload?.takeScreenshot, false),
   };
@@ -483,6 +485,7 @@ export const drag_drop = (payload) => {
     targetSelector,
     steps: asNumber(payload?.steps, 10, 1),
     force: asBoolean(payload?.force, false),
+    timeout: asNumber(payload?.timeout, 30000, 1),
     browserId: asString(payload?.browserId),
     takeScreenshot: asBoolean(payload?.takeScreenshot, false),
   };

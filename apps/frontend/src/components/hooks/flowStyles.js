@@ -13,6 +13,7 @@ export const NODE_STATES = {
   WARNING: "warning",
   SKIPPED: "skipped",
   PICKING: "picking",
+  HEALED: "healed",
 };
 
 export const PROFESSIONAL_COLORS = {
@@ -46,6 +47,13 @@ export const PROFESSIONAL_COLORS = {
     text: "#166534", // green-800
     shadow: "0 2px 8px rgba(22,163,74,0.15)",
     borderWidth: "1px",
+  },
+  [NODE_STATES.HEALED]: {
+    background: "#fffbeb", // amber-50
+    border: "#f59e0b", // amber-500
+    text: "#b45309", // amber-700
+    shadow: "0 0 12px rgba(245,158,11,0.2)",
+    borderWidth: "2px",
   },
   [NODE_STATES.ERROR]: {
     background: "#fef2f2", // red-50

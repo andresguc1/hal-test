@@ -1179,11 +1179,19 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
   // OPTIMIZACIÓN 8: Ejecutar paso con mejor manejo de errores
   // ========================================
   const executeStep = useCallback(
-    async (nodeOrAction, _options = {}) => {
+    async (nodeOrAction, _type, _payload = {}, _options = {}) => {
       let action = nodeOrAction;
 
-      // Adapter: support direct Node object execution (from Panel)
-      if (nodeOrAction && nodeOrAction.id && nodeOrAction.data) {
+      // Adapter 1: support explicit arguments (taskId, taskType, taskPayload)
+      if (typeof nodeOrAction === "string") {
+        action = {
+          nodeId: nodeOrAction,
+          type: _type,
+          payload: _payload,
+        };
+      }
+      // Adapter 2: support direct Node object execution (from Panel)
+      else if (nodeOrAction && nodeOrAction.id && nodeOrAction.data) {
         action = {
           nodeId: nodeOrAction.id,
           type: nodeOrAction.type,
@@ -1198,6 +1206,10 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
       }
 
       const { nodeId, payload } = action;
+
+      // Get node (refresh from store ONLY if we need fallback data, but prefer payload)
+      const storeNode = nodesRef.current.find((n) => n.id === nodeId);
+
       // Robust type detection: check action.type, then node.data.type, then node.type
       const type =
         action.type || storeNode?.data?.type || storeNode?.type || "unknown";
@@ -1211,9 +1223,6 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
       }
 
       const endpoint = (payload && payload.endpoint) || `/actions/${type}`;
-
-      // Get node (refresh from store ONLY if we need fallback data, but prefer payload)
-      const storeNode = nodesRef.current.find((n) => n.id === nodeId);
       const config = payload || storeNode?.data?.configuration || {};
 
       // PRIORITY: Payload > Config > Active Session
@@ -1317,6 +1326,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
           // UPDATE PERSISTENT SESSION
           if (instanceId && !activeBrowserId) {
             setActiveBrowserId(instanceId);
+            localStorage.setItem("lastBrowserId", instanceId);
           }
 
           // ✨ OPTIMIZACIÓN: Actualización batch
@@ -1334,17 +1344,22 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
                 newConfig.browserId = instanceId;
               }
 
+              const isHealed = result?.healed === true;
+              const finalState = isHealed
+                ? NODE_STATES.HEALED
+                : NODE_STATES.SUCCESS;
+
               return {
                 ...node,
                 data: {
                   ...node.data,
                   configuration: newConfig,
                   executed: true,
-                  state: NODE_STATES.SUCCESS,
+                  state: finalState,
                   result,
                   executionTime: duration,
                 },
-                style: getNodeStyle(NODE_STATES.SUCCESS),
+                style: getNodeStyle(finalState),
               };
             }),
           );
@@ -2140,6 +2155,8 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
       activeBrowserId, // Added dependency
       updateNodeState,
       validateFlowStructure,
+      t,
+      toast,
     ],
   );
 

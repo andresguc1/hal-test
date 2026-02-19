@@ -5,51 +5,42 @@ import Joi from 'joi';
 const allowedSourceTypes = ['json', 'csv', 'excel', 'text'];
 
 const readDataBodySchema = Joi.object({
-    // 1. sourceType (Tipo de Fuente, Requerido)
+    // 1. sourceType (Tipo de Fuente, Opcional)
     sourceType: Joi.string()
         .valid(...allowedSourceTypes)
-        .required()
+        .optional()
         .messages({
-            'any.required': 'El tipo de fuente de datos (sourceType) es obligatorio.',
             'any.only': 'El tipo de fuente debe ser json, csv, excel o text.',
         }),
 
-    // 2. path (Ruta del Archivo, Requerido)
-    path: Joi.string().trim().required().messages({
-        'any.required': 'La ruta del archivo (path) es obligatoria.',
+    // 2. path (Ruta del Archivo, Opcional)
+    path: Joi.string().trim().optional().messages({
+        'string.empty': 'La ruta del archivo no puede estar vacía.',
     }),
 
-    // 3. variableName (Guardar en Variable, Requerido)
-    variableName: Joi.string().trim().required().messages({
-        'any.required': 'El nombre de la variable de destino es obligatorio.',
+    // 3. selector (Selector DOM para lectura directa, Requerido si no hay path) 🆙
+    selector: Joi.string().trim().optional().messages({
+        'string.empty': 'El selector no puede estar vacío.',
     }),
 
-    // 4. sheetName (Nombre de la Hoja, Condicional)
-    sheetName: Joi.string()
-        .trim()
-        .optional()
-        .allow(null, '')
-        .when('sourceType', {
-            is: 'excel',
-            then: Joi.string().required().messages({
-                'any.required':
-                    'El nombre de la hoja (sheetName) es obligatorio para archivos Excel.',
-                'string.empty': 'El nombre de la hoja no puede estar vacío.',
-            }),
-            otherwise: Joi.optional().allow(null, ''),
-        }),
+    // 4. type (Tipo de contenido DOM a leer: text/html) 🆙
+    type: Joi.string().valid('text', 'html').default('text').optional(),
 
-    // 5. hasHeader (Contiene Encabezado, Opcional)
-    hasHeader: Joi.boolean().default(true).optional().messages({
-        'boolean.base': 'hasHeader debe ser booleano.',
+    // 5. variableName (Guardar en Variable, Opcional)
+    variableName: Joi.string().trim().optional().messages({
+        'string.empty': 'El nombre de la variable no puede estar vacío.',
     }),
 
-    // 6. encoding (Codificación, Requerido)
-    encoding: Joi.string().trim().default('utf-8').required().messages({
-        'any.required': 'La codificación del archivo es obligatoria.',
-    }),
+    // 6. sheetName (Nombre de la Hoja, Opcional)
+    sheetName: Joi.string().trim().optional().allow(null, ''),
 
-    // 7. browserId (ID del contexto/navegador objetivo) 🆕
+    // 7. hasHeader (Contiene Encabezado, Opcional)
+    hasHeader: Joi.boolean().default(true).optional(),
+
+    // 8. encoding (Codificación, Opcional)
+    encoding: Joi.string().trim().default('utf-8').optional(),
+
+    // 9. browserId (ID del contexto/navegador objetivo) 🆕
     browserId: Joi.string().allow(null, '').required().messages({
         'any.required':
             'El ID del navegador/contexto (browserId) es obligatorio para el contexto de ejecución.',

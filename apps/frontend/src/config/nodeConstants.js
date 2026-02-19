@@ -56,7 +56,6 @@ export const NODE_CATEGORIES = {
       "submit_form",
       "scroll",
       "drag_drop",
-      "upload_file",
       "hover",
     ],
   },
@@ -85,22 +84,21 @@ export const NODE_CATEGORIES = {
     ],
   },
   test_execution: {
-    icon: CheckSquare,
-    color: "lime",
-    label: "Test Execution",
+    icon: Cookie,
+    color: "orange",
+    label: "Context",
     nodes: [
       "manage_session",
+      "persist_session",
       "create_context",
       "cleanup_state",
-      "handle_hooks",
-      "control_exceptions",
     ],
   },
   file_data: {
     icon: Folder,
     color: "yellow", // Files = Yellow (High visibility)
-    label: "Files / Data",
-    nodes: ["read_data", "save_results", "handle_downloads"],
+    label: "Files & Data",
+    nodes: ["read_file", "write_file", "upload_file", "download_file"],
   },
   execution_interface: {
     icon: Terminal,

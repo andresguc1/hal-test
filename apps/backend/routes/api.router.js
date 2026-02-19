@@ -340,18 +340,39 @@ const actionRoutes = [
         category: 'flow',
     },
     {
+        path: 'read_file',
+        schema: 'readDataBodySchema',
+        action: 'readDataAction',
+        category: 'data',
+    },
+    {
+        path: 'write_file',
+        schema: 'saveResultsBodySchema',
+        action: 'saveResultsAction',
+        category: 'data',
+    },
+    {
+        path: 'download_file',
+        schema: 'handleDownloadsBodySchema',
+        action: 'handleDownloadsAction',
+        category: 'data',
+    },
+    {
+        // 🔙 Alias compatibility
         path: 'read_data',
         schema: 'readDataBodySchema',
         action: 'readDataAction',
         category: 'data',
     },
     {
+        // 🔙 Alias compatibility
         path: 'save_results',
         schema: 'saveResultsBodySchema',
         action: 'saveResultsAction',
         category: 'data',
     },
     {
+        // 🔙 Alias compatibility
         path: 'handle_downloads',
         schema: 'handleDownloadsBodySchema',
         action: 'handleDownloadsAction',

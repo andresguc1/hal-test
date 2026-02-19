@@ -1,7 +1,17 @@
 import React, { useEffect, useState, useCallback } from "react";
+import { io } from "socket.io-client";
 import { api } from "../utils/api";
 import { cn } from "../lib/utils";
 import { Database, X, RefreshCw, Layers, Globe } from "lucide-react";
+
+const getSocketURL = () => {
+  const apiUrl = import.meta.env.VITE_API_URL;
+  if (apiUrl) return apiUrl.replace(/\/api$/, "");
+  return window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1"
+    ? "http://127.0.0.1:2001"
+    : window.location.origin;
+};
 
 export default function VariablePanel({ isOpen, onClose }) {
   const [variables, setVariables] = useState({ flow: {}, global: {} });
@@ -22,10 +32,29 @@ export default function VariablePanel({ isOpen, onClose }) {
     }
   }, []);
 
+  // Load on open
   useEffect(() => {
     if (isOpen) {
       loadVariables();
     }
+  }, [isOpen, loadVariables]);
+
+  // Auto-refresh: listen for execution-status events via socket
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const socket = io(getSocketURL(), { autoConnect: true });
+
+    socket.on("execution-status", (data) => {
+      if (data?.status === "success" || data?.status === "failed") {
+        // Debounce: wait 300ms for variables to be written on backend
+        setTimeout(() => loadVariables(), 300);
+      }
+    });
+
+    return () => {
+      socket.disconnect();
+    };
   }, [isOpen, loadVariables]);
 
   if (!isOpen) return null;

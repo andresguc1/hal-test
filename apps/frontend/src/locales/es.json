@@ -140,6 +140,9 @@
       "cleanup_state": "Limpiar Estado",
       "handle_hooks": "Manejar Hooks",
       "control_exceptions": "Control de Excepciones",
+      "read_file": "Leer Archivo",
+      "write_file": "Escribir Archivo",
+      "download_file": "Descargar Archivo",
       "read_data": "Leer Datos",
       "save_results": "Guardar Resultados",
       "handle_downloads": "Manejar Descargas",
@@ -162,7 +165,7 @@
       "network_control": "Red",
       "session_management": "Sesión",
       "test_execution": "Contexto/Control",
-      "file_data": "Archivos/Datos",
+      "file_data": "Archivos & Datos",
       "llm_ai": "Modelos de IA (LLM)",
       "execution_interface": "Ejecución"
     },

@@ -104,8 +104,8 @@ class AIService {
                 selected = this.selectBestModel(taskType, provider);
             }
 
-            // Standards Enforce: Coding temp = 0.2
-            if (taskType === 'coding' || taskType === 'refactoring') {
+            // Standards Enforce: Coding/Local temp = 0.2
+            if (taskType === 'coding' || taskType === 'refactoring' || taskType === 'local') {
                 temperature = 0.2;
             }
 
@@ -294,44 +294,106 @@ class AIService {
         }
     }
 
-    async healSelector({ screenshotBase64, domSnippet, originalSelector, error, intent, apiKey }) {
+    async healSelector({
+        screenshotBase64,
+        domSnippet,
+        originalSelector,
+        error,
+        intent,
+        apiKey,
+        provider,
+        model: forcedModel,
+        timeout: customTimeout,
+    }) {
         try {
-            // Vision Task -> Reasoning/Multimodal
-            const selected = this.selectBestModel('reasoning', 'openai');
-            const providerInstance = this.getProvider(selected.provider, apiKey);
-            const model = providerInstance(selected.model);
+            // Apply Matrix Logic if no specific model/provider forced
+            let selected = { provider, model: forcedModel };
+            if (!forcedModel || !provider) {
+                selected = this.selectBestModel('reasoning', provider);
+            }
 
-            const prompt = `
-            The automation failed to find an element.
-            Original Selector: "${originalSelector}"
-            Error: "${error}"
-            Intent: "${intent}"
+            const activeProvider = provider || selected.provider;
+            const activeModel = forcedModel || selected.model;
 
-            Attached is the screenshot of the page and a snippet of the DOM.
-            Analyze the visual elements and the DOM to find the most likely correct selector.
-            Return a robust CSS selector.
-            `;
+            console.log(
+                `[AIService] Healing selector. Using: ${activeProvider}/${activeModel} (Timeout: ${customTimeout || 'default'}ms)`,
+            );
+
+            const providerInstance = this.getProvider(activeProvider, apiKey);
+            const modelRef = providerInstance(activeModel);
+
+            const prompt = `The automation failed to find an element.
+Original Selector: "${originalSelector}"
+Error: "${error}"
+Intent: "${intent}"
+
+DOM Snippet:
+${domSnippet || 'No DOM available'}
+
+Analyze the DOM to find the most likely correct CSS selector for the intended element.
+Return a JSON object with these exact keys:
+- correctedSelector: a valid CSS selector string
+- confidence: a number between 0 and 1
+- reasoning: a short explanation`;
+
+            console.log(`[AIService] Context size: DOM=${domSnippet?.length || 0} chars`);
+
+            // CRITICAL: Ollama does NOT support generateObject (tool-call based structured output).
+            // It hangs indefinitely. Use generateText + manual JSON parsing for local providers.
+            if (activeProvider === 'ollama') {
+                console.log(
+                    `[AIService] Using generateText (Ollama mode) — avoids generateObject hang.`,
+                );
+
+                const { text } = await generateText({
+                    model: modelRef,
+                    prompt,
+                    temperature: 0.2,
+                    abortSignal: AbortSignal.timeout(customTimeout || 120000), // Respect custom timeout or 2 minutes max for local
+                });
+
+                console.log(`[AIService] Ollama raw response: ${text.substring(0, 200)}...`);
+
+                // Parse JSON from response
+                const jsonMatch = text.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    const parsed = JSON.parse(jsonMatch[0]);
+                    return {
+                        correctedSelector:
+                            parsed.correctedSelector ||
+                            parsed.new_selector ||
+                            parsed.selector ||
+                            null,
+                        confidence: parsed.confidence || 0.8,
+                        reasoning: parsed.reasoning || 'AI suggestion',
+                    };
+                }
+
+                return {
+                    correctedSelector: null,
+                    confidence: 0,
+                    reasoning: 'Could not parse AI response',
+                };
+            }
+
+            // Cloud providers: use generateObject for structured output (faster, more reliable)
+            console.log(`[AIService] Using generateObject (cloud mode).`);
+
+            const content = [{ type: 'text', text: prompt }];
+
+            if (screenshotBase64) {
+                content.push({ type: 'image', image: screenshotBase64 });
+            }
 
             const { object } = await generateObject({
-                model,
+                model: modelRef,
                 schema: z.object({
                     correctedSelector: z.string(),
                     confidence: z.number(),
                     reasoning: z.string(),
                 }),
-                messages: [
-                    {
-                        role: 'user',
-                        content: [
-                            { type: 'text', text: prompt },
-                            {
-                                type: 'text',
-                                text: `DOM Snippet:\n\`\`\`html\n${domSnippet}\n\`\`\``,
-                            },
-                            { type: 'image', image: screenshotBase64 },
-                        ],
-                    },
-                ],
+                messages: [{ role: 'user', content }],
+                abortSignal: AbortSignal.timeout(customTimeout || 60000), // Respect custom or 1 minute for cloud
             });
 
             return object;

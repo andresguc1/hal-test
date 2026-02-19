@@ -1,6 +1,8 @@
 import express from 'express';
 import { chatWithTools } from '../controllers/chat.controller.js';
 import aiService from '../services/AIService.js';
+import { browserService } from '../services/browser.service.js';
+import selectorHealer from '../services/SelectorHealer.js';
 
 const router = express.Router();
 
@@ -87,29 +89,71 @@ router.post('/heal-selector', async (req, res) => {
     // But `AIService.healSelector` uses vision.
     // Let's check `req.body` actually for `screenshot`.
 
-    // Assuming frontend calls this endpoint with screenshot
-    const { screenshot } = req.body;
+    // Assuming frontend calls this endpoint with screenshot and DOM
+    const { screenshot, domSnippet } = req.body;
 
-    // Extract Keys
+    // Extract Keys and Params
     const rawKey = req.headers['x-ai-api-key'] || process.env.OPENAI_API_KEY;
     const apiKey = rawKey?.trim();
+    const provider = req.headers['x-ai-provider'] || 'ollama';
+    const model = req.headers['x-ai-model'] || 'gemma3';
+    const browserId = req.headers['x-browser-id'] || req.body.browserId;
 
-    if (!apiKey) {
+    if (!apiKey && provider !== 'ollama') {
         return res.status(401).json({ error: 'Missing API Key' });
     }
 
-    console.log(`[AI] Healing selector '${failedSelector}'...`);
+    let finalDomSnippet = domSnippet;
+    let retrievalMethod = domSnippet ? 'Frontend provided' : 'None';
+
+    // AUTO-RETRIEVE DOM IF MISSING
+    if (!finalDomSnippet) {
+        try {
+            const browserEntry = browserService.get(browserId) || browserService.getLatest();
+            if (browserEntry) {
+                const browser = browserEntry.browser || browserEntry;
+                const contexts = browser.contexts();
+                if (contexts.length > 0) {
+                    const pages = contexts[0].pages();
+                    if (pages.length > 0) {
+                        const activePage = pages[pages.length - 1];
+                        console.log(
+                            `[AI] Fetching live DOM for healing context (Browser: ${browserId || 'latest'})...`,
+                        );
+                        finalDomSnippet = await activePage.evaluate(
+                            selectorHealer.getCompressionScript(),
+                        );
+                        retrievalMethod = 'Live Fetch';
+                    }
+                }
+            }
+        } catch (domError) {
+            console.error('[AI] Could not fetch live DOM:', domError.message);
+        }
+    }
+
+    console.log(`[AI] Starting Heal:
+      - Provider/Model: ${provider}/${model}
+      - Selector: ${failedSelector}
+      - DOM Retrieval: ${retrievalMethod}
+      - DOM Length: ${finalDomSnippet?.length || 0} characters
+      - Has Screenshot: ${!!screenshot}`);
 
     try {
         const result = await aiService.healSelector({
             screenshotBase64: screenshot,
-            domSnippet: `Target: ${nodeType}`, // Simple snippet if real one missing
+            domSnippet: finalDomSnippet || `Target element type: ${nodeType}`,
             originalSelector: failedSelector,
             error: error,
-            intent: `Interact with ${nodeType}`,
+            intent: `Interact with ${nodeType} (Original selector: ${failedSelector})`,
+            provider,
+            model,
             apiKey,
         });
 
+        console.log(
+            `[AI] Heal Success: Suggested '${result.correctedSelector}' (Confidence: ${result.confidence})`,
+        );
         res.json({ suggestion: result.correctedSelector, confidence: result.confidence });
     } catch (error) {
         console.error('AI Heal Error', error);
