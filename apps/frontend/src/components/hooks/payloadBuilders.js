@@ -1099,3 +1099,64 @@ export const set_network_conditions = (payload) => {
     uploadThroughput: asNumber(payload?.uploadThroughput, 0),
   };
 };
+
+// ---------------------------------------------
+// Builders (FLOW Control)
+// ---------------------------------------------
+
+export const variable = (payload) => {
+  return {
+    browserId: asString(payload?.browserId),
+    operation: asString(payload?.operation, "set"),
+    name: asString(payload?.name),
+    value: asString(payload?.value),
+    scope: asString(payload?.scope, "flow"),
+  };
+};
+
+export const conditional = (payload) => {
+  return {
+    browserId: asString(payload?.browserId),
+    conditions: asJsonString(payload?.conditions, false, '"conditions"'),
+    logic: asString(payload?.logic, "AND"),
+  };
+};
+
+export const loop = (payload) => {
+  return {
+    browserId: asString(payload?.browserId),
+    mode: asString(payload?.mode, "count"),
+    iterations: asNumber(payload?.iterations, 10, 1),
+    condition: asString(payload?.condition),
+    array: asString(payload?.array),
+    itemVar: asString(payload?.itemVar),
+    maxIterations: asNumber(payload?.maxIterations, 1000, 1),
+  };
+};
+
+export const branch = (payload) => {
+  return {
+    browserId: asString(payload?.browserId),
+    mode: asString(payload?.mode, "parallel"),
+    timeout: asNumber(payload?.timeout, 30000, 0),
+  };
+};
+
+export const flow_control = (payload) => {
+  return {
+    browserId: asString(payload?.browserId),
+    action: asString(payload?.action, "break"),
+    returnValue: asJsonString(payload?.returnValue, false, '"returnValue"'),
+  };
+};
+
+export const transform = (payload) => {
+  return {
+    browserId: asString(payload?.browserId),
+    operation: asString(payload?.operation, "map"),
+    input: asString(payload?.input),
+    expression: asString(payload?.expression),
+    mergeWith: asString(payload?.mergeWith),
+    outputVar: asString(payload?.outputVar),
+  };
+};

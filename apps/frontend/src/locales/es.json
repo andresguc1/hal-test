@@ -333,7 +333,8 @@
       "logToFile": "If active, logs save to file. Otherwise, only printed to backend console.",
       "timeout": "Time to listen for errors. 0 for indefinite.",
       "args": "Opcional. Argumentos que se pasarán a la función JavaScript.",
-      "returnValue": "Si está activo, el resultado del script se guardará en una variable."
+      "returnValue": "Si está activo, el resultado del script se guardará en una variable.",
+      "picker_local_only": "Aviso: El Picker solo funciona en la versión local. En la demo web, por favor ingresa el selector manualmente."
     },
     "screenshots": {
       "title": "Capturas de Pantalla",

@@ -74,7 +74,7 @@ VITE_AUTH_ENABLED=false
 3. Run
 Bash
 pnpm --filter backend db:init
-pnpm dev
+pnpm run dev
 App: http://localhost:5173/app/
 
 Server: http://localhost:2001

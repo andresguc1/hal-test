@@ -11,6 +11,7 @@ import {
   ArrowLeftRight,
   Sparkles,
   Trash2,
+  AlertCircle,
 } from "lucide-react";
 import { useToast } from "@/hooks/useToast";
 import { useTranslation } from "react-i18next";
@@ -1057,6 +1058,363 @@ const NODE_INPUTS = {
     },
   ],
 
+  variable: [
+    {
+      key: "operation",
+      label: "Operation",
+      type: "select",
+      options: [
+        { value: "set", label: "Set" },
+        { value: "get", label: "Get" },
+        { value: "increment", label: "Increment" },
+        { value: "push", label: "Push" },
+      ],
+      default: "set",
+      required: true,
+    },
+    {
+      key: "name",
+      label: "Variable Name",
+      type: "text",
+      placeholder: "counter",
+      required: true,
+    },
+    {
+      key: "value",
+      label: "Value",
+      type: "textarea",
+      placeholder: "42 or [1,2,3]",
+      isVisible: (data) =>
+        ["set", "increment", "push"].includes(data.operation),
+    },
+    {
+      key: "scope",
+      label: "Scope",
+      type: "select",
+      options: [
+        { value: "flow", label: "Flow" },
+        { value: "global", label: "Global" },
+      ],
+      default: "flow",
+      required: true,
+    },
+  ],
+
+  conditional: [
+    {
+      key: "conditions",
+      label: "Conditions (JSON Array)",
+      type: "textarea",
+      placeholder: '[{"left": "${counter}", "operator": ">", "right": 10}]',
+      required: true,
+    },
+    {
+      key: "logic",
+      label: "Logic Operator",
+      type: "select",
+      options: [
+        { value: "AND", label: "AND" },
+        { value: "OR", label: "OR" },
+      ],
+      default: "AND",
+      required: true,
+    },
+  ],
+
+  loop: [
+    {
+      key: "mode",
+      label: "Loop Mode",
+      type: "select",
+      options: [
+        { value: "count", label: "Count" },
+        { value: "while", label: "While" },
+        { value: "forEach", label: "ForEach" },
+      ],
+      default: "count",
+      required: true,
+    },
+    {
+      key: "iterations",
+      label: "Iterations",
+      type: "number",
+      placeholder: "10",
+      isVisible: (data) => data.mode === "count",
+    },
+    {
+      key: "condition",
+      label: "While Condition",
+      type: "textarea",
+      placeholder: "${counter} < 100",
+      isVisible: (data) => data.mode === "while",
+    },
+    {
+      key: "array",
+      label: "Array Variable",
+      type: "text",
+      placeholder: "${items}",
+      isVisible: (data) => data.mode === "forEach",
+    },
+    {
+      key: "itemVar",
+      label: "Item Var Name",
+      type: "text",
+      placeholder: "currentItem",
+      isVisible: (data) => data.mode === "forEach",
+    },
+    {
+      key: "maxIterations",
+      label: "Max Iterations",
+      type: "number",
+      default: 1000,
+    },
+  ],
+
+  branch: [
+    {
+      key: "mode",
+      label: "Execution Mode",
+      type: "select",
+      options: [
+        { value: "parallel", label: "Parallel" },
+        { value: "sequential", label: "Sequential" },
+        { value: "race", label: "Race" },
+      ],
+      default: "parallel",
+      required: true,
+    },
+    {
+      key: "timeout",
+      label: "Timeout (ms)",
+      type: "number",
+      default: 30000,
+    },
+  ],
+
+  flow_control: [
+    {
+      key: "action",
+      label: "Control Action",
+      type: "select",
+      options: [
+        { value: "break", label: "Break" },
+        { value: "continue", label: "Continue" },
+        { value: "return", label: "Return" },
+      ],
+      required: true,
+    },
+    {
+      key: "returnValue",
+      label: "Return Value (JSON)",
+      type: "textarea",
+      placeholder: '{"status": "success"}',
+      isVisible: (data) => data.action === "return",
+    },
+  ],
+
+  transform: [
+    {
+      key: "operation",
+      label: "Transform Operation",
+      type: "select",
+      options: [
+        { value: "map", label: "Map" },
+        { value: "filter", label: "Filter" },
+        { value: "reduce", label: "Reduce" },
+        { value: "merge", label: "Merge" },
+      ],
+      default: "map",
+      required: true,
+    },
+    {
+      key: "input",
+      label: "Input Array",
+      type: "text",
+      placeholder: "${items}",
+      required: true,
+    },
+    {
+      key: "expression",
+      label: "Expression",
+      type: "textarea",
+      placeholder: "item.price * 1.1",
+      isVisible: (data) => ["map", "filter"].includes(data.operation),
+    },
+    {
+      key: "mergeWith",
+      label: "Merge With Array",
+      type: "text",
+      placeholder: "${otherItems}",
+      isVisible: (data) => data.operation === "merge",
+    },
+    {
+      key: "outputVar",
+      label: "Output Variable",
+      type: "text",
+      placeholder: "processedItems",
+      required: true,
+    },
+  ],
+
+  cli_params: [
+    {
+      key: "paramName",
+      label: "Parameter Name",
+      type: "text",
+      placeholder: "--targetEnv",
+      required: true,
+    },
+    {
+      key: "paramType",
+      label: "Parameter Type",
+      type: "select",
+      options: [
+        { label: "string", value: "string" },
+        { label: "number", value: "number" },
+        { label: "boolean", value: "boolean" },
+        { label: "json", value: "json" },
+      ],
+      default: "string",
+    },
+    {
+      key: "defaultValue",
+      label: "Default Value",
+      type: "text",
+      placeholder: "default_value",
+    },
+    {
+      key: "required",
+      label: "Required",
+      type: "checkbox",
+      default: true,
+    },
+    {
+      key: "validationCode",
+      label: "Validation Code (JS)",
+      type: "textarea",
+      placeholder: "if (value !== 'dev') throw new Error('invalid');",
+    },
+  ],
+
+  return_code: [
+    {
+      key: "successField",
+      label: "Success Field",
+      type: "text",
+      placeholder: "success",
+      required: true,
+    },
+    {
+      key: "exitOnFail",
+      label: "Exit on Failure",
+      type: "checkbox",
+      default: true,
+    },
+    {
+      key: "customCodes",
+      label: "Custom Codes (JSON)",
+      type: "textarea",
+      placeholder: '{ "success": 0, "failed": 1 }',
+    },
+    {
+      key: "verbose",
+      label: "Verbose Logs",
+      type: "checkbox",
+      default: true,
+    },
+  ],
+
+  integrate_ci: [
+    {
+      key: "provider",
+      label: "CI Provider",
+      type: "select",
+      options: [
+        { label: "GitLab", value: "gitlab" },
+        { label: "GitHub", value: "github" },
+        { label: "Jenkins", value: "jenkins" },
+        { label: "Bitbucket", value: "bitbucket" },
+      ],
+      default: "gitlab",
+      required: true,
+    },
+    {
+      key: "saveArtifacts",
+      label: "Save Artifacts",
+      type: "checkbox",
+      default: true,
+    },
+    {
+      key: "outputPath",
+      label: "Output Path",
+      type: "text",
+      placeholder: "gitlab-artifacts",
+    },
+    {
+      key: "uploadReports",
+      label: "Upload Reports",
+      type: "checkbox",
+      default: false,
+    },
+    {
+      key: "envVariables",
+      label: "Env Variables (JSON)",
+      type: "textarea",
+      placeholder: '{ "VAR": "value" }',
+    },
+    {
+      key: "retryOnFail",
+      label: "Retry on Failure",
+      type: "number",
+      placeholder: "0",
+    },
+    {
+      key: "verbose",
+      label: "Verbose Logs",
+      type: "checkbox",
+      default: true,
+    },
+  ],
+
+  run_tests: [
+    {
+      key: "testSuite",
+      label: "Test Suite Path",
+      type: "text",
+      placeholder: "tests/",
+      required: true,
+    },
+    {
+      key: "parallel",
+      label: "Run Parallel",
+      type: "checkbox",
+      default: true,
+    },
+    {
+      key: "retries",
+      label: "Retries",
+      type: "number",
+      placeholder: "0",
+    },
+    {
+      key: "reportFormat",
+      label: "Report Format",
+      type: "select",
+      options: [
+        { label: "JUnit", value: "junit" },
+        { label: "HTML", value: "html" },
+        { label: "JSON", value: "json" },
+      ],
+      default: "junit",
+    },
+    {
+      key: "timeout",
+      label: "Timeout (ms)",
+      type: "number",
+      placeholder: "900000",
+    },
+  ],
+
   // Default fallback
   default: [
     {
@@ -1613,7 +1971,7 @@ function NodeConfigurationPanel({
                   "w-full bg-[var(--bg-canvas)]/50 border border-[var(--border-ui)] rounded-lg px-3 py-2 pl-3 pr-8 text-xs font-mono focus:outline-none focus:border-indigo-500/50 transition-all placeholder:text-[var(--text-muted)] !pointer-events-auto !cursor-text !select-text",
                   value ? "text-indigo-400" : "text-[var(--text-main)]",
                   error &&
-                  "border-red-500/50 focus:border-red-500 bg-red-500/5",
+                    "border-red-500/50 focus:border-red-500 bg-red-500/5",
                 )}
               />
               <div
@@ -1625,6 +1983,19 @@ function NodeConfigurationPanel({
                 )}
               />
             </div>
+
+            {/* Warning Patch for WEB Demo */}
+            <div className="mt-1 flex items-start gap-1 p-1.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-500/90 text-[10px] leading-tight max-w-[280px]">
+              <AlertCircle size={12} className="shrink-0 mt-0.5" />
+              <span>
+                <span
+                  dangerouslySetInnerHTML={{
+                    __html: t("nodes.hints.picker_local_only"),
+                  }}
+                />
+              </span>
+            </div>
+
             {error && (
               <span className="text-[10px] text-red-400 font-bold ml-1">
                 {error}
@@ -1726,7 +2097,7 @@ function NodeConfigurationPanel({
                       }
                     }, 300); // 300ms debounce for typing comfort
                   }}
-                // onBlur removed - handled by debounce
+                  // onBlur removed - handled by debounce
                 />
               </div>
             </div>
@@ -1760,7 +2131,7 @@ function NodeConfigurationPanel({
           <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
             {/* Dynamic Content Switch */}
             {safeConfig.nodeKey === "component" ||
-              activeNode.type === "component" ? (
+            activeNode.type === "component" ? (
               // --- COMPONENT DASHBOARD ---
               <div className="space-y-6">
                 {/* Description Card */}

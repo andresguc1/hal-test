@@ -36,7 +36,11 @@ const cliParamsBodySchema = Joi.object({
         'string.base': 'El código de validación debe ser una cadena de texto (JS).',
     }),
 
-    // 6. browserId (ID del contexto/navegador objetivo) 🆕
+    // 6. value (Valor actual, Opcional) 🆕
+    // Permite pasar el valor directamente desde el cuerpo de la petición (ej: para pruebas)
+    value: Joi.any().optional(),
+
+    // 7. browserId (ID del contexto/navegador objetivo) 🆕
     // Aunque esto no es directamente una acción de navegador, se requiere un contexto de ejecución.
     browserId: Joi.string().allow(null, '').required().messages({
         'any.required':

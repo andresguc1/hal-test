@@ -3162,32 +3162,133 @@ export const handleDownloadsAction = (req, res) =>
         };
     });
 
-export const runTestsAction = (req, res) =>
-    res.status(200).json({
+export const runTestsAction = (req, res) => {
+    const { testSuite, parallel, retries, reportFormat, timeout } = req.body;
+    smartEmitLog(
+        `[TEST RUNNER] Simulation: Running suite ${testSuite} (Parallel: ${parallel}, Retries: ${retries})`,
+        'info',
+    );
+    return res.status(200).json({
         success: true,
-        message:
-            'Test execution triggered (Simulated). Real integration would require a test runner.',
+        message: req.t('actions.run_tests.success') || 'Test execution simulation triggered',
+        data: { testSuite, parallel, retries, reportFormat, timeout },
+    });
+};
+
+export const cliParamsAction = (req, res) => {
+    const { paramName, paramType, defaultValue, required } = req.body;
+
+    // 1. Search in process.env or req.body (could also be passed via header in a real scenario)
+    let value = process.env[paramName] || req.body.value;
+
+    // 2. Fallback to default
+    if (value === undefined || value === null || value === '') {
+        value = defaultValue;
+    }
+
+    // 3. Check if required
+    if (required && (value === undefined || value === null || value === '')) {
+        return res.status(400).json({
+            success: false,
+            message: `Required CLI parameter missing: ${paramName}`,
+        });
+    }
+
+    // 4. Type conversion
+    if (paramType === 'number') value = Number(value);
+    if (paramType === 'boolean') value = String(value).toLowerCase() === 'true';
+
+    // 5. Persist to Global variable scope
+    variableManager.set(paramName, value, 'global');
+
+    smartEmitLog(`[CLI] Parameter injected: ${paramName} = ${value}`, 'info');
+
+    return res.status(200).json({
+        success: true,
+        message: `CLI parameter ${paramName} injected successfully`,
+        data: { [paramName]: value },
+    });
+};
+
+export const returnCodeAction = (req, res) => {
+    const { successField = 'success', exitOnFail = true, customCodes, verbose = true } = req.body;
+
+    // We look for the success state in the variables (defaulting to the 'success' variable)
+    const isSuccess = variableManager.get(successField, 'flow') !== false;
+
+    let codes = { success: 0, failed: 1 };
+    if (customCodes) {
+        try {
+            codes = typeof customCodes === 'string' ? JSON.parse(customCodes) : customCodes;
+        } catch (e) {
+            console.warn('[ReturnCode] Failed to parse customCodes JSON');
+        }
+    }
+
+    const finalCode = isSuccess ? codes.success : codes.failed;
+
+    // Store in a reserved global variable
+    variableManager.set('HAL_RETURN_CODE', finalCode, 'global');
+
+    if (verbose) {
+        smartEmitLog(
+            `[SYSTEM] Final return code set to: ${finalCode} (Success: ${isSuccess})`,
+            'info',
+        );
+    }
+
+    if (!isSuccess && exitOnFail) {
+        smartEmitLog(`[SYSTEM] Flow flagged to exit with failure code.`, 'warning');
+    }
+
+    return res.status(200).json({
+        success: true,
+        message: `Return code ${finalCode} registered`,
+        data: { code: finalCode, exitOnFail },
+    });
+};
+
+export const integrateCIAction = (req, res) => {
+    const { provider = 'auto', saveArtifacts, outputPath, envVariables } = req.body;
+
+    const ciData = {
+        CI: !!process.env.CI,
+        GITHUB_ACTIONS: !!process.env.GITHUB_ACTIONS,
+        GITLAB_CI: !!process.env.GITLAB_CI,
+        REPO: process.env.GITHUB_REPOSITORY || process.env.CI_PROJECT_PATH || 'unknown',
+        SHA: process.env.GITHUB_SHA || process.env.CI_COMMIT_SHA || 'local',
+        BRANCH: process.env.GITHUB_REF_NAME || process.env.CI_COMMIT_REF_NAME || 'main',
+    };
+
+    // Populate variable manager with CI metadata
+    Object.entries(ciData).forEach(([key, val]) => {
+        variableManager.set(`CI_${key}`, val, 'global');
     });
 
-export const cliParamsAction = (req, res) =>
-    res.status(200).json({
-        success: true,
-        message: 'CLI parameters processed',
-        data: { params: req.body },
-    });
+    // Handle extra env variables
+    if (envVariables) {
+        try {
+            const extra =
+                typeof envVariables === 'string' ? JSON.parse(envVariables) : envVariables;
+            Object.entries(extra).forEach(([k, v]) => {
+                variableManager.set(k, v, 'global');
+            });
+        } catch (e) {
+            console.warn('[IntegrateCI] Failed to parse envVariables');
+        }
+    }
 
-export const returnCodeAction = (req, res) =>
-    res.status(200).json({
-        success: true,
-        message: 'Return code set',
-        data: { code: req.body.code || 0 },
-    });
+    smartEmitLog(
+        `[CI/CD] Integration active for provider: ${provider}. Metadata captured.`,
+        'info',
+    );
 
-export const integrateCIAction = (req, res) =>
-    res.status(200).json({
+    return res.status(200).json({
         success: true,
         message: req.t('actions.integrate_ci.success'),
+        data: { ciData, artifactsPath: saveArtifacts ? outputPath : null },
     });
+};
 
 // Acciones adicionales del router original
 export const dragDropAction = (req, res) =>
