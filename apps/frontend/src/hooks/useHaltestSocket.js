@@ -21,23 +21,28 @@ export const useHaltestSocket = (
   setEdges,
   onElementPicked,
   onLogReceived,
+  onTerminalOutput,
+  onCodegenAction,
 ) => {
   const socketRef = useRef(null);
   const onElementPickedRef = useRef(onElementPicked);
   const setNodesRef = useRef(setNodes);
   const setEdgesRef = useRef(setEdges);
+  const onTerminalOutputRef = useRef(onTerminalOutput);
+  const onCodegenActionRef = useRef(onCodegenAction);
 
   // Update refs when props change (always keep latest)
   useEffect(() => {
     onElementPickedRef.current = onElementPicked;
     setNodesRef.current = setNodes;
     setEdgesRef.current = setEdges;
-  }, [onElementPicked, setNodes, setEdges]);
+    onTerminalOutputRef.current = onTerminalOutput;
+    onCodegenActionRef.current = onCodegenAction;
+  }, [onElementPicked, setNodes, setEdges, onTerminalOutput, onCodegenAction]);
 
   useEffect(() => {
     console.log("Haltest Socket: 🔄 Connecting to", SOCKET_URL);
 
-    // Initialize connection
     socketRef.current = io(SOCKET_URL, {
       autoConnect: true,
       reconnection: true,
@@ -48,11 +53,7 @@ export const useHaltestSocket = (
     const socket = socketRef.current;
 
     socket.on("connect", () => {
-      console.log(
-        "Haltest Socket: ✅ Connected successfully (ID:",
-        socket.id,
-        ")",
-      );
+      console.log("Haltest Socket: ✅ Connected (ID:", socket.id, ")");
     });
 
     socket.on("connect_error", (error) => {
@@ -61,11 +62,9 @@ export const useHaltestSocket = (
 
     socket.on("execution-status", (data) => {
       if (!data || !data.stepId) return;
-
       const { stepId, status, error } = data;
       console.log(`Haltest Socket: ⚡ Event [${stepId}] -> ${status}`);
 
-      // 1. Update Node Status using REF
       if (setNodesRef.current) {
         setNodesRef.current((nds) => {
           if (!Array.isArray(nds)) return nds;
@@ -77,7 +76,6 @@ export const useHaltestSocket = (
                   ...node.data,
                   state: status,
                   error: error || node.data.error,
-                  // Merge result/output if provided (Fixes missing screenshots/status)
                   result: data.result
                     ? { ...node.data.result, ...data.result }
                     : node.data.result,
@@ -90,23 +88,19 @@ export const useHaltestSocket = (
         });
       }
 
-      // 2. Update Outgoing Edges using REF
       if (setEdgesRef.current) {
-        setEdgesRef.current((eds) => {
-          return eds.map((edge) => {
+        setEdgesRef.current((eds) =>
+          eds.map((edge) => {
             if (edge.source === stepId) {
               return {
                 ...edge,
                 animated: status === "running",
-                data: {
-                  ...edge.data,
-                  executionState: status,
-                },
+                data: { ...edge.data, executionState: status },
               };
             }
             return edge;
-          });
-        });
+          }),
+        );
       }
     });
 
@@ -114,19 +108,16 @@ export const useHaltestSocket = (
       console.warn("Haltest Socket: 🔌 Disconnected (Reason:", reason, ")");
     });
 
-    // Listen for Element Picker events
     console.log("[HaltestSocket] Registering 'element_picked' listener");
     socket.on("element_picked", (data) => {
       console.log("[HaltestSocket] 🎯 Element Picked Event Fired:", data);
       if (onElementPickedRef.current) {
-        console.log("[HaltestSocket] Invoking callback ref...");
         onElementPickedRef.current(data);
       } else {
         console.warn("[HaltestSocket] No callback ref found!");
       }
     });
 
-    // Listen for Screenshot Ready events
     socket.on("step_screenshot_ready", (data) => {
       const { nodeId, screenshotPath } = data;
       if (setNodesRef.current) {
@@ -151,7 +142,6 @@ export const useHaltestSocket = (
       }
     });
 
-    // Listen for Execution Logs
     socket.on("execution-log", (data) => {
       const { message, type, nodeId } = data;
       if (onLogReceived) {
@@ -159,14 +149,27 @@ export const useHaltestSocket = (
       }
     });
 
-    // Cleanup on unmount
+    // ─── Interactive Terminal ───────────────────────────────────────────────────
+    socket.on("terminal:output", (data) => {
+      if (onTerminalOutputRef.current) {
+        onTerminalOutputRef.current(data);
+      }
+    });
+
+    // ─── Codegen Ghost Nodes (Phase 2) ─────────────────────────────────────────
+    socket.on("codegen:action-detected", (data) => {
+      if (onCodegenActionRef.current) {
+        onCodegenActionRef.current(data);
+      }
+    });
+
     return () => {
       if (socket) {
         console.log("Haltest Socket: Cleaning up connection");
         socket.disconnect();
       }
     };
-  }, [onLogReceived]); // Connect once, but update if callback changes (unlikely)
+  }, [onLogReceived]);
 
   return socketRef.current;
 };

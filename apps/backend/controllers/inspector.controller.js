@@ -101,3 +101,44 @@ export const stopInspectorAction = async (req, res) => {
         });
     }
 };
+
+/**
+ * NEW: Remote Browser Bridge (Phase 3)
+ * Launches a new browser and starts the inspector on a page.
+ */
+export const launchRemoteAction = async (req, res) => {
+    try {
+        const { url = 'https://www.google.com' } = req.body;
+
+        console.log(`[Inspector] Launching remote browser for URL: ${url}`);
+
+        // 1. Launch Browser (Headful chromium for visibility on the desktop/vnc)
+        const { browserId, browser } = await browserService.launchBrowser({
+            headless: false,
+            browserType: 'chromium',
+        });
+
+        // 2. Create Page
+        const context = await browser.newContext();
+        const page = await context.newPage();
+
+        // 3. Navigate
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+
+        // 4. Start Inspector
+        await startInspector(page);
+
+        return res.status(200).json({
+            success: true,
+            browserId,
+            message: 'Remote browser launched and inspector active',
+        });
+    } catch (error) {
+        console.error('[InspectorController] Remote Launch Error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to launch remote inspector',
+            error: error.message,
+        });
+    }
+};

@@ -157,6 +157,9 @@
             "load_success": "Sesión cargada (Mejor Esfuerzo) en contexto activo.",
             "clear_success": "Sesión limpiada (Cookies y Almacenamiento)."
         },
+        "reload": {
+            "success": "Página recargada correctamente."
+        },
         "create_context": {
             "success": "Contexto verificado/creado exitosamente."
         },

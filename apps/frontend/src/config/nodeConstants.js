@@ -13,6 +13,7 @@ import {
   Settings2,
   Box,
   Brain,
+  RefreshCw,
 } from "lucide-react";
 
 // --- GLOBAL ALL-IN-ONE CONFIGURATION ---
@@ -32,6 +33,7 @@ export const NODE_CATEGORIES = {
       "go_back",
       "go_forward",
       "wait_navigation",
+      "reload_page",
     ],
   },
   dom_manipulation: {

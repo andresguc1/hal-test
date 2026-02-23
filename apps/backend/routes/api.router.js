@@ -15,7 +15,11 @@ import importRouter from './import.router.js';
 import exportRouter from './export.router.js';
 import runRouter from './run.router.js';
 
-import { startInspectorAction, stopInspectorAction } from '../controllers/inspector.controller.js';
+import {
+    startInspectorAction,
+    stopInspectorAction,
+    launchRemoteAction,
+} from '../controllers/inspector.controller.js';
 
 const router = Router();
 
@@ -24,6 +28,7 @@ const router = Router();
 // ==========================================================
 router.post('/inspector/start', startInspectorAction);
 router.post('/inspector/stop', stopInspectorAction);
+router.post('/inspector/launch-remote', launchRemoteAction);
 router.get('/variables', actions.getVariables);
 console.log('✅ Inspector routes registered: /start, /stop');
 
@@ -98,6 +103,12 @@ const actionRoutes = [
         schema: 'resizeViewportBodySchema',
         action: 'resizeViewportAction',
         category: 'viewport',
+    },
+    {
+        path: 'reload_page',
+        schema: 'backForwardBodySchema',
+        action: 'reloadAction',
+        category: 'navigation',
     },
 
     // ========== Element Interaction ==========

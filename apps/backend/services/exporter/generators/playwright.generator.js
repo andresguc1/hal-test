@@ -8,97 +8,158 @@ export const generatePlaywrightCode = (flowSteps) => {
         throw new Error('El flujo debe ser una lista de pasos.');
     }
 
-    const header = `
-const { chromium, firefox, webkit } = require('playwright');
+    const header = `import { test, expect } from '@playwright/test';
 
-(async () => {
-    // Configuración inicial
-    const browser = await chromium.launch({ headless: false });
-    const context = await browser.newContext();
-    const page = await context.newPage();
-
-    try {
-        console.log('🚀 Iniciando ejecución del flujo...');
+test('Generated Flow', async ({ page }) => {
+    let _stepStart = Date.now();
+    console.log('🚀 Iniciando ejecución del flujo...');
 `;
 
     const footer = `
-        console.log('✅ Flujo completado con éxito.');
-    } catch (error) {
-        console.error('❌ Error durante la ejecución:', error);
-    } finally {
-        // Limpieza
-        await context.close();
-        await browser.close();
-    }
-})();
+    console.log('✅ Flujo completado con éxito.');
+});
 `;
 
     const body = flowSteps
         .map((step, index) => {
-            const { action, ...params } = step;
-            let codeLine = `        // Paso ${index + 1}: ${action}\n`;
+            const action = step.type || step.action;
+            const params = step.data?.configuration || step.data || step;
+
+            const actionLabels = {
+                launch_browser: 'Lanzar Navegador',
+                close_browser: 'Cerrar Navegador',
+                open_url: 'Abrir URL',
+                navigate: 'Navegar',
+                click: 'Click',
+                type_text: 'Escribir',
+                type: 'Escribir',
+                wait_visible: 'Esperar Visibilidad',
+                wait_for_element: 'Esperar Elemento',
+                take_screenshot: 'Captura de Pantalla',
+                wait_fixed: 'Esperar',
+                scroll: 'Scroll',
+                go_back: 'Atrás',
+                go_forward: 'Adelante',
+                reload: 'Recargar',
+                reload_page: 'Recargar Página',
+                press_key: 'Presionar Tecla',
+                wait_network_match: 'Esperar Coincidencia de Red',
+            };
+
+            const label =
+                step.data?.customLabel || step.data?.label || actionLabels[action] || action;
+            let codeLine = `    await test.step('Paso ${index + 1}: ${label}', async () => {\n`;
+            codeLine += `        _stepStart = Date.now();\n`;
 
             switch (action) {
                 case 'launch_browser':
-                    // Generalmente manejado en el header, pero si hay opciones específicas:
-                    if (params.headless !== undefined) {
-                        codeLine += `        // Nota: La configuración de headless se define en el lanzamiento del browser.\n`;
-                    }
+                    codeLine += `        console.log('Lanzando navegador...');\n`;
+                    codeLine += `        console.log('Navegador lanzado con ID: playwright-test-runner');\n`;
+                    break;
+
+                case 'close_browser':
+                    codeLine += `        console.log('Cerrando navegador...');\n`;
+                    codeLine += `        // El test runner cierra el contexto automáticamente.\n`;
+                    codeLine += `        console.log(\`Navegador cerrado con éxito. (\${Date.now() - _stepStart}ms)\`);\n`;
                     break;
 
                 case 'open_url':
                 case 'navigate':
-                    codeLine += `        await page.goto('${params.url}');`;
+                    codeLine += `        console.log('Abriendo URL...');\n`;
+                    codeLine += `        await page.goto('${params.url}');\n`;
+                    codeLine += `        console.log(\`Navegado a ${params.url} en \${Date.now() - _stepStart}ms\`);\n`;
                     break;
 
                 case 'click':
-                    codeLine += `        await page.click('${params.selector}');`;
+                    codeLine += `        console.log('Ejecutando click...');\n`;
+                    codeLine += `        await page.click('${params.selector}');\n`;
+                    codeLine += `        console.log(\`Click exitoso en el selector '${params.selector}'. (\${Date.now() - _stepStart}ms)\`);\n`;
                     break;
 
                 case 'type_text':
                 case 'type':
-                    codeLine += `        await page.fill('${params.selector}', '${params.text}');`;
+                    codeLine += `        console.log('Ejecutando type_text...');\n`;
+                    codeLine += `        await page.fill('${params.selector}', '${params.text}');\n`;
+                    codeLine += `        console.log(\`Texto ingresado con éxito en el selector '${params.selector}'. (\${Date.now() - _stepStart}ms)\`);\n`;
                     break;
 
                 case 'wait_visible':
-                    codeLine += `        await page.waitForSelector('${params.selector}', { state: 'visible' });`;
+                    codeLine += `        console.log('Ejecutando wait_visible...');\n`;
+                    codeLine += `        await page.waitForSelector('${params.selector}', { state: 'visible' });\n`;
+                    codeLine += `        console.log(\`El elemento '${params.selector}' ahora es visible. (\${Date.now() - _stepStart}ms)\`);\n`;
                     break;
 
                 case 'wait_for_element':
-                    codeLine += `        await page.waitForSelector('${params.selector}');`;
+                    codeLine += `        console.log('Ejecutando wait_for_element...');\n`;
+                    codeLine += `        await page.waitForSelector('${params.selector}');\n`;
+                    codeLine += `        console.log(\`Elemento '${params.selector}' encontrado. (\${Date.now() - _stepStart}ms)\`);\n`;
                     break;
 
                 case 'take_screenshot': {
                     const path = params.path || `screenshot_${Date.now()}.png`;
-                    codeLine += `        await page.screenshot({ path: '${path}', fullPage: ${params.fullPage || false} }); `;
+                    codeLine += `        await page.screenshot({ path: '${path}', fullPage: ${params.fullPage || false} });\n`;
+                    codeLine += `        console.log(\`Captura de pantalla realizada con éxito. (\${Date.now() - _stepStart}ms)\`);\n`;
                     break;
                 }
 
                 case 'wait_fixed':
-                    codeLine += `        await page.waitForTimeout(${params.ms}); `;
+                    codeLine += `        console.log('Ejecutando wait_fixed...');\n`;
+                    codeLine += `        await page.waitForTimeout(${params.ms});\n`;
+                    codeLine += `        console.log(\`Esperado durante ${params.ms}ms. (\${Date.now() - _stepStart}ms)\`);\n`;
                     break;
 
                 case 'scroll':
+                    codeLine += `        console.log('Ejecutando scroll...');\n`;
                     if (params.selector) {
-                        codeLine += `        await page.locator('${params.selector}').scrollIntoViewIfNeeded(); `;
+                        codeLine += `        await page.locator('${params.selector}').scrollIntoViewIfNeeded();\n`;
                     } else {
-                        codeLine += `        await page.mouse.wheel(0, ${params.amount || 500}); `;
+                        codeLine += `        await page.mouse.wheel(0, ${params.amount || 500});\n`;
                     }
                     break;
 
                 case 'go_back':
-                    codeLine += `        await page.goBack(); `;
+                    codeLine += `        console.log('Ejecutando go_back...');\n`;
+                    codeLine += `        await page.goBack();\n`;
+                    codeLine += `        console.log(\`Retrocedido con éxito. (\${Date.now() - _stepStart}ms)\`);\n`;
                     break;
 
                 case 'go_forward':
-                    codeLine += `        await page.goForward(); `;
+                    codeLine += `        console.log('Ejecutando go_forward...');\n`;
+                    codeLine += `        await page.goForward();\n`;
+                    codeLine += `        console.log(\`Avanzado con éxito. (\${Date.now() - _stepStart}ms)\`);\n`;
+                    break;
+
+                case 'reload':
+                case 'reload_page':
+                    codeLine += `        console.log('Ejecutando reload...');\n`;
+                    codeLine += `        await page.reload();\n`;
+                    codeLine += `        console.log(\`Recargado con éxito. (\${Date.now() - _stepStart}ms)\`);\n`;
+                    break;
+
+                case 'wait_network_match': {
+                    const { type = 'response', urlPattern, method, statusCode } = params;
+                    codeLine += `        console.log('Esperando coincidencia de red: ${urlPattern}...');\n`;
+                    if (type === 'request') {
+                        codeLine += `        await page.waitForRequest(req => req.url().includes('${urlPattern}') && (!'${method}' || '${method}' === 'ALL' || req.method() === '${method}'));\n`;
+                    } else {
+                        codeLine += `        await page.waitForResponse(resp => resp.url().includes('${urlPattern}') && (!'${method}' || '${method}' === 'ALL' || resp.request().method() === '${method}') && (!${statusCode} || resp.status() === ${statusCode}));\n`;
+                    }
+                    codeLine += `        console.log(\`Coincidencia de red encontrada para ${urlPattern}. (\${Date.now() - _stepStart}ms)\`);\n`;
+                    break;
+                }
+
+                case 'press_key':
+                    codeLine += `        console.log('Ejecutando press_key...');\n`;
+                    codeLine += `        await page.keyboard.press('${params.key}');\n`;
+                    codeLine += `        console.log(\`Tecla '${params.key}' presionada con éxito. (\${Date.now() - _stepStart}ms)\`);\n`;
                     break;
 
                 default:
                     codeLine += `        // Acción no soportada automáticamente: ${action}\n`;
-                    codeLine += `        // Params: ${JSON.stringify(params)}`;
+                    codeLine += `        console.warn('Acción desconocida:', ${JSON.stringify(params)});\n`;
             }
 
+            codeLine += `    });`;
             return codeLine;
         })
         .join('\n\n');

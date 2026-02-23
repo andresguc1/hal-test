@@ -1,4 +1,5 @@
 import React, { memo } from "react";
+import { useTranslation } from "react-i18next";
 import { Handle, Position, useStore } from "@xyflow/react";
 import {
   Code,
@@ -18,7 +19,8 @@ import {
   truncate,
 } from "@/config/validationRules";
 
-const AbyssNode = ({ data, selected, type }) => {
+const AbyssNode = ({ id, data, selected, type }) => {
+  const { t } = useTranslation();
   // 1. Determine Node Type & Config
   const nodeKey = data.subType || data.type || type;
   const config = NODE_TYPE_MAP[nodeKey] || NODE_TYPE_MAP.launch_browser;
@@ -48,7 +50,10 @@ const AbyssNode = ({ data, selected, type }) => {
   const smartLabel = getSmartLabel(nodeKey, data.configuration);
   // PRIORITY: Custom User Name > Smart Auto-Label > Legacy/Default
   const displayLabel =
-    data.customLabel || smartLabel || data.label || safeConfig.label;
+    data.customLabel ||
+    smartLabel ||
+    data.label ||
+    t(`nodes.labels.${nodeKey}`, { defaultValue: safeConfig.label });
 
   // 6. Styles & Status
 
@@ -105,6 +110,10 @@ const AbyssNode = ({ data, selected, type }) => {
         !selected &&
           !statusColor &&
           "shadow-md dark:shadow-[0_4px_10px_rgba(0,0,0,0.3)]",
+
+        // GHOST STYLE (Phase 2)
+        data.isGhost &&
+          "border-dashed opacity-80 border-white/40 grayscale-[0.5]",
       )}
     >
       {/* INPUT HANDLE */}
@@ -147,6 +156,14 @@ const AbyssNode = ({ data, selected, type }) => {
         <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-sky-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg border border-white animate-bounce z-50 whitespace-nowrap flex items-center gap-1">
           <MousePointer size={10} />
           PICKING TARGET
+        </div>
+      )}
+
+      {/* GHOST INDICATOR (Phase 2) */}
+      {data.isGhost && (
+        <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-md text-white text-[9px] tracking-widest font-black px-3 py-1 rounded-full shadow-xl border border-white/20 z-50 whitespace-nowrap flex items-center gap-2">
+          <Sparkles size={10} className="text-yellow-400" />
+          GHOST ACTION
         </div>
       )}
 
@@ -273,6 +290,22 @@ const AbyssNode = ({ data, selected, type }) => {
       {data.error && (
         <div className="absolute -top-2 -right-2 bg-white rounded-full p-0.5 shadow-sm border border-red-500 z-10">
           <AlertCircle size={16} className="text-red-600 fill-current" />
+        </div>
+      )}
+
+      {/* GHOST CONFIRM BUTTON */}
+      {data.isGhost && (
+        <div className="mt-3 pt-2 border-t border-white/10 flex justify-center">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (data.onConfirmGhost) data.onConfirmGhost(data.id || id);
+            }}
+            className="w-full py-1.5 rounded-md bg-white/10 hover:bg-white/20 border border-white/10 transition-all text-[10px] font-black tracking-wider text-white flex items-center justify-center gap-2 active:scale-95"
+          >
+            <CheckCircle size={12} className="text-emerald-400" />
+            ADD TO FLOW
+          </button>
         </div>
       )}
 

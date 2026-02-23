@@ -100,7 +100,7 @@ const createExecutedLabel = (action) => {
 
 // Default configurations for specific node types
 const DEFAULT_NODE_CONFIGS = {
-  open_url: { url: "https://www.google.com" },
+  open_url: { url: "https://www.saucedemo.com" },
   launch_browser: { headless: false },
   set_viewport: { width: 1280, height: 720 },
   wait_for_timeout: { duration: 1000 },
@@ -255,7 +255,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
     };
 
     loadFlowData();
-  }, [currentProject, currentProject?.id, currentFlowId, setNodes, setEdges]);
+  }, [currentProject, currentFlowId, setNodes, setEdges, toast, t]); // Satisfy linter while currentProject is the owner of id
 
   // MANIFIESTO: Bidirectional Sync (Footer -> Canvas)
   // If a flow is renamed in the Footer (Global State), update the Node on Canvas
@@ -379,8 +379,10 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
           setApiStatus({
             message: "✓ Flujo guardado correctamente",
           });
-          setHasUnsavedChanges(false); // Clear dirty flag
         }
+
+        // Always clear dirty flag on successful save (both manual and auto-save)
+        setHasUnsavedChanges(false);
 
         // Increment change counter for versioning
         setChangeCounter((prev) => prev + 1);
@@ -585,17 +587,15 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
         nodePosition = position;
       } else {
         // Calculate position based on existing nodes to avoid overlap
-        const nodeWidth = 160; // Reduced from 220
-        const nodeHeight = 60; // Reduced from 80
-        const horizontalSpacing = 100; // Spacing between columns
-        const verticalSpacing = 150; // Increased from 80 to prevent overlap
-        const nodesPerRow = 3; // Number of nodes per row
+        const nodeWidth = 160;
+        const nodeHeight = 60;
+        const horizontalSpacing = 100;
+        const verticalSpacing = 150;
+        const nodesPerRow = 3;
 
-        // NEW: Central offset to position nodes in the middle of the canvas
         const startX = 400;
         const startY = 250;
 
-        // Calculate grid position
         const nodeCount = nodesRef.current.length;
         const row = Math.floor(nodeCount / nodesPerRow);
         const col = nodeCount % nodesPerRow;
@@ -608,25 +608,82 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
 
       const newNode = {
         id,
-        type: typeKey, // Explicitly use the registered node type (maps to AbyssNode)
+        type: typeKey,
         position: nodePosition,
         data: {
-          label, // Only show user-friendly label
+          label,
           type: typeKey,
-          configuration: DEFAULT_NODE_CONFIGS[typeKey] || {},
+          configuration:
+            (DEFAULT_NODE_CONFIGS && DEFAULT_NODE_CONFIGS[typeKey]) || {},
           state: NODE_STATES.DEFAULT,
         },
-        style: getNodeStyle(NODE_STATES.DEFAULT),
         sourcePosition: "right",
         targetPosition: "left",
       };
 
       setNodes((nds) => [...nds, newNode]);
       setSelectedNodeId(id);
-
-      // Auto-fit view removed to prevent unwanted zoom
     },
     [saveToHistory, setNodes],
+  );
+
+  // --- GHOST NODES (Phase 2) ---
+  const confirmGhostNode = useCallback(
+    (nodeId) => {
+      saveToHistory();
+      setNodes((nds) =>
+        nds.map((n) => {
+          if (n.id === nodeId) {
+            return {
+              ...n,
+              data: {
+                ...n.data,
+                isGhost: false,
+                // Remove confirm callback from data to keep it clean for save
+                onConfirmGhost: undefined,
+              },
+            };
+          }
+          return n;
+        }),
+      );
+    },
+    [saveToHistory, setNodes],
+  );
+
+  const addGhostNode = useCallback(
+    (type, selector, value) => {
+      const id = generateNodeId();
+      const label = NODE_LABELS[type] || type;
+
+      // Position: Find the rightmost node and add to the right
+      const rightmostXP = nodesRef.current.reduce(
+        (max, n) => Math.max(max, n.position.x),
+        100,
+      );
+      const lastNodeAtY = nodesRef.current
+        .filter((n) => n.position.x === rightmostXP)
+        .reduce((max, n) => Math.max(max, n.position.y), 100);
+
+      const newNode = {
+        id,
+        type,
+        position: { x: rightmostXP + 300, y: lastNodeAtY },
+        data: {
+          label,
+          type,
+          configuration: { selector, text: value },
+          isGhost: true,
+          onConfirmGhost: confirmGhostNode,
+          state: NODE_STATES.DEFAULT,
+        },
+        sourcePosition: "right",
+        targetPosition: "left",
+      };
+
+      setNodes((nds) => [...nds, newNode]);
+    },
+    [setNodes, confirmGhostNode],
   );
 
   const deleteNode = useCallback(
@@ -702,6 +759,12 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
           await projectManager.updateFlow(currentProject.id, targetFlowId, {
             name: newName,
           });
+          // FORCE UPDATE: Invalidate project query to sync flow list and tabs
+          queryClient.invalidateQueries(["project", currentProject.id]);
+          console.log(
+            "[useFlowManager] ✅ Component renamed and synced:",
+            newName,
+          );
 
           // 2. Optimistic UI Update (Menu)
           queryClient.setQueryData(["project", currentProject.id], (old) => {
@@ -2653,6 +2716,8 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
     deleteNode,
     updateNodeConfiguration,
     updateNodeState,
+    confirmGhostNode, // New
+    addGhostNode, // New
 
     executeStep,
     executeFlow,

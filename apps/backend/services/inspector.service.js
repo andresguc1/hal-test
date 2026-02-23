@@ -1,5 +1,6 @@
-/* eslint-disable no-undef */
 import { emitElementPicked } from '../socket.js';
+/* global window, document, Element, Node */
+import ollamaService from './OllamaService.js';
 
 /**
  * Injects the inspection script into the Page.
@@ -16,11 +17,30 @@ export async function startInspector(page) {
     // Wrap in try-catch because if it's already exposed, it throws an error
     try {
         console.log('[Inspector] Exposing onElementSelected function...');
-        await page.exposeFunction('onElementSelected', (data) => {
+        await page.exposeFunction('onElementSelected', async (data) => {
             console.log(
                 '[Inspector] 🎯 Element selected callback triggered with data:',
                 JSON.stringify(data, null, 2),
             );
+
+            // PHASE 4: AI Sanitization
+            try {
+                const sanitized = await ollamaService.sanitizeSelector(
+                    data.selector,
+                    data.htmlContext,
+                );
+                if (sanitized && sanitized.confidence > 0.6) {
+                    console.log(
+                        `[Inspector] ✨ AI Optimized Selector: ${sanitized.sanitizedSelector}`,
+                    );
+                    data.sanitizedSelector = sanitized.sanitizedSelector;
+                    data.isAI = true;
+                    data.aiReasoning = sanitized.reasoning;
+                }
+            } catch (aiError) {
+                console.warn('[Inspector] AI Sanitization failed, using raw:', aiError.message);
+            }
+
             emitElementPicked(data);
         });
         console.log('[Inspector] ✅ onElementSelected function exposed successfully.');
@@ -210,6 +230,7 @@ export async function startInspector(page) {
                     selector: result.best,
                     candidates: result.all,
                     strategy: result.type,
+                    htmlContext: el.outerHTML, // Pass HTML context for Phase 4
                     timestamp: new Date().toISOString(),
                 });
             } else {

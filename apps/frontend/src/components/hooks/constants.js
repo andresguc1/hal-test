@@ -40,6 +40,8 @@ export const NODE_LABELS = {
   wait_navigation: "Wait Navigation",
   wait_visible: "Wait Element",
   wait_network: "Wait Network Idle",
+  wait_network_match: "Wait Network Match",
+  reload_page: "Reload Page",
   wait_for_element: "Wait Element (Adv)",
 
   // Diagnostics

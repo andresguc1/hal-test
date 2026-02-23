@@ -31,7 +31,7 @@ export const STARTER_TEMPLATE = {
         label: "Open Google",
         starterHint: "Then, we navigate to the page we want to test.",
         configuration: {
-          url: "https://www.google.com",
+          url: "https://www.saucedemo.com",
           waitUntil: "networkidle",
         },
       },

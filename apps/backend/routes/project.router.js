@@ -1,6 +1,9 @@
 import { Router } from 'express';
 import { Project, Flow, Node, Edge } from '../database/init.js';
 import sequelize from '../database/index.js';
+import { exportService } from '../services/exporter/index.js';
+import fs from 'fs';
+import path from 'path';
 
 const router = Router();
 
@@ -21,6 +24,145 @@ const mapFlowData = (flow) => {
             edgeId: undefined, // Hide from frontend
         })),
     };
+};
+
+// Helper to sort nodes topologically based on edges
+const sortNodesTopologically = (nodes, edges) => {
+    if (!nodes || nodes.length === 0) return [];
+
+    const nodeMap = new Map(nodes.map((n) => [n.id || n.nodeId, n]));
+    const adj = new Map();
+    const inDegree = new Map();
+
+    nodes.forEach((n) => {
+        const id = n.id || n.nodeId;
+        adj.set(id, []);
+        inDegree.set(id, 0);
+    });
+
+    edges.forEach((e) => {
+        if (adj.has(e.source) && adj.has(e.target)) {
+            adj.get(e.source).push(e.target);
+            inDegree.set(e.target, inDegree.get(e.target) + 1);
+        }
+    });
+
+    const queue = [];
+    // Start with launch_browser or nodes with 0 in-degree
+    const roots = nodes.filter(
+        (n) => n.type === 'launch_browser' || n.data?.type === 'launch_browser',
+    );
+
+    if (roots.length > 0) {
+        roots.forEach((r) => {
+            const id = r.id || r.nodeId;
+            queue.push(id);
+        });
+    } else {
+        // Fallback: use all nodes with 0 in-degree
+        for (const [id, degree] of inDegree.entries()) {
+            if (degree === 0) queue.push(id);
+        }
+    }
+
+    const sorted = [];
+    const visited = new Set();
+
+    while (queue.length > 0) {
+        const currId = queue.shift();
+        if (visited.has(currId)) continue;
+        visited.add(currId);
+
+        const node = nodeMap.get(currId);
+        if (node) sorted.push(node);
+
+        const neighbors = adj.get(currId) || [];
+        neighbors.forEach((neighborId) => {
+            inDegree.set(neighborId, inDegree.get(neighborId) - 1);
+            if (inDegree.get(neighborId) === 0) {
+                queue.push(neighborId);
+            }
+        });
+    }
+
+    // Add any remaining unconnected nodes
+    nodes.forEach((n) => {
+        const id = n.id || n.nodeId;
+        if (!visited.has(id)) sorted.push(n);
+    });
+
+    return sorted;
+};
+
+// Helper: Sync active flow to tests/generated/active_flow.spec.js
+const syncActiveFlowToDisk = async (nodes, edges, projectId) => {
+    try {
+        const sortedNodes = sortNodesTopologically(nodes, edges);
+        let flattenedNodes = [];
+
+        const flatten = async (currentNodes) => {
+            const IGNORED_TYPES = ['input', 'output', 'annotation', 'note'];
+            for (const n of currentNodes) {
+                if (n.type === 'component' || n.data?.type === 'component') {
+                    const flowId = n.data?.configuration?.flowId || n.data?.flowId;
+                    if (flowId && projectId) {
+                        const { Flow, Node, Edge } = await import('../database/init.js');
+                        const flow = await Flow.findOne({
+                            where: { id: flowId, projectId },
+                            include: [
+                                { model: Node, as: 'nodes' },
+                                { model: Edge, as: 'edges' },
+                            ],
+                        });
+                        if (flow) {
+                            // Recursively flatten and sort sub-flow nodes
+                            sortNodesTopologically(flow.nodes, flow.edges);
+                            // Transform Sequelize instances to POJOs using mapFlowData logic
+                            const mappedSubNodes = mapFlowData(flow).nodes;
+                            await flatten(mappedSubNodes);
+                        }
+                    }
+                } else if (!IGNORED_TYPES.includes(n.type)) {
+                    flattenedNodes.push(n);
+                }
+            }
+        };
+
+        if (sortedNodes) {
+            await flatten(sortedNodes);
+        }
+
+        console.log(
+            `[ProjectRouter] Generating Playwright code for ${flattenedNodes.length} nodes`,
+        );
+        // Debug: Log first few nodes to check structure
+        if (flattenedNodes.length > 0) {
+            console.log(
+                `[ProjectRouter] Node[0] Sample:`,
+                JSON.stringify({
+                    type: flattenedNodes[0].type,
+                    hasData: !!flattenedNodes[0].data,
+                    hasConfig: !!flattenedNodes[0].data?.configuration,
+                    configKeys: flattenedNodes[0].data?.configuration
+                        ? Object.keys(flattenedNodes[0].data.configuration)
+                        : [],
+                }),
+            );
+        }
+
+        const result = exportService.generateCode(flattenedNodes, 'playwright');
+        if (result.success) {
+            const generatedDir = path.join(process.cwd(), 'tests', 'generated');
+            if (!fs.existsSync(generatedDir)) {
+                fs.mkdirSync(generatedDir, { recursive: true });
+            }
+            const filePath = path.join(generatedDir, 'active_flow.spec.js');
+            fs.writeFileSync(filePath, result.code, 'utf-8');
+            console.log(`[ProjectRouter] Auto-exported active_flow.spec.js`);
+        }
+    } catch (exportErr) {
+        console.error(`[ProjectRouter] Failed to auto-export active_flow.spec.js:`, exportErr);
+    }
 };
 
 // ========================================
@@ -261,7 +403,12 @@ router.get('/projects/:projectId/flows/:flowId', async (req, res) => {
             return res.status(404).json({ error: 'Flow not found' });
         }
 
-        res.json(mapFlowData(flow));
+        const mappedFlow = mapFlowData(flow);
+
+        // Auto-export the loaded flow to the bridge file
+        await syncActiveFlowToDisk(mappedFlow.nodes, mappedFlow.edges, projectId);
+
+        res.json(mappedFlow);
     } catch (error) {
         console.error(`[ProjectRouter] Error getting flow:`, error);
         res.status(500).json({ error: error.message });
@@ -412,7 +559,13 @@ router.put('/projects/:projectId/flows/:flowId', async (req, res) => {
                 { model: Edge, as: 'edges' },
             ],
         });
-        res.json(mapFlowData(updatedFlow));
+
+        const mappedFlow = mapFlowData(updatedFlow);
+
+        // Auto-export the saved flow to the bridge file
+        await syncActiveFlowToDisk(mappedFlow.nodes, mappedFlow.edges, projectId);
+
+        res.json(mappedFlow);
     } catch (error) {
         if (transaction) await transaction.rollback();
         console.error(`[ProjectRouter] Error updating flow:`, error);

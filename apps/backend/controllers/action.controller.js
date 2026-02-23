@@ -6,6 +6,7 @@
 // import { callTool } from '../services/mcp.service.js';
 import { browserService } from '../services/browser.service.js';
 import { traceService } from '../services/trace.service.js';
+import { networkHistoryService } from '../services/NetworkHistoryService.js';
 import VariableManager from '../services/VariableManager.js';
 import aiService from '../services/AIService.js';
 import { emitExecutionStatus, emitScreenshotReady, emitLog } from '../socket.js';
@@ -317,6 +318,10 @@ async function getOrCreateContext(req, browser, browserId) {
 
             const newContext = await browser.newContext(contextOptions);
             console.log('[SUCCESS] Context created successfully');
+
+            // Track background network history to avoid race conditions in sequential nodes
+            networkHistoryService.track(browserId, newContext);
+
             return newContext;
         } catch (err) {
             console.error('[ERROR] Could not create context:', err.message);
@@ -1469,6 +1474,16 @@ export const forwardAction = (req, res) =>
         }
         return {
             message: req.t('actions.forward.success'),
+            responseExtra: { newUrl: page.url() },
+            traceDetails: { url: page.url() },
+        };
+    });
+
+export const reloadAction = (req, res) =>
+    executePlaywrightAction(req, res, 'reload_page', async (page) => {
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        return {
+            message: req.t('actions.reload.success'),
             responseExtra: { newUrl: page.url() },
             traceDetails: { url: page.url() },
         };
@@ -2707,14 +2722,6 @@ export const waitForResponseAction = (req, res) =>
                     // Workaround: custom simple glob matcher or simple includes.
                     const url = resp.url();
                     // Very basic glob support: *
-                    const createRegex = (str) => {
-                        // Escape special regex chars except *
-                        const escaped = str
-                            .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
-                            .replace(/\*/g, '.*');
-                        return new RegExp(`^${escaped}$`);
-                    };
-
                     const regex = createRegex(urlPattern);
                     const matchUrl = regex.test(url);
                     const matchStatus = resp.status() === statusCode;
@@ -2757,10 +2764,6 @@ export const waitForRequestAction = (req, res) =>
             (req) => {
                 // URL Match
                 // Same regex logic as above
-                const createRegex = (str) => {
-                    const escaped = str.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
-                    return new RegExp(`^${escaped}$`);
-                };
                 const regex = createRegex(urlPattern);
                 const matchUrl = regex.test(req.url());
 
@@ -3397,18 +3400,43 @@ export const configureRouteAction = (req, res) =>
     });
 
 /**
+ * Helper to create a regex from a URL pattern string
+ */
+const createRegex = (str) => {
+    const escaped = str.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
+    return new RegExp(escaped, 'i'); // Case-insensitive and partial match
+};
+
+/**
  * Consolidates wait_for_request and wait_for_response
  */
 export const waitNetworkMatchAction = (req, res) =>
-    executePlaywrightAction(req, res, 'wait_network_match', async (page, opts) => {
+    executePlaywrightAction(req, res, 'wait_network_match', async (page, opts, targetBrowserId) => {
         const { type = 'response', urlPattern, method, statusCode, timeout = 30000 } = opts;
         if (!urlPattern) throw new Error(req.t('errors.url_pattern_required'));
 
-        const createRegex = (str) => {
-            const escaped = str.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
-            return new RegExp(escaped, 'i'); // Case-insensitive and partial match
-        };
         const regex = createRegex(urlPattern);
+
+        // 1. Check History FIRST (Avoid race conditions in sequential flows like Reload -> Wait)
+        const historyMatch = networkHistoryService.findMatch(targetBrowserId, {
+            type,
+            regex,
+            method,
+            statusCode,
+            since: Date.now() - 60000, // Look back up to 1 minute
+        });
+
+        if (historyMatch) {
+            console.log(`[INFO] Found matching ${type} in background history: ${historyMatch.url}`);
+            return {
+                message: `Matched ${type} from history: ${historyMatch.url} (${
+                    historyMatch.status || historyMatch.method
+                })`,
+                data: historyMatch,
+            };
+        }
+
+        // 2. If not in history, start fresh listener
         let data = {};
 
         if (type === 'request') {
@@ -3500,6 +3528,7 @@ export async function interactionAction(req, res) {
         manage_cookies: manageCookiesAction,
         manage_storage: manageStorageAction,
         drag_drop: dragDropAction,
+        reload_page: reloadAction,
     };
 
     const handler = actionMap[action];

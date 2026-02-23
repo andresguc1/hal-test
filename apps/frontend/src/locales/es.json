@@ -95,6 +95,29 @@
     "open_menu": "Abrir menú de usuario",
     "user_menu": "Menú de usuario"
   },
+  "terminal": {
+    "title_log": "Logs de Ejecución",
+    "title_interactive": "Shell Interactivo",
+    "interactive": "Shell",
+    "log": "Logs",
+    "switch_interactive": "Cambiar a Shell Interactivo",
+    "switch_log": "Cambiar a Logs de Ejecución",
+    "kill": "Terminar proceso (Ctrl+C)",
+    "clear": "Limpiar",
+    "minimize": "Minimizar",
+    "shell_ready": "Shell listo — escribe un comando abajo",
+    "placeholder": "npx playwright --version  |  ↑↓ historial  |  Ctrl+C para terminar",
+    "run_command": "Ejecutar comando (Enter)",
+    "help_title": "⚡ HalTest Interactive Shell",
+    "help_intro": "Comandos permitidos:",
+    "help_footer": "↑↓ historial · Ctrl+C para terminar proceso",
+    "cmd_version": "Ver versión de Playwright",
+    "cmd_codegen": "Grabar acciones en el canvas (Ghost Nodes)",
+    "cmd_test": "Ejecutar un test generado por HalTest",
+    "cmd_test_headed": "Ejecutar un test de HalTest con navegador visible",
+    "cmd_report": "Abrir reporte HTML",
+    "cmd_install": "Instalar navegadores"
+  },
   "nodes": {
     "labels": {
       "open_url": "Abrir URL",
@@ -104,6 +127,7 @@
       "refresh": "Recargar página",
       "resize_viewport": "Ajustar resolución",
       "launch_browser": "Lanzar Navegador",
+      "reload_page": "Recargar Página",
       "manage_tabs": "Manejar Pestañas",
       "find_element": "Buscar Elemento",
       "get_set_content": "Modificar Texto/Attr",
@@ -154,7 +178,8 @@
       "return_code": "Código de Retorno",
       "integrate_ci": "Integración CI/CD",
       "wait_for_element_adv": "Esperar Elemento (Adv)",
-      "submit_form": "Enviar Formulario"
+      "submit_form": "Enviar Formulario",
+      "component": "Componente"
     },
     "categories": {
       "browser_management": "Navegador",

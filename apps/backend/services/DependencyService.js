@@ -1,4 +1,4 @@
-import { globalStateManager } from './stateManager.js';
+import { Flow, Node, Edge } from '../database/init.js';
 
 class DependencyService {
     /**
@@ -22,12 +22,18 @@ class DependencyService {
             if (visited.has(flowId)) continue;
             visited.add(flowId);
 
-            // Fetch the flow definition from State Manager
-            const flow = await globalStateManager.getFlow(projectId, flowId);
+            // Fetch the flow definition from DB
+            const flow = await Flow.findOne({
+                where: { id: flowId, projectId },
+                include: [
+                    { model: Node, as: 'nodes' },
+                    { model: Edge, as: 'edges' },
+                ],
+            });
 
             if (flow) {
                 // Clone to avoid mutating state
-                const flowClone = JSON.parse(JSON.stringify(flow));
+                const flowClone = flow.toJSON();
 
                 // Sanitize secrets in this component (Conditional)
                 if (sanitize) {

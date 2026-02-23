@@ -260,9 +260,9 @@ const FlowTabs = ({
         >
           <div className="flex flex-1 h-full items-end overflow-x-auto no-scrollbar pt-1">
             <AnimatePresence mode="popLayout">
-              {flows.map((flow) => (
+              {flows.map((flow, index) => (
                 <SortableTab
-                  key={flow.id}
+                  key={`${flow.id}-${index}`}
                   flow={flow}
                   isActive={flow.id === activeFlowId}
                   onSwitch={onSwitchFlow}

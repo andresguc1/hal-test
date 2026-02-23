@@ -154,6 +154,9 @@
             "load_success": "Session loaded (Best Effort) in active context.",
             "clear_success": "Session cleared (Cookies and Storage)."
         },
+        "reload": {
+            "success": "Page reloaded successfully."
+        },
         "create_context": {
             "success": "Context verified/created successfully."
         },

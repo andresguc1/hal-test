@@ -1917,6 +1917,20 @@ function NodeConfigurationPanel({
                 <span className="text-[9px] text-indigo-400 opacity-70">
                   CSS / XPath
                 </span>
+
+                {/* AI SANITIZED INDICATOR (Phase 4) */}
+                {activeNode?.data?.configuration?.isAI && (
+                  <span
+                    className="flex items-center gap-1 px-1.5 py-0.5 rounded border text-[9px] bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                    title={
+                      activeNode?.data?.configuration?.aiReasoning ||
+                      "Optimized by local AI"
+                    }
+                  >
+                    <Sparkles size={10} />
+                    <span>AI OPTIMIZED</span>
+                  </span>
+                )}
                 <button
                   type="button"
                   onClick={() => {
@@ -1953,7 +1967,9 @@ function NodeConfigurationPanel({
                   <span>
                     {activeNode?.data?.state === "picking"
                       ? "Picking... (Cancel)"
-                      : "Pick"}
+                      : window.location.hostname !== "localhost"
+                        ? "Remote Pick"
+                        : "Pick"}
                   </span>
                 </button>
               </div>
@@ -1984,15 +2000,26 @@ function NodeConfigurationPanel({
               />
             </div>
 
-            {/* Warning Patch for WEB Demo */}
-            <div className="mt-1 flex items-start gap-1 p-1.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-500/90 text-[10px] leading-tight max-w-[280px]">
-              <AlertCircle size={12} className="shrink-0 mt-0.5" />
+            {/* Warning Patch for WEB Demo (Phase 3: Resolved) */}
+            <div
+              className={cn(
+                "mt-1 flex items-start gap-1.5 p-2 rounded border text-[10px] leading-tight max-w-[280px]",
+                window.location.hostname !== "localhost"
+                  ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500/90"
+                  : "bg-indigo-500/10 border-indigo-500/20 text-indigo-400 font-medium",
+              )}
+            >
+              <Sparkles size={12} className="shrink-0 mt-0.5 opacity-80" />
               <span>
-                <span
-                  dangerouslySetInnerHTML={{
-                    __html: t("nodes.hints.picker_local_only"),
-                  }}
-                />
+                {window.location.hostname !== "localhost" ? (
+                  <b>Remote Picker (BETA):</b>
+                ) : (
+                  <b>Smart Picker:</b>
+                )}{" "}
+                {t(
+                  "nodes.hints.picker_info",
+                  "Launch a cloud browser to pick elements directly from your target app.",
+                )}
               </span>
             </div>
 
@@ -2077,8 +2104,10 @@ function NodeConfigurationPanel({
                   value={localLabel}
                   placeholder={activeNode.data?.label || safeConfig.label}
                   className={cn(
-                    "bg-transparent border-transparent hover:border-white/10 focus:border-white/20 border-b-2 text-sm font-bold text-[var(--text-main)] dark:text-white w-full focus:outline-none transition-colors placeholder:text-white/30 placeholder:font-normal",
+                    "bg-transparent border-white/10 hover:border-white/20 focus:border-indigo-500/50 border-b-2 text-sm font-bold text-[var(--text-main)] dark:text-white w-full focus:outline-none transition-colors placeholder:text-white/30 placeholder:font-normal !pointer-events-auto !cursor-text !select-text",
                   )}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
                   onChange={(e) => {
                     setLocalLabel(e.target.value);
 

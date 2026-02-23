@@ -1,4 +1,5 @@
 import { Server } from 'socket.io';
+import { terminalService } from './services/TerminalService.js';
 
 let io;
 
@@ -13,8 +14,32 @@ export const init = (server) => {
     io.on('connection', (socket) => {
         console.log('📡 [Socket.io] Client connected:', socket.id);
 
+        // ──────────────────────────────────────────
+        // Interactive Terminal events
+        // ──────────────────────────────────────────
+
+        /** Run a new shell command in the session belonging to this socket */
+        socket.on('terminal:run-command', ({ command }) => {
+            console.log(`[Terminal] Run command from ${socket.id}: ${command}`);
+            terminalService.run(socket.id, command);
+        });
+
+        /** Send raw stdin to an already running process */
+        socket.on('terminal:send-input', ({ input }) => {
+            terminalService.sendInput(socket.id, input);
+        });
+
+        /** Kill the process for this session */
+        socket.on('terminal:kill', () => {
+            terminalService.kill(socket.id);
+        });
+
+        // ──────────────────────────────────────────
+        // Disconnect: cleanup terminal session
+        // ──────────────────────────────────────────
         socket.on('disconnect', (reason) => {
             console.log('🔌 [Socket.io] Client disconnected:', socket.id, `(Reason: ${reason})`);
+            terminalService.kill(socket.id);
         });
     });
 
@@ -28,6 +53,8 @@ export const getIO = () => {
     }
     return io;
 };
+
+// ─── Existing emitters ────────────────────────────────────────────────────────
 
 export const emitExecutionStatus = ({ stepId, status, error = null }) => {
     if (io) {
@@ -53,6 +80,7 @@ export const emitScreenshotReady = ({ nodeId, screenshotPath, runId }) => {
         io.emit('step_screenshot_ready', { nodeId, screenshotPath, runId });
     }
 };
+
 export const emitLog = ({
     message,
     type = 'info',
@@ -60,10 +88,8 @@ export const emitLog = ({
     timestamp = new Date().toISOString(),
 }) => {
     if (io) {
-        // Log locally too
         const prefix = nodeId ? `[${nodeId}] ` : '';
         console.log(`📡 [Socket.io] Emitting execution-log: ${prefix}${message}`);
-
         io.emit('execution-log', { message, type, nodeId, timestamp });
     }
 };
@@ -72,5 +98,35 @@ export const emitFlowFinished = ({ runId, status, flowId, error = null }) => {
     if (io) {
         console.log(`📡 [Socket.io] Emitting flow-finished: ${runId} -> ${status}`);
         io.emit('flow-finished', { runId, status, flowId, error });
+    }
+};
+
+// ─── New emitters for Terminal & Codegen ─────────────────────────────────────
+
+/**
+ * Sends terminal stdout/stderr output back to a specific socket client.
+ * @param {string} sessionId - The socket.id of the target client
+ * @param {string} text      - Raw text output
+ * @param {'stdout'|'stderr'|'system'|'command'|'error'} streamType
+ */
+export const emitTerminalOutput = (sessionId, text, streamType = 'stdout') => {
+    if (io) {
+        io.to(sessionId).emit('terminal:output', {
+            text,
+            streamType,
+            timestamp: new Date().toISOString(),
+        });
+    }
+};
+
+/**
+ * Broadcasts a detected codegen action to all clients (for ghost node creation).
+ * @param {string} sessionId
+ * @param {{ actionType: string, selector: string, value: string|null }} action
+ */
+export const emitCodegenAction = (sessionId, action) => {
+    if (io) {
+        console.log(`📡 [Codegen] Detected action: ${action.actionType} → ${action.selector}`);
+        io.emit('codegen:action-detected', { ...action, sessionId });
     }
 };

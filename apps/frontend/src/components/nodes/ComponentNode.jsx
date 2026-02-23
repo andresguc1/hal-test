@@ -1,10 +1,12 @@
 import React, { memo } from "react";
+import { useTranslation } from "react-i18next";
 import { Handle, Position } from "@xyflow/react";
 import { Box, Layers, MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NODE_TYPE_MAP, CATEGORY_STYLES } from "@/config/nodeConstants";
 
 const ComponentNode = ({ data, selected }) => {
+  const { t } = useTranslation();
   // 1. Config
   const nodeKey = "component";
   const config = NODE_TYPE_MAP[nodeKey];
@@ -12,7 +14,7 @@ const ComponentNode = ({ data, selected }) => {
     category: "composition",
     color: "gray",
     icon: Box,
-    label: "Component",
+    label: t("nodes.labels.component", { defaultValue: "Component" }),
   };
 
   // 2. Style
@@ -51,7 +53,11 @@ const ComponentNode = ({ data, selected }) => {
         </div>
         <div className="flex flex-col min-w-0">
           <span className="text-sm font-bold text-white truncate">
-            {data.label || "Grouped Component"}
+            {data.customLabel ||
+              data.label ||
+              t("nodes.labels.component", {
+                defaultValue: "Grouped Component",
+              })}
           </span>
           <span className="text-[10px] text-white/60 font-medium uppercase tracking-wider">
             {subNodeCount} NODES INSIDE
@@ -91,7 +97,8 @@ function arePropsEqual(prevProps, nextProps) {
   return (
     prevProps.id === nextProps.id &&
     prevProps.selected === nextProps.selected &&
-    prevProps.data?.label === nextProps.data?.label && // Component label often changes on rename
+    prevProps.data?.label === nextProps.data?.label &&
+    prevProps.data?.customLabel === nextProps.data?.customLabel &&
     prevProps.data?.subFlow === nextProps.data?.subFlow
   );
 }

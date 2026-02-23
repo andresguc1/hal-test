@@ -270,8 +270,9 @@ function Dashboard() {
     isReadOnly, // Added from useFlowManager
     replayRun, // HISTORY
     resetNodeStates, // HISTORY
-    isStarterTemplate,
     loadStarterTemplate,
+    isStarterTemplate,
+    addGhostNode,
   } = useFlowManager(currentProject, currentFlowId, switchFlow);
 
   // Element Picker Callback (Previously handleElementPicked was here, we will replace the mess)
@@ -290,25 +291,54 @@ function Dashboard() {
         t("common.inspector_started", "Pick an element in the browser..."),
       );
 
-      // 2. Start Inspector API
+      // 2. Determine if we need to launch a remote browser (Phase 3)
+      const isRemote = window.location.hostname !== "localhost";
+      const needsLaunch = isRemote || !activeBrowserId;
+
       try {
-        console.log(
-          "[App] 🚀 Starting inspector on browserId:",
-          activeBrowserId || "LATEST",
-        );
-        const data = await api.post("/inspector/start", {
-          browserId: activeBrowserId || null, // Explicitly pass active session if we have it
-        });
-        if (!data.success) {
-          toast.error(data.message || "Failed to start inspector");
-          updateNodeState(selectedAction.nodeId, NODE_STATES.DEFAULT); // Revert on failure
+        if (needsLaunch) {
+          console.log("[App] 🌐 Launching REMOTE browser for picker...");
+
+          // Try to get a helpful starting URL from the graph
+          const openUrlNode = nodes.find(
+            (n) => n.type === "open_url" || n.data?.type === "open_url",
+          );
+          const startingUrl =
+            openUrlNode?.data?.configuration?.url || "https://www.google.com";
+
+          const res = await api.post("/inspector/launch-remote", {
+            url: startingUrl,
+          });
+
+          if (res.success) {
+            console.log(
+              "[App] ✅ Remote browser launched with ID:",
+              res.browserId,
+            );
+            // Result is handled via socket, but we could store the ID if needed
+          } else {
+            throw new Error(res.message);
+          }
+        } else {
+          // Standard localhost flow
+          console.log(
+            "[App] 🚀 Starting local inspector on browserId:",
+            activeBrowserId,
+          );
+          const data = await api.post("/inspector/start", {
+            browserId: activeBrowserId,
+          });
+          if (!data.success) {
+            throw new Error(data.message);
+          }
         }
       } catch (error) {
-        toast.error(error.message || "Network error starting inspector");
+        console.error("[App] Picker Start Error:", error);
+        toast.error(error.message || "Failed to start inspector");
         updateNodeState(selectedAction?.nodeId, NODE_STATES.DEFAULT); // Revert on failure
       }
     },
-    [selectedAction, updateNodeState, toast, t, activeBrowserId],
+    [selectedAction, updateNodeState, toast, t, activeBrowserId, nodes],
   );
 
   // CANCEL PICKING HANDLER
@@ -395,9 +425,12 @@ function Dashboard() {
         const currentConfig = liveNode.data?.configuration || {};
         console.log("[App] 📋 Current node configuration:", currentConfig);
 
-        // PRIORITY STRATEGY: ID > Data Attr > CSS > XPath
-        let finalSelector = data.selector; // Default fallback
-        console.log("[App] 🎯 Initial selector (fallback):", finalSelector);
+        // PRIORITY STRATEGY: AI Optimized > ID > Data Attr > CSS > XPath
+        let finalSelector = data.sanitizedSelector || data.selector; // Default fallback
+        console.log(
+          "[App] 🎯 Initial selector (AI prioritized):",
+          finalSelector,
+        );
 
         // Handle candidates/selectors structure
         if (sources) {
@@ -541,7 +574,32 @@ function Dashboard() {
   const { addLog } = useLogs();
 
   // Socket setup
-  useHaltestSocket(setNodes, setEdges, handleElementPicked, addLog);
+  const handleCodegenAction = useCallback(
+    (data) => {
+      console.log("[App] 👻 Ghost Action Detected:", data);
+      // Map Playwright actions to our node types
+      const typeMapping = {
+        goto: "open_url",
+        fill: "type_text",
+        type: "type_text",
+        click: "click",
+        press: "press_key",
+      };
+
+      const halType = typeMapping[data.actionType] || data.actionType;
+      addGhostNode(halType, data.selector, data.value);
+    },
+    [addGhostNode],
+  );
+
+  const socket = useHaltestSocket(
+    setNodes,
+    setEdges,
+    handleElementPicked,
+    addLog,
+    null, // onTerminalOutput (handled elsewhere or passed via ref)
+    handleCodegenAction,
+  );
 
   // Computed values
   const isConfigurationPanelVisible = selectedAction !== null;
@@ -1317,7 +1375,7 @@ function Dashboard() {
             </div>
 
             {/* Real-time Execution Terminal - Now inside Main Layout */}
-            <TerminalPanel />
+            <TerminalPanel socket={socket} />
 
             {/* Ask AI Debug Console */}
             <AskAIPanel
@@ -1403,10 +1461,15 @@ function Dashboard() {
           onDeleteProject={(p) => deleteProject(p.id)}
           // Flow Props
           flowName={
-            // Prefer live node label if available, otherwise DB name
+            // 1. Check if we're inside a Component (Sub-flow)
+            // If so, we want to find its representation in the parent flow to get its customLabel
             nodes.find(
-              (n) => n.type === "component" && n.data.flowId === currentFlowId,
+              (n) => n.id === currentFlowId || n.data?.flowId === currentFlowId,
+            )?.data?.customLabel ||
+            nodes.find(
+              (n) => n.id === currentFlowId || n.data?.flowId === currentFlowId,
             )?.data?.label ||
+            // 2. Fallback to DB flow name
             currentProject?.flows?.find((f) => f.id === currentFlowId)?.name ||
             "No Flow Selected"
           }
@@ -1423,7 +1486,7 @@ function Dashboard() {
               .map((n) => ({
                 id: n.data.flowId,
                 name:
-                  n.data.label || n.data.customLabel || "Untitled Component",
+                  n.data.customLabel || n.data.label || "Untitled Component",
                 type: "component",
                 isLive: true, // Flag for styling if needed
               }));
