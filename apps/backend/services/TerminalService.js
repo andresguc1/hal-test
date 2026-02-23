@@ -202,12 +202,30 @@ class TerminalService {
         const proc = this.sessions.get(sessionId);
         if (proc) {
             try {
-                proc.kill('SIGTERM');
-            } catch (_) {
-                /* ignore */
+                // 1. Try SIGINT (simulates Ctrl+C)
+                proc.kill('SIGINT');
+
+                // 2. Fallback to SIGKILL if it doesn't close within 2 seconds
+                const killTimeout = setTimeout(() => {
+                    if (this.sessions.has(sessionId)) {
+                        console.log(
+                            `[TerminalService] SIGINT timed out for ${sessionId}, forcing SIGKILL...`,
+                        );
+                        try {
+                            proc.kill('SIGKILL');
+                        } catch (e) {
+                            /* ignore */
+                        }
+                    }
+                }, 2000);
+
+                // Clear timeout if process closes on its own
+                proc.once('close', () => clearTimeout(killTimeout));
+            } catch (err) {
+                console.error(`[TerminalService] Error killing session ${sessionId}:`, err.message);
             }
             this.sessions.delete(sessionId);
-            console.log(`[TerminalService] Killed session: ${sessionId}`);
+            console.log(`[TerminalService] Requested kill for session: ${sessionId}`);
         }
     }
 

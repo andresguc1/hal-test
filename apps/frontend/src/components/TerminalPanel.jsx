@@ -144,7 +144,14 @@ export default function TerminalPanel({ socket }) {
       initial={{ height: 0, opacity: 0 }}
       animate={{ height: 260, opacity: 1 }}
       exit={{ height: 0, opacity: 0 }}
-      className="relative w-full bg-slate-950 border-t border-slate-800 z-10 flex flex-col shadow-2xl font-mono overflow-hidden"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        // Global Ctrl+C handler for the panel
+        if (e.key === "c" && e.ctrlKey) {
+          killProcess();
+        }
+      }}
+      className="relative w-full bg-slate-950 border-t border-slate-800 z-10 flex flex-col shadow-2xl font-mono outline-none overflow-hidden focus-within:ring-1 focus-within:ring-indigo-500/30"
     >
       {/* ── Header ── */}
       <div className="flex items-center justify-between px-4 py-2 bg-slate-900 border-b border-slate-800 shrink-0">
@@ -177,9 +184,9 @@ export default function TerminalPanel({ socket }) {
             title={
               mode === "log"
                 ? t(
-                    "terminal.switch_interactive",
-                    "Switch to Interactive Shell",
-                  )
+                  "terminal.switch_interactive",
+                  "Switch to Interactive Shell",
+                )
                 : t("terminal.switch_log", "Switch to Execution Logs")
             }
             className={cn(
