@@ -111,10 +111,11 @@ export const NODE_CATEGORIES = {
   flow_control: {
     icon: Settings2,
     color: "purple", // Logic = Purple (Distinct from Error/Red)
-    label: "Logic / Flow",
+    label: "Logic Engine",
     nodes: [
       "variable",
       "conditional",
+      "switch",
       "loop",
       "branch",
       "flow_control",

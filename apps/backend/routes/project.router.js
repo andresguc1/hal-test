@@ -115,11 +115,15 @@ const syncActiveFlowToDisk = async (nodes, edges, projectId) => {
                             ],
                         });
                         if (flow) {
-                            // Recursively flatten and sort sub-flow nodes
-                            sortNodesTopologically(flow.nodes, flow.edges);
-                            // Transform Sequelize instances to POJOs using mapFlowData logic
-                            const mappedSubNodes = mapFlowData(flow).nodes;
-                            await flatten(mappedSubNodes);
+                            // Map the flow data first to get consistent ID naming
+                            const mappedSubFlow = mapFlowData(flow);
+                            // Recursively sort sub-flow nodes topologically
+                            const sortedSubNodes = sortNodesTopologically(
+                                mappedSubFlow.nodes,
+                                mappedSubFlow.edges,
+                            );
+                            // Flatten the sorted sub-nodes
+                            await flatten(sortedSubNodes);
                         }
                     }
                 } else if (!IGNORED_TYPES.includes(n.type)) {

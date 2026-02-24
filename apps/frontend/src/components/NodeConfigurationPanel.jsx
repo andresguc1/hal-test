@@ -274,7 +274,7 @@ const NODE_INPUTS = {
     { key: "takeScreenshot", label: "📸 Take Screenshot", type: "checkbox" },
   ],
 
-  wait_for_timeout: [
+  pause: [
     {
       key: "duration",
       label: "Duration (ms)",
@@ -844,10 +844,35 @@ const NODE_INPUTS = {
   ],
   wait_conditional: [
     {
+      key: "waitType",
+      label: "Wait For",
+      type: "select",
+      options: [
+        { label: "🌐 Browser Expression (JS)", value: "browser" },
+        { label: "🧠 Variable Condition", value: "variable" },
+      ],
+      default: "browser",
+    },
+    {
       key: "expression",
-      label: "JS Expression (Truthy)",
-      type: "text",
-      placeholder: "window.ready === true",
+      label: "Condition (JS or JSON)",
+      type: "textarea",
+      placeholder:
+        'browser: window.ready === true\nvariable: {"left": "${status}", "operator": "===", "right": "complete"}',
+      required: true,
+    },
+    {
+      key: "timeout",
+      label: "Timeout (ms)",
+      type: "number",
+      default: 30000,
+    },
+    {
+      key: "polling",
+      label: "Polling Interval (ms)",
+      type: "number",
+      default: 100,
+      isVisible: (data) => data.waitType === "browser",
     },
   ],
 
@@ -1102,13 +1127,6 @@ const NODE_INPUTS = {
 
   conditional: [
     {
-      key: "conditions",
-      label: "Conditions (JSON Array)",
-      type: "textarea",
-      placeholder: '[{"left": "${counter}", "operator": ">", "right": 10}]',
-      required: true,
-    },
-    {
       key: "logic",
       label: "Logic Operator",
       type: "select",
@@ -1118,6 +1136,41 @@ const NODE_INPUTS = {
       ],
       default: "AND",
       required: true,
+    },
+    {
+      key: "conditions",
+      label: "Conditions (JSON Array)",
+      type: "textarea",
+      placeholder: '[{"left": "${counter}", "operator": ">", "right": 10}]',
+      required: true,
+      tip: 'Snippet: [{"left": "${var}", "operator": "===", "right": "value"}]',
+    },
+  ],
+
+  switch: [
+    {
+      key: "variableName",
+      label: "Variable to Evaluate",
+      type: "text",
+      placeholder: "status",
+      required: true,
+    },
+    {
+      key: "cases",
+      label: "Cases (JSON: {value: path})",
+      type: "textarea",
+      placeholder: '{"success": "path1", "error": "path2"}',
+      required: true,
+    },
+    {
+      key: "scope",
+      label: "Variable Scope",
+      type: "select",
+      options: [
+        { value: "flow", label: "Flow" },
+        { value: "global", label: "Global" },
+      ],
+      default: "flow",
     },
   ],
 
@@ -2187,7 +2240,8 @@ function NodeConfigurationPanel({
                       Nodes
                     </span>
                     <span className="text-2xl font-bold text-white">
-                      {activeNode.data?.subFlow?.nodes?.length || 0}
+                      {activeNode.data?.nodeCount ??
+                        (activeNode.data?.subFlow?.nodes?.length || 0)}
                     </span>
                   </div>
                   {/* Connections */}
@@ -2199,9 +2253,10 @@ function NodeConfigurationPanel({
                       <span
                         className={cn(
                           "text-xs font-mono px-1.5 py-0.5 rounded",
-                          activeNode.data?.subFlow?.nodes?.some(
-                            (n) => n.type === "input",
-                          )
+                          (activeNode.data?.hasInput ??
+                            activeNode.data?.subFlow?.nodes?.some(
+                              (n) => n.type === "input",
+                            ))
                             ? "bg-indigo-500/20 text-indigo-300"
                             : "bg-white/5 text-slate-500",
                         )}
@@ -2212,9 +2267,10 @@ function NodeConfigurationPanel({
                       <span
                         className={cn(
                           "text-xs font-mono px-1.5 py-0.5 rounded",
-                          activeNode.data?.subFlow?.nodes?.some(
-                            (n) => n.type === "output",
-                          )
+                          (activeNode.data?.hasOutput ??
+                            activeNode.data?.subFlow?.nodes?.some(
+                              (n) => n.type === "output",
+                            ))
                             ? "bg-amber-500/20 text-amber-300"
                             : "bg-white/5 text-slate-500",
                         )}

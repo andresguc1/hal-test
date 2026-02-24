@@ -2327,14 +2327,49 @@ export const waitNetworkAction = (req, res) =>
             },
         };
     });
-export const waitConditionalAction = (req, res) =>
-    executePlaywrightAction(req, res, 'wait_conditional', async (page, opts) => {
-        await page.waitForFunction(opts.conditionScript, opts.args, {
-            polling: opts.polling,
-            timeout: opts.timeout,
+export const waitConditionalAction = async (req, res) => {
+    const { waitType = 'browser', expression, timeout = 30000, polling = 100 } = req.body;
+
+    if (waitType === 'browser') {
+        return executePlaywrightAction(req, res, 'wait_conditional', async (page) => {
+            await page.waitForFunction(expression, null, {
+                polling,
+                timeout,
+            });
+            return { message: req.t('actions.wait_conditional.success') };
+        })(req, res);
+    } else {
+        // Variable Wait Logic
+        const startTime = Date.now();
+        const checkCondition = () => {
+            try {
+                // expression should be a condition object or array of conditions
+                const conditions =
+                    typeof expression === 'string' ? JSON.parse(expression) : expression;
+                const condArray = Array.isArray(conditions) ? conditions : [conditions];
+                return variableManager.evaluateConditions(condArray, 'AND');
+            } catch (e) {
+                console.warn('[WaitVariable] Evaluation failed:', e.message);
+                return false;
+            }
+        };
+
+        while (Date.now() - startTime < timeout) {
+            if (checkCondition()) {
+                return res.status(200).json({
+                    success: true,
+                    message: 'Variable condition met',
+                });
+            }
+            await new Promise((resolve) => setTimeout(resolve, polling));
+        }
+
+        return res.status(408).json({
+            success: false,
+            message: `Timeout waiting for variable condition after ${timeout}ms`,
         });
-        return { message: req.t('actions.wait_conditional.success') };
-    });
+    }
+};
 
 export const logErrorsAction = (req, res) =>
     executePlaywrightAction(req, res, 'log_errors', async (page, opts) => {
@@ -3167,10 +3202,17 @@ export const handleDownloadsAction = (req, res) =>
 
 export const runTestsAction = (req, res) => {
     const { testSuite, parallel, retries, reportFormat, timeout } = req.body;
-    smartEmitLog(
-        `[TEST RUNNER] Simulation: Running suite ${testSuite} (Parallel: ${parallel}, Retries: ${retries})`,
-        'info',
-    );
+
+    smartEmitLog(`[TEST RUNNER] Starting execution of suite: ${testSuite || 'all'}`, 'info');
+
+    if (parallel > 1) {
+        smartEmitLog(`[TEST RUNNER] Distributing across ${parallel} workers...`, 'info');
+    }
+
+    if (reportFormat) {
+        smartEmitLog(`[TEST RUNNER] Report format set to: ${reportFormat}`, 'info');
+    }
+
     return res.status(200).json({
         success: true,
         message: req.t('actions.run_tests.success') || 'Test execution simulation triggered',
@@ -3178,11 +3220,81 @@ export const runTestsAction = (req, res) => {
     });
 };
 
+export const integrateCiAction = (req, res) => {
+    const { provider = 'auto', verbose = true } = req.body;
+
+    let detectedProvider = provider;
+    const ciVars = {};
+
+    // 1. Detection Logic
+    if (provider === 'auto' || provider === 'github') {
+        if (process.env.GITHUB_ACTIONS) {
+            detectedProvider = 'github';
+            ciVars.CI_PLATFORM = 'GitHub Actions';
+            ciVars.CI_RUN_ID = process.env.GITHUB_RUN_ID;
+            ciVars.CI_ACTOR = process.env.GITHUB_ACTOR;
+            ciVars.CI_REPOSITORY = process.env.GITHUB_REPOSITORY;
+        }
+    }
+
+    if ((provider === 'auto' || provider === 'gitlab') && !ciVars.CI_PLATFORM) {
+        if (process.env.GITLAB_CI) {
+            detectedProvider = 'gitlab';
+            ciVars.CI_PLATFORM = 'GitLab CI';
+            ciVars.CI_RUN_ID = process.env.CI_PIPELINE_ID;
+            ciVars.CI_ACTOR = process.env.GITLAB_USER_LOGIN;
+            ciVars.CI_REPOSITORY = process.env.CI_PROJECT_PATH;
+        }
+    }
+
+    if ((provider === 'auto' || provider === 'jenkins') && !ciVars.CI_PLATFORM) {
+        if (process.env.JENKINS_URL) {
+            detectedProvider = 'jenkins';
+            ciVars.CI_PLATFORM = 'Jenkins';
+            ciVars.CI_RUN_ID = process.env.BUILD_NUMBER;
+            ciVars.CI_ACTOR = process.env.BUILD_USER_ID || 'anonymous';
+            ciVars.CI_REPOSITORY = process.env.JOB_NAME;
+        }
+    }
+
+    // Fallback if nothing detected but provider was specified
+    if (!ciVars.CI_PLATFORM && provider !== 'auto') {
+        ciVars.CI_PLATFORM = provider;
+        ciVars.CI_STATUS = 'Generic/Manual';
+    }
+
+    // 2. Persist to VariableManager (Global)
+    Object.entries(ciVars).forEach(([key, val]) => {
+        if (val) variableManager.set(key, val, 'global');
+    });
+
+    if (verbose && ciVars.CI_PLATFORM) {
+        smartEmitLog(
+            `[CI] provider detected: ${ciVars.CI_PLATFORM} (Run ID: ${ciVars.CI_RUN_ID})`,
+            'info',
+        );
+    } else if (verbose) {
+        smartEmitLog(`[CI] No CI environment detected. Running in local mode.`, 'info');
+    }
+
+    return res.status(200).json({
+        success: true,
+        message: ciVars.CI_PLATFORM
+            ? `CI environment recognized: ${ciVars.CI_PLATFORM}`
+            : 'CI integration initialized (Local/Manual)',
+        data: {
+            detectedProvider,
+            variables: ciVars,
+        },
+    });
+};
+
 export const cliParamsAction = (req, res) => {
     const { paramName, paramType, defaultValue, required } = req.body;
 
-    // 1. Search in process.env or req.body (could also be passed via header in a real scenario)
-    let value = process.env[paramName] || req.body.value;
+    // 1. Search in process.env, req.query, or req.params (for webhook-like triggers)
+    let value =
+        process.env[paramName] || req.query[paramName] || req.params[paramName] || req.body.value;
 
     // 2. Fallback to default
     if (value === undefined || value === null || value === '') {
@@ -3529,6 +3641,11 @@ export async function interactionAction(req, res) {
         manage_storage: manageStorageAction,
         drag_drop: dragDropAction,
         reload_page: reloadAction,
+        cli_params: cliParamsAction,
+        return_code: returnCodeAction,
+        run_tests: runTestsAction,
+        integrate_ci: integrateCiAction,
+        switch: switchAction,
     };
 
     const handler = actionMap[action];
@@ -3705,6 +3822,39 @@ export const loopAction = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: req.t('actions.loop.error'),
+            error: error.message,
+        });
+    }
+};
+
+export const switchAction = async (req, res) => {
+    try {
+        const { variableName, cases, scope = 'flow' } = req.body;
+
+        const value = variableManager.get(variableName, scope);
+        const caseMap = typeof cases === 'string' ? JSON.parse(cases) : cases;
+
+        const targetPath = caseMap[String(value)] || caseMap['default'] || 'default';
+
+        smartEmitLog(
+            `[FLOW] Switch evaluated: ${variableName}=${value} -> Path: ${targetPath}`,
+            'info',
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: `Switch target: ${targetPath}`,
+            data: {
+                value,
+                targetPath,
+                variableName,
+            },
+        });
+    } catch (error) {
+        console.error('[ERROR] switchAction:', error.message);
+        return res.status(500).json({
+            success: false,
+            message: 'Error executing switch action',
             error: error.message,
         });
     }

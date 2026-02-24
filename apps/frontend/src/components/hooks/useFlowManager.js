@@ -1081,6 +1081,9 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
           type: "component",
           flowId: newFlow.id,
           configuration: {},
+          nodeCount: subNodes.length,
+          hasInput: subNodes.some((n) => n.type === "input"),
+          hasOutput: subNodes.some((n) => n.type === "output"),
           subFlow: { nodes: subNodes, edges: finalSubEdges }, // Include edges for stats and restoration
         },
         style: getNodeStyle ? getNodeStyle(NODE_STATES.DEFAULT) : {},
@@ -1901,32 +1904,127 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
     [executeStep, updateNodeState, toast],
   );
 
-  const loadStarterTemplate = useCallback(() => {
-    setNodes(STARTER_TEMPLATE.nodes);
-    setEdges(
-      STARTER_TEMPLATE.edges.map((e) => ({
-        ...e,
-        type: "custom",
-        animated: true,
-      })),
+  /**
+   * Migrate Nodes (Recursive Sub-flow Creation)
+   * Essential for portability: creates backing flows for component nodes with embedded subFlow data.
+   */
+  const migrateNodes = useCallback(async (nodesToMigrate, targetProjectId) => {
+    if (!targetProjectId) return nodesToMigrate;
+
+    return await Promise.all(
+      nodesToMigrate.map(async (node) => {
+        if (
+          (node.type === "component" || node.data?.type === "component") &&
+          node.data?.subFlow &&
+          node.data.subFlow.nodes // Must have actual nodes to migrate
+        ) {
+          console.log(
+            `[FlowManager] 🧩 Migrating portable component: ${node.data.label}`,
+          );
+
+          try {
+            // 1. Create the backing flow
+            const response = await projectManager.createFlow(
+              targetProjectId,
+              node.data.subFlow.name || node.data.label || "Sub-flow",
+            );
+            const flowId = response.flow?.id || response.id;
+
+            if (flowId) {
+              // 2. Populate it (Recursive migration if sub-flows within sub-flows exist)
+              const innerNodes = await migrateNodes(
+                node.data.subFlow.nodes,
+                targetProjectId,
+              );
+
+              await projectManager.updateFlow(targetProjectId, flowId, {
+                nodes: innerNodes,
+                edges: (node.data.subFlow.edges || []).map((e) => ({
+                  ...e,
+                  type: "custom",
+                  animated: true,
+                })),
+              });
+
+              // 3. Return node linked to new flow, with persistent count
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  flowId,
+                  nodeCount: node.data.subFlow.nodes.length,
+                  hasInput: node.data.subFlow.nodes.some(
+                    (n) => n.type === "input",
+                  ),
+                  hasOutput: node.data.subFlow.nodes.some(
+                    (n) => n.type === "output",
+                  ),
+                  configuration: {
+                    ...node.data.configuration,
+                    flowId,
+                  },
+                  subFlow: undefined, // Clear template data
+                },
+              };
+            }
+          } catch (err) {
+            console.error("Failed to migrate component node:", err);
+            return node;
+          }
+        }
+        return node;
+      }),
     );
-    setIsStarterTemplate(true);
-    setHasUnsavedChanges(true);
-    toast.success(
-      t("common.starter_template_loaded", "Starter Template loaded!"),
+  }, []);
+
+  const loadStarterTemplate = useCallback(async () => {
+    if (!currentProject?.id) return;
+
+    const toastId = toast.loading(
+      t("common.loading_starter", "Initializing Hal-Test Tour..."),
     );
 
-    // Auto-center after loading (snappy and tight)
-    setTimeout(() => {
-      fitView({
-        duration: 400,
-        padding: { top: 0.1, bottom: 0.1, left: 0.02, right: 0.45 },
-        includeNodes: true,
-        minZoom: 0.1,
-        maxZoom: 0.95,
-      });
-    }, 300);
-  }, [setNodes, setEdges, t, toast, fitView]);
+    try {
+      // 1. Process Nodes and create sub-flows (Using migration logic)
+      const processedNodes = await migrateNodes(
+        STARTER_TEMPLATE.nodes,
+        currentProject.id,
+      );
+
+      // 2. Apply to state
+      setNodes(processedNodes);
+      setEdges(
+        STARTER_TEMPLATE.edges.map((e) => ({
+          ...e,
+          type: "custom",
+          animated: true,
+        })),
+      );
+
+      setIsStarterTemplate(true);
+      setHasUnsavedChanges(true);
+
+      toast.dismiss(toastId);
+      toast.success(
+        t("common.starter_template_loaded", "Starter Template loaded!"),
+      );
+
+      // 3. Auto-center
+      setTimeout(() => {
+        fitView({
+          duration: 400,
+          padding: { top: 0.1, bottom: 0.1, left: 0.02, right: 0.45 },
+          includeNodes: true,
+          minZoom: 0.1,
+          maxZoom: 0.95,
+        });
+      }, 300);
+    } catch (err) {
+      toast.dismiss(toastId);
+      console.error("[FlowManager] Error loading starter template:", err);
+      toast.error("Failed to initialize tour.");
+    }
+  }, [currentProject, setNodes, setEdges, t, toast, fitView, migrateNodes]);
 
   const executeFlow = useCallback(
     async (options = {}) => {

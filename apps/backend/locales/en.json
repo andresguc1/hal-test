@@ -226,6 +226,36 @@
         }
     },
     "nodes": {
+        "categories": {
+            "browser_management": "Browser",
+            "navigation": "Navigation",
+            "element": "Elements",
+            "interaction": "Interaction",
+            "wait": "Waits",
+            "tabs": "Tabs",
+            "viewport": "Viewport",
+            "screenshot": "Captures",
+            "network": "Network",
+            "session": "Session",
+            "llm_ai": "AI Ops",
+            "exec": "Execute",
+            "flow_control": "Logic Engine",
+            "composition": "Composition"
+        },
+        "labels": {
+            "variable": "Variable",
+            "conditional": "Conditional",
+            "switch": "Switch",
+            "loop": "Loop",
+            "branch": "Branch",
+            "flow_control": "Flow Control",
+            "transform": "Transform",
+            "wait_conditional": "Wait for Condition",
+            "pause": "Pause (Sleep)",
+            "component": "Component",
+            "input": "Module Input",
+            "output": "Module Output"
+        },
         "fields": {
             "enable": "Enable Logs",
             "logToFile": "Log to File",

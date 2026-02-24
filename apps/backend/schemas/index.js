@@ -86,3 +86,4 @@ export { default as loopBodySchema } from './loop/body.js';
 export { default as branchBodySchema } from './branch/body.js';
 export { default as flowControlBodySchema } from './flow_control/body.js';
 export { default as transformBodySchema } from './transform/body.js';
+export { default as switchBodySchema } from './switch/body.js';

@@ -66,20 +66,36 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges }) => {
     setProgress({ stage: "preparing", message: t("dialogs.export.preparing") });
 
     try {
-      // Create the full export payload
-      // Create the full export payload
-      const exportData = {
-        meta: {
-          version: "2.1.0", // Bumped version
-          timestamp: new Date().toISOString(),
-          source: "hal-9001",
-          flowName:
-            nodes.find((n) => n.type === "launch_browser")?.data?.label ||
-            "Untitled Flow",
-        },
-        nodes: nodes.map((n) => {
-          // Deep copy to avoid mutation
+      // Deep Process Nodes: Fetch sub-flows
+      const processedNodes = await Promise.all(
+        nodes.map(async (n) => {
+          // Deep copy
           const node = JSON.parse(JSON.stringify(n));
+
+          // If component, fetch its latest flow data from API to embed
+          if (
+            (node.type === "component" || node.data?.type === "component") &&
+            node.data?.flowId
+          ) {
+            try {
+              const subFlow = await api.get(
+                `/projects/${node.data.projectId || "active"}/flows/${node.data.flowId}`,
+              );
+              if (subFlow) {
+                node.data.subFlow = {
+                  name: subFlow.name,
+                  nodes: subFlow.nodes || [],
+                  edges: subFlow.edges || [],
+                };
+              }
+            } catch (err) {
+              console.warn(
+                `Failed to fetch sub-flow ${node.data.flowId} for export`,
+                err,
+              );
+            }
+          }
+
           // Sanitization: Remove API Keys if they exist in configuration
           if (node.data?.configuration?.apiKey) {
             delete node.data.configuration.apiKey;
@@ -90,6 +106,19 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges }) => {
 
           return node;
         }),
+      );
+
+      // Create the full export payload
+      const exportData = {
+        meta: {
+          version: "2.2.0", // Bumped version for Deep Export
+          timestamp: new Date().toISOString(),
+          source: "hal-9001",
+          flowName:
+            nodes.find((n) => n.type === "launch_browser")?.data?.label ||
+            "Untitled Flow",
+        },
+        nodes: processedNodes,
         edges: edges,
         viewport: { x: 0, y: 0, zoom: 1 },
       };

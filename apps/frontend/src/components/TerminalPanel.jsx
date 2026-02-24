@@ -184,9 +184,9 @@ export default function TerminalPanel({ socket }) {
             title={
               mode === "log"
                 ? t(
-                  "terminal.switch_interactive",
-                  "Switch to Interactive Shell",
-                )
+                    "terminal.switch_interactive",
+                    "Switch to Interactive Shell",
+                  )
                 : t("terminal.switch_log", "Switch to Execution Logs")
             }
             className={cn(

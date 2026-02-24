@@ -3,27 +3,32 @@
 import Joi from 'joi';
 
 const waitConditionalBodySchema = Joi.object({
-    // 1. conditionScript (Requerido, String)
-    conditionScript: Joi.string().trim().required().messages({
-        'any.required': 'El script de condición JavaScript es obligatorio.',
-        'string.empty': 'El script de condición no puede estar vacío.',
-    }),
+    // 1. expression (Requerido, String o Objeto)
+    expression: Joi.alternatives()
+        .try(Joi.string(), Joi.object(), Joi.array())
+        .required()
+        .messages({
+            'any.required': 'La condición o expresión es obligatoria.',
+        }),
 
-    // 2. polling (Intervalo de Evaluación)
-    polling: Joi.number().integer().min(1).default(500).messages({
+    // 2. waitType
+    waitType: Joi.string().valid('browser', 'variable').default('browser'),
+
+    // 3. polling (Intervalo de Evaluación)
+    polling: Joi.number().integer().min(1).default(100).messages({
         'number.min': 'El intervalo de evaluación (polling) debe ser al menos 1ms.',
     }),
 
-    // 3. timeout (Tiempo de espera Máximo)
-    timeout: Joi.number().integer().min(1).default(20000).messages({
+    // 4. timeout (Tiempo de espera Máximo)
+    timeout: Joi.number().integer().min(1).default(30000).messages({
         'number.min': 'El tiempo de espera (timeout) debe ser al menos 1ms.',
     }),
 
-    // 4. args (Argumentos para el Script, Opcional)
+    // 5. Retrocompatibilidad
+    conditionScript: Joi.string().trim().optional(),
     args: Joi.string().trim().optional().allow(null, ''),
-
-    // 5. browserId (ID del navegador objetivo) - Opcional, manejado por backend si no se envía
     browserId: Joi.string().allow(null, '').optional(),
 });
+
 // Bloquea cualquier campo extra que no esté definido.
 export default waitConditionalBodySchema;

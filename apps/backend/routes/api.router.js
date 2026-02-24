@@ -432,7 +432,7 @@ const actionRoutes = [
     {
         path: 'integrate_ci',
         schema: 'integrateCIBodySchema',
-        action: 'integrateCIAction',
+        action: 'integrateCiAction',
         category: 'ci',
     },
 
@@ -459,6 +459,12 @@ const actionRoutes = [
         path: 'branch',
         schema: 'branchBodySchema',
         action: 'branchAction',
+        category: 'flow_control',
+    },
+    {
+        path: 'switch',
+        schema: 'switchBodySchema',
+        action: 'switchAction',
         category: 'flow_control',
     },
     {

@@ -273,6 +273,7 @@ function Dashboard() {
     loadStarterTemplate,
     isStarterTemplate,
     addGhostNode,
+    migrateNodes,
   } = useFlowManager(currentProject, currentFlowId, switchFlow);
 
   // Element Picker Callback (Previously handleElementPicked was here, we will replace the mess)
@@ -806,8 +807,15 @@ function Dashboard() {
             flowData.edges || [],
           );
 
-          // Restore state
-          setNodes(flowData.nodes || []);
+          // 1. MIGRATE PORTABLE COMPONENTS
+          // If the flow contains components with embedded subFlow data, migrate them now
+          const processedNodes = await migrateNodes(
+            flowData.nodes || [],
+            currentProject?.id,
+          );
+
+          // 2. Restore state
+          setNodes(processedNodes);
           setEdges(flowData.edges || []);
 
           if (flowData.viewport) {
@@ -846,7 +854,17 @@ function Dashboard() {
         toast.error(`Import error: ${error.message}`);
       }
     },
-    [setNodes, setEdges, setViewport, fitView, toast, t, detectOrphans],
+    [
+      currentProject?.id,
+      setNodes,
+      setEdges,
+      setViewport,
+      fitView,
+      toast,
+      t,
+      detectOrphans,
+      migrateNodes,
+    ],
   );
 
   // ========================================

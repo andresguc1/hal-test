@@ -138,8 +138,8 @@
       "hover": "Pasar mouse sobre elemento",
       "drag_drop": "Arrastrar",
       "upload_file": "Subir Archivos",
-      "pause": "Pausa (Espera)",
-      "wait_conditional": "Esperar (Delay)",
+      "pause": "Pausa (Sueño)",
+      "wait_conditional": "Esperar Condición",
       "take_screenshot": "Captura de Pantalla",
       "extract_text": "Extraer texto",
       "execute_script": "Ejecutar JavaScript",
@@ -179,7 +179,16 @@
       "integrate_ci": "Integración CI/CD",
       "wait_for_element_adv": "Esperar Elemento (Adv)",
       "submit_form": "Enviar Formulario",
-      "component": "Componente"
+      "variable": "Variable",
+      "conditional": "Condicional",
+      "switch": "Switch",
+      "loop": "Bucle",
+      "branch": "Bifurcación",
+      "flow_control": "Control de Flujo",
+      "transform": "Transformar",
+      "component": "Componente",
+      "input": "Entrada de Módulo",
+      "output": "Salida de Módulo"
     },
     "categories": {
       "browser_management": "Navegador",
@@ -192,7 +201,9 @@
       "test_execution": "Contexto/Control",
       "file_data": "Archivos & Datos",
       "llm_ai": "Modelos de IA (LLM)",
-      "execution_interface": "Ejecución"
+      "execution_interface": "Ejecución",
+      "flow_control": "Motor Lógico",
+      "composition": "Composición de Módulos"
     },
     "fields": {
       "browserType": "Tipo de navegador",

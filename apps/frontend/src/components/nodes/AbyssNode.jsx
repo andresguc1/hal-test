@@ -100,7 +100,7 @@ const AbyssNode = ({ id, data, selected, type }) => {
           `ring-4 ring-sky-500/50 animate-pulse border-sky-400 z-50`,
 
         // Onboarding Glow (Tutorial Mode)
-        data.starterHint && !data.state && "onboarding-glow border-sky-400/50",
+        data.starterHint && "onboarding-glow border-sky-400/50",
 
         // Selection
         selected && statusColor ? "scale-[1.05] z-50 border-[3px]" : "",
@@ -129,7 +129,7 @@ const AbyssNode = ({ id, data, selected, type }) => {
       <div className="absolute inset-x-0 top-0 h-9 bg-black/10 rounded-t-lg border-b border-black/5 dark:border-white/10" />
 
       {/* Onboarding Hint Bubble (Premium Glassmorphic) */}
-      {data.starterHint && showDetails && !data.state && (
+      {data.starterHint && showDetails && (
         <div className="absolute -top-36 left-1/2 -translate-x-1/2 z-50 pointer-events-none scale-90">
           <div className="relative group/hint">
             <div className="bg-[#0f172a]/95 backdrop-blur-3xl border border-sky-500/40 text-sky-100 px-4 py-3 rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.6),0_0_20px_rgba(56,189,248,0.15)] flex items-center gap-4 min-w-[200px] max-w-[340px] transition-all duration-700 animate-in fade-in zoom-in-95 slide-in-from-bottom-6">

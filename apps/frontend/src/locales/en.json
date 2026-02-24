@@ -140,7 +140,7 @@
       "drag_drop": "Drag & Drop",
       "upload_file": "Upload Files",
       "pause": "Pause (Sleep)",
-      "wait_conditional": "Wait (Delay)",
+      "wait_conditional": "Wait for Condition",
       "take_screenshot": "Take Screenshot",
       "extract_text": "Extract Text",
       "execute_script": "Execute Script",
@@ -177,16 +177,19 @@
       "integrate_ci": "CI/CD Integration",
       "wait_for_element_adv": "Wait Element (Adv)",
       "submit_form": "Submit Form",
+      "validate_semantic": "Validate (AI)",
       "variable": "Variable",
-      "component": "Component",
       "conditional": "Conditional",
+      "switch": "Switch",
       "loop": "Loop",
       "branch": "Branch",
       "flow_control": "Flow Control",
       "transform": "Transform",
+      "component": "Component",
       "call_llm": "Ask AI (Text)",
       "generate_data": "Generate Data (AI)",
-      "validate_semantic": "Validate (AI)"
+      "input": "Module Input",
+      "output": "Module Output"
     },
     "categories": {
       "browser_management": "Browser",
@@ -199,7 +202,8 @@
       "file_data": "Files & Data",
       "llm_ai": "AI / LLM",
       "execution_interface": "Exec",
-      "flow_control": "Flow"
+      "flow_control": "Logic Engine",
+      "composition": "Module Composition"
     },
     "fields": {
       "browserType": "Browser Type",
