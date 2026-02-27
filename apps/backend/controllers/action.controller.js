@@ -7,7 +7,7 @@
 import { browserService } from '../services/browser.service.js';
 import { traceService } from '../services/trace.service.js';
 import { networkHistoryService } from '../services/NetworkHistoryService.js';
-import VariableManager from '../services/VariableManager.js';
+import { variableManager } from '../services/VariableManager.js';
 import aiService from '../services/AIService.js';
 import { emitExecutionStatus, emitScreenshotReady, emitLog } from '../socket.js';
 import { z } from 'zod';
@@ -18,7 +18,8 @@ import { executionLogger } from '../services/ExecutionLogger.js';
 import { STORAGE_RUNS_DIR } from '../config/paths.js';
 
 // Create Variable Manager instance
-const variableManager = new VariableManager();
+// Use shared Variable Manager instance
+// const variableManager = new VariableManager();
 
 /**
  * Smartly emits logs to the frontend via socket

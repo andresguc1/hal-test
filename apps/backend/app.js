@@ -143,24 +143,26 @@ const startServer = async () => {
     }
 
     await storageCleanupService.run();
-    server.listen(PORT, '0.0.0.0', () => {
-        const baseUrl = `http://localhost:${PORT}`;
-        console.log(`\n🚀 =================================================`);
-        console.log(`   HaltTest Server is Up & Running!`);
-        console.log(`   =================================================`);
-        console.log(`   🌍 Landing Page:  ${baseUrl}/`);
-        console.log(`   🖥️  Application:   ${baseUrl}/app/ (Frontend production build)`);
-        console.log(`   -------------------------------------------------`);
-        console.log(`   🚧 Dev App:       http://localhost:5173/ (Hot Reload)`);
-        console.log(`   🚧 Dev Landing:   http://localhost:3000/ (Hot Reload)`);
-        console.log(`   -------------------------------------------------`);
-        console.log(`   📚 API Docs:      ${baseUrl}/api/docs`);
-        console.log(`   🛠️  Environment:   ${process.env.NODE_ENV || 'development'}`);
-        console.log(`   -------------------------------------------------`);
-        console.log(`   🐱 GitHub Repo:   https://github.com/andresguc1/hal-test`);
-        console.log(`   ❤️  Thanks for supporting the project!`);
-        console.log(`   =================================================\n`);
-    });
+    if (process.env.NODE_ENV !== 'test') {
+        server.listen(PORT, '0.0.0.0', () => {
+            const baseUrl = `http://localhost:${PORT}`;
+            console.log(`\n🚀 =================================================`);
+            console.log(`   HaltTest Server is Up & Running!`);
+            console.log(`   =================================================`);
+            console.log(`   🌍 Landing Page:  ${baseUrl}/`);
+            console.log(`   🖥️  Application:   ${baseUrl}/app/ (Frontend production build)`);
+            console.log(`   -------------------------------------------------`);
+            console.log(`   🚧 Dev App:       http://localhost:5173/ (Hot Reload)`);
+            console.log(`   🚧 Dev Landing:   http://localhost:3000/ (Hot Reload)`);
+            console.log(`   -------------------------------------------------`);
+            console.log(`   📚 API Docs:      ${baseUrl}/api/docs`);
+            console.log(`   🛠️  Environment:   ${process.env.NODE_ENV || 'development'}`);
+            console.log(`   -------------------------------------------------`);
+            console.log(`   🐱 GitHub Repo:   https://github.com/andresguc1/hal-test`);
+            console.log(`   ❤️  Thanks for supporting the project!`);
+            console.log(`   =================================================\n`);
+        });
+    }
 };
 
 startServer();

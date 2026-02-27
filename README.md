@@ -92,12 +92,30 @@ To avoid missing system dependencies for Playwright, use Docker:
 
 Bash
 docker compose up -d --build
-See DOCKER.md for detailed production setup.
+See `DOCKER.md` for detailed production setup.
 
-🤝 Community & Support
-Join our Slack: HAL-TEST Talk
+## ⚡ Developer Workflow
 
-Star the Repo: If this project helps you, give us a ⭐!
+To make contributing easier, we provide unified commands in the root `package.json`:
 
-📄 License
+### Update your Local Repo
+Pull the latest changes from GitHub, install all dependencies, and rebuild the frontend monolith in one step:
+```bash
+pnpm run update:app
+```
+
+### Publish a New CLI Release
+*(Maintainers only)*. This command bumps the patch version, runs the standalone build for the CLI, and publishes it to NPM:
+```bash
+pnpm run release
+```
+
+---
+
+## 🤝 Community & Support
+Join our Slack: [HAL-TEST Talk](https://join.slack.com/t/haltest-talk/shared_invite/zt-3o7wqlt53-tzFebjhK5TxQtYZbwK~f~g)
+
+**Star the Repo**: If this project helps you, give us a ⭐!
+
+## 📄 License
 MIT License - Created by Andresguc1

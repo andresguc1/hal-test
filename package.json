@@ -19,13 +19,16 @@
         "build": "turbo build",
         "build:monolith": "pnpm --filter @halt-test/web build --outDir ../backend/public/web --emptyOutDir && pnpm --filter @halt-test/frontend build --outDir ../backend/public/app --emptyOutDir",
         "start": "NODE_ENV=production node apps/backend/app.js",
+        "cli": "node apps/cli/bin/haltest.js",
         "test": "turbo test",
         "lint": "turbo lint",
         "lint:fix": "turbo lint:fix",
         "format": "turbo format",
         "clean": "turbo clean && rm -rf node_modules",
         "stop": "fuser -k 2001/tcp 3000/tcp || echo 'Ports 2001/3000 cleared'",
-        "prepare": "husky"
+        "prepare": "husky",
+        "release": "pnpm format && pnpm lint:fix && pnpm test && cd apps/cli && npm version patch && pnpm build && cd dist && npm publish",
+        "update:app": "git pull && pnpm install && pnpm build:monolith"
     },
     "devDependencies": {
         "husky": "^9.1.7",

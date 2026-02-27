@@ -3,11 +3,19 @@ import { useTranslation } from "react-i18next";
 import { Slack } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Pricing from "./Pricing";
+import { Copy, Check } from "lucide-react";
 
 export default function App() {
   const { t, i18n } = useTranslation();
 
   const [currentView, setCurrentView] = React.useState("hero");
+  const [copied, setCopied] = React.useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText("npx haltest");
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const toggleLanguage = () => {
     const newLang = i18n.language.startsWith("es") ? "en" : "es";
@@ -279,6 +287,45 @@ export default function App() {
                 <Slack size={18} className="text-[#4A154B]" />
                 {t("cta.community") || "Slack"}
               </motion.button>
+            </motion.div>
+
+            {/* Terminal Snippet (NPM) */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.45 }}
+              className="mb-16 max-w-md w-full"
+            >
+              <div className="flex items-center justify-between bg-slate-900 border border-slate-700/50 rounded-xl p-4 shadow-2xl shadow-hal-primary-900/20 backdrop-blur-md">
+                <div className="flex items-center gap-3">
+                  <span className="text-hal-primary-500 font-bold">$</span>
+                  <code className="text-white font-mono text-sm">
+                    npx haltest@latest
+                  </code>
+                </div>
+                <button
+                  onClick={handleCopy}
+                  className="p-2 hover:bg-white/10 rounded-lg transition-colors text-slate-400 hover:text-white group relative"
+                  title="Copy to clipboard"
+                >
+                  {copied ? (
+                    <Check size={18} className="text-emerald-400" />
+                  ) : (
+                    <Copy size={18} />
+                  )}
+
+                  {/* Tooltip */}
+                  {copied && (
+                    <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-emerald-500/20 text-emerald-300 text-[10px] uppercase font-bold px-2 py-1 rounded backdrop-blur-sm whitespace-nowrap">
+                      Copied!
+                    </span>
+                  )}
+                </button>
+              </div>
+              <p className="text-xs text-slate-500 mt-3 flex items-center justify-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
+                Zero config. No cloning required.
+              </p>
             </motion.div>
 
             {/* --- SOCIAL PROOF --- */}

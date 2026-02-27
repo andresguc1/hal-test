@@ -60,6 +60,7 @@ export { default as waitNetworkMatchBodySchema } from './wait_network_match/body
 // 🍪 Sesión y Contexto
 export { default as persistSessionBodySchema } from './persist_session/body.js';
 export { default as manageSessionBodySchema } from './manage_session/body.js';
+export { default as manageCookiesBodySchema } from './manage_cookies/body.js';
 export { default as createContextBodySchema } from './create_context/body.js';
 export { default as closeContextBodySchema } from './close_context/body.js';
 export { default as cleanupStateBodySchema } from './cleanup_state/body.js';

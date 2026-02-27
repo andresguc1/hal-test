@@ -20,18 +20,14 @@ test('Generated Flow', async ({ page }) => {
         _stepStart = Date.now();
         console.log('Ejecutando type_text...');
         await page.fill('#user-name', 'standard_user');
-        console.log(
-            `Texto ingresado con éxito en el selector '#user-name'. (${Date.now() - _stepStart}ms)`,
-        );
+        console.log(`Texto ingresado con éxito en el selector '#user-name'. (${Date.now() - _stepStart}ms)`);
     });
 
     await test.step('Paso 4: Enter Password', async () => {
         _stepStart = Date.now();
         console.log('Ejecutando type_text...');
         await page.fill('#password', 'secret_sauce');
-        console.log(
-            `Texto ingresado con éxito en el selector '#password'. (${Date.now() - _stepStart}ms)`,
-        );
+        console.log(`Texto ingresado con éxito en el selector '#password'. (${Date.now() - _stepStart}ms)`);
     });
 
     await test.step('Paso 5: Submit Login', async () => {
@@ -51,20 +47,13 @@ test('Generated Flow', async ({ page }) => {
     await test.step('Paso 7: Wait List Loaded', async () => {
         _stepStart = Date.now();
         console.log('Esperando coincidencia de red: **/inventory.html*...');
-        await page.waitForResponse(
-            (resp) =>
-                resp.url().includes('**/inventory.html*') &&
-                (!'GET' || 'GET' === 'ALL' || resp.request().method() === 'GET') &&
-                (!undefined || resp.status() === undefined),
-        );
-        console.log(
-            `Coincidencia de red encontrada para **/inventory.html*. (${Date.now() - _stepStart}ms)`,
-        );
+        await page.waitForResponse(resp => resp.url().includes('**/inventory.html*') && (!'GET' || 'GET' === 'ALL' || resp.request().method() === 'GET') && (!undefined || resp.status() === undefined));
+        console.log(`Coincidencia de red encontrada para **/inventory.html*. (${Date.now() - _stepStart}ms)`);
     });
 
     await test.step('Paso 8: Evidence', async () => {
         _stepStart = Date.now();
-        await page.screenshot({ path: 'screenshot_1772046921720.png', fullPage: false });
+        await page.screenshot({ path: 'screenshot_1772208898323.png', fullPage: false });
         console.log(`Captura de pantalla realizada con éxito. (${Date.now() - _stepStart}ms)`);
     });
 

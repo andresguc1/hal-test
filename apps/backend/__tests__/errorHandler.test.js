@@ -25,6 +25,12 @@ const createTestApp = (errorToThrow) => {
         res.status(404).send('Not Found');
     });
 
+    // Mock req.t for translations used in error handler
+    app.use((err, req, res, next) => {
+        req.t = req.t || ((key) => key);
+        next(err);
+    });
+
     // 3. Manejador de Errores (DEBE IR ÚLTIMO)
     app.use(errorHandler);
 
@@ -75,9 +81,7 @@ describe('ErrorHandler Middleware', () => {
         expect(response.statusCode).toBe(500);
         expect(response.body.success).toBe(false);
         // Debe devolver el mensaje genérico en producción
-        expect(response.body.error).toBe(
-            'Error interno del servidor. Intente nuevamente más tarde.',
-        );
+        expect(response.body.error).toBe('common.error_internal');
         // No debe incluir el stack trace en producción
         expect(response.body.stack).toBeUndefined();
 

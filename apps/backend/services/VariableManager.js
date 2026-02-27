@@ -86,6 +86,14 @@ class VariableManager {
     }
 
     /**
+     * Clear all variables in all scopes
+     */
+    clearAll() {
+        this.scopes.flow = {};
+        this.scopes.global = {};
+    }
+
+    /**
      * Resolve variable references in a string
      * Example: "Hello ${name}" -> "Hello John"
      *
@@ -230,4 +238,11 @@ class VariableManager {
     }
 }
 
+// Export class for instantiation if needed
+export { VariableManager };
+
+// Export a unique instance (Singleton) called variableManager
+export const variableManager = new VariableManager();
+
+// Compatibility export
 export default VariableManager;

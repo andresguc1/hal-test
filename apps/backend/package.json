@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "node --watch-path=controllers --watch-path=services --watch-path=middlewares --watch-path=routes --watch-path=database --watch-path=schemas --watch app.js",
     "start": "node app.js",
-    "test": "vitest",
+    "test": "vitest run",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"**/*.js\" \"!node_modules/**\"",

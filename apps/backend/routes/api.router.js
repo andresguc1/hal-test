@@ -316,6 +316,12 @@ const actionRoutes = [
         action: 'manageSessionAction',
         category: 'session',
     },
+    {
+        path: 'manage_cookies',
+        schema: 'manageCookiesBodySchema',
+        action: 'manageCookiesAction',
+        category: 'network',
+    },
 
     // ========== Context and State ==========
     {

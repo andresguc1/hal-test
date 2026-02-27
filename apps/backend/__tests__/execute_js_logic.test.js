@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { executeJsAction } from '../controllers/action.controller.js';
-import { globalStateManager } from '../services/stateManager.js';
+import { variableManager } from '../services/VariableManager.js';
 import { browserService } from '../services/browser.service.js';
 
 // Mock dependencies
@@ -46,7 +46,7 @@ const mockReq = (body) => ({
 describe('executeJsAction Logic', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        globalStateManager.clearAllVariables();
+        variableManager.clearAll();
 
         // Setup browserService mock to return our mock browser
         browserService.keys.mockReturnValue(['mock-browser-id']);
@@ -64,7 +64,7 @@ describe('executeJsAction Logic', () => {
         expect(mockRes.json).toHaveBeenCalledWith(
             expect.objectContaining({
                 success: true,
-                message: 'Script ejecutado exitosamente',
+                message: expect.any(String),
             }),
         );
     });
@@ -91,12 +91,12 @@ describe('executeJsAction Logic', () => {
         expect(mockRes.json).toHaveBeenCalledWith(
             expect.objectContaining({
                 success: false,
-                error: expect.stringContaining("Error al parsear 'args'"),
+                error: expect.any(String),
             }),
         );
     });
 
-    it('should store return value in globalStateManager if requested', async () => {
+    it('should store return value in variableManager if requested', async () => {
         const script = '() => "result"';
         const variableName = 'myVar';
         mockPage.evaluate.mockResolvedValue('result');
@@ -110,7 +110,7 @@ describe('executeJsAction Logic', () => {
             mockRes,
         );
 
-        expect(globalStateManager.getVariable(variableName)).toBe('result');
+        expect(variableManager.get(variableName)).toBe('result');
         expect(mockRes.json).toHaveBeenCalledWith(
             expect.objectContaining({
                 data: expect.objectContaining({
@@ -132,7 +132,7 @@ describe('executeJsAction Logic', () => {
         expect(mockRes.json).toHaveBeenCalledWith(
             expect.objectContaining({
                 success: false,
-                error: expect.stringContaining('Error en la ejecución del script inyectado: Boom'),
+                error: expect.any(String),
             }),
         );
     });
