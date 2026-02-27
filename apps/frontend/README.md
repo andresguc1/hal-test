@@ -83,6 +83,9 @@ pnpm install
 # Start dev server (http://localhost:5173)
 pnpm dev
 
+# Stop dev server (clear port 3000)
+pnpm stop
+
 # Build for production
 pnpm build
 

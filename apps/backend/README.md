@@ -29,12 +29,16 @@ The API provides a wide range of browser automation capabilities organized by ca
 
 ## 🚦 Usage
 
-### Development
-
-Run the server in watch mode:
-
 ```bash
 npm run dev
+```
+
+### Stop Service
+
+Clear the backend port (2001):
+
+```bash
+npm run stop
 ```
 
 ### Production

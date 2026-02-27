@@ -27,8 +27,11 @@ class BrowserManager {
         } = options;
 
         // FORCE headless mode in production (servers don't have X11/Display)
+        // BYPASS this if we are in HAL_CLI_MODE (local execution via NPX/Launcher)
         const isProduction = process.env.NODE_ENV === 'production';
-        if (isProduction && !headless) {
+        const isCliMode = process.env.HAL_CLI_MODE === 'true';
+
+        if (isProduction && !headless && !isCliMode) {
             console.log('[BrowserService] Production environment detected - forcing headless mode');
             headless = true;
         }
@@ -153,6 +156,9 @@ class BrowserManager {
 
         console.log('---------------------------------------------------------');
         console.log(`[AUDIT] Launching ${browserType.toUpperCase()}`);
+        console.log(`[AUDIT] Headless: ${headless}`);
+        console.log(`[AUDIT] NODE_ENV: ${process.env.NODE_ENV}`);
+        console.log(`[AUDIT] HAL_CLI_MODE: ${process.env.HAL_CLI_MODE}`);
         console.log(`[AUDIT] Target Viewport: ${finalWidth}x${finalHeight}`);
         console.log(`[AUDIT] Mobile Simulation: ${isMobile ? 'ACTIVE ✅' : 'DISABLED'}`);
         console.log(`[AUDIT] Device Preset: ${devicePreset}`);

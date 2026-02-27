@@ -2170,7 +2170,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
                 );
                 if (subFlow && subFlow.nodes && subFlow.nodes.length > 0) {
                   // VISUAL: Set Component Node to RUNNING
-                  updateNodeState(node.id, NODE_STATES.RUNNING);
+                  updateNodeState(node.id, NODE_STATES.EXECUTING);
 
                   // Execute Sub-flow
                   await executeGraph(subFlow.nodes, subFlow.edges, depth + 1);
@@ -3048,7 +3048,8 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
             if (step.status === "success") nodeState = NODE_STATES.SUCCESS;
             else if (step.status === "failed") nodeState = NODE_STATES.ERROR;
             else if (step.status === "skipped") nodeState = NODE_STATES.SKIPPED;
-            else if (step.status === "running") nodeState = NODE_STATES.RUNNING;
+            else if (step.status === "running")
+              nodeState = NODE_STATES.EXECUTING;
 
             return {
               ...node,

@@ -1,9 +1,17 @@
 import React, { memo } from "react";
 import { useTranslation } from "react-i18next";
 import { Handle, Position, useStore } from "@xyflow/react";
-import { Layers, MoreHorizontal, Terminal } from "lucide-react";
+import {
+  Layers,
+  MoreHorizontal,
+  Terminal,
+  CheckCircle,
+  XCircle,
+  Loader2,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NODE_TYPE_MAP, CATEGORY_STYLES } from "@/config/nodeConstants";
+import { NODE_STATES } from "../hooks/flowStyles";
 
 const ComponentNode = ({ id: _id, data, selected }) => {
   const { t } = useTranslation();
@@ -18,7 +26,13 @@ const ComponentNode = ({ id: _id, data, selected }) => {
     label: t("nodes.labels.component", { defaultValue: "Component" }),
   };
 
-  // 2. Style
+  // 2. Style & State
+  const state = data?.state || NODE_STATES.DEFAULT;
+  const isRunning =
+    state === NODE_STATES.EXECUTING || state === NODE_STATES.RUNNING;
+  const isSuccess = state === NODE_STATES.SUCCESS;
+  const isError = state === NODE_STATES.ERROR;
+
   const colorKey = safeConfig.color;
   const themeParams = CATEGORY_STYLES[colorKey]
     ? CATEGORY_STYLES[colorKey].node
@@ -40,6 +54,10 @@ const ComponentNode = ({ id: _id, data, selected }) => {
         "group relative min-w-[160px] max-w-[300px] rounded-lg p-3 transition-[background,border,box-shadow,transform] duration-400 select-none border-[2px]",
         themeParams.base,
         selected ? themeParams.selected : "shadow-lg",
+        // Status Colors
+        isError && "border-red-500 bg-red-500/10",
+        isSuccess && "border-green-500/50",
+        isRunning && "border-blue-400 animate-pulse",
         // Onboarding Glow (Matches AbyssNode)
         data.starterHint && "onboarding-glow border-sky-400/50",
       )}
@@ -55,6 +73,19 @@ const ComponentNode = ({ id: _id, data, selected }) => {
 
       {/* HEADER TINT (Matches AbyssNode) */}
       <div className="absolute inset-x-0 top-0 h-9 bg-black/10 rounded-t-lg border-b border-black/5 dark:border-white/10" />
+
+      {/* Status Icons (Top Right) */}
+      <div className="absolute top-2 right-2 z-10">
+        {isSuccess && (
+          <CheckCircle size={14} className="text-green-400 drop-shadow-sm" />
+        )}
+        {isError && (
+          <XCircle
+            size={14}
+            className="text-red-400 drop-shadow-sm animate-bounce"
+          />
+        )}
+      </div>
 
       {/* Onboarding Hint Bubble (Matches AbyssNode) */}
       {data.starterHint && showDetails && (
@@ -82,7 +113,11 @@ const ComponentNode = ({ id: _id, data, selected }) => {
       {/* HEADER CONTENT */}
       <div className="relative flex items-center gap-3 mb-1 pt-1 px-1">
         <div className="shrink-0 p-1 bg-white/10 rounded-md">
-          <Layers size={18} className="text-white drop-shadow-sm" />
+          {isRunning ? (
+            <Loader2 size={18} className="text-white animate-spin" />
+          ) : (
+            <Layers size={18} className="text-white drop-shadow-sm" />
+          )}
         </div>
         <div className="flex flex-col min-w-0">
           <span className="text-sm font-bold truncate leading-tight text-white drop-shadow-sm">
@@ -132,6 +167,7 @@ function arePropsEqual(prevProps, nextProps) {
   return (
     prevProps.id === nextProps.id &&
     prevProps.selected === nextProps.selected &&
+    prevProps.data?.state === nextProps.data?.state &&
     prevProps.data?.label === nextProps.data?.label &&
     prevProps.data?.customLabel === nextProps.data?.customLabel &&
     prevProps.data?.nodeCount === nextProps.data?.nodeCount &&

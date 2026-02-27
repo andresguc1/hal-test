@@ -104,6 +104,13 @@ Pull the latest changes from GitHub, install all dependencies, and rebuild the f
 pnpm run update:app
 ```
 
+### Port Management & Cleanup
+If you encounter `EADDRINUSE` errors or need to clear the development ports (2001 and 3000), use the unified stop command:
+```bash
+pnpm run stop
+```
+The CLI launcher also features **smart port detection**—it will automatically detect if the backend is already running and connect to it instead of failing.
+
 ### Publish a New CLI Release
 *(Maintainers only)*. This command bumps the patch version, runs the standalone build for the CLI, and publishes it to NPM:
 ```bash

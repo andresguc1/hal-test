@@ -15,6 +15,7 @@ import { fileURLToPath } from "url";
 
 // ── Resolve paths ──────────────────────────────────────────────────────────
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+let _serverRef = null;
 
 /**
  * Resolve the backend entry-point, supporting multiple run contexts:
@@ -262,91 +263,128 @@ if (args[0] === "cli") {
 
 printBanner();
 
-await runPreRequisiteChecks();
-
-// Guard: backend not found → print clear instructions and exit
-if (!BACKEND_ENTRY) {
-  console.error(style(c.red + c.bold, "  ❌ HalTest backend not found.\n"));
-  console.error(
-    style(
-      c.white,
-      "  This launcher must be run from the HalTest monorepo root.",
-    ),
-  );
-  console.error(
-    style(
-      c.white,
-      "  Standalone bundle support is coming in a future release.\n",
-    ),
-  );
-  console.error(style(c.dim, "  Quick fix:"));
-  console.error(
-    style(c.dim, "    git clone https://github.com/andresguc1/hal-test"),
-  );
-  console.error(style(c.dim, "    cd hal-test"));
-  console.error(style(c.dim, "    pnpm install"));
-  console.error(style(c.dim, "    pnpm cli\n"));
-  process.exit(1);
+// 🚀 Port detection with small retry to avoid race during turbo startup
+let isAlreadyRunning = await isPortListening(PORT);
+if (!isAlreadyRunning) {
+  // Give the backend a small headstart if turbo launched them simultaneously
+  await new Promise((r) => setTimeout(r, 800));
+  isAlreadyRunning = await isPortListening(PORT);
 }
 
-// Derive CWD: apps/backend/app.js → go up 3 levels → monorepo root
-const backendCwd = path.resolve(BACKEND_ENTRY, "..", "..", "..");
-
-console.log(style(c.bold, `  🚀 Starting HalTest Server...`));
-console.log(style(c.dim, `     Entry: ${BACKEND_ENTRY}`));
-console.log("");
-
-// Spawn the backend server
-const server = spawn("node", [BACKEND_ENTRY], {
-  cwd: backendCwd,
-  stdio: ["ignore", "pipe", "pipe"],
-  env: {
-    ...process.env,
-    NODE_ENV: process.env.NODE_ENV || "production",
-    HAL_CLI_MODE: "true",
-  },
-});
-
-let browserOpened = false;
-
-// Forward stdout — detect ready signal
-server.stdout.on("data", (data) => {
-  const text = data.toString();
-  process.stdout.write(text);
-
-  // Detect the backend "ready" line
-  if (!browserOpened && text.includes("HaltTest Server is Up")) {
-    browserOpened = true;
-    console.log("");
-    console.log(
+if (isAlreadyRunning) {
+  console.log(
+    style(
+      c.green,
+      `  ✅ HalTest Backend — discovered on port ${PORT}. Connecting to existing instance...`,
+    ),
+  );
+  console.log("");
+  openBrowser(APP_URL).catch(() => {});
+} else {
+  // Guard: backend not found → print clear instructions and exit
+  if (!BACKEND_ENTRY) {
+    console.error(style(c.red + c.bold, "  ❌ HalTest backend not found.\n"));
+    console.error(
       style(
-        c.green + c.bold,
-        `  ✅ Server is up! Opening browser at ${APP_URL}`,
+        c.white,
+        "  This launcher must be run from the HalTest monorepo root.",
       ),
     );
-    console.log(style(c.dim, "     Press Ctrl+C to stop the server.\n"));
-    openBrowser(APP_URL).catch(() => {});
+    console.error(
+      style(
+        c.white,
+        "  Standalone bundle support is coming in a future release.\n",
+      ),
+    );
+    console.error(style(c.dim, "  Quick fix:"));
+    console.error(
+      style(c.dim, "    git clone https://github.com/andresguc1/hal-test"),
+    );
+    console.error(style(c.dim, "    cd hal-test"));
+    console.error(style(c.dim, "    pnpm install"));
+    console.error(style(c.dim, "    pnpm cli\n"));
+    process.exit(1);
   }
-});
 
-// Forward stderr
-server.stderr.on("data", (data) => {
-  process.stderr.write(data);
-});
+  // Derive CWD: apps/backend/app.js → go up 3 levels → monorepo root
+  const backendCwd = path.resolve(BACKEND_ENTRY, "..", "..", "..");
 
-// Handle unexpected server exit
-server.on("exit", (code, signal) => {
-  if (signal) return; // Killed by us during shutdown — silent
-  if (code !== 0) {
-    console.error(style(c.red, `\n  ❌ Server exited with code ${code}.`));
-    process.exit(code ?? 1);
-  }
-});
+  console.log(style(c.bold, `  🚀 Starting HalTest Server...`));
+  console.log(style(c.dim, `     Entry: ${BACKEND_ENTRY}`));
+  console.log("");
 
-server.on("error", (err) => {
-  console.error(style(c.red, `\n  ❌ Failed to start server: ${err.message}`));
-  process.exit(1);
-});
+  // Spawn the backend server
+  const serverProc = spawn("node", [BACKEND_ENTRY], {
+    cwd: backendCwd,
+    stdio: ["ignore", "pipe", "pipe"],
+    env: {
+      ...process.env,
+      NODE_ENV: process.env.NODE_ENV || "production",
+      HAL_CLI_MODE: "true",
+    },
+  });
+
+  let browserOpened = false;
+
+  // Forward stdout — detect ready signal
+  serverProc.stdout.on("data", (data) => {
+    const text = data.toString();
+    process.stdout.write(text);
+
+    // Detect the backend "ready" line
+    if (!browserOpened && text.includes("HaltTest Server is Up")) {
+      browserOpened = true;
+      console.log("");
+      console.log(
+        style(
+          c.green + c.bold,
+          `  ✅ Server is up! Opening browser at ${APP_URL}`,
+        ),
+      );
+      console.log(style(c.dim, "     Press Ctrl+C to stop the server.\n"));
+      openBrowser(APP_URL).catch(() => {});
+    }
+  });
+
+  // Forward stderr
+  serverProc.stderr.on("data", (data) => {
+    process.stderr.write(data);
+  });
+
+  // Handle unexpected server exit
+  serverProc.on("exit", async (code, signal) => {
+    if (signal) return; // Killed by us during shutdown — silent
+    if (code !== 0) {
+      // Small check: was it an EADDRINUSE that happened after our check?
+      const checkAgain = await isPortListening(PORT);
+      if (checkAgain) {
+        console.log(
+          style(
+            c.dim,
+            `\n  ℹ️  Backend already active (handled port conflict).`,
+          ),
+        );
+        if (!browserOpened) {
+          browserOpened = true;
+          openBrowser(APP_URL).catch(() => {});
+        }
+        return;
+      }
+      console.error(style(c.red, `\n  ❌ Server exited with code ${code}.`));
+      process.exit(code ?? 1);
+    }
+  });
+
+  serverProc.on("error", (err) => {
+    console.error(
+      style(c.red, `\n  ❌ Failed to start server: ${err.message}`),
+    );
+    process.exit(1);
+  });
+
+  // Attach to global shutdown
+  _serverRef = serverProc;
+}
 
 // ── Graceful Shutdown ──────────────────────────────────────────────────────
 function shutdown(signal) {
@@ -358,14 +396,14 @@ function shutdown(signal) {
     ),
   );
 
-  if (!server.killed) {
-    server.kill("SIGTERM");
+  if (_serverRef && !_serverRef.killed) {
+    _serverRef.kill("SIGTERM");
 
     const forceKill = setTimeout(() => {
-      if (!server.killed) server.kill("SIGKILL");
+      if (!_serverRef.killed) _serverRef.kill("SIGKILL");
     }, 5000);
 
-    server.on("exit", () => {
+    _serverRef.on("exit", () => {
       clearTimeout(forceKill);
       console.log(style(c.green, "  ✅ Server stopped cleanly. Goodbye!\n"));
       process.exit(0);

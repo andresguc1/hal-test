@@ -64,7 +64,7 @@ test('Generated Flow', async ({ page }) => {
 
     await test.step('Paso 8: Evidence', async () => {
         _stepStart = Date.now();
-        await page.screenshot({ path: 'screenshot_1772046921720.png', fullPage: false });
+        await page.screenshot({ path: 'screenshot_1772230985274.png', fullPage: false });
         console.log(`Captura de pantalla realizada con éxito. (${Date.now() - _stepStart}ms)`);
     });
 

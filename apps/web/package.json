@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
+    "stop": "fuser -k 3000/tcp || true",
     "preview": "vite preview"
   },
   "dependencies": {

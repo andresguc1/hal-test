@@ -25,7 +25,7 @@
         "lint:fix": "turbo lint:fix",
         "format": "turbo format",
         "clean": "turbo clean && rm -rf node_modules",
-        "stop": "fuser -k 2001/tcp 3000/tcp || echo 'Ports 2001/3000 cleared'",
+        "stop": "fuser -k 2001/tcp 3000/tcp || true",
         "prepare": "husky",
         "release": "pnpm format && pnpm lint:fix && pnpm test && cd apps/cli && npm version patch && pnpm build && cd dist && npm publish",
         "update:app": "git pull && pnpm install && pnpm build:monolith"

@@ -16,6 +16,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "start": "serve -s dist",
+    "stop": "fuser -k 3000/tcp || true",
     "start:prod": "pm2 start ecosystem.config.js --env production",
     "test": "vitest run",
     "test:watch": "vitest",
