@@ -300,7 +300,11 @@ console.log("");
 const server = spawn("node", [BACKEND_ENTRY], {
   cwd: backendCwd,
   stdio: ["ignore", "pipe", "pipe"],
-  env: { ...process.env, NODE_ENV: process.env.NODE_ENV || "production" },
+  env: {
+    ...process.env,
+    NODE_ENV: process.env.NODE_ENV || "production",
+    HAL_CLI_MODE: "true",
+  },
 });
 
 let browserOpened = false;

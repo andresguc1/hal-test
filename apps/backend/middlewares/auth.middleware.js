@@ -7,10 +7,12 @@ export const authenticated = async (req, res, next) => {
     // Check if authentication is disabled (ONLY allowed in non-production)
     const isDev = process.env.NODE_ENV !== 'production';
     const isAuthDisabled =
-        process.env.AUTH_ENABLED === 'false' || process.env.VITE_AUTH_ENABLED === 'false';
+        process.env.AUTH_ENABLED === 'false' ||
+        process.env.VITE_AUTH_ENABLED === 'false' ||
+        process.env.HAL_CLI_MODE === 'true';
 
-    if (isDev && isAuthDisabled) {
-        req.user = { id: 'local-dev-user', email: 'local@haltest.dev', role: 'admin' };
+    if ((isDev && isAuthDisabled) || process.env.HAL_CLI_MODE === 'true') {
+        req.user = { id: 'local-cli-user', email: 'local@haltest.dev', role: 'admin' };
         return next();
     }
 
