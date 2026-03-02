@@ -11,10 +11,12 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
       
-      # Install pnpm correctly
       - uses: pnpm/action-setup@v3
         with:
           version: 9.15.4
@@ -36,11 +38,15 @@ jobs:
 
       - name: Test
         run: pnpm test
+        env:
+          NODE_ENV: test
+          AUTH_ENABLED: 'false'
+          VITE_AUTH_ENABLED: 'false'
 
       - name: Build
         run: pnpm build
 
       - name: Publish to npm
-        run: cd apps/cli/dist && npm publish
+        run: cd apps/cli/dist && npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
