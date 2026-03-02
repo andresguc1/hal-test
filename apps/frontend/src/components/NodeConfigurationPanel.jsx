@@ -37,7 +37,12 @@ const NODE_INPUTS = {
       type: "number",
       placeholder: "30000",
     },
-    { key: "takeScreenshot", label: "📸 Take Screenshot", type: "checkbox" },
+    {
+      key: "takeScreenshot",
+      label: "📸 Take Screenshot",
+      type: "checkbox",
+      defaultValue: true,
+    },
   ],
   launch_browser: [
     { key: "headless", label: "Headless Mode", type: "checkbox" },
@@ -203,7 +208,12 @@ const NODE_INPUTS = {
       type: "number",
       placeholder: "30000",
     },
-    { key: "takeScreenshot", label: "📸 Take Screenshot", type: "checkbox" },
+    {
+      key: "takeScreenshot",
+      label: "📸 Take Screenshot",
+      type: "checkbox",
+      defaultValue: true,
+    },
   ],
   // User Actions
   click: [
@@ -219,7 +229,12 @@ const NODE_INPUTS = {
       type: "number",
       placeholder: "30000",
     },
-    { key: "takeScreenshot", label: "📸 Take Screenshot", type: "checkbox" },
+    {
+      key: "takeScreenshot",
+      label: "📸 Take Screenshot",
+      type: "checkbox",
+      defaultValue: true,
+    },
   ],
   type_text: [
     {
@@ -236,7 +251,12 @@ const NODE_INPUTS = {
       required: true, // Marked as required
     },
     { key: "delay", label: "Delay (ms)", type: "number", placeholder: "0" },
-    { key: "takeScreenshot", label: "📸 Take Screenshot", type: "checkbox" },
+    {
+      key: "takeScreenshot",
+      label: "📸 Take Screenshot",
+      type: "checkbox",
+      defaultValue: true,
+    },
   ],
   hover: [
     {
@@ -251,7 +271,12 @@ const NODE_INPUTS = {
       type: "number",
       placeholder: "30000",
     },
-    { key: "takeScreenshot", label: "📸 Take Screenshot", type: "checkbox" },
+    {
+      key: "takeScreenshot",
+      label: "📸 Take Screenshot",
+      type: "checkbox",
+      defaultValue: true,
+    },
   ],
 
   // Sync
@@ -262,7 +287,12 @@ const NODE_INPUTS = {
       type: "selector",
       placeholder: ".checkbox",
     },
-    { key: "takeScreenshot", label: "📸 Take Screenshot", type: "checkbox" },
+    {
+      key: "takeScreenshot",
+      label: "📸 Take Screenshot",
+      type: "checkbox",
+      defaultValue: true,
+    },
   ],
   uncheck: [
     {
@@ -271,7 +301,12 @@ const NODE_INPUTS = {
       type: "selector",
       placeholder: ".checkbox",
     },
-    { key: "takeScreenshot", label: "📸 Take Screenshot", type: "checkbox" },
+    {
+      key: "takeScreenshot",
+      label: "📸 Take Screenshot",
+      type: "checkbox",
+      defaultValue: true,
+    },
   ],
 
   pause: [
@@ -313,7 +348,12 @@ const NODE_INPUTS = {
       type: "number",
       placeholder: "30000",
     },
-    { key: "takeScreenshot", label: "📸 Take Screenshot", type: "checkbox" },
+    {
+      key: "takeScreenshot",
+      label: "📸 Take Screenshot",
+      type: "checkbox",
+      defaultValue: true,
+    },
   ],
 
   // Diagnostics
@@ -396,7 +436,12 @@ const NODE_INPUTS = {
       type: "text",
       placeholder: "US",
     },
-    { key: "takeScreenshot", label: "📸 Take Screenshot", type: "checkbox" },
+    {
+      key: "takeScreenshot",
+      label: "📸 Take Screenshot",
+      type: "checkbox",
+      defaultValue: true,
+    },
   ],
   scroll: [
     {
@@ -453,7 +498,12 @@ const NODE_INPUTS = {
         { label: "Instant (Auto)", value: "auto" },
       ],
     },
-    { key: "takeScreenshot", label: "📸 Take Screenshot", type: "checkbox" },
+    {
+      key: "takeScreenshot",
+      label: "📸 Take Screenshot",
+      type: "checkbox",
+      defaultValue: true,
+    },
   ],
   drag_drop: [
     {
@@ -481,7 +531,12 @@ const NODE_INPUTS = {
       label: "Force Action (Skip Checks)",
       type: "checkbox",
     },
-    { key: "takeScreenshot", label: "📸 Take Screenshot", type: "checkbox" },
+    {
+      key: "takeScreenshot",
+      label: "📸 Take Screenshot",
+      type: "checkbox",
+      defaultValue: true,
+    },
   ],
   upload_file: [
     {
@@ -496,7 +551,12 @@ const NODE_INPUTS = {
       type: "text",
       placeholder: "file1.png, file2.png",
     },
-    { key: "takeScreenshot", label: "📸 Take Screenshot", type: "checkbox" },
+    {
+      key: "takeScreenshot",
+      label: "📸 Take Screenshot",
+      type: "checkbox",
+      defaultValue: true,
+    },
   ],
   read_file: [
     {
@@ -585,7 +645,12 @@ const NODE_INPUTS = {
       type: "selector",
       placeholder: "form#login",
     },
-    { key: "takeScreenshot", label: "📸 Take Screenshot", type: "checkbox" },
+    {
+      key: "takeScreenshot",
+      label: "📸 Take Screenshot",
+      type: "checkbox",
+      defaultValue: true,
+    },
   ],
 
   // Code & DOM
@@ -673,7 +738,12 @@ const NODE_INPUTS = {
       type: "number",
       placeholder: "30000",
     },
-    { key: "takeScreenshot", label: "📸 Take Screenshot", type: "checkbox" },
+    {
+      key: "takeScreenshot",
+      label: "📸 Take Screenshot",
+      type: "checkbox",
+      defaultValue: true,
+    },
   ],
   save_dom: [
     {
@@ -700,7 +770,12 @@ const NODE_INPUTS = {
       type: "number",
       placeholder: "30000",
     },
-    { key: "takeScreenshot", label: "📸 Take Screenshot", type: "checkbox" },
+    {
+      key: "takeScreenshot",
+      label: "📸 Take Screenshot",
+      type: "checkbox",
+      defaultValue: true,
+    },
   ],
   log_errors: [
     {

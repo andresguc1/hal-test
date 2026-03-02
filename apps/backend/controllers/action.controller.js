@@ -1877,7 +1877,23 @@ export const takeScreenshotAction = (req, res) =>
             format = 'png',
             quality = 100,
             timeout = 30000,
+            enabled = true,
         } = opts;
+
+        if (!enabled) {
+            console.log(`[Screenshot] Node skipped because it is disabled.`);
+            return {
+                message: req.t('actions.take_screenshot.skipped', {
+                    defaultValue: 'Captura de pantalla omitida (nodo deshabilitado)',
+                }),
+                data: {
+                    skipped: true,
+                },
+                traceDetails: {
+                    skipped: true,
+                },
+            };
+        }
 
         // Playwright options configuration
         const screenshotOptions = {

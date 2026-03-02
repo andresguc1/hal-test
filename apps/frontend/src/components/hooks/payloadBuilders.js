@@ -137,7 +137,7 @@ export const open_url = (payload) => {
     waitUntil: asString(payload?.waitUntil, "domcontentloaded"), // Changed default to match backend
     timeout: asNumber(payload?.timeout, 30000),
     browserId: asString(payload?.browserId),
-    takeScreenshot: asBoolean(payload?.takeScreenshot, false), // Flight Recorder
+    takeScreenshot: asBoolean(payload?.takeScreenshot, true), // Flight Recorder
   };
 };
 
@@ -340,7 +340,7 @@ export const click = (payload = {}) => {
     button: finalButton,
     browserId: asString(payload?.browserId),
     timeout: asNumber(payload?.timeout, 30000, 1),
-    takeScreenshot: asBoolean(payload?.takeScreenshot, false), // Flight Recorder
+    takeScreenshot: asBoolean(payload?.takeScreenshot, true), // Flight Recorder
   };
 
   return body;
@@ -370,7 +370,7 @@ export const type_text = (payload = {}) => {
     delay: asNumber(payload?.delay, 0, 0), // Default: 0, Mín: 0 (según Joi)
     timeout: asNumber(payload?.timeout, 30000, 1), // Default: 30000, Mín: 1 (según Joi)
     browserId: asString(payload?.browserId),
-    takeScreenshot: asBoolean(payload?.takeScreenshot, false), // Flight Recorder
+    takeScreenshot: asBoolean(payload?.takeScreenshot, true), // Flight Recorder
   };
 
   // browserId no se incluye, ya que lo maneja el backend. -> CORRECCIÓN: SÍ se incluye
@@ -408,7 +408,7 @@ export const scroll = (payload) => {
     behavior: asString(payload?.behavior, "auto"),
     timeout: asNumber(payload?.timeout, 30000, 1),
     browserId: asString(payload?.browserId),
-    takeScreenshot: asBoolean(payload?.takeScreenshot, false),
+    takeScreenshot: asBoolean(payload?.takeScreenshot, true),
   };
 };
 
@@ -487,7 +487,7 @@ export const drag_drop = (payload) => {
     force: asBoolean(payload?.force, false),
     timeout: asNumber(payload?.timeout, 30000, 1),
     browserId: asString(payload?.browserId),
-    takeScreenshot: asBoolean(payload?.takeScreenshot, false),
+    takeScreenshot: asBoolean(payload?.takeScreenshot, true),
   };
 };
 
@@ -507,7 +507,7 @@ export const hover = (payload) => {
     selector,
     timeout: asNumber(payload?.timeout, 30000, 1),
     browserId: asString(payload?.browserId),
-    takeScreenshot: asBoolean(payload?.takeScreenshot, false),
+    takeScreenshot: asBoolean(payload?.takeScreenshot, true),
   };
 };
 
@@ -521,7 +521,7 @@ export const wait_for_element = (payload) => {
     condition: asString(payload?.condition, "visible"),
     timeout: asNumber(payload?.timeout, 30000, 0),
     browserId: asString(payload?.browserId),
-    takeScreenshot: asBoolean(payload?.takeScreenshot, false),
+    takeScreenshot: asBoolean(payload?.takeScreenshot, true),
   };
 };
 
@@ -609,7 +609,7 @@ export const save_dom = (payload) => {
     path: asString(payload?.path, null),
     variableName: asString(payload?.variableName, null),
     timeout: asNumber(payload?.timeout, 30000, 1),
-    takeScreenshot: asBoolean(payload?.takeScreenshot, false),
+    takeScreenshot: asBoolean(payload?.takeScreenshot, true),
     browserId: asString(payload?.browserId),
   };
 };
@@ -623,6 +623,7 @@ export const take_screenshot = (payload) => {
     quality: asNumber(payload?.quality, 100, 1, 100),
     timeout: asNumber(payload?.timeout, 30000, 1),
     browserId: asString(payload?.browserId),
+    enabled: asBoolean(payload?.enabled, true),
   };
 };
 

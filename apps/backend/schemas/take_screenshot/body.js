@@ -11,6 +11,11 @@ const takeScreenshotBodySchema = Joi.object({
     // 1. selector (Opcional)
     selector: Joi.string().trim().optional().allow(null, ''),
 
+    // enabled toggle
+    enabled: Joi.boolean().default(true).optional().messages({
+        'boolean.base': 'El campo enabled debe ser booleano.',
+    }),
+
     // 2. path (Ruta de Guardado, Opcional)
     path: Joi.string().trim().optional().allow(null, '').messages({
         'string.base': 'La ruta de guardado debe ser una cadena de texto.',

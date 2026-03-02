@@ -1153,7 +1153,15 @@ function Dashboard() {
       onEdgesChange,
       onConnect,
       onNodeClick,
-      onPaneClick: () => {
+      onPaneClick: (event) => {
+        // Prevent closing the panel if the user clicked on a Node or Edge by checking the DOM target
+        // This is a workaround for React Flow bubbling issues where onPaneClick fires after onNodeClick
+        if (event && event.target) {
+          const isNodeOrEdge = event.target.closest(
+            ".react-flow__node, .react-flow__edge",
+          );
+          if (isNodeOrEdge) return;
+        }
         closeConfiguration();
         setMenu(null);
       },

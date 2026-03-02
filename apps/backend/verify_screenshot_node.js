@@ -68,7 +68,21 @@ const runScreenshotLogic = async (page, opts, path) => {
         format = 'png',
         quality = 100,
         timeout = 30000,
+        enabled = true,
     } = opts;
+
+    if (!enabled) {
+        console.log(`[Screenshot] Node skipped because it is disabled.`);
+        return {
+            message: 'Captura de pantalla omitida (nodo deshabilitado)',
+            data: {
+                skipped: true,
+            },
+            traceDetails: {
+                skipped: true,
+            },
+        };
+    }
 
     // Configuración de opciones para Playwright
     const screenshotOptions = {
@@ -204,6 +218,19 @@ async function runTests() {
         if (result.data.format !== 'jpeg') throw new Error('Formato incorrecto');
     } catch (e) {
         console.error('❌ Falló Test 6:', e);
+    }
+    console.log('---------------------------------------------------');
+    // TEST 7: Disabled Screenshot
+    console.log('🧪 TEST 7: Disabled Screenshot');
+    try {
+        const result = await runScreenshotLogic(page, { enabled: false }, path);
+        console.log(
+            '✅ Resultado:',
+            result.data.skipped ? 'Captura Omitida' : 'Error: No se omitió',
+        );
+        if (!result.data.skipped) throw new Error('Debería haber reportado skipped: true');
+    } catch (e) {
+        console.error('❌ Falló Test 7:', e);
     }
     console.log('---------------------------------------------------');
 }

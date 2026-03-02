@@ -65,6 +65,70 @@ const detectOrphans = (nodes, edges) => {
   return nodes.filter((n) => !visited.has(n.id)).map((n) => n.id);
 };
 
+// NEW: Recursive Helper for Modifying Nodes Data even if they are deep inside Components
+const updateNodeRecursively = (nodes, nodeId, updaterFn) => {
+  let hasChanges = false;
+  const recursiveMap = (list) => {
+    return list.map((node) => {
+      if (node.id === nodeId) {
+        hasChanges = true;
+        return updaterFn(node);
+      }
+      if (
+        (node.type === "component" || node.data?.type === "component") &&
+        node.data?.subFlow?.nodes
+      ) {
+        const oldSubNodes = node.data.subFlow.nodes;
+        const newSubNodes = recursiveMap(oldSubNodes);
+        if (oldSubNodes !== newSubNodes) {
+          hasChanges = true;
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              subFlow: {
+                ...node.data.subFlow,
+                nodes: newSubNodes,
+              },
+            },
+          };
+        }
+      }
+      return node;
+    });
+  };
+  const result = recursiveMap(nodes);
+  return hasChanges ? result : nodes;
+};
+
+// NEW: Helper to reset all nodes recursively
+const resetNodeStatesRecursively = (list) => {
+  return list.map((node) => {
+    let newNode = {
+      ...node,
+      data: {
+        ...node.data,
+        state: NODE_STATES.DEFAULT,
+        executed: false,
+        errorDetails: null,
+        error: null, // NEW: Clear error message
+        executionTime: null,
+      },
+      style: getNodeStyle(NODE_STATES.DEFAULT, node.style),
+    };
+
+    if (
+      (newNode.type === "component" || newNode.data?.type === "component") &&
+      newNode.data?.subFlow?.nodes
+    ) {
+      newNode.data.subFlow.nodes = resetNodeStatesRecursively(
+        newNode.data.subFlow.nodes,
+      );
+    }
+    return newNode;
+  });
+};
+
 const MAX_RETRIES = 3;
 const RETRY_BASE_MS = 1000;
 const AUTO_SAVE_INTERVAL = 30000;
@@ -463,21 +527,17 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
   const updateNodeState = useCallback(
     (nodeId, state, errorDetails = null) => {
       setNodes((nds) =>
-        nds.map((node) => {
-          if (node.id !== nodeId) return node;
-
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              state,
-              errorDetails,
-              error: errorDetails?.message || null,
-              lastExecuted: new Date().toISOString(),
-            },
-            style: getNodeStyle(state, node.style),
-          };
-        }),
+        updateNodeRecursively(nds, nodeId, (node) => ({
+          ...node,
+          data: {
+            ...node.data,
+            state,
+            errorDetails,
+            error: errorDetails?.message || null,
+            lastExecuted: new Date().toISOString(),
+          },
+          style: getNodeStyle(state, node.style),
+        })),
       );
 
       // NEW: Also update outgoing edges for visual feedback!
@@ -501,20 +561,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
   );
 
   const resetNodeStates = useCallback(() => {
-    setNodes((nds) =>
-      nds.map((node) => ({
-        ...node,
-        data: {
-          ...node.data,
-          state: NODE_STATES.DEFAULT,
-          executed: false,
-          errorDetails: null,
-          error: null, // NEW: Clear error message
-          executionTime: null,
-        },
-        style: getNodeStyle(NODE_STATES.DEFAULT, node.style),
-      })),
-    );
+    setNodes((nds) => resetNodeStatesRecursively(nds));
     setExecutionStats({
       total: 0,
       successful: 0,
@@ -709,9 +756,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
       let newName = null;
 
       setNodes((nds) =>
-        nds.map((n) => {
-          if (n.id !== nodeId) return n;
-
+        updateNodeRecursively(nds, nodeId, (n) => {
           // Check if this is a component rename
           if (n.type === "component" || n.data.type === "component") {
             const proposedName = newConfig.customLabel || newConfig.label;
@@ -801,21 +846,16 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
   const updateNodeScreenshot = useCallback(
     (nodeId, timing, screenshotData) => {
       setNodes((nds) =>
-        nds.map((node) => {
-          if (node.id !== nodeId) return node;
-
-          const updatedNode = {
-            ...node,
-            data: {
-              ...node.data,
-              screenshots: {
-                ...node.data.screenshots,
-                [timing]: screenshotData,
-              },
+        updateNodeRecursively(nds, nodeId, (node) => ({
+          ...node,
+          data: {
+            ...node.data,
+            screenshots: {
+              ...node.data.screenshots,
+              [timing]: screenshotData,
             },
-          };
-          return updatedNode;
-        }),
+          },
+        })),
       );
     },
     [setNodes],
@@ -1295,8 +1335,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
       const browserId =
         payload?.browserId || config?.browserId || activeBrowserId;
 
-      // Automatic screenshot for visual-change nodes
-      const shouldAutoCapture = VISUAL_CHANGE_NODES.has(type) && browserId;
+      // Automatic screenshot for visual-change nodes (NOW EVALUATED AFTER PAYLOAD)
 
       updateNodeState(nodeId, NODE_STATES.EXECUTING);
       setIsLoading(true);
@@ -1369,6 +1408,10 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
           setIsLoading(false);
           return { success: false, error: errorMsg };
         }
+
+        // ONLY capture automatically if explicitly requested by the payload's takeScreenshot config
+        const shouldAutoCapture =
+          bodyToSend?.takeScreenshot === true && browserId;
 
         try {
           // NOTE: "Before" screenshot logic removed as per simplified requirements.
