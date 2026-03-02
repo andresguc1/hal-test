@@ -46,6 +46,10 @@ jobs:
 
       - name: 🧪 Run backend tests
         run: cd apps/backend && pnpm test
+        env:
+          NODE_ENV: test
+          AUTH_ENABLED: 'false'
+          VITE_AUTH_ENABLED: 'false'
         continue-on-error: true # Don't fail build on test errors (for now)
 
   # ========================================
@@ -96,13 +100,21 @@ jobs:
           echo "Public URL: https://hal-test-backend.onrender.com"
           echo "App Dashboard: https://hal-test-backend.onrender.com/app/"
 
-      - name: ⏳ Wait for deployments
-        run: sleep 60 # Give services time to deploy
-
-      - name: 🏥 Health check
+      - name: ⏳ Wait for deployments & 🏥 Health check
         run: |
-          echo "Checking application health..."
-          curl -f https://hal-test-backend.onrender.com/api/status || exit 1
+          echo "Checking application health (polling for up to 5 minutes)..."
+          max_retries=30
+          count=0
+          until curl -f -s https://hal-test-backend.onrender.com/api/status > /dev/null; do
+            count=$((count+1))
+            if [ $count -ge $max_retries ]; then
+              echo "Health check failed after 5 minutes."
+              exit 1
+            fi
+            echo "Waiting for Render to finish deploy... (Attempt $count/$max_retries)"
+            sleep 10
+          done
+          echo "Application is up and healthy!"
 
       - name: ✅ Deployment successful
         run: |
