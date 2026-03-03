@@ -1,29 +1,29 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../index.js';
 
-const Project = sequelize.define(
-    'Project',
+const User = sequelize.define(
+    'User',
     {
         id: {
             type: DataTypes.STRING,
             defaultValue: DataTypes.UUIDV4,
             primaryKey: true,
         },
-        name: {
+        email: {
             type: DataTypes.STRING,
             allowNull: false,
+            unique: true,
+            validate: {
+                isEmail: true,
+            },
         },
-        description: {
-            type: DataTypes.TEXT,
-            allowNull: true,
-        },
-        activeFlowId: {
+        name: {
             type: DataTypes.STRING,
             allowNull: true,
         },
-        userId: {
+        role: {
             type: DataTypes.STRING,
-            allowNull: true,
+            defaultValue: 'user',
         },
     },
     {
@@ -31,4 +31,4 @@ const Project = sequelize.define(
     },
 );
 
-export default Project;
+export default User;

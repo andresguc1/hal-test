@@ -71,13 +71,14 @@ class ProjectManager {
 
   async createFlow(projectId, name, options = {}) {
     try {
-      const { type, parentId, nodes, edges } = options;
+      const { type, parentId, nodes, edges, canvasId } = options;
       const flow = await api.post(`/projects/${projectId}/flows`, {
         name,
         type,
         parentId,
         nodes,
         edges,
+        canvasId,
       });
       return flow;
     } catch (err) {
