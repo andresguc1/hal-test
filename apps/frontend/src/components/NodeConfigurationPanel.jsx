@@ -2115,7 +2115,7 @@ function NodeConfigurationPanel({
                   "w-full bg-[var(--bg-canvas)]/50 border border-[var(--border-ui)] rounded-lg px-3 py-2 pl-3 pr-8 text-xs font-mono focus:outline-none focus:border-indigo-500/50 transition-all placeholder:text-[var(--text-muted)] !pointer-events-auto !cursor-text !select-text",
                   value ? "text-indigo-400" : "text-[var(--text-main)]",
                   error &&
-                  "border-red-500/50 focus:border-red-500 bg-red-500/5",
+                    "border-red-500/50 focus:border-red-500 bg-red-500/5",
                 )}
               />
               <div
@@ -2255,7 +2255,7 @@ function NodeConfigurationPanel({
                       }
                     }, 300); // 300ms debounce for typing comfort
                   }}
-                // onBlur removed - handled by debounce
+                  // onBlur removed - handled by debounce
                 />
               </div>
             </div>
@@ -2289,7 +2289,7 @@ function NodeConfigurationPanel({
           <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
             {/* Dynamic Content Switch */}
             {safeConfig.nodeKey === "component" ||
-              activeNode.type === "component" ? (
+            activeNode.type === "component" ? (
               // --- COMPONENT DASHBOARD ---
               <div className="space-y-6">
                 {/* Description Card */}
@@ -2513,9 +2513,9 @@ function NodeConfigurationPanel({
                 hasErrors
                   ? "bg-slate-700/50 text-slate-500 cursor-not-allowed opacity-50" // Disabled State
                   : cn(
-                    "text-white shadow-lg active:scale-[0.98] hover:brightness-110 bg-gradient-to-r shadow-lg",
-                    CATEGORY_STYLES[colorKey]?.panel?.buttonGradient,
-                  ),
+                      "text-white shadow-lg active:scale-[0.98] hover:brightness-110 bg-gradient-to-r shadow-lg",
+                      CATEGORY_STYLES[colorKey]?.panel?.buttonGradient,
+                    ),
               )}
               title={
                 hasErrors ? "Please fix configuration errors" : "Run this node"
