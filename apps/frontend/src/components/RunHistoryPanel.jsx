@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { api } from "../utils/api";
 import { cn } from "../lib/utils";
-import { History, X, RefreshCw, Trash2 } from "lucide-react";
+import { History, X, RefreshCw, Trash2, Play } from "lucide-react";
+import { AnimatePresence, motion as Motion } from "framer-motion";
 
 export default function RunHistoryPanel({
   isOpen,
@@ -13,6 +14,7 @@ export default function RunHistoryPanel({
   const [loading, setLoading] = useState(false);
   const [selectedRunId, setSelectedRunId] = useState(null);
   const [statusFilter, setStatusFilter] = useState("all"); // 'all' | 'failed' | 'completed'
+  const [playingVideo, setPlayingVideo] = useState(null); // URL of the video being played
 
   const loadRuns = useCallback(async () => {
     setLoading(true);
@@ -204,13 +206,32 @@ export default function RunHistoryPanel({
                     {new Date(run.started_at).toLocaleDateString()}
                   </span>
                 </div>
-                <button
-                  onClick={(e) => handleDeleteRun(e, run.id)}
-                  className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-rose-500/20 rounded-md text-slate-500 hover:text-rose-400 transition-all"
-                  title="Delete Run"
-                >
-                  <Trash2 size={12} />
-                </button>
+                <div className="flex gap-1.5">
+                  {run.video_path && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const apiBase =
+                          import.meta.env.VITE_API_URL ||
+                          (import.meta.env.PROD
+                            ? window.location.origin
+                            : "http://localhost:2001");
+                        setPlayingVideo(`${apiBase}/${run.video_path}`);
+                      }}
+                      className="p-1.5 bg-indigo-500/20 hover:bg-indigo-500/40 rounded-md text-indigo-400 transition-all border border-indigo-500/30"
+                      title="Watch Recording"
+                    >
+                      <Play size={12} fill="currentColor" />
+                    </button>
+                  )}
+                  <button
+                    onClick={(e) => handleDeleteRun(e, run.id)}
+                    className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-rose-500/20 rounded-md text-slate-500 hover:text-rose-400 transition-all"
+                    title="Delete Run"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
               </div>
 
               <div className="mt-2 text-[9px] text-slate-600 font-mono border-t border-white/5 pt-1.5 flex justify-between">
@@ -221,6 +242,44 @@ export default function RunHistoryPanel({
           ))
         )}
       </div>
+
+      {/* VIDEO MODAL */}
+      <AnimatePresence>
+        {playingVideo && (
+          <>
+            <Motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setPlayingVideo(null)}
+              className="fixed inset-0 bg-black/80 backdrop-blur-md z-[1000] flex items-center justify-center p-4"
+            >
+              <Motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+                className="relative w-full max-w-4xl aspect-video bg-black rounded-2xl overflow-hidden border border-white/10 shadow-2xl"
+              >
+                <div className="absolute top-4 right-4 z-10">
+                  <button
+                    onClick={() => setPlayingVideo(null)}
+                    className="p-2 bg-black/50 hover:bg-black/80 text-white rounded-full backdrop-blur-md transition-all"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+                <video
+                  src={playingVideo}
+                  controls
+                  autoPlay
+                  className="w-full h-full object-contain"
+                />
+              </Motion.div>
+            </Motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

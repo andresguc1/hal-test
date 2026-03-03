@@ -72,6 +72,12 @@ const NODE_INPUTS = {
     },
     { key: "slowMo", label: "Slow Mo (ms)", type: "number", placeholder: "50" },
     {
+      key: "recordVideo",
+      label: "📹 Record Video",
+      type: "checkbox",
+      defaultValue: true,
+    },
+    {
       key: "args",
       label: "Extra Browser Arguments",
       type: "text",

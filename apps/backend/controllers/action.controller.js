@@ -248,6 +248,7 @@ async function getOrCreateContext(req, browser, browserId) {
         try {
             // Retrieve launch options to apply viewport and mobile settings
             let contextOptions = {};
+
             if (browserId) {
                 const entry = browserService.get(browserId);
                 if (entry && entry.options) {
@@ -255,6 +256,20 @@ async function getOrCreateContext(req, browser, browserId) {
                         '[INFO] Found launch options for browser:',
                         JSON.stringify(entry.options, null, 2),
                     );
+
+                    // --- Enable Video Recording if requested ---
+                    const runId = req.body.runId;
+                    const recordVideo = entry.options.recordVideo !== false; // Default to true
+
+                    if (runId && recordVideo) {
+                        const videoDir = path.join(STORAGE_RUNS_DIR, runId);
+                        await fsp.mkdir(videoDir, { recursive: true }).catch(() => {});
+                        contextOptions.recordVideo = {
+                            dir: videoDir,
+                            size: { width: 1280, height: 720 },
+                        };
+                        console.log(`[AUDIT] Enabling Video Recording to: ${videoDir}`);
+                    }
 
                     const preset = DEVICE_PRESETS[entry.options.devicePreset] || {};
                     const isMaximize =

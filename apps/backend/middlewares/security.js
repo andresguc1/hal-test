@@ -31,8 +31,11 @@ export const helmetMiddleware = helmet({
             imgSrc: ["'self'", 'data:', 'https:', 'blob:'],
             // Conectar a Playwright o a otros servicios
             connectSrc: ["'self'", 'ws:', 'wss:', 'http:', 'https:', 'blob:'],
+            mediaSrc: ["'self'", 'blob:', 'http:', 'https:'],
         },
     },
+    // Required to allow cross-origin asset loading (like videos from backend to frontend)
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
     // Configuración HSTS (HTTP Strict Transport Security)
     strictTransportSecurity: {
         maxAge: 31536000, // 1 año

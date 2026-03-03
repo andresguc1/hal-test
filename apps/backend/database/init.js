@@ -59,7 +59,7 @@ export const initDb = async (_force = false) => {
         // Note: SQLite has limited ALTER TABLE support.
         // For schema changes, delete the database file and restart.
 
-        await sequelize.sync();
+        await sequelize.sync({ alter: _force });
         console.log('Database synchronized');
 
         // Seed initial project if empty

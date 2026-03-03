@@ -63,12 +63,19 @@ app.use(
     }),
 );
 
-app.use('/api', apiLimiter);
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Serve storage folder statically
-app.use('/storage', express.static(STORAGE_DIR));
+// --- STATIC STORAGE (Moved up for precedence) ---
+const staticOptions = {
+    setHeaders: (res) => {
+        res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    },
+};
+app.use('/storage', express.static(STORAGE_DIR, staticOptions));
+app.use('/api/storage', express.static(STORAGE_DIR, staticOptions));
+
+app.use('/api', apiLimiter);
 
 // Localization
 app.use(i18nMiddleware.handle(i18n));

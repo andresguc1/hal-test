@@ -123,9 +123,9 @@ export const getRunDetailsAction = async (req, res) => {
 };
 
 export const deleteRunAction = async (req, res) => {
+    const { id } = req.params;
     try {
-        const { id } = req.params;
-        const deleted = await Run.destroy({ where: { id } });
+        const deleted = await executionLogger.deleteRun(id);
 
         if (!deleted) {
             return res.status(404).json({ success: false, message: 'Run not found' });
@@ -133,13 +133,14 @@ export const deleteRunAction = async (req, res) => {
 
         return res.status(200).json({ success: true, message: 'Run deleted successfully' });
     } catch (error) {
+        console.error(`[ERROR] Failed to delete run ${id}:`, error);
         return res.status(500).json({ success: false, error: error.message });
     }
 };
 
 export const clearHistoryAction = async (req, res) => {
     try {
-        await Run.destroy({ where: {}, truncate: false }); // truncate: false is safer for SQLite sometimes, but generic delete all works
+        await executionLogger.clearHistory();
         return res.status(200).json({ success: true, message: 'History cleared successfully' });
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });

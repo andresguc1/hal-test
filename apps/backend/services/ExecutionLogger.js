@@ -1,4 +1,7 @@
 import { Run, StepResult } from '../database/init.js';
+import fs from 'fs/promises';
+import path from 'path';
+import { STORAGE_RUNS_DIR } from '../config/paths.js';
 
 class ExecutionLogger {
     /**
@@ -73,15 +76,83 @@ class ExecutionLogger {
                 const finishedAt = new Date();
                 const duration = finishedAt.getTime() - new Date(run.started_at).getTime();
 
+                // Video Finalization Logic
+                let videoPath = null;
+                try {
+                    const runDir = path.join(STORAGE_RUNS_DIR, runId);
+                    const files = await fs.readdir(runDir);
+                    const videoFile = files.find((f) => f.endsWith('.webm') || f.endsWith('.mp4'));
+
+                    if (videoFile) {
+                        const oldPath = path.join(runDir, videoFile);
+                        const newFilename = 'execution.webm';
+                        const newPath = path.join(runDir, newFilename);
+
+                        await fs.rename(oldPath, newPath);
+                        videoPath = `storage/runs/${runId}/${newFilename}`;
+                        console.log(`[ExecutionLogger] Video finalized: ${videoPath}`);
+                    }
+                } catch (vErr) {
+                    console.warn('[ExecutionLogger] Could not finalize video:', vErr.message);
+                }
+
                 await run.update({
                     status,
                     finished_at: finishedAt,
                     duration_ms: duration,
                     execution_data: executionData,
+                    video_path: videoPath,
                 });
             }
         } catch (error) {
             console.error('[ExecutionLogger] Failed to end run:', error);
+        }
+    }
+
+    /**
+     * Deletes a run and its associated data (steps, files).
+     * @param {string} runId
+     */
+    async deleteRun(runId) {
+        try {
+            // 1. Delete associated step results
+            await StepResult.destroy({ where: { run_id: runId } });
+
+            // 2. Delete the run files
+            const runDir = path.join(STORAGE_RUNS_DIR, runId);
+            try {
+                await fs.rm(runDir, { recursive: true, force: true });
+                console.log(`[ExecutionLogger] Deleted storage for run: ${runId}`);
+            } catch (fsErr) {
+                console.warn(`[ExecutionLogger] Could not delete run directory: ${fsErr.message}`);
+            }
+
+            // 3. Delete the run record
+            const deleted = await Run.destroy({ where: { id: runId } });
+            return !!deleted;
+        } catch (error) {
+            console.error('[ExecutionLogger] Failed to delete run:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Clears all run history and files.
+     */
+    async clearHistory() {
+        try {
+            await StepResult.destroy({ where: {}, truncate: false });
+            await Run.destroy({ where: {}, truncate: false });
+            try {
+                await fs.rm(STORAGE_RUNS_DIR, { recursive: true, force: true });
+                await fs.mkdir(STORAGE_RUNS_DIR, { recursive: true });
+            } catch (fsErr) {
+                console.warn(`[ExecutionLogger] Could not clear storage: ${fsErr.message}`);
+            }
+            return true;
+        } catch (error) {
+            console.error('[ExecutionLogger] Failed to clear history:', error);
+            throw error;
         }
     }
 }

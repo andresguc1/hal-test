@@ -41,6 +41,10 @@ const Run = sequelize.define(
             type: DataTypes.TEXT, // Stores JSON string of { nodes, edges }
             allowNull: true,
         },
+        video_path: {
+            type: DataTypes.STRING,
+            allowNull: true,
+        },
     },
     {
         timestamps: true,

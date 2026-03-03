@@ -1,6 +1,7 @@
 import { chromium, firefox, webkit } from 'playwright';
 import { randomUUID } from 'crypto';
 import { DEVICE_PRESETS } from '../utils/constants.js';
+import { STORAGE_RUNS_DIR } from '../config/paths.js';
 
 const MAX_BROWSERS = 3;
 
@@ -24,6 +25,7 @@ class BrowserManager {
             maximizeWindow = false,
             devicePreset = 'Desktop',
             timeout,
+            recordVideo = true, // Default to true if not specified
         } = options;
 
         // FORCE headless mode in production (servers don't have X11/Display)
@@ -164,12 +166,14 @@ class BrowserManager {
         console.log(`[AUDIT] Device Preset: ${devicePreset}`);
         console.log('---------------------------------------------------------');
 
-        const browser = await browserEngine.launch({
+        const launchOptions = {
             headless,
             args: launchArgs,
             ...(slowMo && { slowMo }),
             ...(timeout && { timeout }),
-        });
+        };
+
+        const browser = await browserEngine.launch(launchOptions);
 
         const browserId = randomUUID().split('-')[0];
 
@@ -177,7 +181,7 @@ class BrowserManager {
         this.set(browserId, {
             browser,
             launchMethod: 'launch',
-            options: { ...options, launchArgs, maximizeWindow },
+            options: { ...options, launchArgs, maximizeWindow, recordVideo },
         });
 
         return { browserId, browser };

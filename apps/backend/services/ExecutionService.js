@@ -159,7 +159,10 @@ class ExecutionService {
 
         // Prepare Mock Request and Response
         const req = {
-            body: body,
+            body: {
+                ...body,
+                runId: state.runId, // Ensure runId is ALWAYS in the body
+            },
             t: i18n.t.bind(i18n),
             headers: {},
             // Needed for some controllers
