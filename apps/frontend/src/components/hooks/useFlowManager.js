@@ -25,6 +25,7 @@ import screenshotManager from "../../utils/ScreenshotManager";
 import { api } from "../../utils/api";
 import { useToast } from "../../hooks/useToast"; // Use custom hook instead of direct sonner
 import { useTranslation } from "react-i18next";
+import { getLayoutedElements } from "../../utils/layoutUtils";
 
 // NEW: Orphan Detection Helper
 const detectOrphans = (nodes, edges) => {
@@ -587,6 +588,26 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
       future: [],
     }));
   }, []);
+
+  const onLayout = useCallback(
+    (direction) => {
+      saveToHistory();
+      const [layoutedNodes, layoutedEdges] = getLayoutedElements(
+        nodesRef.current,
+        edgesRef.current,
+        direction || "LR",
+      );
+
+      setNodes(layoutedNodes);
+      setEdges(layoutedEdges);
+
+      // Re-fit view to show the new layout
+      setTimeout(() => {
+        fitView({ duration: 800 });
+      }, 50);
+    },
+    [setNodes, setEdges, saveToHistory, fitView],
+  );
 
   const undo = useCallback(() => {
     setHistory((prev) => {
@@ -3220,5 +3241,6 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
     isConfigurationPanelVisible: !!selectedAction, // Derived visibility
     loadStarterTemplate,
     isStarterTemplate,
+    onLayout,
   };
 };

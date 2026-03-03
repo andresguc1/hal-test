@@ -6,6 +6,7 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 import {
   ReactFlow,
   Controls,
+  ControlButton,
   Background,
   useReactFlow,
   MarkerType,
@@ -69,6 +70,7 @@ import {
   Play,
   Info,
   ChevronDown,
+  Wand2,
 } from "lucide-react";
 import { useLogs } from "./context/LogContext";
 import TerminalPanel from "./components/TerminalPanel";
@@ -274,6 +276,7 @@ function Dashboard() {
     isStarterTemplate,
     addGhostNode,
     migrateNodes,
+    onLayout,
   } = useFlowManager(currentProject, currentFlowId, switchFlow);
 
   // Element Picker Callback (Previously handleElementPicked was here, we will replace the mess)
@@ -1308,7 +1311,14 @@ function Dashboard() {
             <div ref={reactFlowWrapper} className="flex-1 w-full relative">
               <ReactFlow {...flowConfig} onNodesDelete={onNodesDelete}>
                 {showMinimap && <StyledMiniMap />}
-                <Controls />
+                <Controls>
+                  <ControlButton
+                    onClick={() => onLayout("LR")}
+                    title={t("common.magic_organize", "Magic Organize")}
+                  >
+                    <Wand2 className="w-4 h-4" />
+                  </ControlButton>
+                </Controls>
 
                 {showGrid && (
                   <Background
