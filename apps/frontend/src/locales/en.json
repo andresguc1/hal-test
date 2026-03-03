@@ -513,5 +513,74 @@
       "executablePath": "Ex: /path/to/chrome.exe. Use custom browser executable."
     },
     "options": {}
+  },
+  "settings": {
+    "sidebar": {
+      "title": "Settings",
+      "general": "General",
+      "canvas": "Canvas & Editor",
+      "integrations": "AI & Integrations",
+      "system": "System",
+      "canvas_coming_soon": "Canvas settings (Grid, Snap, Minimap) coming next.",
+      "system_coming_soon": "System configurations coming soon."
+    },
+    "general": {
+      "title": "General Settings",
+      "subtitle": "Customize your HAL-TEST experience.",
+      "appearance": "Appearance",
+      "language": "Language",
+      "themes": {
+        "light": "Light",
+        "dark": "Dark",
+        "system": "System"
+      }
+    },
+    "ai": {
+      "title": "AI & Integrations",
+      "subtitle": "Configure the intelligence engine and external services.",
+      "active_provider": "Active AI Provider",
+      "recommended_models": "Recommended Models",
+      "default_model": "Default Model",
+      "base_url": "Base URL",
+      "custom_model_identifier": "Custom Model Identifier",
+      "custom_model_desc": "High priority: If you enter a name here, it will be used instead of the selection above. Useful for own models or specific versions.",
+      "temperature": "Temperature",
+      "precise": "Precise",
+      "creative": "Creative",
+      "test_connection": "Test Connection",
+      "testing": "Testing...",
+      "save_settings": "Save Settings",
+      "settings_saved": "AI settings saved",
+      "connection_success": "Connected! Ollama is running with {{model}} available.",
+      "model_not_found": "Ollama is running but model '{{model}}' is not loaded. Run: ollama pull {{model}}",
+      "connect_error": "Could not connect to Ollama",
+      "health_connected": "Ollama connected • Model {{model}} loaded",
+      "health_not_found": "Ollama running but {{model}} not found. ollama pull {{model}}",
+      "models_installed": "{{count}} model installed",
+      "models_installed_plural": "{{count}} models installed"
+    },
+    "vault": {
+      "title": "Secure Wallet",
+      "add_key": "Add Key",
+      "cancel": "Cancel",
+      "provider": "Provider",
+      "alias": "Alias (e.g. My Personal Key)",
+      "alias_placeholder": "Work Account",
+      "api_key": "API Key",
+      "api_key_required": "Enter an API Key to test",
+      "alias_key_required": "Alias and Key are required",
+      "optional_ollama": "(Optional for Ollama)",
+      "base_url_optional": "Base URL (Optional)",
+      "test_connection": "Test Connection",
+      "save_to_vault": "Save to Vault",
+      "saving": "Saving...",
+      "empty_wallet": "Wallet is empty. Add a key to start.",
+      "legacy_warning": "You have a legacy key saved locally. It works, but we recommend migrating to the Vault.",
+      "delete_confirm": "Are you sure? This action cannot be undone.",
+      "key_saved": "Key saved to Vault",
+      "key_deleted": "Key deleted",
+      "test_success": "Connection Successful!",
+      "test_failed": "Connection Failed"
+    }
   }
 }
