@@ -90330,13 +90330,11 @@ var NTe = class extends Uh {
             const n = this.options;
             ((this.options = this.#e.defaultMutationOptions(t)),
                 Gx(this.options, n) ||
-                    this.#e
-                        .getMutationCache()
-                        .notify({
-                            type: 'observerOptionsUpdated',
-                            mutation: this.#n,
-                            observer: this,
-                        }),
+                    this.#e.getMutationCache().notify({
+                        type: 'observerOptionsUpdated',
+                        mutation: this.#n,
+                        observer: this,
+                    }),
                 n?.mutationKey &&
                 this.options.mutationKey &&
                 rd(n.mutationKey) !== rd(this.options.mutationKey)

@@ -2214,14 +2214,15 @@ function NodeConfigurationPanel({
           <div
             className={cn(
               "h-14 shrink-0 flex items-center justify-between px-5 border-b",
-              `border-${colorKey}-500/50 bg-gradient-to-r from-${colorKey}-600/60 via-${colorKey}-600/20 to-transparent`,
+              CATEGORY_STYLES[colorKey]?.panel?.headerBorder,
+              CATEGORY_STYLES[colorKey]?.panel?.headerGradient,
             )}
           >
             <div className="flex flex-col justify-center">
               <span
                 className={cn(
                   "text-[10px] uppercase tracking-widest font-bold mb-0.5",
-                  `text-${colorKey}-500 dark:text-${colorKey}-400`,
+                  CATEGORY_STYLES[colorKey]?.panel?.categoryText,
                 )}
               >
                 {safeConfig.category.replace("_", " ")}
@@ -2511,7 +2512,10 @@ function NodeConfigurationPanel({
                 "w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wide transition-all",
                 hasErrors
                   ? "bg-slate-700/50 text-slate-500 cursor-not-allowed opacity-50" // Disabled State
-                  : `text-white shadow-lg active:scale-[0.98] hover:brightness-110 bg-gradient-to-r from-${colorKey}-600 to-${colorKey}-500 shadow-${colorKey}-500/20`,
+                  : cn(
+                    "text-white shadow-lg active:scale-[0.98] hover:brightness-110 bg-gradient-to-r shadow-lg",
+                    CATEGORY_STYLES[colorKey]?.panel?.buttonGradient,
+                  ),
               )}
               title={
                 hasErrors ? "Please fix configuration errors" : "Run this node"
