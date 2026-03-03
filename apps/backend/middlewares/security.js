@@ -20,7 +20,7 @@ export const helmetMiddleware = helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'"], // Necesario si usas scripts inline
+            scriptSrc: ["'self'"], // Removed 'unsafe-inline' for better security
             styleSrc: [
                 "'self'",
                 "'unsafe-inline'",

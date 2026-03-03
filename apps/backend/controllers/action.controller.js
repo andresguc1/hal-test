@@ -15,7 +15,8 @@ import * as fsp from 'fs/promises';
 // import * as fs from 'fs';
 import * as path from 'path';
 import { executionLogger } from '../services/ExecutionLogger.js';
-import { STORAGE_RUNS_DIR } from '../config/paths.js';
+import { STORAGE_RUNS_DIR, STORAGE_DIR } from '../config/paths.js';
+import { isSafePath } from '../utils/security.js';
 
 // Create Variable Manager instance
 // Use shared Variable Manager instance
@@ -3180,6 +3181,14 @@ export const readDataAction = (req, res) =>
 export const saveResultsAction = (req, res) =>
     executePlaywrightAction(req, res, 'save_results', async (page, opts) => {
         const { data, path: savePath, variableName } = opts;
+
+        // Security check: Prevent Path Traversal
+        if (!isSafePath(savePath, STORAGE_DIR)) {
+            throw new Error(
+                req.t('errors.unsafe_path', { path: savePath }) || `Unsafe path: ${savePath}`,
+            );
+        }
+
         await fsp.writeFile(
             savePath,
             typeof data === 'string' ? data : JSON.stringify(data, null, 2),
@@ -3203,6 +3212,13 @@ export const handleDownloadsAction = (req, res) =>
         const downloadPromise = page.waitForEvent('download');
         await page.click(selector);
         const download = await downloadPromise;
+
+        // Security check: Prevent Path Traversal
+        if (!isSafePath(savePath, STORAGE_DIR)) {
+            throw new Error(
+                req.t('errors.unsafe_path', { path: savePath }) || `Unsafe path: ${savePath}`,
+            );
+        }
 
         await download.saveAs(savePath);
 

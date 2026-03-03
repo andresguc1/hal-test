@@ -4,14 +4,17 @@ import { supabase } from '../services/supabaseClient.js';
  * Middleware to verify Supabase JWT token from Authorization header
  */
 export const authenticated = async (req, res, next) => {
-    // Check if authentication is disabled (ONLY allowed in non-production)
-    const isDev = process.env.NODE_ENV !== 'production';
+    // Check for authentication bypass (ONLY allowed in development)
+    const isDev = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
     const isAuthDisabled =
-        process.env.AUTH_ENABLED === 'false' ||
-        process.env.VITE_AUTH_ENABLED === 'false' ||
-        process.env.HAL_CLI_MODE === 'true';
+        process.env.AUTH_ENABLED === 'false' || process.env.VITE_AUTH_ENABLED === 'false';
+    const isCliMode = process.env.HAL_CLI_MODE === 'true';
 
-    if ((isDev && isAuthDisabled) || process.env.HAL_CLI_MODE === 'true') {
+    // Allow bypass ONLY in non-production environments with explicit flags
+    if (isDev && (isAuthDisabled || isCliMode)) {
+        console.log(
+            `[AUTH] Bypass active (Environment: ${process.env.NODE_ENV}, Reason: ${isCliMode ? 'CLI' : 'Disabled'})`,
+        );
         req.user = { id: 'local-cli-user', email: 'local@haltest.dev', role: 'admin' };
         return next();
     }
