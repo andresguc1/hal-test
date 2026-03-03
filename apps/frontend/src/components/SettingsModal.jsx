@@ -42,7 +42,7 @@ export default function SettingsModal({
   onClose,
   initialTab = "general",
 }) {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const { theme, setTheme } = useTheme();
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -132,12 +132,12 @@ export default function SettingsModal({
         {/* Sidebar */}
         <div className="w-[240px] border-r border-slate-800 p-4 bg-[#141415] flex flex-col gap-1">
           <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4 px-2">
-            Settings
+            {t("settings.sidebar.title")}
           </h2>
-          <SidebarItem id="general" icon={Settings} label="General" />
-          <SidebarItem id="canvas" icon={Layout} label="Canvas & Editor" />
-          <SidebarItem id="integrations" icon={Cpu} label="AI & Integrations" />
-          <SidebarItem id="system" icon={HardDrive} label="System" />
+          <SidebarItem id="general" icon={Settings} label={t("settings.sidebar.general")} />
+          <SidebarItem id="canvas" icon={Layout} label={t("settings.sidebar.canvas")} />
+          <SidebarItem id="integrations" icon={Cpu} label={t("settings.sidebar.integrations")} />
+          <SidebarItem id="system" icon={HardDrive} label={t("settings.sidebar.system")} />
         </div>
 
         {/* Content Area */}
@@ -148,16 +148,16 @@ export default function SettingsModal({
               <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                 <div className="mb-6">
                   <h3 className="text-xl font-semibold text-white">
-                    General Settings
+                    {t("settings.general.title")}
                   </h3>
                   <p className="text-slate-400 text-sm">
-                    Customize your HAL-TEST experience.
+                    {t("settings.general.subtitle")}
                   </p>
                 </div>
 
                 {/* Theme */}
                 <div className="space-y-4">
-                  <Label className="text-base text-slate-300">Appearance</Label>
+                  <Label className="text-base text-slate-300">{t("settings.general.appearance")}</Label>
                   <div className="grid grid-cols-3 gap-4">
                     {["light", "dark", "system"].map((mode) => (
                       <button
@@ -166,7 +166,7 @@ export default function SettingsModal({
                         className={cn(
                           "flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all gap-2 bg-slate-900/50",
                           theme === mode
-                            ? "border-blue-500 bg-blue-500/5"
+                            ? "border-blue-500 bg-blue-500/10 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
                             : "border-slate-800 hover:border-slate-700",
                         )}
                       >
@@ -177,7 +177,7 @@ export default function SettingsModal({
                           }
                         />
                         <span className="text-xs font-medium capitalize text-slate-300">
-                          {mode}
+                          {t(`settings.general.themes.${mode}`)}
                         </span>
                       </button>
                     ))}
@@ -186,28 +186,45 @@ export default function SettingsModal({
 
                 <div className="bg-slate-800/50 h-px w-full" />
 
-                {/* Language */}
+                {/* Language (Llamativo) */}
                 <div className="space-y-4">
-                  <Label className="text-base text-slate-300">Language</Label>
-                  <div className="flex gap-4">
-                    <Button
-                      variant={
-                        i18n.language.startsWith("en") ? "default" : "outline"
-                      }
-                      onClick={() => i18n.changeLanguage("en")}
-                      className="w-32"
-                    >
-                      English
-                    </Button>
-                    <Button
-                      variant={
-                        i18n.language.startsWith("es") ? "default" : "outline"
-                      }
-                      onClick={() => i18n.changeLanguage("es")}
-                      className="w-32"
-                    >
-                      Español
-                    </Button>
+                  <Label className="text-base text-slate-300">{t("settings.general.language")}</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    {[
+                      { id: "en", label: "English", flag: "🇺🇸" },
+                      { id: "es", label: "Español", flag: "🇪🇸" },
+                    ].map((lang) => {
+                      const isSelected = i18n.language.startsWith(lang.id);
+                      return (
+                        <button
+                          key={lang.id}
+                          onClick={() => i18n.changeLanguage(lang.id)}
+                          className={cn(
+                            "group relative flex items-center p-3 rounded-xl border-2 transition-all gap-3 overflow-hidden bg-slate-900/40",
+                            isSelected
+                              ? "border-blue-500 bg-blue-500/10 shadow-[0_0_15px_rgba(59,130,246,0.2)] ring-1 ring-blue-500/40"
+                              : "border-slate-800 hover:border-slate-700 hover:bg-slate-800/50",
+                          )}
+                        >
+                          <span className="text-xl group-hover:scale-110 transition-transform duration-300">
+                            {lang.flag}
+                          </span>
+                          <span
+                            className={cn(
+                              "text-sm font-semibold tracking-wide transition-colors",
+                              isSelected ? "text-blue-400" : "text-slate-400 group-hover:text-slate-200",
+                            )}
+                          >
+                            {lang.label}
+                          </span>
+
+                          {/* Glow effect for selection */}
+                          {isSelected && (
+                            <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-blue-500/5 to-transparent pointer-events-none" />
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -218,16 +235,16 @@ export default function SettingsModal({
               <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                 <div className="mb-6">
                   <h3 className="text-xl font-semibold text-white">
-                    AI & Integrations
+                    {t("settings.ai.title")}
                   </h3>
                   <p className="text-slate-400 text-sm">
-                    Configure the intelligence engine and external services.
+                    {t("settings.ai.subtitle")}
                   </p>
                 </div>
 
                 {/* 1. Provider Selection (Drop-down) */}
                 <div className="space-y-4">
-                  <Label className="text-slate-300">Active AI Provider</Label>
+                  <Label className="text-slate-300">{t("settings.ai.active_provider")}</Label>
                   <Select
                     value={aiConfig.activeProvider}
                     onValueChange={(val) => {
@@ -261,7 +278,7 @@ export default function SettingsModal({
 
                 {/* 2. Model Selection */}
                 <div className="space-y-4">
-                  <Label className="text-slate-300">Default Model</Label>
+                  <Label className="text-slate-300">{t("settings.ai.default_model")}</Label>
                   <Select
                     value={aiConfig.selectedModel}
                     onValueChange={(val) => {
@@ -311,11 +328,10 @@ export default function SettingsModal({
 
                       {/* Legacy Key Warning (if local keys exist) */}
                       {aiConfig.keys[aiConfig.activeProvider] && (
-                        <div className="p-3 border border-yellow-500/20 bg-yellow-500/5 rounded text-xs text-yellow-300 flex items-center gap-2">
+                        <div className="p-3 border border-amber-500/20 bg-amber-500/5 rounded text-xs text-amber-300 flex items-center gap-2">
                           <AlertTriangle size={14} />
                           <span>
-                            You have a legacy key saved locally. It works, but
-                            we recommend migrating to the Vault.
+                            {t("settings.vault.legacy_warning")}
                           </span>
                         </div>
                       )}
@@ -331,7 +347,7 @@ export default function SettingsModal({
             {activeTab === "canvas" && (
               <div className="flex flex-col items-center justify-center h-full text-slate-500">
                 <Layout size={48} className="mb-4 opacity-20" />
-                <p>Canvas settings (Grid, Snap, Minimap) coming next.</p>
+                <p>{t("settings.sidebar.canvas_coming_soon")}</p>
               </div>
             )}
 
@@ -339,7 +355,7 @@ export default function SettingsModal({
             {activeTab === "system" && (
               <div className="flex flex-col items-center justify-center h-full text-slate-500">
                 <HardDrive size={48} className="mb-4 opacity-20" />
-                <p>System configurations coming soon.</p>
+                <p>{t("settings.sidebar.system_coming_soon")}</p>
               </div>
             )}
           </div>

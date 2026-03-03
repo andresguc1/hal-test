@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/useToast";
+import { useTranslation } from "react-i18next";
 import { api } from "../../utils/api";
 
 /**
@@ -21,6 +22,7 @@ import { api } from "../../utils/api";
  * Includes a health-check "Test Connection" button for Ollama.
  */
 export function AISettingsPanel({ aiConfig, setAiConfig }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [isTesting, setIsTesting] = useState(false);
   const [healthResult, setHealthResult] = useState(null);
@@ -43,7 +45,7 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
     };
     localStorage.setItem("hal_ai_config", JSON.stringify(configToSave));
     window.dispatchEvent(new Event("hal_ai_config_updated"));
-    toast.success("AI settings saved");
+    toast.success(t("settings.ai.settings_saved"));
   };
 
   const handleTestConnection = async () => {
@@ -58,13 +60,11 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
       setHealthResult(res);
 
       if (res.success) {
-        toast.success(`Connected! Ollama is running with ${model} available.`);
+        toast.success(t("settings.ai.connection_success", { model }));
       } else if (res.ollamaRunning && !res.modelLoaded) {
-        toast.error(
-          `Ollama is running but model '${model}' is not loaded. Run: ollama pull ${model}`,
-        );
+        toast.error(t("settings.ai.model_not_found", { model }));
       } else {
-        toast.error(res.error || "Could not connect to Ollama");
+        toast.error(res.error || t("settings.ai.connect_error"));
       }
     } catch (error) {
       setHealthResult({ success: false, error: error.message });
@@ -79,17 +79,25 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
       <div className="flex items-center gap-2">
         <Server className="text-indigo-400" size={20} />
         <h3 className="text-lg font-medium text-white">
-          LLM Provider Settings
+          {t("settings.ai.title")}
         </h3>
       </div>
       <p className="text-slate-500 text-xs -mt-3">
-        Configure the connection to your AI model. For local models, use Ollama.
+        {t("settings.ai.active_provider")}
       </p>
+
+      {/* Model Selection */}
+      <div className="space-y-2">
+        <Label className="text-xs text-slate-400">
+          {isOllama ? t("settings.ai.recommended_models") : t("settings.ai.default_model")}
+        </Label>
+        {/* Note: In a real app, the dropdown would be here or in a parent component */}
+      </div>
 
       {/* Base URL */}
       {isOllama && (
         <div className="space-y-2">
-          <Label className="text-xs text-slate-400">Base URL</Label>
+          <Label className="text-xs text-slate-400">{t("settings.ai.base_url")}</Label>
           <div className="relative">
             <Globe size={14} className="absolute left-3 top-3 text-slate-500" />
             <Input
@@ -106,19 +114,19 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
       {isOllama && (
         <div className="space-y-2">
           <Label className="text-xs text-slate-400">
-            Model Name (Override)
+            {t("settings.ai.custom_model_identifier")}
           </Label>
           <div className="relative">
             <Cpu size={14} className="absolute left-3 top-3 text-slate-500" />
             <Input
               value={model}
               onChange={(e) => updateConfig({ selectedModel: e.target.value })}
-              className="bg-slate-950 border-slate-800 pl-9 font-mono text-sm"
+              className={`bg-slate-950 border-slate-800 pl-9 font-mono text-sm ${model ? "border-indigo-500/50 ring-1 ring-indigo-500/20" : ""}`}
               placeholder="gemma3"
             />
           </div>
-          <p className="text-[10px] text-slate-600">
-            Enter any model name pulled on your Ollama instance
+          <p className="text-[10px] text-slate-500 leading-tight">
+            {t("settings.ai.custom_model_desc")}
           </p>
         </div>
       )}
@@ -127,7 +135,7 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
       <div className="space-y-2">
         <Label className="text-xs text-slate-400 flex items-center gap-2">
           <Thermometer size={12} />
-          Temperature: {temperature.toFixed(2)}
+          {t("settings.ai.temperature")}: {temperature.toFixed(2)}
         </Label>
         <input
           type="range"
@@ -141,19 +149,18 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
           className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
         />
         <div className="flex justify-between text-[10px] text-slate-600">
-          <span>Precise (0.0)</span>
-          <span>Creative (1.0)</span>
+          <span>{t("settings.ai.precise")} (0.0)</span>
+          <span>{t("settings.ai.creative")} (1.0)</span>
         </div>
       </div>
 
       {/* Health Result Badge */}
       {healthResult && (
         <div
-          className={`flex items-center gap-2 p-3 rounded-lg border text-xs ${
-            healthResult.success
+          className={`flex items-center gap-2 p-3 rounded-lg border text-xs ${healthResult.success
               ? "border-green-500/20 bg-green-500/5 text-green-300"
               : "border-amber-500/20 bg-amber-500/5 text-amber-300"
-          }`}
+            }`}
         >
           {healthResult.success ? (
             <CheckCircle2 size={14} className="text-green-400" />
@@ -165,23 +172,19 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
           <div className="flex-1">
             {healthResult.success ? (
               <span>
-                Ollama connected • Model{" "}
-                <code className="font-mono text-green-400">{model}</code> loaded
+                {t("settings.ai.health_connected", { model })}
               </span>
             ) : healthResult.ollamaRunning ? (
               <span>
-                Ollama running but{" "}
-                <code className="font-mono text-amber-400">{model}</code> not
-                found. <code className="font-mono">ollama pull {model}</code>
+                {t("settings.ai.health_not_found", { model })}
               </span>
             ) : (
-              <span>{healthResult.error || "Ollama not reachable"}</span>
+              <span>{healthResult.error || t("settings.ai.connect_error")}</span>
             )}
           </div>
           {healthResult.models?.length > 0 && (
             <span className="text-slate-500 text-[10px]">
-              {healthResult.models.length} model
-              {healthResult.models.length !== 1 ? "s" : ""} installed
+              {t(healthResult.models.length === 1 ? "settings.ai.models_installed" : "settings.ai.models_installed_plural", { count: healthResult.models.length })}
             </span>
           )}
         </div>
@@ -201,14 +204,14 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
             ) : (
               <CheckCircle2 className="mr-2 text-slate-400" size={16} />
             )}
-            {isTesting ? "Testing..." : "Test Connection"}
+            {isTesting ? t("settings.ai.testing") : t("settings.ai.test_connection")}
           </Button>
         )}
         <Button
           onClick={handleSaveConfig}
           className="flex-1 bg-indigo-600 hover:bg-indigo-500"
         >
-          Save Settings
+          {t("settings.ai.save_settings")}
         </Button>
       </div>
     </div>

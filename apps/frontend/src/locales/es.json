@@ -512,5 +512,74 @@
       "executablePath": "Ej: /ruta/a/chrome.exe. Usar ejecutable de navegador personalizado."
     },
     "options": {}
+  },
+  "settings": {
+    "sidebar": {
+      "title": "Configuración",
+      "general": "General",
+      "canvas": "Canvas y Editor",
+      "integrations": "IA e Integraciones",
+      "system": "Sistema",
+      "canvas_coming_soon": "Configuración de Canvas (Cuadrícula, Ajuste, Minimapa) próximamente.",
+      "system_coming_soon": "Configuraciones del sistema próximamente."
+    },
+    "general": {
+      "title": "Configuración General",
+      "subtitle": "Personaliza tu experiencia en HAL-TEST.",
+      "appearance": "Apariencia",
+      "language": "Idioma",
+      "themes": {
+        "light": "Claro",
+        "dark": "Oscuro",
+        "system": "Sistema"
+      }
+    },
+    "ai": {
+      "title": "IA e Integraciones",
+      "subtitle": "Configura el motor de inteligencia y los servicios externos.",
+      "active_provider": "Proveedor de IA Activo",
+      "recommended_models": "Modelos Recomendados",
+      "default_model": "Modelo Predeterminado",
+      "base_url": "URL Base",
+      "custom_model_identifier": "Identificador de Modelo Personalizado",
+      "custom_model_desc": "Prioridad alta: Si escribes un nombre aquí, se usará en lugar de la selección de arriba. Útil para modelos propios o versiones específicas.",
+      "temperature": "Temperatura",
+      "precise": "Preciso",
+      "creative": "Creativo",
+      "test_connection": "Probar Conexión",
+      "testing": "Probando...",
+      "save_settings": "Guardar Configuración",
+      "settings_saved": "Configuración de IA guardada",
+      "connection_success": "¡Conectado! Ollama está funcionando con {{model}} disponible.",
+      "model_not_found": "Ollama está funcionando pero el modelo '{{model}}' no está cargado. Ejecuta: ollama pull {{model}}",
+      "connect_error": "No se pudo conectar con Ollama",
+      "health_connected": "Ollama conectado • Modelo {{model}} cargado",
+      "health_not_found": "Ollama funcionando pero {{model}} no encontrado. ollama pull {{model}}",
+      "models_installed": "{{count}} modelo instalado",
+      "models_installed_plural": "{{count}} modelos instalados"
+    },
+    "vault": {
+      "title": "Billetera Segura",
+      "add_key": "Añadir Llave",
+      "cancel": "Cancelar",
+      "provider": "Proveedor",
+      "alias": "Alias (ej. Mi Llave Personal)",
+      "alias_placeholder": "Cuenta de Trabajo",
+      "api_key": "Llave API",
+      "api_key_required": "Ingresa una Llave API para probar",
+      "alias_key_required": "El Alias y la Llave son requeridos",
+      "optional_ollama": "(Opcional para Ollama)",
+      "base_url_optional": "URL Base (Opcional)",
+      "test_connection": "Probar Conexión",
+      "save_to_vault": "Guardar en Billetera",
+      "saving": "Guardando...",
+      "empty_wallet": "La billetera está vacía. Añade una llave para empezar.",
+      "legacy_warning": "Tienes una llave antigua guardada localmente. Funciona, pero recomendamos migrar a la Billetera.",
+      "delete_confirm": "¿Estás seguro? Esta acción no se puede deshacer.",
+      "key_saved": "Llave guardada en la Billetera",
+      "key_deleted": "Llave eliminada",
+      "test_success": "¡Conexión Exitosa!",
+      "test_failed": "Conexión Fallida"
+    }
   }
 }

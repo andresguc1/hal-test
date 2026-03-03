@@ -1,14 +1,6 @@
 import React, { useState } from "react";
-import {
-  Plus,
-  Trash2,
-  Key,
-  Shield,
-  CheckCircle2,
-  XCircle,
-  Loader2,
-  Globe,
-} from "lucide-react";
+import { Wallet, Plus, Key, Globe, Trash2, CheckCircle2, XCircle, Loader2, AlertTriangle, Cpu } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,13 +13,12 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/useToast";
 import { useSettings } from "@/context/SettingsContext";
-import providersData from "@/data/providers.json";
 import { api } from "../../utils/api";
 
 export function KeyVaultPanel() {
-  const { vaultKeys, loadVaultKeys } = useSettings(); // Use context
+  const { t } = useTranslation();
+  const { vaultKeys, loadVaultKeys, setVaultKeys } = useSettings(); // Use context
   const toast = useToast();
-  const keys = vaultKeys;
   const [isLoading] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
@@ -43,8 +34,8 @@ export function KeyVaultPanel() {
 
   const handleTestConnection = async (e) => {
     e.preventDefault(); // Prevent form submission if inside form
-    if (!newKey.key) {
-      toast.error("Enter an API Key to test");
+    if (!newKey.key && newKey.provider !== 'ollama') {
+      toast.error(t('settings.vault.api_key_required'));
       return;
     }
 
@@ -58,12 +49,12 @@ export function KeyVaultPanel() {
       });
 
       if (res.success) {
-        toast.success(res.message || "Connection Successful!");
+        toast.success(t('settings.vault.test_success'));
       } else {
-        toast.error(res.message || "Connection Failed");
+        toast.error(`${t('settings.vault.test_failed')}: ${res.error}`);
       }
     } catch (error) {
-      toast.error(error.message || "Validation Error");
+      toast.error(error.message || t('settings.vault.validation_error'));
     } finally {
       setIsTesting(false);
     }
@@ -83,20 +74,20 @@ export function KeyVaultPanel() {
       });
 
       if (res && res.success) {
-        toast.success(res.message || "Connection Successful!");
+        toast.success(t('settings.vault.test_success'));
       } else {
-        toast.error((res && res.message) || "Connection Failed");
+        toast.error(`${t('settings.vault.test_failed')}: ${res.error}`);
       }
     } catch (e) {
-      toast.error(e.message || "Validation Error");
+      toast.error(e.message || t('settings.vault.validation_error'));
     } finally {
       setIsTesting(false);
     }
   };
 
   const handleAddKey = async () => {
-    if (!newKey.alias || !newKey.key) {
-      toast.error("Alias and Key are required");
+    if (!newKey.alias || (!newKey.key && newKey.provider !== 'ollama')) {
+      toast.error(t('settings.vault.alias_key_required'));
       return;
     }
 
@@ -105,62 +96,60 @@ export function KeyVaultPanel() {
       const data = await api.post("/keys", newKey);
 
       if (data.success) {
-        toast.success("Key saved to Vault");
+        toast.success(t('settings.vault.key_saved'));
         setNewKey({ alias: "", provider: "openai", key: "", baseUrl: "" });
         setIsAdding(false);
         loadVaultKeys(); // Refresh context
         window.dispatchEvent(new Event("hal_keys_updated")); // Notify others
       } else {
         // Now using specific message from backend response
-        toast.error(data.message || "Failed to save key");
+        toast.error(data.message || t('settings.vault.failed_to_save_key'));
       }
     } catch (error) {
       // Error is now an Error object with the message from backend
-      toast.error(error.message || "Error saving key");
+      toast.error(error.message || t('settings.vault.error_saving_key'));
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm("Are you sure? This action cannot be undone.")) return;
+  const handleDeleteKey = async (id) => {
+    if (!confirm(t('settings.vault.delete_confirm'))) return;
     try {
       await api.delete(`/keys/${id}`);
-      toast.success("Key deleted");
+      setVaultKeys(vaultKeys.filter((k) => k.id !== id));
+      toast.success(t('settings.vault.key_deleted'));
       loadVaultKeys(); // Refresh context
       window.dispatchEvent(new Event("hal_keys_updated")); // Notify others
     } catch (error) {
-      toast.error(error.message || "Failed to delete");
+      toast.error(error.message || t('settings.vault.delete_failed'));
     }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Shield className="text-green-500" size={20} />
-          <h3 className="text-lg font-medium text-white">Secure Wallet</h3>
+          <Wallet className="text-indigo-400" size={20} />
+          <h3 className="text-lg font-medium text-white">{t('settings.vault.title')}</h3>
         </div>
-        <Button
-          size="sm"
-          variant={isAdding ? "destructive" : "secondary"}
-          onClick={() => setIsAdding(!isAdding)}
-        >
-          {isAdding ? (
-            "Cancel"
-          ) : (
-            <>
-              <Plus size={16} className="mr-2" /> Add Key
-            </>
-          )}
-        </Button>
+        {!isAdding && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsAdding(true)}
+            className="text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10"
+          >
+            <Plus size={16} className="mr-2" /> {t('settings.vault.add_key')}
+          </Button>
+        )}
       </div>
 
       {isAdding && (
-        <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700 space-y-4 animate-in fade-in slide-in-from-top-2">
+        <div className="p-4 rounded-xl border border-indigo-500/30 bg-indigo-500/5 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-xs text-slate-400">Provider</Label>
+              <Label className="text-xs text-slate-400">{t('settings.vault.provider')}</Label>
               <Select
                 value={newKey.provider}
                 onValueChange={(val) => setNewKey({ ...newKey, provider: val })}
@@ -169,32 +158,27 @@ export function KeyVaultPanel() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {providersData.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="openai">OpenAI</SelectItem>
+                  <SelectItem value="anthropic">Anthropic</SelectItem>
+                  <SelectItem value="google">Google (Gemini)</SelectItem>
+                  <SelectItem value="ollama">Ollama (Local)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-xs text-slate-400">
-                Alias (e.g. My Personal Key)
-              </Label>
+              <Label className="text-xs text-slate-400">{t('settings.vault.alias')}</Label>
               <Input
                 value={newKey.alias}
-                onChange={(e) =>
-                  setNewKey({ ...newKey, alias: e.target.value })
-                }
+                onChange={(e) => setNewKey({ ...newKey, alias: e.target.value })}
+                placeholder={t('settings.vault.alias_placeholder')}
                 className="bg-slate-950 border-slate-800"
-                placeholder="Work Account"
               />
             </div>
           </div>
 
           <div className="space-y-2">
             <Label className="text-xs text-slate-400">
-              API Key {newKey.provider === "ollama" && "(Optional for Ollama)"}
+              {t('settings.vault.api_key')} {newKey.provider === 'ollama' && t('settings.vault.optional_ollama')}
             </Label>
             <div className="relative">
               <Key size={14} className="absolute left-3 top-3 text-slate-500" />
@@ -212,9 +196,7 @@ export function KeyVaultPanel() {
           {/* Optional BaseURL for Ollama/Custom */}
           {(newKey.provider === "ollama" || newKey.provider === "openai") && (
             <div className="space-y-2">
-              <Label className="text-xs text-slate-400">
-                Base URL (Optional)
-              </Label>
+              <Label className="text-xs text-slate-400">{t('settings.vault.base_url_optional')}</Label>
               <div className="relative">
                 <Globe
                   size={14}
@@ -236,25 +218,32 @@ export function KeyVaultPanel() {
             <Button
               variant="outline"
               onClick={handleTestConnection}
-              disabled={isTesting || isSaving}
+              disabled={isTesting || (!newKey.key && newKey.provider !== 'ollama')}
               className="flex-1 border-slate-700 hover:bg-slate-800"
             >
               {isTesting ? (
                 <Loader2 className="animate-spin mr-2" size={16} />
               ) : (
-                <CheckCircle2 className="mr-2 text-slate-400" size={16} />
+                <Globe className="mr-2 text-slate-400" size={16} />
               )}
-              Test Connection
+              {t('settings.vault.test_connection')}
             </Button>
             <Button
               onClick={handleAddKey}
-              disabled={isSaving}
-              className="flex-1 bg-green-600 hover:bg-green-500"
+              disabled={isSaving || (!newKey.key && newKey.provider !== 'ollama')}
+              className="flex-1 bg-indigo-600 hover:bg-indigo-500"
             >
               {isSaving ? (
                 <Loader2 className="animate-spin mr-2" size={16} />
-              ) : null}
-              {isSaving ? "Saving..." : "Save to Vault"}
+              ) : <CheckCircle2 className="mr-2" size={16} />}
+              {isSaving ? t('settings.vault.saving') : t('settings.vault.save_to_vault')}
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => setIsAdding(false)}
+              className="text-slate-500 hover:text-slate-300"
+            >
+              {t('settings.vault.cancel')}
             </Button>
           </div>
         </div>
@@ -265,33 +254,26 @@ export function KeyVaultPanel() {
           <div className="flex justify-center p-4">
             <Loader2 className="animate-spin text-slate-500" />
           </div>
-        ) : keys.length === 0 ? (
-          <p className="text-center text-slate-500 text-sm py-8">
-            Wallet is empty. Add a key to start.
-          </p>
+        ) : vaultKeys.length === 0 && !isAdding ? (
+          <div className="py-8 text-center border-2 border-dashed border-slate-800 rounded-xl bg-slate-900/20">
+            <p className="text-slate-500 text-sm tracking-tight">{t('settings.vault.empty_wallet')}</p>
+          </div>
         ) : (
           <div className="grid gap-2 max-h-[300px] overflow-y-auto pr-2">
-            {keys.map((k) => (
+            {vaultKeys.map((k) => (
               <div
                 key={k.id}
-                className="flex items-center justify-between p-3 bg-slate-900/30 border border-slate-800/50 rounded-md hover:border-slate-700 transition-colors"
+                className="group flex items-center justify-between p-3 rounded-lg border border-slate-800 bg-slate-900/40 hover:border-slate-700 transition-all shadow-sm"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-400 uppercase">
-                    {k.provider.substring(0, 2)}
+                  <div className="w-8 h-8 rounded bg-indigo-500/10 flex items-center justify-center text-indigo-400">
+                    {k.provider === 'ollama' ? <Cpu size={16} /> : <Key size={16} />}
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-slate-200">
-                      {k.alias}
-                    </p>
-                    <p className="text-xs text-slate-500 flex items-center gap-1">
-                      {k.maskedKey}
-                      {k.baseUrl && (
-                        <span className="text-blue-500/50 ml-1">
-                          • Custom URL
-                        </span>
-                      )}
-                    </p>
+                    <div className="text-sm font-medium text-slate-200">{k.alias}</div>
+                    <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">
+                      {k.provider} • ****{k.key?.slice(-4) || 'LOCAL'}
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -300,7 +282,7 @@ export function KeyVaultPanel() {
                     size="icon"
                     className="h-8 w-8 text-slate-600 hover:text-green-400 hover:bg-green-900/8"
                     onClick={() => handleTestExisting(k)}
-                    title="Test connection"
+                    title={t('settings.vault.test_connection')}
                   >
                     {isTesting ? (
                       <Loader2 className="animate-spin" size={14} />
@@ -313,7 +295,7 @@ export function KeyVaultPanel() {
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 text-slate-600 hover:text-red-400 hover:bg-red-900/10"
-                    onClick={() => handleDelete(k.id)}
+                    onClick={() => handleDeleteKey(k.id)}
                   >
                     <Trash2 size={14} />
                   </Button>
