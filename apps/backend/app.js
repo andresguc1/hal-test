@@ -128,16 +128,36 @@ app.use('/app', express.static(path.join(PUBLIC_DIR, 'app')));
 app.get('/app', (req, res) => {
     res.redirect('/app/');
 });
-app.get(/\/app\/?(?!api).*/, (req, res) => {
+
+// Use a regex for the app SPA fallback
+app.get(/\/app($|\/.*)/, (req, res, next) => {
+    if (req.path.startsWith('/app/api')) return next();
     res.sendFile(path.join(PUBLIC_DIR, 'app', 'index.html'));
 });
 
 // 2. Serve Landing Page
 app.use('/', express.static(path.join(PUBLIC_DIR, 'web')));
-app.get(/.*/, (req, res, next) => {
-    if (req.path.startsWith('/api') || req.path.startsWith('/storage')) {
-        return next();
+
+// Catch-all for SPA/Web using a Regex object for Express 5 compatibility
+app.get(/^((?!\/(api|storage|app)).)*$/, (req, res, next) => {
+    // Skip if it looks like a static asset file (to avoid serving index.html as CSS/JS)
+    const assetExtensions = [
+        '.js',
+        '.css',
+        '.png',
+        '.jpg',
+        '.jpeg',
+        '.gif',
+        '.svg',
+        '.ico',
+        '.woff',
+        '.woff2',
+        '.webm',
+    ];
+    if (assetExtensions.some((ext) => req.path.toLowerCase().endsWith(ext))) {
+        return res.status(404).end();
     }
+
     res.sendFile(path.join(PUBLIC_DIR, 'web', 'index.html'), (err) => {
         if (err) next();
     });
