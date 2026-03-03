@@ -1500,7 +1500,11 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
               explicitScreenshot.startsWith("http");
 
             // If it's pure Base64 without the prefix, add it so the image renders properly
-            if (!isServerPath && !explicitScreenshot.startsWith("data:") && !explicitScreenshot.startsWith("blob:")) {
+            if (
+              !isServerPath &&
+              !explicitScreenshot.startsWith("data:") &&
+              !explicitScreenshot.startsWith("blob:")
+            ) {
               explicitScreenshot = `data:image/jpeg;base64,${explicitScreenshot}`;
             }
 

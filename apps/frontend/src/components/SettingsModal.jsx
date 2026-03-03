@@ -134,10 +134,26 @@ export default function SettingsModal({
           <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4 px-2">
             {t("settings.sidebar.title")}
           </h2>
-          <SidebarItem id="general" icon={Settings} label={t("settings.sidebar.general")} />
-          <SidebarItem id="canvas" icon={Layout} label={t("settings.sidebar.canvas")} />
-          <SidebarItem id="integrations" icon={Cpu} label={t("settings.sidebar.integrations")} />
-          <SidebarItem id="system" icon={HardDrive} label={t("settings.sidebar.system")} />
+          <SidebarItem
+            id="general"
+            icon={Settings}
+            label={t("settings.sidebar.general")}
+          />
+          <SidebarItem
+            id="canvas"
+            icon={Layout}
+            label={t("settings.sidebar.canvas")}
+          />
+          <SidebarItem
+            id="integrations"
+            icon={Cpu}
+            label={t("settings.sidebar.integrations")}
+          />
+          <SidebarItem
+            id="system"
+            icon={HardDrive}
+            label={t("settings.sidebar.system")}
+          />
         </div>
 
         {/* Content Area */}
@@ -157,7 +173,9 @@ export default function SettingsModal({
 
                 {/* Theme */}
                 <div className="space-y-4">
-                  <Label className="text-base text-slate-300">{t("settings.general.appearance")}</Label>
+                  <Label className="text-base text-slate-300">
+                    {t("settings.general.appearance")}
+                  </Label>
                   <div className="grid grid-cols-3 gap-4">
                     {["light", "dark", "system"].map((mode) => (
                       <button
@@ -188,7 +206,9 @@ export default function SettingsModal({
 
                 {/* Language (Llamativo) */}
                 <div className="space-y-4">
-                  <Label className="text-base text-slate-300">{t("settings.general.language")}</Label>
+                  <Label className="text-base text-slate-300">
+                    {t("settings.general.language")}
+                  </Label>
                   <div className="grid grid-cols-2 gap-4">
                     {[
                       { id: "en", label: "English", flag: "🇺🇸" },
@@ -212,7 +232,9 @@ export default function SettingsModal({
                           <span
                             className={cn(
                               "text-sm font-semibold tracking-wide transition-colors",
-                              isSelected ? "text-blue-400" : "text-slate-400 group-hover:text-slate-200",
+                              isSelected
+                                ? "text-blue-400"
+                                : "text-slate-400 group-hover:text-slate-200",
                             )}
                           >
                             {lang.label}
@@ -244,7 +266,9 @@ export default function SettingsModal({
 
                 {/* 1. Provider Selection (Drop-down) */}
                 <div className="space-y-4">
-                  <Label className="text-slate-300">{t("settings.ai.active_provider")}</Label>
+                  <Label className="text-slate-300">
+                    {t("settings.ai.active_provider")}
+                  </Label>
                   <Select
                     value={aiConfig.activeProvider}
                     onValueChange={(val) => {
@@ -278,7 +302,9 @@ export default function SettingsModal({
 
                 {/* 2. Model Selection */}
                 <div className="space-y-4">
-                  <Label className="text-slate-300">{t("settings.ai.default_model")}</Label>
+                  <Label className="text-slate-300">
+                    {t("settings.ai.default_model")}
+                  </Label>
                   <Select
                     value={aiConfig.selectedModel}
                     onValueChange={(val) => {
@@ -330,9 +356,7 @@ export default function SettingsModal({
                       {aiConfig.keys[aiConfig.activeProvider] && (
                         <div className="p-3 border border-amber-500/20 bg-amber-500/5 rounded text-xs text-amber-300 flex items-center gap-2">
                           <AlertTriangle size={14} />
-                          <span>
-                            {t("settings.vault.legacy_warning")}
-                          </span>
+                          <span>{t("settings.vault.legacy_warning")}</span>
                         </div>
                       )}
                     </div>

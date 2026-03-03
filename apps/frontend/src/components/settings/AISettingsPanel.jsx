@@ -89,7 +89,9 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
       {/* Model Selection */}
       <div className="space-y-2">
         <Label className="text-xs text-slate-400">
-          {isOllama ? t("settings.ai.recommended_models") : t("settings.ai.default_model")}
+          {isOllama
+            ? t("settings.ai.recommended_models")
+            : t("settings.ai.default_model")}
         </Label>
         {/* Note: In a real app, the dropdown would be here or in a parent component */}
       </div>
@@ -97,7 +99,9 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
       {/* Base URL */}
       {isOllama && (
         <div className="space-y-2">
-          <Label className="text-xs text-slate-400">{t("settings.ai.base_url")}</Label>
+          <Label className="text-xs text-slate-400">
+            {t("settings.ai.base_url")}
+          </Label>
           <div className="relative">
             <Globe size={14} className="absolute left-3 top-3 text-slate-500" />
             <Input
@@ -157,10 +161,11 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
       {/* Health Result Badge */}
       {healthResult && (
         <div
-          className={`flex items-center gap-2 p-3 rounded-lg border text-xs ${healthResult.success
+          className={`flex items-center gap-2 p-3 rounded-lg border text-xs ${
+            healthResult.success
               ? "border-green-500/20 bg-green-500/5 text-green-300"
               : "border-amber-500/20 bg-amber-500/5 text-amber-300"
-            }`}
+          }`}
         >
           {healthResult.success ? (
             <CheckCircle2 size={14} className="text-green-400" />
@@ -171,20 +176,23 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
           )}
           <div className="flex-1">
             {healthResult.success ? (
-              <span>
-                {t("settings.ai.health_connected", { model })}
-              </span>
+              <span>{t("settings.ai.health_connected", { model })}</span>
             ) : healthResult.ollamaRunning ? (
-              <span>
-                {t("settings.ai.health_not_found", { model })}
-              </span>
+              <span>{t("settings.ai.health_not_found", { model })}</span>
             ) : (
-              <span>{healthResult.error || t("settings.ai.connect_error")}</span>
+              <span>
+                {healthResult.error || t("settings.ai.connect_error")}
+              </span>
             )}
           </div>
           {healthResult.models?.length > 0 && (
             <span className="text-slate-500 text-[10px]">
-              {t(healthResult.models.length === 1 ? "settings.ai.models_installed" : "settings.ai.models_installed_plural", { count: healthResult.models.length })}
+              {t(
+                healthResult.models.length === 1
+                  ? "settings.ai.models_installed"
+                  : "settings.ai.models_installed_plural",
+                { count: healthResult.models.length },
+              )}
             </span>
           )}
         </div>
@@ -204,7 +212,9 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
             ) : (
               <CheckCircle2 className="mr-2 text-slate-400" size={16} />
             )}
-            {isTesting ? t("settings.ai.testing") : t("settings.ai.test_connection")}
+            {isTesting
+              ? t("settings.ai.testing")
+              : t("settings.ai.test_connection")}
           </Button>
         )}
         <Button
