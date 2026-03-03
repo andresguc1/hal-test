@@ -32,6 +32,10 @@ const Flow = sequelize.define(
             allowNull: false,
             defaultValue: 'main',
         },
+        canvasId: {
+            type: DataTypes.STRING,
+            allowNull: true,
+        },
         parentId: {
             type: DataTypes.STRING,
             allowNull: true,

@@ -2115,7 +2115,7 @@ function NodeConfigurationPanel({
                   "w-full bg-[var(--bg-canvas)]/50 border border-[var(--border-ui)] rounded-lg px-3 py-2 pl-3 pr-8 text-xs font-mono focus:outline-none focus:border-indigo-500/50 transition-all placeholder:text-[var(--text-muted)] !pointer-events-auto !cursor-text !select-text",
                   value ? "text-indigo-400" : "text-[var(--text-main)]",
                   error &&
-                    "border-red-500/50 focus:border-red-500 bg-red-500/5",
+                  "border-red-500/50 focus:border-red-500 bg-red-500/5",
                 )}
               />
               <div
@@ -2254,7 +2254,7 @@ function NodeConfigurationPanel({
                       }
                     }, 300); // 300ms debounce for typing comfort
                   }}
-                  // onBlur removed - handled by debounce
+                // onBlur removed - handled by debounce
                 />
               </div>
             </div>
@@ -2288,7 +2288,7 @@ function NodeConfigurationPanel({
           <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
             {/* Dynamic Content Switch */}
             {safeConfig.nodeKey === "component" ||
-            activeNode.type === "component" ? (
+              activeNode.type === "component" ? (
               // --- COMPONENT DASHBOARD ---
               <div className="space-y-6">
                 {/* Description Card */}
@@ -2421,7 +2421,7 @@ function NodeConfigurationPanel({
           </div>
 
           {/* Evidence preview for screenshot nodes (shown at bottom) */}
-          {activeNode?.type === "take_screenshot" && nodeScreenshotUrl ? (
+          {nodeScreenshotUrl ? (
             <div className="p-4 border-t border-[var(--border-ui)] bg-[var(--bg-panel)]">
               <EvidenceCard
                 screenshotUrl={nodeScreenshotUrl}

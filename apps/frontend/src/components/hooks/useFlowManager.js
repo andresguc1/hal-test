@@ -1499,6 +1499,11 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
               explicitScreenshot.startsWith("storage/") ||
               explicitScreenshot.startsWith("http");
 
+            // If it's pure Base64 without the prefix, add it so the image renders properly
+            if (!isServerPath && !explicitScreenshot.startsWith("data:") && !explicitScreenshot.startsWith("blob:")) {
+              explicitScreenshot = `data:image/jpeg;base64,${explicitScreenshot}`;
+            }
+
             if (isServerPath) {
               // Server-side path: Don't save to Client DB (atob fails). Just update reference.
               logger.info(

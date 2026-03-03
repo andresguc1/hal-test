@@ -1,8 +1,8 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../index.js';
 
-const Project = sequelize.define(
-    'Project',
+const Canvas = sequelize.define(
+    'Canvas',
     {
         id: {
             type: DataTypes.STRING,
@@ -17,13 +17,14 @@ const Project = sequelize.define(
             type: DataTypes.TEXT,
             allowNull: true,
         },
-        activeFlowId: {
+        projectId: {
             type: DataTypes.STRING,
-            allowNull: true,
+            allowNull: false,
         },
-        userId: {
-            type: DataTypes.STRING,
-            allowNull: true,
+        order: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            defaultValue: 0,
         },
     },
     {
@@ -31,4 +32,4 @@ const Project = sequelize.define(
     },
 );
 
-export default Project;
+export default Canvas;

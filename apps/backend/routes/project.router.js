@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { Project, Flow, Node, Edge } from '../database/init.js';
+import { User, Project, Canvas, Flow, Node, Edge } from '../database/init.js';
 import sequelize from '../database/index.js';
 import { exportService } from '../services/exporter/index.js';
 import fs from 'fs';
@@ -173,20 +173,36 @@ const syncActiveFlowToDisk = async (nodes, edges, projectId) => {
 // PROJECTS
 // ========================================
 
-// List all projects with flows
+// List all projects with flows (and canvases)
 router.get('/projects', async (req, res) => {
     try {
+        const where = {};
+        if (req.user && req.user.id) {
+            where.userId = req.user.id;
+        }
+
         const projects = await Project.findAll({
+            where,
             include: [
                 {
+                    model: Canvas,
+                    as: 'canvases',
+                    include: [
+                        {
+                            model: Flow,
+                            as: 'flows',
+                        },
+                    ],
+                },
+                {
                     model: Flow,
-                    as: 'flows',
+                    as: 'flows', // Keep legacy flows association if needed
                 },
             ],
             order: [
                 ['updatedAt', 'DESC'],
+                [{ model: Canvas, as: 'canvases' }, 'order', 'ASC'],
                 [{ model: Flow, as: 'flows' }, 'order', 'ASC'],
-                [{ model: Flow, as: 'flows' }, 'createdAt', 'ASC'],
             ],
         });
         res.json(projects);
@@ -200,34 +216,83 @@ router.post('/projects', async (req, res) => {
     const transaction = await sequelize.transaction();
     try {
         const { name, description } = req.body;
-        const project = await Project.create({ name, description }, { transaction });
+        let userId = req.user ? req.user.id : null;
 
-        // Create default flow
-        await Flow.create(
+        // Ensure user exists in local DB if we have a userId (from Supabase/Auth)
+        if (userId) {
+            // First try to find the user by ID
+            let user = await User.findByPk(userId, { transaction });
+
+            if (!user) {
+                // If not found, check if a user with the same email exists
+                const email = req.user.email || 'unknown@haltest.dev';
+                user = await User.findOne({ where: { email }, transaction });
+
+                if (!user) {
+                    // Finally, create the user if absolutely new
+                    user = await User.create(
+                        {
+                            id: userId,
+                            email,
+                            name: req.user.user_metadata?.full_name || req.user.name || null,
+                        },
+                        { transaction },
+                    );
+                } else if (user.id !== userId) {
+                    // Email exists but under a different ID?
+                    // This could be an auth sync issue. Let's use the existing user's ID.
+                    userId = user.id;
+                }
+            }
+            userId = user.id;
+        }
+
+        const project = await Project.create({ name, description, userId }, { transaction });
+
+        // Create default canvas
+        const canvas = await Canvas.create(
+            {
+                name: 'Default Canvas',
+                projectId: project.id,
+            },
+            { transaction },
+        );
+
+        // Create default flow associated with the canvas
+        const flow = await Flow.create(
             {
                 name: 'Main Flow',
                 projectId: project.id,
+                canvasId: canvas.id,
                 viewport: { x: 0, y: 0, zoom: 1 },
             },
             { transaction },
         );
 
         // Set active flow
-        // The default flow creation triggers the association, but we might want to be explicit if we added logic later
+        await project.update({ activeFlowId: flow.id }, { transaction });
 
         await transaction.commit();
 
-        // Return plain objects to avoid circular references or strict Sequelize instances if needed
-        const projectResponse = await Project.findByPk(project.id);
-        const flowRef = await Flow.findOne({ where: { projectId: project.id } }); // Get the created flow
+        // Return the project with its hierarchy
+        const projectResponse = await Project.findByPk(project.id, {
+            include: [
+                {
+                    model: Canvas,
+                    as: 'canvases',
+                    include: [{ model: Flow, as: 'flows' }],
+                },
+            ],
+        });
 
-        // 3. Devolver AMBOS al frontend (User Pattern)
         res.status(201).json({
             project: projectResponse,
-            flow: flowRef,
+            flow: flow,
         });
     } catch (error) {
-        if (transaction) await transaction.rollback();
+        if (transaction) {
+            await transaction.rollback();
+        }
         res.status(400).json({ error: error.message });
     }
 });
@@ -323,6 +388,7 @@ router.post('/projects/:projectId/flows', async (req, res) => {
             {
                 name,
                 projectId,
+                canvasId: req.body.canvasId || null,
                 type: type || 'main',
                 parentId: parentId || null,
             },
