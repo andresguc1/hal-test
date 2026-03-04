@@ -227,7 +227,9 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
         seenIds.add(node.id);
         uniqueNodes.push(node);
       } else {
-        console.warn(`[useFlowManager] 🛡️ Duplicate node detected and filtered: ${node.id}`);
+        console.warn(
+          `[useFlowManager] 🛡️ Duplicate node detected and filtered: ${node.id}`,
+        );
       }
     }
 

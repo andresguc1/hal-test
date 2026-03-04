@@ -42,12 +42,12 @@ const ContextMenuItem = ({
       disabled
         ? "pointer-events-none opacity-40"
         : cn(
-          "hover:bg-[var(--border-color)] hover:text-[var(--text-main)] cursor-pointer text-[var(--text-main)]",
-          isActive && "bg-[var(--border-color)] text-[var(--text-main)]",
-        ),
+            "hover:bg-[var(--border-color)] hover:text-[var(--text-main)] cursor-pointer text-[var(--text-main)]",
+            isActive && "bg-[var(--border-color)] text-[var(--text-main)]",
+          ),
       danger &&
-      !disabled &&
-      "text-rose-500 hover:text-rose-400 hover:bg-rose-500/10",
+        !disabled &&
+        "text-rose-500 hover:text-rose-400 hover:bg-rose-500/10",
       className,
     )}
     onClick={(e) => {
@@ -587,20 +587,20 @@ const ContextMenu = ({
               {/* UNGROUP OPTION FOR COMPONENTS */}
               {(data?.type === "component" ||
                 data?.data?.type === "component") && (
-                  <>
-                    <ContextMenuItem
-                      icon={Ungroup}
-                      label="Ungroup"
-                      shortcut="^⇧G"
-                      onClick={() => actions.ungroup?.()}
-                    />
-                    <Divider />
-                  </>
-                )}
+                <>
+                  <ContextMenuItem
+                    icon={Ungroup}
+                    label="Ungroup"
+                    shortcut="^⇧G"
+                    onClick={() => actions.ungroup?.()}
+                  />
+                  <Divider />
+                </>
+              )}
               <ContextMenuItem
                 icon={Play}
                 label="Execute from here"
-                onClick={() => { }}
+                onClick={() => {}}
                 disabled
               />
               <Divider />
