@@ -9,10 +9,14 @@ import {
   ScrollText,
   OctagonX,
   Send,
+  Code2,
+  Copy,
+  Check,
 } from "lucide-react";
 import { useLogs } from "../context/LogContext";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
+import { api } from "../utils/api";
 
 // ─── Log type → color mapping ─────────────────────────────────────────────────
 const LOG_COLORS = {
@@ -28,16 +32,30 @@ const LOG_COLORS = {
 };
 
 const MAX_SHELL_LINES = 500;
+const CODE_DEBOUNCE_MS = 500;
 
-export default function TerminalPanel({ socket }) {
+export default function TerminalPanel({ socket, nodes = [], edges = [] }) {
   const { logs, clearLogs, isPanelVisible, togglePanel } = useLogs();
   const { t } = useTranslation();
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
 
   // ─── Mode ─────────────────────────────────────────────────────────────────
-  /** "log" = read-only execution logs | "interactive" = live shell */
   const [mode, setMode] = useState("log");
+
+  // ─── Code Preview ─────────────────────────────────────────────────────────
+  const [generatedCode, setGeneratedCode] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [language, setLanguage] = useState("javascript");
+
+  const LANGUAGES = [
+    { id: "javascript", label: t("terminal.lang_js"), ext: "js" },
+    { id: "typescript", label: t("terminal.lang_ts"), ext: "ts" },
+    { id: "python", label: t("terminal.lang_python"), ext: "py" },
+    { id: "java", label: t("terminal.lang_java"), ext: "java" },
+    { id: "csharp", label: t("terminal.lang_csharp"), ext: "cs" },
+  ];
 
   // ─── Shell Output ─────────────────────────────────────────────────────────
   const [shellLines, setShellLines] = useState([]);
@@ -47,6 +65,50 @@ export default function TerminalPanel({ socket }) {
   const [command, setCommand] = useState("");
   const [history, setHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
+
+  // ─── Real-time Code Generation ─────────────────────────────────────────────
+  useEffect(() => {
+    if (mode !== "code") return;
+
+    const timer = setTimeout(async () => {
+      setIsGenerating(true);
+      try {
+        // Convert nodes to flow steps format expected by backend
+        const flowSteps = nodes.map((node) => ({
+          type: node.data.type,
+          data: {
+            configuration: node.data.configuration,
+            label: node.data.label,
+            customLabel: node.data.customLabel,
+          },
+        }));
+
+        const result = await api.post("/export/code", {
+          flow: flowSteps,
+          framework: "playwright",
+          language: language,
+        });
+
+        if (result.success && result.code) {
+          setGeneratedCode(result.code);
+        }
+      } catch (err) {
+        console.error("Failed to generate real-time code:", err);
+      } finally {
+        setIsGenerating(false);
+      }
+    }, CODE_DEBOUNCE_MS);
+
+    return () => clearTimeout(timer);
+  }, [nodes, edges, mode, language]);
+
+  const handleCopyCode = useCallback(() => {
+    if (!generatedCode) return;
+    navigator.clipboard.writeText(generatedCode).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [generatedCode]);
 
   // Auto-scroll on new content
   useEffect(() => {
@@ -160,14 +222,20 @@ export default function TerminalPanel({ socket }) {
           <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
             {mode === "log"
               ? t("terminal.title_log", "Execution Logs")
-              : t("terminal.title_interactive", "Interactive Shell")}
+              : mode === "interactive"
+                ? t("terminal.title_interactive", "Interactive Shell")
+                : t("terminal.title_code", "Code Preview")}
           </span>
           <span className="px-2 py-0.5 rounded bg-slate-800 text-[9px] text-slate-500">
             {mode === "log"
               ? `${logs.length} entries`
-              : shellLines.length > 0
-                ? `${shellLines.length} lines`
-                : "ready"}
+              : mode === "interactive"
+                ? shellLines.length > 0
+                  ? `${shellLines.length} lines`
+                  : "ready"
+                : isGenerating
+                  ? "generating..."
+                  : "synced"}
           </span>
           {isRunning && (
             <span className="flex items-center gap-1 text-[9px] text-emerald-400 animate-pulse">
@@ -178,33 +246,82 @@ export default function TerminalPanel({ socket }) {
         </div>
 
         <div className="flex items-center gap-1">
-          {/* Mode toggle */}
-          <button
-            onClick={() => setMode(mode === "log" ? "interactive" : "log")}
-            title={
-              mode === "log"
-                ? t(
-                    "terminal.switch_interactive",
-                    "Switch to Interactive Shell",
-                  )
-                : t("terminal.switch_log", "Switch to Execution Logs")
-            }
-            className={cn(
-              "flex items-center gap-1 px-2 py-1 rounded text-[9px] font-medium transition-all border",
-              mode === "interactive"
-                ? "bg-indigo-500/20 border-indigo-500/40 text-indigo-400"
-                : "bg-slate-800 border-slate-700 text-slate-400 hover:text-slate-200",
-            )}
-          >
-            {mode === "log" ? (
-              <TerminalSquare size={11} />
-            ) : (
+          {/* Mode toggles */}
+          <div className="flex bg-slate-800 p-0.5 rounded-lg border border-slate-700">
+            {/* Logs Tab */}
+            <button
+              onClick={() => setMode("log")}
+              title={t("terminal.switch_log", "Execution Logs")}
+              className={cn(
+                "flex items-center gap-1 px-2 py-1 rounded text-[9px] font-medium transition-all",
+                mode === "log"
+                  ? "bg-slate-700 text-white shadow-sm"
+                  : "text-slate-400 hover:text-slate-200",
+              )}
+            >
               <ScrollText size={11} />
-            )}
-            {mode === "log"
-              ? t("terminal.interactive", "Shell")
-              : t("terminal.log", "Logs")}
-          </button>
+              {t("terminal.log", "Logs")}
+            </button>
+
+            {/* Shell Tab */}
+            <button
+              onClick={() => setMode("interactive")}
+              title={t("terminal.switch_interactive", "Interactive Shell")}
+              className={cn(
+                "flex items-center gap-1 px-2 py-1 rounded text-[9px] font-medium transition-all",
+                mode === "interactive"
+                  ? "bg-indigo-500/20 text-indigo-400 shadow-sm"
+                  : "text-slate-400 hover:text-slate-200",
+              )}
+            >
+              <TerminalSquare size={11} />
+              {t("terminal.interactive", "Shell")}
+            </button>
+
+            {/* Code Preview Tab */}
+            <button
+              onClick={() => setMode("code")}
+              title={t("terminal.switch_code", "Code Preview")}
+              className={cn(
+                "flex items-center gap-1 px-2 py-1 rounded text-[9px] font-medium transition-all",
+                mode === "code"
+                  ? "bg-emerald-500/20 text-emerald-400 shadow-sm"
+                  : "text-slate-400 hover:text-slate-200",
+              )}
+            >
+              <Code2 size={11} />
+              {t("terminal.code", "Code")}
+            </button>
+          </div>
+
+          {/* Language Selector (only in code mode) */}
+          {mode === "code" && (
+            <div className="flex bg-slate-800 p-0.5 rounded-lg border border-slate-700 ml-1">
+              {LANGUAGES.map((lang) => (
+                <button
+                  key={lang.id}
+                  onClick={() => setLanguage(lang.id)}
+                  title={lang.label}
+                  className={cn(
+                    "px-2 py-1 rounded text-[9px] font-medium transition-all whitespace-nowrap",
+                    language === lang.id
+                      ? "bg-slate-700 text-white shadow-sm"
+                      : "text-slate-500 hover:text-slate-300",
+                  )}
+                >
+                  {lang.id === "javascript"
+                    ? "JS"
+                    : lang.id === "typescript"
+                      ? "TS"
+                      : lang.id === "python"
+                        ? "PY"
+                        : lang.id === "java"
+                          ? "JAVA"
+                          : "C#"}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Kill button (interactive mode only) */}
           {mode === "interactive" && isRunning && (
@@ -245,51 +362,107 @@ export default function TerminalPanel({ socket }) {
         ref={scrollRef}
         className="flex-1 overflow-y-auto p-3 space-y-px custom-scrollbar scroll-smooth"
       >
-        <AnimatePresence>
+        <AnimatePresence mode="wait">
           {mode === "log" ? (
-            logs.length === 0 ? (
-              <EmptyState />
-            ) : (
-              logs.map((log) => <LogLine key={log.id} log={log} />)
-            )
-          ) : shellLines.length === 0 ? (
-            <div className="py-2 space-y-1 text-[11px]">
-              <p className="text-indigo-400 font-bold mb-2">
-                {t("terminal.help_title")}
-              </p>
-              <p className="text-slate-500 mb-3">{t("terminal.help_intro")}</p>
-              <div className="space-y-1 pl-2 border-l border-slate-800">
-                <HelpLine
-                  cmd="npx playwright --version"
-                  desc={t("terminal.cmd_version")}
-                />
-                <HelpLine
-                  cmd="npx playwright codegen <url>"
-                  desc={t("terminal.cmd_codegen")}
-                />
-                <HelpLine
-                  cmd="npx playwright test tests/generated/active_flow.spec.js"
-                  desc={t("terminal.cmd_test")}
-                />
-                <HelpLine
-                  cmd="npx playwright test tests/generated/active_flow.spec.js --headed"
-                  desc={t("terminal.cmd_test_headed")}
-                />
-                <HelpLine
-                  cmd="npx playwright show-report"
-                  desc={t("terminal.cmd_report")}
-                />
-                <HelpLine
-                  cmd="npx playwright install"
-                  desc={t("terminal.cmd_install")}
-                />
-              </div>
-              <p className="text-slate-600 mt-3 text-[10px]">
-                {t("terminal.help_footer")}
-              </p>
-            </div>
+            <motion.div
+              key="log"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              {logs.length === 0 ? (
+                <EmptyState />
+              ) : (
+                logs.map((log) => <LogLine key={log.id} log={log} />)
+              )}
+            </motion.div>
+          ) : mode === "interactive" ? (
+            <motion.div
+              key="interactive"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              {shellLines.length === 0 ? (
+                <div className="py-2 space-y-1 text-[11px]">
+                  <p className="text-indigo-400 font-bold mb-2">
+                    {t("terminal.help_title")}
+                  </p>
+                  <p className="text-slate-500 mb-3">
+                    {t("terminal.help_intro")}
+                  </p>
+                  <div className="space-y-1 pl-2 border-l border-slate-800">
+                    <HelpLine
+                      cmd="npx playwright --version"
+                      desc={t("terminal.cmd_version")}
+                    />
+                    <HelpLine
+                      cmd="npx playwright codegen <url>"
+                      desc={t("terminal.cmd_codegen")}
+                    />
+                    <HelpLine
+                      cmd="npx playwright test tests/generated/active_flow.spec.js"
+                      desc={t("terminal.cmd_test")}
+                    />
+                    <HelpLine
+                      cmd="npx playwright test tests/generated/active_flow.spec.js --headed"
+                      desc={t("terminal.cmd_test_headed")}
+                    />
+                    <HelpLine
+                      cmd="npx playwright show-report"
+                      desc={t("terminal.cmd_report")}
+                    />
+                    <HelpLine
+                      cmd="npx playwright install"
+                      desc={t("terminal.cmd_install")}
+                    />
+                  </div>
+                  <p className="text-slate-600 mt-3 text-[10px]">
+                    {t("terminal.help_footer")}
+                  </p>
+                </div>
+              ) : (
+                shellLines.map((line) => (
+                  <ShellLine key={line.id} line={line} />
+                ))
+              )}
+            </motion.div>
           ) : (
-            shellLines.map((line) => <ShellLine key={line.id} line={line} />)
+            <motion.div
+              key="code"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="relative h-full"
+            >
+              {/* Copy Button */}
+              <button
+                onClick={handleCopyCode}
+                className="absolute top-0 right-0 p-1.5 rounded bg-slate-800/50 hover:bg-slate-700 text-slate-400 hover:text-white transition-all border border-white/5"
+                title={t("common.copy")}
+              >
+                {copied ? <Check size={14} /> : <Copy size={14} />}
+              </button>
+
+              <div className="pr-10">
+                {generatedCode ? (
+                  <pre className="text-[11px] leading-relaxed text-slate-300 font-mono overflow-x-auto selection:bg-indigo-500/30">
+                    <code
+                      dangerouslySetInnerHTML={{
+                        __html: highlightCode(generatedCode, language),
+                      }}
+                    />
+                  </pre>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-slate-600 gap-2 opacity-50 py-10">
+                    <Code2 size={28} strokeWidth={1} />
+                    <span className="text-[10px] uppercase tracking-widest text-center">
+                      Build your flow to see <br /> generated code here
+                    </span>
+                  </div>
+                )}
+              </div>
+            </motion.div>
           )}
         </AnimatePresence>
       </div>
@@ -389,4 +562,52 @@ function HelpLine({ cmd, desc }) {
       <span className="text-slate-600 text-[10px]">— {desc}</span>
     </div>
   );
+}
+
+/** Simple syntax highlighting using regex (Single pass to avoid nested replacements) */
+function highlightCode(code, language = "javascript") {
+  if (!code) return "";
+
+  // 1. First escape HTML special characters
+  const escaped = code
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+  // 2. Define patterns in priority order
+  const patterns = [
+    {
+      name: "comment",
+      regex: language === "python" ? /(#.*$)/ : /(\/\/.*$|\/\*[\s\S]*?\*\/)/,
+    },
+    { name: "string", regex: /("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/ },
+    {
+      name: "keyword",
+      regex:
+        /\b(await|async|import|test|expect|from|let|const|console|def|class|public|static|void|using|namespace|var|var)\b/,
+    },
+    { name: "number", regex: /\b(\d+)\b/ },
+  ];
+
+  // 3. Combine into a single regex
+  const combinedRegex = new RegExp(
+    patterns.map((p) => p.regex.source).join("|"),
+    "gm",
+  );
+
+  // 4. Single pass replacement
+  return escaped.replace(combinedRegex, (match, ...args) => {
+    // Find which group matched
+    // args contains: [group1, group2, ..., offset, string]
+    const m1 = args[0]; // comment
+    const m2 = args[1]; // string
+    const m3 = args[2]; // keyword
+    const m4 = args[3]; // number
+
+    if (m1) return `<span class="text-slate-600">${m1}</span>`;
+    if (m2) return `<span class="text-emerald-400">${m2}</span>`;
+    if (m3) return `<span class="text-indigo-400 font-bold">${m3}</span>`;
+    if (m4) return `<span class="text-amber-400">${m4}</span>`;
+    return match;
+  });
 }

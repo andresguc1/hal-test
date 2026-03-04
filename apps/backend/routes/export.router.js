@@ -6,7 +6,7 @@ const router = Router();
 // Endpoint to export to code (Playwright, etc.)
 router.post('/code', (req, res) => {
     try {
-        const { flow, framework } = req.body;
+        const { flow, framework, language } = req.body;
 
         if (!flow || !Array.isArray(flow)) {
             return res.status(400).json({
@@ -15,7 +15,11 @@ router.post('/code', (req, res) => {
             });
         }
 
-        const result = exportService.generateCode(flow, framework || 'playwright');
+        const result = exportService.generateCode(
+            flow,
+            framework || 'playwright',
+            language || 'javascript',
+        );
 
         if (result.success) {
             res.json(result);

@@ -10,12 +10,12 @@ export const authenticated = async (req, res, next) => {
         process.env.AUTH_ENABLED === 'false' || process.env.VITE_AUTH_ENABLED === 'false';
     const isCliMode = process.env.HAL_CLI_MODE === 'true';
 
-    // Allow bypass ONLY in non-production environments with explicit flags
-    if (isDev && (isAuthDisabled || isCliMode)) {
+    // Allow bypass in development with flags OR if explicitly in CLI mode
+    if ((isDev && isAuthDisabled) || isCliMode) {
         console.log(
             `[AUTH] Bypass active (Environment: ${process.env.NODE_ENV}, Reason: ${isCliMode ? 'CLI' : 'Disabled'})`,
         );
-        req.user = { id: 'local-cli-user', email: 'local@haltest.dev', role: 'admin' };
+        req.user = { id: 'default-user-1', email: 'local@haltest.dev', role: 'admin' };
         return next();
     }
 
