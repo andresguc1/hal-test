@@ -48,7 +48,13 @@ app.use(i18nMiddleware.handle(i18n));
 
 const allowedOrigins = process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',')
-    : ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:2001'];
+    : [
+          'http://localhost:3000',
+          'http://localhost:5173',
+          'http://localhost:2001',
+          'https://haltest.com',
+          'https://hal-test-backend.onrender.com',
+      ];
 
 app.use(
     cors({
