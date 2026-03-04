@@ -20,7 +20,7 @@ export const helmetMiddleware = helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'"], // Removed 'unsafe-inline' for better security
+            scriptSrc: ["'self'", "'unsafe-inline'"], // Allowed unsafe-inline for Vite build loading
             styleSrc: [
                 "'self'",
                 "'unsafe-inline'",

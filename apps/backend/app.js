@@ -44,18 +44,25 @@ initSocket(server);
 // --- 1. SECURITY & CONFIG MIDDLEWARES ---
 app.set('trust proxy', 1);
 app.use(helmetMiddleware);
+app.use(i18nMiddleware.handle(i18n));
+
 const allowedOrigins = process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',')
-    : ['http://localhost:3000', 'http://localhost:5173'];
+    : ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:2001'];
 
 app.use(
     cors({
         origin: (origin, callback) => {
-            // Allow requests with no origin (like mobile apps or curl)
+            // Allow requests with no origin (like mobile apps or same-origin)
             if (!origin) return callback(null, true);
-            if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
+
+            // Check if origin is allowed or if it's the same origin
+            const isAllowed = allowedOrigins.some((allowed) => origin.startsWith(allowed));
+
+            if (isAllowed || process.env.NODE_ENV !== 'production') {
                 callback(null, true);
             } else {
+                console.warn(`[CORS Blocked] Origin: ${origin}`);
                 callback(new Error('Not allowed by CORS'));
             }
         },
@@ -75,10 +82,8 @@ const staticOptions = {
 app.use('/storage', express.static(STORAGE_DIR, staticOptions));
 app.use('/api/storage', express.static(STORAGE_DIR, staticOptions));
 
+// Rate Limiter
 app.use('/api', apiLimiter);
-
-// Localization
-app.use(i18nMiddleware.handle(i18n));
 
 // --- 3. SWAGGER DOCUMENTATION ---
 app.use(
@@ -132,7 +137,31 @@ app.get('/app', (req, res) => {
 // Use a regex for the app SPA fallback
 app.get(/\/app($|\/.*)/, (req, res, next) => {
     if (req.path.startsWith('/app/api')) return next();
-    res.sendFile(path.join(PUBLIC_DIR, 'app', 'index.html'));
+
+    // Skip if it looks like a static asset file (to avoid serving index.html as CSS/JS)
+    const assetExtensions = [
+        '.js',
+        '.css',
+        '.png',
+        '.jpg',
+        '.jpeg',
+        '.gif',
+        '.svg',
+        '.ico',
+        '.woff',
+        '.woff2',
+    ];
+    if (assetExtensions.some((ext) => req.path.toLowerCase().endsWith(ext))) {
+        return next();
+    }
+
+    const indexPath = path.join(PUBLIC_DIR, 'app', 'index.html');
+    res.sendFile(indexPath, (err) => {
+        if (err) {
+            console.error(`[SPA App Error] Failed to send index.html: ${err.message}`);
+            next(err);
+        }
+    });
 });
 
 // 2. Serve Landing Page
@@ -165,9 +194,10 @@ app.get(/^((?!\/(api|storage|app)).)*$/, (req, res, next) => {
 
 // --- 6. ERROR HANDLING ---
 app.use((req, res) => {
+    const t = typeof req.t === 'function' ? req.t : (key) => key;
     res.status(404).json({
         status: 'error',
-        message: req.t('common.route_not_found', { method: req.method, path: req.path }),
+        message: t('common.route_not_found', { method: req.method, path: req.path }),
     });
 });
 app.use(errorHandler);

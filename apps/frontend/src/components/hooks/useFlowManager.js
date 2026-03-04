@@ -218,8 +218,21 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
     const resolvedNodes =
       typeof newNodes === "function" ? newNodes(nodesRef.current) : newNodes;
 
-    nodesRef.current = resolvedNodes;
-    setNodesState(resolvedNodes);
+    // ✨ ROBUST DEDUPLICATION: Prevent duplicate IDs that crash React Flow
+    const uniqueNodes = [];
+    const seenIds = new Set();
+
+    for (const node of resolvedNodes) {
+      if (!seenIds.has(node.id)) {
+        seenIds.add(node.id);
+        uniqueNodes.push(node);
+      } else {
+        console.warn(`[useFlowManager] 🛡️ Duplicate node detected and filtered: ${node.id}`);
+      }
+    }
+
+    nodesRef.current = uniqueNodes;
+    setNodesState(uniqueNodes);
     setHasUnsavedChanges(true); // Mark as dirty on ANY node change
   }, []);
 

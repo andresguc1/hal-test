@@ -15,18 +15,15 @@ const errorHandler = (err, req, res, _next) => {
     const statusCode = err.statusCode || 500;
 
     // 2. Determine the error message.
+    const t = typeof req.t === 'function' ? req.t : (key) => key;
     const message =
         statusCode === 500 && process.env.NODE_ENV === 'production'
-            ? req.t('common.error_internal')
-            : err.message || req.t('common.error_unknown');
+            ? t('common.error_internal')
+            : err.message || t('common.error_unknown');
 
     // 3. Log the full error on the server (not to the client).
-    console.error(`[ERROR ${statusCode}]: ${message}`);
-
-    // Optional: Log the stack trace only in development for debugging.
-    if (process.env.NODE_ENV !== 'production' && statusCode === 500) {
-        console.error(err.stack);
-    }
+    console.error(`[ERROR ${statusCode}]: ${err.message || message}`);
+    console.error(err.stack);
 
     // 4. Send the standardized JSON response.
     res.status(statusCode).json({
