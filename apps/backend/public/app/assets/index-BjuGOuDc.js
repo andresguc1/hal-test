@@ -90794,11 +90794,13 @@ var NHe = class extends sm {
             const n = this.options;
             ((this.options = this.#e.defaultMutationOptions(t)),
                 Tw(this.options, n) ||
-                    this.#e.getMutationCache().notify({
-                        type: 'observerOptionsUpdated',
-                        mutation: this.#n,
-                        observer: this,
-                    }),
+                    this.#e
+                        .getMutationCache()
+                        .notify({
+                            type: 'observerOptionsUpdated',
+                            mutation: this.#n,
+                            observer: this,
+                        }),
                 n?.mutationKey &&
                 this.options.mutationKey &&
                 gd(n.mutationKey) !== gd(this.options.mutationKey)
@@ -107229,8 +107231,8 @@ function MFe({ socket: e, nodes: t = [], edges: n = [] }) {
                                                                             {
                                                                                 fileName:
                                                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/TerminalPanel.jsx',
-                                                                                lineNumber: 425,
-                                                                                columnNumber: 42,
+                                                                                lineNumber: 426,
+                                                                                columnNumber: 19,
                                                                             },
                                                                             this,
                                                                         ),
@@ -107270,7 +107272,7 @@ function MFe({ socket: e, nodes: t = [], edges: n = [] }) {
                                                                                 {
                                                                                     fileName:
                                                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/TerminalPanel.jsx',
-                                                                                    lineNumber: 442,
+                                                                                    lineNumber: 444,
                                                                                     columnNumber: 27,
                                                                                 },
                                                                                 this,
@@ -107283,7 +107285,7 @@ function MFe({ socket: e, nodes: t = [], edges: n = [] }) {
                                                                                 {
                                                                                     fileName:
                                                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/TerminalPanel.jsx',
-                                                                                    lineNumber: 442,
+                                                                                    lineNumber: 444,
                                                                                     columnNumber: 49,
                                                                                 },
                                                                                 this,
@@ -107294,7 +107296,7 @@ function MFe({ socket: e, nodes: t = [], edges: n = [] }) {
                                                                   {
                                                                       fileName:
                                                                           '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/TerminalPanel.jsx',
-                                                                      lineNumber: 437,
+                                                                      lineNumber: 439,
                                                                       columnNumber: 15,
                                                                   },
                                                                   this,
@@ -107326,7 +107328,7 @@ function MFe({ socket: e, nodes: t = [], edges: n = [] }) {
                                                                                             {
                                                                                                 fileName:
                                                                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/TerminalPanel.jsx',
-                                                                                                lineNumber: 448,
+                                                                                                lineNumber: 450,
                                                                                                 columnNumber: 21,
                                                                                             },
                                                                                             this,
@@ -107337,7 +107339,7 @@ function MFe({ socket: e, nodes: t = [], edges: n = [] }) {
                                                                                 {
                                                                                     fileName:
                                                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/TerminalPanel.jsx',
-                                                                                    lineNumber: 447,
+                                                                                    lineNumber: 449,
                                                                                     columnNumber: 19,
                                                                                 },
                                                                                 this,
@@ -107359,7 +107361,7 @@ function MFe({ socket: e, nodes: t = [], edges: n = [] }) {
                                                                                             {
                                                                                                 fileName:
                                                                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/TerminalPanel.jsx',
-                                                                                                lineNumber: 456,
+                                                                                                lineNumber: 458,
                                                                                                 columnNumber: 21,
                                                                                             },
                                                                                             this,
@@ -107380,7 +107382,7 @@ function MFe({ socket: e, nodes: t = [], edges: n = [] }) {
                                                                                                             {
                                                                                                                 fileName:
                                                                                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/TerminalPanel.jsx',
-                                                                                                                lineNumber: 458,
+                                                                                                                lineNumber: 460,
                                                                                                                 columnNumber: 46,
                                                                                                             },
                                                                                                             this,
@@ -107393,7 +107395,7 @@ function MFe({ socket: e, nodes: t = [], edges: n = [] }) {
                                                                                             {
                                                                                                 fileName:
                                                                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/TerminalPanel.jsx',
-                                                                                                lineNumber: 457,
+                                                                                                lineNumber: 459,
                                                                                                 columnNumber: 21,
                                                                                             },
                                                                                             this,
@@ -107405,7 +107407,7 @@ function MFe({ socket: e, nodes: t = [], edges: n = [] }) {
                                                                                 {
                                                                                     fileName:
                                                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/TerminalPanel.jsx',
-                                                                                    lineNumber: 455,
+                                                                                    lineNumber: 457,
                                                                                     columnNumber: 19,
                                                                                 },
                                                                                 this,
@@ -107416,7 +107418,7 @@ function MFe({ socket: e, nodes: t = [], edges: n = [] }) {
                                                                   {
                                                                       fileName:
                                                                           '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/TerminalPanel.jsx',
-                                                                      lineNumber: 445,
+                                                                      lineNumber: 447,
                                                                       columnNumber: 15,
                                                                   },
                                                                   this,
@@ -107428,7 +107430,7 @@ function MFe({ socket: e, nodes: t = [], edges: n = [] }) {
                                                       {
                                                           fileName:
                                                               '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/TerminalPanel.jsx',
-                                                          lineNumber: 429,
+                                                          lineNumber: 431,
                                                           columnNumber: 13,
                                                       },
                                                       this,
@@ -107481,7 +107483,7 @@ function MFe({ socket: e, nodes: t = [], edges: n = [] }) {
                                                   {
                                                       fileName:
                                                           '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/TerminalPanel.jsx',
-                                                      lineNumber: 477,
+                                                      lineNumber: 479,
                                                       columnNumber: 13,
                                                   },
                                                   this,
@@ -107507,7 +107509,7 @@ function MFe({ socket: e, nodes: t = [], edges: n = [] }) {
                                                   {
                                                       fileName:
                                                           '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/TerminalPanel.jsx',
-                                                      lineNumber: 478,
+                                                      lineNumber: 480,
                                                       columnNumber: 13,
                                                   },
                                                   this,
@@ -107531,7 +107533,7 @@ function MFe({ socket: e, nodes: t = [], edges: n = [] }) {
                                                           {
                                                               fileName:
                                                                   '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/TerminalPanel.jsx',
-                                                              lineNumber: 497,
+                                                              lineNumber: 499,
                                                               columnNumber: 15,
                                                           },
                                                           this,
@@ -107542,7 +107544,7 @@ function MFe({ socket: e, nodes: t = [], edges: n = [] }) {
                                                   {
                                                       fileName:
                                                           '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/TerminalPanel.jsx',
-                                                      lineNumber: 491,
+                                                      lineNumber: 493,
                                                       columnNumber: 13,
                                                   },
                                                   this,
@@ -107554,7 +107556,7 @@ function MFe({ socket: e, nodes: t = [], edges: n = [] }) {
                                       {
                                           fileName:
                                               '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/TerminalPanel.jsx',
-                                          lineNumber: 471,
+                                          lineNumber: 473,
                                           columnNumber: 11,
                                       },
                                       this,
@@ -107565,7 +107567,7 @@ function MFe({ socket: e, nodes: t = [], edges: n = [] }) {
                           {
                               fileName:
                                   '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/TerminalPanel.jsx',
-                              lineNumber: 469,
+                              lineNumber: 471,
                               columnNumber: 7,
                           },
                           this,
@@ -107599,7 +107601,7 @@ function VFe() {
                     {
                         fileName:
                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/TerminalPanel.jsx',
-                        lineNumber: 511,
+                        lineNumber: 513,
                         columnNumber: 7,
                     },
                     this,
@@ -107615,7 +107617,7 @@ function VFe() {
                     {
                         fileName:
                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/TerminalPanel.jsx',
-                        lineNumber: 512,
+                        lineNumber: 514,
                         columnNumber: 7,
                     },
                     this,
@@ -107627,7 +107629,7 @@ function VFe() {
         {
             fileName:
                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/TerminalPanel.jsx',
-            lineNumber: 510,
+            lineNumber: 512,
             columnNumber: 5,
         },
         this,
@@ -107651,7 +107653,7 @@ function IFe({ log: e }) {
                     {
                         fileName:
                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/TerminalPanel.jsx',
-                        lineNumber: 522,
+                        lineNumber: 524,
                         columnNumber: 7,
                     },
                     this,
@@ -107673,7 +107675,7 @@ function IFe({ log: e }) {
                                     {
                                         fileName:
                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/TerminalPanel.jsx',
-                                        lineNumber: 532,
+                                        lineNumber: 534,
                                         columnNumber: 11,
                                     },
                                     this,
@@ -107686,7 +107688,7 @@ function IFe({ log: e }) {
                     {
                         fileName:
                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/TerminalPanel.jsx',
-                        lineNumber: 525,
+                        lineNumber: 527,
                         columnNumber: 7,
                     },
                     this,
@@ -107698,7 +107700,7 @@ function IFe({ log: e }) {
         {
             fileName:
                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/TerminalPanel.jsx',
-            lineNumber: 521,
+            lineNumber: 523,
             columnNumber: 5,
         },
         this,
@@ -107721,7 +107723,7 @@ function HFe({ line: e }) {
               {
                   fileName:
                       '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/TerminalPanel.jsx',
-                  lineNumber: 545,
+                  lineNumber: 547,
                   columnNumber: 5,
               },
               this,
@@ -107741,7 +107743,7 @@ function Xf({ cmd: e, desc: t }) {
                     {
                         fileName:
                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/TerminalPanel.jsx',
-                        lineNumber: 559,
+                        lineNumber: 561,
                         columnNumber: 7,
                     },
                     this,
@@ -107754,7 +107756,7 @@ function Xf({ cmd: e, desc: t }) {
                     {
                         fileName:
                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/TerminalPanel.jsx',
-                        lineNumber: 560,
+                        lineNumber: 562,
                         columnNumber: 7,
                     },
                     this,
@@ -107766,7 +107768,7 @@ function Xf({ cmd: e, desc: t }) {
         {
             fileName:
                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/TerminalPanel.jsx',
-            lineNumber: 558,
+            lineNumber: 560,
             columnNumber: 5,
         },
         this,
@@ -113255,7 +113257,7 @@ var E6e = (e, t = !1) => {
                 return (
                     this.#c
                         ? (h = this.#c)
-                        : ((h = mUe(() => YFe(() => import('./CDWEKZTF-B7mKS6wu.js'), []))),
+                        : ((h = mUe(() => YFe(() => import('./CDWEKZTF-CdHtyJQT.js'), []))),
                           (this.#c = h)),
                     wze(this.#i, this.#a),
                     uUe(
