@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import i18n from "../i18n";
 import { api } from "../utils/api";
+import { useProjectManager } from "./hooks/useProjectManager";
 
 // ─── Log type → color mapping ─────────────────────────────────────────────────
 const LOG_COLORS = {
@@ -38,6 +39,7 @@ const CODE_DEBOUNCE_MS = 500;
 
 export default function TerminalPanel({ socket, nodes = [], edges = [] }) {
   const { logs, clearLogs, isPanelVisible, togglePanel } = useLogs();
+  const { currentProject } = useProjectManager();
   const { t } = useTranslation();
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
@@ -75,21 +77,23 @@ export default function TerminalPanel({ socket, nodes = [], edges = [] }) {
     const timer = setTimeout(async () => {
       setIsGenerating(true);
       try {
-        // Recursive function to map nodes and their children
-        const mapNodes = (nodesToMap) => {
-          return nodesToMap.map((node) => ({
-            type: node.data.type,
-            data: {
-              configuration: node.data.configuration,
-              label: node.data.label,
-              customLabel: node.data.customLabel,
-              // Recursive expansion of sub-nodes for components
-              // Fix: use subFlow.nodes from the store
-              subNodes: node.data.subFlow?.nodes
-                ? mapNodes(node.data.subFlow.nodes)
-                : [],
-            },
-          }));
+        // Simplified mapNodes: just list current level nodes,
+        // Backend now handles the recursion using projectId.
+        const mapNodes = (allNodes) => {
+          if (!allNodes || !Array.isArray(allNodes)) return [];
+
+          return allNodes
+            .filter((n) => !n.parentNode && !n.parentId) // Only root nodes of current flow
+            .map((node) => ({
+              id: node.id,
+              type: node.data?.type || node.type,
+              data: {
+                configuration: node.data?.configuration || {},
+                label: node.data?.label || node.data?.customLabel || node.type,
+                customLabel: node.data?.customLabel,
+              },
+            }))
+            .filter(Boolean);
         };
 
         const flowSteps = mapNodes(nodes);
@@ -99,6 +103,7 @@ export default function TerminalPanel({ socket, nodes = [], edges = [] }) {
           framework: "playwright",
           language: language,
           locale: i18n.language, // Pass current UI locale
+          projectId: currentProject?.id,
         });
 
         if (result.success && result.code) {
@@ -112,7 +117,7 @@ export default function TerminalPanel({ socket, nodes = [], edges = [] }) {
     }, CODE_DEBOUNCE_MS);
 
     return () => clearTimeout(timer);
-  }, [nodes, edges, mode, language]);
+  }, [nodes, edges, mode, language, currentProject?.id]);
 
   const handleCopyCode = useCallback(() => {
     if (!generatedCode) return;
@@ -373,38 +378,6 @@ export default function TerminalPanel({ socket, nodes = [], edges = [] }) {
       <div
         className="flex-1 relative overflow-hidden" // Main container for content
       >
-        {/* Global WIP Overlay for Code Mode */}
-        <AnimatePresence>
-          {mode === "code" && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 z-30 backdrop-blur-md bg-slate-950/80 flex flex-col items-center justify-center p-4"
-            >
-              <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-6 w-full max-w-sm text-center shadow-2xl">
-                <div className="w-14 h-14 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-amber-500/30">
-                  <AlertTriangle size={28} className="text-amber-400" />
-                </div>
-                <h3 className="text-amber-400 font-bold text-base mb-2 uppercase tracking-wider">
-                  {t("terminal.wip_title", "Feature Work in Progress")}
-                </h3>
-                <p className="text-slate-300 text-xs leading-relaxed font-sans mb-4">
-                  {t(
-                    "terminal.wip_message",
-                    "Estamos trabajando en mejorar la precisión y robustez del generador de código. Esta característica estará disponible completamente pronto.",
-                  )}
-                </p>
-                <div className="flex justify-center">
-                  <span className="px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-400 text-[9px] font-bold uppercase tracking-widest">
-                    V8 Engine Upgrade
-                  </span>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
         <div
           ref={scrollRef}
           className="h-full overflow-y-auto p-3 space-y-px custom-scrollbar scroll-smooth"
@@ -482,6 +455,17 @@ export default function TerminalPanel({ socket, nodes = [], edges = [] }) {
                 exit={{ opacity: 0 }}
                 className="relative min-h-full"
               >
+                {/* Under Development Warning */}
+                <div className="mb-4 flex items-center gap-2 p-2 rounded bg-amber-500/10 border border-amber-500/20 text-amber-200/70 text-[10px]">
+                  <AlertTriangle size={12} className="text-amber-500" />
+                  <span>
+                    {t(
+                      "terminal.dev_warning",
+                      "Feature Under Development: Code Preview is experimental and may contain missing implementations.",
+                    )}
+                  </span>
+                </div>
+
                 {/* Copy Button */}
                 <button
                   onClick={handleCopyCode}

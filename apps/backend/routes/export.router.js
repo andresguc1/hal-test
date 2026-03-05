@@ -4,9 +4,9 @@ import { exportService } from '../services/exporter/index.js';
 const router = Router();
 
 // Endpoint to export to code (Playwright, etc.)
-router.post('/code', (req, res) => {
+router.post('/code', async (req, res) => {
     try {
-        const { flow, framework, language, locale } = req.body;
+        const { flow, framework, language, locale, projectId } = req.body;
 
         if (!flow || !Array.isArray(flow)) {
             return res.status(400).json({
@@ -15,11 +15,16 @@ router.post('/code', (req, res) => {
             });
         }
 
+        // Resolve components recursively if projectId is provided
+        const resolvedFlow = projectId
+            ? await exportService.resolveSubFlows(flow, projectId)
+            : flow;
+
         const result = exportService.generateCode(
-            flow,
+            resolvedFlow,
             framework || 'playwright',
             language || 'javascript',
-            locale || 'es', // Default to ES if not provided
+            locale || 'es',
         );
 
         if (result.success) {

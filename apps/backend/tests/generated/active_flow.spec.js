@@ -1,9 +1,9 @@
 import { test } from '@playwright/test';
 
 test('Flujo Generado Hal-Test', async ({ page }) => {
-    console.log('🚀 Iniciando ejecución del flujo en JavaScript...');
+    console.log('🚀 Iniciando ejecución del flujo en javascript...');
     await test.step('Launch Browser', async () => {
-        // Navegador ya iniciado por el runner de Playwright
+        // Browser managed by runner
     });
 
     await test.step('Navigate to SauceDemo', async () => {
@@ -27,7 +27,7 @@ test('Flujo Generado Hal-Test', async ({ page }) => {
     });
 
     await test.step('Wait List Loaded', async () => {
-        // Espera de red saltada: no se proporcionó patrón de URL
+        // Network wait skipped: no URL pattern provided
     });
 
     await test.step('Evidence', async () => {
@@ -35,6 +35,11 @@ test('Flujo Generado Hal-Test', async ({ page }) => {
     });
 
     await test.step('Finish Tour', async () => {
-        // Playwright cierra automáticamente el contexto al finalizar el test
+        // Browser managed by runner
     });
+
+    await test.step('Open URL', async () => {
+        await page.goto('https://www.saucedemo.com');
+    });
+    console.log('✅ Flujo completado con éxito.');
 });

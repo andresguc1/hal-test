@@ -1,6 +1,55 @@
-import { generatePlaywrightCode } from './generators/playwright.generator.js';
+import { PlaywrightGenerator } from './generators/PlaywrightGenerator.js';
 
 export const exportService = {
+    /**
+     * Resuelve recursivamente los sub-flujos de los componentes.
+     * @param {Array} nodes - Nodos del flujo.
+     * @param {string} projectId - ID del proyecto para buscar las tablas.
+     * @returns {Promise<Array>} - Nodos con subNodes poblados.
+     */
+    resolveSubFlows: async (nodes, projectId) => {
+        if (!nodes || !Array.isArray(nodes)) return [];
+
+        const { Flow, Node, Edge } = await import('../../database/init.js');
+        const resolvedNodes = [];
+
+        for (const node of nodes) {
+            const newNode = { ...node };
+            const type = node.type || node.data?.type;
+
+            if (type === 'component') {
+                const flowId = node.data?.configuration?.flowId || node.data?.flowId;
+                if (flowId && projectId) {
+                    const subFlow = await Flow.findOne({
+                        where: { id: flowId, projectId },
+                        include: [
+                            { model: Node, as: 'nodes' },
+                            { model: Edge, as: 'edges' },
+                        ],
+                    });
+
+                    if (subFlow) {
+                        // Mapear los nodos del sub-flujo al formato esperado
+                        const subNodesRaw = (subFlow.nodes || []).map((n) => ({
+                            id: n.nodeId,
+                            type: n.type,
+                            data: n.data,
+                            position: n.position,
+                        }));
+
+                        // Resolver recursivamente
+                        newNode.data = {
+                            ...newNode.data,
+                            subNodes: await exportService.resolveSubFlows(subNodesRaw, projectId),
+                        };
+                    }
+                }
+            }
+            resolvedNodes.push(newNode);
+        }
+        return resolvedNodes;
+    },
+
     /**
      * Genera código ejecutable basado en el flujo y el framework seleccionado.
      * @param {Array} flowData - Datos del flujo (lista de pasos).
@@ -10,8 +59,6 @@ export const exportService = {
     generateCode: (flowData, framework = 'playwright', language = 'javascript', locale = 'es') => {
         try {
             let code = '';
-            let extension = 'js';
-
             const extensionMap = {
                 javascript: 'js',
                 typescript: 'ts',
@@ -19,14 +66,14 @@ export const exportService = {
                 java: 'java',
                 csharp: 'cs',
             };
-
-            extension = extensionMap[language.toLowerCase()] || 'js';
+            const extension = extensionMap[language.toLowerCase()] || 'js';
 
             switch (framework.toLowerCase()) {
-                case 'playwright':
-                    code = generatePlaywrightCode(flowData, language, locale);
+                case 'playwright': {
+                    const generator = new PlaywrightGenerator(language, locale);
+                    code = generator.generate(flowData);
                     break;
-                // Futuro: case 'puppeteer': ...
+                }
                 default:
                     throw new Error(`Framework no soportado: ${framework}`);
             }
@@ -40,6 +87,7 @@ export const exportService = {
                 filename: `export_${Date.now()}.${extension}`,
             };
         } catch (error) {
+            console.error('[ExportService] Error generating code:', error);
             return {
                 success: false,
                 error: error.message,
