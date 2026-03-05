@@ -36,6 +36,7 @@ Most automation frameworks suffer from **"Framework Fatigue"**: complex YAMLs, b
 * **Node-Based Logic**: 50+ specialized nodes for DOM manipulation, network interception, and AI.
 * **Smart Connections**: Animated execution feedback—watch your test run in real-time.
 * **Category-Specific UI**: Glassmorphic design with 50+ unique icons for instant recognition.
+* **[Viendo la App: Documentación Visual](docs/visual-documentation.md)**: Guía detallada de nodos, colores y feedback en tiempo real.
 
 ### 🛠️ Developer-First DX
 * **Powerful CLI**: Integrated terminal tool for CI/CD pipelines (GitHub Actions, Jenkins).
@@ -54,40 +55,66 @@ Most automation frameworks suffer from **"Framework Fatigue"**: complex YAMLs, b
 
 ---
 
-## ⚡ Quick Start (Development)
+## ⚡ Quick Start
+The fastest way to get started is using **npx**. No cloning or installation required:
+
+```bash
+npx haltest@latest
+```
+*This will start the backend server, run pre-requisite checks, and open the HAL-TEST studio in your browser.*
+
+---
+
+## 🏗️ Technical Setup (Development)
 
 ### Prerequisites
-- **Node.js** 18+ and **pnpm**
+- **Node.js** 20+ and **pnpm**
 
 ### 1. Setup
 ```bash
-git clone [https://github.com/andresguc1/hal-test.git](https://github.com/andresguc1/hal-test.git)
+git clone https://github.com/andresguc1/hal-test.git
 cd hal-test
 pnpm install
-2. Configure Guest Mode
+```
+
+### 2. Configure Guest Mode
 For quick local testing without Supabase:
 
-Bash
+```bash
 # Set in your .env
 AUTH_ENABLED=false
 VITE_AUTH_ENABLED=false
-3. Run
-Bash
+```
+
+### 3. Run
+```bash
 pnpm --filter backend db:init
 pnpm run dev
-App: http://localhost:5173/app/
+```
 
-Server: http://localhost:2001
+**App**: [http://localhost:5173/app/](http://localhost:5173/app/)  
+**Server**: [http://localhost:2001](http://localhost:2001)
 
-💻 Terminal CLI
-Automate the automation. Install the HAL-TEST CLI to run flows in headless mode:
+---
 
-Bash
-cd apps/cli && npm install -g .
+## 💻 Terminal CLI
+Automate your workflows. You can run the CLI directly via **npx** (recommended) or install it globally.
 
+### Running with NPX
+```bash
 # Run a flow by ID
-haltest run <flow_id> --headed
-🐳 Docker Deployment (Recommended)
+npx haltest@latest cli run <flow_id> --headed
+```
+
+### Local Installation
+If you prefer a local installation:
+```bash
+cd apps/cli && npm install -g .
+```
+
+---
+
+## 🐳 Docker Deployment (Recommended)
 To avoid missing system dependencies for Playwright, use Docker:
 
 Bash

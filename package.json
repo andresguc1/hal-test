@@ -3,6 +3,7 @@
     "version": "1.0.0",
     "description": "Unified platform for automation and mock services",
     "license": "GPL-3.0-only",
+    "type": "module",
     "repository": {
         "type": "git",
         "url": "https://github.com/USER_NAME/halt-test.git"
@@ -28,7 +29,8 @@
         "stop": "fuser -k 2001/tcp 3000/tcp || true",
         "prepare": "husky",
         "release": "pnpm format && pnpm lint:fix && pnpm test && cd apps/cli && npm version patch && pnpm build && cd dist && npm publish",
-        "update:app": "git pull && pnpm install && pnpm build:monolith"
+        "update:app": "git pull && pnpm install && pnpm build:monolith",
+        "setup": "pnpm install && node scripts/setup.js"
     },
     "devDependencies": {
         "husky": "^9.1.7",

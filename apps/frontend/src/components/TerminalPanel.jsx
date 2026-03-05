@@ -12,10 +12,12 @@ import {
   Code2,
   Copy,
   Check,
+  AlertTriangle,
 } from "lucide-react";
 import { useLogs } from "../context/LogContext";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
+import i18n from "../i18n";
 import { api } from "../utils/api";
 
 // ─── Log type → color mapping ─────────────────────────────────────────────────
@@ -73,20 +75,30 @@ export default function TerminalPanel({ socket, nodes = [], edges = [] }) {
     const timer = setTimeout(async () => {
       setIsGenerating(true);
       try {
-        // Convert nodes to flow steps format expected by backend
-        const flowSteps = nodes.map((node) => ({
-          type: node.data.type,
-          data: {
-            configuration: node.data.configuration,
-            label: node.data.label,
-            customLabel: node.data.customLabel,
-          },
-        }));
+        // Recursive function to map nodes and their children
+        const mapNodes = (nodesToMap) => {
+          return nodesToMap.map((node) => ({
+            type: node.data.type,
+            data: {
+              configuration: node.data.configuration,
+              label: node.data.label,
+              customLabel: node.data.customLabel,
+              // Recursive expansion of sub-nodes for components
+              // Fix: use subFlow.nodes from the store
+              subNodes: node.data.subFlow?.nodes
+                ? mapNodes(node.data.subFlow.nodes)
+                : [],
+            },
+          }));
+        };
+
+        const flowSteps = mapNodes(nodes);
 
         const result = await api.post("/export/code", {
           flow: flowSteps,
           framework: "playwright",
           language: language,
+          locale: i18n.language, // Pass current UI locale
         });
 
         if (result.success && result.code) {
@@ -359,112 +371,148 @@ export default function TerminalPanel({ socket, nodes = [], edges = [] }) {
 
       {/* ── Content ── */}
       <div
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto p-3 space-y-px custom-scrollbar scroll-smooth"
+        className="flex-1 relative overflow-hidden" // Main container for content
       >
-        <AnimatePresence mode="wait">
-          {mode === "log" ? (
+        {/* Global WIP Overlay for Code Mode */}
+        <AnimatePresence>
+          {mode === "code" && (
             <motion.div
-              key="log"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              className="absolute inset-0 z-30 backdrop-blur-md bg-slate-950/80 flex flex-col items-center justify-center p-4"
             >
-              {logs.length === 0 ? (
-                <EmptyState />
-              ) : (
-                logs.map((log) => <LogLine key={log.id} log={log} />)
-              )}
-            </motion.div>
-          ) : mode === "interactive" ? (
-            <motion.div
-              key="interactive"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
-              {shellLines.length === 0 ? (
-                <div className="py-2 space-y-1 text-[11px]">
-                  <p className="text-indigo-400 font-bold mb-2">
-                    {t("terminal.help_title")}
-                  </p>
-                  <p className="text-slate-500 mb-3">
-                    {t("terminal.help_intro")}
-                  </p>
-                  <div className="space-y-1 pl-2 border-l border-slate-800">
-                    <HelpLine
-                      cmd="npx playwright --version"
-                      desc={t("terminal.cmd_version")}
-                    />
-                    <HelpLine
-                      cmd="npx playwright codegen <url>"
-                      desc={t("terminal.cmd_codegen")}
-                    />
-                    <HelpLine
-                      cmd="npx playwright test tests/generated/active_flow.spec.js"
-                      desc={t("terminal.cmd_test")}
-                    />
-                    <HelpLine
-                      cmd="npx playwright test tests/generated/active_flow.spec.js --headed"
-                      desc={t("terminal.cmd_test_headed")}
-                    />
-                    <HelpLine
-                      cmd="npx playwright show-report"
-                      desc={t("terminal.cmd_report")}
-                    />
-                    <HelpLine
-                      cmd="npx playwright install"
-                      desc={t("terminal.cmd_install")}
-                    />
-                  </div>
-                  <p className="text-slate-600 mt-3 text-[10px]">
-                    {t("terminal.help_footer")}
-                  </p>
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-6 w-full max-w-sm text-center shadow-2xl">
+                <div className="w-14 h-14 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-amber-500/30">
+                  <AlertTriangle size={28} className="text-amber-400" />
                 </div>
-              ) : (
-                shellLines.map((line) => (
-                  <ShellLine key={line.id} line={line} />
-                ))
-              )}
-            </motion.div>
-          ) : (
-            <motion.div
-              key="code"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="relative h-full"
-            >
-              {/* Copy Button */}
-              <button
-                onClick={handleCopyCode}
-                className="absolute top-0 right-0 p-1.5 rounded bg-slate-800/50 hover:bg-slate-700 text-slate-400 hover:text-white transition-all border border-white/5"
-                title={t("common.copy")}
-              >
-                {copied ? <Check size={14} /> : <Copy size={14} />}
-              </button>
-
-              <div className="pr-10">
-                {generatedCode ? (
-                  <pre className="text-[11px] leading-relaxed text-slate-300 font-mono overflow-x-auto selection:bg-indigo-500/30">
-                    <code
-                      dangerouslySetInnerHTML={{
-                        __html: highlightCode(generatedCode, language),
-                      }}
-                    />
-                  </pre>
-                ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-slate-600 gap-2 opacity-50 py-10">
-                    <Code2 size={28} strokeWidth={1} />
-                    <span className="text-[10px] uppercase tracking-widest text-center">
-                      Build your flow to see <br /> generated code here
-                    </span>
-                  </div>
-                )}
+                <h3 className="text-amber-400 font-bold text-base mb-2 uppercase tracking-wider">
+                  {t("terminal.wip_title", "Feature Work in Progress")}
+                </h3>
+                <p className="text-slate-300 text-xs leading-relaxed font-sans mb-4">
+                  {t(
+                    "terminal.wip_message",
+                    "Estamos trabajando en mejorar la precisión y robustez del generador de código. Esta característica estará disponible completamente pronto.",
+                  )}
+                </p>
+                <div className="flex justify-center">
+                  <span className="px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-400 text-[9px] font-bold uppercase tracking-widest">
+                    V8 Engine Upgrade
+                  </span>
+                </div>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
+
+        <div
+          ref={scrollRef}
+          className="h-full overflow-y-auto p-3 space-y-px custom-scrollbar scroll-smooth"
+        >
+          <AnimatePresence mode="wait">
+            {mode === "log" ? (
+              <motion.div
+                key="log"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                {logs.length === 0 ? (
+                  <EmptyState />
+                ) : (
+                  logs.map((log) => <LogLine key={log.id} log={log} />)
+                )}
+              </motion.div>
+            ) : mode === "interactive" ? (
+              <motion.div
+                key="interactive"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                {shellLines.length === 0 ? (
+                  <div className="py-2 space-y-1 text-[11px]">
+                    <p className="text-indigo-400 font-bold mb-2">
+                      {t("terminal.help_title")}
+                    </p>
+                    <p className="text-slate-500 mb-3">
+                      {t("terminal.help_intro")}
+                    </p>
+                    <div className="space-y-1 pl-2 border-l border-slate-800">
+                      <HelpLine
+                        cmd="npx playwright --version"
+                        desc={t("terminal.cmd_version")}
+                      />
+                      <HelpLine
+                        cmd="npx playwright codegen <url>"
+                        desc={t("terminal.cmd_codegen")}
+                      />
+                      <HelpLine
+                        cmd="npx playwright test tests/generated/active_flow.spec.js"
+                        desc={t("terminal.cmd_test")}
+                      />
+                      <HelpLine
+                        cmd="npx playwright test tests/generated/active_flow.spec.js --headed"
+                        desc={t("terminal.cmd_test_headed")}
+                      />
+                      <HelpLine
+                        cmd="npx playwright show-report"
+                        desc={t("terminal.cmd_report")}
+                      />
+                      <HelpLine
+                        cmd="npx playwright install"
+                        desc={t("terminal.cmd_install")}
+                      />
+                    </div>
+                    <p className="text-slate-600 mt-3 text-[10px]">
+                      {t("terminal.help_footer")}
+                    </p>
+                  </div>
+                ) : (
+                  shellLines.map((line) => (
+                    <ShellLine key={line.id} line={line} />
+                  ))
+                )}
+              </motion.div>
+            ) : (
+              <motion.div
+                key="code"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="relative min-h-full"
+              >
+                {/* Copy Button */}
+                <button
+                  onClick={handleCopyCode}
+                  className="absolute top-0 right-0 p-1.5 rounded bg-slate-800/50 hover:bg-slate-700 text-slate-400 hover:text-white transition-all border border-white/5 z-10"
+                  title={t("common.copy")}
+                >
+                  {copied ? <Check size={14} /> : <Copy size={14} />}
+                </button>
+
+                <div className="pr-10">
+                  {generatedCode ? (
+                    <pre className="text-[11px] leading-relaxed text-slate-300 font-mono overflow-x-auto selection:bg-indigo-500/30">
+                      <code
+                        dangerouslySetInnerHTML={{
+                          __html: highlightCode(generatedCode, language),
+                        }}
+                      />
+                    </pre>
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-slate-600 gap-2 opacity-50 py-10">
+                      <Code2 size={28} strokeWidth={1} />
+                      <span className="text-[10px] uppercase tracking-widest text-center">
+                        Build your flow to see <br /> generated code here
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
 
       {/* ── Input Bar (Interactive Mode only) ── */}

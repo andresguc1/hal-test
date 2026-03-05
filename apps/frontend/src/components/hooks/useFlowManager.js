@@ -485,10 +485,12 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
   // ========================================
   useEffect(() => {
     // Only save if auto-save is enabled AND the current nodes belong to the active flowId
+    // AND there are actual unsaved changes
     if (
       !autoSaveEnabled ||
       !currentProject ||
       !currentFlowId ||
+      !hasUnsavedChanges ||
       lastLoadedFlowId.current !== currentFlowId
     )
       return;
@@ -511,7 +513,15 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
     return () => {
       debouncedSave.cancel();
     };
-  }, [nodes, edges, autoSaveEnabled, saveFlow, currentProject, currentFlowId]);
+  }, [
+    nodes,
+    edges,
+    autoSaveEnabled,
+    saveFlow,
+    currentProject,
+    currentFlowId,
+    hasUnsavedChanges,
+  ]);
 
   // ========================================
   // VERSIONADO AUTOMÁTICO

@@ -159,3 +159,17 @@ export const initDb = async (_force = false) => {
 };
 
 export { User, Project, Canvas, Flow, Node, Edge, Run, StepResult };
+
+// Allow running directly from CLI
+if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith('init.js')) {
+    const force = process.argv.includes('--force');
+    initDb(force)
+        .then(() => {
+            console.log('✅ Database initialization successful.');
+            process.exit(0);
+        })
+        .catch((error) => {
+            console.error('❌ Database initialization failed:', error);
+            process.exit(1);
+        });
+}

@@ -6,7 +6,7 @@ const router = Router();
 // Endpoint to export to code (Playwright, etc.)
 router.post('/code', (req, res) => {
     try {
-        const { flow, framework, language } = req.body;
+        const { flow, framework, language, locale } = req.body;
 
         if (!flow || !Array.isArray(flow)) {
             return res.status(400).json({
@@ -19,6 +19,7 @@ router.post('/code', (req, res) => {
             flow,
             framework || 'playwright',
             language || 'javascript',
+            locale || 'es', // Default to ES if not provided
         );
 
         if (result.success) {

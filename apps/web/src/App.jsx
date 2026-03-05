@@ -225,10 +225,13 @@ export default function App() {
             >
               {/* Launch App Button */}
               <motion.button
-                whileHover={{ scale: 1.05 }}
+                whileHover={{
+                  scale: 1.05,
+                  boxShadow: "0 0 20px rgba(99, 102, 241, 0.4)",
+                }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => window.open("/app", "_self")}
-                className="group relative px-8 py-4 bg-hal-primary-600 hover:bg-hal-primary-500 text-white rounded-lg font-bold uppercase tracking-wider overflow-hidden transition-all shadow-lg shadow-hal-primary-900/50"
+                className="group relative px-8 py-4 bg-hal-primary-500 hover:bg-hal-primary-400 text-white rounded-lg font-bold uppercase tracking-wider overflow-hidden transition-all shadow-xl shadow-hal-primary-900/40 border border-hal-primary-400/30"
               >
                 <span className="relative z-10 flex items-center gap-2">
                   {t("cta.launch_app") || "Launch App"}
@@ -239,7 +242,7 @@ export default function App() {
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
-                    strokeWidth="2"
+                    strokeWidth="2.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     className="transform group-hover:translate-x-1 transition-transform"
@@ -248,14 +251,15 @@ export default function App() {
                     <path d="m12 5 7 7-7 7" />
                   </svg>
                 </span>
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
               </motion.button>
 
               {/* Docs / GitHub Button */}
               <motion.button
                 whileHover={{
                   scale: 1.05,
-                  backgroundColor: "rgba(255,255,255,0.05)",
+                  backgroundColor: "rgba(255,255,255,0.1)",
+                  borderColor: "rgba(255,255,255,0.4)",
                 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() =>
@@ -264,7 +268,7 @@ export default function App() {
                     "_blank",
                   )
                 }
-                className="px-8 py-4 border border-white/10 hover:border-white/30 text-slate-300 hover:text-white rounded-lg font-bold uppercase tracking-wider transition-all backdrop-blur-sm"
+                className="px-8 py-4 bg-white/5 border border-white/20 hover:border-white/40 text-white rounded-lg font-bold uppercase tracking-wider transition-all backdrop-blur-md shadow-lg"
               >
                 {t("cta.star_github") || "GitHub"}
               </motion.button>
@@ -273,7 +277,8 @@ export default function App() {
               <motion.button
                 whileHover={{
                   scale: 1.05,
-                  backgroundColor: "rgba(255,255,255,0.05)",
+                  backgroundColor: "rgba(255,255,255,0.1)",
+                  borderColor: "rgba(255,255,255,0.4)",
                 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() =>
@@ -282,9 +287,9 @@ export default function App() {
                     "_blank",
                   )
                 }
-                className="px-8 py-4 border border-white/10 hover:border-white/30 text-slate-300 hover:text-white rounded-lg font-bold uppercase tracking-wider transition-all backdrop-blur-sm flex items-center gap-2"
+                className="px-8 py-4 bg-white/5 border border-white/20 hover:border-white/40 text-white rounded-lg font-bold uppercase tracking-wider transition-all backdrop-blur-md shadow-lg flex items-center gap-2"
               >
-                <Slack size={18} className="text-[#4A154B]" />
+                <Slack size={18} className="text-[#E01E5A]" />
                 {t("cta.community") || "Slack"}
               </motion.button>
             </motion.div>
@@ -296,16 +301,16 @@ export default function App() {
               transition={{ duration: 0.8, delay: 0.45 }}
               className="mb-16 max-w-md w-full"
             >
-              <div className="flex items-center justify-between bg-slate-900 border border-slate-700/50 rounded-xl p-4 shadow-2xl shadow-hal-primary-900/20 backdrop-blur-md">
+              <div className="flex items-center justify-between bg-slate-800/80 border border-white/10 rounded-xl p-4 shadow-2xl shadow-hal-primary-900/40 backdrop-blur-xl">
                 <div className="flex items-center gap-3">
-                  <span className="text-hal-primary-500 font-bold">$</span>
-                  <code className="text-white font-mono text-sm">
+                  <span className="text-hal-primary-400 font-bold">$</span>
+                  <code className="text-white font-mono text-sm tracking-tight">
                     npx haltest@latest
                   </code>
                 </div>
                 <button
                   onClick={handleCopy}
-                  className="p-2 hover:bg-white/10 rounded-lg transition-colors text-slate-400 hover:text-white group relative"
+                  className="p-2 bg-white/5 hover:bg-white/10 rounded-lg transition-colors text-slate-300 hover:text-white group relative border border-white/5"
                   title="Copy to clipboard"
                 >
                   {copied ? (

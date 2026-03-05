@@ -9,6 +9,7 @@ import {
   CheckCircle,
   Loader,
   Code2,
+  AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion as Motion, AnimatePresence } from "motion/react";
@@ -328,7 +329,24 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges }) => {
 
               {/* Code Config */}
               {exportMode === "code" && !generatedCode && (
-                <div className="flex flex-col items-center text-center p-8 bg-white/5 rounded-xl border border-white/5">
+                <div className="relative flex flex-col items-center text-center p-8 bg-white/5 rounded-xl border border-white/5 overflow-hidden">
+                  <div className="absolute inset-0 z-10 backdrop-blur-sm bg-slate-950/40 flex flex-col items-center justify-center p-6">
+                    <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-6 max-w-xs text-center shadow-2xl">
+                      <AlertTriangle
+                        size={28}
+                        className="text-amber-400 mx-auto mb-3"
+                      />
+                      <h4 className="text-amber-400 font-bold text-xs mb-2 uppercase tracking-widest">
+                        {t("dialogs.export.wip_title", "Work in Progress")}
+                      </h4>
+                      <p className="text-slate-300 text-[10px] leading-relaxed">
+                        {t(
+                          "dialogs.export.wip_desc",
+                          "El generador de código está siendo actualizado para soportar flujos complejos y localización avanzada. Estará listo en la próxima actualización.",
+                        )}
+                      </p>
+                    </div>
+                  </div>
                   <Code2
                     size={48}
                     className="text-indigo-400 mb-4 opacity-50"
@@ -347,8 +365,8 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges }) => {
                     <select
                       value={framework}
                       onChange={(e) => setFramework(e.target.value)}
-                      disabled={isProcessing}
-                      className="w-full mt-1 px-3 py-2 bg-slate-900 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-500"
+                      disabled={true}
+                      className="w-full mt-1 px-3 py-2 bg-slate-900 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-500 opacity-50"
                     >
                       <option value="playwright">Playwright</option>
                     </select>
@@ -425,7 +443,9 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges }) => {
               ) : (
                 <button
                   onClick={handleExportClick}
-                  disabled={isProcessing || nodes.length === 0}
+                  disabled={
+                    isProcessing || nodes.length === 0 || exportMode === "code"
+                  }
                   className="px-6 py-2 rounded-lg text-sm font-medium bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-lg shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
                 >
                   {isProcessing ? (

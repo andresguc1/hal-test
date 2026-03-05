@@ -7,7 +7,7 @@ export const exportService = {
      * @param {string} framework - Framework destino ('playwright', 'puppeteer', etc.).
      * @returns {object} - Resultado con el código generado y metadatos.
      */
-    generateCode: (flowData, framework = 'playwright', language = 'javascript') => {
+    generateCode: (flowData, framework = 'playwright', language = 'javascript', locale = 'es') => {
         try {
             let code = '';
             let extension = 'js';
@@ -24,7 +24,7 @@ export const exportService = {
 
             switch (framework.toLowerCase()) {
                 case 'playwright':
-                    code = generatePlaywrightCode(flowData, language);
+                    code = generatePlaywrightCode(flowData, language, locale);
                     break;
                 // Futuro: case 'puppeteer': ...
                 default:
