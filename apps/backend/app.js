@@ -162,9 +162,21 @@ app.get(/\/app($|\/.*)/, (req, res, next) => {
     }
 
     const indexPath = path.join(PUBLIC_DIR, 'app', 'index.html');
+
+    if (!fs.existsSync(indexPath)) {
+        console.error(`[SPA App Error] index.html not found at: ${indexPath}`);
+        return res.status(404).json({
+            status: 'error',
+            message: `Frontend application entry point not found. Expected at: ${indexPath}`,
+            hint: 'Ensure that the frontend is correctly built and included in the public/app directory.',
+        });
+    }
+
     res.sendFile(indexPath, (err) => {
         if (err) {
-            console.error(`[SPA App Error] Failed to send index.html: ${err.message}`);
+            console.error(
+                `[SPA App Error] Failed to send index.html from ${indexPath}: ${err.message}`,
+            );
             next(err);
         }
     });

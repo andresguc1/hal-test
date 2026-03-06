@@ -306,8 +306,10 @@ if (isAlreadyRunning) {
     process.exit(1);
   }
 
-  // Derive CWD: apps/backend/app.js → go up 3 levels → monorepo root
-  const backendCwd = path.resolve(BACKEND_ENTRY, "..", "..", "..");
+  // Derive CWD: The backend should run from where app.js is located or its parent.
+  // In the standalone bundle: dist/backend/app.js -> CWD should be dist/backend
+  // In monorepo: apps/backend/app.js -> CWD should be apps/backend
+  const backendCwd = path.dirname(BACKEND_ENTRY);
 
   console.log(style(c.bold, `  🚀 Starting HalTest Server...`));
   console.log(style(c.dim, `     Entry: ${BACKEND_ENTRY}`));
