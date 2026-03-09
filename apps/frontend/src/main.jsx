@@ -45,7 +45,9 @@ createRoot(document.getElementById("root")).render(
           </ToastProvider>
         </ReactFlowProvider>
       </ThemeProvider>
-      <ReactQueryDevtools initialIsOpen={false} />
+      {import.meta.env.DEV && (
+        <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />
+      )}
     </QueryClientProvider>
   </StrictMode>,
 );
