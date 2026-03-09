@@ -13,7 +13,7 @@ class ExecutionService {
      * Executes a flow from the backend.
      * @param {string} flowId
      * @param {string} projectId
-     * @param {object} options - { overrides: { headless: true }, runId: string }
+     * @param {object} options - { overrides: { headless: true }, runId: string, headers: object }
      */
     async executeFlow(flowId, projectId, options = {}) {
         console.log(`🚀 [ExecutionService] Starting remote execution for flow: ${flowId}`);
@@ -73,6 +73,7 @@ class ExecutionService {
             variables: {},
             executedNodeIds: new Set(),
             overrides: options.overrides || {},
+            headers: options.headers || {},
         };
 
         // Emit overall start
@@ -164,7 +165,7 @@ class ExecutionService {
                 runId: state.runId, // Ensure runId is ALWAYS in the body
             },
             t: i18n.t.bind(i18n),
-            headers: {},
+            headers: state.headers || {},
             // Needed for some controllers
             params: {},
         };

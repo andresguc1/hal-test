@@ -17,15 +17,27 @@ class AIService {
     }
 
     getProvider(providerName, apiKey, baseUrl) {
-        if (
-            ['openai', 'google', 'anthropic', 'grok', 'groq'].includes(providerName) &&
-            !apiKey &&
-            !process.env.OPENAI_API_KEY
-        ) {
-            // Validating key existence lazily
+        // Resolve effective API key using provider-specific env vars if not provided
+        let effectiveKey = apiKey;
+        if (!effectiveKey) {
+            switch (providerName) {
+                case 'google':
+                    effectiveKey = process.env.GOOGLE_API_KEY;
+                    break;
+                case 'anthropic':
+                    effectiveKey = process.env.ANTHROPIC_API_KEY;
+                    break;
+                case 'groq':
+                    effectiveKey = process.env.GROQ_API_KEY;
+                    break;
+                case 'grok':
+                    effectiveKey = process.env.XAI_API_KEY;
+                    break;
+                case 'openai':
+                    effectiveKey = process.env.OPENAI_API_KEY;
+                    break;
+            }
         }
-
-        const effectiveKey = apiKey || process.env.OPENAI_API_KEY;
 
         switch (providerName) {
             case 'google':
@@ -33,11 +45,16 @@ class AIService {
             case 'anthropic':
                 return createAnthropic({ apiKey: effectiveKey });
             case 'ollama': {
-                let ollamaUrl = baseUrl || 'http://localhost:11434/v1';
+                let ollamaUrl =
+                    baseUrl || process.env.OLLAMA_BASE_URL || 'http://localhost:11434/v1';
                 if (!ollamaUrl.endsWith('/v1')) {
                     ollamaUrl = `${ollamaUrl.replace(/\/$/, '')}/v1`;
                 }
+
+                // If apiKey is 'ollama', it's a marker from our resolution logic or a legacy call.
+                // We use standard createOpenAI config for Ollama's OpenAI-compatible endpoint.
                 return createOpenAI({
+                    compatibility: 'compatible',
                     baseURL: ollamaUrl,
                     apiKey: 'ollama',
                 });
@@ -61,7 +78,8 @@ class AIService {
      * @param {string} [preferredProvider] - Optional override
      */
     selectBestModel(taskType, preferredProvider) {
-        if (preferredProvider === 'ollama') return { provider: 'ollama', model: 'gemma3' };
+        const ollamaModel = process.env.OLLAMA_MODEL || 'gemma3';
+        if (preferredProvider === 'ollama') return { provider: 'ollama', model: ollamaModel };
 
         switch (taskType) {
             case 'coding':
@@ -79,7 +97,7 @@ class AIService {
                 return { provider: 'openai', model: 'gpt-4o' };
 
             case 'local':
-                return { provider: 'ollama', model: 'gemma3' };
+                return { provider: 'ollama', model: ollamaModel };
 
             default:
                 return { provider: 'openai', model: 'gpt-4o' };
@@ -91,11 +109,11 @@ class AIService {
         model,
         system,
         maxTokens,
-        temperature = 0.7, // Default behavior
+        temperature = 0.7,
         provider,
         apiKey,
         baseUrl,
-        taskType = 'reasoning', // Default task
+        taskType = 'reasoning',
     }) {
         try {
             // Apply Matrix Logic if no specific model/provider forced
@@ -109,8 +127,16 @@ class AIService {
                 temperature = 0.2;
             }
 
-            const activeProvider = provider || selected.provider;
-            const activeModel = model || selected.model;
+            let activeProvider = provider || selected.provider;
+            let activeModel = model || selected.model;
+
+            // --- SMART RESOLUTION FOR OLLAMA ---
+            if (activeProvider === 'ollama' && activeModel) {
+                activeModel = await this.resolveOllamaModel({
+                    baseUrl: baseUrl || process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
+                    requestedModel: activeModel,
+                });
+            }
 
             console.log(
                 `[AIService] Generating text. Task: ${taskType} -> Using: ${activeProvider}/${activeModel}, Temp: ${temperature}`,
@@ -130,7 +156,11 @@ class AIService {
             return { text, usage, finishReason };
         } catch (error) {
             console.error('[AIService] Error generating text:', error);
-            throw new Error(`AI Generation failed (${provider}/${model}): ${error.message}`);
+            const activeProvider = provider || 'unknown';
+            const activeModel = model || 'unknown';
+            throw new Error(
+                `AI Generation failed (${activeProvider}/${activeModel}): ${error.message}`,
+            );
         }
     }
 
@@ -188,7 +218,7 @@ class AIService {
 
             // For Ollama, use healthCheck first for better error messages
             if (provider === 'ollama') {
-                const validationModel = model || 'gemma3';
+                const validationModel = model || process.env.OLLAMA_MODEL || 'gemma3';
                 const health = await this.healthCheck({
                     baseUrl: baseUrl || 'http://localhost:11434',
                     model: validationModel,
@@ -243,12 +273,62 @@ class AIService {
     }
 
     /**
+     * Resolves a partial model name to an exact Ollama model tag.
+     * Example: "gemma" -> "gemma3:latest"
+     */
+    async resolveOllamaModel({ baseUrl, requestedModel }) {
+        try {
+            const health = await this.healthCheck({ baseUrl });
+            if (!health.ollamaRunning) return requestedModel; // Let it fail normally if not running
+
+            const availableModels = health.models || [];
+            if (availableModels.length === 0) return requestedModel;
+
+            // 1. Exact match
+            if (availableModels.includes(requestedModel)) return requestedModel;
+
+            // 2. Case-insensitive exact match
+            const exactCi = availableModels.find(
+                (m) => m.toLowerCase() === requestedModel.toLowerCase(),
+            );
+            if (exactCi) return exactCi;
+
+            // 3. Prefix match (e.g. "gemma" matches "gemma3:latest")
+            const prefixMatch = availableModels.find(
+                (m) =>
+                    m.startsWith(`${requestedModel}:`) ||
+                    m.startsWith(`${requestedModel}3`) ||
+                    m.includes(requestedModel),
+            );
+            if (prefixMatch) {
+                console.log(
+                    `[AIService] Resolved Ollama model '${requestedModel}' to '${prefixMatch}'`,
+                );
+                return prefixMatch;
+            }
+
+            // 4. Default to first available if requested is totally generic
+            if (requestedModel === 'ollama' || requestedModel === 'local') {
+                return availableModels[0];
+            }
+
+            return requestedModel;
+        } catch (e) {
+            console.warn(`[AIService] Failed to resolve Ollama model: ${e.message}`);
+            return requestedModel;
+        }
+    }
+
+    /**
      * Health Check for Ollama
      * Pings the Ollama API to verify reachability and model availability.
      * @param {{ baseUrl: string, model: string }} options
      * @returns {{ ollamaRunning: boolean, modelLoaded: boolean, models: string[], error?: string }}
      */
-    async healthCheck({ baseUrl = 'http://localhost:11434', model = 'gemma3' }) {
+    async healthCheck({
+        baseUrl = 'http://localhost:11434',
+        model = process.env.OLLAMA_MODEL || 'gemma3',
+    }) {
         const result = {
             ollamaRunning: false,
             modelLoaded: false,
@@ -309,7 +389,7 @@ class AIService {
             // Apply Matrix Logic if no specific model/provider forced
             let selected = { provider, model: forcedModel };
             if (!forcedModel || !provider) {
-                selected = this.selectBestModel('reasoning', provider);
+                selected = this.selectBestModel(forcedModel ? 'reasoning' : 'local', provider);
             }
 
             const activeProvider = provider || selected.provider;
@@ -477,6 +557,140 @@ Return a JSON object with these exact keys:
         } catch (error) {
             console.error('[AIService] Error generating flow:', error);
             throw new Error(`Flow Generation failed: ${error.message}`);
+        }
+    }
+
+    /**
+     * Genera datos estructurados basados en una descripción.
+     */
+    async generateStructured({ description, schema, provider, model, apiKey, keys }) {
+        try {
+            const taskType = 'reasoning';
+            let selected = { provider, model };
+            if (!model || !provider) {
+                selected = this.selectBestModel(taskType, provider);
+            }
+
+            let activeProvider = provider || selected.provider;
+            let activeModel = model || selected.model;
+
+            // --- SMART RESOLUTION FOR OLLAMA ---
+            if (activeProvider === 'ollama' && activeModel) {
+                activeModel = await this.resolveOllamaModel({
+                    baseUrl:
+                        (keys && keys.baseUrl) ||
+                        process.env.OLLAMA_BASE_URL ||
+                        'http://localhost:11434',
+                    requestedModel: activeModel,
+                });
+            }
+
+            const effectiveKey = apiKey || (keys && keys[activeProvider]);
+
+            console.log(
+                `[AIService] Generating structured data. Using: ${activeProvider}/${activeModel}`,
+            );
+
+            const providerInstance = this.getProvider(activeProvider, effectiveKey);
+            const modelRef = providerInstance(activeModel);
+
+            // Ollama: structured output via prompt Engineering (generateObject might fail)
+            if (activeProvider === 'ollama') {
+                const prompt = `Produce a JSON object matching this description: ${description}. 
+                Ensure the output is valid JSON.`;
+
+                const { text } = await generateText({
+                    model: modelRef,
+                    prompt,
+                    temperature: 0.2,
+                });
+
+                const jsonMatch = text.match(/\{[\s\S]*\}/);
+                if (jsonMatch) return JSON.parse(jsonMatch[0]);
+                throw new Error('Failed to parse structured data from Ollama result');
+            }
+
+            const { object } = await generateObject({
+                model: modelRef,
+                schema,
+                prompt: description,
+            });
+
+            return object;
+        } catch (error) {
+            console.error('[AIService] Error in generateStructured:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Valida contenido basado en criterios semánticos.
+     */
+    async validate({ content, criteria, provider, model, apiKey, keys }) {
+        try {
+            const taskType = 'reasoning';
+            let selected = { provider, model };
+            if (!model || !provider) {
+                selected = this.selectBestModel(taskType, provider);
+            }
+
+            let activeProvider = provider || selected.provider;
+            let activeModel = model || selected.model;
+
+            // --- SMART RESOLUTION FOR OLLAMA ---
+            if (activeProvider === 'ollama' && activeModel) {
+                activeModel = await this.resolveOllamaModel({
+                    baseUrl:
+                        (keys && keys.baseUrl) ||
+                        process.env.OLLAMA_BASE_URL ||
+                        'http://localhost:11434',
+                    requestedModel: activeModel,
+                });
+            }
+
+            const effectiveKey = apiKey || (keys && keys[activeProvider]);
+
+            const providerInstance = this.getProvider(activeProvider, effectiveKey);
+            const modelRef = providerInstance(activeModel);
+
+            const prompt = `Validate the following content against the given criteria.
+            Content: "${content}"
+            Criteria: "${criteria}"
+            
+            Return a JSON object with:
+            - isValid: boolean
+            - reason: string
+            - confidence: number (0-1)`;
+
+            if (activeProvider === 'ollama') {
+                const { text } = await generateText({
+                    model: modelRef,
+                    prompt,
+                    temperature: 0.1,
+                });
+                const jsonMatch = text.match(/\{[\s\S]*\}/);
+                if (jsonMatch) return JSON.parse(jsonMatch[0]);
+                return {
+                    isValid: false,
+                    reason: 'Failed to parse validation result from Ollama',
+                    confidence: 0,
+                };
+            }
+
+            const { object } = await generateObject({
+                model: modelRef,
+                schema: z.object({
+                    isValid: z.boolean(),
+                    reason: z.string(),
+                    confidence: z.number(),
+                }),
+                prompt,
+            });
+
+            return object;
+        } catch (error) {
+            console.error('[AIService] Error in semantic validation:', error);
+            throw error;
         }
     }
 }

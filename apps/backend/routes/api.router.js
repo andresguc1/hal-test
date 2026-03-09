@@ -396,26 +396,6 @@ const actionRoutes = [
         category: 'data',
     },
 
-    // ========== Artificial Intelligence (LLM) ==========
-    {
-        path: 'call_llm',
-        schema: 'callLlmBodySchema',
-        action: 'callLlmAction',
-        category: 'ai',
-    },
-    {
-        path: 'generate_data',
-        schema: 'generateDataBodySchema',
-        action: 'generateDataAction',
-        category: 'ai',
-    },
-    {
-        path: 'validate_semantic',
-        schema: 'validateSemanticBodySchema',
-        action: 'validateSemanticAction',
-        category: 'ai',
-    },
-
     // ========== Testing and CI/CD ==========
     {
         path: 'run_tests',
@@ -486,7 +466,7 @@ const actionRoutes = [
         category: 'flow_control',
     },
 
-    // ========== AI Integration ==========
+    // ========== AI Integration (LLM) ==========
     {
         path: 'call_llm',
         schema: 'callLlmBodySchema',

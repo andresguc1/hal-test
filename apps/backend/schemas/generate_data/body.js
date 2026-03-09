@@ -28,4 +28,8 @@ export default Joi.object({
         .description('Number of items to generate (if array)'),
 
     variable: Joi.string().required().description('Variable to store the generated JSON'),
+    variableName: Joi.string().optional(), // Alias for consistency
+    model: Joi.any().optional(),
+    provider: Joi.any().optional(),
+    nodeId: Joi.string().optional(),
 });

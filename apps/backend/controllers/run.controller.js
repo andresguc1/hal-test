@@ -47,8 +47,16 @@ export const startRunAction = async (req, res) => {
             console.log(`[RemoteRun] Run created with ID: ${runId}. Triggering execution...`);
 
             // 3. Trigger execution in the background (DO NOT AWAIT)
+            // Extract AI configuration headers to pass to execution
+            const aiHeaders = {};
+            for (const [key, value] of Object.entries(req.headers)) {
+                if (key.startsWith('x-ai-')) {
+                    aiHeaders[key] = value;
+                }
+            }
+
             executionService
-                .executeFlow(flowId, projectId, { overrides, runId })
+                .executeFlow(flowId, projectId, { overrides, runId, headers: aiHeaders })
                 .then(() => console.log(`[RemoteRun] Execution completed for runId: ${runId}`))
                 .catch((err) =>
                     console.error(`[RemoteExecution] Background task failed: ${err.message}`, err),

@@ -186,20 +186,29 @@ export const NODE_INPUTS = {
 
   // AI & Analytics
   call_llm: [
-    {
-      key: "prompt",
-      label: "System Prompt / Instructions",
-      type: "textarea",
-      placeholder: "Extract all prices from this page...",
-      required: true,
-    },
+    { key: "provider", label: "Provider", type: "select", required: true },
+    { key: "model", label: "Model", type: "text" },
+    { key: "prompt", label: "Prompt", type: "textarea", required: true },
+  ],
+  generate_data: [
+    { key: "provider", label: "Provider", type: "select", required: true },
+    { key: "model", label: "Model", type: "text" },
+    { key: "prompt", label: "Description", type: "textarea", required: true },
+    { key: "expectedFormat", label: "Format", type: "select", required: true },
   ],
   validate_semantic: [
+    { key: "provider", label: "Provider", type: "select", required: true },
+    { key: "model", label: "Model", type: "text" },
     {
-      key: "assertion",
-      label: "Semantic Assertion",
+      key: "sourceTextVariable",
+      label: "Source Variable",
       type: "text",
-      placeholder: "The page should show a confirmation message",
+      required: true,
+    },
+    {
+      key: "validationPrompt",
+      label: "Prompt",
+      type: "textarea",
       required: true,
     },
   ],

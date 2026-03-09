@@ -3997,43 +3997,81 @@ export const transformAction = async (req, res) => {
 
 export const callLlmAction = async (req, res) => {
     try {
-        let { prompt, system, model, variableName, maxTokens, temperature, provider } = req.body;
+        const {
+            prompt,
+            system,
+            model,
+            variableName,
+            maxTokens,
+            temperature,
+            provider: bodyProvider,
+        } = req.body;
 
-        const defaultModel = req.headers['x-openai-model'];
+        // Resolve context: Priority is 1. Node Body (Manual), 2. Headers (Global Settings)
+        let activeProvider = bodyProvider || req.headers['x-ai-provider'];
+        let activeModel = model || req.headers['x-ai-model'];
+        const headerBaseUrl = req.headers['x-ai-base-url'];
 
-        // Auto-detect provider if not explicitly set
-        if (!provider && model) {
-            if (model.toLowerCase().includes('gemini')) provider = 'google';
-            else if (model.toLowerCase().includes('claude')) provider = 'anthropic';
-            else if (model.toLowerCase().includes('grok')) provider = 'grok';
-            else provider = 'openai';
-        } else if (!provider) {
-            provider = 'openai';
+        // Auto-detect provider from model name if still ambiguous
+        if (activeModel && (!activeProvider || activeProvider === 'openai')) {
+            const m = activeModel.toLowerCase();
+            if (m.includes('gemini')) activeProvider = 'google';
+            else if (m.includes('claude')) activeProvider = 'anthropic';
+            else if (m.includes('grok')) activeProvider = 'grok';
+            else if (
+                m.includes('ollama') ||
+                m.includes('llama') ||
+                m.includes('gemma') ||
+                m.includes('mistral') ||
+                m.includes('phi')
+            )
+                activeProvider = 'ollama';
         }
 
-        // Select key based on provider
-        let apiKey = req.headers['x-openai-key'];
-        if (provider === 'google') apiKey = req.headers['x-google-key'];
-        if (provider === 'anthropic') apiKey = req.headers['x-anthropic-key'];
-        if (provider === 'grok') apiKey = req.headers['x-openai-key']; // Grok often uses same key slot or x-grok-key, but usually compatible with openai sdk
+        // Final Default
+        if (!activeProvider) activeProvider = 'openai';
+
+        console.log(
+            `[Action] call_llm using ${activeProvider}/${activeModel || 'default'} (Source: ${bodyProvider ? 'Node' : 'Global'})`,
+        );
+
+        // Resolve API Key
+        let apiKey = req.headers['x-ai-api-key'];
+        if (!apiKey) {
+            if (activeProvider === 'google') apiKey = req.headers['x-google-key'];
+            if (activeProvider === 'anthropic') apiKey = req.headers['x-anthropic-key'];
+            if (activeProvider === 'openai' || activeProvider === 'grok')
+                apiKey = req.headers['x-openai-key'];
+        }
 
         const response = await aiService.generateText({
             prompt: variableManager.resolve(prompt),
             system: system ? variableManager.resolve(system) : undefined,
-            model: model, // Fix: Changed modelName to model to match AIService signature
-            defaultModel,
-            provider,
+            model: activeModel === 'ollama' ? undefined : activeModel,
+            provider: activeProvider,
             apiKey,
+            baseUrl: headerBaseUrl,
             maxTokens,
             temperature,
         });
 
-        variableManager.set(variableName, response, 'flow');
+        // Extract text from object
+        const resultText = response.text || '';
+
+        // Set variable
+        variableManager.set(variableName, resultText, 'flow');
+
+        // Emit log for UI visualization
+        emitLog({
+            message: `AI Response: ${resultText.substring(0, 100)}${resultText.length > 100 ? '...' : ''}`,
+            type: 'success',
+            nodeId: req.body.nodeId || 'call_llm',
+        });
 
         return res.status(200).json({
             success: true,
             message: req.t('actions.call_llm.success'),
-            data: { response, variable: variableName },
+            data: { response: resultText, usage: response.usage, variable: variableName },
         });
     } catch (error) {
         console.error('[ERROR] callLlmAction:', error.message);
@@ -4047,41 +4085,32 @@ export const callLlmAction = async (req, res) => {
 
 export const generateDataAction = async (req, res) => {
     try {
-        const { description, fields, count = 1, variable } = req.body;
+        const { prompt, expectedFormat, variableName, model, provider } = req.body;
 
-        // Build Zod schema dynamically from fields
-        const shape = {};
-        fields.forEach((field) => {
-            let validator;
-            switch (field.type) {
-                case 'string':
-                    validator = z.string();
-                    break;
-                case 'number':
-                    validator = z.number();
-                    break;
-                case 'boolean':
-                    validator = z.boolean();
-                    break;
-                case 'array':
-                    validator = z.array(z.string());
-                    break; // Simplified for now
-                case 'object':
-                    validator = z.record(z.any());
-                    break;
-                default:
-                    validator = z.string();
-            }
-            if (field.description) validator = validator.describe(field.description);
-            shape[field.name] = validator;
-        });
+        // Simple schema for general data generation
+        const schema = z.any();
 
-        let schema = z.object(shape);
-        if (count > 1) {
-            schema = z.array(schema);
+        // Resolve context: Priority is 1. Node Body (Manual), 2. Headers (Global Settings)
+        let activeProvider = provider || req.headers['x-ai-provider'];
+        let activeModel = model || req.headers['x-ai-model'];
+
+        if (activeModel && (!activeProvider || activeProvider === 'openai')) {
+            const mBody = activeModel.toLowerCase();
+            if (mBody.includes('gemini')) activeProvider = 'google';
+            else if (mBody.includes('claude')) activeProvider = 'anthropic';
+            else if (mBody.includes('grok')) activeProvider = 'grok';
+            else if (
+                mBody.includes('ollama') ||
+                mBody.includes('llama') ||
+                mBody.includes('gemma') ||
+                mBody.includes('mistral') ||
+                mBody.includes('phi')
+            )
+                activeProvider = 'ollama';
         }
 
-        const defaultModel = req.headers['x-openai-model'];
+        if (!activeProvider) activeProvider = 'openai';
+
         const keys = {
             openai: req.headers['x-openai-key'],
             google: req.headers['x-google-key'],
@@ -4089,18 +4118,26 @@ export const generateDataAction = async (req, res) => {
         };
 
         const data = await aiService.generateStructured({
-            description: variableManager.resolve(description),
+            description: `Generate data in ${expectedFormat} format based on this description: ${variableManager.resolve(prompt)}`,
             schema,
-            defaultModel,
+            provider: activeProvider,
+            model: activeModel === 'ollama' ? undefined : activeModel,
             keys,
         });
 
-        variableManager.set(variable, data, 'flow');
+        variableManager.set(variableName, data, 'flow');
+
+        // Emit log for UI visualization
+        emitLog({
+            message: `Generated Data (${expectedFormat}) saved to ${variableName}`,
+            type: 'success',
+            nodeId: req.body.nodeId || 'generate_data',
+        });
 
         return res.status(200).json({
             success: true,
             message: req.t('actions.generate_data.success'),
-            data: { data, variable },
+            data: { data, variable: variableName },
         });
     } catch (error) {
         console.error('[ERROR] generateDataAction:', error.message);
@@ -4114,28 +4151,64 @@ export const generateDataAction = async (req, res) => {
 
 export const validateSemanticAction = async (req, res) => {
     try {
-        const { content, criteria, variable } = req.body;
+        const {
+            sourceTextVariable,
+            validationPrompt,
+            expectedAnswer,
+            variableName = 'semanticValid',
+            model,
+            provider,
+        } = req.body;
 
-        const defaultModel = req.headers['x-openai-model'];
+        // Resolve context: Priority is 1. Node Body (Manual), 2. Headers (Global Settings)
+        let activeProvider = provider || req.headers['x-ai-provider'];
+        let activeModel = model || req.headers['x-ai-model'];
+
+        if (activeModel && (!activeProvider || activeProvider === 'openai')) {
+            const mVal = activeModel.toLowerCase();
+            if (mVal.includes('gemini')) activeProvider = 'google';
+            else if (mVal.includes('claude')) activeProvider = 'anthropic';
+            else if (mVal.includes('grok')) activeProvider = 'grok';
+            else if (
+                mVal.includes('ollama') ||
+                mVal.includes('llama') ||
+                mVal.includes('gemma') ||
+                mVal.includes('mistral') ||
+                mVal.includes('phi')
+            )
+                activeProvider = 'ollama';
+        }
+
+        if (!activeProvider) activeProvider = 'openai';
+
         const keys = {
             openai: req.headers['x-openai-key'],
             google: req.headers['x-google-key'],
             anthropic: req.headers['x-anthropic-key'],
         };
 
+        const content = variableManager.get(sourceTextVariable);
+        const criteria = variableManager.resolve(validationPrompt);
+
         const result = await aiService.validate({
-            content: variableManager.resolve(content),
-            criteria: variableManager.resolve(criteria),
-            defaultModel,
+            content,
+            criteria,
+            provider: activeProvider,
+            model: activeModel === 'ollama' ? undefined : activeModel,
             keys,
         });
 
-        variableManager.set(variable, result, 'flow');
+        // Map result to a success/fail based on expectedAnswer
+        const isMatch =
+            String(result.isValid).toLowerCase() === String(expectedAnswer).toLowerCase() ||
+            (result.isValid && String(expectedAnswer).toLowerCase() === 'true');
+
+        variableManager.set(variableName, isMatch, 'flow');
 
         return res.status(200).json({
             success: true,
             message: req.t('actions.validate_semantic.success'),
-            data: { result, variable },
+            data: { result, variable: variableName },
         });
     } catch (error) {
         console.error('[ERROR] validateSemanticAction:', error.message);
@@ -4152,30 +4225,25 @@ export const validateSemanticAction = async (req, res) => {
  */
 export const validateAICredentials = async (req, res) => {
     try {
-        const { provider, model, apiKey } = req.body;
+        const { provider, model, apiKey, baseUrl } = req.body;
 
-        if (!provider || !model || !apiKey) {
+        if (!provider) {
             return res.status(400).json({
                 success: false,
-                message: 'Missing provider, model or apiKey',
+                message: 'Missing provider',
             });
         }
 
-        const keys = { [provider]: apiKey.trim() };
-        // We use a very cheap, short prompt to test connectivity
-        await aiService.generateText({
-            prompt: "Return 'OK' if you see this.",
-            modelName: model,
-            defaultModel: model,
-            keys,
+        await aiService.validateKey({
+            provider,
+            apiKey,
+            baseUrl,
+            model,
         });
 
         res.json({ success: true, message: 'Connection successful' });
     } catch (error) {
-        // Log brief error internally (avoid logging full error object which might have keys)
         console.error('[AI Validation Error]', error.message);
-
-        // Return 200 so frontend doesn't log "Unauthorized" console error
         res.status(200).json({
             success: false,
             message: 'Validation failed: ' + (error.message || 'Unknown error'),

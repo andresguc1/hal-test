@@ -70,7 +70,7 @@ export const NODE_CATEGORIES = {
   llm_ai: {
     icon: Brain,
     color: "violet", // AI = Violet
-    label: "AI Models",
+    label: "Modelos de IA (LLM)",
     nodes: ["call_llm", "generate_data", "validate_semantic"],
   },
   network_control: {

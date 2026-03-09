@@ -22,6 +22,10 @@ test('Flujo Generado Hal-Test', async ({ page }) => {
         await page.click('#login-button');
     });
 
+    await test.step('Llamada LLM', async () => {
+        console.log('⚠️ Acción no implementada o pendiente: call_llm');
+    });
+
     await test.step('Reload Page', async () => {
         await page.reload();
     });
@@ -31,15 +35,11 @@ test('Flujo Generado Hal-Test', async ({ page }) => {
     });
 
     await test.step('Evidence', async () => {
-        await page.screenshot({ path: 'screenshot_7.png' });
+        await page.screenshot({ path: 'screenshot_8.png' });
     });
 
     await test.step('Finish Tour', async () => {
         // Browser managed by runner
-    });
-
-    await test.step('Open URL', async () => {
-        await page.goto('https://www.saucedemo.com');
     });
     console.log('✅ Flujo completado con éxito.');
 });

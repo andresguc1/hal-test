@@ -9,4 +9,7 @@ export default Joi.object({
     variable: Joi.string()
         .required()
         .description('Variable to store result object {isValid, reasoning}'),
+    model: Joi.any().optional(),
+    provider: Joi.any().optional(),
+    nodeId: Joi.string().optional(),
 });

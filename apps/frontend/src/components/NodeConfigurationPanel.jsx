@@ -12,6 +12,8 @@ import {
   Sparkles,
   Trash2,
   AlertCircle,
+  Brain,
+  CheckCircle2,
 } from "lucide-react";
 import { useToast } from "@/hooks/useToast";
 import { useTranslation } from "react-i18next";
@@ -874,18 +876,137 @@ const NODE_INPUTS = {
   // AI
   call_llm: [
     {
+      key: "provider",
+      label: "Proveedor (Opcional - Usa Global)",
+      type: "select",
+      options: [
+        { label: "Ollama (Local)", value: "ollama" },
+        { label: "Google (Gemini)", value: "google" },
+        { label: "Anthropic (Claude)", value: "anthropic" },
+        { label: "OpenAI (GPT)", value: "openai" },
+        { label: "Groq", value: "groq" },
+        { label: "Grok (X.ai)", value: "grok" },
+      ],
+    },
+    {
+      key: "model",
+      label: "Modelo / ID (Opcional)",
+      type: "text",
+      placeholder: "Usa modelo global si está vacío",
+    },
+    {
       key: "prompt",
-      label: "System Prompt / Instructions",
+      label: "Prompt",
       type: "textarea",
-      placeholder: "Extract all prices from this page...",
+      placeholder: "La instrucción para la IA...",
+    },
+    {
+      key: "system",
+      label: "System Prompt",
+      type: "textarea",
+      placeholder: "Opcional: Comportamiento del sistema",
+    },
+    {
+      key: "variableName",
+      label: "Nombre de Variable",
+      type: "text",
+      defaultValue: "llmResult",
+    },
+    {
+      key: "temperature",
+      label: "Temperatura",
+      type: "number",
+      defaultValue: 0.7,
+    },
+    {
+      key: "maxTokens",
+      label: "Máx Tokens",
+      type: "number",
+      defaultValue: 1000,
+    },
+  ],
+  generate_data: [
+    {
+      key: "provider",
+      label: "Proveedor (Opcional - Usa Global)",
+      type: "select",
+      options: [
+        { label: "Ollama (Local)", value: "ollama" },
+        { label: "Google (Gemini)", value: "google" },
+        { label: "Anthropic (Claude)", value: "anthropic" },
+        { label: "OpenAI (GPT)", value: "openai" },
+      ],
+    },
+    {
+      key: "model",
+      label: "Modelo (Opcional)",
+      type: "text",
+      placeholder: "Usa modelo global si está vacío",
+    },
+    {
+      key: "prompt",
+      label: "Descripción de los Datos",
+      type: "textarea",
+      placeholder: "Describe qué datos quieres generar",
+    },
+    {
+      key: "expectedFormat",
+      label: "Formato",
+      type: "select",
+      options: [
+        { label: "JSON", value: "json" },
+        { label: "CSV", value: "csv" },
+        { label: "Texto", value: "text" },
+      ],
+    },
+    {
+      key: "variableName",
+      label: "Variable de Salida",
+      type: "text",
+      defaultValue: "generatedData",
     },
   ],
   validate_semantic: [
     {
-      key: "assertion",
-      label: "Semantic Assertion",
+      key: "provider",
+      label: "Proveedor (Opcional - Usa Global)",
+      type: "select",
+      options: [
+        { label: "Ollama (Local)", value: "ollama" },
+        { label: "Google (Gemini)", value: "google" },
+        { label: "Anthropic (Claude)", value: "anthropic" },
+        { label: "OpenAI (GPT)", value: "openai" },
+      ],
+    },
+    {
+      key: "model",
+      label: "Modelo (Opcional)",
       type: "text",
-      placeholder: "The page should show a confirmation message",
+      placeholder: "Usa modelo global si está vacío",
+    },
+    {
+      key: "sourceTextVariable",
+      label: "Variable de Texto Fuente",
+      type: "text",
+      placeholder: "${miTexto}",
+    },
+    {
+      key: "validationPrompt",
+      label: "Prompt de Validación",
+      type: "textarea",
+      placeholder: "¿El texto contiene errores gramaticales?",
+    },
+    {
+      key: "expectedAnswer",
+      label: "Respuesta Esperada",
+      type: "text",
+      placeholder: "true / false",
+    },
+    {
+      key: "variableName",
+      label: "Nombre de Variable",
+      type: "text",
+      defaultValue: "semanticValid",
     },
   ],
 
@@ -1884,6 +2005,11 @@ function NodeConfigurationPanel({
 
   const colorKey = safeConfig.color;
 
+  // Placeholder helpers
+  const aiConfig = JSON.parse(localStorage.getItem("hal_ai_config") || "{}");
+  const globalModel = aiConfig.selectedModel || "gemma3";
+  const globalProvider = aiConfig.activeProvider || "ollama";
+
   const renderInput = (field) => {
     // Read from LOCAL state for performance
     const value = localConfig[field.key] ?? "";
@@ -2197,6 +2323,155 @@ function NodeConfigurationPanel({
     }
   };
 
+  const renderNodeInputs = () => {
+    const inputs = (definedInputs || []).map((input) => {
+      if (input.key === "model") {
+        return { ...input, placeholder: `Uses global: ${globalModel}` };
+      }
+      if (input.key === "provider") {
+        return {
+          ...input,
+          label: `${input.label} (Global: ${globalProvider})`,
+        };
+      }
+      return input;
+    });
+
+    const result = activeNode.data?.result;
+    const aiResult = result?.data;
+
+    return (
+      <div className="space-y-5">
+        {inputs.length > 0 ? (
+          inputs
+            .filter((f) => !f.isVisible || f.isVisible(localConfig || {}))
+            .map(renderInput)
+        ) : (
+          <div className="p-4 rounded-lg border border-dashed border-white/10 bg-white/5 flex flex-col items-center justify-center text-center">
+            <Info size={20} className="text-slate-500 mb-2" />
+            <span className="text-xs text-slate-400">
+              No configuration options available for this node type.
+            </span>
+          </div>
+        )}
+
+        {/* AI Result Visualization */}
+        {aiResult && (
+          <div className="mt-6 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="flex items-center gap-2 px-1">
+              <div className="p-1 rounded-md bg-indigo-500/20">
+                <Brain size={12} className="text-indigo-400" />
+              </div>
+              <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400">
+                AI Execution Result
+              </span>
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-gradient-to-br from-slate-800/50 to-slate-900/80 p-4 shadow-xl overflow-hidden relative group">
+              {/* Background Glow */}
+              <div className="absolute -top-12 -right-12 w-24 h-24 bg-indigo-500/10 blur-3xl group-hover:bg-indigo-500/20 transition-colors duration-500" />
+
+              {/* Call LLM Result */}
+              {aiResult.response && typeof aiResult.response === "string" && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-slate-500 font-medium">
+                      Text Response
+                    </span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 font-mono">
+                      $
+                      {aiResult.variable ||
+                        localConfig.variableName ||
+                        "result"}
+                    </span>
+                  </div>
+                  <pre className="text-[11px] leading-relaxed text-slate-200 whitespace-pre-wrap font-sans">
+                    {aiResult.response}
+                  </pre>
+                </div>
+              )}
+
+              {/* Generate Data Result */}
+              {aiResult.result && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-slate-500 font-medium">
+                      Structured Data
+                    </span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 font-mono">
+                      ${aiResult.variable || localConfig.variableName || "data"}
+                    </span>
+                  </div>
+                  <div className="bg-black/30 rounded-lg p-3 border border-white/5">
+                    <pre className="text-[10px] font-mono text-emerald-400 leading-tight">
+                      {JSON.stringify(aiResult.result, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+              )}
+
+              {/* Validate Semantic Result */}
+              {aiResult.isValid !== undefined && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div
+                      className={cn(
+                        "flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold",
+                        aiResult.isValid
+                          ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                          : "bg-red-500/10 border-red-500/20 text-red-400",
+                      )}
+                    >
+                      {aiResult.isValid ? (
+                        <CheckCircle2 size={14} />
+                      ) : (
+                        <AlertCircle size={14} />
+                      )}
+                      {aiResult.isValid ? "Valid Content" : "Invalid Content"}
+                    </div>
+                    <div className="flex flex-col items-end">
+                      <span className="text-[9px] text-slate-500 uppercase font-bold tracking-tighter">
+                        Var: $
+                        {aiResult.variable ||
+                          localConfig.variableName ||
+                          "semanticValid"}
+                      </span>
+                      <span className="text-[9px] text-slate-500 uppercase font-bold tracking-tighter">
+                        Confidence
+                      </span>
+                      <span className="text-xs font-mono font-bold text-white">
+                        {(aiResult.confidence * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                  </div>
+
+                  {aiResult.reason && (
+                    <div className="space-y-1">
+                      <span className="text-[10px] text-slate-500 font-medium ml-1">
+                        Reasoning
+                      </span>
+                      <p className="text-[11px] text-slate-300 italic leading-snug bg-white/5 p-2 rounded-lg border border-white/5">
+                        "{aiResult.reason}"
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Usage Stats Footer */}
+              {aiResult.usage && (
+                <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-[9px] text-slate-600 font-mono uppercase tracking-tighter">
+                  <span>Tokens: {aiResult.usage.totalTokens || 0}</span>
+                  <span>Execution: {result.executionTime || 0}ms</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <AnimatePresence>
       {isVisible && (
@@ -2407,23 +2682,7 @@ function NodeConfigurationPanel({
                 </button>
               </div>
             ) : (
-              // --- GENERIC INPUTS ---
-              <div className="space-y-5">
-                {definedInputs.length > 0 ? (
-                  definedInputs
-                    .filter(
-                      (f) => !f.isVisible || f.isVisible(localConfig || {}),
-                    )
-                    .map(renderInput)
-                ) : (
-                  <div className="p-4 rounded-lg border border-dashed border-white/10 bg-white/5 flex flex-col items-center justify-center text-center">
-                    <Info size={20} className="text-slate-500 mb-2" />
-                    <span className="text-xs text-slate-400">
-                      No configuration options available for this node type.
-                    </span>
-                  </div>
-                )}
-              </div>
+              renderNodeInputs()
             )}
           </div>
 

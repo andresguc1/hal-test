@@ -83,7 +83,6 @@ class SelectorHealer {
                 intent: `Perform action: ${actionName}`,
                 apiKey: apiKey,
                 provider: 'ollama',
-                model: 'gemma3',
                 timeout: timeout, // Pass the timeout to AIService
             });
 

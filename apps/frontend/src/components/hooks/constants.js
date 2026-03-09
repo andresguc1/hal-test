@@ -77,9 +77,9 @@ export const NODE_LABELS = {
   handle_downloads: "Handle Downloads",
 
   // IA / LLM
-  call_llm: "LLM Call",
-  generate_data: "Generate Data (AI)",
-  validate_semantic: "Semantic Validation",
+  call_llm: "Llamada LLM",
+  generate_data: "Generar Datos (IA)",
+  validate_semantic: "Validación Semántica",
 
   // Execution Interface
   run_tests: "Run Tests",
@@ -130,7 +130,7 @@ export const NODE_CATEGORIES = {
   },
   // NUEVA CATEGORÍA
   llm_ai: {
-    label: "AI Models (LLM)",
+    label: "Modelos de IA (LLM)",
     icon: "🧠",
     nodes: ["call_llm", "generate_data", "validate_semantic"],
   },
@@ -1807,12 +1807,12 @@ export const NODE_FIELD_CONFIGS = {
       name: "model",
       label: "Modelo",
       type: "select",
-      defaultValue: "gemini",
+      defaultValue: "gpt-4",
       options: [
-        { value: "gemini", label: "gemini" },
-        { value: "gpt4", label: "gpt4" },
-        { value: "gpt4o", label: "gpt4o" },
-        { value: "local", label: "local" },
+        { value: "gpt-4", label: "GPT-4" },
+        { value: "gemini", label: "Gemini" },
+        { value: "claude", label: "Claude" },
+        { value: "ollama", label: "Ollama (Local)" },
       ],
       required: true,
     },
@@ -1820,14 +1820,15 @@ export const NODE_FIELD_CONFIGS = {
       name: "prompt",
       label: "Prompt",
       type: "textarea",
-      placeholder: "Write the prompt for the model",
+      placeholder: "La instrucción o pregunta para la IA.",
       required: true,
     },
     {
       name: "variableName",
-      label: "Variable Name",
+      label: "Nombre de Variable",
       type: "text",
-      placeholder: "adCopy",
+      defaultValue: "llmResult",
+      placeholder: "llmResult",
       required: true,
       validation: (v, allParams, t) => {
         if (!v || String(v).trim() === "") return "Variable name is required";
@@ -1835,29 +1836,25 @@ export const NODE_FIELD_CONFIGS = {
       },
     },
     {
-      name: "system",
-      label: "System Prompt",
-      type: "textarea",
-      placeholder: "You are a helpful assistant...",
-      required: false,
-    },
-    {
       name: "temperature",
-      label: "Temperature",
+      label: "Temperatura",
       type: "number",
       defaultValue: 0.7,
+      min: 0.0,
+      max: 2.0,
+      step: 0.1,
       validation: (v, allParams, t) => {
         const n = Number(v);
         if (Number.isNaN(n) || n < 0 || n > 2)
-          return "Temperature must be between 0 and 2";
+          return "Temperature must be between 0 and 2.0";
         return null;
       },
     },
     {
       name: "maxTokens",
-      label: "Max tokens",
+      label: "Límite de Tokens",
       type: "number",
-      defaultValue: 150,
+      defaultValue: 1000,
       validation: (v, allParams, t) => {
         const n = Number(v);
         if (Number.isNaN(n) || n <= 0)
@@ -1869,30 +1866,22 @@ export const NODE_FIELD_CONFIGS = {
 
   generate_data: [
     {
-      name: "model",
-      label: "Modelo",
+      name: "expectedFormat",
+      label: "Formato Esperado",
       type: "select",
-      defaultValue: "gpt4",
+      defaultValue: "json",
       options: [
-        { value: "gpt4", label: "gpt4" },
-        { value: "gpt4o", label: "gpt4o" },
-        { value: "gemini", label: "gemini" },
-        { value: "local", label: "local" },
+        { value: "json", label: "JSON" },
+        { value: "csv", label: "CSV" },
+        { value: "text", label: "Texto" },
       ],
-      required: true,
-    },
-    {
-      name: "prompt",
-      label: "Prompt",
-      type: "textarea",
-      placeholder: "Write the prompt you want to send to the model",
-      required: true,
     },
     {
       name: "variableName",
-      label: "Variable Name",
+      label: "Nombre de Variable",
       type: "text",
-      placeholder: "mockedUsers",
+      defaultValue: "generatedData",
+      placeholder: "generatedData",
       required: true,
       validation: (v, allParams, t) => {
         if (!v || String(v).trim() === "") return "Variable name is required";
@@ -1900,69 +1889,35 @@ export const NODE_FIELD_CONFIGS = {
       },
     },
     {
-      name: "expectedFormat",
-      label: "Expected Format",
-      type: "select",
-      defaultValue: "json",
-      options: [
-        { value: "json", label: "json" },
-        { value: "csv", label: "csv" },
-        { value: "text", label: "text" },
-      ],
-    },
-    {
-      name: "temperature",
-      label: "Temperature",
-      type: "number",
-      defaultValue: 0.7,
-      validation: (v, allParams, t) => {
-        const n = Number(v);
-        if (Number.isNaN(n) || n < 0 || n > 2)
-          return "Temperature must be between 0 and 2";
-        return null;
-      },
+      name: "prompt",
+      label: "Descripción de los Datos",
+      type: "textarea",
+      placeholder: "Describe los datos estructurados que deseas generar.",
+      required: true,
     },
   ],
 
   validate_semantic: [
     {
-      name: "model",
-      label: "Modelo",
-      type: "select",
-      defaultValue: "gemini",
-      options: [
-        { value: "gemini", label: "gemini" },
-        { value: "gpt-4o", label: "gpt-4o" },
-        { value: "local", label: "local" },
-      ],
-      required: true,
-    },
-    {
       name: "sourceTextVariable",
-      label: "Source text variable",
+      label: "Variable de Texto Fuente",
       type: "text",
-      placeholder: "extracted_product_description",
+      placeholder: "Variable que contiene el texto a validar.",
       required: true,
     },
     {
       name: "validationPrompt",
-      label: "Validation prompt",
+      label: "Criterio de Validación",
       type: "textarea",
-      placeholder: "Insert the validation prompt to be sent to the model",
+      placeholder: "El criterio de validación (ej. ¿Contiene insultos?).",
       required: true,
     },
     {
       name: "expectedAnswer",
-      label: "Expected answer",
+      label: "Respuesta de Éxito",
       type: "text",
-      placeholder: "APPROVED",
+      placeholder: "Ej: VÁLIDO o APROBADO",
       required: true,
-    },
-    {
-      name: "validationTimeout",
-      label: "Validation timeout (ms)",
-      type: "number",
-      defaultValue: 15000,
     },
   ],
 
