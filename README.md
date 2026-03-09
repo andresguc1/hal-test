@@ -4,7 +4,7 @@
   # HAL-TEST 🤖
   ### The Missing Link in Browser Automation
 
-  [![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+  [![Apache License 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
   [![Playwright](https://img.shields.io/badge/Powered%20by-Playwright-green)](https://playwright.dev/)
   [![React Flow](https://img.shields.io/badge/UI-React%20Flow-orange)](https://reactflow.dev/)
   [![Slack](https://img.shields.io/badge/Community-Slack-purple)](https://join.slack.com/t/haltest-talk/shared_invite/zt-3o7wqlt53-tzFebjhK5TxQtYZbwK~f~g)
@@ -152,4 +152,4 @@ Join our Slack: [HAL-TEST Talk](https://join.slack.com/t/haltest-talk/shared_inv
 **Star the Repo**: If this project helps you, give us a ⭐!
 
 ## 📄 License
-MIT License - Created by Andresguc1
+Apache License 2.0 - Created by Andresguc1
