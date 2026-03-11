@@ -11,7 +11,8 @@ const callLlmBodySchema = Joi.object({
     variableName: Joi.string().required(),
     provider: Joi.any().optional(),
     nodeId: Joi.string().optional(),
+    browserId: Joi.string().optional(),
     debugMode: Joi.boolean().optional(),
-});
+}).unknown();
 
 export default callLlmBodySchema;

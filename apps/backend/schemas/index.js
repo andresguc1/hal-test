@@ -78,6 +78,9 @@ export { default as integrateCIBodySchema } from './integrate_ci/body.js';
 export { default as callLlmBodySchema } from './call_llm/body.js';
 export { default as generateDataBodySchema } from './generate_data/body.js';
 export { default as validateSemanticBodySchema } from './validate_semantic/body.js';
+export { default as extractDomContextBodySchema } from './extract_dom_context/body.js';
+export { default as chainOfThoughtBodySchema } from './chain_of_thought/body.js';
+export { default as smartSelectorBodySchema } from './smart_selector/body.js';
 export { default as runTestsBodySchema } from './run_tests/body.js';
 
 // 🔀 Flow Control

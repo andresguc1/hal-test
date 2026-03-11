@@ -6,8 +6,8 @@ export const chatWithTools = async (req, res) => {
         // EXTRACT KEYS
         const rawKey = req.headers['x-ai-api-key'] || process.env.OPENAI_API_KEY;
         const apiKey = rawKey?.trim();
-        const model = req.headers['x-ai-model'] || 'gpt-4o';
-        const provider = req.headers['x-ai-provider'] || 'openai';
+        const model = req.headers['x-ai-model'] || 'gemma3:latest';
+        const provider = req.headers['x-ai-provider'] || 'ollama';
 
         console.log(`[ChatController] Auth Check: Provider=${provider}, HasKey=${!!apiKey}`);
 
@@ -20,6 +20,10 @@ export const chatWithTools = async (req, res) => {
         // But for generateText, we usually pass just the prompt or a history string.
         // generateText accepts 'prompt' string or 'messages' array (in newer versions).
         // Let's assume we pass the last user message as prompt + history in system or context.
+
+        if (!messages || !Array.isArray(messages) || messages.length === 0) {
+            return res.status(400).json({ error: 'No messages found in request' });
+        }
 
         const lastMessage = messages[messages.length - 1];
         if (!lastMessage || lastMessage.role !== 'user') {

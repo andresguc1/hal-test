@@ -485,6 +485,24 @@ const actionRoutes = [
         action: 'validateSemanticAction',
         category: 'llm_ai',
     },
+    {
+        path: 'extract_dom_context',
+        schema: 'extractDomContextBodySchema',
+        action: 'extractDomContextAction',
+        category: 'llm_ai',
+    },
+    {
+        path: 'chain_of_thought',
+        schema: 'chainOfThoughtBodySchema',
+        action: 'chainOfThoughtAction',
+        category: 'llm_ai',
+    },
+    {
+        path: 'smart_selector',
+        schema: 'smartSelectorBodySchema',
+        action: 'smartSelectorAction',
+        category: 'llm_ai',
+    },
 ];
 
 // ==========================================================

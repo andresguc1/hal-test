@@ -91596,13 +91596,11 @@ var EHe = class extends sm {
             const n = this.options;
             ((this.options = this.#e.defaultMutationOptions(t)),
                 jw(this.options, n) ||
-                    this.#e
-                        .getMutationCache()
-                        .notify({
-                            type: 'observerOptionsUpdated',
-                            mutation: this.#n,
-                            observer: this,
-                        }),
+                    this.#e.getMutationCache().notify({
+                        type: 'observerOptionsUpdated',
+                        mutation: this.#n,
+                        observer: this,
+                    }),
                 n?.mutationKey &&
                 this.options.mutationKey &&
                 gd(n.mutationKey) !== gd(this.options.mutationKey)

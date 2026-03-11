@@ -192,6 +192,18 @@
         "validate_semantic": {
             "success": "Semantic validation completed."
         },
+        "extract_dom_context": {
+            "success": "DOM context extracted correctly.",
+            "error": "Error extracting DOM context."
+        },
+        "chain_of_thought": {
+            "success": "Chain of thought reasoning completed.",
+            "error": "Error during AI reasoning."
+        },
+        "smart_selector": {
+            "success": "Smart selector suggestion generated.",
+            "error": "Error attempting to repair selector."
+        },
         "mock_router": {
             "operation_not_found": "Operation '{{operationName}}' not found.",
             "project_not_found": "Project not found.",

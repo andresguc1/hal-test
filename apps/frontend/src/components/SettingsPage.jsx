@@ -72,10 +72,9 @@ export default function SettingsPage({ onBack }) {
   );
 
   const defaultValues = {
-    selectedModel: localStorage.getItem("hal_selected_model") || "gpt-4o-mini",
-    openaiKey: localStorage.getItem("hal_openai_key") || "",
-    googleKey: localStorage.getItem("hal_google_key") || "",
-    anthropicKey: localStorage.getItem("hal_anthropic_key") || "",
+    selectedModel: localStorage.getItem("hal_selected_model") || "gemma3",
+    ollamaBaseUrl:
+      localStorage.getItem("hal_ollama_base_url") || "http://localhost:11434",
   };
 
   const { control, handleSubmit, register, watch } = useForm({
@@ -84,11 +83,8 @@ export default function SettingsPage({ onBack }) {
 
   const selectedModel = watch("selectedModel");
 
-  const getProvider = (model) => {
-    if (model.includes("gpt")) return "openai";
-    if (model.includes("claude")) return "anthropic";
-    if (model.includes("gemini")) return "google";
-    return "openai";
+  const getProvider = (_model) => {
+    return "ollama";
   };
 
   const activeProvider = getProvider(selectedModel);
@@ -122,12 +118,7 @@ export default function SettingsPage({ onBack }) {
     }
   };
 
-  const modelOptions = [
-    { value: "gpt-4o-mini", label: "GPT-4o Mini" },
-    { value: "gpt-4o", label: "GPT-4o" },
-    { value: "claude-3-5-sonnet", label: "Claude 3.5 Sonnet" },
-    { value: "gemini-1.5-pro", label: "Gemini 1.5 Pro" },
-  ];
+  const modelOptions = [{ value: "gemma3", label: "Gemma 3 (Default)" }];
 
   return (
     // Full-screen overlay on top of everything

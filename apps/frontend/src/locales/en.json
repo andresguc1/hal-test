@@ -196,6 +196,9 @@
       "component": "Component",
       "call_llm": "Ask AI (Text)",
       "generate_data": "Generate Data (AI)",
+      "extract_dom_context": "Extract DOM Context",
+      "chain_of_thought": "Chain of Thought",
+      "smart_selector": "Smart Selector",
       "input": "Module Input",
       "output": "Module Output"
     },
@@ -208,7 +211,7 @@
       "network_control": "Network",
       "test_execution": "Context",
       "file_data": "Files & Data",
-      "llm_ai": "AI Models (LLM)",
+      "llm_ai": "AI Models",
       "execution_interface": "Exec",
       "flow_control": "Logic Engine",
       "composition": "Module Composition"

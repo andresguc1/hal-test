@@ -77,9 +77,12 @@ export const NODE_LABELS = {
   handle_downloads: "Handle Downloads",
 
   // IA / LLM
-  call_llm: "Llamada LLM",
+  call_llm: "Ask AI (Text)",
   generate_data: "Generar Datos (IA)",
   validate_semantic: "Validación Semántica",
+  extract_dom_context: "Extract DOM Context",
+  chain_of_thought: "Chain of Thought (Reasoning)",
+  smart_selector: "Smart Selector (Auto-Repair)",
 
   // Execution Interface
   run_tests: "Run Tests",
@@ -130,9 +133,16 @@ export const NODE_CATEGORIES = {
   },
   // NUEVA CATEGORÍA
   llm_ai: {
-    label: "Modelos de IA (LLM)",
+    label: "AI Models",
     icon: "🧠",
-    nodes: ["call_llm", "generate_data", "validate_semantic"],
+    nodes: [
+      "call_llm",
+      "generate_data",
+      "validate_semantic",
+      "extract_dom_context",
+      "chain_of_thought",
+      "smart_selector",
+    ],
   },
   // Flow Control Category
   flow_control: {
@@ -1302,7 +1312,6 @@ export const NODE_FIELD_CONFIGS = {
       placeholder:
         '[{"name":"auth_token","value":"...","domain":"ejemplo.com","secure":true}]',
       defaultValue: "",
-      // validación ligera: si acción= set o delete, debe existir algo
       validation: (v, form, t) => {
         if (
           (form.action === "set" || form.action === "delete") &&
@@ -1804,19 +1813,6 @@ export const NODE_FIELD_CONFIGS = {
 
   call_llm: [
     {
-      name: "model",
-      label: "Modelo",
-      type: "select",
-      defaultValue: "gpt-4",
-      options: [
-        { value: "gpt-4", label: "GPT-4" },
-        { value: "gemini", label: "Gemini" },
-        { value: "claude", label: "Claude" },
-        { value: "ollama", label: "Ollama (Local)" },
-      ],
-      required: true,
-    },
-    {
       name: "prompt",
       label: "Prompt",
       type: "textarea",
@@ -1917,6 +1913,90 @@ export const NODE_FIELD_CONFIGS = {
       label: "Respuesta de Éxito",
       type: "text",
       placeholder: "Ej: VÁLIDO o APROBADO",
+      required: true,
+    },
+  ],
+
+  extract_dom_context: [
+    {
+      name: "selector",
+      label: "Selector (Opcional)",
+      type: "text",
+      placeholder: "Filtra la extracción a un selector específico.",
+    },
+    {
+      name: "extractionType",
+      label: "Tipo de Extracción",
+      type: "select",
+      defaultValue: "text",
+      options: [
+        { value: "text", label: "Texto Plano (Limpio)" },
+        { value: "html", label: "HTML Completo" },
+        { value: "markdown", label: "Formato Markdown" },
+      ],
+    },
+    {
+      name: "variableName",
+      label: "Nombre de Variable",
+      type: "text",
+      defaultValue: "domContext",
+      required: true,
+    },
+  ],
+
+  chain_of_thought: [
+    {
+      name: "instruction",
+      label: "Instrucción / Pregunta",
+      type: "textarea",
+      placeholder: "Describe la tarea compleja que la IA debe razonar.",
+      required: true,
+    },
+    {
+      name: "thoughtVariable",
+      label: "Variable de Pensamiento",
+      type: "text",
+      defaultValue: "aiThought",
+      required: true,
+    },
+    {
+      name: "answerVariable",
+      label: "Variable de Respuesta Final",
+      type: "text",
+      defaultValue: "aiAnswer",
+      required: true,
+    },
+    {
+      name: "temperature",
+      label: "Temperatura",
+      type: "number",
+      defaultValue: 0.7,
+      min: 0,
+      max: 2,
+      step: 0.1,
+    },
+  ],
+
+  smart_selector: [
+    {
+      name: "originalSelector",
+      label: "Selector Fallido",
+      type: "text",
+      placeholder: "e.g. .btn-submit",
+      required: true,
+    },
+    {
+      name: "intent",
+      label: "Intención de la Acción",
+      type: "text",
+      placeholder: "e.g. Click en el botón de login",
+      required: true,
+    },
+    {
+      name: "variableName",
+      label: "Variable de Sugerencia",
+      type: "text",
+      defaultValue: "suggestedSelector",
       required: true,
     },
   ],

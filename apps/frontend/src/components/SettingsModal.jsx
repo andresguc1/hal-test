@@ -56,12 +56,12 @@ export default function SettingsModal({
 
   // --- AI Configuration State ---
   const [aiConfig, setAiConfig] = useState({
-    activeProvider: "openai",
-    selectedModel: "gpt-4o",
+    activeProvider: "ollama",
+    selectedModel: "gemma3",
     keys: {
-      openai: "",
-      anthropic: "",
+      ollama: "",
     },
+    baseUrl: "http://localhost:11434",
   });
 
   // Load configuration on open

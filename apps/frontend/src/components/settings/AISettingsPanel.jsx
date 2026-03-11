@@ -27,7 +27,7 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
   const [isTesting, setIsTesting] = useState(false);
   const [healthResult, setHealthResult] = useState(null);
 
-  const isOllama = aiConfig.activeProvider === "ollama";
+  const isOllama = true;
 
   const baseUrl = aiConfig.baseUrl || "http://localhost:11434";
   const model = aiConfig.selectedModel || "gemma3";
@@ -89,9 +89,7 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
       {/* Model Selection */}
       <div className="space-y-2">
         <Label className="text-xs text-slate-400">
-          {isOllama
-            ? t("settings.ai.recommended_models")
-            : t("settings.ai.default_model")}
+          {t("settings.ai.default_model")}
         </Label>
         {/* Note: In a real app, the dropdown would be here or in a parent component */}
       </div>

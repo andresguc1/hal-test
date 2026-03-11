@@ -1,6 +1,4 @@
 import { createOpenAI } from '@ai-sdk/openai';
-import { createGoogleGenerativeAI } from '@ai-sdk/google';
-import { createAnthropic } from '@ai-sdk/anthropic';
 import { keyVaultService } from './KeyVaultService.js';
 
 /**
@@ -14,57 +12,39 @@ class LLMFactory {
      * @param {string} [fallbackProvider] - Provider string (e.g. 'openai') to use if raw key is detected
      * @returns {object} The Vercel AI SDK provider instance
      */
-    getProviderInstance(keyAliasOrId, fallbackProvider) {
+    getProviderInstance(keyAliasOrId, fallbackProvider, baseUrl) {
         // 1. Try to Retrieve from Vault
         const securedKey = keyVaultService.getDecryptedKey(keyAliasOrId);
 
         if (securedKey) {
-            return this.createInstance(securedKey.provider, securedKey.key, securedKey.baseUrl);
+            return this.createInstance(
+                securedKey.provider,
+                securedKey.key,
+                baseUrl || securedKey.baseUrl,
+            );
         }
 
         // 2. Legacy/Raw Key Support
-        // If the 'Alias' passed is actually a raw key (heuristic), use it directly.
         if (this.isLikelyRawKey(keyAliasOrId)) {
-            // Warn only once per session or use debug log
-            // console.warn("[LLMFactory] Using RAW API Key (Legacy Mode). Please migrate to Key Vault.");
-            if (!fallbackProvider) {
-                throw new Error('Raw Key provided but Provider type is unknown.');
-            }
-            return this.createInstance(fallbackProvider, keyAliasOrId);
+            return this.createInstance(fallbackProvider || 'ollama', keyAliasOrId, baseUrl);
         }
 
-        // 3. Fallback for Environment Variables (e.g. 'openai' passed as ID)
-        if (['openai', 'google', 'anthropic', 'ollama', 'grok'].includes(keyAliasOrId)) {
-            return this.createFromEnv(keyAliasOrId);
-        }
-
-        // 4. Not Found - Securely Log
-        const masked =
-            keyAliasOrId.length > 10
-                ? `${keyAliasOrId.substring(0, 4)}...${keyAliasOrId.substring(keyAliasOrId.length - 4)}`
-                : keyAliasOrId;
-
-        throw new Error(`Key Alias '${masked}' not found in Vault and is not a valid Provider.`);
+        // 3. Force Ollama if requested or as fallback
+        return this.createFromEnv('ollama', baseUrl);
     }
 
     createInstance(provider, key, baseUrl) {
-        switch (provider) {
-            case 'openai':
-                return createOpenAI({ apiKey: key });
-            case 'google':
-                return createGoogleGenerativeAI({ apiKey: key });
-            case 'anthropic':
-                return createAnthropic({ apiKey: key });
-            case 'ollama':
-                return createOpenAI({
-                    baseURL: baseUrl || 'http://localhost:11434/v1',
-                    apiKey: 'ollama',
-                });
-            case 'grok':
-                return createOpenAI({ baseURL: 'https://api.x.ai/v1', apiKey: key });
-            default:
-                throw new Error(`Provider '${provider}' not supported.`);
+        // We now consolidate everything to Ollama's OpenAI compatible endpoint
+        let ollamaUrl = baseUrl || process.env.OLLAMA_BASE_URL || 'http://localhost:11434/v1';
+        if (!ollamaUrl.endsWith('/v1')) {
+            ollamaUrl = `${ollamaUrl.replace(/\/$/, '')}/v1`;
         }
+
+        return createOpenAI({
+            baseURL: ollamaUrl,
+            apiKey: 'ollama',
+            compatibility: 'compatible',
+        });
     }
 
     isLikelyRawKey(str) {
@@ -81,22 +61,17 @@ class LLMFactory {
     /**
      * Fallback for Environment Variables (Legacy/Dev)
      */
-    createFromEnv(provider) {
-        switch (provider) {
-            case 'openai':
-                return createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
-            case 'google':
-                return createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_API_KEY });
-            case 'anthropic':
-                return createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-            case 'ollama':
-                return createOpenAI({
-                    baseURL: process.env.OLLAMA_BASE_URL || 'http://localhost:11434/v1',
-                    apiKey: 'ollama',
-                });
-            default:
-                throw new Error(`Env provider '${provider}' not found`);
+    createFromEnv(provider, baseUrl) {
+        let ollamaUrl = baseUrl || process.env.OLLAMA_BASE_URL || 'http://localhost:11434/v1';
+        if (!ollamaUrl.endsWith('/v1')) {
+            ollamaUrl = `${ollamaUrl.replace(/\/$/, '')}/v1`;
         }
+
+        return createOpenAI({
+            baseURL: ollamaUrl,
+            apiKey: 'ollama',
+            compatibility: 'compatible',
+        });
     }
 
     /**

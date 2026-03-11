@@ -31,5 +31,7 @@ export default Joi.object({
     variableName: Joi.string().optional(), // Alias for consistency
     model: Joi.any().optional(),
     provider: Joi.any().optional(),
+    maxTokens: Joi.number().integer().min(1).optional(),
     nodeId: Joi.string().optional(),
-});
+    browserId: Joi.string().optional(),
+}).unknown();

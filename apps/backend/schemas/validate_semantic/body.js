@@ -10,6 +10,8 @@ export default Joi.object({
         .required()
         .description('Variable to store result object {isValid, reasoning}'),
     model: Joi.any().optional(),
-    provider: Joi.any().optional(),
+    variableName: Joi.string().required(),
+    maxTokens: Joi.number().integer().min(1).optional(),
     nodeId: Joi.string().optional(),
-});
+    browserId: Joi.string().optional(),
+}).unknown();

@@ -187,13 +187,25 @@
             "success": "Descarga completada."
         },
         "call_llm": {
-            "success": "LLM llamado (Simulado)."
+            "success": "Pregunta enviada a la IA exitosamente."
         },
         "generate_data": {
             "success": "Datos generados."
         },
         "validate_semantic": {
             "success": "Validación semántica completada."
+        },
+        "extract_dom_context": {
+            "success": "Contexto DOM extraído correctamente.",
+            "error": "Error al extraer el contexto DOM."
+        },
+        "chain_of_thought": {
+            "success": "Razonamiento en cadena completado.",
+            "error": "Error durante el razonamiento de la IA."
+        },
+        "smart_selector": {
+            "success": "Sugerencia de selector generada correctamente.",
+            "error": "Error al intentar reparar el selector."
         },
         "mock_router": {
             "operation_not_found": "Operación '{{operationName}}' no encontrada.",

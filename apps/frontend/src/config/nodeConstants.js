@@ -14,6 +14,9 @@ import {
   Box,
   Brain,
   RefreshCw,
+  Search,
+  Sparkles,
+  Zap,
 } from "lucide-react";
 
 // --- GLOBAL ALL-IN-ONE CONFIGURATION ---
@@ -70,8 +73,15 @@ export const NODE_CATEGORIES = {
   llm_ai: {
     icon: Brain,
     color: "violet", // AI = Violet
-    label: "Modelos de IA (LLM)",
-    nodes: ["call_llm", "generate_data", "validate_semantic"],
+    label: "Inteligencia Artificial",
+    nodes: [
+      "call_llm",
+      "generate_data",
+      "validate_semantic",
+      "extract_dom_context",
+      "chain_of_thought",
+      "smart_selector",
+    ],
   },
   network_control: {
     icon: Cable,
@@ -139,6 +149,9 @@ export const NODE_TYPE_MAP = Object.entries(NODE_CATEGORIES).reduce(
       // Define specific overrides
       const overrides = {};
       if (nodeType === "close_browser") overrides.terminal = true;
+      if (nodeType === "extract_dom_context") overrides.icon = Search;
+      if (nodeType === "chain_of_thought") overrides.icon = Sparkles;
+      if (nodeType === "smart_selector") overrides.icon = Zap;
 
       acc[nodeType] = {
         category: catKey,

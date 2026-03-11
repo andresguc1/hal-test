@@ -876,25 +876,6 @@ const NODE_INPUTS = {
   // AI
   call_llm: [
     {
-      key: "provider",
-      label: "Proveedor (Opcional - Usa Global)",
-      type: "select",
-      options: [
-        { label: "Ollama (Local)", value: "ollama" },
-        { label: "Google (Gemini)", value: "google" },
-        { label: "Anthropic (Claude)", value: "anthropic" },
-        { label: "OpenAI (GPT)", value: "openai" },
-        { label: "Groq", value: "groq" },
-        { label: "Grok (X.ai)", value: "grok" },
-      ],
-    },
-    {
-      key: "model",
-      label: "Modelo / ID (Opcional)",
-      type: "text",
-      placeholder: "Usa modelo global si está vacío",
-    },
-    {
       key: "prompt",
       label: "Prompt",
       type: "textarea",
@@ -913,36 +894,13 @@ const NODE_INPUTS = {
       defaultValue: "llmResult",
     },
     {
-      key: "temperature",
-      label: "Temperatura",
-      type: "number",
-      defaultValue: 0.7,
-    },
-    {
       key: "maxTokens",
-      label: "Máx Tokens",
+      label: "Límite de Tokens",
       type: "number",
-      defaultValue: 1000,
+      defaultValue: 2048,
     },
   ],
   generate_data: [
-    {
-      key: "provider",
-      label: "Proveedor (Opcional - Usa Global)",
-      type: "select",
-      options: [
-        { label: "Ollama (Local)", value: "ollama" },
-        { label: "Google (Gemini)", value: "google" },
-        { label: "Anthropic (Claude)", value: "anthropic" },
-        { label: "OpenAI (GPT)", value: "openai" },
-      ],
-    },
-    {
-      key: "model",
-      label: "Modelo (Opcional)",
-      type: "text",
-      placeholder: "Usa modelo global si está vacío",
-    },
     {
       key: "prompt",
       label: "Descripción de los Datos",
@@ -965,25 +923,14 @@ const NODE_INPUTS = {
       type: "text",
       defaultValue: "generatedData",
     },
+    {
+      key: "maxTokens",
+      label: "Límite de Tokens",
+      type: "number",
+      defaultValue: 2048,
+    },
   ],
   validate_semantic: [
-    {
-      key: "provider",
-      label: "Proveedor (Opcional - Usa Global)",
-      type: "select",
-      options: [
-        { label: "Ollama (Local)", value: "ollama" },
-        { label: "Google (Gemini)", value: "google" },
-        { label: "Anthropic (Claude)", value: "anthropic" },
-        { label: "OpenAI (GPT)", value: "openai" },
-      ],
-    },
-    {
-      key: "model",
-      label: "Modelo (Opcional)",
-      type: "text",
-      placeholder: "Usa modelo global si está vacío",
-    },
     {
       key: "sourceTextVariable",
       label: "Variable de Texto Fuente",
@@ -1007,6 +954,78 @@ const NODE_INPUTS = {
       label: "Nombre de Variable",
       type: "text",
       defaultValue: "semanticValid",
+    },
+  ],
+
+  extract_dom_context: [
+    {
+      key: "selector",
+      label: "Selector (Opcional)",
+      type: "text",
+      placeholder: "e.g. #content o .article-body",
+    },
+    {
+      key: "extractionType",
+      label: "Tipo de Extracción",
+      type: "select",
+      options: [
+        { label: "Solo Texto", value: "text" },
+        { label: "HTML Completo", value: "html" },
+        { label: "Markdown", value: "markdown" },
+      ],
+      default: "text",
+    },
+    {
+      key: "variableName",
+      label: "Nombre de Variable",
+      type: "text",
+      defaultValue: "domContext",
+    },
+  ],
+  chain_of_thought: [
+    {
+      key: "instruction",
+      label: "Instrucción / Pregunta",
+      type: "textarea",
+      placeholder: "Describe la tarea compleja que la IA debe razonar...",
+    },
+    {
+      key: "thoughtVariable",
+      label: "Variable de Pensamiento",
+      type: "text",
+      defaultValue: "aiThought",
+    },
+    {
+      key: "answerVariable",
+      label: "Variable de Respuesta Final",
+      type: "text",
+      defaultValue: "aiAnswer",
+    },
+    {
+      key: "maxTokens",
+      label: "Límite de Tokens",
+      type: "number",
+      defaultValue: 2048,
+    },
+  ],
+  smart_selector: [
+    {
+      key: "originalSelector",
+      label: "Selector Original (Fallido)",
+      type: "text",
+      placeholder: "e.g. button#submit",
+    },
+    {
+      key: "intent",
+      label: "Intención / Objetivo",
+      type: "text",
+      placeholder: "e.g. Click en el botón de login",
+    },
+    {
+      key: "variableName",
+      label: "Nombre de Variable",
+      type: "text",
+      defaultValue: "suggestedSelector",
     },
   ],
 

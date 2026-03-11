@@ -3997,52 +3997,16 @@ export const transformAction = async (req, res) => {
 
 export const callLlmAction = async (req, res) => {
     try {
-        const {
-            prompt,
-            system,
-            model,
-            variableName,
-            maxTokens,
-            temperature,
-            provider: bodyProvider,
-        } = req.body;
+        const { prompt, system, variableName = 'llmResult', maxTokens, temperature } = req.body;
 
-        // Resolve context: Priority is 1. Node Body (Manual), 2. Headers (Global Settings)
-        let activeProvider = bodyProvider || req.headers['x-ai-provider'];
-        let activeModel = model || req.headers['x-ai-model'];
+        // Resolve context: Force Ollama
+        const activeProvider = 'ollama';
+
+        // Strictly use global config, ignore any node-level overrides
+        const activeModel =
+            req.headers['x-ai-model'] || process.env.OLLAMA_MODEL || 'gemma3:latest';
         const headerBaseUrl = req.headers['x-ai-base-url'];
-
-        // Auto-detect provider from model name if still ambiguous
-        if (activeModel && (!activeProvider || activeProvider === 'openai')) {
-            const m = activeModel.toLowerCase();
-            if (m.includes('gemini')) activeProvider = 'google';
-            else if (m.includes('claude')) activeProvider = 'anthropic';
-            else if (m.includes('grok')) activeProvider = 'grok';
-            else if (
-                m.includes('ollama') ||
-                m.includes('llama') ||
-                m.includes('gemma') ||
-                m.includes('mistral') ||
-                m.includes('phi')
-            )
-                activeProvider = 'ollama';
-        }
-
-        // Final Default
-        if (!activeProvider) activeProvider = 'openai';
-
-        console.log(
-            `[Action] call_llm using ${activeProvider}/${activeModel || 'default'} (Source: ${bodyProvider ? 'Node' : 'Global'})`,
-        );
-
-        // Resolve API Key
-        let apiKey = req.headers['x-ai-api-key'];
-        if (!apiKey) {
-            if (activeProvider === 'google') apiKey = req.headers['x-google-key'];
-            if (activeProvider === 'anthropic') apiKey = req.headers['x-anthropic-key'];
-            if (activeProvider === 'openai' || activeProvider === 'grok')
-                apiKey = req.headers['x-openai-key'];
-        }
+        const apiKey = 'ollama';
 
         const response = await aiService.generateText({
             prompt: variableManager.resolve(prompt),
@@ -4085,36 +4049,17 @@ export const callLlmAction = async (req, res) => {
 
 export const generateDataAction = async (req, res) => {
     try {
-        const { prompt, expectedFormat, variableName, model, provider } = req.body;
-
+        const { prompt, expectedFormat, variableName = 'generatedData', maxTokens } = req.body;
         // Simple schema for general data generation
         const schema = z.any();
 
-        // Resolve context: Priority is 1. Node Body (Manual), 2. Headers (Global Settings)
-        let activeProvider = provider || req.headers['x-ai-provider'];
-        let activeModel = model || req.headers['x-ai-model'];
-
-        if (activeModel && (!activeProvider || activeProvider === 'openai')) {
-            const mBody = activeModel.toLowerCase();
-            if (mBody.includes('gemini')) activeProvider = 'google';
-            else if (mBody.includes('claude')) activeProvider = 'anthropic';
-            else if (mBody.includes('grok')) activeProvider = 'grok';
-            else if (
-                mBody.includes('ollama') ||
-                mBody.includes('llama') ||
-                mBody.includes('gemma') ||
-                mBody.includes('mistral') ||
-                mBody.includes('phi')
-            )
-                activeProvider = 'ollama';
-        }
-
-        if (!activeProvider) activeProvider = 'openai';
+        // Force Ollama, ignore node-level overrides
+        const activeProvider = 'ollama';
+        const activeModel =
+            req.headers['x-ai-model'] || process.env.OLLAMA_MODEL || 'gemma3:latest';
 
         const keys = {
-            openai: req.headers['x-openai-key'],
-            google: req.headers['x-google-key'],
-            anthropic: req.headers['x-anthropic-key'],
+            ollama: 'ollama',
         };
 
         const data = await aiService.generateStructured({
@@ -4123,6 +4068,7 @@ export const generateDataAction = async (req, res) => {
             provider: activeProvider,
             model: activeModel === 'ollama' ? undefined : activeModel,
             keys,
+            maxTokens,
         });
 
         variableManager.set(variableName, data, 'flow');
@@ -4156,35 +4102,16 @@ export const validateSemanticAction = async (req, res) => {
             validationPrompt,
             expectedAnswer,
             variableName = 'semanticValid',
-            model,
-            provider,
+            maxTokens,
         } = req.body;
 
-        // Resolve context: Priority is 1. Node Body (Manual), 2. Headers (Global Settings)
-        let activeProvider = provider || req.headers['x-ai-provider'];
-        let activeModel = model || req.headers['x-ai-model'];
-
-        if (activeModel && (!activeProvider || activeProvider === 'openai')) {
-            const mVal = activeModel.toLowerCase();
-            if (mVal.includes('gemini')) activeProvider = 'google';
-            else if (mVal.includes('claude')) activeProvider = 'anthropic';
-            else if (mVal.includes('grok')) activeProvider = 'grok';
-            else if (
-                mVal.includes('ollama') ||
-                mVal.includes('llama') ||
-                mVal.includes('gemma') ||
-                mVal.includes('mistral') ||
-                mVal.includes('phi')
-            )
-                activeProvider = 'ollama';
-        }
-
-        if (!activeProvider) activeProvider = 'openai';
+        // Ignore model/provider from node config, use global settings
+        const activeProvider = 'ollama';
+        const activeModel =
+            req.headers['x-ai-model'] || process.env.OLLAMA_MODEL || 'gemma3:latest';
 
         const keys = {
-            openai: req.headers['x-openai-key'],
-            google: req.headers['x-google-key'],
-            anthropic: req.headers['x-anthropic-key'],
+            ollama: 'ollama',
         };
 
         const content = variableManager.get(sourceTextVariable);
@@ -4196,6 +4123,7 @@ export const validateSemanticAction = async (req, res) => {
             provider: activeProvider,
             model: activeModel === 'ollama' ? undefined : activeModel,
             keys,
+            maxTokens,
         });
 
         // Map result to a success/fail based on expectedAnswer
@@ -4215,6 +4143,192 @@ export const validateSemanticAction = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: req.t('actions.validate_semantic.error'),
+            error: error.message,
+        });
+    }
+};
+
+export const extractDomContextAction = async (req, res) => {
+    try {
+        const {
+            browserId,
+            selector,
+            extractionType = 'text',
+            variableName = 'domContext',
+            nodeId,
+        } = req.body;
+
+        const validation = validateBrowser(req, browserId);
+        if (validation.error) {
+            return res
+                .status(validation.status)
+                .json({ success: false, message: validation.message });
+        }
+        const browserIdActual = validation.browserId;
+        const entry = validation.entry;
+        const browser = entry.browser || entry;
+
+        const context = await getOrCreateContext(req, browser, browserIdActual);
+        const pages = context.pages();
+        const page = pages.length > 0 ? pages[0] : await context.newPage();
+
+        let content = '';
+        if (selector) {
+            const resolvedSelector = variableManager.resolve(selector);
+            if (extractionType === 'html') {
+                content = await page.$eval(resolvedSelector, (el) => el.outerHTML);
+            } else if (extractionType === 'markdown') {
+                // Simple markdown-ish extraction: innerText with some structure
+                content = await page.$eval(resolvedSelector, (el) => el.innerText);
+            } else {
+                content = await page.textContent(resolvedSelector);
+            }
+        } else {
+            if (extractionType === 'html') {
+                content = await page.content();
+            } else {
+                content = await page.innerText('body');
+            }
+        }
+
+        variableManager.set(variableName, content, 'flow');
+
+        emitLog({
+            message: `DOM Context extracted (${extractionType}) to ${variableName}`,
+            type: 'success',
+            nodeId: nodeId || 'extract_dom_context',
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: req.t('actions.extract_dom_context.success'),
+            data: { content: content.substring(0, 500), variable: variableName },
+        });
+    } catch (error) {
+        console.error('[ERROR] extractDomContextAction:', error.message);
+        return res.status(500).json({
+            success: false,
+            message: req.t('actions.extract_dom_context.error'),
+            error: error.message,
+        });
+    }
+};
+
+export const chainOfThoughtAction = async (req, res) => {
+    try {
+        const {
+            instruction,
+            thoughtVariable = 'aiThought',
+            answerVariable = 'aiAnswer',
+            temperature = 0.7,
+            maxTokens,
+            nodeId,
+        } = req.body;
+
+        // Zero-Config: Force Ollama/Gemma3
+        const activeProvider = 'ollama';
+        const activeModel =
+            req.headers['x-ai-model'] || process.env.OLLAMA_MODEL || 'gemma3:latest';
+
+        const prompt = `Task: ${variableManager.resolve(instruction)}\n\nPlease think step by step. Use this exact format:\nTHOUGHT: <your detailed reasoning process>\nANSWER: <your final concise answer>`;
+
+        console.log(`[Action] chain_of_thought using ${activeProvider}/${activeModel}`);
+
+        const response = await aiService.generateText({
+            prompt,
+            provider: activeProvider,
+            model: activeModel === 'ollama' ? undefined : activeModel,
+            temperature,
+            maxTokens,
+            taskType: 'reasoning',
+        });
+
+        const text = response.text || '';
+        const thoughtMatch = text.match(/THOUGHT:([\s\S]*?)(?=ANSWER:|$)/i);
+        const answerMatch = text.match(/ANSWER:([\s\S]*)/i);
+
+        const thought = thoughtMatch ? thoughtMatch[1].trim() : 'No separate thought extracted.';
+        const answer = answerMatch ? answerMatch[1].trim() : text;
+
+        variableManager.set(thoughtVariable, thought, 'flow');
+        variableManager.set(answerVariable, answer, 'flow');
+
+        emitLog({
+            message: `Reasoning completed. Step-by-step logic saved to ${thoughtVariable}`,
+            type: 'success',
+            nodeId: nodeId || 'chain_of_thought',
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: req.t('actions.chain_of_thought.success'),
+            data: { thought, answer },
+        });
+    } catch (error) {
+        console.error('[ERROR] chainOfThoughtAction:', error.message);
+        return res.status(500).json({
+            success: false,
+            message: req.t('actions.chain_of_thought.error'),
+            error: error.message,
+        });
+    }
+};
+
+export const smartSelectorAction = async (req, res) => {
+    try {
+        const {
+            browserId,
+            originalSelector,
+            intent,
+            variableName = 'suggestedSelector',
+            nodeId,
+        } = req.body;
+
+        const validation = validateBrowser(req, browserId);
+        if (validation.error) {
+            return res
+                .status(validation.status)
+                .json({ success: false, message: validation.message });
+        }
+        const browserIdActual = validation.browserId;
+        const entry = validation.entry;
+        const browser = entry.browser || entry;
+
+        const context = await getOrCreateContext(req, browser, browserIdActual);
+        const pages = context.pages();
+        const page = pages.length > 0 ? pages[0] : await context.newPage();
+
+        // Extract DOM snippet for context
+        const domSnippet = await page.content();
+
+        console.log(`[Action] smart_selector attempting to heal: ${originalSelector}`);
+
+        const result = await aiService.healSelector({
+            domSnippet,
+            originalSelector,
+            intent: variableManager.resolve(intent),
+            error: 'Element not found with original selector',
+        });
+
+        const newSelector = result.correctedSelector || originalSelector;
+        variableManager.set(variableName, newSelector, 'flow');
+
+        emitLog({
+            message: `Smart Selector suggested: ${newSelector} (Confidence: ${result.confidence})`,
+            type: 'success',
+            nodeId: nodeId || 'smart_selector',
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: req.t('actions.smart_selector.success'),
+            data: { suggestedSelector: newSelector, confidence: result.confidence },
+        });
+    } catch (error) {
+        console.error('[ERROR] smartSelectorAction:', error.message);
+        return res.status(500).json({
+            success: false,
+            message: req.t('actions.smart_selector.error'),
             error: error.message,
         });
     }

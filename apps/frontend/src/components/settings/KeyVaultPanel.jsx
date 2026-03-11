@@ -38,9 +38,9 @@ export function KeyVaultPanel() {
   // Form State
   const [newKey, setNewKey] = useState({
     alias: "",
-    provider: "openai",
+    provider: "ollama",
     key: "",
-    baseUrl: "",
+    baseUrl: "http://localhost:11434",
   });
 
   const handleTestConnection = async (e) => {
@@ -108,7 +108,12 @@ export function KeyVaultPanel() {
 
       if (data.success) {
         toast.success(t("settings.vault.key_saved"));
-        setNewKey({ alias: "", provider: "openai", key: "", baseUrl: "" });
+        setNewKey({
+          alias: "",
+          provider: "ollama",
+          key: "",
+          baseUrl: "http://localhost:11434",
+        });
         setIsAdding(false);
         loadVaultKeys(); // Refresh context
         window.dispatchEvent(new Event("hal_keys_updated")); // Notify others
@@ -173,9 +178,6 @@ export function KeyVaultPanel() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="openai">OpenAI</SelectItem>
-                  <SelectItem value="anthropic">Anthropic</SelectItem>
-                  <SelectItem value="google">Google (Gemini)</SelectItem>
                   <SelectItem value="ollama">Ollama (Local)</SelectItem>
                 </SelectContent>
               </Select>

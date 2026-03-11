@@ -33,20 +33,6 @@ const asNumber = (value, defaultValue, min = -Infinity, max = Infinity) => {
 };
 
 /**
- * Normaliza y valida un número de punto flotante.
- * @param {*} value - El valor de entrada.
- * @param {number} defaultValue - El valor a retornar si la entrada no es un número.
- * @param {number} [min=-Infinity] - El valor mínimo permitido.
- * @param {number} [max=Infinity] - El valor máximo permitido.
- * @returns {number | undefined}
- */
-const asFloat = (value, defaultValue, min = -Infinity, max = Infinity) => {
-  const num = Number(value);
-  if (!Number.isFinite(num)) return defaultValue;
-  return Math.min(Math.max(num, min), max);
-};
-
-/**
  * Normaliza un string, asegurando que no sea null/undefined y esté "trimeado".
  * @param {*} value - El valor de entrada.
  * @param {string} [defaultValue=''] - El valor a retornar si la entrada es null/undefined.
@@ -1007,7 +993,6 @@ export const read_data = (payload) => {
 export const validate_semantic = (payload) => {
   return {
     browserId: asString(payload?.browserId),
-    model: asString(payload?.model, "gemini"),
     sourceTextVariable: asString(payload?.sourceTextVariable),
     validationPrompt: asString(payload?.validationPrompt),
     expectedAnswer: asString(payload?.expectedAnswer),
@@ -1018,22 +1003,47 @@ export const validate_semantic = (payload) => {
 export const generate_data = (payload) => {
   return {
     browserId: asString(payload?.browserId),
-    model: asString(payload?.model, "gpt4"),
     prompt: asString(payload?.prompt),
     variableName: asString(payload?.variableName, "generatedData"),
     expectedFormat: asString(payload?.expectedFormat, "json").toLowerCase(),
-    temperature: asFloat(payload?.temperature, 0.7, 0.0, 2.0),
+    maxTokens: asNumber(payload?.maxTokens, 2048, 1),
   };
 };
 
 export const call_llm = (payload) => {
   return {
     browserId: asString(payload?.browserId),
-    model: asString(payload?.model, "gemini"),
     prompt: asString(payload?.prompt),
     variableName: asString(payload?.variableName, "llmResult"),
-    temperature: asFloat(payload?.temperature, 0.7, 0.0, 2.0),
-    maxTokens: asNumber(payload?.maxTokens, 150, 1),
+    maxTokens: asNumber(payload?.maxTokens, 2048, 1),
+  };
+};
+
+export const extract_dom_context = (payload) => {
+  return {
+    browserId: asString(payload?.browserId),
+    selector: asString(payload?.selector),
+    extractionType: asString(payload?.extractionType, "text"),
+    variableName: asString(payload?.variableName, "domContext"),
+  };
+};
+
+export const chain_of_thought = (payload) => {
+  return {
+    browserId: asString(payload?.browserId),
+    instruction: asString(payload?.instruction),
+    thoughtVariable: asString(payload?.thoughtVariable, "aiThought"),
+    answerVariable: asString(payload?.answerVariable, "aiAnswer"),
+    maxTokens: asNumber(payload?.maxTokens, 2048, 1),
+  };
+};
+
+export const smart_selector = (payload) => {
+  return {
+    browserId: asString(payload?.browserId),
+    originalSelector: asString(payload?.originalSelector),
+    intent: asString(payload?.intent),
+    variableName: asString(payload?.variableName, "suggestedSelector"),
   };
 };
 

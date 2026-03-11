@@ -1,8 +1,6 @@
 // services/AIService.js
 import { generateText, generateObject } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
-import { createGoogleGenerativeAI } from '@ai-sdk/google';
-import { createAnthropic } from '@ai-sdk/anthropic';
 import { z } from 'zod';
 import { playwrightMcpServer } from './PlaywrightMCPServer.js';
 import { llmFactory } from './LLMFactory.js';
@@ -17,59 +15,18 @@ class AIService {
     }
 
     getProvider(providerName, apiKey, baseUrl) {
-        // Resolve effective API key using provider-specific env vars if not provided
-        let effectiveKey = apiKey;
-        if (!effectiveKey) {
-            switch (providerName) {
-                case 'google':
-                    effectiveKey = process.env.GOOGLE_API_KEY;
-                    break;
-                case 'anthropic':
-                    effectiveKey = process.env.ANTHROPIC_API_KEY;
-                    break;
-                case 'groq':
-                    effectiveKey = process.env.GROQ_API_KEY;
-                    break;
-                case 'grok':
-                    effectiveKey = process.env.XAI_API_KEY;
-                    break;
-                case 'openai':
-                    effectiveKey = process.env.OPENAI_API_KEY;
-                    break;
-            }
+        // We now exclusively use Ollama as the provider.
+        // Even if another provider is requested, we redirect to Ollama's OpenAI-compatible endpoint.
+        let ollamaUrl = baseUrl || process.env.OLLAMA_BASE_URL || 'http://localhost:11434/v1';
+        if (!ollamaUrl.endsWith('/v1')) {
+            ollamaUrl = `${ollamaUrl.replace(/\/$/, '')}/v1`;
         }
 
-        switch (providerName) {
-            case 'google':
-                return createGoogleGenerativeAI({ apiKey: effectiveKey });
-            case 'anthropic':
-                return createAnthropic({ apiKey: effectiveKey });
-            case 'ollama': {
-                let ollamaUrl =
-                    baseUrl || process.env.OLLAMA_BASE_URL || 'http://localhost:11434/v1';
-                if (!ollamaUrl.endsWith('/v1')) {
-                    ollamaUrl = `${ollamaUrl.replace(/\/$/, '')}/v1`;
-                }
-
-                // If apiKey is 'ollama', it's a marker from our resolution logic or a legacy call.
-                // We use standard createOpenAI config for Ollama's OpenAI-compatible endpoint.
-                return createOpenAI({
-                    compatibility: 'compatible',
-                    baseURL: ollamaUrl,
-                    apiKey: 'ollama',
-                });
-            }
-            case 'groq':
-                return createOpenAI({
-                    baseURL: 'https://api.groq.com/openai/v1',
-                    apiKey: effectiveKey,
-                });
-            case 'grok':
-                return createOpenAI({ baseURL: 'https://api.x.ai/v1', apiKey: effectiveKey });
-            case 'openai':
-            default:
-                return createOpenAI({ apiKey: effectiveKey });
-        }
+        return createOpenAI({
+            compatibility: 'compatible',
+            baseURL: ollamaUrl,
+            apiKey: 'ollama',
+        });
     }
 
     /**
@@ -77,31 +34,10 @@ class AIService {
      * @param {string} taskType - 'coding' | 'massive_context' | 'reasoning' | 'local'
      * @param {string} [preferredProvider] - Optional override
      */
-    selectBestModel(taskType, preferredProvider) {
-        const ollamaModel = process.env.OLLAMA_MODEL || 'gemma3';
-        if (preferredProvider === 'ollama') return { provider: 'ollama', model: ollamaModel };
-
-        switch (taskType) {
-            case 'coding':
-            case 'refactoring':
-                // Priority #1: Claude 3.5 Sonnet
-                return { provider: 'anthropic', model: 'claude-3-5-sonnet-20240620' };
-
-            case 'massive_context':
-                // Priority #1: Gemini 1.5 Pro (>50k lines)
-                return { provider: 'google', model: 'gemini-1.5-pro' };
-
-            case 'reasoning':
-            case 'planning':
-                // Priority #1: GPT-4o
-                return { provider: 'openai', model: 'gpt-4o' };
-
-            case 'local':
-                return { provider: 'ollama', model: ollamaModel };
-
-            default:
-                return { provider: 'openai', model: 'gpt-4o' };
-        }
+    selectBestModel(_taskType, _preferredProvider) {
+        // Consolidate to Gemma 3 via Ollama
+        const ollamaModel = process.env.OLLAMA_MODEL || 'gemma3:latest';
+        return { provider: 'ollama', model: ollamaModel };
     }
 
     async generateText({
@@ -122,13 +58,28 @@ class AIService {
                 selected = this.selectBestModel(taskType, provider);
             }
 
-            // Standards Enforce: Coding/Local temp = 0.2
-            if (taskType === 'coding' || taskType === 'refactoring' || taskType === 'local') {
-                temperature = 0.2;
-            }
-
             let activeProvider = provider || selected.provider;
             let activeModel = model || selected.model;
+
+            // Sanitize received model: if it's a known non-Ollama model, ignore it to force fallback
+            const legacyModels = [
+                'gemini',
+                'gpt4',
+                'gpt-4',
+                'claude',
+                'openai',
+                'google',
+                'anthropic',
+            ];
+            if (activeModel && legacyModels.includes(activeModel.toLowerCase())) {
+                activeModel = null;
+            }
+
+            if (!activeModel || activeProvider !== 'ollama') {
+                const best = this.selectBestModel(taskType);
+                activeProvider = best.provider;
+                activeModel = best.model;
+            }
 
             // --- SMART RESOLUTION FOR OLLAMA ---
             if (activeProvider === 'ollama' && activeModel) {
@@ -138,10 +89,6 @@ class AIService {
                 });
             }
 
-            console.log(
-                `[AIService] Generating text. Task: ${taskType} -> Using: ${activeProvider}/${activeModel}, Temp: ${temperature}`,
-            );
-
             const providerInstance = this.getProvider(activeProvider, apiKey, baseUrl);
             const modelRef = providerInstance(activeModel);
 
@@ -149,8 +96,13 @@ class AIService {
                 model: modelRef,
                 prompt,
                 system,
-                maxTokens,
+                maxTokens: maxTokens ? Number(maxTokens) : undefined,
                 temperature,
+                providerOptions: {
+                    openai: {
+                        max_tokens: maxTokens ? Number(maxTokens) : undefined,
+                    },
+                },
             });
 
             return { text, usage, finishReason };
@@ -187,6 +139,7 @@ class AIService {
             const providerInstance = llmFactory.getProviderInstance(
                 apiKey || activeProvider,
                 activeProvider,
+                _baseUrl,
             );
             const modelRef = providerInstance(activeModel);
             const tools = playwrightMcpServer.getToolDefinitions();
@@ -198,9 +151,11 @@ class AIService {
             const { text, toolCalls, toolResults, finishReason } = await generateText({
                 model: modelRef,
                 prompt,
-                system: system || 'You are Hal-9001.',
+                system: system || 'You are HAL-9001.',
                 tools,
                 maxSteps,
+                apiKey: 'ollama',
+                baseUrl: _baseUrl,
             });
 
             return { text, toolCalls, toolResults, finishReason };
@@ -217,38 +172,20 @@ class AIService {
             );
 
             // For Ollama, use healthCheck first for better error messages
-            if (provider === 'ollama') {
-                const validationModel = model || process.env.OLLAMA_MODEL || 'gemma3';
-                const health = await this.healthCheck({
-                    baseUrl: baseUrl || 'http://localhost:11434',
-                    model: validationModel,
-                });
-                if (!health.ollamaRunning) {
-                    throw new Error(
-                        'Ollama is not running. Please start Ollama with: ollama serve',
-                    );
-                }
-                if (!health.modelLoaded) {
-                    throw new Error(
-                        `Model '${validationModel}' is not available. Pull it with: ollama pull ${validationModel}`,
-                    );
-                }
-                return true;
-            }
-
-            const providerInstance = this.getProvider(provider, apiKey, baseUrl);
-
-            // Standard Validation Models (Updated for 2026 Compatibility)
-            let modelId = 'gpt-3.5-turbo'; // Fallback to most accessible model
-            if (provider === 'google') modelId = 'gemini-pro'; // High availability fallback
-            if (provider === 'anthropic') modelId = 'claude-3-5-sonnet-20240620';
-
-            const modelRef = providerInstance(modelId);
-            await generateText({
-                model: modelRef,
-                prompt: 'Hello',
-                maxTokens: 1,
+            // We only validate Ollama availability now
+            const validationModel = model || process.env.OLLAMA_MODEL || 'gemma3:latest';
+            const health = await this.healthCheck({
+                baseUrl: baseUrl || 'http://localhost:11434',
+                model: validationModel,
             });
+            if (!health.ollamaRunning) {
+                throw new Error('Ollama is not running. Please start Ollama with: ollama serve');
+            }
+            if (!health.modelLoaded) {
+                throw new Error(
+                    `Model '${validationModel}' is not available. Pull it with: ollama pull ${validationModel}`,
+                );
+            }
             return true;
         } catch (e) {
             // Enhanced Ollama-specific error mapping
@@ -307,9 +244,10 @@ class AIService {
                 return prefixMatch;
             }
 
-            // 4. Default to first available if requested is totally generic
+            // 4. Default to gemma3 if available, otherwise first available
             if (requestedModel === 'ollama' || requestedModel === 'local') {
-                return availableModels[0];
+                const gemma = availableModels.find((m) => m.includes('gemma3'));
+                return gemma || availableModels[0];
             }
 
             return requestedModel;
@@ -327,7 +265,7 @@ class AIService {
      */
     async healthCheck({
         baseUrl = 'http://localhost:11434',
-        model = process.env.OLLAMA_MODEL || 'gemma3',
+        model = process.env.OLLAMA_MODEL || 'gemma3:latest',
     }) {
         const result = {
             ollamaRunning: false,
@@ -563,7 +501,7 @@ Return a JSON object with these exact keys:
     /**
      * Genera datos estructurados basados en una descripción.
      */
-    async generateStructured({ description, schema, provider, model, apiKey, keys }) {
+    async generateStructured({ description, schema, provider, model, apiKey, keys, maxTokens }) {
         try {
             const taskType = 'reasoning';
             let selected = { provider, model };
@@ -603,6 +541,12 @@ Return a JSON object with these exact keys:
                     model: modelRef,
                     prompt,
                     temperature: 0.2,
+                    maxTokens: maxTokens ? Number(maxTokens) : undefined,
+                    providerOptions: {
+                        openai: {
+                            max_tokens: maxTokens ? Number(maxTokens) : undefined,
+                        },
+                    },
                 });
 
                 const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -614,6 +558,7 @@ Return a JSON object with these exact keys:
                 model: modelRef,
                 schema,
                 prompt: description,
+                maxTokens: maxTokens ? Number(maxTokens) : undefined,
             });
 
             return object;
@@ -626,7 +571,7 @@ Return a JSON object with these exact keys:
     /**
      * Valida contenido basado en criterios semánticos.
      */
-    async validate({ content, criteria, provider, model, apiKey, keys }) {
+    async validate({ content, criteria, provider, model, apiKey, keys, maxTokens }) {
         try {
             const taskType = 'reasoning';
             let selected = { provider, model };
@@ -667,6 +612,12 @@ Return a JSON object with these exact keys:
                     model: modelRef,
                     prompt,
                     temperature: 0.1,
+                    maxTokens: maxTokens ? Number(maxTokens) : undefined,
+                    providerOptions: {
+                        openai: {
+                            max_tokens: maxTokens ? Number(maxTokens) : undefined,
+                        },
+                    },
                 });
                 const jsonMatch = text.match(/\{[\s\S]*\}/);
                 if (jsonMatch) return JSON.parse(jsonMatch[0]);
@@ -685,6 +636,7 @@ Return a JSON object with these exact keys:
                     confidence: z.number(),
                 }),
                 prompt,
+                maxTokens: maxTokens ? Number(maxTokens) : undefined,
             });
 
             return object;
