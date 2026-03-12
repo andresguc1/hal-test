@@ -1,6 +1,10 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
+import { createRequire } from "module";
+
+const require = createRequire(import.meta.url);
+const { version } = require("./package.json");
 
 export default defineConfig({
   plugins: [react()],
@@ -12,6 +16,12 @@ export default defineConfig({
       react: path.resolve("./node_modules/react"),
       "react-dom": path.resolve("./node_modules/react-dom"),
     },
+  },
+
+  // === INJECT VERSION FROM package.json ===
+  // This replaces __APP_VERSION__ at build time — no manual sync needed.
+  define: {
+    __APP_VERSION__: JSON.stringify(version),
   },
 
   // === PROXY PARA BACKEND ===

@@ -4049,11 +4049,19 @@ export const callLlmAction = async (req, res) => {
 
 export const generateDataAction = async (req, res) => {
     try {
-        const { prompt, expectedFormat, variableName = 'generatedData', maxTokens } = req.body;
-        // Simple schema for general data generation
-        const schema = z.any();
+        const {
+            description,
+            expectedFormat = 'json',
+            variableName = 'generatedData',
+            variable, // Alias support
+            maxTokens = 2048,
+            count = 1,
+            fields,
+        } = req.body;
 
-        // Force Ollama, ignore node-level overrides
+        const targetVariable = variable || variableName;
+
+        // Force Ollama, ignore node-level overrides (Zero-Config)
         const activeProvider = 'ollama';
         const activeModel =
             req.headers['x-ai-model'] || process.env.OLLAMA_MODEL || 'gemma3:latest';
@@ -4062,8 +4070,16 @@ export const generateDataAction = async (req, res) => {
             ollama: 'ollama',
         };
 
+        // If 'fields' are provided, we can pass them, otherwise aiService handles description
+        const schema = fields ? z.any() : z.any(); // Simple for now, AIService maps it
+
+        const resolvedDescription = variableManager.resolve(description);
+        const finalPrompt = `Generate ${count} item(s) in ${expectedFormat} format. 
+Description: ${resolvedDescription}
+${fields ? `Fields: ${JSON.stringify(fields)}` : ''}`;
+
         const data = await aiService.generateStructured({
-            description: `Generate data in ${expectedFormat} format based on this description: ${variableManager.resolve(prompt)}`,
+            description: finalPrompt,
             schema,
             provider: activeProvider,
             model: activeModel === 'ollama' ? undefined : activeModel,
@@ -4071,11 +4087,11 @@ export const generateDataAction = async (req, res) => {
             maxTokens,
         });
 
-        variableManager.set(variableName, data, 'flow');
+        variableManager.set(targetVariable, data, 'flow');
 
         // Emit log for UI visualization
         emitLog({
-            message: `Generated Data (${expectedFormat}) saved to ${variableName}`,
+            message: `Generated Data (${expectedFormat}) saved to ${targetVariable}`,
             type: 'success',
             nodeId: req.body.nodeId || 'generate_data',
         });
@@ -4083,7 +4099,7 @@ export const generateDataAction = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: req.t('actions.generate_data.success'),
-            data: { data, variable: variableName },
+            data: { result: data, variable: targetVariable },
         });
     } catch (error) {
         console.error('[ERROR] generateDataAction:', error.message);
@@ -4098,32 +4114,42 @@ export const generateDataAction = async (req, res) => {
 export const validateSemanticAction = async (req, res) => {
     try {
         const {
-            sourceTextVariable,
-            validationPrompt,
+            content: rawContent,
+            criteria: rawCriteria,
             expectedAnswer,
             variableName = 'semanticValid',
-            maxTokens,
+            maxTokens = 2048,
+            nodeId,
         } = req.body;
 
-        // Ignore model/provider from node config, use global settings
+        // --- ZERO-CONFIG LOGIC: Ignore node-set provider/model ---
         const activeProvider = 'ollama';
         const activeModel =
             req.headers['x-ai-model'] || process.env.OLLAMA_MODEL || 'gemma3:latest';
 
-        const keys = {
-            ollama: 'ollama',
-        };
+        emitLog({
+            message: `Ejecutando validación semántica con modelo ${activeModel} (maxTokens: ${maxTokens})`,
+            type: 'ai',
+            nodeId,
+        });
 
-        const content = variableManager.get(sourceTextVariable);
-        const criteria = variableManager.resolve(validationPrompt);
+        const keys = { ollama: 'ollama' };
+
+        // Resolve inputs (may contain variables like ${text})
+        const content = variableManager.resolve(rawContent);
+        const criteria = variableManager.resolve(rawCriteria);
+
+        if (!content) {
+            throw new Error(`El contenido a validar está vacío o no se resolvió correctamente.`);
+        }
 
         const result = await aiService.validate({
             content,
             criteria,
             provider: activeProvider,
-            model: activeModel === 'ollama' ? undefined : activeModel,
+            model: activeModel,
             keys,
-            maxTokens,
+            maxTokens: Number(maxTokens),
         });
 
         // Map result to a success/fail based on expectedAnswer
@@ -4133,13 +4159,28 @@ export const validateSemanticAction = async (req, res) => {
 
         variableManager.set(variableName, isMatch, 'flow');
 
+        emitLog({
+            message: `Validación finalizada. Resultado: ${result.isValid} (Coincidencia: ${isMatch})`,
+            type: 'success',
+            nodeId,
+        });
+
         return res.status(200).json({
             success: true,
             message: req.t('actions.validate_semantic.success'),
-            data: { result, variable: variableName },
+            data: {
+                ...result,
+                variable: variableName,
+                isMatch,
+            },
         });
     } catch (error) {
         console.error('[ERROR] validateSemanticAction:', error.message);
+        emitLog({
+            message: `Error en validación semántica: ${error.message}`,
+            type: 'error',
+            nodeId: req.body?.nodeId,
+        });
         return res.status(500).json({
             success: false,
             message: req.t('actions.validate_semantic.error'),
@@ -4155,6 +4196,7 @@ export const extractDomContextAction = async (req, res) => {
             selector,
             extractionType = 'text',
             variableName = 'domContext',
+            maxTokens = 2048,
             nodeId,
         } = req.body;
 
@@ -4172,40 +4214,81 @@ export const extractDomContextAction = async (req, res) => {
         const pages = context.pages();
         const page = pages.length > 0 ? pages[0] : await context.newPage();
 
-        let content = '';
+        emitLog({
+            message: `Extracting DOM Context (${extractionType}) using ${selector || 'body'}`,
+            type: 'info',
+            nodeId,
+        });
+
+        let rawContent = '';
         if (selector) {
             const resolvedSelector = variableManager.resolve(selector);
             if (extractionType === 'html') {
-                content = await page.$eval(resolvedSelector, (el) => el.outerHTML);
-            } else if (extractionType === 'markdown') {
-                // Simple markdown-ish extraction: innerText with some structure
-                content = await page.$eval(resolvedSelector, (el) => el.innerText);
+                rawContent = await page.$eval(resolvedSelector, (el) => el.outerHTML);
             } else {
-                content = await page.textContent(resolvedSelector);
+                rawContent = await page.$eval(resolvedSelector, (el) => el.innerText);
             }
         } else {
             if (extractionType === 'html') {
-                content = await page.content();
+                rawContent = await page.content();
             } else {
-                content = await page.innerText('body');
+                rawContent = await page.innerText('body');
             }
         }
 
-        variableManager.set(variableName, content, 'flow');
+        let finalContent = rawContent;
+
+        // --- AI SMART EXTRACTION (Zero-Config) ---
+        if (extractionType === 'text' || extractionType === 'markdown') {
+            const activeProvider = 'ollama';
+            const activeModel =
+                req.headers['x-ai-model'] || process.env.OLLAMA_MODEL || 'gemma3:latest';
+
+            emitLog({
+                message: `Cleaning up content with AI (${activeModel})...`,
+                type: 'ai',
+                nodeId,
+            });
+
+            const prompt =
+                extractionType === 'markdown'
+                    ? `Convert the following content into clean, well-structured Markdown. Remove UI noise like navigation menus, footers, and ads. Focus on the main content.\n\nContent:\n${rawContent}`
+                    : `Extract and clean the main text from the following content. Remove boilerplate, UI artifacts, and repetitive elements. Retain only the actual information.\n\nContent:\n${rawContent}`;
+
+            const response = await aiService.generateText({
+                prompt,
+                provider: activeProvider,
+                model: activeModel,
+                maxTokens: Number(maxTokens),
+            });
+
+            finalContent = response.text || rawContent;
+        }
+
+        variableManager.set(variableName, finalContent, 'flow');
 
         emitLog({
-            message: `DOM Context extracted (${extractionType}) to ${variableName}`,
+            message: `Context extracted and saved to ${variableName}`,
             type: 'success',
-            nodeId: nodeId || 'extract_dom_context',
+            nodeId,
         });
 
         return res.status(200).json({
             success: true,
             message: req.t('actions.extract_dom_context.success'),
-            data: { content: content.substring(0, 500), variable: variableName },
+            data: {
+                content: finalContent.substring(0, 500),
+                variable: variableName,
+                isSmart: extractionType !== 'html',
+            },
         });
     } catch (error) {
         console.error('[ERROR] extractDomContextAction:', error.message);
+        emitLog({
+            message: `Error extracting DOM context: ${error.message}`,
+            type: 'error',
+            nodeId: req.body?.nodeId,
+        });
         return res.status(500).json({
             success: false,
             message: req.t('actions.extract_dom_context.error'),
@@ -4221,25 +4304,30 @@ export const chainOfThoughtAction = async (req, res) => {
             thoughtVariable = 'aiThought',
             answerVariable = 'aiAnswer',
             temperature = 0.7,
-            maxTokens,
+            maxTokens = 2048,
             nodeId,
         } = req.body;
 
-        // Zero-Config: Force Ollama/Gemma3
+        // --- ZERO-CONFIG LOGIC ---
         const activeProvider = 'ollama';
         const activeModel =
             req.headers['x-ai-model'] || process.env.OLLAMA_MODEL || 'gemma3:latest';
 
-        const prompt = `Task: ${variableManager.resolve(instruction)}\n\nPlease think step by step. Use this exact format:\nTHOUGHT: <your detailed reasoning process>\nANSWER: <your final concise answer>`;
+        emitLog({
+            message: `Iniciando razonamiento (CoT) con modelo ${activeModel}...`,
+            type: 'ai',
+            nodeId,
+        });
 
-        console.log(`[Action] chain_of_thought using ${activeProvider}/${activeModel}`);
+        const resolvedInstruction = variableManager.resolve(instruction);
+        const prompt = `Task: ${resolvedInstruction}\n\nPlease think step by step. Use this exact format:\nTHOUGHT: <your detailed reasoning process>\nANSWER: <your final concise answer>`;
 
         const response = await aiService.generateText({
             prompt,
             provider: activeProvider,
-            model: activeModel === 'ollama' ? undefined : activeModel,
-            temperature,
-            maxTokens,
+            model: activeModel,
+            temperature: Number(temperature),
+            maxTokens: Number(maxTokens),
             taskType: 'reasoning',
         });
 
@@ -4254,15 +4342,15 @@ export const chainOfThoughtAction = async (req, res) => {
         variableManager.set(answerVariable, answer, 'flow');
 
         emitLog({
-            message: `Reasoning completed. Step-by-step logic saved to ${thoughtVariable}`,
+            message: `Razonamiento completado. Resultado guardado en ${answerVariable}.`,
             type: 'success',
-            nodeId: nodeId || 'chain_of_thought',
+            nodeId,
         });
 
         return res.status(200).json({
             success: true,
             message: req.t('actions.chain_of_thought.success'),
-            data: { thought, answer },
+            data: { thought, answer, thoughtVariable, answerVariable },
         });
     } catch (error) {
         console.error('[ERROR] chainOfThoughtAction:', error.message);
@@ -4298,34 +4386,57 @@ export const smartSelectorAction = async (req, res) => {
         const pages = context.pages();
         const page = pages.length > 0 ? pages[0] : await context.newPage();
 
+        // --- ZERO-CONFIG LOGIC ---
+        const activeProvider = 'ollama';
+        const activeModel =
+            req.headers['x-ai-model'] || process.env.OLLAMA_MODEL || 'gemma3:latest';
+
+        emitLog({
+            message: `Healing selector with AI (${activeModel})...`,
+            type: 'ai',
+            nodeId,
+        });
+
         // Extract DOM snippet for context
         const domSnippet = await page.content();
 
-        console.log(`[Action] smart_selector attempting to heal: ${originalSelector}`);
+        const resolvedIntent = variableManager.resolve(intent);
 
         const result = await aiService.healSelector({
             domSnippet,
             originalSelector,
-            intent: variableManager.resolve(intent),
+            intent: resolvedIntent,
             error: 'Element not found with original selector',
+            provider: activeProvider,
+            model: activeModel,
+            timeout: 60000, // 1 minute timeout for healer
         });
 
         const newSelector = result.correctedSelector || originalSelector;
         variableManager.set(variableName, newSelector, 'flow');
 
         emitLog({
-            message: `Smart Selector suggested: ${newSelector} (Confidence: ${result.confidence})`,
+            message: `Selector healed: ${newSelector} (Confidence: ${(result.confidence * 100).toFixed(0)}%)`,
             type: 'success',
-            nodeId: nodeId || 'smart_selector',
+            nodeId,
         });
 
         return res.status(200).json({
             success: true,
             message: req.t('actions.smart_selector.success'),
-            data: { suggestedSelector: newSelector, confidence: result.confidence },
+            data: {
+                suggestedSelector: newSelector,
+                confidence: result.confidence,
+                reasoning: result.reasoning,
+            },
         });
     } catch (error) {
         console.error('[ERROR] smartSelectorAction:', error.message);
+        emitLog({
+            message: `Error healing selector: ${error.message}`,
+            type: 'error',
+            nodeId: req.body?.nodeId,
+        });
         return res.status(500).json({
             success: false,
             message: req.t('actions.smart_selector.error'),

@@ -5,6 +5,7 @@ const smartSelectorBodySchema = Joi.object({
     originalSelector: Joi.string().required(),
     intent: Joi.string().required(),
     variableName: Joi.string().default('suggestedSelector'),
+    maxTokens: Joi.number().integer().min(1).default(2048),
     nodeId: Joi.string().optional(),
 }).unknown();
 

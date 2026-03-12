@@ -1885,11 +1885,31 @@ export const NODE_FIELD_CONFIGS = {
       },
     },
     {
-      name: "prompt",
+      name: "description",
       label: "Descripción de los Datos",
       type: "textarea",
-      placeholder: "Describe los datos estructurados que deseas generar.",
+      placeholder:
+        "Describe los datos estructurados que deseas generar (ej: 'Genera 5 usuarios con nombre y edad').",
       required: true,
+    },
+    {
+      name: "count",
+      label: "Cantidad de elementos",
+      type: "number",
+      defaultValue: 1,
+      min: 1,
+    },
+    {
+      name: "maxTokens",
+      label: "Límite de Tokens",
+      type: "number",
+      defaultValue: 2048,
+      validation: (v, allParams, t) => {
+        const n = Number(v);
+        if (Number.isNaN(n) || n <= 0)
+          return "maxTokens must be a positive number";
+        return null;
+      },
     },
   ],
 

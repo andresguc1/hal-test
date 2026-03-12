@@ -6,9 +6,6 @@ export default Joi.object({
     criteria: Joi.string()
         .required()
         .description('Validation criteria (e.g. "Is the tone polite?")'),
-    variable: Joi.string()
-        .required()
-        .description('Variable to store result object {isValid, reasoning}'),
     model: Joi.any().optional(),
     variableName: Joi.string().required(),
     maxTokens: Joi.number().integer().min(1).optional(),

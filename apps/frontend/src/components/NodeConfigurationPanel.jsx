@@ -829,6 +829,7 @@ const NODE_INPUTS = {
       type: "selector",
       placeholder: ".btn-to-watch",
       isVisible: (config) =>
+        config &&
         ["click", "input", "change", "submit"].includes(config.eventType),
     },
     {
@@ -836,7 +837,8 @@ const NODE_INPUTS = {
       label: "URL Pattern (Glob/Regex)",
       type: "text",
       placeholder: "**/api/v1/*",
-      isVisible: (config) => ["request", "response"].includes(config.eventType),
+      isVisible: (config) =>
+        config && ["request", "response"].includes(config.eventType),
     },
     {
       key: "method",
@@ -874,6 +876,7 @@ const NODE_INPUTS = {
   ],
 
   // AI
+  // ⚠️ These are the ONLY node types that produce AI result data for the Result panel.
   call_llm: [
     {
       key: "prompt",
@@ -902,10 +905,11 @@ const NODE_INPUTS = {
   ],
   generate_data: [
     {
-      key: "prompt",
+      key: "description",
       label: "Descripción de los Datos",
       type: "textarea",
-      placeholder: "Describe qué datos quieres generar",
+      placeholder:
+        "Describe los datos estructurados que deseas generar (ej: 'Genera 5 usuarios').",
     },
     {
       key: "expectedFormat",
@@ -916,6 +920,13 @@ const NODE_INPUTS = {
         { label: "CSV", value: "csv" },
         { label: "Texto", value: "text" },
       ],
+      default: "json",
+    },
+    {
+      key: "count",
+      label: "Cantidad",
+      type: "number",
+      defaultValue: 1,
     },
     {
       key: "variableName",
@@ -928,6 +939,7 @@ const NODE_INPUTS = {
       label: "Límite de Tokens",
       type: "number",
       defaultValue: 2048,
+      placeholder: "2048",
     },
   ],
   validate_semantic: [
@@ -955,13 +967,19 @@ const NODE_INPUTS = {
       type: "text",
       defaultValue: "semanticValid",
     },
+    {
+      key: "maxTokens",
+      label: "Límite de Tokens",
+      type: "number",
+      defaultValue: 2048,
+    },
   ],
 
   extract_dom_context: [
     {
       key: "selector",
       label: "Selector (Opcional)",
-      type: "text",
+      type: "selector",
       placeholder: "e.g. #content o .article-body",
     },
     {
@@ -980,6 +998,12 @@ const NODE_INPUTS = {
       label: "Nombre de Variable",
       type: "text",
       defaultValue: "domContext",
+    },
+    {
+      key: "maxTokens",
+      label: "Límite de Tokens",
+      type: "number",
+      defaultValue: 2048,
     },
   ],
   chain_of_thought: [
@@ -1012,7 +1036,7 @@ const NODE_INPUTS = {
     {
       key: "originalSelector",
       label: "Selector Original (Fallido)",
-      type: "text",
+      type: "selector",
       placeholder: "e.g. button#submit",
     },
     {
@@ -1026,6 +1050,12 @@ const NODE_INPUTS = {
       label: "Nombre de Variable",
       type: "text",
       defaultValue: "suggestedSelector",
+    },
+    {
+      key: "maxTokens",
+      label: "Límite de Tokens",
+      type: "number",
+      defaultValue: 2048,
     },
   ],
 
@@ -1234,7 +1264,8 @@ const NODE_INPUTS = {
       label: "Key / Name",
       type: "text",
       placeholder: "e.g. auth_token",
-      isVisible: (data) => ["get", "set", "delete"].includes(data.action),
+      isVisible: (data) =>
+        data && ["get", "set", "delete"].includes(data.action),
       required: true,
     },
     {
@@ -1331,7 +1362,7 @@ const NODE_INPUTS = {
       type: "textarea",
       placeholder: "42 or [1,2,3]",
       isVisible: (data) =>
-        ["set", "increment", "push"].includes(data.operation),
+        data && ["set", "increment", "push"].includes(data.operation),
     },
     {
       key: "scope",
@@ -1512,7 +1543,7 @@ const NODE_INPUTS = {
       label: "Expression",
       type: "textarea",
       placeholder: "item.price * 1.1",
-      isVisible: (data) => ["map", "filter"].includes(data.operation),
+      isVisible: (data) => data && ["map", "filter"].includes(data.operation),
     },
     {
       key: "mergeWith",
@@ -1733,7 +1764,7 @@ function NodeConfigurationPanel({
   const { safeConfig, definedInputs } = useMemo(() => {
     if (!activeNode) return {};
 
-    const _nodeKey = activeNode.data?.type || activeNode.type;
+    const _nodeKey = activeNode.data?.type || activeNode.type || "";
     const _config = NODE_TYPE_MAP[_nodeKey] || NODE_TYPE_MAP.launch_browser;
     const _safeConfig = _config || { category: "default", color: "slate" };
 
@@ -1792,26 +1823,26 @@ function NodeConfigurationPanel({
       nodeState !== "picking" &&
       lastSyncedConfigRef.current.nodeState === "picking";
 
-    // C. Detect Any External Configuration Change (from Undo/Redo, Socket, or AI)
-    // We compare with what we last THOUGHT we synced to detect external drifts.
-    const globalConfigStr = JSON.stringify(globalConfig);
-    const lastSyncedConfigStr = JSON.stringify(
-      lastSyncedConfigRef.current.config,
-    );
-    const isDrifted = globalConfigStr !== lastSyncedConfigStr;
+    const globalConfigStr = activeNode?.data?.configuration
+      ? JSON.stringify(activeNode.data.configuration)
+      : "{}";
+    const lastConfigStr = lastSyncedConfigRef.current.config
+      ? JSON.stringify(lastSyncedConfigRef.current.config)
+      : "{}";
 
-    if (hasNodeChanged || justFinishedPicking || isDrifted) {
-      console.warn("[NodeConfig] 🔄 INTERNAL SYNC TRIGGERED. Reason:", {
+    // DRIFT: Global is different from what we thought we synced.
+    // This happens if an external source (AI, Picker, Undo) changed the node data.
+    const isExternalDrift = globalConfigStr !== lastConfigStr;
+
+    if (hasNodeChanged || justFinishedPicking || isExternalDrift) {
+      console.log("[NodeConfig] 🔄 EXTERNAL SYNC TRIGGERED. Reason:", {
         hasNodeChanged,
         justFinishedPicking,
-        isDrifted,
+        isExternalDrift,
       });
 
-      // CRITICAL: Clear any pending local updates to prevent overwriting the sync result with stale local state
+      // Prioritize external changes (AI, Picker) over local unsaved changes
       if (updateTimeoutRef.current) {
-        console.log(
-          "[NodeConfig] Clearing pending local update timeout to prioritize sync.",
-        );
         clearTimeout(updateTimeoutRef.current);
       }
 
@@ -1820,7 +1851,6 @@ function NodeConfigurationPanel({
         activeNode.data?.customLabel || activeNode.data?.label || "",
       );
 
-      // Update ref to current state
       lastSyncedConfigRef.current = {
         config: globalConfig,
         nodeId: activeNode.id,
@@ -1838,7 +1868,7 @@ function NodeConfigurationPanel({
       hasConfig: !!globalConfig,
       configKeys: Object.keys(globalConfig),
       selectorValue: globalConfig?.selector,
-      isDrifted,
+      isExternalDrift,
       justFinishedPicking,
     });
   }, [
@@ -1924,8 +1954,13 @@ function NodeConfigurationPanel({
 
       console.log(`[AI-Fix] Response received:`, data);
 
-      if (data.suggestion) {
-        handleConfigUpdate("selector", data.suggestion);
+      if (data && data.suggestion) {
+        // Correctly identify field to update (Smart Selector uses originalSelector)
+        const targetField =
+          activeNode.data?.type === "smart_selector"
+            ? "originalSelector"
+            : "selector";
+        handleConfigUpdate(targetField, data.suggestion);
         toast.dismiss("ai-heal-toast");
         toast.success(
           `Selector repaired! (Confidence: ${Math.round((data.confidence || 0) * 100)}%)`,
@@ -2357,7 +2392,16 @@ function NodeConfigurationPanel({
     });
 
     const result = activeNode.data?.result;
-    const aiResult = result?.data;
+    const nodeType = activeNode.data?.type || activeNode.type;
+    const isAiNode = [
+      "call_llm",
+      "chain_of_thought",
+      "generate_data",
+      "validate_semantic",
+      "extract_dom_context",
+      "smart_selector",
+    ].includes(nodeType);
+    const aiResult = isAiNode ? result?.data : null;
 
     return (
       <div className="space-y-5">
@@ -2390,6 +2434,26 @@ function NodeConfigurationPanel({
               {/* Background Glow */}
               <div className="absolute -top-12 -right-12 w-24 h-24 bg-indigo-500/10 blur-3xl group-hover:bg-indigo-500/20 transition-colors duration-500" />
 
+              {/* Extracted Content (DOM Context) */}
+              {aiResult.content && typeof aiResult.content === "string" && (
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-slate-500 font-medium">
+                      Extracted Content
+                    </span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 font-mono">
+                      $
+                      {aiResult.variable ||
+                        localConfig.variableName ||
+                        "domContext"}
+                    </span>
+                  </div>
+                  <pre className="text-[11px] leading-relaxed text-slate-200 whitespace-pre-wrap font-sans bg-black/20 p-2 rounded-lg border border-white/5 max-h-40 overflow-y-auto">
+                    {aiResult.content}
+                  </pre>
+                </div>
+              )}
+
               {/* Call LLM Result */}
               {aiResult.response && typeof aiResult.response === "string" && (
                 <div className="space-y-2">
@@ -2410,8 +2474,50 @@ function NodeConfigurationPanel({
                 </div>
               )}
 
+              {/* Chain of Thought Result */}
+              {(aiResult.thought || aiResult.answer) && (
+                <div className="space-y-3">
+                  {aiResult.thought && (
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-slate-500 font-medium">
+                          🧠 Reasoning Process
+                        </span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 font-mono">
+                          $
+                          {aiResult.thoughtVariable ||
+                            localConfig.thoughtVariable ||
+                            "aiThought"}
+                        </span>
+                      </div>
+                      <pre className="text-[11px] leading-relaxed text-slate-300 whitespace-pre-wrap font-sans bg-black/20 p-2 rounded-lg border border-white/5 max-h-40 overflow-y-auto italic">
+                        {aiResult.thought}
+                      </pre>
+                    </div>
+                  )}
+                  {aiResult.answer && (
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-slate-500 font-medium">
+                          ✅ Final Answer
+                        </span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-mono">
+                          $
+                          {aiResult.answerVariable ||
+                            localConfig.answerVariable ||
+                            "aiAnswer"}
+                        </span>
+                      </div>
+                      <pre className="text-[11px] leading-relaxed text-slate-200 whitespace-pre-wrap font-sans bg-black/20 p-2 rounded-lg border border-white/5">
+                        {aiResult.answer}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Generate Data Result */}
-              {aiResult.result && (
+              {aiResult.result && aiResult.isValid === undefined && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] text-slate-500 font-medium">
@@ -2430,58 +2536,97 @@ function NodeConfigurationPanel({
               )}
 
               {/* Validate Semantic Result */}
-              {aiResult.isValid !== undefined && (
+              {(aiResult.isValid !== undefined ||
+                aiResult.result?.isValid !== undefined) && (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between gap-3">
-                    <div
-                      className={cn(
-                        "flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold",
-                        aiResult.isValid
-                          ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
-                          : "bg-red-500/10 border-red-500/20 text-red-400",
-                      )}
-                    >
-                      {aiResult.isValid ? (
-                        <CheckCircle2 size={14} />
-                      ) : (
-                        <AlertCircle size={14} />
-                      )}
-                      {aiResult.isValid ? "Valid Content" : "Invalid Content"}
-                    </div>
-                    <div className="flex flex-col items-end">
-                      <span className="text-[9px] text-slate-500 uppercase font-bold tracking-tighter">
-                        Var: $
-                        {aiResult.variable ||
-                          localConfig.variableName ||
-                          "semanticValid"}
-                      </span>
-                      <span className="text-[9px] text-slate-500 uppercase font-bold tracking-tighter">
-                        Confidence
-                      </span>
-                      <span className="text-xs font-mono font-bold text-white">
-                        {(aiResult.confidence * 100).toFixed(0)}%
-                      </span>
-                    </div>
+                    {(() => {
+                      const isValid =
+                        aiResult.isValid !== undefined
+                          ? aiResult.isValid
+                          : aiResult.result?.isValid;
+                      const confidence =
+                        aiResult.confidence !== undefined
+                          ? aiResult.confidence
+                          : aiResult.result?.confidence;
+                      const _reason =
+                        aiResult.reason || aiResult.result?.reason;
+
+                      return (
+                        <>
+                          <div
+                            className={cn(
+                              "flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold",
+                              isValid
+                                ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                                : "bg-red-500/10 border-red-500/20 text-red-400",
+                            )}
+                          >
+                            {isValid ? (
+                              <CheckCircle2 size={14} />
+                            ) : (
+                              <AlertCircle size={14} />
+                            )}
+                            {isValid ? "Valid Content" : "Invalid Content"}
+                          </div>
+                          <div className="flex flex-col items-end">
+                            <span className="text-[9px] text-slate-500 uppercase font-bold tracking-tighter">
+                              Var: $
+                              {aiResult.variable ||
+                                localConfig.variableName ||
+                                "semanticValid"}
+                            </span>
+                            <span className="text-[9px] text-slate-500 uppercase font-bold tracking-tighter">
+                              Confidence
+                            </span>
+                            <span className="text-xs font-mono font-bold text-white">
+                              {(Number(confidence) * 100).toFixed(0)}%
+                            </span>
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
 
-                  {aiResult.reason && (
+                  {(aiResult.reason || aiResult.result?.reason) && (
                     <div className="space-y-1">
                       <span className="text-[10px] text-slate-500 font-medium ml-1">
                         Reasoning
                       </span>
                       <p className="text-[11px] text-slate-300 italic leading-snug bg-white/5 p-2 rounded-lg border border-white/5">
-                        "{aiResult.reason}"
+                        "{aiResult.reason || aiResult.result?.reason}"
                       </p>
                     </div>
                   )}
                 </div>
               )}
 
+              {/* Universal Fallback: show raw data for unrecognized AI result shapes */}
+              {!aiResult.content &&
+                !aiResult.response &&
+                !aiResult.thought &&
+                !aiResult.answer &&
+                !aiResult.result &&
+                aiResult.isValid === undefined && (
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-slate-500 font-medium">
+                      Result Data
+                    </span>
+                    <div className="bg-black/30 rounded-lg p-3 border border-white/5">
+                      <pre className="text-[10px] font-mono text-slate-300 leading-tight max-h-40 overflow-y-auto">
+                        {JSON.stringify(aiResult, null, 2)}
+                      </pre>
+                    </div>
+                  </div>
+                )}
+
               {/* Usage Stats Footer */}
               {aiResult.usage && (
                 <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-[9px] text-slate-600 font-mono uppercase tracking-tighter">
                   <span>Tokens: {aiResult.usage.totalTokens || 0}</span>
-                  <span>Execution: {result.executionTime || 0}ms</span>
+                  <span>
+                    Execution: {activeNode.data?.executionTime || 0}ms
+                  </span>
                 </div>
               )}
             </div>
@@ -2705,8 +2850,9 @@ function NodeConfigurationPanel({
             )}
           </div>
 
-          {/* Evidence preview for screenshot nodes (shown at bottom) */}
-          {nodeScreenshotUrl ? (
+          {/* Evidence preview for screenshot nodes (shown at bottom, only when not already shown inline via takeScreenshot checkbox) */}
+          {nodeScreenshotUrl &&
+          !definedInputs?.some((f) => f.key === "takeScreenshot") ? (
             <div className="p-4 border-t border-[var(--border-ui)] bg-[var(--bg-panel)]">
               <EvidenceCard
                 screenshotUrl={nodeScreenshotUrl}
@@ -2724,55 +2870,78 @@ function NodeConfigurationPanel({
 
           {/* FOOTER ACTIONS (Themed) */}
           <div className="p-4 border-t border-[var(--border-ui)] bg-[var(--bg-panel)] shrink-0 space-y-3">
-            {/* Self-Healing Banner & Action */}
-            {activeNode?.data?.state === "healed" && (
-              <div className="mb-4 bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 space-y-3 shadow-lg shadow-amber-500/5">
-                <div className="flex items-start gap-2">
-                  <div className="p-1.5 bg-amber-500/20 rounded-md shrink-0">
-                    <Sparkles size={14} className="text-amber-400" />
+            {/* AI Suggestion / Healed Banner */}
+            {(activeNode?.data?.state === "healed" ||
+              (activeNode?.data?.type === "smart_selector" &&
+                activeNode?.data?.result?.suggestedSelector)) && (
+              <div className="mb-4 bg-violet-500/10 border border-violet-500/30 rounded-xl p-4 space-y-3 shadow-xl shadow-violet-500/5 backdrop-blur-md">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-violet-500/20 rounded-lg shrink-0 border border-violet-500/20 shadow-inner">
+                    <Sparkles size={16} className="text-violet-400" />
                   </div>
                   <div className="space-y-1">
-                    <p className="text-[11px] font-bold text-amber-200 leading-tight">
-                      AI Self-Healing Success!
-                    </p>
-                    <p className="text-[10px] text-amber-400/80 leading-relaxed italic">
-                      "{activeNode.data.result?.reasoning}"
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-[11px] font-bold text-violet-200 uppercase tracking-wider">
+                        AI Evidence Found
+                      </p>
+                      {activeNode.data.result?.confidence && (
+                        <span
+                          className={cn(
+                            "text-[9px] px-1.5 py-0.5 rounded-full font-bold",
+                            activeNode.data.result.confidence > 0.8
+                              ? "bg-green-500/20 text-green-400"
+                              : "bg-amber-500/20 text-amber-400",
+                          )}
+                        >
+                          {(activeNode.data.result.confidence * 100).toFixed(0)}
+                          % Conf.
+                        </span>
+                      )}
+                    </div>
+                    {activeNode.data.result?.reasoning && (
+                      <p className="text-[10px] text-violet-300/80 leading-relaxed line-clamp-2 italic">
+                        "{activeNode.data.result.reasoning}"
+                      </p>
+                    )}
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-2 bg-black/20 rounded p-2 border border-amber-500/10">
-                  <div className="flex justify-between items-center text-[9px] uppercase tracking-tighter font-bold">
-                    <span className="text-red-400/70">Original</span>
-                    <span className="text-amber-400">→ Suggestion</span>
+                <div className="flex flex-col gap-2 bg-black/40 rounded-lg p-3 border border-white/5 shadow-inner">
+                  <div className="flex justify-between items-center text-[9px] uppercase tracking-widest font-black opacity-40">
+                    <span>Target Suggestion</span>
                   </div>
-                  <div className="flex items-center gap-2 overflow-hidden">
-                    <span className="text-[10px] font-mono text-red-500/60 truncate line-through max-w-[100px]">
-                      {activeNode.data.result?.originalSelector ||
-                        "No selector"}
-                    </span>
-                    <ArrowRight size={10} className="text-amber-500 shrink-0" />
-                    <span className="text-[10px] font-mono text-amber-400 truncate flex-1">
-                      {activeNode.data.result?.newSelector}
-                    </span>
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 font-mono text-xs text-violet-200 bg-violet-500/5 p-2 rounded border border-violet-500/10 truncate">
+                      {activeNode.data.result?.suggestedSelector ||
+                        activeNode.data.result?.newSelector}
+                    </div>
                   </div>
                 </div>
 
                 <button
                   onClick={() => {
-                    const newSelector = activeNode.data.result?.newSelector;
+                    const resData = activeNode?.data?.result || {};
+                    const newSelector =
+                      resData.suggestedSelector || resData.newSelector;
+
                     if (newSelector) {
-                      updateNodeConfiguration(activeNode.id, {
-                        ...(activeNode.data?.configuration || {}),
-                        selector: newSelector,
-                      });
-                      toast.success("Selector updated permanently!");
+                      const targetField =
+                        activeNode?.data?.type === "smart_selector"
+                          ? "originalSelector"
+                          : "selector";
+                      handleConfigUpdate(targetField, newSelector);
+                      toast.success(
+                        t(
+                          "actions.smart_selector.applied",
+                          "Selector updated!",
+                        ),
+                      );
                     }
                   }}
-                  className="w-full flex items-center justify-center gap-2 py-1.5 rounded bg-amber-500 hover:bg-amber-400 text-amber-950 text-[10px] font-bold uppercase tracking-wider transition-colors shadow-sm"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold uppercase tracking-widest transition-all shadow-lg hover:shadow-violet-500/20 active:scale-[0.98]"
                 >
-                  <Sparkles size={12} fill="currentColor" />
-                  Permanently Update
+                  <Sparkles size={14} fill="currentColor" />
+                  Apply Suggested Fix
                 </button>
               </div>
             )}

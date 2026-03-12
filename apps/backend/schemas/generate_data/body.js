@@ -6,7 +6,12 @@ export default Joi.object({
         .required()
         .description('Natural language description of data to generate'),
 
-    // Simple field definition for dynamic schema generation
+    expectedFormat: Joi.string()
+        .valid('json', 'csv', 'text')
+        .default('json')
+        .description('Desired output format'),
+
+    // Fields can be optional if description is clear
     fields: Joi.array()
         .items(
             Joi.object({
@@ -17,21 +22,16 @@ export default Joi.object({
                 description: Joi.string().optional(),
             }),
         )
-        .min(1)
-        .required()
-        .description('Fields structure to generate'),
+        .optional()
+        .description('Explicit fields structure to generate (optional)'),
 
-    count: Joi.number()
-        .integer()
-        .min(1)
-        .default(1)
-        .description('Number of items to generate (if array)'),
+    count: Joi.number().integer().min(1).default(1).description('Number of items to generate'),
 
-    variable: Joi.string().required().description('Variable to store the generated JSON'),
-    variableName: Joi.string().optional(), // Alias for consistency
-    model: Joi.any().optional(),
-    provider: Joi.any().optional(),
-    maxTokens: Joi.number().integer().min(1).optional(),
+    variableName: Joi.string().required().description('Variable to store the generated data'),
+
+    variable: Joi.string().optional().description('Alias for variableName'),
+
+    maxTokens: Joi.number().integer().min(1).default(2048),
     nodeId: Joi.string().optional(),
     browserId: Joi.string().optional(),
 }).unknown();

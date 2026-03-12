@@ -247,8 +247,25 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
     setHasUnsavedChanges(true); // Mark as dirty on ANY edge change
   }, []);
 
-  const [, setSelectedNodeId] = useState(null);
-  const [selectedAction, setSelectedAction] = useState(null);
+  const [selectedNodeId, setSelectedNodeId] = useState(null);
+  const selectedAction = useMemo(() => {
+    if (!selectedNodeId) return null;
+    const node = updateNodeRecursively(
+      nodesRef.current,
+      selectedNodeId,
+      (n) => n,
+    )?.find((n) => n.id === selectedNodeId);
+    // Fallback search in flat nodes if recursive search is not needed for selectedAction logic here
+    const flatNode = nodes.find((n) => n.id === selectedNodeId);
+    const activeNode = flatNode || node;
+
+    if (!activeNode) return null;
+    return {
+      nodeId: activeNode.id,
+      type: activeNode.type,
+      data: activeNode.data,
+    };
+  }, [selectedNodeId, nodes]);
 
   // History (Undo/Redo)
   const [history, setHistory] = useState({ past: [], future: [] });
@@ -551,19 +568,30 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
   // OPTIMIZACIÓN 5: Batch updates con useCallback
   // ========================================
   const updateNodeState = useCallback(
-    (nodeId, state, errorDetails = null) => {
+    (nodeId, state, extraData = null) => {
       setNodes((nds) =>
-        updateNodeRecursively(nds, nodeId, (node) => ({
-          ...node,
-          data: {
+        updateNodeRecursively(nds, nodeId, (node) => {
+          const newData = {
             ...node.data,
             state,
-            errorDetails,
-            error: errorDetails?.message || null,
             lastExecuted: new Date().toISOString(),
-          },
-          style: getNodeStyle(state, node.style),
-        })),
+          };
+
+          // If extraData has pickingField (even if null), add/reset it.
+          // If it's an error object, handle legacy error structure.
+          if (extraData && "pickingField" in extraData) {
+            newData.pickingField = extraData.pickingField;
+          } else if (extraData?.message) {
+            newData.errorDetails = extraData;
+            newData.error = extraData.message;
+          }
+
+          return {
+            ...node,
+            data: newData,
+            style: getNodeStyle(state, node.style),
+          };
+        }),
       );
 
       // NEW: Also update outgoing edges for visual feedback!
@@ -789,9 +817,9 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
       setSelectedNodeId(null);
 
       // CRITICAL FIX: Close panel if we deleted the active node
-      setSelectedAction((prev) => (prev?.nodeId === nodeId ? null : prev));
+      setSelectedNodeId((prev) => (prev === nodeId ? null : prev));
     },
-    [saveToHistory, setNodes, setEdges, setSelectedAction],
+    [saveToHistory, setNodes, setEdges, setSelectedNodeId],
   );
 
   const updateNodeConfiguration = useCallback(
@@ -1219,11 +1247,6 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
       // AUTO-FOCUS: Select Node and Open Inspector
       setTimeout(() => {
         setSelectedNodeId(componentId);
-        setSelectedAction({
-          nodeId: componentId,
-          type: "component",
-          data: componentNode.data,
-        });
       }, 50);
 
       toast.success(t("groups.success", "Grouped into Component"));
@@ -1239,7 +1262,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
     setEdges,
     t,
     setSelectedNodeId,
-    setSelectedAction,
+
     toast,
     queryClient,
     saveFlow,
@@ -1598,7 +1621,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
           const isNetworkError =
             error.name === "AbortError" ||
             error.message === "Failed to fetch" ||
-            error.message.includes("NetworkError");
+            (error.message && error.message.includes("NetworkError"));
 
           if (
             isNetworkError &&
@@ -1801,11 +1824,6 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
     }
 
     setSelectedNodeId(node.id);
-    setSelectedAction({
-      nodeId: node.id,
-      type: node.type,
-      data: node.data,
-    });
   }, []);
 
   // ========================================
@@ -2252,8 +2270,8 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
           });
 
           // RECURSION CHECK: Component Node
-          if (node.type === "component" || node.data.type === "component") {
-            const { flowId } = node.data;
+          if (node.type === "component" || node.data?.type === "component") {
+            const { flowId } = node.data || {};
             if (flowId) {
               setApiStatus({
                 state: "loading",
@@ -2305,7 +2323,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
           // CRITICAL FIX: If node type is explicitly "component" but didn't pass the check above (e.g. missing flowId),
           // we must NOT try to execute it as an API action 'unknown' or 'component'.
           // Double check to prevent fall-through.
-          if (node.type === "component" || node.data.type === "component") {
+          if (node.type === "component" || node.data?.type === "component") {
             logger.warn(`Skipping invalid/empty component node: ${node.id}`);
             continue;
           }
@@ -2317,7 +2335,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
 
           // NORMAL STEP EXECUTION
           const payload = {
-            ...(node.data.configuration || {}),
+            ...(node.data?.configuration || {}),
             ...runtimeContext,
             runId,
           };
@@ -2333,7 +2351,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
 
           setApiStatus({
             state: "loading",
-            message: `Step ${i + 1}/${sortedAll.length} (Depth ${depth}): ${node.data.label || node.data.type}`,
+            message: `Step ${i + 1}/${sortedAll.length} (Depth ${depth}): ${node.data?.label || node.data?.type || node.type}`,
           });
 
           try {
@@ -2891,7 +2909,6 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
   return {
     nodes,
     edges,
-    selectedAction,
     // nodes, edges, selectedAction removed (duplicates)
     viewStack,
     enterComponent,
@@ -2904,8 +2921,9 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
 
     setNodes,
     setEdges,
-    setSelectedAction, // CORRECTED: Expose real setter, not alias to setSelectedNodeId
-    setSelectedNodeId, // Expose this too if needed externally
+    selectedNodeId,
+    selectedAction,
+    setSelectedNodeId,
     setAutoSaveEnabled,
 
     addNode,

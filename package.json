@@ -1,6 +1,6 @@
 {
     "name": "halt-test-monorepo",
-    "version": "1.0.0",
+    "version": "1.0.26",
     "description": "Unified platform for automation and mock services",
     "license": "GPL-3.0-only",
     "type": "module",

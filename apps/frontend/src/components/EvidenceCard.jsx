@@ -19,7 +19,7 @@ const EvidenceCard = ({ screenshotUrl, durationMs, timestamp }) => {
 
     // Cache busting for server paths
     const ts = timestamp || Date.now();
-    const separator = url.includes("?") ? "&" : "?";
+    const separator = url && url.includes("?") ? "&" : "?";
 
     // Forensic Logic: Use secure history endpoint if it's a storage run path
     if (url && url.includes("storage/runs/")) {

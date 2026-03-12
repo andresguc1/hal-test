@@ -245,7 +245,6 @@ function Dashboard() {
     canUndo,
     canRedo,
     selectedAction,
-    setSelectedAction,
     setNodes,
     setEdges,
     addNode,
@@ -284,13 +283,23 @@ function Dashboard() {
   // START PICKING HANDLER (Visual Feedback + API)
   const handleStartPicking = useCallback(
     async (fieldKey = "selector") => {
+      // If we are already picking, we should stop/cancel before starting another
+      // or simply treat a second click as a cancel if it's the same node/field.
+      if (selectedAction?.data?.state === NODE_STATES.PICKING) {
+        console.log("[App] 🛑 Already picking, stopping current session...");
+        await handleCancelPicking();
+        return;
+      }
+
       if (!selectedAction) return;
 
       console.log("[App] 📍 Starting picker for field:", fieldKey);
       setPickingField(fieldKey);
 
       // 1. Visual Feedback: Set node to "PICKING" state
-      updateNodeState(selectedAction.nodeId, NODE_STATES.PICKING);
+      updateNodeState(selectedAction.nodeId, NODE_STATES.PICKING, {
+        pickingField: fieldKey,
+      });
       toast.info(
         t("common.inspector_started", "Pick an element in the browser..."),
       );
@@ -347,69 +356,45 @@ function Dashboard() {
 
   // CANCEL PICKING HANDLER
   const handleCancelPicking = useCallback(async () => {
+    // If we have a selected action, try to revert its state regardless of current state check
+    // to be safe against stale closure logic elsewhere.
     if (selectedAction) {
-      updateNodeState(selectedAction.nodeId, NODE_STATES.DEFAULT);
+      updateNodeState(selectedAction.nodeId, NODE_STATES.DEFAULT, {
+        pickingField: null,
+      });
       console.log(
-        "[App] Cancelled picking state for node:",
+        "[App] Resetting node state to DEFAULT for node:",
         selectedAction.nodeId,
       );
-      setPickingField("selector");
     }
+
+    // Reset picking field
+    setPickingField("selector");
+
     // Call backend to remove listeners
     try {
-      await api.post("/inspector/stop", { browserId: null });
-      // Optional: toast.info("Inspector stopped");
+      await api.post("/inspector/stop", { browserId: activeBrowserId || null });
     } catch (e) {
       console.warn("[App] Failed to stop backend inspector:", e);
     }
-  }, [selectedAction, updateNodeState]);
+  }, [selectedAction, updateNodeState, activeBrowserId]);
 
   // Element Picker Callback
   const handleElementPicked = useCallback(
     async (data) => {
       console.log("[App] 🎯 Element Picked Event Received:", data);
 
-      const pickingNodes = nodes.filter(
-        (n) => n.data?.state === NODE_STATES.PICKING,
-      );
-      console.log(
-        "[App] 🔍 Nodes in PICKING state:",
-        pickingNodes.map((n) => n.id),
-      );
+      // CRITICAL: We need the LATEST nodes. Since this is a socket callback,
+      // the 'nodes' in scope might be stale. We'll use a functional update
+      // for updateNodeConfiguration or better, find the node from the current state.
 
-      let liveNode = pickingNodes[0];
-
-      if (!liveNode && selectedAction) {
-        liveNode = nodes.find((n) => n.id === selectedAction.nodeId);
-        console.log(
-          "[App] 🔍 Fallback to selectedAction node:",
-          liveNode?.id || "NONE",
-        );
-      }
-
-      if (!liveNode) {
-        console.error(
-          "[App] ❌ CRITICAL: Element picked but no candidate node found to update.",
-          {
-            pickingNodesCount: pickingNodes.length,
-            selectedActionNodeId: selectedAction?.nodeId,
-            allNodeStates: nodes.map((n) => ({
-              id: n.id,
-              state: n.data?.state,
-            })),
-          },
-        );
-        return;
-      }
-
-      const kmId = liveNode.id;
-      console.log("[App] ✅ Target node identified for update:", kmId);
+      // 1. Identify which node is in PICKING state
+      // We'll use nodesRef or a similar mechanism if available, but for now
+      // let's try to handle it within updateNodeConfiguration logic.
 
       try {
         // VALIDATION: Ensure we captured a valid selector
         const sources = data.candidates || data.selectors || {};
-        console.log("[App] 📦 Selector sources:", sources);
-
         const isValidSelector =
           data &&
           (data.selector || (sources && Object.values(sources).some((v) => v)));
@@ -422,131 +407,116 @@ function Dashboard() {
               "Failed to capture element. Try again.",
             ),
           );
-          updateNodeState(kmId, NODE_STATES.DEFAULT);
+
+          // Reset all picking states just in case
+          nodes.forEach((n) => {
+            if (n.data?.state === NODE_STATES.PICKING)
+              updateNodeState(n.id, NODE_STATES.DEFAULT);
+          });
           return;
         }
 
-        const currentConfig = liveNode.data?.configuration || {};
-        console.log("[App] 📋 Current node configuration:", currentConfig);
-
         // PRIORITY STRATEGY: AI Optimized > ID > Data Attr > CSS > XPath
-        let finalSelector = data.sanitizedSelector || data.selector; // Default fallback
-        console.log(
-          "[App] 🎯 Initial selector (AI prioritized):",
-          finalSelector,
-        );
+        let finalSelector = data.sanitizedSelector || data.selector;
 
-        // Handle candidates/selectors structure
         if (sources) {
-          // Map standard keys
           const id = sources.id;
-          const dataAttr = sources.dataAttribute || sources.testId; // Backend might send testId
+          const dataAttr = sources.dataAttribute || sources.testId;
           const css = sources.css || sources.cssPath;
           const xpath = sources.xpath || sources.text;
 
-          console.log("[App] 🔍 Extracted selectors from candidates:", {
-            id,
-            dataAttr,
-            css,
-            xpath,
-          });
-
-          if (id) {
-            finalSelector = id;
-            console.log(
-              "[App] ✅ Priority 1: Using ID selector:",
-              finalSelector,
-            );
-          } else if (dataAttr) {
-            finalSelector = dataAttr;
-            console.log(
-              "[App] ✅ Priority 2: Using Data Attribute selector:",
-              finalSelector,
-            );
-          } else if (css) {
-            finalSelector = css;
-            console.log(
-              "[App] ✅ Priority 3: Using CSS selector:",
-              finalSelector,
-            );
-          } else if (xpath) {
-            finalSelector = xpath;
-            console.log(
-              "[App] ✅ Priority 4: Using XPath selector:",
-              finalSelector,
-            );
-          }
-        } else {
-          console.log(
-            "[App] ℹ️ No candidates provided, using primary selector:",
-            finalSelector,
-          );
+          if (id) finalSelector = id;
+          else if (dataAttr) finalSelector = dataAttr;
+          else if (css) finalSelector = css;
+          else if (xpath) finalSelector = xpath;
         }
 
-        // Validate selector is not empty after priority selection
         if (
           !finalSelector ||
           typeof finalSelector !== "string" ||
           finalSelector.trim() === ""
         ) {
-          console.warn("[PICKER] ❌ Final selector is empty", {
-            finalSelector,
-            original: data,
-          });
           toast.error(
-            t(
-              "common.selector_empty",
-              "Selector is empty. Try selecting a different element.",
-            ),
+            t("common.selector_empty", "Selector is empty. Try again."),
           );
-          updateNodeState(kmId, NODE_STATES.DEFAULT);
           return;
         }
 
-        console.log(
-          `[PICKER] 🚀 Applying selector to field [${pickingField}] in node:`,
-          kmId,
-          "with value:",
-          finalSelector,
-        );
+        const trimmedSelector = finalSelector.trim();
 
-        const newConfig = {
-          ...currentConfig,
-          [pickingField]: finalSelector.trim(),
-        };
+        // 2. APPLY TO ALL NODES IN PICKING STATE
+        // This is more robust than relying on selectedAction which might be stale in this closure
+        let updatedAny = false;
 
-        console.log(
-          "[App] 📝 Configuration payload prepared:",
-          JSON.stringify(newConfig, null, 2),
-        );
+        // We'll use a functional update to ensure we don't miss anything
+        setNodes((currNodes) => {
+          const pickingNodes = currNodes.filter(
+            (n) => n.data?.state === NODE_STATES.PICKING,
+          );
 
-        // CRITICAL: We use await to ensure nodes state is fully processed before we move on
-        // though setNodes is async, updateNodeConfiguration returns after calling setNodes.
-        await updateNodeConfiguration(kmId, newConfig);
-        console.log(
-          "[App] ✅ updateNodeConfiguration async call finished for nodeId:",
-          kmId,
-        );
+          if (pickingNodes.length === 0) {
+            console.warn("[App] ⚠️ No nodes found in PICKING state to update.");
+            return currNodes;
+          }
 
-        // Reset visual state
-        updateNodeState(kmId, NODE_STATES.DEFAULT);
-        console.log("[App] ✅ Node state updated to DEFAULT for nodeId:", kmId);
+          console.log(
+            `[App] 📝 Updating ${pickingNodes.length} nodes with selector: ${trimmedSelector}`,
+          );
+          updatedAny = true;
 
-        toast.success(t("common.selector_captured", "Target captured!"));
+          return currNodes.map((node) => {
+            if (node.data?.state === NODE_STATES.PICKING) {
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  state: NODE_STATES.DEFAULT,
+                  configuration: {
+                    ...node.data.configuration,
+                    [pickingField]: trimmedSelector,
+                  },
+                },
+              };
+            }
+            return node;
+          });
+        });
+
+        if (updatedAny) {
+          toast.success(t("common.selector_captured", "Target captured!"));
+        } else {
+          // Fallback: If no node was in PICKING state, try selectedAction
+          if (selectedAction) {
+            console.log(
+              "[App] 🔄 Fallback: Updating selectedAction node:",
+              selectedAction.nodeId,
+            );
+            await updateNodeConfiguration(selectedAction.nodeId, {
+              ...selectedAction.data.configuration,
+              [pickingField]: trimmedSelector,
+            });
+            updateNodeState(selectedAction.nodeId, NODE_STATES.DEFAULT);
+            toast.success(t("common.selector_captured", "Target captured!"));
+          }
+        }
+
+        // Always stop backend inspector
+        await handleCancelPicking();
       } catch (err) {
         console.error("[PICKER] 💥 Error processing picked element:", err);
-        updateNodeState(kmId, NODE_STATES.ERROR);
         toast.error("Error processing selection");
       }
     },
     [
       nodes,
-      selectedAction,
+      pickingField,
       updateNodeConfiguration,
       updateNodeState,
-      toast,
+      handleCancelPicking,
+      selectedAction,
+      setNodes,
       t,
-      pickingField,
+      toast,
     ],
   );
 
@@ -628,13 +598,10 @@ function Dashboard() {
   }, [currentFlowId]);
 
   const closeConfiguration = useCallback(() => {
-    if (setSelectedAction) {
-      setSelectedAction(null);
-    }
     if (setSelectedNodeId) {
       setSelectedNodeId(null);
     }
-  }, [setSelectedAction, setSelectedNodeId]);
+  }, [setSelectedNodeId]);
 
   // ========================================
   // CALLBACKS - Footer Actions
@@ -1442,7 +1409,6 @@ function Dashboard() {
               type={selectedAction.type}
               initialData={selectedAction.data}
               onClose={() => {
-                setSelectedAction(null);
                 setSelectedNodeId(null);
               }}
               onExecute={executeSingleNode} // ATOMIC EXECUTION (Run Node)
@@ -1546,7 +1512,7 @@ function Dashboard() {
           onRenameFlow={(f, newName) => renameFlow(f.id, newName)}
           onDeleteFlow={(f) => deleteFlow(f.id)}
           // Global Props
-          version="v1.1.0"
+          version={`v${__APP_VERSION__}`}
           isReadOnly={false}
           isRunning={executionProgress.status === "running"}
           onRun={handleExecuteFlow}

@@ -993,19 +993,22 @@ export const read_data = (payload) => {
 export const validate_semantic = (payload) => {
   return {
     browserId: asString(payload?.browserId),
-    sourceTextVariable: asString(payload?.sourceTextVariable),
-    validationPrompt: asString(payload?.validationPrompt),
+    content: asString(payload?.sourceTextVariable),
+    criteria: asString(payload?.validationPrompt),
     expectedAnswer: asString(payload?.expectedAnswer),
-    validationTimeout: asNumber(payload?.validationTimeout, 15000, 0),
+    variableName: asString(payload?.variableName, "semanticValid"),
+    maxTokens: asNumber(payload?.maxTokens, 2048, 1),
+    nodeId: payload?.nodeId,
   };
 };
 
 export const generate_data = (payload) => {
   return {
     browserId: asString(payload?.browserId),
-    prompt: asString(payload?.prompt),
+    description: asString(payload?.description ?? payload?.prompt),
     variableName: asString(payload?.variableName, "generatedData"),
     expectedFormat: asString(payload?.expectedFormat, "json").toLowerCase(),
+    count: asNumber(payload?.count, 1),
     maxTokens: asNumber(payload?.maxTokens, 2048, 1),
   };
 };
@@ -1025,6 +1028,8 @@ export const extract_dom_context = (payload) => {
     selector: asString(payload?.selector),
     extractionType: asString(payload?.extractionType, "text"),
     variableName: asString(payload?.variableName, "domContext"),
+    maxTokens: asNumber(payload?.maxTokens, 2048, 1),
+    nodeId: payload?.nodeId,
   };
 };
 
@@ -1044,6 +1049,8 @@ export const smart_selector = (payload) => {
     originalSelector: asString(payload?.originalSelector),
     intent: asString(payload?.intent),
     variableName: asString(payload?.variableName, "suggestedSelector"),
+    maxTokens: asNumber(payload?.maxTokens, 2048, 1),
+    nodeId: payload?.nodeId,
   };
 };
 
