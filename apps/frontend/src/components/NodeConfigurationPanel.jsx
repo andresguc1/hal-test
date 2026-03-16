@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import { motion as Motion, AnimatePresence } from "motion/react";
 import {
   X,
@@ -1829,7 +1829,8 @@ function NodeConfigurationPanel({
         return str.substring(0, maxLen) + "... (truncated)";
       }
       return str;
-    } catch (e) {
+    } catch (error) {
+      console.warn("Truncate error:", error);
       return "[Unserializable Data]";
     }
   }, []);
@@ -2346,7 +2347,7 @@ function NodeConfigurationPanel({
                   "w-full bg-[var(--bg-canvas)]/50 border border-[var(--border-ui)] rounded-lg px-3 py-2 pl-3 pr-8 text-xs font-mono focus:outline-none focus:border-indigo-500/50 transition-all placeholder:text-[var(--text-muted)] !pointer-events-auto !cursor-text !select-text",
                   value ? "text-indigo-400" : "text-[var(--text-main)]",
                   error &&
-                    "border-red-500/50 focus:border-red-500 bg-red-500/5",
+                  "border-red-500/50 focus:border-red-500 bg-red-500/5",
                 )}
               />
               <div
@@ -2680,68 +2681,68 @@ function NodeConfigurationPanel({
               {/* Validate Semantic Result */}
               {(aiResult.isValid !== undefined ||
                 aiResult.result?.isValid !== undefined) && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between gap-3">
-                    {(() => {
-                      const isValid =
-                        aiResult.isValid !== undefined
-                          ? aiResult.isValid
-                          : aiResult.result?.isValid;
-                      const confidence =
-                        aiResult.confidence !== undefined
-                          ? aiResult.confidence
-                          : aiResult.result?.confidence;
-                      const _reason =
-                        aiResult.reason || aiResult.result?.reason;
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      {(() => {
+                        const isValid =
+                          aiResult.isValid !== undefined
+                            ? aiResult.isValid
+                            : aiResult.result?.isValid;
+                        const confidence =
+                          aiResult.confidence !== undefined
+                            ? aiResult.confidence
+                            : aiResult.result?.confidence;
+                        const _reason =
+                          aiResult.reason || aiResult.result?.reason;
 
-                      return (
-                        <>
-                          <div
-                            className={cn(
-                              "flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold",
-                              isValid
-                                ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
-                                : "bg-red-500/10 border-red-500/20 text-red-400",
-                            )}
-                          >
-                            {isValid ? (
-                              <CheckCircle2 size={14} />
-                            ) : (
-                              <AlertCircle size={14} />
-                            )}
-                            {isValid ? "Valid Content" : "Invalid Content"}
-                          </div>
-                          <div className="flex flex-col items-end">
-                            <span className="text-[9px] text-slate-500 uppercase font-bold tracking-tighter">
-                              Var: $
-                              {aiResult.variable ||
-                                localConfig.variableName ||
-                                "semanticValid"}
-                            </span>
-                            <span className="text-[9px] text-slate-500 uppercase font-bold tracking-tighter">
-                              Confidence
-                            </span>
-                            <span className="text-xs font-mono font-bold text-white">
-                              {(Number(confidence) * 100).toFixed(0)}%
-                            </span>
-                          </div>
-                        </>
-                      );
-                    })()}
-                  </div>
-
-                  {(aiResult.reason || aiResult.result?.reason) && (
-                    <div className="space-y-1">
-                      <span className="text-[10px] text-slate-500 font-medium ml-1">
-                        Reasoning
-                      </span>
-                      <p className="text-[11px] text-slate-300 italic leading-snug bg-white/5 p-2 rounded-lg border border-white/5">
-                        "{aiResult.reason || aiResult.result?.reason}"
-                      </p>
+                        return (
+                          <>
+                            <div
+                              className={cn(
+                                "flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold",
+                                isValid
+                                  ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                                  : "bg-red-500/10 border-red-500/20 text-red-400",
+                              )}
+                            >
+                              {isValid ? (
+                                <CheckCircle2 size={14} />
+                              ) : (
+                                <AlertCircle size={14} />
+                              )}
+                              {isValid ? "Valid Content" : "Invalid Content"}
+                            </div>
+                            <div className="flex flex-col items-end">
+                              <span className="text-[9px] text-slate-500 uppercase font-bold tracking-tighter">
+                                Var: $
+                                {aiResult.variable ||
+                                  localConfig.variableName ||
+                                  "semanticValid"}
+                              </span>
+                              <span className="text-[9px] text-slate-500 uppercase font-bold tracking-tighter">
+                                Confidence
+                              </span>
+                              <span className="text-xs font-mono font-bold text-white">
+                                {(Number(confidence) * 100).toFixed(0)}%
+                              </span>
+                            </div>
+                          </>
+                        );
+                      })()}
                     </div>
-                  )}
-                </div>
-              )}
+
+                    {(aiResult.reason || aiResult.result?.reason) && (
+                      <div className="space-y-1">
+                        <span className="text-[10px] text-slate-500 font-medium ml-1">
+                          Reasoning
+                        </span>
+                        <p className="text-[11px] text-slate-300 italic leading-snug bg-white/5 p-2 rounded-lg border border-white/5">
+                          "{aiResult.reason || aiResult.result?.reason}"
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
 
               {/* Universal Fallback: show raw data for unrecognized AI result shapes */}
               {!aiResult.content &&
@@ -2842,7 +2843,7 @@ function NodeConfigurationPanel({
                       }
                     }, 300); // 300ms debounce for typing comfort
                   }}
-                  // onBlur removed - handled by debounce
+                // onBlur removed - handled by debounce
                 />
               </div>
             </div>
@@ -2876,7 +2877,7 @@ function NodeConfigurationPanel({
           <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
             {/* Dynamic Content Switch */}
             {safeConfig.nodeKey === "component" ||
-            activeNode.type === "component" ? (
+              activeNode.type === "component" ? (
               // --- COMPONENT DASHBOARD ---
               <div className="space-y-6">
                 {/* Description Card */}
@@ -2994,7 +2995,7 @@ function NodeConfigurationPanel({
 
           {/* Evidence preview for screenshot nodes (shown at bottom, only when not already shown inline via takeScreenshot checkbox) */}
           {nodeScreenshotUrl &&
-          !definedInputs?.some((f) => f.key === "takeScreenshot") ? (
+            !definedInputs?.some((f) => f.key === "takeScreenshot") ? (
             <div className="p-4 border-t border-[var(--border-ui)] bg-[var(--bg-panel)]">
               <EvidenceCard
                 screenshotUrl={nodeScreenshotUrl}
@@ -3016,77 +3017,77 @@ function NodeConfigurationPanel({
             {(activeNode?.data?.state === "healed" ||
               (activeNode?.data?.type === "smart_selector" &&
                 activeNode?.data?.result?.suggestedSelector)) && (
-              <div className="mb-4 bg-violet-500/10 border border-violet-500/30 rounded-xl p-4 space-y-3 shadow-xl shadow-violet-500/5 backdrop-blur-md">
-                <div className="flex items-start gap-3">
-                  <div className="p-2 bg-violet-500/20 rounded-lg shrink-0 border border-violet-500/20 shadow-inner">
-                    <Sparkles size={16} className="text-violet-400" />
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <p className="text-[11px] font-bold text-violet-200 uppercase tracking-wider">
-                        AI Evidence Found
-                      </p>
-                      {activeNode.data.result?.confidence && (
-                        <span
-                          className={cn(
-                            "text-[9px] px-1.5 py-0.5 rounded-full font-bold",
-                            activeNode.data.result.confidence > 0.8
-                              ? "bg-green-500/20 text-green-400"
-                              : "bg-amber-500/20 text-amber-400",
-                          )}
-                        >
-                          {(activeNode.data.result.confidence * 100).toFixed(0)}
-                          % Conf.
-                        </span>
+                <div className="mb-4 bg-violet-500/10 border border-violet-500/30 rounded-xl p-4 space-y-3 shadow-xl shadow-violet-500/5 backdrop-blur-md">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-violet-500/20 rounded-lg shrink-0 border border-violet-500/20 shadow-inner">
+                      <Sparkles size={16} className="text-violet-400" />
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-[11px] font-bold text-violet-200 uppercase tracking-wider">
+                          AI Evidence Found
+                        </p>
+                        {activeNode.data.result?.confidence && (
+                          <span
+                            className={cn(
+                              "text-[9px] px-1.5 py-0.5 rounded-full font-bold",
+                              activeNode.data.result.confidence > 0.8
+                                ? "bg-green-500/20 text-green-400"
+                                : "bg-amber-500/20 text-amber-400",
+                            )}
+                          >
+                            {(activeNode.data.result.confidence * 100).toFixed(0)}
+                            % Conf.
+                          </span>
+                        )}
+                      </div>
+                      {activeNode.data.result?.reasoning && (
+                        <p className="text-[10px] text-violet-300/80 leading-relaxed line-clamp-2 italic">
+                          "{activeNode.data.result.reasoning}"
+                        </p>
                       )}
                     </div>
-                    {activeNode.data.result?.reasoning && (
-                      <p className="text-[10px] text-violet-300/80 leading-relaxed line-clamp-2 italic">
-                        "{activeNode.data.result.reasoning}"
-                      </p>
-                    )}
                   </div>
-                </div>
 
-                <div className="flex flex-col gap-2 bg-black/40 rounded-lg p-3 border border-white/5 shadow-inner">
-                  <div className="flex justify-between items-center text-[9px] uppercase tracking-widest font-black opacity-40">
-                    <span>Target Suggestion</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1 font-mono text-xs text-violet-200 bg-violet-500/5 p-2 rounded border border-violet-500/10 truncate">
-                      {activeNode.data.result?.suggestedSelector ||
-                        activeNode.data.result?.newSelector}
+                  <div className="flex flex-col gap-2 bg-black/40 rounded-lg p-3 border border-white/5 shadow-inner">
+                    <div className="flex justify-between items-center text-[9px] uppercase tracking-widest font-black opacity-40">
+                      <span>Target Suggestion</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 font-mono text-xs text-violet-200 bg-violet-500/5 p-2 rounded border border-violet-500/10 truncate">
+                        {activeNode.data.result?.suggestedSelector ||
+                          activeNode.data.result?.newSelector}
+                      </div>
                     </div>
                   </div>
+
+                  <button
+                    onClick={() => {
+                      const resData = activeNode?.data?.result || {};
+                      const newSelector =
+                        resData.suggestedSelector || resData.newSelector;
+
+                      if (newSelector) {
+                        const targetField =
+                          activeNode?.data?.type === "smart_selector"
+                            ? "originalSelector"
+                            : "selector";
+                        handleConfigUpdate(targetField, newSelector);
+                        toast.success(
+                          t(
+                            "actions.smart_selector.applied",
+                            "Selector updated!",
+                          ),
+                        );
+                      }
+                    }}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold uppercase tracking-widest transition-all shadow-lg hover:shadow-violet-500/20 active:scale-[0.98]"
+                  >
+                    <Sparkles size={14} fill="currentColor" />
+                    Apply Suggested Fix
+                  </button>
                 </div>
-
-                <button
-                  onClick={() => {
-                    const resData = activeNode?.data?.result || {};
-                    const newSelector =
-                      resData.suggestedSelector || resData.newSelector;
-
-                    if (newSelector) {
-                      const targetField =
-                        activeNode?.data?.type === "smart_selector"
-                          ? "originalSelector"
-                          : "selector";
-                      handleConfigUpdate(targetField, newSelector);
-                      toast.success(
-                        t(
-                          "actions.smart_selector.applied",
-                          "Selector updated!",
-                        ),
-                      );
-                    }
-                  }}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold uppercase tracking-widest transition-all shadow-lg hover:shadow-violet-500/20 active:scale-[0.98]"
-                >
-                  <Sparkles size={14} fill="currentColor" />
-                  Apply Suggested Fix
-                </button>
-              </div>
-            )}
+              )}
 
             {/* Primary Action */}
             <button
@@ -3108,9 +3109,9 @@ function NodeConfigurationPanel({
                 hasErrors
                   ? "bg-slate-700/50 text-slate-500 cursor-not-allowed opacity-50" // Disabled State
                   : cn(
-                      "text-white shadow-lg active:scale-[0.98] hover:brightness-110 bg-gradient-to-r shadow-lg",
-                      CATEGORY_STYLES[colorKey]?.panel?.buttonGradient,
-                    ),
+                    "text-white shadow-lg active:scale-[0.98] hover:brightness-110 bg-gradient-to-r shadow-lg",
+                    CATEGORY_STYLES[colorKey]?.panel?.buttonGradient,
+                  ),
               )}
               title={
                 hasErrors ? "Please fix configuration errors" : "Run this node"

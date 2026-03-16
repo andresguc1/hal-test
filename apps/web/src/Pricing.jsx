@@ -1,18 +1,17 @@
 import React from "react";
-import { motion } from "framer-motion";
+import { motion as Motion } from "framer-motion";
 import { Check } from "lucide-react";
 
 const PricingTier = ({
   title,
   price,
-  description,
   features,
   buttonText,
   highlighted,
   color,
 }) => {
   return (
-    <motion.div
+    <Motion.div
       whileHover={{ y: -5, scale: 1.02 }}
       className={`relative p-8 rounded-3xl border ${
         highlighted
@@ -62,11 +61,11 @@ const PricingTier = ({
       >
         {buttonText}
       </button>
-    </motion.div>
+    </Motion.div>
   );
 };
 
-export default function Pricing({ onBack }) {
+export default function Pricing() {
   const tiers = [
     {
       title: "STARTER",
@@ -118,7 +117,7 @@ export default function Pricing({ onBack }) {
       className="relative z-10 w-full max-w-6xl mx-auto px-4 py-12"
     >
       <div className="text-center mb-16">
-        <motion.h2
+        <Motion.h2
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -126,8 +125,8 @@ export default function Pricing({ onBack }) {
         >
           Unlock Your{" "}
           <span className="text-hal-primary-400">Full Potential</span>
-        </motion.h2>
-        <motion.p
+        </Motion.h2>
+        <Motion.p
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -135,12 +134,12 @@ export default function Pricing({ onBack }) {
           className="text-slate-400 font-mono text-sm tracking-widest"
         >
           Simple, scalable pricing for teams of all sizes.
-        </motion.p>
+        </Motion.p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {tiers.map((tier, index) => (
-          <motion.div
+          <Motion.div
             key={index}
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -148,11 +147,11 @@ export default function Pricing({ onBack }) {
             transition={{ delay: index * 0.1 }}
           >
             <PricingTier {...tier} />
-          </motion.div>
+          </Motion.div>
         ))}
       </div>
 
-      <motion.div
+      <Motion.div
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
@@ -165,7 +164,7 @@ export default function Pricing({ onBack }) {
         <p className="text-slate-600 text-[10px] uppercase tracking-[0.2em] mt-1">
           Custom deployments & SLAs
         </p>
-      </motion.div>
+      </Motion.div>
     </div>
   );
 }

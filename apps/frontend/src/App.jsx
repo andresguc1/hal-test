@@ -280,6 +280,31 @@ function Dashboard() {
 
   // Element Picker Callback (Previously handleElementPicked was here, we will replace the mess)
 
+  // CANCEL PICKING HANDLER
+  const handleCancelPicking = useCallback(async () => {
+    // If we have a selected action, try to revert its state regardless of current state check
+    // to be safe against stale closure logic elsewhere.
+    if (selectedAction) {
+      updateNodeState(selectedAction.nodeId, NODE_STATES.DEFAULT, {
+        pickingField: null,
+      });
+      console.log(
+        "[App] Resetting node state to DEFAULT for node:",
+        selectedAction.nodeId,
+      );
+    }
+
+    // Reset picking field
+    setPickingField("selector");
+
+    // Call backend to remove listeners
+    try {
+      await api.post("/inspector/stop", { browserId: activeBrowserId || null });
+    } catch (e) {
+      console.warn("[App] Failed to stop backend inspector:", e);
+    }
+  }, [selectedAction, updateNodeState, activeBrowserId]);
+
   // START PICKING HANDLER (Visual Feedback + API)
   const handleStartPicking = useCallback(
     async (fieldKey = "selector") => {
@@ -351,33 +376,8 @@ function Dashboard() {
         updateNodeState(selectedAction?.nodeId, NODE_STATES.DEFAULT); // Revert on failure
       }
     },
-    [selectedAction, updateNodeState, toast, t, activeBrowserId, nodes],
+    [selectedAction, updateNodeState, toast, t, activeBrowserId, nodes, handleCancelPicking],
   );
-
-  // CANCEL PICKING HANDLER
-  const handleCancelPicking = useCallback(async () => {
-    // If we have a selected action, try to revert its state regardless of current state check
-    // to be safe against stale closure logic elsewhere.
-    if (selectedAction) {
-      updateNodeState(selectedAction.nodeId, NODE_STATES.DEFAULT, {
-        pickingField: null,
-      });
-      console.log(
-        "[App] Resetting node state to DEFAULT for node:",
-        selectedAction.nodeId,
-      );
-    }
-
-    // Reset picking field
-    setPickingField("selector");
-
-    // Call backend to remove listeners
-    try {
-      await api.post("/inspector/stop", { browserId: activeBrowserId || null });
-    } catch (e) {
-      console.warn("[App] Failed to stop backend inspector:", e);
-    }
-  }, [selectedAction, updateNodeState, activeBrowserId]);
 
   // Element Picker Callback
   const handleElementPicked = useCallback(

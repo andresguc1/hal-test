@@ -1,7 +1,7 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { Slack } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion as Motion, AnimatePresence } from "framer-motion";
 import Pricing from "./Pricing";
 import { Copy, Check } from "lucide-react";
 
@@ -61,7 +61,7 @@ export default function App() {
       {/* --- NAVBAR --- */}
       <nav className="fixed top-0 left-0 w-full p-6 z-50 flex justify-between items-center bg-slate-900/50 backdrop-blur-md border-b border-white/5">
         {/* Logo Area */}
-        <motion.div
+        <Motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
@@ -78,10 +78,10 @@ export default function App() {
             <span className="text-white/30">-</span>
             <span className="text-hal-warning-400">TEST</span>
           </div>
-        </motion.div>
+        </Motion.div>
 
         {/* Phantom Navigation */}
-        <motion.div
+        <Motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
@@ -129,10 +129,10 @@ export default function App() {
           >
             Community
           </span>
-        </motion.div>
+        </Motion.div>
 
         {/* Controls */}
-        <motion.div
+        <Motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
@@ -150,13 +150,13 @@ export default function App() {
               {t("nav.status") || "ONLINE"}
             </span>
           </div>
-        </motion.div>
+        </Motion.div>
       </nav>
 
       {/* --- HERO CONTENT --- */}
       <AnimatePresence mode="wait">
         {currentView === "hero" ? (
-          <motion.main
+          <Motion.main
             key="hero"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -165,7 +165,7 @@ export default function App() {
             className="relative z-10 flex flex-col items-center justify-center min-h-screen px-4 text-center pt-20"
           >
             {/* Floating Logo/Icon */}
-            <motion.div
+            <Motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.8, ease: "easeOut" }}
@@ -177,10 +177,10 @@ export default function App() {
                 alt="Hero Logo"
                 className="w-32 h-32 md:w-32 md:h-32 rounded-2xl shadow-2xl shadow-hal-primary-500/30 relative z-10 border border-white/10"
               />
-            </motion.div>
+            </Motion.div>
 
             {/* Headline */}
-            <motion.h1
+            <Motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
@@ -191,10 +191,10 @@ export default function App() {
               </span>
               <br />
               <span className="text-hal-primary-400">in Automation</span>
-            </motion.h1>
+            </Motion.h1>
 
             {/* Main Sub-headline */}
-            <motion.p
+            <Motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.3 }}
@@ -203,10 +203,10 @@ export default function App() {
               No-code flow builder with AI-powered healing
               <br />
               and real-time Playwright execution.
-            </motion.p>
+            </Motion.p>
 
             {/* Secondary Description */}
-            <motion.p
+            <Motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.35 }}
@@ -214,17 +214,17 @@ export default function App() {
             >
               {t("hero.subtitle") ||
                 "Unified platform for visual workflows, mock services, and intelligent testing."}
-            </motion.p>
+            </Motion.p>
 
             {/* Call to Action Buttons */}
-            <motion.div
+            <Motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.4 }}
               className="flex flex-col sm:flex-row gap-4 items-center mb-16"
             >
               {/* Launch App Button */}
-              <motion.button
+              <Motion.button
                 whileHover={{
                   scale: 1.05,
                   boxShadow: "0 0 20px rgba(99, 102, 241, 0.4)",
@@ -252,10 +252,10 @@ export default function App() {
                   </svg>
                 </span>
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-              </motion.button>
+              </Motion.button>
 
               {/* Docs / GitHub Button */}
-              <motion.button
+              <Motion.button
                 whileHover={{
                   scale: 1.05,
                   backgroundColor: "rgba(255,255,255,0.1)",
@@ -271,10 +271,10 @@ export default function App() {
                 className="px-8 py-4 bg-white/5 border border-white/20 hover:border-white/40 text-white rounded-lg font-bold uppercase tracking-wider transition-all backdrop-blur-md shadow-lg"
               >
                 {t("cta.star_github") || "GitHub"}
-              </motion.button>
+              </Motion.button>
 
               {/* Community / Slack Button */}
-              <motion.button
+              <Motion.button
                 whileHover={{
                   scale: 1.05,
                   backgroundColor: "rgba(255,255,255,0.1)",
@@ -291,11 +291,11 @@ export default function App() {
               >
                 <Slack size={18} className="text-[#E01E5A]" />
                 {t("cta.community") || "Slack"}
-              </motion.button>
-            </motion.div>
+              </Motion.button>
+            </Motion.div>
 
             {/* Terminal Snippet (NPM) */}
-            <motion.div
+            <Motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.45 }}
@@ -331,10 +331,10 @@ export default function App() {
                 <span className="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
                 Zero config. No cloning required.
               </p>
-            </motion.div>
+            </Motion.div>
 
             {/* --- SOCIAL PROOF --- */}
-            <motion.div
+            <Motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.5 }}
@@ -364,10 +364,10 @@ export default function App() {
                   Source
                 </span>
               </div>
-            </motion.div>
-          </motion.main>
+            </Motion.div>
+          </Motion.main>
         ) : (
-          <motion.main
+          <Motion.main
             key="pricing"
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -403,7 +403,7 @@ export default function App() {
                 </span>
               </button>
             </div>
-          </motion.main>
+          </Motion.main>
         )}
       </AnimatePresence>
     </div>
