@@ -74,7 +74,7 @@ export default function SettingsPage({ onBack }) {
   const defaultValues = {
     selectedModel: localStorage.getItem("hal_selected_model") || "gemma3",
     ollamaBaseUrl:
-      localStorage.getItem("hal_ollama_base_url") || "http://localhost:11434",
+      localStorage.getItem("hal_ollama_base_url") || "http://127.0.0.1:11434",
   };
 
   const { control, handleSubmit, register, watch } = useForm({

@@ -61,7 +61,7 @@ export default function SettingsModal({
     keys: {
       ollama: "",
     },
-    baseUrl: "http://localhost:11434",
+    baseUrl: "http://127.0.0.1:11434",
   });
 
   // Load configuration on open

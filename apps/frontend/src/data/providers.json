@@ -4,7 +4,7 @@
     "name": "Ollama (Local)",
     "requiresKey": false,
     "requiresBaseUrl": true,
-    "defaultBaseUrl": "http://localhost:11434",
+    "defaultBaseUrl": "http://127.0.0.1:11434",
     "models": [
       {
         "id": "gemma3",

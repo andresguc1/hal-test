@@ -29,7 +29,7 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
 
   const isOllama = true;
 
-  const baseUrl = aiConfig.baseUrl || "http://localhost:11434";
+  const baseUrl = aiConfig.baseUrl || "http://127.0.0.1:11434";
   const model = aiConfig.selectedModel || "gemma3";
   const temperature = aiConfig.temperature ?? 0.7;
 
@@ -106,7 +106,7 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
               value={baseUrl}
               onChange={(e) => updateConfig({ baseUrl: e.target.value })}
               className="bg-slate-950 border-slate-800 pl-9 font-mono text-sm"
-              placeholder="http://localhost:11434"
+              placeholder="http://127.0.0.1:11434"
             />
           </div>
         </div>

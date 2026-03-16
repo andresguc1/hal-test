@@ -376,7 +376,15 @@ function Dashboard() {
         updateNodeState(selectedAction?.nodeId, NODE_STATES.DEFAULT); // Revert on failure
       }
     },
-    [selectedAction, updateNodeState, toast, t, activeBrowserId, nodes, handleCancelPicking],
+    [
+      selectedAction,
+      updateNodeState,
+      toast,
+      t,
+      activeBrowserId,
+      nodes,
+      handleCancelPicking,
+    ],
   );
 
   // Element Picker Callback

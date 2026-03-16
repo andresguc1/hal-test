@@ -5,7 +5,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const ollamaModel = process.env.OLLAMA_MODEL || 'gemma3';
-const ollamaUrl = process.env.OLLAMA_BASE_URL || 'http://localhost:11434/v1';
+const ollamaUrl = process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434/v1';
 
 console.log(`Checking tool support for model: ${ollamaModel} at ${ollamaUrl}`);
 

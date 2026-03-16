@@ -17,7 +17,10 @@ class AIService {
     getProvider(providerName, apiKey, baseUrl) {
         // We now exclusively use Ollama as the provider.
         // Even if another provider is requested, we redirect to Ollama's OpenAI-compatible endpoint.
-        let ollamaUrl = baseUrl || process.env.OLLAMA_BASE_URL || 'http://localhost:11434/v1';
+        let ollamaUrl = baseUrl || process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434/v1';
+        if (ollamaUrl.includes('localhost')) {
+            ollamaUrl = ollamaUrl.replace('localhost', '127.0.0.1');
+        }
         if (!ollamaUrl.endsWith('/v1')) {
             ollamaUrl = `${ollamaUrl.replace(/\/$/, '')}/v1`;
         }
@@ -84,7 +87,7 @@ class AIService {
             // --- SMART RESOLUTION FOR OLLAMA ---
             if (activeProvider === 'ollama' && activeModel) {
                 activeModel = await this.resolveOllamaModel({
-                    baseUrl: baseUrl || process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
+                    baseUrl: baseUrl || process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434',
                     requestedModel: activeModel,
                 });
             }
@@ -175,7 +178,7 @@ class AIService {
             // We only validate Ollama availability now
             const validationModel = model || process.env.OLLAMA_MODEL || 'gemma3:latest';
             const health = await this.healthCheck({
-                baseUrl: baseUrl || 'http://localhost:11434',
+                baseUrl: baseUrl || 'http://127.0.0.1:11434',
                 model: validationModel,
             });
             if (!health.ollamaRunning) {
@@ -264,7 +267,7 @@ class AIService {
      * @returns {{ ollamaRunning: boolean, modelLoaded: boolean, models: string[], error?: string }}
      */
     async healthCheck({
-        baseUrl = 'http://localhost:11434',
+        baseUrl = 'http://127.0.0.1:11434',
         model = process.env.OLLAMA_MODEL || 'gemma3:latest',
     }) {
         const result = {
@@ -518,7 +521,7 @@ Return a JSON object with these exact keys:
                     baseUrl:
                         (keys && keys.baseUrl) ||
                         process.env.OLLAMA_BASE_URL ||
-                        'http://localhost:11434',
+                        'http://127.0.0.1:11434',
                     requestedModel: activeModel,
                 });
             }
@@ -588,7 +591,7 @@ Return a JSON object with these exact keys:
                     baseUrl:
                         (keys && keys.baseUrl) ||
                         process.env.OLLAMA_BASE_URL ||
-                        'http://localhost:11434',
+                        'http://127.0.0.1:11434',
                     requestedModel: activeModel,
                 });
             }

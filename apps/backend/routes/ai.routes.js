@@ -179,7 +179,8 @@ router.post('/heal-selector', async (req, res) => {
  *         description: Model to check availability for
  */
 router.get('/health', async (req, res) => {
-    const baseUrl = req.query.baseUrl || 'http://localhost:11434';
+    let baseUrl = req.query.baseUrl || 'http://127.0.0.1:11434';
+    if (baseUrl.includes('localhost')) baseUrl = baseUrl.replace('localhost', '127.0.0.1');
     const model = req.query.model || 'gemma3';
 
     try {
@@ -229,7 +230,9 @@ router.post('/ask', async (req, res) => {
     // Resolve provider/model from headers or body
     const provider = req.headers['x-ai-provider'] || 'ollama';
     const activeModel = model || req.headers['x-ai-model'] || 'gemma3';
-    const activeBaseUrl = baseUrl || req.headers['x-ai-base-url'] || 'http://localhost:11434';
+    let activeBaseUrl = baseUrl || req.headers['x-ai-base-url'] || 'http://127.0.0.1:11434';
+    if (activeBaseUrl.includes('localhost'))
+        activeBaseUrl = activeBaseUrl.replace('localhost', '127.0.0.1');
     const apiKey = req.headers['x-ai-api-key'] || 'ollama';
     const temp = temperature !== undefined ? temperature : 0.7;
 

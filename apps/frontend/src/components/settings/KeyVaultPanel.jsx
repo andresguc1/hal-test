@@ -40,7 +40,7 @@ export function KeyVaultPanel() {
     alias: "",
     provider: "ollama",
     key: "",
-    baseUrl: "http://localhost:11434",
+    baseUrl: "http://127.0.0.1:11434",
   });
 
   const handleTestConnection = async (e) => {
@@ -112,7 +112,7 @@ export function KeyVaultPanel() {
           alias: "",
           provider: "ollama",
           key: "",
-          baseUrl: "http://localhost:11434",
+          baseUrl: "http://127.0.0.1:11434",
         });
         setIsAdding(false);
         loadVaultKeys(); // Refresh context
@@ -233,7 +233,7 @@ export function KeyVaultPanel() {
                     setNewKey({ ...newKey, baseUrl: e.target.value })
                   }
                   className="bg-slate-950 border-slate-800 pl-9 font-mono text-sm"
-                  placeholder="http://localhost:11434/v1"
+                  placeholder="http://127.0.0.1:11434/v1"
                 />
               </div>
             </div>

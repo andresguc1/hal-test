@@ -16832,26 +16832,18 @@ class kk extends Pg {
 const Ck = (e, t) => (hu(e) ? new kk(t) : new Sk(t, { allowProjection: e !== R.Fragment })),
     Pk = Yx({ ...Gw, ...hk, ...nk, ...pk }, Ck),
     ae = cx(Pk),
-    Tk = ({
-        title: e,
-        price: t,
-        description: n,
-        features: r,
-        buttonText: i,
-        highlighted: s,
-        color: o,
-    }) =>
+    Tk = ({ title: e, price: t, features: n, buttonText: r, highlighted: i, color: s }) =>
         k.jsxs(ae.div, {
             whileHover: { y: -5, scale: 1.02 },
-            className: `relative p-8 rounded-3xl border ${s ? `border-${o}-500 shadow-lg shadow-${o}-500/20` : 'border-white/10 bg-white/5'} backdrop-blur-md flex flex-col items-center text-center`,
+            className: `relative p-8 rounded-3xl border ${i ? `border-${s}-500 shadow-lg shadow-${s}-500/20` : 'border-white/10 bg-white/5'} backdrop-blur-md flex flex-col items-center text-center`,
             children: [
-                s &&
+                i &&
                     k.jsx('div', {
-                        className: `absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-${o}-500 text-[10px] font-bold uppercase tracking-widest`,
+                        className: `absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-${s}-500 text-[10px] font-bold uppercase tracking-widest`,
                         children: 'Most Popular',
                     }),
                 k.jsx('h3', {
-                    className: `text-xl font-bold tracking-widest mb-4 ${s ? `text-${o}-400` : 'text-white/70'}`,
+                    className: `text-xl font-bold tracking-widest mb-4 ${i ? `text-${s}-400` : 'text-white/70'}`,
                     children: e,
                 }),
                 k.jsxs('div', {
@@ -16870,28 +16862,28 @@ const Ck = (e, t) => (hu(e) ? new kk(t) : new Sk(t, { allowProjection: e !== R.F
                 }),
                 k.jsx('ul', {
                     className: 'mt-8 mb-8 space-y-4 text-left w-full',
-                    children: r.map((a, l) =>
+                    children: n.map((o, a) =>
                         k.jsxs(
                             'li',
                             {
                                 className: 'flex items-center gap-3 text-sm text-slate-300',
                                 children: [
-                                    k.jsx(Yp, { size: 16, className: `text-${o}-500` }),
-                                    k.jsx('span', { children: a }),
+                                    k.jsx(Yp, { size: 16, className: `text-${s}-500` }),
+                                    k.jsx('span', { children: o }),
                                 ],
                             },
-                            l,
+                            a,
                         ),
                     ),
                 }),
                 k.jsx('button', {
-                    className: `mt-auto w-full py-3 rounded-full font-bold uppercase tracking-widest text-xs transition-all ${s ? 'bg-white text-black hover:bg-white/90 shadow-xl shadow-white/10' : 'border border-white/20 hover:bg-white/10 text-white'}`,
-                    children: i,
+                    className: `mt-auto w-full py-3 rounded-full font-bold uppercase tracking-widest text-xs transition-all ${i ? 'bg-white text-black hover:bg-white/90 shadow-xl shadow-white/10' : 'border border-white/20 hover:bg-white/10 text-white'}`,
+                    children: r,
                 }),
             ],
         });
-function Ek({ onBack: e }) {
-    const t = [
+function Ek() {
+    const e = [
         {
             title: 'STARTER',
             price: 'FREE',
@@ -16968,17 +16960,17 @@ function Ek({ onBack: e }) {
             }),
             k.jsx('div', {
                 className: 'grid grid-cols-1 md:grid-cols-3 gap-8',
-                children: t.map((n, r) =>
+                children: e.map((t, n) =>
                     k.jsx(
                         ae.div,
                         {
                             initial: { opacity: 0, y: 20 },
                             whileInView: { opacity: 1, y: 0 },
                             viewport: { once: !0 },
-                            transition: { delay: r * 0.1 },
-                            children: k.jsx(Tk, { ...n }),
+                            transition: { delay: n * 0.1 },
+                            children: k.jsx(Tk, { ...t }),
                         },
-                        r,
+                        n,
                     ),
                 ),
             }),

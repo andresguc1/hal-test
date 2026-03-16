@@ -26,12 +26,8 @@ test('Flujo Generado Hal-Test', async ({ page }) => {
         await page.reload();
     });
 
-    await test.step('Ask AI (Text)', async () => {
-        console.log('⚠️ Acción no implementada o pendiente: call_llm');
-    });
-
     await test.step('Evidence', async () => {
-        await page.screenshot({ path: 'screenshot_7.png' });
+        await page.screenshot({ path: 'screenshot_6.png' });
     });
 
     await test.step('Finish Tour', async () => {

@@ -35,7 +35,10 @@ class LLMFactory {
 
     createInstance(provider, key, baseUrl) {
         // We now consolidate everything to Ollama's OpenAI compatible endpoint
-        let ollamaUrl = baseUrl || process.env.OLLAMA_BASE_URL || 'http://localhost:11434/v1';
+        let ollamaUrl = baseUrl || process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434/v1';
+        if (ollamaUrl.includes('localhost')) {
+            ollamaUrl = ollamaUrl.replace('localhost', '127.0.0.1');
+        }
         if (!ollamaUrl.endsWith('/v1')) {
             ollamaUrl = `${ollamaUrl.replace(/\/$/, '')}/v1`;
         }
@@ -62,7 +65,10 @@ class LLMFactory {
      * Fallback for Environment Variables (Legacy/Dev)
      */
     createFromEnv(provider, baseUrl) {
-        let ollamaUrl = baseUrl || process.env.OLLAMA_BASE_URL || 'http://localhost:11434/v1';
+        let ollamaUrl = baseUrl || process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434/v1';
+        if (ollamaUrl.includes('localhost')) {
+            ollamaUrl = ollamaUrl.replace('localhost', '127.0.0.1');
+        }
         if (!ollamaUrl.endsWith('/v1')) {
             ollamaUrl = `${ollamaUrl.replace(/\/$/, '')}/v1`;
         }
