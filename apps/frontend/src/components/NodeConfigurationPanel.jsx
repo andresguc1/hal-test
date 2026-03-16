@@ -11,9 +11,12 @@ import {
   ArrowLeftRight,
   Sparkles,
   Trash2,
-  AlertCircle,
-  Brain,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  Copy,
+  Maximize2,
 } from "lucide-react";
 import { useToast } from "@/hooks/useToast";
 import { useTranslation } from "react-i18next";
@@ -1744,6 +1747,8 @@ function NodeConfigurationPanel({
   _projectPath, // Unused
   _isReadOnly, // Unused
   onExecute, // Restore
+  edges = [], // Added for navigation
+  onSelectNode, // Added for navigation
 }) {
   const { t } = useTranslation();
   const toast = useToast();
@@ -1790,6 +1795,45 @@ function NodeConfigurationPanel({
     };
   }, [activeNode]);
 
+  // --- NAVIGATION & ADJACENCY LOGIC ---
+  const { precedingNodes, nextNodes } = useMemo(() => {
+    if (!activeNode || !edges || !nodes)
+      return { precedingNodes: [], nextNodes: [] };
+
+    const incomingEdges = edges.filter((e) => e.target === activeNode.id);
+    const outgoingEdges = edges.filter((e) => e.source === activeNode.id);
+
+    // Deduplicate by ID to prevent "duplicate key" warnings in React
+    const prevIds = Array.from(new Set(incomingEdges.map((e) => e.source)));
+    const nextIds = Array.from(new Set(outgoingEdges.map((e) => e.target)));
+
+    const prev = prevIds
+      .map((id) => nodes.find((n) => n.id === id))
+      .filter(Boolean);
+    const next = nextIds
+      .map((id) => nodes.find((n) => n.id === id))
+      .filter(Boolean);
+
+    return { precedingNodes: prev, nextNodes: next };
+  }, [activeNode, edges, nodes]);
+
+  // Utility to safely stringify and truncate large results for preview
+  const truncateResult = useCallback((result, maxLen = 1000) => {
+    if (!result) return "";
+    try {
+      const str =
+        typeof result === "object"
+          ? JSON.stringify(result) // No indentation for preview
+          : String(result);
+      if (str.length > maxLen) {
+        return str.substring(0, maxLen) + "... (truncated)";
+      }
+      return str;
+    } catch (e) {
+      return "[Unserializable Data]";
+    }
+  }, []);
+
   // Local state for immediate performance (fix typing lag)
   const [localConfig, setLocalConfig] = React.useState(
     activeNode?.data?.configuration || {},
@@ -1800,6 +1844,7 @@ function NodeConfigurationPanel({
   );
 
   const [lightboxUrl, setLightboxUrl] = useState(null); // Lightbox modal state
+  const [inspectedData, setInspectedData] = useState(null); // Full data view state
   const lastSyncedConfigRef = React.useRef({
     config: activeNode?.data?.configuration || {},
     nodeId: activeNode?.id,
@@ -2418,6 +2463,79 @@ function NodeConfigurationPanel({
           </div>
         )}
 
+        {/* PRECEDING NODES DATA (Visibility into flow values) */}
+        {precedingNodes.length > 0 && (
+          <div className="space-y-3 mt-4 pt-4 border-t border-white/5">
+            <div className="flex items-center gap-2 px-1">
+              <span className="text-[10px] uppercase tracking-wider font-bold text-slate-500">
+                Incoming Data
+              </span>
+            </div>
+            <div className="space-y-2">
+              {precedingNodes.map((pn) => (
+                <div
+                  key={pn.id}
+                  className="p-2 rounded-lg bg-slate-900/40 border border-white/5 overflow-hidden"
+                >
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-[10px] font-medium text-slate-400">
+                      {pn.data?.customLabel || pn.data?.label || pn.type}
+                    </span>
+                    <span className="text-[9px] px-1 py-0.5 rounded bg-slate-800 text-slate-500 font-mono">
+                      {`{{${pn.data?.label || pn.id}.result}}`}
+                    </span>
+                  </div>
+                  {pn.data?.result ? (
+                    <div className="relative group/data">
+                      <div className="text-[10px] text-slate-300 font-mono line-clamp-3 bg-black/20 p-1.5 rounded pr-12">
+                        {truncateResult(pn.data.result)}
+                      </div>
+                      <div className="absolute right-1 top-1 flex flex-col gap-1 opacity-0 group-hover/data:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => {
+                            const text =
+                              typeof pn.data.result === "object"
+                                ? JSON.stringify(pn.data.result, null, 2)
+                                : String(pn.data.result);
+                            navigator.clipboard.writeText(text);
+                            toast.success("Copied to clipboard", {
+                              icon: "📋",
+                              id: "copy-toast",
+                            });
+                          }}
+                          className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-400"
+                          title="Copy"
+                        >
+                          <Copy size={10} />
+                        </button>
+                        <button
+                          onClick={() =>
+                            setInspectedData({
+                              title:
+                                pn.data?.customLabel ||
+                                pn.data?.label ||
+                                pn.type,
+                              content: pn.data.result,
+                            })
+                          }
+                          className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-400"
+                          title="View Full"
+                        >
+                          <Maximize2 size={10} />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-[9px] text-slate-600 italic">
+                      No data emitted yet.
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* AI Result Visualization */}
         {aiResult && (
           <div className="mt-6 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
@@ -2527,10 +2645,34 @@ function NodeConfigurationPanel({
                       ${aiResult.variable || localConfig.variableName || "data"}
                     </span>
                   </div>
-                  <div className="bg-black/30 rounded-lg p-3 border border-white/5">
-                    <pre className="text-[10px] font-mono text-emerald-400 leading-tight">
-                      {JSON.stringify(aiResult.result, null, 2)}
+                  <div className="bg-black/30 rounded-lg p-3 border border-white/5 relative group/data">
+                    <pre className="text-[10px] font-mono text-emerald-400 leading-tight pr-12 overflow-hidden line-clamp-6">
+                      {truncateResult(aiResult.result)}
                     </pre>
+                    <div className="absolute right-2 top-2 flex flex-col gap-1 opacity-0 group-hover/data:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(
+                            JSON.stringify(aiResult.result, null, 2),
+                          );
+                          toast.success("Copied to clipboard", { icon: "📋" });
+                        }}
+                        className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 shadow-lg"
+                      >
+                        <Copy size={12} />
+                      </button>
+                      <button
+                        onClick={() =>
+                          setInspectedData({
+                            title: "Structured Data",
+                            content: aiResult.result,
+                          })
+                        }
+                        className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 shadow-lg"
+                      >
+                        <Maximize2 size={12} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -2977,6 +3119,31 @@ function NodeConfigurationPanel({
               <Play size={14} fill="currentColor" />
               {t("common.run_node", "Run Node")}
             </button>
+
+            {/* NAVIGATION FOOTER */}
+            {(precedingNodes.length > 0 || nextNodes.length > 0) && (
+              <div className="flex items-center justify-between gap-2 mt-4 pt-4 border-t border-white/5">
+                <button
+                  onClick={() =>
+                    precedingNodes[0] && onSelectNode(precedingNodes[0].id)
+                  }
+                  disabled={precedingNodes.length === 0}
+                  className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-slate-800 hover:bg-slate-700 text-slate-400 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft size={14} />
+                  Prev
+                </button>
+                <div className="w-px h-4 bg-white/5" />
+                <button
+                  onClick={() => nextNodes[0] && onSelectNode(nextNodes[0].id)}
+                  disabled={nextNodes.length === 0}
+                  className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-slate-800 hover:bg-slate-700 text-slate-400 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  Next
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+            )}
           </div>
         </Motion.div>
       )}
@@ -2999,6 +3166,66 @@ function NodeConfigurationPanel({
             className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           />
+        </div>
+      )}
+
+      {/* Data Inspector Modal */}
+      {inspectedData && (
+        <div
+          className="fixed inset-0 z-[10000] bg-black/80 flex items-center justify-center p-6 backdrop-blur-md"
+          onClick={() => setInspectedData(null)}
+        >
+          <Motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="w-full max-w-4xl max-h-[80vh] bg-slate-900 border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-4 border-b border-white/5 bg-slate-950/50">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400">
+                  <FileText size={18} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">
+                    {inspectedData.title}
+                  </h3>
+                  <p className="text-[10px] text-slate-500">
+                    Full Data Inspector
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    const text =
+                      typeof inspectedData.content === "object"
+                        ? JSON.stringify(inspectedData.content, null, 2)
+                        : String(inspectedData.content);
+                    navigator.clipboard.writeText(text);
+                    toast.success("Copied to clipboard", { icon: "📋" });
+                  }}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold transition-colors"
+                >
+                  <Copy size={14} />
+                  COPY
+                </button>
+                <button
+                  className="p-1.5 text-slate-500 hover:text-white transition-colors"
+                  onClick={() => setInspectedData(null)}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6 bg-slate-950/20">
+              <pre className="text-xs font-mono text-emerald-400 leading-relaxed whitespace-pre-wrap">
+                {typeof inspectedData.content === "object"
+                  ? JSON.stringify(inspectedData.content, null, 2)
+                  : String(inspectedData.content)}
+              </pre>
+            </div>
+          </Motion.div>
         </div>
       )}
     </AnimatePresence>

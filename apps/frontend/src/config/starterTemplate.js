@@ -161,25 +161,9 @@ export const STARTER_TEMPLATE = {
       },
     },
     {
-      id: "starter_wait",
-      type: "wait_network_match",
-      position: { x: 900, y: 450 },
-      data: {
-        type: "wait_network_match",
-        label: "Wait List Loaded",
-        starterHint:
-          "Network history monitoring ensures we don't miss the inventory load request.",
-        configuration: {
-          urlPattern: "**/inventory.html*",
-          method: "GET",
-          timeout: 10000,
-        },
-      },
-    },
-    {
       id: "starter_screenshot",
       type: "take_screenshot",
-      position: { x: 1200, y: 450 },
+      position: { x: 900, y: 450 },
       data: {
         type: "take_screenshot",
         label: "Evidence",
@@ -192,7 +176,7 @@ export const STARTER_TEMPLATE = {
     {
       id: "starter_close",
       type: "close_browser",
-      position: { x: 1500, y: 450 },
+      position: { x: 1200, y: 450 },
       data: {
         type: "close_browser",
         label: "Finish Tour",
@@ -224,15 +208,8 @@ export const STARTER_TEMPLATE = {
       type: "custom",
     },
     {
-      id: "er-4",
+      id: "er-screenshot",
       source: "starter_reload",
-      target: "starter_wait",
-      animated: true,
-      type: "custom",
-    },
-    {
-      id: "e4-5",
-      source: "starter_wait",
       target: "starter_screenshot",
       animated: true,
       type: "custom",

@@ -3,7 +3,8 @@ import Joi from 'joi';
 
 export default Joi.object({
     description: Joi.string()
-        .required()
+        .allow('', null)
+        .optional()
         .description('Natural language description of data to generate'),
 
     expectedFormat: Joi.string()

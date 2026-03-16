@@ -63,3 +63,45 @@
   background-color: #94a3b8 !important;
   border: 1px solid #ffffff !important;
 }
+
+/* ----------------------------------
+   EXECUTION VISUAL SIGNALS
+   ---------------------------------- */
+
+@keyframes scanning-bar {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(100%);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+.animate-scanning-bar {
+  width: 40%;
+  animation: scanning-bar 2s infinite ease-in-out;
+}
+
+@keyframes pulse-overlay {
+  0% {
+    opacity: 0.1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 0.1;
+  }
+}
+
+.animate-pulse-overlay {
+  animation: pulse-overlay 3s infinite ease-in-out;
+  background: radial-gradient(
+    circle at center,
+    transparent 40%,
+    rgba(99, 102, 241, 0.05) 100%
+  );
+}

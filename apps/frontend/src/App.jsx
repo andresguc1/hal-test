@@ -1307,6 +1307,11 @@ function Dashboard() {
                   }}
                 />
 
+                {/* EXECUTION PULSE OVERLAY */}
+                {isReadOnly && (
+                  <div className="absolute inset-0 z-[10] pointer-events-none animate-pulse-overlay border-[4px] border-indigo-500/10 rounded-xl" />
+                )}
+
                 {/* Context Menu Overlay */}
                 {menu && (
                   <ContextMenu
@@ -1397,14 +1402,21 @@ function Dashboard() {
                 )}
               </button>
             )}
+            {/* EXECUTION SCANNING BAR */}
+            {isReadOnly && (
+              <div className="absolute top-0 left-0 right-0 h-[2px] z-[1000] pointer-events-none overflow-hidden">
+                <div className="h-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)] animate-scanning-bar" />
+              </div>
+            )}
           </main>
 
-          {/* PANEL DERECHO (CONFIGURACIÓN) */}
           {isConfigurationPanelVisible && selectedAction && (
             <NodeConfigurationPanel
               isVisible={isConfigurationPanelVisible}
-              action={selectedAction} // Restored
-              nodes={nodes} // Restored
+              action={selectedAction}
+              nodes={nodes}
+              edges={edges}
+              onSelectNode={setSelectedNodeId}
               nodeId={selectedAction.nodeId}
               type={selectedAction.type}
               initialData={selectedAction.data}

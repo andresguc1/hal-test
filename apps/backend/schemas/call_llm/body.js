@@ -1,7 +1,7 @@
 import Joi from 'joi';
 
 const callLlmBodySchema = Joi.object({
-    prompt: Joi.string().required().messages({
+    prompt: Joi.string().allow('', null).optional().messages({
         'string.empty': 'User prompt is required',
     }),
     system: Joi.string().allow('', null).optional(),

@@ -2,9 +2,13 @@
 import Joi from 'joi';
 
 export default Joi.object({
-    content: Joi.string().required().description('Content to validate (e.g. ${last_response})'),
+    content: Joi.string()
+        .allow('', null)
+        .optional()
+        .description('Content to validate (e.g. ${last_response})'),
     criteria: Joi.string()
-        .required()
+        .allow('', null)
+        .optional()
         .description('Validation criteria (e.g. "Is the tone polite?")'),
     model: Joi.any().optional(),
     variableName: Joi.string().required(),

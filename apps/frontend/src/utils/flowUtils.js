@@ -281,3 +281,72 @@ export function getConnectedComponents(nodes, edges) {
 
   return components;
 }
+/**
+ * Resolves variables in a configuration object using the provided context.
+ * Supports {{nodeId.property}} and {{Node Label.property}} syntax.
+ *
+ * @param {Object} config - The configuration object to resolve.
+ * @param {Object} context - The context containing variable values.
+ * @returns {Object} A new configuration object with resolved variables.
+ */
+export function resolveVariables(config, context) {
+  if (!config || !context) return config;
+
+  const resolveValue = (value) => {
+    if (typeof value !== "string") return value;
+
+    return value.replace(/\{\{(.+?)\}\}/g, (match, path) => {
+      const parts = path.trim().split(".");
+      const key = parts[0];
+      const specifiedProp = parts[1];
+
+      // Properties to try if none specified
+      const propertiesToTry = specifiedProp
+        ? [specifiedProp]
+        : ["result", "value", "output", "data", "text"];
+
+      const extractValue = (obj) => {
+        if (!obj || typeof obj !== "object") return undefined;
+        for (const prop of propertiesToTry) {
+          if (obj[prop] !== undefined) return obj[prop];
+        }
+        // If no property was specified and no common fields matched, return the whole object
+        if (!specifiedProp) return obj;
+        return undefined;
+      };
+
+      // 1. Try resolving by Node ID
+      let nodeData = context[key];
+
+      // 2. Try resolving by Slugified Label if ID not found
+      if (!nodeData) {
+        const slug = key.toLowerCase().replace(/\s+/g, "_");
+        nodeData = context[slug];
+      }
+
+      if (nodeData) {
+        const val = extractValue(nodeData);
+        if (val !== undefined) {
+          return typeof val === "object" ? JSON.stringify(val) : String(val);
+        }
+      }
+
+      return match; // Return original if not found
+    });
+  };
+
+  const traverse = (obj) => {
+    if (Array.isArray(obj)) {
+      return obj.map(traverse);
+    } else if (obj !== null && typeof obj === "object") {
+      const newObj = {};
+      for (const [key, value] of Object.entries(obj)) {
+        newObj[key] = traverse(value);
+      }
+      return newObj;
+    }
+    return resolveValue(obj);
+  };
+
+  return traverse(config);
+}

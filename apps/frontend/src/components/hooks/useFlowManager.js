@@ -19,7 +19,11 @@ import { CATEGORY_STYLES, NODE_TYPE_MAP } from "../../config/nodeConstants";
 import { STARTER_TEMPLATE } from "../../config/starterTemplate";
 import * as payloadBuilders from "./payloadBuilders";
 import { NODE_STATES, PROFESSIONAL_COLORS, getNodeStyle } from "./flowStyles";
-import { debounce, wouldCreateCycle } from "../../utils/flowUtils";
+import {
+  debounce,
+  wouldCreateCycle,
+  resolveVariables,
+} from "../../utils/flowUtils";
 import { logger } from "../../utils/logger";
 import screenshotManager from "../../utils/ScreenshotManager";
 import { api } from "../../utils/api";
@@ -2192,7 +2196,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
       }
 
       // Shared Runtime Context (Browser Session, Variables)
-      const runtimeContext = {};
+      const flowContext = {}; // NEW: Shared context for data propagation
       let browserId = activeBrowserId || null; // Start with active session if available
 
       let runId = null;
@@ -2334,11 +2338,23 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
           }
 
           // NORMAL STEP EXECUTION
+          // 1. Resolve Variables: Inject context values into node configuration
+          const resolvedConfig = resolveVariables(
+            node.data?.configuration || {},
+            flowContext,
+          );
+
           const payload = {
-            ...(node.data?.configuration || {}),
-            ...runtimeContext,
+            ...resolvedConfig,
+            browserId, // CRITICAL: Inject current local browserId
             runId,
           };
+
+          // Proof of Concept: Log Flow Context for AI nodes
+          if (node.type === "call_llm") {
+            console.log("[Zero-Config POC] LLM Flow Context:", flowContext);
+            console.log("[Zero-Config POC] Resolved Config:", resolvedConfig);
+          }
 
           // Robust type detection for graph execution
           const nodeType = node.data?.type || node.type || "unknown";
@@ -2358,10 +2374,20 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
             const result = await executeStep(action, options);
 
             // Update Context
-            if (result.success && result.instanceId) {
-              browserId = result.instanceId;
-              runtimeContext.browserId = result.instanceId;
-              runtimeContext.instanceId = result.instanceId;
+            if (result.success) {
+              // Capture instance/browser
+              if (result.instanceId) {
+                browserId = result.instanceId;
+                flowContext.browserId = result.instanceId;
+                flowContext.instanceId = result.instanceId;
+              }
+
+              // Capture node result for Zero-Config propagation
+              const nodeLabel = node.data?.label || node.id;
+              const slug = nodeLabel.toLowerCase().replace(/\s+/g, "_");
+
+              flowContext[node.id] = result.result || result; // By ID
+              flowContext[slug] = result.result || result; // By slugified Label
             }
 
             if (result.skipped) globalStats.skipped++;

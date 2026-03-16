@@ -402,6 +402,37 @@ async function getActivePage(req, browserId) {
 }
 
 /**
+ * Automatically retrieves and compresses the DOM context if a browser is available.
+ * Used to enhance AI prompts with page state for Zero-Config experience.
+ */
+async function fetchContext(req, browserId) {
+    if (!browserId) return null;
+
+    try {
+        const validation = validateBrowser(req, browserId);
+        if (validation.error) return null;
+
+        const browserInstance = validation.entry.browser || validation.entry;
+        const contexts = browserInstance.contexts();
+        if (contexts.length === 0) return null;
+
+        const pages = contexts[0].pages();
+        if (pages.length === 0) return null;
+
+        const activePage = pages[pages.length - 1];
+        if (activePage.isClosed()) return null;
+
+        const { default: selectorHealer } = await import('../services/SelectorHealer.js');
+        const compressedDOM = await activePage.evaluate(selectorHealer.getCompressionScript());
+
+        return compressedDOM;
+    } catch (err) {
+        console.warn('[AI Context] Failed to fetch auto-context:', err.message);
+        return null;
+    }
+}
+
+/**
  * Generic wrapper for Playwright actions.
  */
 async function executePlaywrightAction(req, res, actionName, actionLogic) {
@@ -3997,7 +4028,14 @@ export const transformAction = async (req, res) => {
 
 export const callLlmAction = async (req, res) => {
     try {
-        const { prompt, system, variableName = 'llmResult', maxTokens, temperature } = req.body;
+        const {
+            prompt,
+            system,
+            variableName = 'llmResult',
+            maxTokens,
+            temperature,
+            browserId,
+        } = req.body;
 
         // Resolve context: Force Ollama
         const activeProvider = 'ollama';
@@ -4008,8 +4046,24 @@ export const callLlmAction = async (req, res) => {
         const headerBaseUrl = req.headers['x-ai-base-url'];
         const apiKey = 'ollama';
 
+        // --- AUTO CONTEXT INJECTION ---
+        const autoContext = await fetchContext(req, browserId);
+        let resolvedPrompt = variableManager.resolve(prompt) || '';
+
+        // Zero-Config Fallback: If prompt is empty but we have context
+        if (!resolvedPrompt && autoContext) {
+            resolvedPrompt =
+                'Describe the visible content, main features, and purpose of this page in detail.';
+        }
+
+        if (autoContext) {
+            resolvedPrompt = `[CURRENT PAGE CONTEXT]\n${autoContext}\n\n[USER PROMPT]\n${resolvedPrompt}`;
+            console.log('[AI Context] Injected browser context into call_llm prompt');
+        }
+        // ------------------------------
+
         const response = await aiService.generateText({
-            prompt: variableManager.resolve(prompt),
+            prompt: resolvedPrompt,
             system: system ? variableManager.resolve(system) : undefined,
             model: activeModel === 'ollama' ? undefined : activeModel,
             provider: activeProvider,
@@ -4050,6 +4104,7 @@ export const callLlmAction = async (req, res) => {
 export const generateDataAction = async (req, res) => {
     try {
         const {
+            browserId,
             description,
             expectedFormat = 'json',
             variableName = 'generatedData',
@@ -4061,21 +4116,38 @@ export const generateDataAction = async (req, res) => {
 
         const targetVariable = variable || variableName;
 
+        // --- AUTO CONTEXT INJECTION ---
+        const autoContext = await fetchContext(req, browserId);
+        let activeDescription = variableManager.resolve(description) || '';
+
+        // Zero-Config Fallback
+        if (!activeDescription && autoContext) {
+            activeDescription =
+                'Extract all meaningful data fields, products, lists, or structured information visible on this page.';
+        }
+
+        if (autoContext) {
+            activeDescription = `[PAGE CONTEXT]\n${autoContext}\n\n[INSTRUCTION]\n${activeDescription}`;
+            console.log('[AI Context] Injected browser context into generate_data prompt');
+        }
+        // ------------------------------
+
         // Force Ollama, ignore node-level overrides (Zero-Config)
         const activeProvider = 'ollama';
         const activeModel =
             req.headers['x-ai-model'] || process.env.OLLAMA_MODEL || 'gemma3:latest';
 
         const keys = {
+            openai: req.headers['x-openai-key'] || process.env.OPENAI_API_KEY,
+            anthropic: req.headers['x-anthropic-key'] || process.env.ANTHROPIC_API_KEY,
             ollama: 'ollama',
         };
 
         // If 'fields' are provided, we can pass them, otherwise aiService handles description
         const schema = fields ? z.any() : z.any(); // Simple for now, AIService maps it
 
-        const resolvedDescription = variableManager.resolve(description);
         const finalPrompt = `Generate ${count} item(s) in ${expectedFormat} format. 
-Description: ${resolvedDescription}
+Description: ${activeDescription}
 ${fields ? `Fields: ${JSON.stringify(fields)}` : ''}`;
 
         const data = await aiService.generateStructured({
@@ -4114,6 +4186,7 @@ ${fields ? `Fields: ${JSON.stringify(fields)}` : ''}`;
 export const validateSemanticAction = async (req, res) => {
     try {
         const {
+            browserId,
             content: rawContent,
             criteria: rawCriteria,
             expectedAnswer,
@@ -4121,6 +4194,16 @@ export const validateSemanticAction = async (req, res) => {
             maxTokens = 2048,
             nodeId,
         } = req.body;
+
+        // --- AUTO CONTEXT INJECTION ---
+        const autoContext = await fetchContext(req, browserId);
+        let content = variableManager.resolve(rawContent);
+        if (autoContext && (!content || content.length < 5)) {
+            // If content is empty or very short, use the browser context as content
+            content = autoContext;
+            console.log('[AI Context] Using browser context for semantic validation');
+        }
+        // ------------------------------
 
         // --- ZERO-CONFIG LOGIC: Ignore node-set provider/model ---
         const activeProvider = 'ollama';
@@ -4133,11 +4216,20 @@ export const validateSemanticAction = async (req, res) => {
             nodeId,
         });
 
-        const keys = { ollama: 'ollama' };
+        const keys = {
+            openai: req.headers['x-openai-key'] || process.env.OPENAI_API_KEY,
+            anthropic: req.headers['x-anthropic-key'] || process.env.ANTHROPIC_API_KEY,
+            ollama: 'ollama',
+        };
 
         // Resolve inputs (may contain variables like ${text})
-        const content = variableManager.resolve(rawContent);
-        const criteria = variableManager.resolve(rawCriteria);
+        let criteria = variableManager.resolve(rawCriteria) || '';
+
+        // Zero-Config Fallback
+        if (!criteria && autoContext) {
+            criteria =
+                'Does this page appear to be loaded correctly with relevant content and no obvious error messages?';
+        }
 
         if (!content) {
             throw new Error(`El contenido a validar está vacío o no se resolvió correctamente.`);
@@ -4212,7 +4304,7 @@ export const extractDomContextAction = async (req, res) => {
 
         const context = await getOrCreateContext(req, browser, browserIdActual);
         const pages = context.pages();
-        const page = pages.length > 0 ? pages[0] : await context.newPage();
+        const page = pages.length > 0 ? pages[pages.length - 1] : await context.newPage();
 
         emitLog({
             message: `Extracting DOM Context (${extractionType}) using ${selector || 'body'}`,
