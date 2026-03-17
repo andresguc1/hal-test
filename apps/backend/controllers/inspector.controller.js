@@ -3,7 +3,7 @@ import { startInspector, stopInspector } from '../services/inspector.service.js'
 
 export const startInspectorAction = async (req, res) => {
     try {
-        const { browserId } = req.body;
+        const { browserId, url } = req.body;
 
         // 1. Get Browser
         const entry = browserService.get(browserId);
@@ -22,32 +22,51 @@ export const startInspectorAction = async (req, res) => {
 
         const browser = entry.browser || entry;
 
-        // 2. Get Active Page (Search all contexts)
-        const contexts = browser.contexts();
-        if (contexts.length === 0) {
-            return res.status(400).json({
+        // Zombie Check: Is the browser actually alive?
+        if (!browser || (typeof browser.isConnected === 'function' && !browser.isConnected())) {
+            console.warn(
+                `[Inspector] Browser ${browserId} is dead/disconnected. Purging from registry.`,
+            );
+            browserService.delete(browserId);
+            return res.status(404).json({
                 success: false,
-                message: req.t ? req.t('errors.no_active_pages') : 'No active contexts found',
+                code: 'BROWSER_DISCONNECTED',
+                message: 'The requested browser session has expired or was closed.',
             });
         }
 
-        // Try to find a page in any context, preferring the first context's last page
+        // 2. Get Active Page (Search all contexts)
+        const contexts = browser.contexts();
+
         let page = null;
-        for (const ctx of contexts) {
-            const pages = ctx.pages();
-            if (pages.length > 0) {
-                page = pages[pages.length - 1];
-                break;
+        if (contexts.length > 0) {
+            for (const ctx of contexts) {
+                const pages = ctx.pages();
+                if (pages.length > 0) {
+                    page = pages[pages.length - 1];
+                    break;
+                }
             }
         }
 
         if (!page) {
-            return res.status(400).json({
-                success: false,
-                message: req.t
-                    ? req.t('errors.no_active_pages')
-                    : 'No active pages found in any context. Please open a URL first.',
-            });
+            console.log('[Inspector] No pages found. Creating a new page.');
+            try {
+                const context = contexts.length > 0 ? contexts[0] : await browser.newContext();
+                page = await context.newPage();
+
+                if (url) {
+                    console.log(`[Inspector] Navigating to requested URL: ${url}`);
+                    await page
+                        .goto(url, { waitUntil: 'load' })
+                        .catch((e) => console.warn('Failed to goto url:', e.message));
+                }
+            } catch (err) {
+                return res.status(500).json({
+                    success: false,
+                    message: `Failed to create a new page: ${err.message}`,
+                });
+            }
         }
 
         // 3. Start Inspector
@@ -63,6 +82,22 @@ export const startInspectorAction = async (req, res) => {
             success: false,
             message: 'Failed to start inspector',
             error: error.message || String(error),
+        });
+    }
+};
+
+export const getActiveSessionsAction = async (req, res) => {
+    try {
+        const ids = Array.from(browserService.keys());
+        return res.status(200).json({
+            success: true,
+            sessions: ids,
+        });
+    } catch (error) {
+        console.error('[Inspector Controller] Error fetching sessions:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Internal Server Error',
         });
     }
 };

@@ -83,9 +83,103 @@ function AppHeader({
   activeBrowserId,
   onStopSession,
   isStarterTemplate,
+  apiStatus = { state: "idle" },
 }) {
   const { theme, setTheme } = useTheme();
   const { t } = useTranslation();
+
+  // Local state to manage temporary visibility of success/error messages
+  const [indicatorState, setIndicatorState] = React.useState("idle");
+
+  React.useEffect(() => {
+    if (!activeBrowserId) {
+      setIndicatorState("none");
+      return;
+    }
+
+    if (apiStatus.state === "running") {
+      setIndicatorState("running");
+    } else if (apiStatus.state === "success") {
+      setIndicatorState("success");
+      const timer = setTimeout(() => setIndicatorState("idle"), 2500);
+      return () => clearTimeout(timer);
+    } else if (apiStatus.state === "warning" || apiStatus.state === "error") {
+      setIndicatorState("error");
+    } else {
+      setIndicatorState("idle");
+    }
+  }, [apiStatus.state, activeBrowserId]);
+
+  const renderIndicator = () => {
+    if (indicatorState === "none") return null;
+
+    let config = {
+      bg: "bg-slate-500/10",
+      border: "border-slate-500/20",
+      dotOuter: "",
+      dotInner: "bg-slate-400",
+      text: "text-slate-400",
+      label: "Session Open",
+    };
+
+    switch (indicatorState) {
+      case "running":
+        config = {
+          bg: "bg-emerald-500/10",
+          border: "border-emerald-500/20",
+          dotOuter: "animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75",
+          dotInner: "bg-emerald-500",
+          text: "text-emerald-500",
+          label: "Executing Flow...",
+        };
+        break;
+      case "success":
+        config = {
+          bg: "bg-emerald-500/20",
+          border: "border-emerald-500/30",
+          dotOuter: "",
+          dotInner: "bg-emerald-400",
+          text: "text-emerald-400",
+          label: "Success!",
+        };
+        break;
+      case "error":
+        config = {
+          bg: "bg-red-500/10",
+          border: "border-red-500/20",
+          dotOuter: "animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75",
+          dotInner: "bg-red-500",
+          text: "text-red-500",
+          label: "Execution Error",
+        };
+        break;
+    }
+
+    return (
+      <Motion.div
+        key={indicatorState}
+        initial={{ opacity: 0, y: -5 }}
+        animate={{ opacity: 1, y: 0 }}
+        className={cn("flex items-center gap-2 ml-4 px-3 py-1 rounded-full border", config.bg, config.border)}
+      >
+        <span className="relative flex h-2 w-2">
+          {config.dotOuter && <span className={config.dotOuter}></span>}
+          <span className={cn("relative inline-flex rounded-full h-2 w-2", config.dotInner)}></span>
+        </span>
+        <span className={cn("text-xs font-medium", config.text)}>
+          {config.label}
+        </span>
+
+        <button
+          onClick={onStopSession}
+          className={cn("ml-2 hover:bg-black/10 p-1 rounded transition-colors", config.text)}
+          title="Stop Session & Close Browser"
+        >
+          <div className="w-2.5 h-2.5 bg-current rounded-[1px]" />
+        </button>
+      </Motion.div>
+    );
+  };
 
   return (
     <header
@@ -117,29 +211,7 @@ function AppHeader({
         </h1>
 
         {/* SESSION INDICATOR */}
-        {activeBrowserId && (
-          <Motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="flex items-center gap-2 ml-4 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full"
-          >
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </span>
-            <span className="text-xs font-medium text-emerald-500">
-              Session Active
-            </span>
-
-            <button
-              onClick={onStopSession}
-              className="ml-2 hover:bg-emerald-500/20 p-1 rounded transition-colors text-emerald-600 hover:text-emerald-400"
-              title="Stop Session & Close Browser"
-            >
-              <div className="w-2.5 h-2.5 bg-current rounded-[1px]" />
-            </button>
-          </Motion.div>
-        )}
+        {renderIndicator()}
       </div>
 
       {/* CENTER - ABSOLUTE (The Fix) */}

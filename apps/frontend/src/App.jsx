@@ -276,6 +276,7 @@ function Dashboard() {
     addGhostNode,
     migrateNodes,
     onLayout,
+    apiStatus, // NEW: added for indicator
   } = useFlowManager(currentProject, currentFlowId, switchFlow);
 
   // Element Picker Callback (Previously handleElementPicked was here, we will replace the mess)
@@ -329,45 +330,125 @@ function Dashboard() {
         t("common.inspector_started", "Pick an element in the browser..."),
       );
 
-      // 2. Determine if we need to launch a remote browser (Phase 3)
+      // 2. Determine if we need to launch a remote browser or restore state (Phase 3)
       const isRemote = window.location.hostname !== "localhost";
-      const needsLaunch = isRemote || !activeBrowserId;
+      let needsLaunch = isRemote || !activeBrowserId;
+
+      const getStartingUrl = () => {
+        const openUrlNode = nodes.find(
+          (n) => n.type === "open_url" || n.data?.type === "open_url",
+        );
+        return openUrlNode?.data?.configuration?.url || "https://www.google.com";
+      };
 
       try {
-        if (needsLaunch) {
-          console.log("[App] 🌐 Launching REMOTE browser for picker...");
+        let inspectorBrowserId = activeBrowserId;
 
-          // Try to get a helpful starting URL from the graph
-          const openUrlNode = nodes.find(
-            (n) => n.type === "open_url" || n.data?.type === "open_url",
-          );
-          const startingUrl =
-            openUrlNode?.data?.configuration?.url || "https://www.google.com";
-
-          const res = await api.post("/inspector/launch-remote", {
-            url: startingUrl,
-          });
-
-          if (res.success) {
-            console.log(
-              "[App] ✅ Remote browser launched with ID:",
-              res.browserId,
-            );
-            // Result is handled via socket, but we could store the ID if needed
-          } else {
-            throw new Error(res.message);
-          }
-        } else {
-          // Standard localhost flow
+        // Standard localhost flow
+        if (!needsLaunch) {
           console.log(
             "[App] 🚀 Starting local inspector on browserId:",
-            activeBrowserId,
+            inspectorBrowserId,
           );
-          const data = await api.post("/inspector/start", {
-            browserId: activeBrowserId,
-          });
-          if (!data.success) {
-            throw new Error(data.message);
+          try {
+            const data = await api.post("/inspector/start", {
+              browserId: inspectorBrowserId,
+              url: getStartingUrl(),
+            });
+            if (!data.success) {
+              // If backend actively tells us the browser is dead, trigger recovery
+              if (data.code === "BROWSER_DISCONNECTED" || data.message?.includes("dead")) {
+                console.warn("[App] ⚠ Active session is dead. Initiating recovery...");
+                inspectorBrowserId = null; // Force needsLaunch path
+                needsLaunch = true; // Re-evaluate needsLaunch to true for the next block
+              } else {
+                throw new Error(data.message);
+              }
+            }
+          } catch (err) {
+            // If the API call fails or returns 404 with our custom code
+            if (err?.response?.data?.code === "BROWSER_DISCONNECTED" || err.message?.includes("dead")) {
+              console.warn("[App] ⚠ Active session is dead (caught). Initiating recovery...");
+              inspectorBrowserId = null; // Force needsLaunch path
+              needsLaunch = true; // Re-evaluate needsLaunch to true for the next block
+            } else {
+              throw err;
+            }
+          }
+        }
+
+        if (needsLaunch || !inspectorBrowserId) {
+          console.log("[App] 🌐 Needs browser state for picker...");
+
+          // Find ancestors to execute previous steps
+          const getAncestors = (nodeId, graphNodes, graphEdges) => {
+            const ancestors = [];
+            const visited = new Set();
+            const queue = [nodeId];
+
+            while (queue.length > 0) {
+              const currentId = queue.shift();
+              if (visited.has(currentId)) continue;
+              visited.add(currentId);
+
+              const incomingEdges = graphEdges.filter((e) => e.target === currentId);
+              for (const edge of incomingEdges) {
+                if (!visited.has(edge.source)) {
+                  const sourceNode = graphNodes.find(n => n.id === edge.source);
+                  if (sourceNode) ancestors.push(sourceNode);
+                  queue.push(edge.source);
+                }
+              }
+            }
+            return ancestors;
+          };
+
+          const ancestors = getAncestors(selectedAction.nodeId, nodes, edges);
+
+          if (ancestors.length > 0) {
+            console.log("[App] 🔄 Executing ancestor nodes to inherit state:", ancestors.length);
+            const toastId = toast.loading(t("common.picker_setup", "Executing previous steps to build state..."));
+
+            try {
+              const execResult = await executeFlow({ nodes: ancestors, keepOpen: true });
+              toast.dismiss(toastId);
+
+              if (execResult && execResult.success && execResult.browserId) {
+                inspectorBrowserId = execResult.browserId;
+              } else {
+                console.warn("[App] ⚠ Failed to build state completely, falling back to simple launch");
+              }
+            } catch (err) {
+              toast.dismiss(toastId);
+              console.warn("[App] ⚠ Error building state:", err);
+            }
+          }
+
+          if (inspectorBrowserId) {
+            console.log("[App] 🚀 Starting inspector on restored browser context:", inspectorBrowserId);
+            const data = await api.post("/inspector/start", {
+              browserId: inspectorBrowserId,
+              url: getStartingUrl(),
+            });
+            if (!data.success) {
+              throw new Error(data.message);
+            }
+          } else {
+            console.log("[App] 🌐 Launching REMOTE browser for picker...");
+
+            const res = await api.post("/inspector/launch-remote", {
+              url: getStartingUrl(),
+            });
+
+            if (res.success) {
+              console.log(
+                "[App] ✅ Remote browser launched with ID:",
+                res.browserId,
+              );
+              // Result is handled via socket, but we could store the ID if needed
+            } else {
+              throw new Error(res.message);
+            }
           }
         }
       } catch (error) {
@@ -383,6 +464,8 @@ function Dashboard() {
       t,
       activeBrowserId,
       nodes,
+      edges,
+      executeFlow,
       handleCancelPicking,
     ],
   );
@@ -1247,6 +1330,7 @@ function Dashboard() {
           onExitComponent={exitComponent}
           activeBrowserId={activeBrowserId}
           onStopSession={stopSession}
+          apiStatus={apiStatus}
         />
 
         {/* 2. Content Wrapper */}

@@ -301,6 +301,22 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false); // NEW: Unsaved Indicator
   const { autoSaveEnabled, setAutoSaveEnabled } = useSettings();
 
+  // RELOAD PERSISTENCE: Check if there's an active session in the backend on mount
+  useEffect(() => {
+    const restoreSession = async () => {
+      try {
+        const res = await api.get("/inspector/sessions");
+        if (res.success && res.sessions && res.sessions.length > 0) {
+          console.log("[useFlowManager] 🔄 Restored active session from backend:", res.sessions[0]);
+          setActiveBrowserId(res.sessions[0]);
+        }
+      } catch (e) {
+        console.warn("[useFlowManager] Could not restore session:", e);
+      }
+    };
+    restoreSession();
+  }, []);
+
   // NEW: Read-Only Mode derived from execution status
   const isReadOnly = useMemo(
     () => apiStatus.state === "running",
@@ -2445,7 +2461,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
         });
       }
 
-      return { success: globalStats.failed === 0, stats: globalStats };
+      return { success: globalStats.failed === 0, stats: globalStats, browserId };
     },
     [
       nodes,

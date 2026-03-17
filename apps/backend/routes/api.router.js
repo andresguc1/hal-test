@@ -19,16 +19,16 @@ import {
     startInspectorAction,
     stopInspectorAction,
     launchRemoteAction,
+    getActiveSessionsAction,
 } from '../controllers/inspector.controller.js';
 
 const router = Router();
 
-// ==========================================================
-// INSPECTOR ROUTES
-// ==========================================================
+// ---- INSPECTOR & DEV TOOLS API ----
 router.post('/inspector/start', startInspectorAction);
 router.post('/inspector/stop', stopInspectorAction);
 router.post('/inspector/launch-remote', launchRemoteAction);
+router.get('/inspector/sessions', getActiveSessionsAction);
 router.get('/variables', actions.getVariables);
 console.log('✅ Inspector routes registered: /start, /stop');
 
