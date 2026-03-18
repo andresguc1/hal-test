@@ -19,9 +19,7 @@ import {
 import { cn } from "@/lib/utils";
 import { NODE_CATEGORIES, CATEGORY_STYLES } from "@/config/nodeConstants";
 import { useSettings } from "@/context/SettingsContext";
-
-import { useToast } from "@/hooks/useToast";
-import { api } from "../utils/api";
+import { useAIContext } from "@/context/AIContext";
 
 const ToolboxItem = ({ label, nodeId, color, onAdd }) => {
   // Select styles based on color theme, fallback to slate
@@ -286,26 +284,18 @@ export default function ToolboxPanel({
   onToggleCollapse,
 }) {
   const { t } = useTranslation();
-  const toast = useToast();
-  const { aiConfig, openSettings, vaultKeys } = useSettings();
+  const { aiConfig, openSettings } = useSettings();
 
-  // Key Selection State
-  const [selectedKeyId, setSelectedKeyId] = useState("default");
-
-  // Filter keys for active provider
-  const availableKeys = useMemo(() => {
-    if (!aiConfig?.activeProvider) return [];
-    return vaultKeys.filter((k) => k.provider === aiConfig.activeProvider);
-  }, [vaultKeys, aiConfig?.activeProvider]);
-
-  // Reset selection when provider changes
-  useEffect(() => {
-    if (availableKeys.length > 0) {
-      setSelectedKeyId(availableKeys[0].id); // Default to first available
-    } else {
-      setSelectedKeyId("default");
-    }
-  }, [availableKeys]);
+  const {
+    chatMessages,
+    isGenerating,
+    isAiReady,
+    selectedKeyId,
+    setSelectedKeyId,
+    availableKeys,
+    sendMessage,
+    clearMessages,
+  } = useAIContext();
 
   const [localIsCollapsed, setLocalIsCollapsed] = useState(false);
   const isCollapsed =
@@ -328,7 +318,6 @@ export default function ToolboxPanel({
   const [searchTerm, setSearchTerm] = useState("");
 
   // Chat State
-  const [chatMessages, setChatMessages] = useState([]);
   const messagesEndRef = useRef(null);
 
   // Auto-scroll to bottom of chat
@@ -338,9 +327,7 @@ export default function ToolboxPanel({
     }
   }, [chatMessages]);
 
-  const [openCategories, setOpenCategories] = useState({
-    browser_management: true,
-  });
+  const [openCategories, setOpenCategories] = useState({});
 
   // Filter Logic
   const filteredCategories = useMemo(() => {
@@ -397,103 +384,19 @@ export default function ToolboxPanel({
   // Let's check props. `addNode` is passed.
   // I will add `activeBrowserId` to props in the function signature.
 
-  // Chat State
   const [chatInput, setChatInput] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false);
 
-  // Helper to check if AI is ready
-  const isAiReady = useMemo(() => {
-    if (!aiConfig) return false;
-    const provider = aiConfig.activeProvider;
-
-    if (provider === "ollama") return true;
-
-    const key = aiConfig.keys?.[provider];
-    return !!(provider && key);
-  }, [aiConfig]);
-
-  // Handle AI Generation
-  const handleSendMessage = async () => {
+  const handleSendMessageLocal = async () => {
     if (!chatInput.trim() || !isAiReady) return;
-
-    setIsGenerating(true);
-    const originalText = chatInput;
-    setChatInput(""); // Clear immediately for UX
-
-    // Optimistically add user message
-    const newUserMsg = { role: "user", content: originalText };
-    setChatMessages((prev) => [...prev, newUserMsg]);
-
-    try {
-      const provider = aiConfig.activeProvider;
-      const model = aiConfig.selectedModel;
-
-      // Decision Logic: Use selected Vault Key OR Fallback to Legacy/Env
-      let apiKeyToSend;
-
-      if (selectedKeyId !== "default") {
-        apiKeyToSend = selectedKeyId;
-      } else {
-        apiKeyToSend = aiConfig.keys?.[provider];
-      }
-
-      // Prepare history for context (optional, but good for chat)
-      const historyToSend = [...chatMessages, newUserMsg].map((m) => ({
-        role: m.role,
-        content: m.content,
-      }));
-
-      const data = await api.post(
-        "/ai/chat",
-        {
-          messages: historyToSend, // Send full history
-          browserId: activeBrowserId,
-          aiConfig,
-        },
-        {
-          headers: {
-            "x-ai-provider": provider,
-            "x-ai-model": model,
-            "x-ai-api-key": apiKeyToSend,
-          },
-        },
-      );
-
-      const result = data; // { success, message, toolCalls }
-
-      if (result.message) {
-        // Append Assistant Message
-        setChatMessages((prev) => [
-          ...prev,
-          { role: "assistant", content: result.message },
-        ]);
-      }
-
-      // If tool calls happened, we might want to notify
-      if (result.toolCalls && result.toolCalls.length > 0) {
-        result.toolCalls.forEach((tc) => {
-          if (tc.function.name === "highlight_element") {
-            toast.info("👁️ AI is inspecting the page...");
-          }
-          if (tc.function.name === "inspect_page") {
-            toast.info("🧠 Analyzing page structure...");
-          }
-        });
-      }
-    } catch (error) {
-      toast.error(`HAL Failed: ${error.message}`);
-      setChatInput(originalText); // Restore text on error
-      // Optionally remove the failed user message?
-      // For now, keep it.
-    } finally {
-      setIsGenerating(false);
-    }
+    const text = chatInput;
+    setChatInput("");
+    await sendMessage(text, activeBrowserId);
   };
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSendMessage();
+      handleSendMessageLocal();
     }
   };
 
@@ -568,237 +471,241 @@ export default function ToolboxPanel({
       </div>
 
       {/* CONTENT */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 custom-scrollbar flex flex-col">
-        {!isCollapsed ? (
-          <>
-            {/* Search */}
-            <div className="relative mb-4 group">
-              <Search
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-400 transition-colors"
-                size={14}
-              />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder={t("common.select_default", "Search tools...")}
-                className="w-full bg-slate-900/50 border border-white/10 rounded-lg py-2 pl-9 pr-3 text-xs text-slate-300 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition-all shadow-inner"
-              />
-              {searchTerm && (
-                <button
-                  onClick={() => setSearchTerm("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
-                >
-                  <X size={12} />
-                </button>
-              )}
-            </div>
-
-            {/* List */}
-            <div className="flex-1">
-              {Object.entries(filteredCategories).map(([key, section]) => (
-                <ToolboxCategory
-                  key={key}
-                  categoryKey={key}
-                  icon={section.icon}
-                  color={section.color}
-                  nodes={section.nodes}
-                  isOpen={!!openCategories[key]}
-                  onToggle={() => toggleCategory(key)}
-                  t={t}
-                  onAdd={addNode}
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 custom-scrollbar flex flex-col">
+          {!isCollapsed ? (
+            <>
+              {/* Search */}
+              <div className="relative mb-4 group">
+                <Search
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-400 transition-colors"
+                  size={14}
                 />
-              ))}
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder={t("common.select_default", "Search tools...")}
+                  className="w-full bg-slate-900/50 border border-white/10 rounded-lg py-2 pl-9 pr-3 text-xs text-slate-300 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition-all shadow-inner"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+
+              {/* List */}
+              <div className="flex-1">
+                {Object.entries(filteredCategories).map(([key, section]) => (
+                  <ToolboxCategory
+                    key={key}
+                    categoryKey={key}
+                    icon={section.icon}
+                    color={section.color}
+                    nodes={section.nodes}
+                    isOpen={!!openCategories[key]}
+                    onToggle={() => toggleCategory(key)}
+                    t={t}
+                    onAdd={addNode}
+                  />
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col gap-4 items-center mt-2">
+              {Object.entries(NODE_CATEGORIES).map(([key, section]) => {
+                return (
+                  <button
+                    key={key}
+                    title={t(`nodes.categories.${key}`)}
+                    onClick={() => {
+                      handleToggleCollapse(false);
+                      setOpenCategories({ [key]: true });
+                    }}
+                    className={cn(
+                      "w-9 h-9 flex items-center justify-center rounded-lg transition-all bg-white/5 hover:bg-white/10",
+                      "text-slate-400", // Default color
+                      getSidebarHoverColor(section.color),
+                    )}
+                  >
+                    <section.icon size={18} />
+                  </button>
+                );
+              })}
             </div>
+          )}
+        </div>
 
-            {/* AI COPILOT */}
-            <div className="mt-4 pt-4 border-t border-white/5">
-              <div className="flex-1 bg-slate-950 flex flex-col min-h-0">
-                {/* Internal Header for AI Chat */}
-                <div className="p-3 border-b border-slate-800 bg-slate-900/50 flex items-center justify-between sticky top-0 z-10">
-                  <div className="flex flex-col">
-                    <div className="flex items-center gap-2">
-                      <Sparkles size={14} className="text-purple-400" />
-                      <span className="text-xs font-bold text-slate-300 uppercase tracking-widest">
-                        Hal-9001
-                      </span>
-                      {activeBrowserId && (
-                        <span
-                          className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse"
-                          title="Connected to Browser"
-                        />
-                      )}
-                    </div>
-                    {/* Available Keys Selector */}
-                    {availableKeys.length > 0 && (
-                      <div className="mt-1">
-                        <select
-                          className="bg-transparent text-[10px] text-slate-500 border-none outline-none cursor-pointer hover:text-slate-300"
-                          value={selectedKeyId}
-                          onChange={(e) => setSelectedKeyId(e.target.value)}
-                        >
-                          {availableKeys.map((k) => (
-                            <option key={k.id} value={k.id}>
-                              Using: {k.alias}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+        {/* AI COPILOT */}
+        {!isCollapsed && (
+          <div className="mt-auto shrink-0 border-t border-white/5">
+            <div className="bg-slate-950 flex flex-col min-h-0">
+              {/* Internal Header for AI Chat */}
+              <div className="p-3 border-b border-slate-800 bg-slate-900/50 flex items-center justify-between sticky top-0 z-10">
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2">
+                    <Sparkles size={14} className="text-purple-400" />
+                    <span className="text-xs font-bold text-slate-300 uppercase tracking-widest">
+                      Hal-9001
+                    </span>
+                    {activeBrowserId && (
+                      <span
+                        className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse"
+                        title="Connected to Browser"
+                      />
                     )}
                   </div>
-
-                  <div className="flex items-center gap-1">
-                    {chatMessages.length > 0 && (
-                      <button
-                        onClick={() => setChatMessages([])}
-                        className="p-1.5 hover:bg-slate-800 rounded-md text-slate-500 hover:text-slate-300 transition-colors"
-                        title="Clear History"
+                  {/* Available Keys Selector */}
+                  {availableKeys.length > 0 && (
+                    <div className="mt-1">
+                      <select
+                        className="bg-transparent text-[10px] text-slate-500 border-none outline-none cursor-pointer hover:text-slate-300"
+                        value={selectedKeyId}
+                        onChange={(e) => setSelectedKeyId(e.target.value)}
                       >
-                        <Trash2 size={13} />
-                      </button>
-                    )}
-                    <button
-                      onClick={() => openSettings("integrations")}
-                      className="p-1.5 hover:bg-slate-800 rounded-md text-slate-500 hover:text-slate-300 transition-colors"
-                      title={t("toolbox.configureAI")}
-                    >
-                      <Settings size={14} />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide bg-gradient-to-b from-slate-900/80 to-slate-900/40 border border-white/10 rounded-xl p-0 relative group overflow-hidden flex flex-col h-36 shadow-lg">
-                  <div className="flex-1 p-3 overflow-y-auto custom-scrollbar flex flex-col gap-3">
-                    {chatMessages.length === 0 ? (
-                      <div className="flex gap-3 mb-2">
-                        <div className="w-5 h-5 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0">
-                          <Bot size={12} className="text-indigo-400" />
-                        </div>
-                        <p className="text-[11px] text-slate-300 leading-relaxed mt-0.5">
-                          {isAiReady ? (
-                            <>
-                              Connected to{" "}
-                              <span className="text-indigo-300 font-semibold">
-                                {aiConfig?.activeProvider}
-                              </span>
-                              .
-                              <br />
-                              How can I help you automate today?
-                            </>
-                          ) : (
-                            <>
-                              I can help you build this flow. Try asking:{" "}
-                              <span className="text-indigo-300 italic">
-                                "Go to google.com and search for kittens"
-                              </span>
-                            </>
-                          )}
-                        </p>
-                      </div>
-                    ) : (
-                      <>
-                        {chatMessages.map((msg, i) => (
-                          <div
-                            key={i}
-                            className={cn(
-                              "flex flex-col gap-1 max-w-[90%]",
-                              msg.role === "user"
-                                ? "self-end items-end"
-                                : "self-start items-start",
-                            )}
-                          >
-                            <div
-                              className={cn(
-                                "p-2 rounded-lg text-[11px] leading-relaxed",
-                                msg.role === "user"
-                                  ? "bg-indigo-600/90 text-white rounded-br-none"
-                                  : "bg-slate-800 text-slate-200 rounded-bl-none border border-slate-700",
-                              )}
-                            >
-                              {msg.content}
-                            </div>
-                          </div>
+                        {availableKeys.map((k) => (
+                          <option key={k.id} value={k.id}>
+                            Using: {k.alias}
+                          </option>
                         ))}
-                        {isGenerating && (
-                          <div className="flex items-center gap-2 text-[10px] text-slate-500 ml-1 opacity-70">
-                            <Loader2 size={10} className="animate-spin" />
-                            <span>Thinking...</span>
-                          </div>
-                        )}
-                        {/* Auto-scroll anchor */}
-                        <div ref={messagesEndRef} />
-                      </>
-                    )}
-                  </div>
-                  <div className="h-9 border-t border-white/5 bg-white/[0.02] flex items-center px-3 gap-2">
-                    <input
-                      className="bg-transparent border-none text-[11px] text-slate-200 placeholder:text-slate-600 focus:outline-none w-full h-full disabled:opacity-50"
-                      placeholder={
-                        isAiReady
-                          ? isGenerating
-                            ? "HAL is thinking..."
-                            : "Describe a test case..."
-                          : "Configure AI to chat..."
-                      }
-                      disabled={!isAiReady || isGenerating}
-                      value={chatInput}
-                      onChange={(e) => setChatInput(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                    />
-                    {isGenerating ? (
-                      <Loader2
-                        size={12}
-                        className="text-indigo-400 animate-spin"
-                      />
-                    ) : (
-                      <Send
-                        size={12}
-                        className={cn(
-                          "transition-colors",
-                          isAiReady
-                            ? "text-indigo-400 cursor-pointer hover:text-indigo-300"
-                            : "text-slate-700",
-                        )}
-                        onClick={handleSendMessage}
-                      />
-                    )}
-                  </div>
-
-                  {!isAiReady && (
-                    <div
-                      onClick={() => openSettings("integrations")}
-                      className="absolute inset-0 bg-[var(--bg-canvas)]/80 backdrop-blur-[1px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 rounded-lg cursor-pointer"
-                    >
-                      <span className="text-[10px] font-bold text-amber-500 border border-amber-500/30 px-3 py-1 rounded-full bg-amber-500/10 shadow-[0_0_10px_rgba(245,158,11,0.2)] hover:bg-amber-500/20 transition-colors">
-                        SETUP REQUIRED
-                      </span>
+                      </select>
                     </div>
                   )}
+                </div>
+
+                <div className="flex items-center gap-1">
+                  {chatMessages.length > 0 && (
+                    <button
+                      onClick={() => clearMessages()}
+                      className="p-1.5 hover:bg-slate-800 rounded-md text-slate-500 hover:text-slate-300 transition-colors"
+                      title="Clear History"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => openSettings("integrations")}
+                    className="p-1.5 hover:bg-slate-800 rounded-md text-slate-500 hover:text-slate-300 transition-colors"
+                    title={t("toolbox.configureAI")}
+                  >
+                    <Settings size={14} />
+                  </button>
                 </div>
               </div>
-            </div>
-          </>
-        ) : (
-          <div className="flex flex-col gap-4 items-center mt-2">
-            {Object.entries(NODE_CATEGORIES).map(([key, section]) => {
-              return (
-                <button
-                  key={key}
-                  title={t(`nodes.categories.${key}`)}
-                  onClick={() => {
-                    handleToggleCollapse(false);
-                    setOpenCategories({ [key]: true });
-                  }}
-                  className={cn(
-                    "w-9 h-9 flex items-center justify-center rounded-lg transition-all bg-white/5 hover:bg-white/10",
-                    "text-slate-400", // Default color
-                    getSidebarHoverColor(section.color),
+
+              <div className="flex-none h-[25vh] min-h-[180px] bg-gradient-to-b from-slate-900/80 to-slate-900/40 border border-white/10 rounded-xl p-0 relative group overflow-hidden flex flex-col shadow-lg">
+                <div className="flex-1 p-3 overflow-y-auto custom-scrollbar flex flex-col gap-3">
+                  {chatMessages.length === 0 ? (
+                    <div className="flex gap-3 mb-2">
+                      <div className="w-5 h-5 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0">
+                        <Bot size={12} className="text-indigo-400" />
+                      </div>
+                      <p className="text-[11px] text-slate-300 leading-relaxed mt-0.5">
+                        {isAiReady ? (
+                          <>
+                            Connected to{" "}
+                            <span className="text-indigo-300 font-semibold">
+                              {aiConfig?.activeProvider}
+                            </span>
+                            .
+                            <br />
+                            How can I help you automate today?
+                          </>
+                        ) : (
+                          <>
+                            I can help you build this flow. Try asking:{" "}
+                            <span className="text-indigo-300 italic">
+                              "Go to google.com and search for kittens"
+                            </span>
+                          </>
+                        )}
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      {chatMessages.map((msg, i) => (
+                        <div
+                          key={i}
+                          className={cn(
+                            "flex flex-col gap-1 max-w-[90%]",
+                            msg.role === "user"
+                              ? "self-end items-end"
+                              : "self-start items-start",
+                          )}
+                        >
+                          <div
+                            className={cn(
+                              "p-2 rounded-lg text-[11px] leading-relaxed",
+                              msg.role === "user"
+                                ? "bg-indigo-600/90 text-white rounded-br-none"
+                                : "bg-slate-800 text-slate-200 rounded-bl-none border border-slate-700",
+                            )}
+                          >
+                            {msg.content}
+                          </div>
+                        </div>
+                      ))}
+                      {isGenerating && (
+                        <div className="flex items-center gap-2 text-[10px] text-slate-500 ml-1 opacity-70">
+                          <Loader2 size={10} className="animate-spin" />
+                          <span>Thinking...</span>
+                        </div>
+                      )}
+                      {/* Auto-scroll anchor */}
+                      <div ref={messagesEndRef} />
+                    </>
                   )}
-                >
-                  <section.icon size={18} />
-                </button>
-              );
-            })}
+                </div>
+                <div className="h-9 border-t border-white/5 bg-white/[0.02] flex items-center px-3 gap-2">
+                  <input
+                    className="bg-transparent border-none text-[11px] text-slate-200 placeholder:text-slate-600 focus:outline-none w-full h-full disabled:opacity-50"
+                    placeholder={
+                      isAiReady
+                        ? isGenerating
+                          ? "HAL is thinking..."
+                          : "Describe a test case..."
+                        : "Configure AI to chat..."
+                    }
+                    disabled={!isAiReady || isGenerating}
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                  />
+                  {isGenerating ? (
+                    <Loader2
+                      size={12}
+                      className="text-indigo-400 animate-spin"
+                    />
+                  ) : (
+                    <Send
+                      size={12}
+                      className={cn(
+                        "transition-colors",
+                        isAiReady
+                          ? "text-indigo-400 cursor-pointer hover:text-indigo-300"
+                          : "text-slate-700",
+                      )}
+                      onClick={handleSendMessageLocal}
+                    />
+                  )}
+                </div>
+
+                {!isAiReady && (
+                  <div
+                    onClick={() => openSettings("integrations")}
+                    className="absolute inset-0 bg-[var(--bg-canvas)]/80 backdrop-blur-[1px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 rounded-lg cursor-pointer"
+                  >
+                    <span className="text-[10px] font-bold text-amber-500 border border-amber-500/30 px-3 py-1 rounded-full bg-amber-500/10 shadow-[0_0_10px_rgba(245,158,11,0.2)] hover:bg-amber-500/20 transition-colors">
+                      SETUP REQUIRED
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </div>

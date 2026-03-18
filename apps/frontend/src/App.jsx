@@ -56,6 +56,7 @@ import StepDetailsModal from "./components/StepDetailsModal";
 import { ExportModal } from "./components/modals/ExportModal";
 import { ImportModal } from "./components/modals/ImportModal";
 import { api } from "./utils/api";
+import { useElementPicker } from "./hooks/useElementPicker";
 import { NODE_STATES } from "./components/hooks/flowStyles";
 import {
   Terminal,
@@ -203,7 +204,6 @@ function Dashboard() {
     isOpen: false,
     type: "project",
   });
-  const [pickingField, setPickingField] = useState("selector");
 
   // Execution state for progress bar
   const [executionProgress, setExecutionProgress] = useState({
@@ -279,337 +279,18 @@ function Dashboard() {
     apiStatus, // NEW: added for indicator
   } = useFlowManager(currentProject, currentFlowId, switchFlow);
 
-  // Element Picker Callback (Previously handleElementPicked was here, we will replace the mess)
-
-  // CANCEL PICKING HANDLER
-  const handleCancelPicking = useCallback(async () => {
-    // If we have a selected action, try to revert its state regardless of current state check
-    // to be safe against stale closure logic elsewhere.
-    if (selectedAction) {
-      updateNodeState(selectedAction.nodeId, NODE_STATES.DEFAULT, {
-        pickingField: null,
-      });
-      console.log(
-        "[App] Resetting node state to DEFAULT for node:",
-        selectedAction.nodeId,
-      );
-    }
-
-    // Reset picking field
-    setPickingField("selector");
-
-    // Call backend to remove listeners
-    try {
-      await api.post("/inspector/stop", { browserId: activeBrowserId || null });
-    } catch (e) {
-      console.warn("[App] Failed to stop backend inspector:", e);
-    }
-  }, [selectedAction, updateNodeState, activeBrowserId]);
-
-  // START PICKING HANDLER (Visual Feedback + API)
-  const handleStartPicking = useCallback(
-    async (fieldKey = "selector") => {
-      // If we are already picking, we should stop/cancel before starting another
-      // or simply treat a second click as a cancel if it's the same node/field.
-      if (selectedAction?.data?.state === NODE_STATES.PICKING) {
-        console.log("[App] 🛑 Already picking, stopping current session...");
-        await handleCancelPicking();
-        return;
-      }
-
-      if (!selectedAction) return;
-
-      console.log("[App] 📍 Starting picker for field:", fieldKey);
-      setPickingField(fieldKey);
-
-      // 1. Visual Feedback: Set node to "PICKING" state
-      updateNodeState(selectedAction.nodeId, NODE_STATES.PICKING, {
-        pickingField: fieldKey,
-      });
-      toast.info(
-        t("common.inspector_started", "Pick an element in the browser..."),
-      );
-
-      // 2. Determine if we need to launch a remote browser or restore state (Phase 3)
-      const isRemote = window.location.hostname !== "localhost";
-      let needsLaunch = isRemote || !activeBrowserId;
-
-      const getStartingUrl = () => {
-        const openUrlNode = nodes.find(
-          (n) => n.type === "open_url" || n.data?.type === "open_url",
-        );
-        return openUrlNode?.data?.configuration?.url || "https://www.google.com";
-      };
-
-      try {
-        let inspectorBrowserId = activeBrowserId;
-
-        // Standard localhost flow
-        if (!needsLaunch) {
-          console.log(
-            "[App] 🚀 Starting local inspector on browserId:",
-            inspectorBrowserId,
-          );
-          try {
-            const data = await api.post("/inspector/start", {
-              browserId: inspectorBrowserId,
-              url: getStartingUrl(),
-            });
-            if (!data.success) {
-              // If backend actively tells us the browser is dead, trigger recovery
-              if (data.code === "BROWSER_DISCONNECTED" || data.message?.includes("dead")) {
-                console.warn("[App] ⚠ Active session is dead. Initiating recovery...");
-                inspectorBrowserId = null; // Force needsLaunch path
-                needsLaunch = true; // Re-evaluate needsLaunch to true for the next block
-              } else {
-                throw new Error(data.message);
-              }
-            }
-          } catch (err) {
-            // If the API call fails or returns 404 with our custom code
-            if (err?.response?.data?.code === "BROWSER_DISCONNECTED" || err.message?.includes("dead")) {
-              console.warn("[App] ⚠ Active session is dead (caught). Initiating recovery...");
-              inspectorBrowserId = null; // Force needsLaunch path
-              needsLaunch = true; // Re-evaluate needsLaunch to true for the next block
-            } else {
-              throw err;
-            }
-          }
-        }
-
-        if (needsLaunch || !inspectorBrowserId) {
-          console.log("[App] 🌐 Needs browser state for picker...");
-
-          // Find ancestors to execute previous steps
-          const getAncestors = (nodeId, graphNodes, graphEdges) => {
-            const ancestors = [];
-            const visited = new Set();
-            const queue = [nodeId];
-
-            while (queue.length > 0) {
-              const currentId = queue.shift();
-              if (visited.has(currentId)) continue;
-              visited.add(currentId);
-
-              const incomingEdges = graphEdges.filter((e) => e.target === currentId);
-              for (const edge of incomingEdges) {
-                if (!visited.has(edge.source)) {
-                  const sourceNode = graphNodes.find(n => n.id === edge.source);
-                  if (sourceNode) ancestors.push(sourceNode);
-                  queue.push(edge.source);
-                }
-              }
-            }
-            return ancestors;
-          };
-
-          const ancestors = getAncestors(selectedAction.nodeId, nodes, edges);
-
-          if (ancestors.length > 0) {
-            console.log("[App] 🔄 Executing ancestor nodes to inherit state:", ancestors.length);
-            const toastId = toast.loading(t("common.picker_setup", "Executing previous steps to build state..."));
-
-            try {
-              const execResult = await executeFlow({ nodes: ancestors, keepOpen: true });
-              toast.dismiss(toastId);
-
-              if (execResult && execResult.success && execResult.browserId) {
-                inspectorBrowserId = execResult.browserId;
-              } else {
-                console.warn("[App] ⚠ Failed to build state completely, falling back to simple launch");
-              }
-            } catch (err) {
-              toast.dismiss(toastId);
-              console.warn("[App] ⚠ Error building state:", err);
-            }
-          }
-
-          if (inspectorBrowserId) {
-            console.log("[App] 🚀 Starting inspector on restored browser context:", inspectorBrowserId);
-            const data = await api.post("/inspector/start", {
-              browserId: inspectorBrowserId,
-              url: getStartingUrl(),
-            });
-            if (!data.success) {
-              throw new Error(data.message);
-            }
-          } else {
-            console.log("[App] 🌐 Launching REMOTE browser for picker...");
-
-            const res = await api.post("/inspector/launch-remote", {
-              url: getStartingUrl(),
-            });
-
-            if (res.success) {
-              console.log(
-                "[App] ✅ Remote browser launched with ID:",
-                res.browserId,
-              );
-              // Result is handled via socket, but we could store the ID if needed
-            } else {
-              throw new Error(res.message);
-            }
-          }
-        }
-      } catch (error) {
-        console.error("[App] Picker Start Error:", error);
-        toast.error(error.message || "Failed to start inspector");
-        updateNodeState(selectedAction?.nodeId, NODE_STATES.DEFAULT); // Revert on failure
-      }
-    },
-    [
+  // Element Picker Hook
+  const { handleStartPicking, handleCancelPicking, handleElementPicked } =
+    useElementPicker({
       selectedAction,
       updateNodeState,
-      toast,
-      t,
+      updateNodeConfiguration,
       activeBrowserId,
       nodes,
       edges,
       executeFlow,
-      handleCancelPicking,
-    ],
-  );
-
-  // Element Picker Callback
-  const handleElementPicked = useCallback(
-    async (data) => {
-      console.log("[App] 🎯 Element Picked Event Received:", data);
-
-      // CRITICAL: We need the LATEST nodes. Since this is a socket callback,
-      // the 'nodes' in scope might be stale. We'll use a functional update
-      // for updateNodeConfiguration or better, find the node from the current state.
-
-      // 1. Identify which node is in PICKING state
-      // We'll use nodesRef or a similar mechanism if available, but for now
-      // let's try to handle it within updateNodeConfiguration logic.
-
-      try {
-        // VALIDATION: Ensure we captured a valid selector
-        const sources = data.candidates || data.selectors || {};
-        const isValidSelector =
-          data &&
-          (data.selector || (sources && Object.values(sources).some((v) => v)));
-
-        if (!isValidSelector) {
-          console.warn("[PICKER] ❌ No valid selector in payload", data);
-          toast.error(
-            t(
-              "common.selector_capture_failed",
-              "Failed to capture element. Try again.",
-            ),
-          );
-
-          // Reset all picking states just in case
-          nodes.forEach((n) => {
-            if (n.data?.state === NODE_STATES.PICKING)
-              updateNodeState(n.id, NODE_STATES.DEFAULT);
-          });
-          return;
-        }
-
-        // PRIORITY STRATEGY: AI Optimized > ID > Data Attr > CSS > XPath
-        let finalSelector = data.sanitizedSelector || data.selector;
-
-        if (sources) {
-          const id = sources.id;
-          const dataAttr = sources.dataAttribute || sources.testId;
-          const css = sources.css || sources.cssPath;
-          const xpath = sources.xpath || sources.text;
-
-          if (id) finalSelector = id;
-          else if (dataAttr) finalSelector = dataAttr;
-          else if (css) finalSelector = css;
-          else if (xpath) finalSelector = xpath;
-        }
-
-        if (
-          !finalSelector ||
-          typeof finalSelector !== "string" ||
-          finalSelector.trim() === ""
-        ) {
-          toast.error(
-            t("common.selector_empty", "Selector is empty. Try again."),
-          );
-          return;
-        }
-
-        const trimmedSelector = finalSelector.trim();
-
-        // 2. APPLY TO ALL NODES IN PICKING STATE
-        // This is more robust than relying on selectedAction which might be stale in this closure
-        let updatedAny = false;
-
-        // We'll use a functional update to ensure we don't miss anything
-        setNodes((currNodes) => {
-          const pickingNodes = currNodes.filter(
-            (n) => n.data?.state === NODE_STATES.PICKING,
-          );
-
-          if (pickingNodes.length === 0) {
-            console.warn("[App] ⚠️ No nodes found in PICKING state to update.");
-            return currNodes;
-          }
-
-          console.log(
-            `[App] 📝 Updating ${pickingNodes.length} nodes with selector: ${trimmedSelector}`,
-          );
-          updatedAny = true;
-
-          return currNodes.map((node) => {
-            if (node.data?.state === NODE_STATES.PICKING) {
-              return {
-                ...node,
-                data: {
-                  ...node.data,
-                  state: NODE_STATES.DEFAULT,
-                  configuration: {
-                    ...node.data.configuration,
-                    [pickingField]: trimmedSelector,
-                  },
-                },
-              };
-            }
-            return node;
-          });
-        });
-
-        if (updatedAny) {
-          toast.success(t("common.selector_captured", "Target captured!"));
-        } else {
-          // Fallback: If no node was in PICKING state, try selectedAction
-          if (selectedAction) {
-            console.log(
-              "[App] 🔄 Fallback: Updating selectedAction node:",
-              selectedAction.nodeId,
-            );
-            await updateNodeConfiguration(selectedAction.nodeId, {
-              ...selectedAction.data.configuration,
-              [pickingField]: trimmedSelector,
-            });
-            updateNodeState(selectedAction.nodeId, NODE_STATES.DEFAULT);
-            toast.success(t("common.selector_captured", "Target captured!"));
-          }
-        }
-
-        // Always stop backend inspector
-        await handleCancelPicking();
-      } catch (err) {
-        console.error("[PICKER] 💥 Error processing picked element:", err);
-        toast.error("Error processing selection");
-      }
-    },
-    [
-      nodes,
-      pickingField,
-      updateNodeConfiguration,
-      updateNodeState,
-      handleCancelPicking,
-      selectedAction,
       setNodes,
-      t,
-      toast,
-    ],
-  );
+    });
 
   const handleSelectRun = useCallback(
     async (runBasic) => {
@@ -657,6 +338,96 @@ function Dashboard() {
     [addGhostNode],
   );
 
+  // --- MCP Phase 3 Methods ---
+  const getCanvasState = useCallback(() => {
+    return { nodes, edges };
+  }, [nodes, edges]);
+
+  // Make it globally accessible for AIContext
+  useEffect(() => {
+    window.__HAL_GET_CANVAS_STATE__ = getCanvasState;
+    return () => {
+      delete window.__HAL_GET_CANVAS_STATE__;
+    };
+  }, [getCanvasState]);
+
+  const handleMCPInjectNodes = useCallback(
+    async (newNodesData) => {
+      // Basic coordinate offset so they don't all stack at 0,0
+      let startX = 100;
+      let startY = 100;
+
+      // Create new nodes and layout them
+      const mappedNodes = newNodesData.map((nodeData, index) => {
+        const id = `node_${Date.now()}_${index}`;
+        return {
+          id,
+          type: nodeData.type,
+          position: { x: startX + index * 250, y: startY },
+          data: {
+            ...nodeData.data,
+            state: NODE_STATES.DEFAULT,
+            configuration: nodeData.data || {},
+          },
+        };
+      });
+
+      // Create sequential edges between them
+      const newEdges = [];
+      for (let i = 0; i < mappedNodes.length - 1; i++) {
+        newEdges.push({
+          id: `edge_${mappedNodes[i].id}_${mappedNodes[i + 1].id}`,
+          source: mappedNodes[i].id,
+          target: mappedNodes[i + 1].id,
+          type: "custom",
+          animated: true,
+        });
+      }
+
+      // Add them to canvas (this triggers saveFlow automatically in useFlowManager if configured)
+      setNodes((prev) => [...prev, ...mappedNodes]);
+      setEdges((prev) => [...prev, ...newEdges]);
+
+      return { success: true, nodeIds: mappedNodes.map((n) => n.id) };
+    },
+    [setNodes, setEdges],
+  );
+
+  // MCP phase 3 granular tools
+  const handleMCPAddNode = useCallback(
+    async (nodeData) => {
+      const id = `node_${Date.now()}`;
+      const newNode = {
+        id,
+        type: nodeData.type,
+        position: nodeData.position || { x: 100, y: 100 },
+        data: {
+          ...nodeData.data,
+          state: NODE_STATES.DEFAULT,
+          configuration: nodeData.data || {},
+        },
+      };
+      setNodes((prev) => [...prev, newNode]);
+      return { success: true, nodeId: id };
+    },
+    [setNodes],
+  );
+
+  const handleMCPConnectNodes = useCallback(
+    async ({ sourceId, targetId }) => {
+      const newEdge = {
+        id: `edge_${sourceId}_${targetId}`,
+        source: sourceId,
+        target: targetId,
+        type: "custom",
+        animated: true,
+      };
+      setEdges((prev) => [...prev, newEdge]);
+      return { success: true };
+    },
+    [setEdges],
+  );
+
   const socket = useHaltestSocket(
     setNodes,
     setEdges,
@@ -664,6 +435,10 @@ function Dashboard() {
     addLog,
     null, // onTerminalOutput (handled elsewhere or passed via ref)
     handleCodegenAction,
+    getCanvasState, // MCP Phase 3
+    handleMCPInjectNodes, // MCP Phase 3
+    handleMCPAddNode, // Granular
+    handleMCPConnectNodes, // Granular
   );
 
   // Computed values

@@ -23,6 +23,10 @@ export const useHaltestSocket = (
   onLogReceived,
   onTerminalOutput,
   onCodegenAction,
+  getCanvasState, // NEW: Function to return { nodes, edges }
+  onInjectNodes, // NEW: Function to handle node injection
+  onAddNode, // NEW: Granular node addition
+  onConnectNodes, // NEW: Granular node connection
 ) => {
   const socketRef = useRef(null);
   const onElementPickedRef = useRef(onElementPicked);
@@ -30,6 +34,10 @@ export const useHaltestSocket = (
   const setEdgesRef = useRef(setEdges);
   const onTerminalOutputRef = useRef(onTerminalOutput);
   const onCodegenActionRef = useRef(onCodegenAction);
+  const getCanvasStateRef = useRef(getCanvasState);
+  const onInjectNodesRef = useRef(onInjectNodes);
+  const onAddNodeRef = useRef(onAddNode);
+  const onConnectNodesRef = useRef(onConnectNodes);
 
   // Update refs when props change (always keep latest)
   useEffect(() => {
@@ -38,7 +46,21 @@ export const useHaltestSocket = (
     setEdgesRef.current = setEdges;
     onTerminalOutputRef.current = onTerminalOutput;
     onCodegenActionRef.current = onCodegenAction;
-  }, [onElementPicked, setNodes, setEdges, onTerminalOutput, onCodegenAction]);
+    getCanvasStateRef.current = getCanvasState;
+    onInjectNodesRef.current = onInjectNodes;
+    onAddNodeRef.current = onAddNode;
+    onConnectNodesRef.current = onConnectNodes;
+  }, [
+    onElementPicked,
+    setNodes,
+    setEdges,
+    onTerminalOutput,
+    onCodegenAction,
+    getCanvasState,
+    onInjectNodes,
+    onAddNode,
+    onConnectNodes,
+  ]);
 
   useEffect(() => {
     console.log("Haltest Socket: 🔄 Connecting to", SOCKET_URL);
@@ -160,6 +182,70 @@ export const useHaltestSocket = (
     socket.on("codegen:action-detected", (data) => {
       if (onCodegenActionRef.current) {
         onCodegenActionRef.current(data);
+      }
+    });
+
+    // ─── MCP Canvas Tools (Phase 3) ─────────────────────────────────────────
+    socket.on("mcp:request_canvas_state", (data, callback) => {
+      console.log("[HaltestSocket] 🧠 AI requested canvas state");
+      if (getCanvasStateRef.current && typeof callback === "function") {
+        const state = getCanvasStateRef.current();
+        callback(state);
+      } else if (typeof callback === "function") {
+        callback({
+          error: "Canvas state provider not configured on frontend.",
+        });
+      }
+    });
+
+    socket.on("mcp:inject_nodes", async (data, callback) => {
+      console.log("[HaltestSocket] 💉 AI requested node injection", data);
+      if (onInjectNodesRef.current && typeof callback === "function") {
+        try {
+          const result = await onInjectNodesRef.current(data.nodes);
+          callback(result);
+        } catch (err) {
+          callback({ error: err.message });
+        }
+      } else if (typeof callback === "function") {
+        callback({
+          error: "Node injection handler not configured on frontend.",
+        });
+      }
+    });
+
+    socket.on("mcp:add_node", async (data, callback) => {
+      console.log(
+        "[HaltestSocket] ➕ AI requested granular node addition",
+        data,
+      );
+      if (onAddNodeRef.current && typeof callback === "function") {
+        try {
+          const result = await onAddNodeRef.current(data);
+          callback(result);
+        } catch (err) {
+          callback({ error: err.message });
+        }
+      } else if (typeof callback === "function") {
+        callback({
+          error: "Node addition handler not configured on frontend.",
+        });
+      }
+    });
+
+    socket.on("mcp:connect_nodes", async (data, callback) => {
+      console.log("[HaltestSocket] 🔗 AI requested node connection", data);
+      if (onConnectNodesRef.current && typeof callback === "function") {
+        try {
+          const result = await onConnectNodesRef.current(data);
+          callback(result);
+        } catch (err) {
+          callback({ error: err.message });
+        }
+      } else if (typeof callback === "function") {
+        callback({
+          error: "Node connection handler not configured on frontend.",
+        });
       }
     });
 

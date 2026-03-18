@@ -23,6 +23,7 @@ const queryClient = new QueryClient({
 });
 
 import { AuthProvider } from "./context/AuthContext";
+import { AIProvider } from "./context/AIContext";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
@@ -38,7 +39,9 @@ createRoot(document.getElementById("root")).render(
             <AuthProvider>
               <SettingsProvider>
                 <LogProvider>
-                  <App />
+                  <AIProvider>
+                    <App />
+                  </AIProvider>
                 </LogProvider>
               </SettingsProvider>
             </AuthProvider>

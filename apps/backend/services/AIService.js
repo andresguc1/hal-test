@@ -10,10 +10,6 @@ import { llmFactory } from './LLMFactory.js';
  * Wraps Vercel AI SDK for text generation and structured output.
  */
 class AIService {
-    constructor() {
-        this.providers = {};
-    }
-
     getProvider(providerName, apiKey, baseUrl) {
         // We now exclusively use Ollama as the provider.
         // Even if another provider is requested, we redirect to Ollama's OpenAI-compatible endpoint.
@@ -147,19 +143,99 @@ class AIService {
             const modelRef = providerInstance(activeModel);
             const tools = playwrightMcpServer.getToolDefinitions();
 
+            // Inject Canvas Tools
+            // DYNAMIC IMPORT ONLY ONCE to avoid circular deps if canvasTools tries to use socket early
+            const { canvasTools } = await import('../mcp/canvasTools.js');
+            for (const tool of canvasTools) {
+                tools[tool.name] = {
+                    description: tool.description,
+                    parameters: tool.inputSchema?.properties
+                        ? z.object(
+                              Object.fromEntries(
+                                  Object.entries(tool.inputSchema.properties).map(([k, v]) => {
+                                      // Simple mapping for standard z types based on our definition
+                                      let zType = z.any();
+                                      if (v.type === 'string') zType = z.string();
+                                      if (v.type === 'number') zType = z.number();
+                                      if (v.type === 'boolean') zType = z.boolean();
+                                      if (v.type === 'object') zType = z.record(z.any());
+                                      if (v.type === 'array') zType = z.array(z.any());
+
+                                      if (v.description) zType = zType.describe(v.description);
+                                      return [k, zType];
+                                  }),
+                              ),
+                          )
+                        : z.object({}),
+                    execute: tool.handler,
+                };
+            }
+
             console.log(
                 `[AIService] Tools Generation. Task: ${taskType} -> Using: ${activeProvider}/${activeModel}`,
             );
 
-            const { text, toolCalls, toolResults, finishReason } = await generateText({
+            let activeSystem = system || 'You are HAL-9001.';
+            if (activeProvider === 'ollama') {
+                activeSystem += `\n\n[OLLAMA_TOOL_INSTRUCTIONS]
+You have access to tools that can manipulate the Visual Canvas. To use them, you MUST include a <tool_call> tag in your response. Do not use Markdown JSON fences inside the tags.
+Format:
+<tool_call name="tool_name">{ "argument_key": "value" }</tool_call>
+
+Supported Tools:
+1. inject_nodes: { "nodes": [{ "type": "NODE_TYPE", "data": { ... } }] } (Recommended for building flows)
+   -> SUPPORTED NODE_TYPES: launch_browser, open_url, click, type_text, wait_visible, take_screenshot, close_browser.
+2. add_node_to_canvas: { "type": "NODE_TYPE", "data": { ... } }
+3. connect_nodes: { "sourceId": "id1", "targetId": "id2" }
+4. execute_playwright_cmd: { "browserId": "id", "code": "..." }
+
+IMPORTANT DIRECTIONS:
+- Always create the COMPLETE sequence of nodes for the requested flow at once in a single response step.
+- Connect them together or use inject_nodes with the full array of desired actions so they are chained correctly.`;
+            }
+
+            const response = await generateText({
                 model: modelRef,
                 prompt,
-                system: system || 'You are HAL-9001.',
-                tools,
-                maxSteps,
+                system: activeSystem,
+                ...(activeProvider !== 'ollama' ? { tools, maxSteps } : {}),
                 apiKey: 'ollama',
                 baseUrl: _baseUrl,
             });
+
+            let text = response.text;
+            let toolCalls = response.toolCalls || [];
+            let toolResults = response.toolResults || [];
+            const finishReason = response.finishReason;
+
+            // FALLBACK FOR OLLAMA (Text-based tool calls)
+            if (activeProvider === 'ollama') {
+                const toolCallRegex =
+                    /<tool_call\s+name=["']([^"']+)["']\s*>([\s\S]*?)<\/tool_call>/g;
+                let match;
+                while ((match = toolCallRegex.exec(text)) !== null) {
+                    const toolName = match[1];
+                    const argsString = match[2].trim();
+                    try {
+                        const args = JSON.parse(argsString);
+                        console.log(`[AIService] Fallback Tool Call: ${toolName}`, args);
+                        if (tools[toolName] && typeof tools[toolName].execute === 'function') {
+                            const result = await tools[toolName].execute(args);
+                            const callId = `fallback_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+                            toolCalls.push({
+                                id: callId,
+                                type: 'function',
+                                function: { name: toolName, arguments: argsString },
+                            });
+                            toolResults.push({ toolCallId: callId, toolName, args, result });
+                        }
+                    } catch (e) {
+                        console.error(`[AIService] Fallback tool error for ${toolName}:`, e);
+                    }
+                }
+                // Strip tags from text before returning to keep frontend output clean
+                text = text.replace(toolCallRegex, '').trim();
+            }
 
             return { text, toolCalls, toolResults, finishReason };
         } catch (error) {

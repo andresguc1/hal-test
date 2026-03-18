@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import {
   Sparkles,
   Send,
@@ -13,8 +13,9 @@ import {
   Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { api } from "../utils/api";
 import providersData from "@/data/providers.json";
+
+import { useAIContext } from "@/context/AIContext";
 
 /**
  * AskAIPanel
@@ -22,57 +23,31 @@ import providersData from "@/data/providers.json";
  * Sends prompts to the Ask AI endpoint and displays responses.
  */
 export default function AskAIPanel({ isVisible, onClose, onOpenSettings }) {
+  const {
+    chatMessages: conversation,
+    isGenerating: isLoading,
+    sendMessage,
+    clearMessages: handleClear,
+    aiConfig,
+  } = useAIContext();
+
   const [prompt, setPrompt] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [isExpanded, setIsExpanded] = useState(true);
-  const [conversation, setConversation] = useState([]);
-  const [activeConfig, setActiveConfig] = useState(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
-  // Check AI configuration from localStorage
-  const checkAIConfig = () => {
-    try {
-      const configStr = localStorage.getItem("hal_ai_config");
-      if (!configStr) return null;
-      const config = JSON.parse(configStr);
-
-      if (config.activeProvider && config.selectedModel) {
-        const provider = providersData.find(
-          (p) => p.id === config.activeProvider,
-        );
-        return {
-          providerName: provider ? provider.name : config.activeProvider,
-          modelId: config.selectedModel,
-        };
-      }
-      return null;
-    } catch (e) {
-      console.error("[AskAI] Error parsing config:", e);
-      return null;
+  const activeConfig = useMemo(() => {
+    if (aiConfig?.activeProvider && aiConfig?.selectedModel) {
+      const provider = providersData.find(
+        (p) => p.id === aiConfig.activeProvider,
+      );
+      return {
+        providerName: provider ? provider.name : aiConfig.activeProvider,
+        modelId: aiConfig.selectedModel,
+      };
     }
-  };
-
-  // Check config on mount and listen for config updates
-  useEffect(() => {
-    setActiveConfig(checkAIConfig());
-
-    const handleConfigUpdate = () => setActiveConfig(checkAIConfig());
-    window.addEventListener("hal_ai_config_updated", handleConfigUpdate);
-    window.addEventListener("storage", handleConfigUpdate);
-
-    return () => {
-      window.removeEventListener("hal_ai_config_updated", handleConfigUpdate);
-      window.removeEventListener("storage", handleConfigUpdate);
-    };
-  }, []);
-
-  // Re-check when panel becomes visible
-  useEffect(() => {
-    if (isVisible) {
-      setActiveConfig(checkAIConfig());
-    }
-  }, [isVisible]);
+    return null;
+  }, [aiConfig]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -92,52 +67,9 @@ export default function AskAIPanel({ isVisible, onClose, onOpenSettings }) {
     e?.preventDefault();
     if (!prompt.trim() || isLoading) return;
 
-    const userMessage = { role: "user", content: prompt.trim() };
-    setConversation((prev) => [...prev, userMessage]);
+    const text = prompt;
     setPrompt("");
-    setIsLoading(true);
-
-    try {
-      const res = await api.post("/ai/ask", {
-        prompt: userMessage.content,
-        messages: conversation, // Send previous history
-      });
-
-      if (res.success) {
-        setConversation((prev) => [
-          ...prev,
-          {
-            role: "assistant",
-            content: res.text,
-            model: res.model,
-            provider: res.provider,
-            usage: res.usage,
-          },
-        ]);
-      } else {
-        setConversation((prev) => [
-          ...prev,
-          {
-            role: "error",
-            content: res.error || "Unknown error",
-          },
-        ]);
-      }
-    } catch (error) {
-      setConversation((prev) => [
-        ...prev,
-        {
-          role: "error",
-          content: error.message || "Failed to connect to AI service",
-        },
-      ]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleClear = () => {
-    setConversation([]);
+    await sendMessage(text, null); // Try without browserId since it's debug console
   };
 
   if (!isVisible) return null;
@@ -309,7 +241,7 @@ export default function AskAIPanel({ isVisible, onClose, onOpenSettings }) {
           {/* Input Area */}
           <form
             onSubmit={handleSubmit}
-            className="flex items-center gap-2 px-4 py-2.5 border-t border-white/5 bg-[#0c0c0d]/80"
+            className="flex items-center gap-2 pl-4 pr-36 py-2.5 border-t border-white/5 bg-[#0c0c0d]/80"
           >
             <input
               ref={inputRef}

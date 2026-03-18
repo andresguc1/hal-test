@@ -30,7 +30,7 @@ class LLMFactory {
         }
 
         // 3. Force Ollama if requested or as fallback
-        return this.createFromEnv('ollama', baseUrl);
+        return this.createInstance('ollama', null, baseUrl);
     }
 
     createInstance(provider, key, baseUrl) {
@@ -47,6 +47,18 @@ class LLMFactory {
             baseURL: ollamaUrl,
             apiKey: 'ollama',
             compatibility: 'compatible',
+            fetch: async (url, options) => {
+                const controller = new AbortController();
+                const id = setTimeout(() => controller.abort(), 300000); // 5 minutes timeout for local models
+                try {
+                    const response = await fetch(url, { ...options, signal: controller.signal });
+                    clearTimeout(id);
+                    return response;
+                } catch (error) {
+                    clearTimeout(id);
+                    throw error;
+                }
+            },
         });
     }
 
@@ -59,25 +71,6 @@ class LLMFactory {
             str.startsWith('xai-') ||
             str.length > 40
         );
-    }
-
-    /**
-     * Fallback for Environment Variables (Legacy/Dev)
-     */
-    createFromEnv(provider, baseUrl) {
-        let ollamaUrl = baseUrl || process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434/v1';
-        if (ollamaUrl.includes('localhost')) {
-            ollamaUrl = ollamaUrl.replace('localhost', '127.0.0.1');
-        }
-        if (!ollamaUrl.endsWith('/v1')) {
-            ollamaUrl = `${ollamaUrl.replace(/\/$/, '')}/v1`;
-        }
-
-        return createOpenAI({
-            baseURL: ollamaUrl,
-            apiKey: 'ollama',
-            compatibility: 'compatible',
-        });
     }
 
     /**

@@ -307,7 +307,10 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
       try {
         const res = await api.get("/inspector/sessions");
         if (res.success && res.sessions && res.sessions.length > 0) {
-          console.log("[useFlowManager] 🔄 Restored active session from backend:", res.sessions[0]);
+          console.log(
+            "[useFlowManager] 🔄 Restored active session from backend:",
+            res.sessions[0],
+          );
           setActiveBrowserId(res.sessions[0]);
         }
       } catch (e) {
@@ -2461,7 +2464,11 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
         });
       }
 
-      return { success: globalStats.failed === 0, stats: globalStats, browserId };
+      return {
+        success: globalStats.failed === 0,
+        stats: globalStats,
+        browserId,
+      };
     },
     [
       nodes,

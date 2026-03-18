@@ -127,7 +127,8 @@ function AppHeader({
         config = {
           bg: "bg-emerald-500/10",
           border: "border-emerald-500/20",
-          dotOuter: "animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75",
+          dotOuter:
+            "animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75",
           dotInner: "bg-emerald-500",
           text: "text-emerald-500",
           label: "Executing Flow...",
@@ -147,7 +148,8 @@ function AppHeader({
         config = {
           bg: "bg-red-500/10",
           border: "border-red-500/20",
-          dotOuter: "animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75",
+          dotOuter:
+            "animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75",
           dotInner: "bg-red-500",
           text: "text-red-500",
           label: "Execution Error",
@@ -160,11 +162,20 @@ function AppHeader({
         key={indicatorState}
         initial={{ opacity: 0, y: -5 }}
         animate={{ opacity: 1, y: 0 }}
-        className={cn("flex items-center gap-2 ml-4 px-3 py-1 rounded-full border", config.bg, config.border)}
+        className={cn(
+          "flex items-center gap-2 ml-4 px-3 py-1 rounded-full border",
+          config.bg,
+          config.border,
+        )}
       >
         <span className="relative flex h-2 w-2">
           {config.dotOuter && <span className={config.dotOuter}></span>}
-          <span className={cn("relative inline-flex rounded-full h-2 w-2", config.dotInner)}></span>
+          <span
+            className={cn(
+              "relative inline-flex rounded-full h-2 w-2",
+              config.dotInner,
+            )}
+          ></span>
         </span>
         <span className={cn("text-xs font-medium", config.text)}>
           {config.label}
@@ -172,7 +183,10 @@ function AppHeader({
 
         <button
           onClick={onStopSession}
-          className={cn("ml-2 hover:bg-black/10 p-1 rounded transition-colors", config.text)}
+          className={cn(
+            "ml-2 hover:bg-black/10 p-1 rounded transition-colors",
+            config.text,
+          )}
           title="Stop Session & Close Browser"
         >
           <div className="w-2.5 h-2.5 bg-current rounded-[1px]" />

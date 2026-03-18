@@ -2,7 +2,7 @@ import aiService from '../services/AIService.js';
 
 export const chatWithTools = async (req, res) => {
     try {
-        const { messages, browserId } = req.body;
+        const { messages, browserId, canvasState } = req.body;
         // EXTRACT KEYS
         const rawKey = req.headers['x-ai-api-key'] || process.env.OPENAI_API_KEY;
         const apiKey = rawKey?.trim();
@@ -36,9 +36,23 @@ export const chatWithTools = async (req, res) => {
             finalPrompt += `\n\n[System: Active Browser ID: ${browserId}]`;
         }
 
-        const system = `You are HAL-9001, an advanced autonomous AI with direct and exclusive control over the browser instance identified as "${browserId}".
+        let system = `You are HAL-9001, an advanced autonomous AI with direct and exclusive control over the browser instance identified as "${browserId}".\n\n`;
 
-You do not speculate. You do not guess. You do not hallucinate.
+        if (canvasState && Array.isArray(canvasState.nodes)) {
+            const mappedNodes = canvasState.nodes.map((n) => ({
+                id: n.id,
+                type: n.type,
+                label: n.data?.label || n.data?.customLabel,
+                data: n.data,
+            }));
+            const mappedEdges = (canvasState.edges || []).map((e) => ({
+                source: e.source,
+                target: e.target,
+            }));
+            system += `[CANVAS_CONTEXT]\nThe user is currently looking at a visual testing workflow canvas. Here is the current state of their canvas:\nNODES: ${JSON.stringify(mappedNodes)}\nEDGES: ${JSON.stringify(mappedEdges)}\n\nYou can explicitly reference these nodes when answering questions about their canvas. You should not list the complete JSON output format when describing it, just explain the nodes clearly.\n[/CANVAS_CONTEXT]\n\n`;
+        }
+
+        system += `You do not speculate. You do not guess. You do not hallucinate.
 
 When the user asks to inspect, verify, debug, analyze, or fix anything related to the browser session, you MUST use your available tools.
 Reality must always be obtained through inspect_page or other provided tools before taking action.
