@@ -1,5 +1,15 @@
 import { getIO } from '../socket.js';
 
+const VALID_NODE_TYPES = [
+    'launch_browser',
+    'open_url',
+    'click',
+    'type_text',
+    'wait_visible',
+    'take_screenshot',
+    'close_browser',
+];
+
 /**
  * Helper to emit events to the frontend and wait for a callback response.
  * We use socket.io acknowledgements.
@@ -109,6 +119,17 @@ export const canvasTools = [
         },
         handler: async (args) => {
             try {
+                if (args.nodes && Array.isArray(args.nodes)) {
+                    const invalidNodes = args.nodes.filter(
+                        (n) => !VALID_NODE_TYPES.includes(n.type),
+                    );
+                    if (invalidNodes.length > 0) {
+                        throw new Error(
+                            `Unsupported node types: ${invalidNodes.map((n) => n.type).join(', ')}. Allowed: ${VALID_NODE_TYPES.join(', ')}`,
+                        );
+                    }
+                }
+
                 const result = await requestFromFrontend('mcp:propose_nodes', {
                     nodes: args.nodes,
                 });
@@ -157,6 +178,12 @@ export const canvasTools = [
         },
         handler: async (args) => {
             try {
+                if (!VALID_NODE_TYPES.includes(args.type)) {
+                    throw new Error(
+                        `Unsupported node type: ${args.type}. Allowed: ${VALID_NODE_TYPES.join(', ')}`,
+                    );
+                }
+
                 const result = await requestFromFrontend('mcp:add_node', {
                     type: args.type,
                     data: args.data,
