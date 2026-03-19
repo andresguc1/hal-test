@@ -39,12 +39,24 @@ export const chatWithTools = async (req, res) => {
         let system = `You are HAL-9001, an advanced autonomous AI with direct and exclusive control over the browser instance identified as "${browserId}".\n\n`;
 
         if (canvasState && Array.isArray(canvasState.nodes)) {
-            const mappedNodes = canvasState.nodes.map((n) => ({
-                id: n.id,
-                type: n.type,
-                label: n.data?.label || n.data?.customLabel,
-                data: n.data,
-            }));
+            const mappedNodes = canvasState.nodes.map((n) => {
+                // Minificar data: conservar solo propiedades estrictamente necesarias para el contexto del LLM
+                const minifiedData = {};
+                if (n.data) {
+                    if (n.data.url) minifiedData.url = n.data.url;
+                    if (n.data.selector) minifiedData.selector = n.data.selector;
+                    if (n.data.text) minifiedData.text = n.data.text;
+                    if (n.data.label) minifiedData.label = n.data.label;
+                    if (n.data.customLabel) minifiedData.customLabel = n.data.customLabel;
+                    if (n.data.action) minifiedData.action = n.data.action;
+                }
+                return {
+                    id: n.id,
+                    type: n.type,
+                    label: n.data?.label || n.data?.customLabel,
+                    data: minifiedData,
+                };
+            });
             const mappedEdges = (canvasState.edges || []).map((e) => ({
                 source: e.source,
                 target: e.target,
