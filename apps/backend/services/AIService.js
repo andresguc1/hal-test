@@ -6,6 +6,22 @@ import { playwrightMcpServer } from './PlaywrightMCPServer.js';
 import { llmFactory } from './LLMFactory.js';
 
 /**
+ * Intenta reparar estructuras JSON comunes mal formadas por LLMs locales.
+ */
+const repairJson = (str) => {
+    if (!str) return str;
+    try {
+        // 1. Eliminar comas flotantes antes de cierres de llaves o corchetes
+        let fixed = str.replace(/,\s*([\]}])/g, '$1');
+        // 2. Eliminar comentarios de una sola línea
+        fixed = fixed.replace(/\/\/.*$/gm, '');
+        return fixed;
+    } catch (e) {
+        return str;
+    }
+};
+
+/**
  * Servicio Central de IA
  * Wraps Vercel AI SDK for text generation and structured output.
  */
@@ -194,46 +210,97 @@ IMPORTANT DIRECTIONS:
 - Connect them together or use inject_nodes with the full array of desired actions so they are chained correctly.`;
             }
 
-            const response = await generateText({
-                model: modelRef,
-                prompt,
-                system: activeSystem,
-                ...(activeProvider !== 'ollama' ? { tools, maxSteps } : {}),
-                apiKey: 'ollama',
-                baseUrl: _baseUrl,
-            });
+            let activePrompt = prompt;
+            let retryCount = 0;
+            const maxRetries = 2;
+            let response;
+            let text = '';
+            let toolCalls = [];
+            let toolResults = [];
+            let finishReason = '';
 
-            let text = response.text;
-            let toolCalls = response.toolCalls || [];
-            let toolResults = response.toolResults || [];
-            const finishReason = response.finishReason;
+            while (retryCount <= maxRetries) {
+                console.log(`[AIService] Step Attempt ${retryCount + 1} for ${activeProvider}`);
 
-            // FALLBACK FOR OLLAMA (Text-based tool calls)
-            if (activeProvider === 'ollama') {
+                response = await generateText({
+                    model: modelRef,
+                    prompt: activePrompt,
+                    system: activeSystem,
+                    ...(activeProvider !== 'ollama' ? { tools, maxSteps } : {}),
+                    apiKey: 'ollama',
+                    baseUrl: _baseUrl,
+                });
+
+                text = response.text;
+                toolCalls = response.toolCalls || [];
+                toolResults = response.toolResults || [];
+                finishReason = response.finishReason;
+
+                if (activeProvider !== 'ollama') {
+                    break; // No fallback needed for cloud providers
+                }
+
                 const toolCallRegex =
                     /<tool_call\s+name=["']([^"']+)["']\s*>([\s\S]*?)<\/tool_call>/g;
                 let match;
+                let hasParseError = false;
+                let errorDetails = '';
+
                 while ((match = toolCallRegex.exec(text)) !== null) {
                     const toolName = match[1];
                     const argsString = match[2].trim();
                     try {
-                        const args = JSON.parse(argsString);
-                        console.log(`[AIService] Fallback Tool Call: ${toolName}`, args);
+                        let parsedArgs;
+                        try {
+                            parsedArgs = JSON.parse(argsString);
+                        } catch (initialError) {
+                            console.warn(
+                                `[AIService] JSON.parse failed, attempting repair for ${toolName}`,
+                            );
+                            const repaired = repairJson(argsString);
+                            parsedArgs = JSON.parse(repaired); // Will throw to outer catch if fails
+                        }
+
+                        console.log(`[AIService] Fallback Tool Call: ${toolName}`, parsedArgs);
                         if (tools[toolName] && typeof tools[toolName].execute === 'function') {
-                            const result = await tools[toolName].execute(args);
+                            const result = await tools[toolName].execute(parsedArgs);
                             const callId = `fallback_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
                             toolCalls.push({
                                 id: callId,
                                 type: 'function',
                                 function: { name: toolName, arguments: argsString },
                             });
-                            toolResults.push({ toolCallId: callId, toolName, args, result });
+                            toolResults.push({
+                                toolCallId: callId,
+                                toolName,
+                                args: parsedArgs,
+                                result,
+                            });
                         }
                     } catch (e) {
                         console.error(`[AIService] Fallback tool error for ${toolName}:`, e);
+                        hasParseError = true;
+                        errorDetails += `\n- Tool: ${toolName}. Error: ${e.message}`;
                     }
                 }
-                // Strip tags from text before returning to keep frontend output clean
+
+                if (!hasParseError) {
+                    break; // Success! No parse errors.
+                }
+
+                retryCount++;
+                if (retryCount <= maxRetries) {
+                    console.log(
+                        `[AIService] Retrying due to JSON parse error (${retryCount}/${maxRetries})`,
+                    );
+                    activePrompt += `\n\n[SYSTEM WARNING: El bloque JSON en tu <tool_call> anterior fue inválido. Errores encontrados:${errorDetails}\nPor favor responde SOLO con el bloque <tool_call> corregido o una explicación con el comando corregido.]`;
+                }
+            }
+
+            // Strip tags from text before returning to keep frontend output clean
+            if (activeProvider === 'ollama') {
+                const toolCallRegex =
+                    /<tool_call\s+name=["']([^"']+)["']\s*>([\s\S]*?)<\/tool_call>/g;
                 text = text.replace(toolCallRegex, '').trim();
             }
 
