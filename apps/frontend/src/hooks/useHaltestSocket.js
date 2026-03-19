@@ -24,7 +24,7 @@ export const useHaltestSocket = (
   onTerminalOutput,
   onCodegenAction,
   getCanvasState, // NEW: Function to return { nodes, edges }
-  onInjectNodes, // NEW: Function to handle node injection
+  onProposeNodes, // CHANGED: Manejar propuesta de nodos
   onAddNode, // NEW: Granular node addition
   onConnectNodes, // NEW: Granular node connection
 ) => {
@@ -35,7 +35,7 @@ export const useHaltestSocket = (
   const onTerminalOutputRef = useRef(onTerminalOutput);
   const onCodegenActionRef = useRef(onCodegenAction);
   const getCanvasStateRef = useRef(getCanvasState);
-  const onInjectNodesRef = useRef(onInjectNodes);
+  const onProposeNodesRef = useRef(onProposeNodes);
   const onAddNodeRef = useRef(onAddNode);
   const onConnectNodesRef = useRef(onConnectNodes);
 
@@ -47,7 +47,7 @@ export const useHaltestSocket = (
     onTerminalOutputRef.current = onTerminalOutput;
     onCodegenActionRef.current = onCodegenAction;
     getCanvasStateRef.current = getCanvasState;
-    onInjectNodesRef.current = onInjectNodes;
+    onProposeNodesRef.current = onProposeNodes;
     onAddNodeRef.current = onAddNode;
     onConnectNodesRef.current = onConnectNodes;
   }, [
@@ -57,7 +57,7 @@ export const useHaltestSocket = (
     onTerminalOutput,
     onCodegenAction,
     getCanvasState,
-    onInjectNodes,
+    onProposeNodes,
     onAddNode,
     onConnectNodes,
   ]);
@@ -198,18 +198,18 @@ export const useHaltestSocket = (
       }
     });
 
-    socket.on("mcp:inject_nodes", async (data, callback) => {
-      console.log("[HaltestSocket] 💉 AI requested node injection", data);
-      if (onInjectNodesRef.current && typeof callback === "function") {
+    socket.on("mcp:propose_nodes", async (data, callback) => {
+      console.log("[HaltestSocket] 💍 AI proposed nodes", data);
+      if (onProposeNodesRef.current && typeof callback === "function") {
         try {
-          const result = await onInjectNodesRef.current(data.nodes);
+          const result = await onProposeNodesRef.current(data.nodes);
           callback(result);
         } catch (err) {
           callback({ error: err.message });
         }
       } else if (typeof callback === "function") {
         callback({
-          error: "Node injection handler not configured on frontend.",
+          error: "Node proposal handler not configured on frontend.",
         });
       }
     });

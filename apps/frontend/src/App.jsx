@@ -200,6 +200,8 @@ function Dashboard() {
   const [isHistoryPanelVisible, setIsHistoryPanelVisible] = useState(false); // HISTORY PANEL
   const [isVariablePanelVisible, setIsVariablePanelVisible] = useState(false); // VARIABLE EXPLORER
   const [isAskAIPanelVisible, setIsAskAIPanelVisible] = useState(false); // ASK AI DEBUG CONSOLE
+  const [proposedNodes, setProposedNodes] = useState(null);
+  const [confirmationPromise, setConfirmationPromise] = useState(null);
   const [creationModal, setCreationModal] = useState({
     isOpen: false,
     type: "project",
@@ -393,6 +395,34 @@ function Dashboard() {
     [setNodes, setEdges],
   );
 
+  const handleMCPProposeNodes = useCallback(
+    async (nodes) => {
+      return new Promise((resolve, reject) => {
+        setProposedNodes(nodes);
+        setIsAskAIPanelVisible(true); // Abrir el panel para mostrar la propuesta
+        setConfirmationPromise({ resolve, reject });
+      });
+    },
+    [setIsAskAIPanelVisible],
+  );
+
+  const handleConfirmProposal = useCallback(async () => {
+    if (proposedNodes && confirmationPromise) {
+      const result = await handleMCPInjectNodes(proposedNodes);
+      confirmationPromise.resolve(result);
+      setProposedNodes(null);
+      setConfirmationPromise(null);
+    }
+  }, [proposedNodes, confirmationPromise, handleMCPInjectNodes]);
+
+  const handleRejectProposal = useCallback(() => {
+    if (confirmationPromise) {
+      confirmationPromise.resolve({ error: "User rejected node injection proposal." });
+      setProposedNodes(null);
+      setConfirmationPromise(null);
+    }
+  }, [confirmationPromise]);
+
   // MCP phase 3 granular tools
   const handleMCPAddNode = useCallback(
     async (nodeData) => {
@@ -436,7 +466,7 @@ function Dashboard() {
     null, // onTerminalOutput (handled elsewhere or passed via ref)
     handleCodegenAction,
     getCanvasState, // MCP Phase 3
-    handleMCPInjectNodes, // MCP Phase 3
+    handleMCPProposeNodes, // Proponer en vez de inyectar directamente
     handleMCPAddNode, // Granular
     handleMCPConnectNodes, // Granular
   );
@@ -1257,6 +1287,9 @@ function Dashboard() {
               isVisible={isAskAIPanelVisible}
               onClose={() => setIsAskAIPanelVisible(false)}
               onOpenSettings={() => openSettings("integrations")}
+              proposedNodes={proposedNodes}
+              onConfirmProposal={handleConfirmProposal}
+              onRejectProposal={handleRejectProposal}
             />
 
             {/* TERMINAL TAG (Vignette) - Only visible when terminal is closed */}
