@@ -22,7 +22,14 @@ import { useAIContext } from "@/context/AIContext";
  * Debug console for testing LLM connectivity.
  * Sends prompts to the Ask AI endpoint and displays responses.
  */
-export default function AskAIPanel({ isVisible, onClose, onOpenSettings }) {
+export default function AskAIPanel({
+  isVisible,
+  onClose,
+  onOpenSettings,
+  proposedNodes,
+  onConfirmProposal,
+  onRejectProposal,
+}) {
   const {
     chatMessages: conversation,
     isGenerating: isLoading,
@@ -238,41 +245,69 @@ export default function AskAIPanel({ isVisible, onClose, onOpenSettings }) {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input Area */}
-          <form
-            onSubmit={handleSubmit}
-            className="flex items-center gap-2 pl-4 pr-36 py-2.5 border-t border-white/5 bg-[#0c0c0d]/80"
-          >
-            <input
-              ref={inputRef}
-              type="text"
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder={
-                activeConfig
-                  ? "Ask about testing, selectors, automation..."
-                  : "Configure AI to chat..."
-              }
-              disabled={isLoading || !activeConfig}
-              className="flex-1 bg-slate-900/50 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition-all disabled:opacity-50"
-            />
-            <button
-              type="submit"
-              disabled={!prompt.trim() || isLoading || !activeConfig}
-              className={cn(
-                "p-2 rounded-lg transition-all",
-                prompt.trim() && !isLoading && activeConfig
-                  ? "bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/20"
-                  : "bg-slate-800/50 text-slate-600 cursor-not-allowed",
-              )}
+          {/* Input Area / Confirmation Area */}
+          {proposedNodes ? (
+            <div className="flex items-center justify-between gap-4 pl-4 pr-36 py-2.5 border-t border-indigo-500/20 bg-indigo-950/20 backdrop-blur-xl animate-in fade-in duration-300">
+              <div className="flex items-center gap-2 text-xs text-indigo-200">
+                <Sparkles size={14} className="text-indigo-400 animate-pulse" />
+                <span className="font-medium">
+                  AI ha propuesto {proposedNodes.length} nodo(s) para tu flujo
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={onRejectProposal}
+                  className="px-3 py-1.5 rounded-lg text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/50 transition-all font-sans"
+                >
+                  Rechazar
+                </button>
+                <button
+                  type="button"
+                  onClick={onConfirmProposal}
+                  className="px-3 py-1.5 rounded-lg text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-medium shadow-lg shadow-indigo-500/30 border border-indigo-500/30 transition-all flex items-center gap-1 font-sans"
+                >
+                  <Sparkles size={12} />
+                  Aplicar Cambios
+                </button>
+              </div>
+            </div>
+          ) : (
+            <form
+              onSubmit={handleSubmit}
+              className="flex items-center gap-2 pl-4 pr-36 py-2.5 border-t border-white/5 bg-[#0c0c0d]/80"
             >
-              {isLoading ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : (
-                <Send size={16} />
-              )}
-            </button>
-          </form>
+              <input
+                ref={inputRef}
+                type="text"
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder={
+                  activeConfig
+                    ? "Ask about testing, selectors, automation..."
+                    : "Configure AI to chat..."
+                }
+                disabled={isLoading || !activeConfig}
+                className="flex-1 bg-slate-900/50 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition-all disabled:opacity-50"
+              />
+              <button
+                type="submit"
+                disabled={!prompt.trim() || isLoading || !activeConfig}
+                className={cn(
+                  "p-2 rounded-lg transition-all",
+                  prompt.trim() && !isLoading && activeConfig
+                    ? "bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/20"
+                    : "bg-slate-800/50 text-slate-600 cursor-not-allowed",
+                )}
+              >
+                {isLoading ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <Send size={16} />
+                )}
+              </button>
+            </form>
+          )}
         </div>
       )}
     </div>

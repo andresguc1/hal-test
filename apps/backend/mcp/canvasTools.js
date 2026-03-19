@@ -109,7 +109,9 @@ export const canvasTools = [
         },
         handler: async (args) => {
             try {
-                const result = await requestFromFrontend('mcp:inject_nodes', { nodes: args.nodes });
+                const result = await requestFromFrontend('mcp:propose_nodes', {
+                    nodes: args.nodes,
+                });
                 return {
                     content: [
                         {
