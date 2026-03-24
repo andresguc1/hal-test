@@ -21,6 +21,14 @@ const Edge = sequelize.define(
             type: DataTypes.STRING,
             allowNull: false,
         },
+        sourceHandle: {
+            type: DataTypes.STRING,
+            allowNull: true,
+        },
+        targetHandle: {
+            type: DataTypes.STRING,
+            allowNull: true,
+        },
         flowId: {
             type: DataTypes.STRING,
             allowNull: false,

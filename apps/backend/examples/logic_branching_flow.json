@@ -1,0 +1,76 @@
+{
+  "name": "Prueba Bifurcación Precios",
+  "nodes": [
+    {
+      "nodeId": "n1",
+      "type": "variable",
+      "data": {
+        "operation": "set",
+        "name": "Price",
+        "value": 120,
+        "scope": "flow"
+      }
+    },
+    {
+      "nodeId": "n2",
+      "type": "conditional",
+      "data": {
+        "conditions": [
+          {
+            "left": "${Price}",
+            "operator": ">",
+            "right": "100"
+          }
+        ],
+        "logic": "AND"
+      }
+    },
+    {
+      "nodeId": "n3",
+      "type": "backend_js",
+      "data": {
+        "expression": "${Price} * 0.1",
+        "outputVar": "Discount"
+      }
+    },
+    {
+      "nodeId": "n4",
+      "type": "fail_flow",
+      "data": {
+        "message": "El precio no califica para el descuento"
+      }
+    },
+    {
+      "nodeId": "n5",
+      "type": "backend_js",
+      "data": {
+        "expression": "${Price} - ${Discount}",
+        "outputVar": "Final"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "edgeId": "e1",
+      "source": "n1",
+      "target": "n2"
+    },
+    {
+      "edgeId": "e2",
+      "source": "n2",
+      "target": "n3",
+      "sourceHandle": "true"
+    },
+    {
+      "edgeId": "e3",
+      "source": "n2",
+      "target": "n4",
+      "sourceHandle": "false"
+    },
+    {
+      "edgeId": "e4",
+      "source": "n3",
+      "target": "n5"
+    }
+  ]
+}

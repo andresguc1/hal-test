@@ -109,11 +109,19 @@ class ExecutionService {
             if (state.executedNodeIds.has(node.nodeId)) continue;
 
             // 1. Execute Node
-            await this.executeNode(node, state);
+            const result = await this.executeNode(node, state);
             state.executedNodeIds.add(node.nodeId);
 
             // 2. Find next nodes
-            const nextEdges = allEdges.filter((e) => e.source === node.nodeId);
+            let nextEdges = allEdges.filter((e) => e.source === node.nodeId);
+
+            // Branching support: If node returns a specific path/handle direction
+            const path = result?.data?.path;
+            if (path) {
+                console.log(`[ExecutionService] Filtering edges for path: ${path}`);
+                nextEdges = nextEdges.filter((e) => e.sourceHandle === path);
+            }
+
             const nextNodes = nextEdges
                 .map((e) => allNodes.find((n) => n.nodeId === e.target))
                 .filter(Boolean);

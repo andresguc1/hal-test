@@ -91,3 +91,5 @@ export { default as branchBodySchema } from './branch/body.js';
 export { default as flowControlBodySchema } from './flow_control/body.js';
 export { default as transformBodySchema } from './transform/body.js';
 export { default as switchBodySchema } from './switch/body.js';
+export { default as backendJsBodySchema } from './backend_js/body.js';
+export { default as failFlowBodySchema } from './fail_flow/body.js';

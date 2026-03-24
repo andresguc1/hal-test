@@ -133,7 +133,8 @@ class VariableManager {
         const resolved = this.resolve(expression);
 
         // If it's just a variable reference, return the value
-        if (!resolved.includes('${') && resolved === expression) {
+        const hasContext = Object.keys(additionalContext).length > 0;
+        if (!resolved.includes('${') && resolved === expression && !hasContext) {
             return resolved;
         }
 

@@ -93114,13 +93114,11 @@ var AHe = class extends dm {
             const n = this.options;
             ((this.options = this.#e.defaultMutationOptions(t)),
                 M_(this.options, n) ||
-                    this.#e
-                        .getMutationCache()
-                        .notify({
-                            type: 'observerOptionsUpdated',
-                            mutation: this.#n,
-                            observer: this,
-                        }),
+                    this.#e.getMutationCache().notify({
+                        type: 'observerOptionsUpdated',
+                        mutation: this.#n,
+                        observer: this,
+                    }),
                 n?.mutationKey &&
                 this.options.mutationKey &&
                 xd(n.mutationKey) !== xd(this.options.mutationKey)
