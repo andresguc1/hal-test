@@ -1,5 +1,15 @@
 import { getIO } from '../socket.js';
 
+const VALID_NODE_TYPES = [
+    'launch_browser',
+    'open_url',
+    'click',
+    'type_text',
+    'wait_visible',
+    'take_screenshot',
+    'close_browser',
+];
+
 /**
  * Helper to emit events to the frontend and wait for a callback response.
  * We use socket.io acknowledgements.
@@ -109,7 +119,24 @@ export const canvasTools = [
         },
         handler: async (args) => {
             try {
-                const result = await requestFromFrontend('mcp:inject_nodes', { nodes: args.nodes });
+                if (args.nodes && Array.isArray(args.nodes)) {
+                    const invalidNodes = args.nodes.filter(
+                        (n) => !VALID_NODE_TYPES.includes(n.type),
+                    );
+                    if (invalidNodes.length > 0) {
+                        throw new Error(
+                            `Unsupported node types: ${invalidNodes.map((n) => n.type).join(', ')}. Allowed: ${VALID_NODE_TYPES.join(', ')}`,
+                        );
+                    }
+                }
+
+                const result = await requestFromFrontend(
+                    'mcp:propose_nodes',
+                    {
+                        nodes: args.nodes,
+                    },
+                    120000,
+                ); // 2 minute timeout for user approval
                 return {
                     content: [
                         {
@@ -155,6 +182,12 @@ export const canvasTools = [
         },
         handler: async (args) => {
             try {
+                if (!VALID_NODE_TYPES.includes(args.type)) {
+                    throw new Error(
+                        `Unsupported node type: ${args.type}. Allowed: ${VALID_NODE_TYPES.join(', ')}`,
+                    );
+                }
+
                 const result = await requestFromFrontend('mcp:add_node', {
                     type: args.type,
                     data: args.data,
@@ -242,6 +275,63 @@ export const canvasTools = [
                 return {
                     isError: true,
                     content: [{ type: 'text', text: `Failed to execute: ${err.message}` }],
+                };
+            }
+        },
+    },
+    {
+        name: 'remove_node',
+        description: 'Removes a node from the visual canvas.',
+        inputSchema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string', description: 'ID of the node to remove' },
+            },
+            required: ['id'],
+        },
+        handler: async (args) => {
+            try {
+                await requestFromFrontend('mcp:remove_node', {
+                    id: args.id,
+                });
+                return {
+                    content: [{ type: 'text', text: `Successfully removed node: ${args.id}` }],
+                };
+            } catch (err) {
+                return {
+                    isError: true,
+                    content: [{ type: 'text', text: `Failed to remove node: ${err.message}` }],
+                };
+            }
+        },
+    },
+    {
+        name: 'update_node',
+        description: 'Updates a node configuration on the visual canvas.',
+        inputSchema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string', description: 'ID of the node to update' },
+                data: {
+                    type: 'object',
+                    description: 'New configuration data. E.g. { url: "..." }',
+                },
+            },
+            required: ['id', 'data'],
+        },
+        handler: async (args) => {
+            try {
+                await requestFromFrontend('mcp:update_node', {
+                    id: args.id,
+                    data: args.data,
+                });
+                return {
+                    content: [{ type: 'text', text: `Successfully updated node: ${args.id}` }],
+                };
+            } catch (err) {
+                return {
+                    isError: true,
+                    content: [{ type: 'text', text: `Failed to update node: ${err.message}` }],
                 };
             }
         },

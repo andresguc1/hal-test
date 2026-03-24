@@ -214,8 +214,11 @@ export function useProjectManager() {
         updates: { name: newName },
       }),
 
-    createFlow: (name) =>
-      createFlowMutation.mutateAsync({ projectId: currentProjectId, name }),
+    createFlow: (name, projectId) =>
+      createFlowMutation.mutateAsync({
+        projectId: projectId || currentProjectId,
+        name,
+      }),
     switchFlow,
     deleteFlow: (flowId) =>
       deleteFlowMutation.mutateAsync({ projectId: currentProjectId, flowId }),

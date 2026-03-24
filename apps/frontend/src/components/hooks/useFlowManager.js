@@ -2,6 +2,7 @@
 // ✨ VERSIÓN OPTIMIZADA según best practices de React Flow
 
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { GraphValidator } from "../../utils/GraphValidator.js";
 import {
   addEdge,
   applyNodeChanges,
@@ -2005,6 +2006,19 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
         errors.push(
           "Invalid Flow: Multiple 'Launch Browser' nodes detected. Only one is permitted.",
         );
+      }
+
+      // 6. Enforce GraphValidator Check
+      try {
+        const result = GraphValidator.validate({
+          nodes: nodesToValidate,
+          edges: edgesToValidate,
+        });
+        if (!result.valid) {
+          errors.push(...result.errors);
+        }
+      } catch (err) {
+        console.error("GraphValidator execution failed", err);
       }
 
       return errors;
