@@ -409,6 +409,7 @@ function Dashboard() {
   const handleConfirmProposal = useCallback(async () => {
     if (proposedNodes && confirmationPromise) {
       const result = await handleMCPInjectNodes(proposedNodes);
+      await saveFlow(true); // Explictly save nodes to DB to prevent descriptive desync
       confirmationPromise.resolve(result);
       setProposedNodes(null);
       setConfirmationPromise(null);
@@ -417,7 +418,9 @@ function Dashboard() {
 
   const handleRejectProposal = useCallback(() => {
     if (confirmationPromise) {
-      confirmationPromise.resolve({ error: "User rejected node injection proposal." });
+      confirmationPromise.resolve({
+        error: "User rejected node injection proposal.",
+      });
       setProposedNodes(null);
       setConfirmationPromise(null);
     }
@@ -458,6 +461,22 @@ function Dashboard() {
     [setEdges],
   );
 
+  const handleMCPRemoveNode = useCallback(
+    async (nodeId) => {
+      deleteNode(nodeId);
+      return { success: true };
+    },
+    [deleteNode],
+  );
+
+  const handleMCPUpdateNode = useCallback(
+    async (nodeId, data) => {
+      await updateNodeConfiguration(nodeId, data);
+      return { success: true };
+    },
+    [updateNodeConfiguration],
+  );
+
   const socket = useHaltestSocket(
     setNodes,
     setEdges,
@@ -469,6 +488,8 @@ function Dashboard() {
     handleMCPProposeNodes, // Proponer en vez de inyectar directamente
     handleMCPAddNode, // Granular
     handleMCPConnectNodes, // Granular
+    handleMCPRemoveNode,
+    handleMCPUpdateNode,
   );
 
   // Computed values
@@ -579,36 +600,66 @@ function Dashboard() {
     stopSession,
   ]);
 
+  const ensureProjectAndGetId = useCallback(async () => {
+    if (currentProject?.id) return currentProject.id;
+    if (projects && projects.length > 0) {
+      loadProject(projects[0].id);
+      return projects[0].id;
+    }
+    const { project } = await createProject(
+      t("projects.default_name", "General Project"),
+    );
+    return project.id;
+  }, [currentProject, projects, loadProject, createProject, t]);
+
   // AI Generation Handler
   const handleAIFlowGeneration = useCallback(
     async (prompt) => {
       const toastId = toast.info(
         t("ai.generating", "Generating flow with AI... ✨"),
-        { duration: 5000 },
+        { duration: 120000 },
       );
       try {
+        const projectId = await ensureProjectAndGetId();
+
         // 1. Call AI Endpoint
-        const { data } = await api.post("/ai/generate-flow", { prompt });
+        const responseData = await api.post("/ai/generate-flow", { prompt });
 
         // 2. Create Container Flow
         const flowName = `AI: ${prompt.slice(0, 20)}...`;
-        const response = await createFlow(flowName);
+        const response = await createFlow(flowName, projectId);
         const newFlowId = response.flow?.id || response.id; // defensive
 
-        if (newFlowId && currentProject?.id) {
+        const flowNodes = (
+          responseData.flow_json?.nodes ||
+          responseData.nodes ||
+          []
+        ).map((node, index) => ({
+          id: node.id || `node_${Date.now()}_${index}`,
+          type: node.type,
+          position: node.position || { x: 100 + index * 250, y: 150 },
+          data: {
+            ...node.data,
+            state: NODE_STATES.DEFAULT,
+            configuration: node.data || {},
+          },
+        }));
+        const flowEdges =
+          responseData.flow_json?.edges || responseData.edges || [];
+
+        if (newFlowId && projectId) {
           // 3. Save Generated Content
-          await api.put(`/projects/${currentProject.id}/flows/${newFlowId}`, {
-            nodes: data.nodes,
-            edges: data.edges,
+          await api.put(`/projects/${projectId}/flows/${newFlowId}`, {
+            nodes: flowNodes,
+            edges: flowEdges,
             viewport: { x: 0, y: 0, zoom: 1 },
           });
 
+          // Force local update if we are already on the new flow
+          setNodes(flowNodes);
+          setEdges(flowEdges);
           toast.dismiss(toastId);
           toast.success(t("ai.success", "Flow generated successfully! 🧠"));
-
-          // Force local update if we are already on the new flow
-          setNodes(data.nodes);
-          setEdges(data.edges);
         }
       } catch (err) {
         toast.dismiss(toastId);
@@ -616,7 +667,7 @@ function Dashboard() {
         toast.error(t("ai.error", "AI Generation failed"));
       }
     },
-    [createFlow, currentProject, setNodes, setEdges, toast, t],
+    [createFlow, ensureProjectAndGetId, setNodes, setEdges, toast, t],
   );
 
   const handleSaveFlow = useCallback(() => {
@@ -1460,15 +1511,16 @@ function Dashboard() {
           onClose={() =>
             setCreationModal((prev) => ({ ...prev, isOpen: false }))
           }
-          onConfirm={(result) => {
-            if (creationModal.type === "project") {
-              createProject(typeof result === "object" ? result.name : result);
+          onConfirm={async (result) => {
+            if (typeof result === "object" && result.mode === "ai") {
+              await handleAIFlowGeneration(result.prompt);
             } else {
-              const isAI = typeof result === "object" && result.mode === "ai";
-              if (isAI) {
-                handleAIFlowGeneration(result.prompt);
+              // Standard creation from modal
+              if (creationModal.type === "flow") {
+                const projectId = await ensureProjectAndGetId();
+                createFlow(result, projectId);
               } else {
-                createFlow(result);
+                createProject(result);
               }
             }
           }}

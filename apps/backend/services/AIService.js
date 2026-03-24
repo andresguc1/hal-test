@@ -118,6 +118,7 @@ class AIService {
                         max_tokens: maxTokens ? Number(maxTokens) : undefined,
                     },
                 },
+                abortSignal: AbortSignal.timeout(300000), // 5 minute timeout for local models/slow requests
             });
 
             return { text, usage, finishReason };
@@ -194,7 +195,8 @@ class AIService {
             let activeSystem = system || 'You are HAL-9001.';
             if (activeProvider === 'ollama') {
                 activeSystem += `\n\n[OLLAMA_TOOL_INSTRUCTIONS]
-You have access to tools that can manipulate the Visual Canvas. To use them, you MUST include a <tool_call> tag in your response. Do not use Markdown JSON fences inside the tags.
+You have access to tools that can manipulate the Visual Canvas. To use them, you MUST include a <tool_call> tag in your response. 
+Output ONLY the <tool_call> tag and nothing else. DO NOT explain, describe, or add any conversational dialogue.
 Format:
 <tool_call name="tool_name">{ "argument_key": "value" }</tool_call>
 
@@ -204,6 +206,8 @@ Supported Tools:
 2. add_node_to_canvas: { "type": "NODE_TYPE", "data": { ... } }
 3. connect_nodes: { "sourceId": "id1", "targetId": "id2" }
 4. execute_playwright_cmd: { "browserId": "id", "code": "..." }
+5. remove_node: { "id": "node_id" }
+6. update_node: { "id": "node_id", "data": { "url": "...", "selector": "..." } }
 
 IMPORTANT DIRECTIONS:
 - Always create the COMPLETE sequence of nodes for the requested flow at once in a single response step.
@@ -211,6 +215,9 @@ IMPORTANT DIRECTIONS:
             }
 
             let activePrompt = prompt;
+            if (activeProvider === 'ollama') {
+                activePrompt = `${activeSystem}\n\n[USER_INSTRUCTIONS]\n${prompt}`;
+            }
             let retryCount = 0;
             const maxRetries = 2;
             let response;
@@ -229,6 +236,7 @@ IMPORTANT DIRECTIONS:
                     ...(activeProvider !== 'ollama' ? { tools, maxSteps } : {}),
                     apiKey: 'ollama',
                     baseUrl: _baseUrl,
+                    abortSignal: AbortSignal.timeout(300000), // 5 minute timeout for local models/multi-steps
                 });
 
                 text = response.text;
@@ -240,15 +248,37 @@ IMPORTANT DIRECTIONS:
                     break; // No fallback needed for cloud providers
                 }
 
-                const toolCallRegex =
-                    /<tool_call\s+name=["']([^"']+)["']\s*>([\s\S]*?)<\/tool_call>/g;
+                const toolCallRegex = /<tool_call([^>]*)>([\s\S]*?)<\/tool_call>/g;
                 let match;
                 let hasParseError = false;
                 let errorDetails = '';
 
                 while ((match = toolCallRegex.exec(text)) !== null) {
-                    const toolName = match[1];
-                    const argsString = match[2].trim();
+                    let toolName = null;
+                    let argsString = match[2].trim();
+
+                    // Try to extract name from attributes
+                    const nameMatch = match[1].match(/name=["']([^"']+)["']/);
+                    if (nameMatch) {
+                        toolName = nameMatch[1];
+                    } else {
+                        // Fallback: Check if content starts with name="tool_name"
+                        const contentNameMatch = argsString.match(
+                            /^name=["']([^"']+)["']\s*(\{[\s\S]*\})/,
+                        );
+                        if (contentNameMatch) {
+                            toolName = contentNameMatch[1];
+                            argsString = contentNameMatch[2].trim(); // Rest is the JSON
+                        }
+                    }
+
+                    if (!toolName) {
+                        console.warn(
+                            `[AIService] Failed to extract tool name from match: ${match[0]}`,
+                        );
+                        continue;
+                    }
+
                     try {
                         let parsedArgs;
                         try {
@@ -259,6 +289,27 @@ IMPORTANT DIRECTIONS:
                             );
                             const repaired = repairJson(argsString);
                             parsedArgs = JSON.parse(repaired); // Will throw to outer catch if fails
+                        }
+
+                        if (toolName === 'inject_nodes' && parsedArgs && parsedArgs.nodes) {
+                            try {
+                                const { GraphValidator } = await import('./GraphValidator.js');
+                                const { fixed, flow } = GraphValidator.repair({
+                                    nodes: parsedArgs.nodes,
+                                    edges: [],
+                                });
+                                if (fixed) {
+                                    console.log(
+                                        '[AIService] 🔧 inject_nodes arg auto-repaired by GraphValidator',
+                                    );
+                                    parsedArgs.nodes = flow.nodes;
+                                }
+                            } catch (vErr) {
+                                console.error(
+                                    '[AIService] GraphValidator tool check failed:',
+                                    vErr,
+                                );
+                            }
                         }
 
                         console.log(`[AIService] Fallback Tool Call: ${toolName}`, parsedArgs);
@@ -297,11 +348,12 @@ IMPORTANT DIRECTIONS:
                 }
             }
 
+            console.log(`[AIService] Raw text from ${activeProvider}:`, text);
+
             // Strip tags from text before returning to keep frontend output clean
             if (activeProvider === 'ollama') {
-                const toolCallRegex =
-                    /<tool_call\s+name=["']([^"']+)["']\s*>([\s\S]*?)<\/tool_call>/g;
-                text = text.replace(toolCallRegex, '').trim();
+                const stripRegex = /<tool_call([^>]*)>([\s\S]*?)<\/tool_call>/g;
+                text = text.replace(stripRegex, '').trim();
             }
 
             return { text, toolCalls, toolResults, finishReason };
@@ -599,6 +651,67 @@ Return a JSON object with these exact keys:
                 'take_screenshot',
                 'close_browser',
             ]);
+
+            // Ollama: structured output via prompt Engineering (generateObject might fail)
+            if (activeProvider === 'ollama') {
+                const ollamaPrompt = `Convert natural language instructions into a visual flow object JSON.
+                Instructions: "${prompt}"
+
+                ** STRICT WORKFLOW RULES **
+                1. A web flow or automation sequence ALWAYS starts with a \`launch_browser\` node followed by an \`open_url\` node.
+                2. Execute intermediary actions (e.g., \`type_text\`, \`click\`, etc) as needed to fulfil the instruction.
+                3. Place a \`take_screenshot\` node right BEFORE the end.
+                4. Always end the flow sequence with a \`close_browser\` node.
+                5. Connect all nodes together in logical order using \`edges\` (\`source\` and \`target\`).
+
+                Supported Nodes: launch_browser, open_url, click, type_text, wait_visible, take_screenshot, close_browser.
+                
+                You must return a raw JSON object with:
+                - action: "generate_flow"
+                - message: "A brief descriptive message"
+                - flow_json: { nodes: [...], edges: [...] }
+                  - nodes: [{ id: "1", type: "launch_browser", data: { url: "https://...", label: "Brief visual label" } }]
+                  - edges: [{ id: "e1", source: "1", target: "2" }]
+
+                Return ONLY valid JSON. Do not write markdown. DO NOT include any introductory, explanatory, or conversational text.`;
+
+                const { text } = await generateText({
+                    model: modelRef,
+                    prompt: ollamaPrompt,
+                    temperature: 0.2,
+                    abortSignal: AbortSignal.timeout(300000), // 5 minute timeout for local models
+                });
+
+                const jsonMatch = text.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    let parsed;
+                    try {
+                        parsed = JSON.parse(jsonMatch[0]);
+                    } catch (e) {
+                        console.warn(
+                            '[AIService] JSON.parse failed inside generateFlow, attempting repair',
+                        );
+                        const repaired = repairJson(jsonMatch[0]);
+                        parsed = JSON.parse(repaired);
+                    }
+
+                    try {
+                        const { GraphValidator } = await import('./GraphValidator.js');
+                        if (parsed && parsed.flow_json) {
+                            const { fixed, flow } = GraphValidator.repair(parsed.flow_json);
+                            if (fixed) {
+                                console.log('[AIService] 🔧 Flow auto-repaired by GraphValidator');
+                                parsed.flow_json = flow;
+                            }
+                        }
+                    } catch (vErr) {
+                        console.error('[AIService] GraphValidator execution failed:', vErr);
+                    }
+
+                    return parsed;
+                }
+                throw new Error('Failed to parse flow JSON from Ollama result');
+            }
 
             const { object } = await generateObject({
                 model: modelRef,

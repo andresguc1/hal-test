@@ -130,9 +130,13 @@ export const canvasTools = [
                     }
                 }
 
-                const result = await requestFromFrontend('mcp:propose_nodes', {
-                    nodes: args.nodes,
-                });
+                const result = await requestFromFrontend(
+                    'mcp:propose_nodes',
+                    {
+                        nodes: args.nodes,
+                    },
+                    120000,
+                ); // 2 minute timeout for user approval
                 return {
                     content: [
                         {
@@ -271,6 +275,63 @@ export const canvasTools = [
                 return {
                     isError: true,
                     content: [{ type: 'text', text: `Failed to execute: ${err.message}` }],
+                };
+            }
+        },
+    },
+    {
+        name: 'remove_node',
+        description: 'Removes a node from the visual canvas.',
+        inputSchema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string', description: 'ID of the node to remove' },
+            },
+            required: ['id'],
+        },
+        handler: async (args) => {
+            try {
+                await requestFromFrontend('mcp:remove_node', {
+                    id: args.id,
+                });
+                return {
+                    content: [{ type: 'text', text: `Successfully removed node: ${args.id}` }],
+                };
+            } catch (err) {
+                return {
+                    isError: true,
+                    content: [{ type: 'text', text: `Failed to remove node: ${err.message}` }],
+                };
+            }
+        },
+    },
+    {
+        name: 'update_node',
+        description: 'Updates a node configuration on the visual canvas.',
+        inputSchema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string', description: 'ID of the node to update' },
+                data: {
+                    type: 'object',
+                    description: 'New configuration data. E.g. { url: "..." }',
+                },
+            },
+            required: ['id', 'data'],
+        },
+        handler: async (args) => {
+            try {
+                await requestFromFrontend('mcp:update_node', {
+                    id: args.id,
+                    data: args.data,
+                });
+                return {
+                    content: [{ type: 'text', text: `Successfully updated node: ${args.id}` }],
+                };
+            } catch (err) {
+                return {
+                    isError: true,
+                    content: [{ type: 'text', text: `Failed to update node: ${err.message}` }],
                 };
             }
         },

@@ -27,6 +27,8 @@ export const useHaltestSocket = (
   onProposeNodes, // CHANGED: Manejar propuesta de nodos
   onAddNode, // NEW: Granular node addition
   onConnectNodes, // NEW: Granular node connection
+  onRemoveNode, // NEW: Node removal
+  onUpdateNode, // NEW: Node update
 ) => {
   const socketRef = useRef(null);
   const onElementPickedRef = useRef(onElementPicked);
@@ -38,6 +40,8 @@ export const useHaltestSocket = (
   const onProposeNodesRef = useRef(onProposeNodes);
   const onAddNodeRef = useRef(onAddNode);
   const onConnectNodesRef = useRef(onConnectNodes);
+  const onRemoveNodeRef = useRef(onRemoveNode);
+  const onUpdateNodeRef = useRef(onUpdateNode);
 
   // Update refs when props change (always keep latest)
   useEffect(() => {
@@ -50,6 +54,8 @@ export const useHaltestSocket = (
     onProposeNodesRef.current = onProposeNodes;
     onAddNodeRef.current = onAddNode;
     onConnectNodesRef.current = onConnectNodes;
+    onRemoveNodeRef.current = onRemoveNode;
+    onUpdateNodeRef.current = onUpdateNode;
   }, [
     onElementPicked,
     setNodes,
@@ -60,6 +66,8 @@ export const useHaltestSocket = (
     onProposeNodes,
     onAddNode,
     onConnectNodes,
+    onRemoveNode,
+    onUpdateNode,
   ]);
 
   useEffect(() => {
@@ -245,6 +253,42 @@ export const useHaltestSocket = (
       } else if (typeof callback === "function") {
         callback({
           error: "Node connection handler not configured on frontend.",
+        });
+      }
+    });
+
+    socket.on("mcp:remove_node", async (data, callback) => {
+      console.log("[HaltestSocket] 🗑️ AI requested node removal", data);
+      if (onRemoveNodeRef.current && typeof callback === "function") {
+        try {
+          const id = data.id || data.nodeId;
+          if (!id) throw new Error("Missing node ID for removal");
+          const result = await onRemoveNodeRef.current(id);
+          callback(result || { success: true });
+        } catch (err) {
+          callback({ error: err.message });
+        }
+      } else if (typeof callback === "function") {
+        callback({
+          error: "Node removal handler not configured on frontend.",
+        });
+      }
+    });
+
+    socket.on("mcp:update_node", async (data, callback) => {
+      console.log("[HaltestSocket] ✏️ AI requested node update", data);
+      if (onUpdateNodeRef.current && typeof callback === "function") {
+        try {
+          const id = data.id || data.nodeId;
+          if (!id) throw new Error("Missing node ID for update");
+          const result = await onUpdateNodeRef.current(id, data.data);
+          callback(result || { success: true });
+        } catch (err) {
+          callback({ error: err.message });
+        }
+      } else if (typeof callback === "function") {
+        callback({
+          error: "Node update handler not configured on frontend.",
         });
       }
     });

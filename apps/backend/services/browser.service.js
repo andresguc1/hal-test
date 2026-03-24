@@ -9,6 +9,22 @@ class BrowserManager {
     constructor() {
         this.browsers = new Map();
         this.lastAccessed = new Map();
+
+        // --- Idle Garbage Collector ---
+        // Sweeps every 5 minutes to close sessions idle for > 15 minutes
+        this.idleInterval = setInterval(
+            () => {
+                const IDLE_TIMEOUT = 10 * 60 * 1000; // 10 minutes fallback for slow PCs
+                const now = Date.now();
+                for (const [id, lastTime] of this.lastAccessed.entries()) {
+                    if (now - lastTime > IDLE_TIMEOUT) {
+                        console.log(`[GC] Browser ${id} closed due to idle timeout`);
+                        this.delete(id).catch(() => {});
+                    }
+                }
+            },
+            3 * 1000 * 60,
+        ); // 3 minutes sweep
     }
 
     /**
@@ -145,6 +161,8 @@ class BrowserManager {
                 '--mute-audio',
                 '--disable-setuid-sandbox',
                 '--disable-blink-features=AutomationControlled',
+                '--disable-disk-cache',
+                '--disable-application-cache',
             ];
 
             if (headless) {

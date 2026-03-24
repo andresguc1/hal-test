@@ -11,19 +11,15 @@ test('Flujo Generado Hal-Test', async ({ page }) => {
     });
 
     await test.step('type_text', async () => {
-        await page.fill('#query', 'Metallica');
+        await page.fill('#gh-ac', 'Metallica');
     });
 
     await test.step('click', async () => {
-        await page.click('#btn_adv_search');
-    });
-
-    await test.step('wait_visible', async () => {
-        await page.waitForSelector('#search_results', { state: 'visible', timeout: 10000 });
+        await page.click('#gh-search-btn');
     });
 
     await test.step('take_screenshot', async () => {
-        await page.screenshot({ path: 'screenshot_5.png' });
+        await page.screenshot({ path: 'screenshot_4.png' });
     });
 
     await test.step('close_browser', async () => {
