@@ -414,7 +414,7 @@ function Dashboard() {
       setProposedNodes(null);
       setConfirmationPromise(null);
     }
-  }, [proposedNodes, confirmationPromise, handleMCPInjectNodes]);
+  }, [proposedNodes, confirmationPromise, handleMCPInjectNodes, saveFlow]);
 
   const handleRejectProposal = useCallback(() => {
     if (confirmationPromise) {
@@ -609,6 +609,7 @@ function Dashboard() {
     edges,
     activeBrowserId,
     stopSession,
+    currentFlowId,
   ]);
 
   const ensureProjectAndGetId = useCallback(async () => {

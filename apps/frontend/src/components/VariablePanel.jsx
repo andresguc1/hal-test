@@ -2,7 +2,17 @@ import React, { useEffect, useState, useCallback } from "react";
 import { io } from "socket.io-client";
 import { api } from "../utils/api";
 import { cn } from "../lib/utils";
-import { Database, X, RefreshCw, Layers, Globe, ChevronDown, ChevronRight, Copy, Check } from "lucide-react";
+import {
+  Database,
+  X,
+  RefreshCw,
+  Layers,
+  Globe,
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  Check,
+} from "lucide-react";
 
 const getSocketURL = () => {
   const apiUrl = import.meta.env.VITE_API_URL;
@@ -32,7 +42,9 @@ const VariableCard = ({ varKey, value, accentColor = "emerald" }) => {
 
   const formatted = formatValue(value);
   const isLong = formatted.length > MAX_DISPLAY_LENGTH;
-  const displayText = expanded ? formatted : formatted.slice(0, MAX_DISPLAY_LENGTH);
+  const displayText = expanded
+    ? formatted
+    : formatted.slice(0, MAX_DISPLAY_LENGTH);
 
   const handleCopy = (e) => {
     e.stopPropagation();
@@ -73,14 +85,22 @@ const VariableCard = ({ varKey, value, accentColor = "emerald" }) => {
         </span>
         <div className="flex items-center gap-1.5">
           <span className="text-[9px] text-slate-600 uppercase font-bold">
-            {typeof value === "object" ? (Array.isArray(value) ? "array" : "object") : typeof value}
+            {typeof value === "object"
+              ? Array.isArray(value)
+                ? "array"
+                : "object"
+              : typeof value}
           </span>
           <button
             onClick={handleCopy}
             className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-white/10 text-slate-500 hover:text-slate-300 transition-all"
             title="Copy variable reference"
           >
-            {copied ? <Check size={10} className="text-emerald-400" /> : <Copy size={10} />}
+            {copied ? (
+              <Check size={10} className="text-emerald-400" />
+            ) : (
+              <Copy size={10} />
+            )}
           </button>
         </div>
       </div>
@@ -91,9 +111,7 @@ const VariableCard = ({ varKey, value, accentColor = "emerald" }) => {
         )}
       >
         {displayText}
-        {isLong && !expanded && (
-          <span className="text-slate-600">…</span>
-        )}
+        {isLong && !expanded && <span className="text-slate-600">…</span>}
       </div>
       {isLong && (
         <button
@@ -212,10 +230,14 @@ export default function VariablePanel({ isOpen, onClose }) {
           <Layers size={12} />
           Flow Scope
           {flowCount > 0 && (
-            <span className={cn(
-              "text-[9px] px-1.5 py-0.5 rounded-full font-bold",
-              activeTab === "flow" ? "bg-emerald-500/30 text-emerald-300" : "bg-white/5 text-slate-500",
-            )}>
+            <span
+              className={cn(
+                "text-[9px] px-1.5 py-0.5 rounded-full font-bold",
+                activeTab === "flow"
+                  ? "bg-emerald-500/30 text-emerald-300"
+                  : "bg-white/5 text-slate-500",
+              )}
+            >
               {flowCount}
             </span>
           )}
@@ -232,10 +254,14 @@ export default function VariablePanel({ isOpen, onClose }) {
           <Globe size={12} />
           Global Scope
           {globalCount > 0 && (
-            <span className={cn(
-              "text-[9px] px-1.5 py-0.5 rounded-full font-bold",
-              activeTab === "global" ? "bg-sky-500/30 text-sky-300" : "bg-white/5 text-slate-500",
-            )}>
+            <span
+              className={cn(
+                "text-[9px] px-1.5 py-0.5 rounded-full font-bold",
+                activeTab === "global"
+                  ? "bg-sky-500/30 text-sky-300"
+                  : "bg-white/5 text-slate-500",
+              )}
+            >
               {globalCount}
             </span>
           )}

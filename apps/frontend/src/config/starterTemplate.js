@@ -193,8 +193,7 @@ export const STARTER_TEMPLATE = {
       data: {
         type: "reload_page",
         label: "Reload Page",
-        starterHint:
-          "We reload after login to ensure a fresh state.",
+        starterHint: "We reload after login to ensure a fresh state.",
         configuration: {},
       },
     },

@@ -1836,15 +1836,17 @@ function NodeConfigurationPanel({
       .map((n) => {
         // Enrich with live variable result if available
         const nodeLabel = n.data?.customLabel || n.data?.label || n.id;
-        const liveResult = liveVariables[`${nodeLabel}.result`] || liveVariables[`${n.id}.result`];
-        
+        const liveResult =
+          liveVariables[`${nodeLabel}.result`] ||
+          liveVariables[`${n.id}.result`];
+
         if (liveResult !== undefined) {
           return {
             ...n,
             data: {
               ...n.data,
-              result: liveResult
-            }
+              result: liveResult,
+            },
           };
         }
         return n;
@@ -1868,8 +1870,15 @@ function NodeConfigurationPanel({
           if (parentComponentNode) {
             // Check if it's already in the list (unlikely as it's from another flow)
             if (!prev.some((n) => n.id === parentComponentNode.id)) {
-              const nodeLabel = parentComponentNode.data?.customLabel || parentComponentNode.data?.label || parentComponentNode.nodeId || parentComponentNode.id;
-              const liveResult = liveVariables[`${nodeLabel}.result`] || liveVariables[`${parentComponentNode.nodeId}.result`] || liveVariables[`${parentComponentNode.id}.result`];
+              const nodeLabel =
+                parentComponentNode.data?.customLabel ||
+                parentComponentNode.data?.label ||
+                parentComponentNode.nodeId ||
+                parentComponentNode.id;
+              const liveResult =
+                liveVariables[`${nodeLabel}.result`] ||
+                liveVariables[`${parentComponentNode.nodeId}.result`] ||
+                liveVariables[`${parentComponentNode.id}.result`];
 
               prev.push({
                 ...parentComponentNode,
@@ -1879,7 +1888,10 @@ function NodeConfigurationPanel({
                   label: parentComponentNode.data?.label || "Component Input",
                   customLabel:
                     parentComponentNode.data?.customLabel || "Component Input",
-                  result: liveResult !== undefined ? liveResult : parentComponentNode.data?.result
+                  result:
+                    liveResult !== undefined
+                      ? liveResult
+                      : parentComponentNode.data?.result,
                 },
               });
             }
@@ -1893,7 +1905,7 @@ function NodeConfigurationPanel({
       .filter(Boolean);
 
     return { precedingNodes: prev, nextNodes: next };
-  }, [activeNode, edges, nodes, viewStack, currentProject]);
+  }, [activeNode, edges, nodes, viewStack, currentProject, liveVariables]);
 
   // Utility to safely stringify and truncate large results for preview
   const truncateResult = useCallback((result, maxLen = 1000) => {
@@ -2149,6 +2161,42 @@ function NodeConfigurationPanel({
     activeNode?.data?.screenshots?.after?.path ||
     null;
 
+  // Prepare dynamic variables map for VariableInput
+  const variablesMap = React.useMemo(() => {
+    const map = {};
+
+    // 1. Merge live variables from backend (highest priority - actual execution results)
+    if (liveVariables && typeof liveVariables === "object") {
+      Object.entries(liveVariables).forEach(([key, val]) => {
+        map[key] = val;
+      });
+    }
+
+    // 2. Merge from preceding nodes (fallback for pre-execution state)
+    if (precedingNodes) {
+      precedingNodes.forEach((pn) => {
+        if (pn.data?.result !== undefined) {
+          // Only set if not already provided by liveVariables
+          if (!(`${pn.id}.result` in map)) {
+            map[`${pn.id}.result`] = pn.data.result;
+          }
+          if (pn.data?.label && !(`${pn.data.label}.result` in map)) {
+            map[`${pn.data.label}.result`] = pn.data.result;
+          }
+        }
+        if (
+          pn.data?.label &&
+          pn.data?.result !== undefined &&
+          !(pn.data.label in map)
+        ) {
+          map[pn.data.label] = pn.data.result;
+        }
+      });
+    }
+
+    return map;
+  }, [precedingNodes, liveVariables]);
+
   if (!isVisible) return null;
 
   if (!activeNode) {
@@ -2187,38 +2235,6 @@ function NodeConfigurationPanel({
   const aiConfig = JSON.parse(localStorage.getItem("hal_ai_config") || "{}");
   const globalModel = aiConfig.selectedModel || "gemma3";
   const globalProvider = aiConfig.activeProvider || "ollama";
-
-  // Prepare dynamic variables map for VariableInput
-  const variablesMap = React.useMemo(() => {
-    const map = {};
-
-    // 1. Merge live variables from backend (highest priority - actual execution results)
-    if (liveVariables && typeof liveVariables === "object") {
-      Object.entries(liveVariables).forEach(([key, val]) => {
-        map[key] = val;
-      });
-    }
-
-    // 2. Merge from preceding nodes (fallback for pre-execution state)
-    if (precedingNodes) {
-      precedingNodes.forEach((pn) => {
-        if (pn.data?.result !== undefined) {
-          // Only set if not already provided by liveVariables
-          if (!((`${pn.id}.result`) in map)) {
-            map[`${pn.id}.result`] = pn.data.result;
-          }
-          if (pn.data?.label && !((`${pn.data.label}.result`) in map)) {
-            map[`${pn.data.label}.result`] = pn.data.result;
-          }
-        }
-        if (pn.data?.label && pn.data?.result !== undefined && !(pn.data.label in map)) {
-          map[pn.data.label] = pn.data.result;
-        }
-      });
-    }
-
-    return map;
-  }, [precedingNodes, liveVariables]);
 
   const renderInput = (field) => {
     // Read from LOCAL state for performance

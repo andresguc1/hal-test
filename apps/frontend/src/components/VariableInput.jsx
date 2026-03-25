@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import { cn } from "@/lib/utils";
 
@@ -11,10 +11,22 @@ const parseValue = (value) => {
   const parts = value.split(regex);
   return parts.filter(Boolean).map((part) => {
     if (part.startsWith("{{") && part.endsWith("}}")) {
-      return { type: "variable", text: part, key: part.slice(2, -2), prefix: "{{", suffix: "}}" };
+      return {
+        type: "variable",
+        text: part,
+        key: part.slice(2, -2),
+        prefix: "{{",
+        suffix: "}}",
+      };
     }
     if (part.startsWith("${") && part.endsWith("}")) {
-      return { type: "variable", text: part, key: part.slice(2, -1), prefix: "${", suffix: "}" };
+      return {
+        type: "variable",
+        text: part,
+        key: part.slice(2, -1),
+        prefix: "${",
+        suffix: "}",
+      };
     }
     return { type: "text", text: part };
   });
@@ -48,7 +60,8 @@ export const VariableInput = ({
     return parsedParts.map((part, i) => {
       if (part.type === "variable") {
         const varValue = variables[part.key];
-        const hasValue = varValue !== undefined && varValue !== null && varValue !== "";
+        const hasValue =
+          varValue !== undefined && varValue !== null && varValue !== "";
         const displayValue = hasValue ? varValue : "No data emitted yet";
         const isValid = varValue !== undefined;
 
@@ -61,12 +74,16 @@ export const VariableInput = ({
                     "rounded px-1.5 py-0.5 -mx-0.5 pointer-events-auto cursor-help transition-colors",
                     isValid
                       ? "bg-indigo-500/25 text-indigo-300 font-bold ring-1 ring-indigo-500/30 shadow-[0_0_10px_rgba(99,102,241,0.2)]"
-                      : "bg-amber-500/20 text-amber-400 font-medium border-b-2 border-dashed border-amber-500/50"
+                      : "bg-amber-500/20 text-amber-400 font-medium border-b-2 border-dashed border-amber-500/50",
                   )}
                 >
-                  <span className="opacity-40 select-none mr-0.5">{part.prefix}</span>
+                  <span className="opacity-40 select-none mr-0.5">
+                    {part.prefix}
+                  </span>
                   <span className="relative">{part.key}</span>
-                  <span className="opacity-40 select-none ml-0.5">{part.suffix}</span>
+                  <span className="opacity-40 select-none ml-0.5">
+                    {part.suffix}
+                  </span>
                 </span>
               </Tooltip.Trigger>
               <Tooltip.Portal>
@@ -76,25 +93,34 @@ export const VariableInput = ({
                 >
                   <div className="flex items-center justify-between gap-4 mb-2 pb-2 border-b border-white/5">
                     <div className="flex items-center gap-2">
-                       <div className={cn("w-2 h-2 rounded-full", isValid ? "bg-indigo-400" : "bg-amber-400")} />
-                       <span className="font-bold text-[10px] uppercase tracking-widest text-slate-400">
-                         Variable Value
-                       </span>
+                      <div
+                        className={cn(
+                          "w-2 h-2 rounded-full",
+                          isValid ? "bg-indigo-400" : "bg-amber-400",
+                        )}
+                      />
+                      <span className="font-bold text-[10px] uppercase tracking-widest text-slate-400">
+                        Variable Value
+                      </span>
                     </div>
                     <span className="font-mono text-[9px] text-slate-500 px-1.5 py-0.5 bg-black/40 rounded border border-white/5">
-                      {part.prefix}{part.suffix}
+                      {part.prefix}
+                      {part.suffix}
                     </span>
                   </div>
-                  
+
                   <div className="font-mono text-xs text-indigo-200 bg-black/30 p-2.5 rounded-lg border border-indigo-500/10 max-h-48 overflow-y-auto custom-scrollbar whitespace-pre-wrap">
                     {typeof displayValue === "object"
                       ? JSON.stringify(displayValue, null, 2)
                       : String(displayValue)}
                   </div>
-                  
+
                   {!isValid && (
                     <div className="mt-2 text-[10px] text-amber-400/80 italic flex items-center gap-1">
-                       <span>⚠️ This variable has not been resolved yet in the current run.</span>
+                      <span>
+                        ⚠️ This variable has not been resolved yet in the
+                        current run.
+                      </span>
                     </div>
                   )}
 
@@ -126,12 +152,14 @@ export const VariableInput = ({
           "absolute inset-0 pointer-events-none overflow-hidden !m-0 !outline-none focus:!ring-0",
           "!text-transparent !bg-transparent border-transparent",
           isTextarea ? "whitespace-pre-wrap break-words" : "whitespace-pre",
-          "z-0"
+          "z-0",
         )}
-        style={{
-          // Match padding exactly. Tailwind classes in className will handle this usually,
-          // but we ensure the alignment is perfect.
-        }}
+        style={
+          {
+            // Match padding exactly. Tailwind classes in className will handle this usually,
+            // but we ensure the alignment is perfect.
+          }
+        }
         aria-hidden="true"
       >
         <div
@@ -158,7 +186,7 @@ export const VariableInput = ({
           className,
           "relative z-10",
           "text-transparent caret-white selection:bg-indigo-500/30 selection:text-transparent",
-          "!bg-transparent placeholder-transparent"
+          "!bg-transparent placeholder-transparent",
         )}
         {...props}
       />
@@ -174,7 +202,7 @@ export const VariableInput = ({
             ? "border-red-500/50 shadow-[0_0_10px_rgba(239,68,68,0.2)]"
             : isFocused
               ? "border-indigo-500/50"
-              : "border-[var(--border-ui)]"
+              : "border-[var(--border-ui)]",
         )}
       />
 
@@ -183,7 +211,7 @@ export const VariableInput = ({
         <div
           className={cn(
             "absolute inset-0 pointer-events-none flex text-xs font-mono opacity-60 text-[var(--text-muted)]",
-            isTextarea ? "items-start pt-2 px-3" : "items-center px-3"
+            isTextarea ? "items-start pt-2 px-3" : "items-center px-3",
           )}
         >
           {placeholder}
