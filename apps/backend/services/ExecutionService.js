@@ -3,6 +3,7 @@ import { executionLogger } from './ExecutionLogger.js';
 import * as actions from '../controllers/action.controller.js';
 import { emitLog, emitFlowFinished } from '../socket.js';
 import i18n from '../config/i18n.js';
+import { variableManager } from './VariableManager.js';
 
 class ExecutionService {
     constructor() {
@@ -112,6 +113,19 @@ class ExecutionService {
             const result = await this.executeNode(node, state);
             state.executedNodeIds.add(node.nodeId);
 
+            // 1.1 Store result in VariableManager for downstream interpolation
+            const nodeLabel = node.data?.customLabel || node.data?.label || node.nodeId;
+            if (result && result.success !== false) {
+                const nodeResult = result.data || result;
+                // Save by Label (User friendly)
+                variableManager.set(`${nodeLabel}.result`, nodeResult, 'flow');
+                // Save by ID (Robust)
+                variableManager.set(`${node.nodeId}.result`, nodeResult, 'flow');
+                console.log(
+                    `[ExecutionService] Saved result for "${nodeLabel}" (${node.nodeId}) to variableManager`,
+                );
+            }
+
             // 2. Find next nodes
             let nextEdges = allEdges.filter((e) => e.source === node.nodeId);
 
@@ -151,13 +165,28 @@ class ExecutionService {
         // Logic to extract parameters.
         // In HAL-TEST, configuration is often stored in node.data.configuration
         const config = node.data?.configuration || {};
-        const body = {
+
+        // Deeply interpolate variables in config strings before executing
+        const interpolateStrings = (obj) => {
+            if (typeof obj === 'string') return variableManager.resolve(obj);
+            if (Array.isArray(obj)) return obj.map(interpolateStrings);
+            if (obj && typeof obj === 'object') {
+                const newObj = {};
+                for (const [k, v] of Object.entries(obj)) {
+                    newObj[k] = interpolateStrings(v);
+                }
+                return newObj;
+            }
+            return obj;
+        };
+
+        const body = interpolateStrings({
             ...node.data, // Generic data
             ...config, // Specific configuration (keys like 'url', 'selector', etc.)
             nodeId: node.nodeId,
             runId: state.runId,
             browserId: state.browserId,
-        };
+        });
 
         // Apply browser launch overrides
         if (actionType === 'launch_browser') {

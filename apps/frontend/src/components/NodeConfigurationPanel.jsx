@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 import { CATEGORY_STYLES, NODE_TYPE_MAP } from "@/config/nodeConstants";
 import { api } from "../utils/api";
 import EvidenceCard from "./EvidenceCard"; // New component import
+import VariableInput from "./VariableInput";
 
 // --- CONFIGURATION SCHEMA ---
 // Defines available input fields for each node type
@@ -1749,9 +1750,24 @@ function NodeConfigurationPanel({
   onExecute, // Restore
   edges = [], // Added for navigation
   onSelectNode, // Added for navigation
+  viewStack = [], // NEW: Navigation stack for subflow context
+  currentProject = null, // NEW: Current project for flow lookup
 }) {
   const { t } = useTranslation();
   const toast = useToast();
+
+  const [liveVariables, setLiveVariables] = useState({});
+
+  const refreshVariables = useCallback(async () => {
+    try {
+      const response = await api.get("/variables");
+      if (response && response.success) {
+        setLiveVariables(response.data?.flow || {});
+      }
+    } catch (err) {
+      console.warn("[NodeConfig] Failed to fetch live variables:", err);
+    }
+  }, []);
 
   // REMOVED handleStartInspector (delegated to App.jsx)
 
@@ -1764,6 +1780,13 @@ function NodeConfigurationPanel({
       nodes.find((n) => n.id === action.nodeId || n.id === action.id) || action
     );
   }, [action, nodes]);
+
+  // Fetch variables when panel opens or when activeNode changes
+  React.useEffect(() => {
+    if (activeNode) {
+      refreshVariables();
+    }
+  }, [activeNode, refreshVariables]);
 
   // Memoize logic to prevent unnecessary re-renders
   const { safeConfig, definedInputs } = useMemo(() => {
@@ -1809,13 +1832,68 @@ function NodeConfigurationPanel({
 
     const prev = prevIds
       .map((id) => nodes.find((n) => n.id === id))
-      .filter(Boolean);
+      .filter(Boolean)
+      .map((n) => {
+        // Enrich with live variable result if available
+        const nodeLabel = n.data?.customLabel || n.data?.label || n.id;
+        const liveResult = liveVariables[`${nodeLabel}.result`] || liveVariables[`${n.id}.result`];
+        
+        if (liveResult !== undefined) {
+          return {
+            ...n,
+            data: {
+              ...n.data,
+              result: liveResult
+            }
+          };
+        }
+        return n;
+      });
+
+    // --- SUBFLOW CONTEXT ENRICHMENT ---
+    // If this is an Entry node and we are in a subflow, add the parent component node
+    const isEntryNode =
+      activeNode.type === "entry" || activeNode.data?.type === "entry";
+    if (isEntryNode && viewStack.length > 0 && currentProject) {
+      const lastView = viewStack[viewStack.length - 1];
+      if (lastView.nodeId) {
+        // Find the parent flow's component node
+        const parentFlow = currentProject.flows?.find(
+          (f) => f.id === lastView.id,
+        );
+        if (parentFlow && parentFlow.nodes) {
+          const parentComponentNode = parentFlow.nodes.find(
+            (n) => n.nodeId === lastView.nodeId || n.id === lastView.nodeId,
+          );
+          if (parentComponentNode) {
+            // Check if it's already in the list (unlikely as it's from another flow)
+            if (!prev.some((n) => n.id === parentComponentNode.id)) {
+              const nodeLabel = parentComponentNode.data?.customLabel || parentComponentNode.data?.label || parentComponentNode.nodeId || parentComponentNode.id;
+              const liveResult = liveVariables[`${nodeLabel}.result`] || liveVariables[`${parentComponentNode.nodeId}.result`] || liveVariables[`${parentComponentNode.id}.result`];
+
+              prev.push({
+                ...parentComponentNode,
+                id: parentComponentNode.nodeId || parentComponentNode.id, // Ensure consistent ID
+                data: {
+                  ...parentComponentNode.data,
+                  label: parentComponentNode.data?.label || "Component Input",
+                  customLabel:
+                    parentComponentNode.data?.customLabel || "Component Input",
+                  result: liveResult !== undefined ? liveResult : parentComponentNode.data?.result
+                },
+              });
+            }
+          }
+        }
+      }
+    }
+
     const next = nextIds
       .map((id) => nodes.find((n) => n.id === id))
       .filter(Boolean);
 
     return { precedingNodes: prev, nextNodes: next };
-  }, [activeNode, edges, nodes]);
+  }, [activeNode, edges, nodes, viewStack, currentProject]);
 
   // Utility to safely stringify and truncate large results for preview
   const truncateResult = useCallback((result, maxLen = 1000) => {
@@ -2110,6 +2188,38 @@ function NodeConfigurationPanel({
   const globalModel = aiConfig.selectedModel || "gemma3";
   const globalProvider = aiConfig.activeProvider || "ollama";
 
+  // Prepare dynamic variables map for VariableInput
+  const variablesMap = React.useMemo(() => {
+    const map = {};
+
+    // 1. Merge live variables from backend (highest priority - actual execution results)
+    if (liveVariables && typeof liveVariables === "object") {
+      Object.entries(liveVariables).forEach(([key, val]) => {
+        map[key] = val;
+      });
+    }
+
+    // 2. Merge from preceding nodes (fallback for pre-execution state)
+    if (precedingNodes) {
+      precedingNodes.forEach((pn) => {
+        if (pn.data?.result !== undefined) {
+          // Only set if not already provided by liveVariables
+          if (!((`${pn.id}.result`) in map)) {
+            map[`${pn.id}.result`] = pn.data.result;
+          }
+          if (pn.data?.label && !((`${pn.data.label}.result`) in map)) {
+            map[`${pn.data.label}.result`] = pn.data.result;
+          }
+        }
+        if (pn.data?.label && pn.data?.result !== undefined && !(pn.data.label in map)) {
+          map[pn.data.label] = pn.data.result;
+        }
+      });
+    }
+
+    return map;
+  }, [precedingNodes, liveVariables]);
+
   const renderInput = (field) => {
     // Read from LOCAL state for performance
     const value = localConfig[field.key] ?? "";
@@ -2163,19 +2273,17 @@ function NodeConfigurationPanel({
                 </span>
               )}
             </div>
-            <textarea
+            <VariableInput
+              type="textarea"
               value={value}
+              variables={variablesMap}
+              hasError={!!error}
               placeholder={t(
                 `nodes.placeholders.${field.key}`,
                 field.placeholder,
               )}
               onChange={(e) => handleConfigUpdate(field.key, e.target.value)}
-              className={cn(
-                "w-full bg-[var(--bg-canvas)]/50 border rounded-lg px-3 py-2 text-xs text-[var(--text-main)] focus:outline-none transition-all placeholder:text-[var(--text-muted)] min-h-[100px] font-mono !pointer-events-auto !cursor-text !select-text",
-                error
-                  ? "border-red-500/50 focus:border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)] bg-red-500/5"
-                  : "border-[var(--border-ui)] focus:border-indigo-500/50",
-              )}
+              className="w-full min-h-[100px] text-xs font-mono !pointer-events-auto !cursor-text !select-text py-2 px-3"
             />
           </div>
         );
@@ -2236,24 +2344,17 @@ function NodeConfigurationPanel({
                 </span>
               )}
             </div>
-            <input
-              type="text" // Changet to text to allow {{vars}}
+            <VariableInput
+              type="text"
               value={value}
+              variables={variablesMap}
+              hasError={!!error}
               placeholder={t(
                 `nodes.placeholders.${field.key}`,
                 field.placeholder,
               )}
-              onChange={(e) => {
-                const val = e.target.value;
-                // Allow empty, numbers, or variable syntax {{...}}
-                handleConfigUpdate(field.key, val);
-              }}
-              className={cn(
-                "w-full bg-[var(--bg-canvas)]/50 border rounded-lg px-3 py-2 text-xs text-[var(--text-main)] focus:outline-none transition-all placeholder:text-[var(--text-muted)] opacity-70 !pointer-events-auto !cursor-text !select-text",
-                error
-                  ? "border-red-500/50 focus:border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)] bg-red-500/5"
-                  : "border-[var(--border-ui)] focus:border-indigo-500/50",
-              )}
+              onChange={(e) => handleConfigUpdate(field.key, e.target.value)}
+              className="w-full opacity-70 px-3 py-2 text-xs font-mono !pointer-events-auto !cursor-text !select-text"
             />
           </div>
         );
@@ -2335,20 +2436,17 @@ function NodeConfigurationPanel({
               </div>
             </label>
             <div className="relative">
-              <input
+              <VariableInput
                 type="text"
                 value={value}
+                variables={variablesMap}
+                hasError={!!error}
                 placeholder={t(
                   `nodes.placeholders.${field.key}`,
                   field.placeholder,
                 )}
                 onChange={(e) => handleConfigUpdate(field.key, e.target.value)}
-                className={cn(
-                  "w-full bg-[var(--bg-canvas)]/50 border border-[var(--border-ui)] rounded-lg px-3 py-2 pl-3 pr-8 text-xs font-mono focus:outline-none focus:border-indigo-500/50 transition-all placeholder:text-[var(--text-muted)] !pointer-events-auto !cursor-text !select-text",
-                  value ? "text-indigo-400" : "text-[var(--text-main)]",
-                  error &&
-                    "border-red-500/50 focus:border-red-500 bg-red-500/5",
-                )}
+                className="w-full pr-8 text-xs font-mono !pointer-events-auto !cursor-text !select-text px-3 py-2"
               />
               <div
                 className={cn(
@@ -2403,20 +2501,17 @@ function NodeConfigurationPanel({
                 </span>
               )}
             </div>
-            <input
+            <VariableInput
               type="text"
               value={value}
+              variables={variablesMap}
+              hasError={!!error}
               placeholder={t(
                 `nodes.placeholders.${field.key}`,
                 field.placeholder,
               )}
               onChange={(e) => handleConfigUpdate(field.key, e.target.value)}
-              className={cn(
-                "w-full bg-slate-950/50 border rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none transition-all placeholder:text-slate-700 !pointer-events-auto !cursor-text !select-text",
-                error
-                  ? "border-red-500/50 focus:border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)] bg-red-500/5"
-                  : "border-white/10 focus:border-indigo-500/50",
-              )}
+              className="w-full text-xs font-mono !pointer-events-auto !cursor-text !select-text px-3 py-2"
             />
           </div>
         );
@@ -2488,8 +2583,8 @@ function NodeConfigurationPanel({
                   </div>
                   {pn.data?.result ? (
                     <div className="relative group/data">
-                      <div className="text-[10px] text-slate-300 font-mono line-clamp-3 bg-black/20 p-1.5 rounded pr-12">
-                        {truncateResult(pn.data.result)}
+                      <div className="text-[11px] text-slate-300 font-mono line-clamp-6 bg-black/30 p-2.5 rounded pr-12 max-h-48 overflow-y-auto custom-scrollbar border border-white/5">
+                        {truncateResult(pn.data.result, 2000)}
                       </div>
                       <div className="absolute right-1 top-1 flex flex-col gap-1 opacity-0 group-hover/data:opacity-100 transition-opacity">
                         <button
@@ -3091,8 +3186,8 @@ function NodeConfigurationPanel({
 
             {/* Primary Action */}
             <button
-              onClick={() =>
-                onExecute({
+              onClick={async () => {
+                await onExecute({
                   ...activeNode,
                   data: {
                     ...activeNode.data,
@@ -3101,8 +3196,9 @@ function NodeConfigurationPanel({
                       ...localConfig,
                     },
                   },
-                })
-              }
+                });
+                await refreshVariables();
+              }}
               disabled={hasErrors} // Block execution if validation/mandatory fields fail
               className={cn(
                 "w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wide transition-all",

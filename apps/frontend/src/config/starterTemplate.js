@@ -40,9 +40,43 @@ export const STARTER_TEMPLATE = {
       },
     },
     {
+      id: "starter_var_user",
+      type: "variable",
+      position: { x: 300, y: 280 },
+      data: {
+        type: "variable",
+        label: "Set Username",
+        starterHint:
+          "This variable stores the username. Downstream nodes reference it as {{test_user}}.",
+        configuration: {
+          operation: "set",
+          name: "test_user",
+          value: "standard_user",
+          scope: "flow",
+        },
+      },
+    },
+    {
+      id: "starter_var_pass",
+      type: "variable",
+      position: { x: 300, y: 620 },
+      data: {
+        type: "variable",
+        label: "Set Password",
+        starterHint:
+          "Same idea — the password is stored as {{test_password}} and used inside the Login component.",
+        configuration: {
+          operation: "set",
+          name: "test_password",
+          value: "secret_sauce",
+          scope: "flow",
+        },
+      },
+    },
+    {
       id: "starter_login_group",
       type: "component",
-      position: { x: 300, y: 450 },
+      position: { x: 600, y: 450 },
       data: {
         type: "component",
         label: "Login Steps",
@@ -53,7 +87,6 @@ export const STARTER_TEMPLATE = {
           description:
             "Encapsulates username, password, and login button clicks.",
         },
-        // Nested sub-flow definition handled by useFlowManager
         subFlow: {
           name: "Login Steps (Library)",
           nodes: [
@@ -74,10 +107,11 @@ export const STARTER_TEMPLATE = {
               data: {
                 type: "type_text",
                 label: "Enter Username",
-                starterHint: "We use standard_user for this demo.",
+                starterHint:
+                  "Notice how we use {{test_user}} instead of hardcoding. This pulls data from the variable node!",
                 configuration: {
                   selector: "#user-name",
-                  text: "standard_user",
+                  text: "{{test_user}}",
                 },
               },
             },
@@ -88,8 +122,12 @@ export const STARTER_TEMPLATE = {
               data: {
                 type: "type_text",
                 label: "Enter Password",
-                starterHint: "Secret sauce is the key!",
-                configuration: { selector: "#password", text: "secret_sauce" },
+                starterHint:
+                  "Same here — {{test_password}} is resolved at runtime from the variable node above.",
+                configuration: {
+                  selector: "#password",
+                  text: "{{test_password}}",
+                },
               },
             },
             {
@@ -151,19 +189,19 @@ export const STARTER_TEMPLATE = {
     {
       id: "starter_reload",
       type: "reload_page",
-      position: { x: 600, y: 450 },
+      position: { x: 900, y: 450 },
       data: {
         type: "reload_page",
         label: "Reload Page",
         starterHint:
-          "We reload after login to ensure a fresh state. This demonstrates our localized reload action.",
+          "We reload after login to ensure a fresh state.",
         configuration: {},
       },
     },
     {
       id: "starter_screenshot",
       type: "take_screenshot",
-      position: { x: 900, y: 450 },
+      position: { x: 1200, y: 450 },
       data: {
         type: "take_screenshot",
         label: "Evidence",
@@ -176,7 +214,7 @@ export const STARTER_TEMPLATE = {
     {
       id: "starter_close",
       type: "close_browser",
-      position: { x: 1200, y: 450 },
+      position: { x: 1500, y: 450 },
       data: {
         type: "close_browser",
         label: "Finish Tour",
@@ -194,8 +232,29 @@ export const STARTER_TEMPLATE = {
       type: "custom",
     },
     {
-      id: "e2-3",
+      id: "e2-varu",
       source: "starter_open",
+      target: "starter_var_user",
+      animated: true,
+      type: "custom",
+    },
+    {
+      id: "e2-varp",
+      source: "starter_open",
+      target: "starter_var_pass",
+      animated: true,
+      type: "custom",
+    },
+    {
+      id: "evaru-3",
+      source: "starter_var_user",
+      target: "starter_login_group",
+      animated: true,
+      type: "custom",
+    },
+    {
+      id: "evarp-3",
+      source: "starter_var_pass",
       target: "starter_login_group",
       animated: true,
       type: "custom",

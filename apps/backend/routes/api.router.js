@@ -477,6 +477,12 @@ const actionRoutes = [
         action: 'failFlowAction',
         category: 'flow_control',
     },
+    {
+        path: 'component',
+        schema: 'componentBodySchema',
+        action: 'componentAction',
+        category: 'flow_control',
+    },
 
     // ========== AI Integration (LLM) ==========
     {
@@ -541,12 +547,61 @@ if (validationErrors.length > 0) {
     throw new Error('Router configuration error. Check console for details.');
 }
 
+// Middleware wrapper: auto-emits execution-status socket events for ALL actions
+const withSocketStatus = (handler) => async (req, res) => {
+    const nodeId = req.body?.nodeId || req.body?.stepId;
+    try {
+        // Emit "running" state (only if handler doesn't manage its own socket events)
+        if (nodeId && !req._socketStatusHandled) {
+            const { emitExecutionStatus } = await import('../socket.js');
+            emitExecutionStatus({ stepId: nodeId, status: 'running' });
+        }
+
+        // Intercept res.json to detect success/error from the response
+        const originalJson = res.json.bind(res);
+        res.json = (body) => {
+            // Only emit if handler didn't already handle socket events itself
+            if (nodeId && !req._socketStatusHandled) {
+                import('../socket.js')
+                    .then(({ emitExecutionStatus }) => {
+                        const status = body?.success === false ? 'error' : 'success';
+                        const error =
+                            body?.success === false
+                                ? body?.message || body?.error || 'Unknown error'
+                                : null;
+                        emitExecutionStatus({ stepId: nodeId, status, error });
+                    })
+                    .catch(() => {
+                        /* socket not ready */
+                    });
+            }
+            return originalJson(body);
+        };
+
+        return await handler(req, res);
+    } catch (error) {
+        if (nodeId && !req._socketStatusHandled) {
+            try {
+                const { emitExecutionStatus } = await import('../socket.js');
+                emitExecutionStatus({ stepId: nodeId, status: 'error', error: error.message });
+            } catch (_) {
+                /* socket not ready */
+            }
+        }
+        throw error;
+    }
+};
+
 // Create routes dynamically
 actionRoutes.forEach(({ path, schema, action }) => {
     const schemaObject = schemas[schema];
     const actionHandler = actions[action];
 
-    router.post(`/actions/${path}`, validate({ body: schemaObject }), actionHandler);
+    router.post(
+        `/actions/${path}`,
+        validate({ body: schemaObject }),
+        withSocketStatus(actionHandler),
+    );
 });
 
 console.log(`✅ ${actionRoutes.length} action routes registered successfully`);

@@ -1393,6 +1393,8 @@ function Dashboard() {
               nodeId={selectedAction.nodeId}
               type={selectedAction.type}
               initialData={selectedAction.data}
+              viewStack={viewStack}
+              currentProject={currentProject}
               onClose={() => {
                 setSelectedNodeId(null);
               }}
@@ -1484,13 +1486,12 @@ function Dashboard() {
             //    Actually, if we are in Main Flow, 'dbFlows' has all components.
             //    We want to OVERRIDE the DB flow entry with the Live Node entry if IDs match.
 
-            const liveIds = new Set(liveComponentFlows.map((f) => f.id));
+            // 3. Final deduplication: DB flows first, then live overrides (last write wins)
+            const flowMap = new Map();
+            dbFlows.forEach((f) => flowMap.set(f.id, f));
+            liveComponentFlows.forEach((f) => flowMap.set(f.id, f));
 
-            const nonLiveFlows = dbFlows.filter((f) => !liveIds.has(f.id));
-
-            // 3. Combine: Active Live Components + Other Flows (Main, or Components not on current canvas)
-            //    Note: This creates a view where "Components on Canvas" are shown with their LIVE names.
-            return [...nonLiveFlows, ...liveComponentFlows];
+            return [...flowMap.values()];
           }, [currentProject?.flows, nodes])}
           onSwitchFlow={(f) => switchFlow(f.id)}
           onNewFlow={() => setCreationModal({ isOpen: true, type: "flow" })}

@@ -14,6 +14,7 @@ import { z } from 'zod';
 import * as fsp from 'fs/promises';
 // import * as fs from 'fs';
 import * as path from 'path';
+import { Flow, Node, Edge } from '../database/init.js';
 import { executionLogger } from '../services/ExecutionLogger.js';
 import { STORAGE_RUNS_DIR, STORAGE_DIR } from '../config/paths.js';
 import { isSafePath } from '../utils/security.js';
@@ -440,11 +441,17 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
     const start = Date.now();
     const runId = req.body.runId; // Extract runId if present
     const nodeId = req.body.nodeId; // Extract nodeId if present
+    const label = req.body.label || req.body.customLabel;
 
-    const opts = req.body;
+    // --- VARIABLE RESOLUTION ---
+    // Deeply interpolate variables in the request body before any logic
+    const opts = variableManager.resolveRecursive(req.body);
+    // ---------------------------
+
     let page, context;
 
     if (nodeId) {
+        req._socketStatusHandled = true; // Flag: prevent middleware double-emission
         emitExecutionStatus({ stepId: nodeId, status: 'running' });
         smartEmitLog(`Executing ${actionName}...`, 'info', nodeId);
     }
@@ -576,6 +583,20 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
         if (nodeId) {
             emitExecutionStatus({ stepId: nodeId, status: 'success' });
         }
+
+        // --- VARIABLE PERSISTENCE ---
+        // Save result to variableManager for downstream reuse
+        const nodeLabel = label || nodeId || actionName;
+        if (result && result.success !== false) {
+            const nodeResult = result.data || result;
+            variableManager.set(`${nodeLabel}.result`, nodeResult, 'flow');
+            if (nodeId) {
+                variableManager.set(`${nodeId}.result`, nodeResult, 'flow');
+            }
+            console.log(`[ActionController] Saved result for "${nodeLabel}" to variableManager`);
+        }
+        // ----------------------------
+
         return res.status(200).json({
             success: true,
             message: result.message,
@@ -4066,6 +4087,97 @@ export const failFlowAction = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Error executing fail index action',
+            error: error.message,
+        });
+    }
+};
+
+/**
+ * Execute a Subflow (Component) recursively
+ */
+export const componentAction = async (req, res) => {
+    try {
+        const { configuration, nodeId, runId } = req.body;
+        const flowId = configuration?.flowId || req.body.flowId;
+
+        if (!flowId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing flowId for component execution',
+            });
+        }
+
+        emitLog({
+            message: `Entering subflow: ${flowId}`,
+            type: 'info',
+            nodeId,
+        });
+
+        // 1. Fetch subflow structure
+        const subflow = await Flow.findByPk(flowId, {
+            include: [
+                { model: Node, as: 'nodes' },
+                { model: Edge, as: 'edges' },
+            ],
+        });
+
+        if (!subflow) {
+            throw new Error(`Subflow not found: ${flowId}`);
+        }
+
+        // 2. Prepare subflow execution context
+        const { ExecutionService } = await import('../services/ExecutionService.js');
+        const executionService = new ExecutionService();
+
+        // Map database models to the format expected by ExecutionService
+        const allNodes = subflow.nodes.map((n) => ({
+            nodeId: n.nodeId, // Use nodeId field which corresponds to React Flow ID
+            type: n.type,
+            data: n.data,
+        }));
+        const allEdges = subflow.edges.map((e) => ({
+            source: e.source,
+            target: e.target,
+            sourceHandle: e.sourceHandle,
+        }));
+
+        const entryNodes = allNodes.filter((n) => n.type === 'entry');
+        if (entryNodes.length === 0) {
+            throw new Error(`Subflow ${flowId} has no Entry node`);
+        }
+
+        // 3. Run subflow
+        const subflowState = {
+            runId: runId || `subrun_${Date.now()}`,
+            browserId: req.body.browserId, // Extract from body if provided
+            executedNodeIds: new Set(),
+        };
+
+        // Note: ExecutionService.runSequence doesn't return a unified result yet,
+        // but it executes nodes and updates variableManager.
+        await executionService.runSequence(entryNodes, allNodes, allEdges, subflowState);
+
+        emitLog({
+            message: `Completed subflow: ${flowId}`,
+            type: 'success',
+            nodeId,
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: `Subflow ${flowId} executed successfully`,
+            data: { flowId, executedNodes: subflowState.executedNodeIds.size },
+        });
+    } catch (error) {
+        console.error('[ERROR] componentAction:', error.message);
+        emitLog({
+            message: `Error in subflow: ${error.message}`,
+            type: 'error',
+            nodeId: req.body?.nodeId,
+        });
+        return res.status(500).json({
+            success: false,
+            message: 'Error executing subflow component',
             error: error.message,
         });
     }
