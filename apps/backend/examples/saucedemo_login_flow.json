@@ -1,0 +1,102 @@
+{
+  "name": "E2E: Login SauceDemo",
+  "nodes": [
+    {
+      "id": "node-1",
+      "type": "launch_browser",
+      "position": { "x": 100, "y": 200 },
+      "data": {
+        "configuration": { "browser": "chromium", "headless": true }
+      }
+    },
+    {
+      "id": "node-2",
+      "type": "open_url",
+      "position": { "x": 350, "y": 200 },
+      "data": {
+        "configuration": { "url": "https://www.saucedemo.com" }
+      }
+    },
+    {
+      "id": "node-3",
+      "type": "type_text",
+      "position": { "x": 600, "y": 200 },
+      "data": {
+        "configuration": { "selector": "#user-name", "text": "standard_user" }
+      }
+    },
+    {
+      "id": "node-4",
+      "type": "type_text",
+      "position": { "x": 850, "y": 200 },
+      "data": {
+        "configuration": { "selector": "#password", "text": "secret_sauce" }
+      }
+    },
+    {
+      "id": "node-5",
+      "type": "click",
+      "position": { "x": 1100, "y": 200 },
+      "data": {
+        "configuration": { "selector": "#login-button" }
+      }
+    },
+    {
+      "id": "node-6",
+      "type": "execute_js",
+      "position": { "x": 1350, "y": 200 },
+      "data": {
+        "configuration": { "expression": "window.location.href", "outputVar": "currentUrl" }
+      }
+    },
+    {
+      "id": "node-7",
+      "type": "conditional",
+      "position": { "x": 1600, "y": 200 },
+      "data": {
+        "configuration": {
+          "conditions": [
+            { "left": "${currentUrl}", "operator": "includes", "right": "/inventory.html" }
+          ],
+          "logic": "AND"
+        }
+      }
+    },
+    {
+      "id": "node-8",
+      "type": "backend_js",
+      "position": { "x": 1850, "y": 100 },
+      "data": {
+        "configuration": { "expression": "'Login Exitoso en SauceDemo'", "outputVar": "log" }
+      }
+    },
+    {
+      "id": "node-9",
+      "type": "fail_flow",
+      "position": { "x": 1850, "y": 300 },
+      "data": {
+        "configuration": { "message": "Error de Login: No se redirigió a la vista de inventario." }
+      }
+    },
+    {
+      "id": "node-10",
+      "type": "close_browser",
+      "position": { "x": 2100, "y": 150 },
+      "data": {
+        "configuration": {}
+      }
+    }
+  ],
+  "edges": [
+    { "id": "e1-2", "source": "node-1", "target": "node-2" },
+    { "id": "e2-3", "source": "node-2", "target": "node-3" },
+    { "id": "e3-4", "source": "node-3", "target": "node-4" },
+    { "id": "e4-5", "source": "node-4", "target": "node-5" },
+    { "id": "e5-6", "source": "node-5", "target": "node-6" },
+    { "id": "e6-7", "source": "node-6", "target": "node-7" },
+    { "id": "e7-8", "source": "node-7", "target": "node-8", "sourceHandle": "true" },
+    { "id": "e7-9", "source": "node-7", "target": "node-9", "sourceHandle": "false" },
+    { "id": "e8-10", "source": "node-8", "target": "node-10" }
+  ],
+  "viewport": { "x": 0, "y": 0, "zoom": 0.6 }
+}

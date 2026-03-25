@@ -535,6 +535,17 @@ function Dashboard() {
       return; // Stop here, no processing toast shown.
     }
 
+    if (!currentFlowId) {
+      toast.info(
+        t(
+          "common.save_before_execute",
+          "Debes guardar el flujo antes de ejecutarlo.",
+        ),
+      );
+      setCreationModal({ isOpen: true, type: "flow" });
+      return;
+    }
+
     // 1. Show Loading Toast immediately (Duration 0 = indefinite until dismissed)
     // 1. Show Loading Toast immediately (Duration 0 = indefinite until dismissed)
     const toastId = toast.loading(t("common.processing"));
@@ -671,6 +682,17 @@ function Dashboard() {
   );
 
   const handleSaveFlow = useCallback(() => {
+    if (!currentFlowId) {
+      toast.info(
+        t(
+          "common.save_flow_first",
+          "Por favor, dale un nombre y guarda este nuevo flujo.",
+        ),
+      );
+      setCreationModal({ isOpen: true, type: "flow" });
+      return;
+    }
+
     try {
       setIsSaving(true);
       saveFlow();
@@ -681,7 +703,7 @@ function Dashboard() {
     } finally {
       setIsSaving(false);
     }
-  }, [saveFlow, toast, t]);
+  }, [saveFlow, currentFlowId, toast, t]);
 
   // Export/Import Flow handlers (currently unused)
   /* 
@@ -1473,7 +1495,16 @@ function Dashboard() {
           onSwitchFlow={(f) => switchFlow(f.id)}
           onNewFlow={() => setCreationModal({ isOpen: true, type: "flow" })}
           onRenameFlow={(f, newName) => renameFlow(f.id, newName)}
-          onDeleteFlow={(f) => deleteFlow(f.id)}
+          onDeleteFlow={(f) => {
+            deleteFlow(f.id);
+            if (f.id === currentFlowId) {
+              setNodes([]);
+              setEdges([]);
+              if (!currentProject?.flows || currentProject.flows.length <= 1) {
+                setIsStarterDismissed(false);
+              }
+            }
+          }}
           // Global Props
           version={`v${__APP_VERSION__}`}
           isReadOnly={false}
@@ -1487,13 +1518,25 @@ function Dashboard() {
 
         <StarterOverlay
           isVisible={
-            nodes.length === 0 &&
             !isStarterDismissed &&
-            !!currentFlowId &&
-            currentProject?.flows?.length === 1
+            ((projects && projects.length === 0) ||
+              !currentProject?.flows ||
+              currentProject.flows.length === 0 ||
+              (nodes.length === 0 &&
+                !!currentFlowId &&
+                currentProject?.flows?.length === 1))
           }
-          onLoadTemplate={loadStarterTemplate}
-          onDismiss={() => setIsStarterDismissed(true)}
+          onLoadTemplate={async () => {
+            const projectId = await ensureProjectAndGetId();
+            await loadStarterTemplate(projectId);
+            setIsStarterDismissed(true);
+          }}
+          onDismiss={async () => {
+            setIsStarterDismissed(true);
+            if (projects && projects.length === 0) {
+              await ensureProjectAndGetId();
+            }
+          }}
         />
 
         <CreationModal
@@ -1518,9 +1561,16 @@ function Dashboard() {
               // Standard creation from modal
               if (creationModal.type === "flow") {
                 const projectId = await ensureProjectAndGetId();
-                createFlow(result, projectId);
+                // If there's no active flow, but the canvas has content, we save that content
+                const options =
+                  !currentFlowId && nodes.length > 0 ? { nodes, edges } : {};
+                createFlow(result, projectId, options);
               } else {
-                createProject(result);
+                const options =
+                  !currentProject?.id && nodes.length > 0
+                    ? { nodes, edges }
+                    : {};
+                createProject(result, "", options);
               }
             }
           }}

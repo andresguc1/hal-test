@@ -465,6 +465,18 @@ const actionRoutes = [
         action: 'transformAction',
         category: 'flow_control',
     },
+    {
+        path: 'backend_js',
+        schema: 'backendJsBodySchema',
+        action: 'backendJsAction',
+        category: 'flow_control',
+    },
+    {
+        path: 'fail_flow',
+        schema: 'failFlowBodySchema',
+        action: 'failFlowAction',
+        category: 'flow_control',
+    },
 
     // ========== AI Integration (LLM) ==========
     {

@@ -95,15 +95,8 @@ export class GraphValidator {
             }
         });
 
-        // 4. Evidence Constraint
-        const screenshots = nodes.filter(
-            (n) => n.type === 'take_screenshot' || n.data?.type === 'take_screenshot',
-        );
-        if (screenshots.length === 0) {
-            errors.push(
-                'Flujo incompleto: missing a screenshot node to guarantee execution evidence.',
-            );
-        }
+        // 4. Evidence Constraint - REMOVED PER USER REQUEST
+        // Screenshots are now optional for standard execution.
 
         return {
             valid: errors.length === 0,

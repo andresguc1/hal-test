@@ -6,10 +6,14 @@ class ProjectManager {
   // PROJECTS
   // ========================================
 
-  async createProject(name, description = "") {
+  async createProject(name, description = "", options = {}) {
     try {
       // Backend now creates the project AND the default flow and returns { project, flow }
-      const response = await api.post("/projects", { name, description });
+      const response = await api.post("/projects", {
+        name,
+        description,
+        ...options,
+      });
       // Destructure to ensure we have the right shape, although api.post returns the json directly
       const { project, flow } = response;
 
@@ -111,7 +115,7 @@ class ProjectManager {
 
   async deleteFlow(projectId, flowId) {
     try {
-      await api.delete(`/projects/${projectId}/flows/${flowId}`);
+      return await api.delete(`/projects/${projectId}/flows/${flowId}`);
     } catch (err) {
       logger.error("Failed to delete flow", err, "ProjectManager");
       throw err;

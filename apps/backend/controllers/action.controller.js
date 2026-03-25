@@ -4022,6 +4022,55 @@ export const transformAction = async (req, res) => {
     }
 };
 
+export const backendJsAction = async (req, res) => {
+    try {
+        const { expression, outputVar = 'backendResult' } = req.body;
+        if (!expression) {
+            return res.status(400).json({
+                success: false,
+                message: 'Expression is required',
+            });
+        }
+
+        const result = variableManager.evaluate(expression);
+        const resolvedOutput = outputVar.replace('${', '').replace('}', '');
+        variableManager.set(resolvedOutput, result, 'flow');
+
+        console.log(`[FLOW] Backend JS executed. Saved to ${resolvedOutput}`);
+
+        return res.status(200).json({
+            success: true,
+            message: 'Backend Script executed successfully',
+            data: { result, variable: resolvedOutput },
+        });
+    } catch (error) {
+        console.error('[ERROR] backendJsAction:', error.message);
+        return res.status(500).json({
+            success: false,
+            message: 'Error executing backend JS',
+            error: error.message,
+        });
+    }
+};
+
+export const failFlowAction = async (req, res) => {
+    try {
+        const { message = 'Flow explicitly aborted' } = req.body;
+
+        return res.status(200).json({
+            success: false, // Mark failure to stop runner
+            message: `Flow explicitly failed: ${message}`,
+            error: message,
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: 'Error executing fail index action',
+            error: error.message,
+        });
+    }
+};
+
 // ==========================================================
 // 🤖 AI ACTIONS
 // ==========================================================
