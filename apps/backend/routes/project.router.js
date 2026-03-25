@@ -214,8 +214,9 @@ router.get('/projects', async (req, res) => {
 // Create project
 router.post('/projects', async (req, res) => {
     const transaction = await sequelize.transaction();
+    let transactionCommitted = false;
     try {
-        const { name, description } = req.body;
+        const { name, description, nodes, edges } = req.body;
         let userId = req.user ? req.user.id : null;
 
         // Ensure user exists in local DB if we have a userId (from Supabase/Auth)
@@ -269,10 +270,39 @@ router.post('/projects', async (req, res) => {
             { transaction },
         );
 
+        if (nodes && Array.isArray(nodes) && nodes.length > 0) {
+            await Node.bulkCreate(
+                nodes.map((n) => ({
+                    nodeId: n.id,
+                    type: n.type,
+                    data: n.data,
+                    position: n.position,
+                    flowId: flow.id,
+                })),
+                { transaction },
+            );
+        }
+
+        if (edges && Array.isArray(edges) && edges.length > 0) {
+            await Edge.bulkCreate(
+                edges.map((e) => ({
+                    edgeId: e.id,
+                    source: e.source,
+                    target: e.target,
+                    sourceHandle: e.sourceHandle || null,
+                    targetHandle: e.targetHandle || null,
+                    type: e.type || 'custom',
+                    flowId: flow.id,
+                })),
+                { transaction },
+            );
+        }
+
         // Set active flow
         await project.update({ activeFlowId: flow.id }, { transaction });
 
         await transaction.commit();
+        transactionCommitted = true;
 
         // Return the project with its hierarchy
         const projectResponse = await Project.findByPk(project.id, {
@@ -290,7 +320,7 @@ router.post('/projects', async (req, res) => {
             flow: flow,
         });
     } catch (error) {
-        if (transaction) {
+        if (transaction && !transactionCommitted) {
             await transaction.rollback();
         }
         res.status(400).json({ error: error.message });
@@ -367,6 +397,7 @@ router.delete('/projects/:id', async (req, res) => {
 // Create flow
 router.post('/projects/:projectId/flows', async (req, res) => {
     const transaction = await sequelize.transaction();
+    let transactionCommitted = false;
     try {
         const { projectId } = req.params;
         const { name, type, parentId, nodes, edges } = req.body;
@@ -421,6 +452,7 @@ router.post('/projects/:projectId/flows', async (req, res) => {
         }
 
         await transaction.commit();
+        transactionCommitted = true;
 
         // Return the updated project with all flows
         const updatedProject = await Project.findByPk(projectId, {
@@ -449,7 +481,7 @@ router.post('/projects/:projectId/flows', async (req, res) => {
             project: updatedProject,
         });
     } catch (error) {
-        if (transaction) await transaction.rollback();
+        if (transaction && !transactionCommitted) await transaction.rollback();
         res.status(400).json({ error: error.message });
     }
 });
@@ -556,6 +588,7 @@ router.get('/projects/:projectId/flows/:flowId/export', async (req, res) => {
 // Update flow (syncing nodes/edges)
 router.put('/projects/:projectId/flows/:flowId', async (req, res) => {
     const transaction = await sequelize.transaction();
+    let transactionCommitted = false;
     try {
         const { projectId, flowId } = req.params;
         const { name, viewport, nodes, edges } = req.body;
@@ -622,6 +655,7 @@ router.put('/projects/:projectId/flows/:flowId', async (req, res) => {
         }
 
         await transaction.commit();
+        transactionCommitted = true;
 
         const updatedFlow = await Flow.findByPk(flow.id, {
             include: [
@@ -637,7 +671,7 @@ router.put('/projects/:projectId/flows/:flowId', async (req, res) => {
 
         res.json(mappedFlow);
     } catch (error) {
-        if (transaction) await transaction.rollback();
+        if (transaction && !transactionCommitted) await transaction.rollback();
         console.error(`[ProjectRouter] Error updating flow:`, error);
         res.status(400).json({ error: error.message });
     }

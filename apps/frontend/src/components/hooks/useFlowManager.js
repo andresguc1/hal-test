@@ -331,10 +331,15 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
   useEffect(() => {
     const loadFlowData = async () => {
       if (currentProject && currentFlowId) {
-        try {
-          // If we are just switching back via navigation, maybe we don't need to reload if state is preserved?
-          // But since we are switching 'flows' in the DB now, we MUST reload.
+        // Prevent fetching a deleted flow due to React state batching lag
+        if (
+          currentProject.flows &&
+          !currentProject.flows.some((f) => f.id === currentFlowId)
+        ) {
+          return;
+        }
 
+        try {
           lastLoadedFlowId.current = currentFlowId; // Mark start of load
 
           const flow = await projectManager.getFlow(
@@ -477,10 +482,17 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
 
   // ========================================
   // OPTIMIZACIÓN 4: useCallback con deps correctas
-  // ========================================
   const saveFlow = useCallback(
     async (silent = false) => {
       if (!currentProject || !currentFlowId) return;
+
+      // Prevent saving to a deleted flow
+      if (
+        currentProject.flows &&
+        !currentProject.flows.some((f) => f.id === currentFlowId)
+      ) {
+        return;
+      }
 
       const flowData = {
         nodes: nodesRef.current, // Use Ref for latest state
@@ -2130,54 +2142,55 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
     );
   }, []);
 
-  const loadStarterTemplate = useCallback(async () => {
-    if (!currentProject?.id) return;
+  const loadStarterTemplate = useCallback(
+    async (explicitProjectId = null) => {
+      const pId = explicitProjectId || currentProject?.id;
+      if (!pId) return;
 
-    const toastId = toast.loading(
-      t("common.loading_starter", "Initializing Hal-Test Tour..."),
-    );
-
-    try {
-      // 1. Process Nodes and create sub-flows (Using migration logic)
-      const processedNodes = await migrateNodes(
-        STARTER_TEMPLATE.nodes,
-        currentProject.id,
+      const toastId = toast.loading(
+        t("common.loading_starter", "Initializing Hal-Test Tour..."),
       );
 
-      // 2. Apply to state
-      setNodes(processedNodes);
-      setEdges(
-        STARTER_TEMPLATE.edges.map((e) => ({
-          ...e,
-          type: "custom",
-          animated: true,
-        })),
-      );
+      try {
+        // 1. Process Nodes and create sub-flows (Using migration logic)
+        const processedNodes = await migrateNodes(STARTER_TEMPLATE.nodes, pId);
 
-      setIsStarterTemplate(true);
-      setHasUnsavedChanges(true);
+        // 2. Apply to state
+        setNodes(processedNodes);
+        setEdges(
+          STARTER_TEMPLATE.edges.map((e) => ({
+            ...e,
+            type: "custom",
+            animated: true,
+          })),
+        );
 
-      toast.dismiss(toastId);
-      toast.success(
-        t("common.starter_template_loaded", "Starter Template loaded!"),
-      );
+        setIsStarterTemplate(true);
+        setHasUnsavedChanges(true);
 
-      // 3. Auto-center
-      setTimeout(() => {
-        fitView({
-          duration: 400,
-          padding: { top: 0.1, bottom: 0.1, left: 0.02, right: 0.45 },
-          includeNodes: true,
-          minZoom: 0.1,
-          maxZoom: 0.95,
-        });
-      }, 300);
-    } catch (err) {
-      toast.dismiss(toastId);
-      console.error("[FlowManager] Error loading starter template:", err);
-      toast.error("Failed to initialize tour.");
-    }
-  }, [currentProject, setNodes, setEdges, t, toast, fitView, migrateNodes]);
+        toast.dismiss(toastId);
+        toast.success(
+          t("common.starter_template_loaded", "Starter Template loaded!"),
+        );
+
+        // 3. Auto-center
+        setTimeout(() => {
+          fitView({
+            duration: 400,
+            padding: { top: 0.1, bottom: 0.1, left: 0.02, right: 0.45 },
+            includeNodes: true,
+            minZoom: 0.1,
+            maxZoom: 0.95,
+          });
+        }, 300);
+      } catch (err) {
+        toast.dismiss(toastId);
+        console.error("[FlowManager] Error loading starter template:", err);
+        toast.error("Failed to initialize tour.");
+      }
+    },
+    [currentProject, setNodes, setEdges, t, toast, fitView, migrateNodes],
+  );
 
   const executeFlow = useCallback(
     async (options = {}) => {

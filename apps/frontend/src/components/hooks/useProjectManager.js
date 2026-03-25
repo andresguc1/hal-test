@@ -52,8 +52,8 @@ export function useProjectManager() {
   // ========================================
 
   const createProjectMutation = useMutation({
-    mutationFn: ({ name, description }) =>
-      projectManager.createProject(name, description),
+    mutationFn: ({ name, description, options }) =>
+      projectManager.createProject(name, description, options),
     onSuccess: (response) => {
       const { project, flow } = response; // Destructure new backend response
 
@@ -105,15 +105,17 @@ export function useProjectManager() {
   // ========================================
 
   const createFlowMutation = useMutation({
-    mutationFn: ({ projectId, name }) =>
-      projectManager.createFlow(projectId, name),
+    mutationFn: ({ projectId, name, options }) =>
+      projectManager.createFlow(projectId, name, options),
     onSuccess: (response, { projectId }) => {
-      // Adapt response depending on API (the user mentioned createFlow returns { flow, project } or just flow)
-      // Based on router.js: res.json({ flow: mapFlowData(flow), project: updatedProject })
       const newFlow = response.flow || response;
 
-      // 1. Invalidates to fetch fresh project structure
+      // 1. Instant UI Update with response data
+      if (response && response.project) {
+        queryClient.setQueryData(["project", projectId], response.project);
+      }
       queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] }); // Sync projects list
 
       // 2. Auto-Select
       setCurrentFlowId(newFlow.id);
@@ -123,16 +125,40 @@ export function useProjectManager() {
   const deleteFlowMutation = useMutation({
     mutationFn: ({ projectId, flowId }) =>
       projectManager.deleteFlow(projectId, flowId),
-    onSuccess: (_, { projectId }) => {
+    onSuccess: (response, { projectId, flowId }) => {
+      // 1. Clear or switch active flow if we just deleted it (do this BEFORE query updates to avoid race conditions)
+      setCurrentFlowId((prevFlowId) => {
+        if (prevFlowId === flowId) {
+          return response?.project?.flows?.[0]?.id || null;
+        }
+        return prevFlowId;
+      });
+
+      // 2. Instant UI Update with response data
+      if (response && response.project) {
+        queryClient.setQueryData(["project", projectId], response.project);
+      }
       queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] }); // Sync projects list
     },
   });
 
   const updateFlowMutation = useMutation({
     mutationFn: ({ projectId, flowId, updates }) =>
       projectManager.updateFlow(projectId, flowId, updates),
-    onSuccess: (_, { projectId }) => {
+    onSuccess: (updatedFlow, { projectId, flowId }) => {
+      // 1. Instant UI Update for nested item
+      if (updatedFlow) {
+        queryClient.setQueryData(["project", projectId], (oldProject) => {
+          if (!oldProject) return oldProject;
+          const updatedFlows = (oldProject.flows || []).map((f) =>
+            f.id === flowId ? { ...f, ...updatedFlow } : f,
+          );
+          return { ...oldProject, flows: updatedFlows };
+        });
+      }
       queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] }); // Sync projects list
     },
   });
 
@@ -201,8 +227,8 @@ export function useProjectManager() {
 
     loadProjects: () =>
       queryClient.invalidateQueries({ queryKey: ["projects"] }),
-    createProject: (name, description) =>
-      createProjectMutation.mutateAsync({ name, description }),
+    createProject: (name, description, options = {}) =>
+      createProjectMutation.mutateAsync({ name, description, options }),
     loadProject: (projectId) => {
       setCurrentProjectId(projectId);
       setCurrentFlowId(null); // Reset flow when switching projects
@@ -214,10 +240,11 @@ export function useProjectManager() {
         updates: { name: newName },
       }),
 
-    createFlow: (name, projectId) =>
+    createFlow: (name, projectId, options = {}) =>
       createFlowMutation.mutateAsync({
         projectId: projectId || currentProjectId,
         name,
+        options,
       }),
     switchFlow,
     deleteFlow: (flowId) =>
