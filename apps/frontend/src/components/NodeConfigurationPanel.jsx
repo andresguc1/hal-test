@@ -2878,9 +2878,9 @@ function NodeConfigurationPanel({
     <AnimatePresence>
       {isVisible && (
         <Motion.div
-          initial={{ x: 320, opacity: 0 }}
+          initial={{ x: "100%", opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
-          exit={{ x: 320, opacity: 0 }}
+          exit={{ x: "100%", opacity: 0 }}
           transition={{
             type: "spring",
             damping: 30,
@@ -2890,7 +2890,7 @@ function NodeConfigurationPanel({
           onMouseDown={stopPropagation}
           onClick={stopPropagation}
           className={cn(
-            "w-80 h-full glass-panel z-[var(--z-popover)] flex flex-col !pointer-events-auto !cursor-auto !select-text relative",
+            "w-full sm:w-80 md:w-[400px] h-full glass-panel z-[var(--z-popover)] flex flex-col !pointer-events-auto !cursor-auto !select-text relative shadow-2xl",
           )}
         >
           {/* HEADER */}

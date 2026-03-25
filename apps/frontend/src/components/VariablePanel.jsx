@@ -170,7 +170,7 @@ export default function VariablePanel({ isOpen, onClose }) {
   const globalCount = Object.keys(variables.global).length;
 
   return (
-    <div className="relative h-full flex flex-col shrink-0 w-80 glass-panel z-[var(--z-hud)] border-l border-white/5 bg-[#0f172a]/95 backdrop-blur-xl">
+    <div className="relative h-full flex flex-col shrink-0 w-full sm:w-72 md:w-80 lg:w-96 glass-panel z-[var(--z-hud)] border-l border-white/5 bg-[#0f172a]/95 backdrop-blur-xl shadow-2xl">
       {/* HEADER */}
       <div className="h-14 flex items-center justify-between px-4 border-b border-white/5 shrink-0 bg-[#0f172a]/50">
         <div className="flex items-center gap-3">
