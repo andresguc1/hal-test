@@ -229,13 +229,13 @@ function AppHeader({
       </div>
 
       {/* CENTER - ABSOLUTE (The Fix) */}
-      <div className="hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 w-full max-w-[280px] lg:max-w-lg justify-center pointer-events-none">
+      <div className="hidden sm:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 w-full max-w-[320px] md:max-w-[450px] lg:max-w-lg justify-center pointer-events-none">
         <div className="pointer-events-auto flex items-center gap-3 text-sm select-none whitespace-nowrap">
           {viewStack && viewStack.length > 0 ? (
             <Breadcrumbs viewStack={viewStack} onExit={onExitComponent} />
           ) : selectedProject ? (
             <>
-              <span className="text-[var(--text-primary)] font-semibold tracking-tight truncate max-w-[80px] lg:max-w-[150px]">
+              <span className="text-[var(--text-primary)] font-semibold tracking-tight truncate max-w-[100px] md:max-w-[150px] lg:max-w-[200px]">
                 {selectedProject.name}
               </span>
               <span className="text-[var(--text-secondary)] font-light shrink-0">
@@ -243,7 +243,7 @@ function AppHeader({
               </span>
               <span
                 className={cn(
-                  "transition-colors truncate max-w-[80px] lg:max-w-[200px]",
+                  "transition-colors truncate max-w-[100px] md:max-w-[200px] lg:max-w-[300px]",
                   selectedFlow
                     ? "text-indigo-500"
                     : "text-[var(--text-secondary)] italic",

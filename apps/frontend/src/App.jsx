@@ -1158,7 +1158,7 @@ function Dashboard() {
 
   return (
     <>
-      <div className="relative h-screen w-screen flex flex-col overflow-hidden bg-[var(--bg-canvas)] text-[var(--text-primary)] transition-all duration-400 antialiased font-sans selection:bg-cyan-500/30 m-0 p-0 border-none">
+      <div className="relative h-dvh w-screen flex flex-col overflow-hidden bg-[var(--bg-canvas)] text-[var(--text-primary)] transition-all duration-400 antialiased font-sans selection:bg-cyan-500/30 m-0 p-0 border-none">
         {/* Progress Bar */}
         {executionProgress.total > 0 && (
           <ProgressBar
