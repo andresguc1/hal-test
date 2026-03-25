@@ -2,7 +2,17 @@ import React, { useEffect, useState, useCallback } from "react";
 import { io } from "socket.io-client";
 import { api } from "../utils/api";
 import { cn } from "../lib/utils";
-import { Database, X, RefreshCw, Layers, Globe } from "lucide-react";
+import {
+  Database,
+  X,
+  RefreshCw,
+  Layers,
+  Globe,
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  Check,
+} from "lucide-react";
 
 const getSocketURL = () => {
   const apiUrl = import.meta.env.VITE_API_URL;
@@ -11,6 +21,109 @@ const getSocketURL = () => {
     window.location.hostname === "127.0.0.1"
     ? "http://127.0.0.1:2001"
     : window.location.origin;
+};
+
+// Max characters to display before truncating
+const MAX_DISPLAY_LENGTH = 200;
+
+// Format a value for display, with optional truncation
+const formatValue = (value) => {
+  if (value === null || value === undefined) return "null";
+  if (typeof value === "object") {
+    return JSON.stringify(value, null, 2);
+  }
+  return String(value);
+};
+
+// Single variable card component
+const VariableCard = ({ varKey, value, accentColor = "emerald" }) => {
+  const [expanded, setExpanded] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const formatted = formatValue(value);
+  const isLong = formatted.length > MAX_DISPLAY_LENGTH;
+  const displayText = expanded
+    ? formatted
+    : formatted.slice(0, MAX_DISPLAY_LENGTH);
+
+  const handleCopy = (e) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(`{{${varKey}}}`);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  const accentColors = {
+    emerald: {
+      badge: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+      border: "hover:border-emerald-500/30",
+    },
+    sky: {
+      badge: "text-sky-400 bg-sky-500/10 border-sky-500/20",
+      border: "hover:border-sky-500/30",
+    },
+  };
+
+  const colors = accentColors[accentColor] || accentColors.emerald;
+
+  return (
+    <div
+      className={cn(
+        "group bg-slate-900/40 border border-white/5 rounded-lg p-3 transition-all hover:bg-slate-900/60 shadow-sm",
+        colors.border,
+      )}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <span
+          className={cn(
+            "text-[10px] font-mono font-bold tracking-tight px-1.5 py-0.5 rounded border max-w-[180px] truncate",
+            colors.badge,
+          )}
+          title={varKey}
+        >
+          {varKey}
+        </span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[9px] text-slate-600 uppercase font-bold">
+            {typeof value === "object"
+              ? Array.isArray(value)
+                ? "array"
+                : "object"
+              : typeof value}
+          </span>
+          <button
+            onClick={handleCopy}
+            className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-white/10 text-slate-500 hover:text-slate-300 transition-all"
+            title="Copy variable reference"
+          >
+            {copied ? (
+              <Check size={10} className="text-emerald-400" />
+            ) : (
+              <Copy size={10} />
+            )}
+          </button>
+        </div>
+      </div>
+      <div
+        className={cn(
+          "text-xs text-slate-300 font-mono bg-black/20 p-2.5 rounded border border-white/5 group-hover:border-white/10 transition-colors overflow-hidden",
+          "max-h-40 overflow-y-auto custom-scrollbar whitespace-pre-wrap break-all",
+        )}
+      >
+        {displayText}
+        {isLong && !expanded && <span className="text-slate-600">…</span>}
+      </div>
+      {isLong && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="flex items-center gap-1 mt-1.5 text-[10px] text-slate-500 hover:text-slate-300 transition-colors"
+        >
+          {expanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
+          {expanded ? "Collapse" : `Show all (${formatted.length} chars)`}
+        </button>
+      )}
+    </div>
+  );
 };
 
 export default function VariablePanel({ isOpen, onClose }) {
@@ -23,7 +136,18 @@ export default function VariablePanel({ isOpen, onClose }) {
     try {
       const res = await api.get("/variables");
       if (res.success) {
-        setVariables(res.data);
+        // Deduplicate: remove from flow any key that already exists in global
+        const globalKeys = new Set(Object.keys(res.data.global || {}));
+        const dedupedFlow = {};
+        Object.entries(res.data.flow || {}).forEach(([key, val]) => {
+          if (!globalKeys.has(key)) {
+            dedupedFlow[key] = val;
+          }
+        });
+        setVariables({
+          flow: dedupedFlow,
+          global: res.data.global || {},
+        });
       }
     } catch (error) {
       console.error("Failed to load variables:", error);
@@ -47,7 +171,6 @@ export default function VariablePanel({ isOpen, onClose }) {
 
     socket.on("execution-status", (data) => {
       if (data?.status === "success" || data?.status === "failed") {
-        // Debounce: wait 300ms for variables to be written on backend
         setTimeout(() => loadVariables(), 300);
       }
     });
@@ -61,9 +184,11 @@ export default function VariablePanel({ isOpen, onClose }) {
 
   const currentVars = activeTab === "flow" ? variables.flow : variables.global;
   const varEntries = Object.entries(currentVars);
+  const flowCount = Object.keys(variables.flow).length;
+  const globalCount = Object.keys(variables.global).length;
 
   return (
-    <div className="relative h-full flex flex-col shrink-0 w-80 glass-panel z-[var(--z-hud)] border-l border-white/5 bg-[#0f172a]/95 backdrop-blur-xl">
+    <div className="relative h-full flex flex-col shrink-0 w-full sm:w-72 md:w-80 lg:w-96 glass-panel z-[var(--z-hud)] border-l border-white/5 bg-[#0f172a]/95 backdrop-blur-xl shadow-2xl">
       {/* HEADER */}
       <div className="h-14 flex items-center justify-between px-4 border-b border-white/5 shrink-0 bg-[#0f172a]/50">
         <div className="flex items-center gap-3">
@@ -104,6 +229,18 @@ export default function VariablePanel({ isOpen, onClose }) {
         >
           <Layers size={12} />
           Flow Scope
+          {flowCount > 0 && (
+            <span
+              className={cn(
+                "text-[9px] px-1.5 py-0.5 rounded-full font-bold",
+                activeTab === "flow"
+                  ? "bg-emerald-500/30 text-emerald-300"
+                  : "bg-white/5 text-slate-500",
+              )}
+            >
+              {flowCount}
+            </span>
+          )}
         </button>
         <button
           onClick={() => setActiveTab("global")}
@@ -116,6 +253,18 @@ export default function VariablePanel({ isOpen, onClose }) {
         >
           <Globe size={12} />
           Global Scope
+          {globalCount > 0 && (
+            <span
+              className={cn(
+                "text-[9px] px-1.5 py-0.5 rounded-full font-bold",
+                activeTab === "global"
+                  ? "bg-sky-500/30 text-sky-300"
+                  : "bg-white/5 text-slate-500",
+              )}
+            >
+              {globalCount}
+            </span>
+          )}
         </button>
       </div>
 
@@ -133,32 +282,21 @@ export default function VariablePanel({ isOpen, onClose }) {
             <Database size={32} className="opacity-20" />
             <div className="flex flex-col gap-1">
               <span className="font-bold text-slate-400">Empty Scope</span>
-              <span className="text-[10px] text-slate-600 leading-relaxed uppercase">
+              <span className="text-[10px] text-slate-600 leading-relaxed">
                 No variables captured in {activeTab} scope yet.
+                {activeTab === "flow" && " Run a node to populate this scope."}
               </span>
             </div>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {varEntries.map(([key, value]) => (
-              <div
+              <VariableCard
                 key={key}
-                className="group bg-slate-900/40 border border-white/5 hover:border-emerald-500/30 rounded-lg p-3 transition-all hover:bg-slate-900/60 shadow-sm"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-mono font-bold text-emerald-400 tracking-tight bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
-                    {key}
-                  </span>
-                  <span className="text-[9px] text-slate-600 uppercase font-bold">
-                    {typeof value}
-                  </span>
-                </div>
-                <div className="text-xs text-slate-300 font-mono break-all bg-black/20 p-2 rounded border border-white/5 group-hover:border-white/10 transition-colors">
-                  {typeof value === "object"
-                    ? JSON.stringify(value, null, 2)
-                    : String(value)}
-                </div>
-              </div>
+                varKey={key}
+                value={value}
+                accentColor={activeTab === "flow" ? "emerald" : "sky"}
+              />
             ))}
           </div>
         )}
@@ -170,6 +308,10 @@ export default function VariablePanel({ isOpen, onClose }) {
           Use{" "}
           <span className="text-emerald-500/70 font-bold">
             {"${variableName}"}
+          </span>{" "}
+          or{" "}
+          <span className="text-indigo-400/70 font-bold">
+            {"{{variableName}}"}
           </span>{" "}
           in any node input to reference these values.
         </p>

@@ -198,7 +198,7 @@ function AppHeader({
   return (
     <header
       className={cn(
-        "h-14 w-full shrink-0 z-50 px-8 relative transition-all duration-400",
+        "h-14 w-full shrink-0 z-50 px-3 md:px-6 lg:px-8 relative transition-all duration-400",
         "flex items-center justify-between",
         "bg-[var(--bg-panel)] border-b border-[var(--border-color)] glass-panel rounded-none shadow-sm font-sans",
       )}
@@ -214,7 +214,7 @@ function AppHeader({
       {/* LEFT */}
       <div className="flex items-center gap-3 relative z-20 shrink-0">
         <HalLogo className="w-8 h-8" />
-        <h1 className="text-[var(--text-primary)] font-bold tracking-wider text-xl uppercase font-mono leading-none cursor-default select-none flex items-center gap-1 group">
+        <h1 className="text-[var(--text-primary)] font-bold tracking-wider text-base md:text-xl uppercase font-mono leading-none cursor-default select-none flex items-center gap-1 group">
           <span className="text-indigo-500 group-hover:text-indigo-400 transition-colors">
             HAL
           </span>
@@ -229,13 +229,13 @@ function AppHeader({
       </div>
 
       {/* CENTER - ABSOLUTE (The Fix) */}
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 w-full max-w-lg flex justify-center pointer-events-none">
+      <div className="hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 w-full max-w-[280px] lg:max-w-lg justify-center pointer-events-none">
         <div className="pointer-events-auto flex items-center gap-3 text-sm select-none whitespace-nowrap">
           {viewStack && viewStack.length > 0 ? (
             <Breadcrumbs viewStack={viewStack} onExit={onExitComponent} />
           ) : selectedProject ? (
             <>
-              <span className="text-[var(--text-primary)] font-semibold tracking-tight truncate max-w-[150px]">
+              <span className="text-[var(--text-primary)] font-semibold tracking-tight truncate max-w-[80px] lg:max-w-[150px]">
                 {selectedProject.name}
               </span>
               <span className="text-[var(--text-secondary)] font-light shrink-0">
@@ -243,7 +243,7 @@ function AppHeader({
               </span>
               <span
                 className={cn(
-                  "transition-colors truncate max-w-[200px]",
+                  "transition-colors truncate max-w-[80px] lg:max-w-[200px]",
                   selectedFlow
                     ? "text-indigo-500"
                     : "text-[var(--text-secondary)] italic",
@@ -296,7 +296,7 @@ function AppHeader({
       </div>
 
       {/* RIGHT */}
-      <div className="flex items-center gap-12 relative z-20 shrink-0">
+      <div className="flex items-center gap-1 md:gap-2 lg:gap-3 relative z-20 shrink-0">
         <HeaderButton
           onClick={onToggleToolbox}
           title={isToolboxVisible ? "Hide Toolbox" : "Show Toolbox"}

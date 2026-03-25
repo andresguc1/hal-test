@@ -1353,6 +1353,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
         {
           id: currentFlowId,
           label: currentFlowName,
+          nodeId: componentId, // Track which node triggered the dive
         },
       ]);
 

@@ -2,16 +2,16 @@ import { test } from '@playwright/test';
 
 test('Flujo Generado Hal-Test', async ({ page }) => {
     console.log('🚀 Iniciando ejecución del flujo en javascript...');
-    await test.step('Launch Browser', async () => {
-        // Browser managed by runner
+    await test.step('Enter Username', async () => {
+        await page.fill('#user-name', '{{test_user}}');
     });
 
-    await test.step('Open URL', async () => {
-        await page.goto('https://www.saucedemo.com');
+    await test.step('Enter Password', async () => {
+        await page.fill('#password', '{{test_password}}');
     });
 
-    await test.step('Close Browser', async () => {
-        // Browser managed by runner
+    await test.step('Submit Login', async () => {
+        await page.click('#login-button');
     });
     console.log('✅ Flujo completado con éxito.');
 });

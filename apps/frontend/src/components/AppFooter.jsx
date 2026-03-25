@@ -40,7 +40,7 @@ const FooterButton = ({
       className={cn(baseStyles, variants[variant], className)}
     >
       {Icon && <Icon size={14} />}
-      {label && <span>{label}</span>}
+      {label && <span className="hidden md:inline">{label}</span>}
     </button>
   );
 };
@@ -395,7 +395,7 @@ function AppFooter({
   };
 
   return (
-    <div className="w-full h-14 flex items-center justify-between px-4 glass-panel z-[var(--z-hud)] relative rounded-none border-t border-white/5">
+    <div className="w-full h-14 flex items-center justify-between px-2 md:px-4 glass-panel z-[var(--z-hud)] relative rounded-none border-t border-white/5">
       {/* MENUS POPUP ABOVE - Adjusted position */}
       <AnimatePresence>
         {activeMenu === "project" && (
@@ -439,7 +439,7 @@ function AppFooter({
       </AnimatePresence>
 
       {/* LEFT: Project & Flow Info */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-1 md:gap-4">
         {/* SECTION 1: PROJECT SELECTOR */}
         <div ref={projectButtonRef}>
           <SelectorButton
@@ -470,16 +470,16 @@ function AppFooter({
       <div className="flex-1" />
 
       {/* RIGHT: Actions */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-1 md:gap-3">
         {/* Import / Export */}
         <FooterButton
-          icon={Folder} // Using Folder as Import icon for now
+          icon={Folder}
           label="Import"
           variant="outline"
           onClick={onShowImport}
         />
         <FooterButton
-          icon={Share2} // Requires import
+          icon={Share2}
           label="Export"
           variant="outline"
           onClick={onShowExport}

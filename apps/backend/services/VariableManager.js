@@ -103,17 +103,36 @@ class VariableManager {
     resolve(template) {
         if (typeof template !== 'string') return template;
 
-        return template.replace(/\$\{([^}]+)\}/g, (match, varName) => {
-            const trimmedName = varName.trim();
+        // Match both ${varName} and {{varName}}
+        return template.replace(/(?:\$\{([^}]+)\})|(?:\{\{([^}]+)\}\})/g, (match, p1, p2) => {
+            const varName = (p1 || p2).trim();
 
             // Try flow scope first, then global
-            let value = this.scopes.flow[trimmedName];
+            let value = this.scopes.flow[varName];
             if (value === undefined) {
-                value = this.scopes.global[trimmedName];
+                value = this.scopes.global[varName];
             }
 
             return value !== undefined ? value : match;
         });
+    }
+
+    /**
+     * Recursively resolve variable references in an object or array
+     * @param {any} obj - Object, array, or string to resolve
+     * @returns {any} Resolved object
+     */
+    resolveRecursive(obj) {
+        if (typeof obj === 'string') return this.resolve(obj);
+        if (Array.isArray(obj)) return obj.map((item) => this.resolveRecursive(item));
+        if (obj && typeof obj === 'object') {
+            const newObj = {};
+            for (const [k, v] of Object.entries(obj)) {
+                newObj[k] = this.resolveRecursive(v);
+            }
+            return newObj;
+        }
+        return obj;
     }
 
     /**
