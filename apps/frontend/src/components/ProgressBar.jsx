@@ -29,15 +29,15 @@ export default function ProgressBar({
     <div className="progress-bar-container">
       <div className="progress-bar-header">
         <span className="progress-bar-text">
-          Ejecutando: {current} de {total} nodos
+          Executing: {current} of {total} nodes
         </span>
         {onCancel && (
           <button
             className="progress-bar-cancel"
             onClick={onCancel}
-            aria-label="Cancelar ejecución"
+            aria-label="Cancel execution"
           >
-            Cancelar
+            Cancel
           </button>
         )}
       </div>

@@ -118,12 +118,40 @@ class VariableManager {
     }
 
     /**
+     * Resolve variable references keeping the original type if the template is just a variable
+     * Example: "${count}" -> 10 (number)
+     *
+     * @param {string} template - String with ${var} placeholders
+     * @returns {any} Resolved value or original template
+     */
+    resolveValue(template) {
+        if (typeof template !== 'string') return template;
+
+        // Check if the entire string is exactly one variable reference: ${varName} or {{varName}}
+        const singleVarRegex = /^(?:\$\{([^}]+)\}|\{\{([^}]+)\}\})$/;
+        const match = template.trim().match(singleVarRegex);
+
+        if (match) {
+            const varName = (match[1] || match[2]).trim();
+            // Try flow scope first, then global
+            let value = this.scopes.flow[varName];
+            if (value === undefined) {
+                value = this.scopes.global[varName];
+            }
+            if (value !== undefined) return value;
+        }
+
+        // If not a single variable, or variable not found, use standard string resolution
+        return this.resolve(template);
+    }
+
+    /**
      * Recursively resolve variable references in an object or array
      * @param {any} obj - Object, array, or string to resolve
      * @returns {any} Resolved object
      */
     resolveRecursive(obj) {
-        if (typeof obj === 'string') return this.resolve(obj);
+        if (typeof obj === 'string') return this.resolveValue(obj);
         if (Array.isArray(obj)) return obj.map((item) => this.resolveRecursive(item));
         if (obj && typeof obj === 'object') {
             const newObj = {};
@@ -148,17 +176,37 @@ class VariableManager {
             return expression;
         }
 
-        // First resolve variable references
-        const resolved = this.resolve(expression);
+        // First resolve variable references keeping types if possible
+        const resolved = this.resolveValue(expression);
 
-        // If it's just a variable reference, return the value
+        // If it's already resolved to a non-string value, return it
+        if (typeof resolved !== 'string') {
+            return resolved;
+        }
+
+        // If it's just a variable reference (but was not found/resolved to non-string), return it
         const hasContext = Object.keys(additionalContext).length > 0;
         if (!resolved.includes('${') && resolved === expression && !hasContext) {
-            return resolved;
+            // If it's a boolean/null/undefined literal, evaluate it properly
+            if (resolved === 'true') return true;
+            if (resolved === 'false') return false;
+            if (resolved === 'null') return null;
+            if (resolved === 'undefined') return undefined;
+
+            // If it looks like an expression (has operators, parentheses, or dots), proceed to evaluate
+            // Added (.) for property access like Math.round and () for function calls like Date.now()
+            if (/[><=!&|().]/.test(resolved)) {
+                // proceed to evaluate
+            } else {
+                return resolved;
+            }
         }
 
         // Create safe evaluation context
         const context = {
+            Math,
+            Date,
+            JSON,
             ...this.scopes.flow,
             ...this.scopes.global,
             ...additionalContext,
@@ -206,9 +254,33 @@ class VariableManager {
     evaluateCondition(condition) {
         const { left, operator, right } = condition;
 
-        // Resolve variable interpolations
-        const resolvedLeft = this.resolve(String(left));
-        const resolvedRight = right !== undefined ? this.resolve(String(right)) : undefined;
+        // Resolve variable interpolations with type safety
+        let resolvedLeft = this.resolveValue(left);
+        let resolvedRight = right !== undefined ? this.resolveValue(right) : undefined;
+
+        // Type coercion for comparison: if one is boolean, try to convert other to boolean
+        if (typeof resolvedLeft === 'boolean' && typeof resolvedRight === 'string') {
+            if (resolvedRight === 'true') resolvedRight = true;
+            if (resolvedRight === 'false') resolvedRight = false;
+        } else if (typeof resolvedRight === 'boolean' && typeof resolvedLeft === 'string') {
+            if (resolvedLeft === 'true') resolvedLeft = true;
+            if (resolvedLeft === 'false') resolvedLeft = false;
+        }
+
+        // Type coercion for numbers
+        if (
+            typeof resolvedLeft === 'number' &&
+            typeof resolvedRight === 'string' &&
+            !isNaN(Number(resolvedRight))
+        ) {
+            resolvedRight = Number(resolvedRight);
+        } else if (
+            typeof resolvedRight === 'number' &&
+            typeof resolvedLeft === 'string' &&
+            !isNaN(Number(resolvedLeft))
+        ) {
+            resolvedLeft = Number(resolvedLeft);
+        }
 
         switch (operator) {
             case '===':

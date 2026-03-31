@@ -6,32 +6,32 @@ const allowedActions = ['get', 'set'];
 const allowedContentTypes = ['text', 'html', 'attribute'];
 
 const getSetContentBodySchema = Joi.object({
-    // 1. selector (Requerido)
+    // 1. selector (Required)
     selector: Joi.string().trim().required().messages({
-        'any.required': 'El selector para localizar el elemento es obligatorio.',
-        'string.empty': 'El selector no puede estar vacío.',
+        'any.required': 'Element selector is required.',
+        'string.empty': 'Selector cannot be empty.',
     }),
 
-    // 2. action (Requerido)
+    // 2. action (Required)
     action: Joi.string()
         .valid(...allowedActions)
         .default('get')
         .required()
         .messages({
-            'any.required': 'La acción (get/set) es obligatoria.',
-            'any.only': 'La acción debe ser "get" (obtener) o "set" (asignar).',
+            'any.required': 'Action (get/set) is required.',
+            'any.only': 'Action must be "get" or "set".',
         }),
 
-    // 3. contentType (Opcional) - Tipo de contenido a obtener/establecer
+    // 3. contentType (Optional) - Type of content to get/set
     contentType: Joi.string()
         .valid(...allowedContentTypes)
         .default('text')
         .optional()
         .messages({
-            'any.only': 'El tipo de contenido debe ser "text", "html" o "attribute".',
+            'any.only': 'Content type must be "text", "html", or "attribute".',
         }),
 
-    // 4. attribute (Condicional) - Nombre del atributo específico
+    // 4. attribute (Conditional) - Specific attribute name
     attribute: Joi.string()
         .trim()
         .when('contentType', {
@@ -40,36 +40,35 @@ const getSetContentBodySchema = Joi.object({
             otherwise: Joi.optional(),
         })
         .messages({
-            'any.required':
-                'El nombre del atributo es obligatorio cuando contentType es "attribute".',
-            'string.empty': 'El nombre del atributo no puede estar vacío.',
+            'any.required': 'Attribute name is required when contentType is "attribute".',
+            'string.empty': 'Attribute name cannot be empty.',
         }),
 
-    // 5. value (Requerido CONDICIONAL)
+    // 5. value (Conditional Required)
     value: Joi.string()
         .allow('')
         .when('action', {
-            // Si action es 'set', el campo 'value' es obligatorio (puede ser cadena vacía)
+            // If action is 'set', 'value' field is mandatory (can be empty string)
             is: 'set',
             then: Joi.required(),
-            // Si action es 'get', el campo 'value' es opcional y se ignora.
+            // If action is 'get', 'value' is optional and ignored.
             otherwise: Joi.optional(),
         })
         .messages({
-            'any.required': 'El "value" es obligatorio cuando la acción es "set".',
+            'any.required': '"value" is required when action is "set".',
         }),
 
-    // 6. clearBeforeSet (Opcional)
+    // 6. clearBeforeSet (Optional)
     clearBeforeSet: Joi.boolean().default(true).optional().messages({
-        'boolean.base': 'El campo clearBeforeSet debe ser booleano.',
+        'boolean.base': 'clearBeforeSet field must be boolean.',
     }),
 
-    // 7. browserId (ID del navegador objetivo)
+    // 7. browserId (Target browser ID)
     browserId: Joi.string().allow(null, '').optional().messages({
-        'string.base': 'browserId debe ser una cadena de texto.',
+        'string.base': 'browserId must be a string.',
     }),
 
-    // 8. takeScreenshot (Opcional)
+    // 8. takeScreenshot (Optional)
     takeScreenshot: Joi.boolean().default(false).optional(),
 });
 

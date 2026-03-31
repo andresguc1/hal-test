@@ -1,37 +1,37 @@
-# Directrices de Código Limpio (Clean Code)
+# Clean Code Guidelines
 
-Este documento sirve como guía para mantener un código fuente legible, mantenible y libre de "código basura".
+This document serves as a guide for maintaining a readable, maintainable source code free of "junk code".
 
-## Principios Fundamentales
+## Core Principles
 
-### 1. Hazlo simple o no lo hagas (KISS)
-*   **Evita la sobreingeniería**: Resuelve el problema actual, no problemas futuros hipotéticos.
-*   **YAGNI (You Aren't Gonna Need It)**: No agregues funcionalidades "por si acaso".
-*   **Legibilidad**: El código debe ser fácil de leer para otros (y para ti mismo en 6 meses).
+### 1. Keep It Simple, Stupid (KISS)
+*   **Avoid Overengineering**: Solve the current problem, not hypothetical future ones.
+*   **YAGNI (You Aren't Gonna Need It)**: Do not add features "just in case".
+*   **Readability**: Code should be easy to read for others (and for yourself in 6 months).
 
-### 2. Borra sin miedo el código inútil
-*   **Sin código comentado**: Si no se usa, bórralo. Para recuperar código antiguo, usamos el historial de Control de Versiones (**Git**).
-*   **Elimina variables y funciones muertas**: Evita el desorden que distrae de la lógica real.
+### 2. Delete Useless Code Without Fear
+*   **No Commented-Out Code**: If it's not used, delete it. Use Version Control (**Git**) history to recover old code if needed.
+*   **Remove Dead Variables and Functions**: Avoid clutter that distracts from the actual logic.
 
-### 3. Si necesitas comentarios, rehazlo
-*   **Código autodocumentado**: Usa nombres de variables y funciones descriptivos (ej. `calcularPrecioTotal()` en lugar de `calc()`).
-*   **Evita redundancias**: No comentes lo obvio. El "por qué" es más importante que el "cómo" (si es que es necesario).
+### 3. If You Need Comments, Refactor
+*   **Self-Documenting Code**: Use descriptive variable and function names (e.g., `calculateTotalPrice()` instead of `calc()`).
+*   **Avoid Redundancy**: Don't comment on the obvious. The "why" is more important than the "how" (if a comment is even necessary).
 
-### 4. No mezcles refactors con arreglos
-*   **Separación de intenciones**: Si estás arreglando un bug, enfócate solo en el bug.
-*   **Refactorización aislada**: Mejora la estructura en un paso separado para facilitar las revisiones de código (PRs) y revertir cambios si es necesario.
+### 4. Don't Mix Refactors with Fixes
+*   **Separation of Intent**: If you are fixing a bug, focus only on the bug.
+*   **Isolated Refactoring**: Improve structure in a separate step to facilitate code reviews (PRs) and make reverts easier.
 
-### 5. Si no lo puedes explicar rápido, está mal
-*   **Responsabilidad Única**: Una función o clase debe hacer una sola cosa y hacerla bien.
-*   **Técnica del Pato de Goma**: Si te cuesta explicar la lógica, es señal de que necesita simplificación o división.
+### 5. If You Can't Explain It Quickly, It's Wrong
+*   **Single Responsibility**: A function or class should do one thing and do it well.
+*   **Rubber Duck Technique**: If you struggle to explain the logic, it's a sign that it needs simplification or division.
 
-### 6. Que funcione primero, optimiza después
-*   **Lógica Correcta**: Asegúrate de que el código resuelva el problema de forma fiable.
-*   **Evita la optimización prematura**: No sacrifiques legibilidad por milisegundos de rendimiento a menos que exista un cuello de botella demostrado.
+### 6. Make It Work First, Optimize Later
+*   **Correct Logic**: Ensure the code solves the problem reliably.
+*   **Avoid Premature Optimization**: Don't sacrifice readability for milliseconds of performance unless there is a proven bottleneck.
 
-### 7. Commits pequeños o estás ocultando algo
-*   **Commits Atómicos**: Un commit debe representar un solo cambio lógico.
-*   **Revisiones Fáciles**: Commits pequeños son más rápidos de revisar y reducen la probabilidad de conflictos graves.
+### 7. Keep Commits Small or You're Hiding Something
+*   **Atomic Commits**: A commit should represent a single logical change.
+*   **Easy Reviews**: Small commits are faster to review and reduce the likelihood of serious conflicts.
 
 ---
-*Mantengamos el código limpio y el desarrollo ágil.*
+*Let's keep the code clean and development agile.*

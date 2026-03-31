@@ -34,10 +34,10 @@ export const PROFESSIONAL_COLORS = {
     customClass: "animate-pulse ring-2 ring-sky-400",
   },
   [NODE_STATES.EXECUTING]: {
-    background: "#eff6ff", // blue-50
-    border: "#2563eb", // blue-600
-    text: "#1e40af", // blue-800
-    shadow: "0 0 12px rgba(37,99,235,0.2)",
+    background: "#fffbeb", // amber-50
+    border: "#f59e0b", // amber-600
+    text: "#b45309", // amber-800
+    shadow: "0 0 12px rgba(245,158,11,0.2)",
     animate: true,
     borderWidth: "2px",
   },

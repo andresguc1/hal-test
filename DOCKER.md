@@ -517,7 +517,7 @@ docker compose up -d
 If you encounter issues not covered here:
 1. Check logs: `docker logs hal-test-app`
 2. Search [GitHub Issues](https://github.com/andresguc1/hal-test/issues)
-3. Join [Slack Community](https://join.slack.com/t/haltest-talk/shared_invite/zt-3o7wqlt53-tzFebjhK5TxQtYZbwK~f~g)
+3. Join [Slack Community](https://join.slack.com/t/haltest-talk/shared_invite/zt-3tzii9nxh-vgdIcI5A8bg~GCG8QF6MuA)
 4. Open a new issue with:
    - Docker version: `docker --version`
    - OS/Distribution

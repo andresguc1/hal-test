@@ -143,7 +143,7 @@ const ComponentNode = ({ id: _id, data, selected }) => {
             Contains Logic
           </span>
           <span className="px-1.5 py-0.5 rounded bg-white/10 border border-white/5 font-mono">
-            DOUBLE CLICK
+            OPEN FLOW
           </span>
         </div>
       </div>

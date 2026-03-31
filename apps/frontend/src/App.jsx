@@ -1410,6 +1410,7 @@ function Dashboard() {
               onStartPick={handleStartPicking}
               onCancelPick={handleCancelPicking}
               onUngroup={ungroupNodes}
+              onEnterSubFlow={enterComponent}
             />
           )}
           {/* Global Settings Modal (Unified Hub) */}

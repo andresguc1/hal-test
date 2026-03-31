@@ -78,8 +78,8 @@ export const NODE_LABELS = {
 
   // IA / LLM
   call_llm: "Ask AI (Text)",
-  generate_data: "Generar Datos (IA)",
-  validate_semantic: "Validación Semántica",
+  generate_data: "Generate Data (AI)",
+  validate_semantic: "Semantic Validation",
   extract_dom_context: "Extract DOM Context",
   chain_of_thought: "Chain of Thought (Reasoning)",
   smart_selector: "Smart Selector (Auto-Repair)",
@@ -1310,7 +1310,7 @@ export const NODE_FIELD_CONFIGS = {
       label: "Cookies data (JSON string or empty)",
       type: "textarea",
       placeholder:
-        '[{"name":"auth_token","value":"...","domain":"ejemplo.com","secure":true}]',
+        '[{"name":"auth_token","value":"...","domain":"example.com","secure":true}]',
       defaultValue: "",
       validation: (v, form, t) => {
         if (
@@ -1351,7 +1351,7 @@ export const NODE_FIELD_CONFIGS = {
     },
     {
       name: "key",
-      label: "Clave (key)",
+      label: "Key",
       type: "text",
       placeholder: "userToken",
       defaultValue: "",
@@ -1380,7 +1380,7 @@ export const NODE_FIELD_CONFIGS = {
     },
     {
       name: "key",
-      label: "Clave (header / query param / cookie name)",
+      label: "Key (header / query param / cookie name)",
       type: "text",
       placeholder: "Authorization",
       required: true,
@@ -1816,12 +1816,12 @@ export const NODE_FIELD_CONFIGS = {
       name: "prompt",
       label: "Prompt",
       type: "textarea",
-      placeholder: "La instrucción o pregunta para la IA.",
+      placeholder: "The instruction or question for the AI.",
       required: true,
     },
     {
       name: "variableName",
-      label: "Nombre de Variable",
+      label: "Variable Name",
       type: "text",
       defaultValue: "llmResult",
       placeholder: "llmResult",
@@ -1833,7 +1833,7 @@ export const NODE_FIELD_CONFIGS = {
     },
     {
       name: "temperature",
-      label: "Temperatura",
+      label: "Temperature",
       type: "number",
       defaultValue: 0.7,
       min: 0.0,
@@ -1848,7 +1848,7 @@ export const NODE_FIELD_CONFIGS = {
     },
     {
       name: "maxTokens",
-      label: "Límite de Tokens",
+      label: "Tokens Limit",
       type: "number",
       defaultValue: 1000,
       validation: (v, allParams, t) => {
@@ -1863,18 +1863,18 @@ export const NODE_FIELD_CONFIGS = {
   generate_data: [
     {
       name: "expectedFormat",
-      label: "Formato Esperado",
+      label: "Expected Format",
       type: "select",
       defaultValue: "json",
       options: [
         { value: "json", label: "JSON" },
         { value: "csv", label: "CSV" },
-        { value: "text", label: "Texto" },
+        { value: "text", label: "Text" },
       ],
     },
     {
       name: "variableName",
-      label: "Nombre de Variable",
+      label: "Variable Name",
       type: "text",
       defaultValue: "generatedData",
       placeholder: "generatedData",
@@ -1886,22 +1886,22 @@ export const NODE_FIELD_CONFIGS = {
     },
     {
       name: "description",
-      label: "Descripción de los Datos",
+      label: "Data Description",
       type: "textarea",
       placeholder:
-        "Describe los datos estructurados que deseas generar (ej: 'Genera 5 usuarios con nombre y edad').",
+        "Describe the structured data you want to generate (e.g., 'Generate 5 users with name and age').",
       required: true,
     },
     {
       name: "count",
-      label: "Cantidad de elementos",
+      label: "Count of elements",
       type: "number",
       defaultValue: 1,
       min: 1,
     },
     {
       name: "maxTokens",
-      label: "Límite de Tokens",
+      label: "Tokens Limit",
       type: "number",
       defaultValue: 2048,
       validation: (v, allParams, t) => {
@@ -1916,23 +1916,23 @@ export const NODE_FIELD_CONFIGS = {
   validate_semantic: [
     {
       name: "sourceTextVariable",
-      label: "Variable de Texto Fuente",
+      label: "Source Text Variable",
       type: "text",
-      placeholder: "Variable que contiene el texto a validar.",
+      placeholder: "Variable containing the text to validate.",
       required: true,
     },
     {
       name: "validationPrompt",
-      label: "Criterio de Validación",
+      label: "Validation Criteria",
       type: "textarea",
-      placeholder: "El criterio de validación (ej. ¿Contiene insultos?).",
+      placeholder: "The validation criteria (e.g. Does it contain insults?).",
       required: true,
     },
     {
       name: "expectedAnswer",
-      label: "Respuesta de Éxito",
+      label: "Success Response",
       type: "text",
-      placeholder: "Ej: VÁLIDO o APROBADO",
+      placeholder: "Ex: VALID or APPROVED",
       required: true,
     },
   ],
@@ -1940,24 +1940,24 @@ export const NODE_FIELD_CONFIGS = {
   extract_dom_context: [
     {
       name: "selector",
-      label: "Selector (Opcional)",
+      label: "Selector (Optional)",
       type: "text",
-      placeholder: "Filtra la extracción a un selector específico.",
+      placeholder: "Filters the extraction to a specific selector.",
     },
     {
       name: "extractionType",
-      label: "Tipo de Extracción",
+      label: "Extraction Type",
       type: "select",
       defaultValue: "text",
       options: [
-        { value: "text", label: "Texto Plano (Limpio)" },
-        { value: "html", label: "HTML Completo" },
-        { value: "markdown", label: "Formato Markdown" },
+        { value: "text", label: "Plain Text (Clean)" },
+        { value: "html", label: "Full HTML" },
+        { value: "markdown", label: "Markdown Format" },
       ],
     },
     {
       name: "variableName",
-      label: "Nombre de Variable",
+      label: "Variable Name",
       type: "text",
       defaultValue: "domContext",
       required: true,
@@ -1967,28 +1967,28 @@ export const NODE_FIELD_CONFIGS = {
   chain_of_thought: [
     {
       name: "instruction",
-      label: "Instrucción / Pregunta",
+      label: "Instruction / Question",
       type: "textarea",
-      placeholder: "Describe la tarea compleja que la IA debe razonar.",
+      placeholder: "Describe the complex task the AI should reason about.",
       required: true,
     },
     {
       name: "thoughtVariable",
-      label: "Variable de Pensamiento",
+      label: "Thought Variable",
       type: "text",
       defaultValue: "aiThought",
       required: true,
     },
     {
       name: "answerVariable",
-      label: "Variable de Respuesta Final",
+      label: "Final Answer Variable",
       type: "text",
       defaultValue: "aiAnswer",
       required: true,
     },
     {
       name: "temperature",
-      label: "Temperatura",
+      label: "Temperature",
       type: "number",
       defaultValue: 0.7,
       min: 0,
@@ -2000,21 +2000,21 @@ export const NODE_FIELD_CONFIGS = {
   smart_selector: [
     {
       name: "originalSelector",
-      label: "Selector Fallido",
+      label: "Failed Selector",
       type: "text",
       placeholder: "e.g. .btn-submit",
       required: true,
     },
     {
       name: "intent",
-      label: "Intención de la Acción",
+      label: "Action Intent",
       type: "text",
-      placeholder: "e.g. Click en el botón de login",
+      placeholder: "e.g. Click on the login button",
       required: true,
     },
     {
       name: "variableName",
-      label: "Variable de Sugerencia",
+      label: "Suggestion Variable",
       type: "text",
       defaultValue: "suggestedSelector",
       required: true,
@@ -2102,7 +2102,7 @@ export const NODE_FIELD_CONFIGS = {
     },
     {
       name: "verbose",
-      label: "Verbose (logs detallados)",
+      label: "Verbose (detailed logs)",
       type: "checkbox",
       defaultValue: true,
     },
@@ -2161,7 +2161,7 @@ export const NODE_FIELD_CONFIGS = {
     },
     {
       name: "verbose",
-      label: "Verbose (logs detallados)",
+      label: "Verbose (detailed logs)",
       type: "checkbox",
       defaultValue: true,
     },
@@ -2460,7 +2460,7 @@ export const NODE_FIELD_CONFIGS = {
       name: "selector",
       label: "Selector",
       type: "text",
-      placeholder: '#id-del-boton-principal or //button[text()="OK"]',
+      placeholder: '#main-button-id or //button[text()="OK"]',
       required: true,
       validation: (v, allParams, t) => {
         if (!v || String(v).trim() === "")
@@ -2518,8 +2518,8 @@ export const NODE_FIELD_CONFIGS = {
       type: "select",
       defaultValue: "get",
       options: [
-        { value: "get", label: "Obtener (GET)" },
-        { value: "set", label: "Establecer (SET)" },
+        { value: "get", label: "Get (GET)" },
+        { value: "set", label: "Set (SET)" },
       ],
       required: true,
     },

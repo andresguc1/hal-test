@@ -1,31 +1,31 @@
-# 🎨 Documentación Visual de Haltest
+# 🎨 Haltest Visual Documentation
 
-Haltest transforma la automatización de navegadores en una experiencia visual e interactiva. A diferencia de los frameworks tradicionales donde la lógica está oculta en archivos de código, en Haltest cada acción tiene una representación visual clara, color y estado.
+Haltest transforms browser automation into a visual and interactive experience. Unlike traditional frameworks where logic is hidden in code files, in Haltest every action has a clear visual representation, color, and state.
 
-## 🧱 Categorías de Nodos
+## 🧱 Node Categories
 
-La caja de herramientas de Haltest está organizada por categorías cromáticas para facilitar la identificación rápida de funciones:
+The Haltest toolbox is organized by chromatic categories to facilitate quick identification of functions:
 
-| Categoría | Icono (App) | Color | Descripción | Nodos Principales |
+| Category | Icon (App) | Color | Description | Main Nodes |
 | :--- | :---: | :--- | :--- | :--- |
-| **Browser** | 🌐 | Azul | Gestión del ciclo de vida del navegador y pestañas. | Launch, Open URL, Reload |
-| **DOM / Code** | 💻 | Cyan | Manipulación directa de elementos e inyección de JS. | Find Element, Execute JS |
-| **User Actions** | 🖱️ | Rosa | Simulación de interacciones reales de usuario. | Click, Type, Drag & Drop |
-| **Diagnostics** | 📷 | Rose | Captura de evidencias y depuración. | Screenshot, Save DOM |
-| **AI Models** | 🧠 | Violeta | Integración con LLMs para pruebas inteligentes. | Call LLM, Validate Semantic |
-| **Network** | 🔌 | Esmeralda | Intercepción y control del tráfico de red. | Configure Route, Wait Network |
-| **Context** | 🍪 | Naranja | Gestión de sesiones, cookies y estado. | Manage Session, Auth Persist |
-| **Files & Data** | 📂 | Amarillo | Operaciones con el sistema de archivos. | Read/Write File, Upload |
-| **Logic Engine** | ⚙️ | Púrpura | Control de flujo y estructuras lógicas. | Variables, Conditionals, Loops |
+| **Browser** | 🌐 | Blue | Browser lifecycle and tab management. | Launch, Open URL, Reload |
+| **DOM / Code** | 💻 | Cyan | Direct element manipulation and JS injection. | Find Element, Execute JS |
+| **User Actions** | 🖱️ | Pink | Simulation of real user interactions. | Click, Type, Drag & Drop |
+| **Diagnostics** | 📷 | Rose | Evidence capture and debugging. | Screenshot, Save DOM |
+| **AI Models** | 🧠 | Violet | Integration with LLMs for intelligent testing. | Call LLM, Validate Semantic |
+| **Network** | 🔌 | Emerald | Interception and control of network traffic. | Configure Route, Wait Network |
+| **Context** | 🍪 | Orange | Session, cookie, and state management. | Manage Session, Auth Persist |
+| **Files & Data** | 📂 | Yellow | File system operations. | Read/Write File, Upload |
+| **Logic Engine** | ⚙️ | Purple | Flow control and logical structures. | Variables, Conditionals, Loops |
 
 ---
 
-## 🔌 Intercepción de Red Visual vs. Código (Playwright)
+## 🔌 Visual Network Interception vs. Code (Playwright)
 
-En Playwright "puro", interceptar una petición requiere escribir bloques de código asíncrono que pueden volverse difíciles de leer:
+In "pure" Playwright, intercepting a request requires writing asynchronous blocks of code that can become hard to read:
 
 ```javascript
-// Playwright puro
+// Pure Playwright
 await page.route('**/api/users', route => {
   route.fulfill({
     status: 200,
@@ -34,22 +34,22 @@ await page.route('**/api/users', route => {
 });
 ```
 
-En **Haltest**, este proceso se visualiza mediante los **Nodos Esmeralda (Network Control)**:
-- **Configure Route**: Define visualmente qué URL interceptar y qué respuesta devolver.
-- **Claridad Inmediata**: Ves exactamente qué rutas están siendo mockeadas en tu canvas sin buscar entre cientos de líneas de código.
-- **Estado en Vivo**: Durante la ejecución, verás el nodo iluminarse cuando la petición de red coincida con tu regla.
+In **Haltest**, this process is visualized using **Emerald Nodes (Network Control)**:
+- **Configure Route**: Visually define which URL to intercept and what response to return.
+- **Immediate Clarity**: You see exactly which routes are being mocked on your canvas without searching through hundreds of lines of code.
+- **Live State**: During execution, you will see the node light up when the network request matches your rule.
 
 ---
 
-## ✨ Feedback en Tiempo Real
+## ✨ Real-Time Feedback
 
-Lo que ves en nuestra landing es exactamente lo que obtienes al instalar Haltest localmente.
+What you see in our studio is exactly what you get when installing Haltest locally.
 
-### Nodos Iluminados
-Durante la ejecución de un flujo:
-1. **Pulsación Activa**: El nodo que se está ejecutando actualmente emite un pulso brillante (glow) del color de su categoría.
-2. **Camino de Éxito**: Las conexiones (bordes) se animan siguiendo el flujo de los datos.
-3. **Validación Visual**: Recibes feedback instantáneo si un nodo falla (borde rojo) o tiene éxito (borde verde/brillante), permitiéndote depurar visualmente sin leer logs extensos.
+### Glowing Nodes
+During flow execution:
+1. **Active Pulsation**: The node currently executing emits a bright glow of its category color.
+2. **Success Path**: Connections (edges) animate following the data flow.
+3. **Visual Validation**: You receive instant feedback if a node fails (red border) or succeeds (green/bright border), allowing you to debug visually without reading extensive logs.
 
 > [!TIP]
-> Instala Haltest localmente para ver estas animaciones en acción con `npx haltest@latest`.
+> Install Haltest locally to see these animations in action with `npx haltest@latest`.

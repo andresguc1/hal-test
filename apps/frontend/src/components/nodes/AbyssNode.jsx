@@ -61,6 +61,11 @@ const AbyssNode = ({ id, data, selected, type }) => {
   const showOutputs =
     data.configuration?.showOutputs !== false && !safeConfig.terminal;
 
+  const isConditional = nodeKey === "conditional";
+  const branches = data.configuration?.branches || [
+    { id: "true", label: "True" },
+    { id: "false", label: "False" },
+  ];
   const { color: statusColor, shadow: statusShadow } =
     data.state === "success" || data.state === "error"
       ? {
@@ -83,6 +88,10 @@ const AbyssNode = ({ id, data, selected, type }) => {
       style={{
         borderColor: statusColor || undefined,
         boxShadow: statusShadow || undefined,
+        minHeight:
+          isConditional && showOutputs
+            ? Math.max(80, branches.length * 40)
+            : undefined,
         transition:
           "background-color 0.4s, border-color 0.4s, box-shadow 0.4s, transform 0s", // CRITICAL: transform 0s
       }}
@@ -310,13 +319,36 @@ const AbyssNode = ({ id, data, selected, type }) => {
       )}
 
       {/* OUTPUT HANDLE */}
-      {showOutputs && (
+      {showOutputs && isConditional ? (
+        branches.map((branch, idx) => {
+          const topPct = `${((idx + 1) * 100) / (branches.length + 1)}%`;
+          return (
+            <React.Fragment key={branch.id || idx}>
+              <div
+                className="absolute -right-3 z-10 pointer-events-none flex items-center justify-end"
+                style={{ top: topPct, transform: "translateY(-50%)" }}
+              >
+                <div className="mr-3 bg-[#0f172a]/95 backdrop-blur-xl px-2 py-0.5 rounded text-[9px] font-black tracking-wider text-sky-400 border border-sky-500/30 whitespace-nowrap shadow-lg">
+                  {branch.label || branch.id}
+                </div>
+              </div>
+              <Handle
+                type="source"
+                id={branch.id}
+                position={Position.Right}
+                style={{ top: topPct }}
+                className="!-right-3 !w-3 !h-3 !bg-sky-400 !border-[2px] !border-[#0f172a] transition-all hover:scale-[1.5] shadow-[0_0_10px_rgba(56,189,248,0.5)]"
+              />
+            </React.Fragment>
+          );
+        })
+      ) : showOutputs ? (
         <Handle
           type="source"
           position={Position.Right}
           className="!-right-3 !w-3 !h-3 !bg-white !border-[2px] !border-black/20 transition-colors"
         />
-      )}
+      ) : null}
     </div>
   );
 };

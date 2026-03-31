@@ -7,7 +7,7 @@
   [![Apache License 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
   [![Playwright](https://img.shields.io/badge/Powered%20by-Playwright-green)](https://playwright.dev/)
   [![React Flow](https://img.shields.io/badge/UI-React%20Flow-orange)](https://reactflow.dev/)
-  [![Slack](https://img.shields.io/badge/Community-Slack-purple)](https://join.slack.com/t/haltest-talk/shared_invite/zt-3o7wqlt53-tzFebjhK5TxQtYZbwK~f~g)
+  [![Slack](https://img.shields.io/badge/Community-Slack-purple)](https://join.slack.com/t/haltest-talk/shared_invite/zt-3tzii9nxh-vgdIcI5A8bg~GCG8QF6MuA)
 
   **HAL-TEST** is a modern, visual automation framework that bridges the gap between manual QA and technical automation. Built on top of **Playwright**, it provides a high-performance, node-based interface to build, manage, and scale complex browser workflows without writing a single line of boilerplate code.
 </div>
@@ -36,7 +36,7 @@ Most automation frameworks suffer from **"Framework Fatigue"**: complex YAMLs, b
 * **Node-Based Logic**: 50+ specialized nodes for DOM manipulation, network interception, and AI.
 * **Smart Connections**: Animated execution feedback—watch your test run in real-time.
 * **Category-Specific UI**: Glassmorphic design with 50+ unique icons for instant recognition.
-* **[Viendo la App: Documentación Visual](docs/visual-documentation.md)**: Guía detallada de nodos, colores y feedback en tiempo real.
+* **[Viewing the App: Visual Documentation](docs/visual-documentation.md)**: Detailed guide for nodes, colors, and real-time feedback.
 
 ### 🛠️ Developer-First DX
 * **Powerful CLI**: Integrated terminal tool for CI/CD pipelines (GitHub Actions, Jenkins).
@@ -147,7 +147,7 @@ pnpm run release
 ---
 
 ## 🤝 Community & Support
-Join our Slack: [HAL-TEST Talk](https://join.slack.com/t/haltest-talk/shared_invite/zt-3o7wqlt53-tzFebjhK5TxQtYZbwK~f~g)
+Join our Slack: [HAL-TEST Talk](https://join.slack.com/t/haltest-talk/shared_invite/zt-3tzii9nxh-vgdIcI5A8bg~GCG8QF6MuA)
 
 **Star the Repo**: If this project helps you, give us a ⭐!
 

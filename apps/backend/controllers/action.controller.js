@@ -3882,8 +3882,68 @@ export const variableAction = async (req, res) => {
 
 export const conditionalAction = async (req, res) => {
     try {
-        const { conditions, logic = 'AND' } = req.body;
+        const { conditions, logic = 'AND', branches, fallbackPath = 'false' } = req.body;
 
+        // NEW LOGIC: Dynamic Branches Evaluation
+        if (branches && Array.isArray(branches) && branches.length > 0) {
+            let matchedBranch = null;
+            const trace = {};
+
+            for (const branch of branches) {
+                let branchMatched = false;
+                let branchError = null;
+                let status = 'pending';
+
+                if (matchedBranch) {
+                    status = 'skipped';
+                } else if (!branch.expression || branch.expression.trim() === '') {
+                    // Default branch matches if no previous branch matched
+                    branchMatched = true;
+                    status = 'matched';
+                } else {
+                    try {
+                        const branchResult = variableManager.evaluate(branch.expression);
+                        branchMatched = branchResult === true;
+                        status = branchMatched ? 'matched' : 'not_matched';
+                    } catch (exprError) {
+                        branchError = exprError.message;
+                        status = 'error';
+                        console.warn(
+                            `[WARN] Failed to evaluate branch '${branch.id}': ${exprError.message}`,
+                        );
+                    }
+                }
+
+                trace[branch.id] = {
+                    status,
+                    matched: branchMatched,
+                    error: branchError,
+                    label: branch.label,
+                    expression: branch.expression,
+                };
+
+                if (branchMatched && !matchedBranch) {
+                    matchedBranch = branch;
+                }
+            }
+
+            const finalPath = matchedBranch ? matchedBranch.id : fallbackPath;
+            const finalResult = !!matchedBranch;
+
+            return res.status(200).json({
+                success: true,
+                message: matchedBranch
+                    ? `Condition matched branch: ${matchedBranch.label || matchedBranch.id}`
+                    : `No conditions matched, routing to fallback`,
+                data: {
+                    result: finalResult,
+                    path: finalPath,
+                    trace,
+                },
+            });
+        }
+
+        // LEGACY LOGIC: Single conditions array -> true/false
         const result = variableManager.evaluateConditions(conditions, logic);
 
         return res.status(200).json({

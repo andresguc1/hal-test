@@ -342,7 +342,7 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges }) => {
                       <p className="text-slate-300 text-[10px] leading-relaxed">
                         {t(
                           "dialogs.export.wip_desc",
-                          "El generador de código está siendo actualizado para soportar flujos complejos y localización avanzada. Estará listo en la próxima actualización.",
+                          "The code generator is being updated to support complex flows and advanced localization. It will be ready in the next update.",
                         )}
                       </p>
                     </div>

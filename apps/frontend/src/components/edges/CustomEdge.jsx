@@ -26,8 +26,9 @@ const CustomEdge = ({
   });
 
   // 2. Definir estilos dinámicos
-  const executionState = data?.executionState || "default"; // running, success, error
-  const isRunning = executionState === "running";
+  const executionState = data?.executionState || "default"; // executing, success, error
+  const isRunning =
+    executionState === "running" || executionState === "executing";
   const isSuccess = executionState === "success";
   const isError = executionState === "error" || executionState === "failed";
 
@@ -35,7 +36,7 @@ const CustomEdge = ({
   let strokeColor = "var(--connection-line)";
   if (selected) strokeColor = "url(#edge-gradient)";
   else if (isRunning)
-    strokeColor = "#3b82f6"; // Blue-500
+    strokeColor = "#f59e0b"; // Amber-500 (Processing)
   else if (isSuccess)
     strokeColor = "#22c55e"; // Green-500
   else if (isError) strokeColor = "#ef4444"; // Red-500

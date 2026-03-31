@@ -28,9 +28,7 @@ export default Joi.object({
                 }).description('Right operand (not required for "exists" operator)'),
             }),
         )
-        .min(1)
-        .required()
-        .description('Array of conditions to evaluate'),
+        .description('Array of conditions to evaluate (Legacy)'),
 
     logic: Joi.string()
         .valid('AND', 'OR')
@@ -38,25 +36,44 @@ export default Joi.object({
         .description(
             'Logic operator for multiple conditions: AND (all must be true) or OR (at least one must be true)',
         ),
-}).meta({
-    description: 'Evaluates conditions and determines true/false execution path',
-    examples: [
-        {
-            conditions: [{ left: '${counter}', operator: '>', right: 10 }],
-            logic: 'AND',
-        },
-        {
-            conditions: [
-                { left: '${status}', operator: '===', right: 'success' },
-                { left: '${retries}', operator: '<', right: 3 },
-            ],
-            logic: 'AND',
-        },
-        {
-            conditions: [{ left: '${name}', operator: 'contains', right: 'test' }],
-        },
-        {
-            conditions: [{ left: '${optionalVar}', operator: 'exists' }],
-        },
-    ],
-});
+
+    branches: Joi.array()
+        .items(
+            Joi.object({
+                id: Joi.string().required().description('Route Identifier (e.g. "auth_success")'),
+                label: Joi.string()
+                    .required()
+                    .description('Display label for the UI (e.g. "Is Logged In")'),
+                expression: Joi.string()
+                    .allow('')
+                    .description(
+                        'Javascript expression to evaluate, e.g. "${status} === 200". Leave empty for a Default/Else branch that matches if no previous branch does.',
+                    ),
+            }),
+        )
+        .min(1)
+        .required()
+        .description('Dynamic output branches mapping conditions to route paths'),
+
+    fallbackPath: Joi.string()
+        .default('false')
+        .description('Fallback destination ID to use if no branch matches (default: "false")'),
+})
+    .or('conditions', 'branches')
+    .meta({
+        description:
+            'Evaluates conditions and determines execution path (supports dual or multiple dynamic branches)',
+        examples: [
+            {
+                conditions: [{ left: '${counter}', operator: '>', right: 10 }],
+                logic: 'AND',
+            },
+            {
+                branches: [
+                    { id: 'admin', label: 'Is Admin', expression: '${role} === "admin"' },
+                    { id: 'user', label: 'Is User', expression: '${role} === "user"' },
+                ],
+                fallbackPath: 'false',
+            },
+        ],
+    });

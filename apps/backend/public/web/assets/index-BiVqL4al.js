@@ -17111,7 +17111,7 @@ function Lk() {
                             k.jsx('span', {
                                 onClick: () =>
                                     window.open(
-                                        'https://join.slack.com/t/haltest-talk/shared_invite/zt-3o7wqlt53-tzFebjhK5TxQtYZbwK~f~g',
+                                        'https://join.slack.com/t/haltest-talk/shared_invite/zt-3tzii9nxh-vgdIcI5A8bg~GCG8QF6MuA',
                                         '_blank',
                                     ),
                                 className:
@@ -17300,7 +17300,7 @@ function Lk() {
                                                   whileTap: { scale: 0.95 },
                                                   onClick: () =>
                                                       window.open(
-                                                          'https://join.slack.com/t/haltest-talk/shared_invite/zt-3o7wqlt53-tzFebjhK5TxQtYZbwK~f~g',
+                                                          'https://join.slack.com/t/haltest-talk/shared_invite/zt-3tzii9nxh-vgdIcI5A8bg~GCG8QF6MuA',
                                                           '_blank',
                                                       ),
                                                   className:

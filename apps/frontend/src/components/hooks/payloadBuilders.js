@@ -1,14 +1,14 @@
 // payloadBuilders.js
 
 // ---------------------------------------------
-// Helpers de Validación y Normalización
+// Validation and Normalization Helpers
 // ---------------------------------------------
 
 /**
- * Normaliza y valida un valor booleano.
- * Acepta strings "true"/"false" y "1"/"0".
- * @param {*} value - El valor de entrada.
- * @param {boolean} defaultValue - El valor a retornar si la entrada es inválida.
+ * Normalizes and validates a boolean value.
+ * Accepts strings "true"/"false" and "1"/"0".
+ * @param {*} value - The input value.
+ * @param {boolean} defaultValue - The value to return if the input is invalid.
  * @returns {boolean}
  */
 const asBoolean = (value, defaultValue) => {
@@ -19,12 +19,12 @@ const asBoolean = (value, defaultValue) => {
 };
 
 /**
- * Normaliza y valida un número, asegurando que sea finito.
- * @param {*} value - El valor de entrada.
- * @param {number} defaultValue - El valor a retornar si la entrada no es un número.
- * @param {number} [min=-Infinity] - El valor mínimo permitido.
- * @param {number} [max=Infinity] - El valor máximo permitido.
- * @returns {number | undefined} - Retorna 'defaultValue' (que puede ser undefined) si es inválido.
+ * Normalizes and validates a number, ensuring it is finite.
+ * @param {*} value - The input value.
+ * @param {number} defaultValue - The value to return if the input is not a number.
+ * @param {number} [min=-Infinity] - The minimum allowed value.
+ * @param {number} [max=Infinity] - The maximum allowed value.
+ * @returns {number | undefined} - Returns 'defaultValue' (which can be undefined) if invalid.
  */
 const asNumber = (value, defaultValue, min = -Infinity, max = Infinity) => {
   const num = Number(value);
@@ -33,9 +33,9 @@ const asNumber = (value, defaultValue, min = -Infinity, max = Infinity) => {
 };
 
 /**
- * Normaliza un string, asegurando que no sea null/undefined y esté "trimeado".
- * @param {*} value - El valor de entrada.
- * @param {string} [defaultValue=''] - El valor a retornar si la entrada es null/undefined.
+ * Normalizes a string, ensuring it is not null/undefined and is trimmed.
+ * @param {*} value - The input value.
+ * @param {string} [defaultValue=''] - The value to return if the input is null/undefined.
  * @returns {string}
  */
 const asString = (value, defaultValue = "") => {
@@ -43,15 +43,15 @@ const asString = (value, defaultValue = "") => {
 };
 
 /**
- * Valida o normaliza un objeto JSON desde un string.
- * @param {*} value - El valor de entrada (string u objeto).
- * @param {boolean} [required=false] - Si es true, lanza un error si está vacío o es inválido.
- * @param {string} [fieldName='Campo'] - Nombre del campo para los mensajes de error.
- * @returns {string} - El JSON normalizado como string.
+ * Validates or normalizes a JSON object from a string.
+ * @param {*} value - The input value (string or object).
+ * @param {boolean} [required=false] - If true, throws an error if empty or invalid.
+ * @param {string} [fieldName='Field'] - Field name for error messages.
+ * @returns {string} - The normalized JSON as a string.
  */
-const asJsonString = (value, required = false, fieldName = "Campo") => {
+const asJsonString = (value, required = false, fieldName = "Field") => {
   if (value == null || value === "") {
-    if (required) throw new Error(`${fieldName} es obligatorio.`);
+    if (required) throw new Error(`${fieldName} is required.`);
     return "";
   }
 
@@ -60,23 +60,21 @@ const asJsonString = (value, required = false, fieldName = "Campo") => {
     if (typeof value === "object") {
       jsonString = JSON.stringify(value);
     } else if (typeof value === "string") {
-      // Validar y normalizar
+      // Validate and normalize
       const parsed = JSON.parse(value);
       jsonString = JSON.stringify(parsed);
     } else {
-      throw new Error("Debe ser un objeto o JSON string.");
+      throw new Error("Must be an object or JSON string.");
     }
   } catch (err) {
-    throw new Error(`${fieldName} no es JSON válido: ${err.message}`);
+    throw new Error(`${fieldName} is not valid JSON: ${err.message}`);
   }
 
   return jsonString;
 };
 
-// ELIMINADA la función auxiliar build_history_payload que ya no se utiliza.
-
 // ---------------------------------------------
-// Builders de Payload (Acciones del Navegador)
+// Payload Builders (Browser Actions)
 // ---------------------------------------------
 
 export const launch_browser = (payload) => {
@@ -105,7 +103,7 @@ export const open_url = (payload) => {
   // Validate URL is not empty
   if (!url || url.trim() === "") {
     throw new Error(
-      "La URL es requerida. Por favor, configura la URL en el nodo (ej: https://example.com)",
+      "URL is required. Please configure the URL in the node (e.g., https://example.com)",
     );
   }
 
@@ -114,22 +112,22 @@ export const open_url = (payload) => {
     new URL(url);
   } catch {
     throw new Error(
-      `URL inválida: "${url}". Debe incluir http:// o https:// (ej: https://www.tradingview.com)`,
+      `Invalid URL: "${url}". Must include http:// or https:// (e.g., https://google.com)`,
     );
   }
 
   return {
     url: url,
-    waitUntil: asString(payload?.waitUntil, "domcontentloaded"), // Changed default to match backend
+    waitUntil: asString(payload?.waitUntil, "domcontentloaded"),
     timeout: asNumber(payload?.timeout, 30000),
     browserId: asString(payload?.browserId),
-    takeScreenshot: asBoolean(payload?.takeScreenshot, true), // Flight Recorder
+    takeScreenshot: asBoolean(payload?.takeScreenshot, true),
   };
 };
 
 export const close_browser = (payload) => {
   return {
-    browserId: asString(payload?.browserId), // Puede ser vacío si es el primero
+    browserId: asString(payload?.browserId),
     forceClose: asBoolean(payload?.forceClose, false),
     clearContext: asBoolean(payload?.clearContext, true),
   };
@@ -142,12 +140,12 @@ export const resize_viewport = (payload = {}) => {
   if (!devicePreset || devicePreset === "Custom") {
     const width = asNumber(payload.width);
     if (!Number.isFinite(width) || width <= 0) {
-      throw new Error("Width inválido o faltante para tamaño personalizado.");
+      throw new Error("Invalid or missing Width for custom size.");
     }
 
     const height = asNumber(payload.height);
     if (!Number.isFinite(height) || height <= 0) {
-      throw new Error("Height inválido o faltante para tamaño personalizado.");
+      throw new Error("Invalid or missing Height for custom size.");
     }
 
     return {
@@ -171,27 +169,26 @@ export const manage_tabs = (payload = {}) => {
   const allowed = ["new", "switch", "close", "list", "navigate"];
   const act = allowed.includes(action) ? action : "new";
 
-  // body ya NO incluye browserId -> CORRECCIÓN: SÍ debe incluirlo
   const body = {
     action: act,
     browserId: asString(payload?.browserId),
   };
 
-  // --- Manejo de tabIndex (para switch, close, navigate) ---
+  // --- tabIndex handling (for switch, close, navigate) ---
   if (["switch", "close", "navigate"].includes(act)) {
     const rawIndex = payload.tabIndex;
     const parsed = asNumber(rawIndex);
 
     if (!Number.isFinite(parsed) || parsed < 0 || !Number.isInteger(parsed)) {
       throw new Error(
-        `tabIndex inválido para la acción '${act}'. Debe ser un número entero >= 0.`,
+        `Invalid tabIndex for action '${act}'. Must be an integer >= 0.`,
       );
     }
 
     body.tabIndex = Math.trunc(parsed);
   }
 
-  // --- Manejo de url (para new y navigate) ---
+  // --- url handling (for new and navigate) ---
   const url = asString(payload.url);
 
   if (act === "new") {
@@ -200,7 +197,7 @@ export const manage_tabs = (payload = {}) => {
     }
   } else if (act === "navigate") {
     if (url === "") {
-      throw new Error("Para 'navigate' la propiedad 'url' es obligatoria.");
+      throw new Error("Property 'url' is required for 'navigate'.");
     }
     body.url = url;
   }
@@ -208,22 +205,12 @@ export const manage_tabs = (payload = {}) => {
   return body;
 };
 
-/**
- * Crea el payload para go_back.
- * @param {object} _payload - Datos del formulario (se ignora).
- * @returns {object} Un objeto vacío.
- */
 export const go_back = (_payload = {}) => {
   return {
     browserId: asString(_payload?.browserId),
   };
 };
 
-/**
- * Crea el payload para go_forward.
- * @param {object} payload - Datos del formulario (se ignora).
- * @returns {object} Un objeto vacío.
- */
 export const go_forward = (_payload = {}) => {
   return {
     browserId: asString(_payload?.browserId),
@@ -231,7 +218,7 @@ export const go_forward = (_payload = {}) => {
 };
 
 // ---------------------------------------------
-// Builders (Interacción de Elementos)
+// Builders (Element Interaction)
 // ---------------------------------------------
 
 export const find_element = (payload) => {
@@ -255,14 +242,12 @@ export const get_set_content = (payload) => {
     browserId: asString(payload?.browserId),
   };
 
-  // Incluir attribute si contentType === "attribute"
   if (contentType === "attribute") {
     body.attribute = asString(payload?.attribute);
   }
 
-  // Incluir campos para acción SET
   if (action === "set") {
-    body.value = asString(payload?.value); // El valor puede ser intencionalmente vacío
+    body.value = asString(payload?.value);
     body.clearBeforeSet = asBoolean(payload?.clearBeforeSet, true);
   }
 
@@ -273,26 +258,15 @@ export const get_set_content = (payload) => {
 };
 
 /**
- * Crea el payload para execute_js.
- *
- * ⚠️ ADVERTENCIA DE SEGURIDAD: Esta función permite la ejecución de código JavaScript arbitrario.
- * El script se ejecuta en el contexto del navegador controlado por Playwright.
- * Asegúrate de validar y sanitizar los scripts en el backend antes de ejecutarlos.
- *
- * @param {object} payload - Datos del formulario
- * @param {string} payload.script - Código JavaScript a ejecutar
- * @param {boolean} [payload.returnValue=false] - Si se debe retornar el valor de ejecución
- * @param {string} [payload.variableName='resultado_js'] - Nombre de la variable para almacenar el resultado
- * @param {string} [payload.args] - Argumentos serializados como JSON string
- * @param {string} [payload.browserId] - ID del navegador
- * @returns {object} Payload para el backend
+ * Creates the payload for execute_js.
+ * ⚠️ SECURITY WARNING: Allows execution of arbitrary JavaScript code.
  */
 export const execute_js = (payload) => {
   const returnValue = asBoolean(payload?.returnValue, false);
   const script = asString(payload?.script);
 
   if (!script) {
-    throw new Error("El script de JavaScript es obligatorio.");
+    throw new Error("JavaScript script is required.");
   }
 
   return {
@@ -305,63 +279,46 @@ export const execute_js = (payload) => {
 };
 
 export const click = (payload = {}) => {
-  // const browserId = asString(payload.browserId); // ELIMINADO: Ya no se obtiene
   const selector = asString(payload.selector);
 
-  // ELIMINADA la validación de browserId
-
   if (selector === "") {
-    throw new Error("El 'selector' es obligatorio.");
+    throw new Error("'selector' is required.");
   }
 
-  // Normalizar el botón
   const button = asString(payload.button, "left").toLowerCase();
   const allowedButtons = ["left", "right", "middle"];
   const finalButton = allowedButtons.includes(button) ? button : "left";
 
-  // Construir el payload final
-  // Construir el payload final
-  const body = {
+  return {
     selector: selector,
     button: finalButton,
     browserId: asString(payload?.browserId),
     timeout: asNumber(payload?.timeout, 30000, 1),
-    takeScreenshot: asBoolean(payload?.takeScreenshot, true), // Flight Recorder
+    takeScreenshot: asBoolean(payload?.takeScreenshot, true),
   };
-
-  return body;
 };
 
 export const type_text = (payload = {}) => {
   const selector = asString(payload?.selector);
-
-  // Robust check: try multiple possible keys
   const text = payload?.textToType ?? payload?.value ?? payload?.text;
 
-  // Validaciones estrictas del frontend
   if (selector === "") {
-    throw new Error("El selector es obligatorio.");
+    throw new Error("Selector is required.");
   }
 
-  // Allow empty string if it's explicitly defined, but fail on undefined/null
   if (text === null || text === undefined) {
-    throw new Error("El texto a ingresar es obligatorio.");
+    throw new Error("Text to enter is required.");
   }
 
-  // Construir el payload
-  const body = {
+  return {
     selector: selector,
     text: asString(text, ""),
-    clearBeforeType: asBoolean(payload?.clearBeforeType, true), // Default: true (según Joi)
-    delay: asNumber(payload?.delay, 0, 0), // Default: 0, Mín: 0 (según Joi)
-    timeout: asNumber(payload?.timeout, 30000, 1), // Default: 30000, Mín: 1 (según Joi)
+    clearBeforeType: asBoolean(payload?.clearBeforeType, true),
+    delay: asNumber(payload?.delay, 0, 0),
+    timeout: asNumber(payload?.timeout, 30000, 1),
     browserId: asString(payload?.browserId),
-    takeScreenshot: asBoolean(payload?.takeScreenshot, true), // Flight Recorder
+    takeScreenshot: asBoolean(payload?.takeScreenshot, true),
   };
-
-  // browserId no se incluye, ya que lo maneja el backend. -> CORRECCIÓN: SÍ se incluye
-
-  return body;
 };
 
 export const select_option = (payload) => {
@@ -399,36 +356,25 @@ export const scroll = (payload) => {
 };
 
 /**
- * Crea el payload para upload_file.
- * Valida y sanitiza las rutas de archivos para prevenir path traversal.
- *
- * @param {object} payload - Datos del formulario
- * @param {string} payload.selector - Selector del input file
- * @param {string} payload.files - Rutas de archivos separadas por coma
- * @param {number} [payload.timeout=30000] - Timeout en milisegundos
- * @param {string} [payload.browserId] - ID del navegador
- * @returns {object} Payload validado para el backend
- * @throws {Error} Si las rutas de archivos son inválidas o peligrosas
+ * Creates the payload for upload_file.
+ * Validates and sanitizes file paths to prevent path traversal.
  */
 export const upload_file = (payload) => {
   const filesString = asString(payload?.files);
 
   if (!filesString) {
-    throw new Error("Se requiere al menos una ruta de archivo.");
+    throw new Error("At least one file path is required.");
   }
 
-  // Dividir la cadena por comas y limpiar espacios
   const pathsArray = filesString
     .split(",")
     .map((path) => path.trim())
     .filter((path) => path.length > 0);
 
   if (pathsArray.length === 0) {
-    throw new Error("No se proporcionaron rutas de archivos válidas.");
+    throw new Error("No valid file paths provided.");
   }
 
-  // Validar cada ruta para prevenir path traversal
-  // Nota: La validación completa se hace en el backend, pero hacemos validación básica aquí
   const dangerousPatterns = ["..", "\0", "\\"];
   const invalidPaths = pathsArray.filter((path) =>
     dangerousPatterns.some((pattern) => path.includes(pattern)),
@@ -436,34 +382,28 @@ export const upload_file = (payload) => {
 
   if (invalidPaths.length > 0) {
     throw new Error(
-      `Rutas de archivo inválidas o peligrosas detectadas: ${invalidPaths.join(", ")}`,
+      `Invalid or dangerous file paths detected: ${invalidPaths.join(", ")}`,
     );
   }
 
   return {
     selector: asString(payload?.selector),
-    // El backend espera un string con rutas separadas por coma
     files: pathsArray.join(","),
     timeout: asNumber(payload?.timeout, 30000, 1),
     browserId: asString(payload?.browserId),
   };
 };
 
-/**
- * Crea el payload para drag_drop.
- * @param {object} payload - Datos del formulario
- * @returns {object} Payload para el backend
- */
 export const drag_drop = (payload) => {
   const sourceSelector = asString(payload?.sourceSelector);
   const targetSelector = asString(payload?.targetSelector);
 
   if (!sourceSelector) {
-    throw new Error("El selector de origen (source) es obligatorio.");
+    throw new Error("Source selector is required.");
   }
 
   if (!targetSelector) {
-    throw new Error("El selector de destino (target) es obligatorio.");
+    throw new Error("Target selector is required.");
   }
 
   return {
@@ -477,16 +417,11 @@ export const drag_drop = (payload) => {
   };
 };
 
-/**
- * Crea el payload para hover.
- * @param {object} payload - Datos del formulario
- * @returns {object} Payload para el backend
- */
 export const hover = (payload) => {
   const selector = asString(payload?.selector);
 
   if (!selector) {
-    throw new Error("El selector es obligatorio.");
+    throw new Error("Selector is required.");
   }
 
   return {
@@ -498,7 +433,7 @@ export const hover = (payload) => {
 };
 
 // ---------------------------------------------
-// Builders (Esperas)
+// Builders (Waits)
 // ---------------------------------------------
 
 export const wait_for_element = (payload) => {
@@ -512,24 +447,13 @@ export const wait_for_element = (payload) => {
 };
 
 /**
- * Crea el payload para wait_conditional.
- *
- * ⚠️ ADVERTENCIA: Esta función ejecuta scripts JavaScript en el navegador.
- * El script debe retornar un valor booleano para determinar si la condición se cumple.
- *
- * @param {object} payload - Datos del formulario
- * @param {string} payload.conditionScript - Script JS que retorna boolean
- * @param {number} [payload.polling=500] - Intervalo de polling en ms
- * @param {number} [payload.timeout=20000] - Timeout máximo en ms
- * @param {string} [payload.browserId] - ID del navegador
- * @returns {object} Payload para el backend
- * @throws {Error} Si el script de condición está vacío
+ * Creates the payload for wait_conditional.
  */
 export const wait_conditional = (payload) => {
   const conditionScript = asString(payload?.conditionScript);
 
   if (!conditionScript) {
-    throw new Error("El script de condición es obligatorio.");
+    throw new Error("Condition script is required.");
   }
 
   return {
@@ -565,13 +489,13 @@ export const wait_visible = (payload) => {
 };
 
 // ---------------------------------------------
-// Builders (Manejo de Eventos y Datos)
+// Builders (Event and Data Handling)
 // ---------------------------------------------
 
 export const listen_events = (payload) => {
   return {
     eventType: asString(payload?.eventType, "click"),
-    selector: asString(payload?.selector), // Selector es opcional aquí
+    selector: asString(payload?.selector),
     logToFile: asBoolean(payload?.logToFile, false),
     filePath: asString(payload?.filePath),
     timeout: asNumber(payload?.timeout, 60000, 1),
@@ -614,7 +538,7 @@ export const take_screenshot = (payload) => {
 };
 
 // ---------------------------------------------
-// Builders (Red e Interceptación)
+// Builders (Network and Interception)
 // ---------------------------------------------
 
 export const modify_headers = (payload) => {
@@ -631,12 +555,12 @@ export const modify_headers = (payload) => {
     "OPTIONS",
   ];
   if (!allowedMethods.includes(method)) {
-    method = ""; // Default a "todos" si es inválido
+    method = "";
   }
 
   return {
     urlPattern: asString(payload?.urlPattern),
-    headers: headersString, // Debe ser string JSON
+    headers: headersString,
     method: method,
     timeout: asNumber(payload?.timeout, 0, 0),
     browserId: asString(payload?.browserId),
@@ -658,7 +582,7 @@ export const mock_response = (payload) => {
     method: asString(payload?.method, "GET").toUpperCase(),
     status: asNumber(payload?.status, 200, 100, 599),
     responseBody: asString(payload?.responseBody),
-    headers: asJsonString(payload?.headers, false, '"headers"'), // Opcional
+    headers: asJsonString(payload?.headers, false, '"headers"'),
     timeout: asNumber(payload?.timeout, 120000, 0),
     browserId: asString(payload?.browserId),
   };
@@ -682,7 +606,7 @@ export const clear_all_mocks = (payload) => {
 };
 
 // ---------------------------------------------
-// Builders (Sesión y Almacenamiento)
+// Builders (Session and Storage)
 // ---------------------------------------------
 
 export const manage_cookies = (payload) => {
@@ -693,7 +617,6 @@ export const manage_cookies = (payload) => {
   };
 
   if (action === "set" || action === "delete") {
-    // Asume que cookiesData es un string JSON o un objeto
     body.cookiesData = asJsonString(
       payload?.cookiesData,
       true,
@@ -715,7 +638,7 @@ export const persist_session = (payload) => {
 
   if (action === "save" || action === "load") {
     const path = asString(payload?.path);
-    if (!path) throw new Error('path es obligatorio para "save" o "load".');
+    if (!path) throw new Error('path is required for "save" or "load".');
     body.path = path;
   }
 
@@ -746,7 +669,6 @@ export const manage_storage = (payload) => {
   } else if (action === "get" || action === "remove") {
     body.key = asString(payload?.key);
   }
-  // 'clear' no necesita key/value
 
   return body;
 };
@@ -754,7 +676,7 @@ export const manage_storage = (payload) => {
 export const cleanup_state = (payload) => {
   const browserId = asString(payload?.browserId);
   if (!browserId) {
-    throw new Error("browserId es obligatorio para cleanup_state.");
+    throw new Error("browserId is required for cleanup_state.");
   }
   return {
     browserId: browserId,
@@ -770,7 +692,7 @@ export const cleanup_state = (payload) => {
 export const create_context = (payload) => {
   const browserId = asString(payload?.browserId);
   if (!browserId) {
-    throw new Error("browserId es obligatorio para create_context.");
+    throw new Error("browserId is required for create_context.");
   }
 
   const body = { browserId };
@@ -793,13 +715,13 @@ export const create_context = (payload) => {
 };
 
 // ---------------------------------------------
-// Builders (Manejo de Excepciones y Hooks)
+// Builders (Exception Handling and Hooks)
 // ---------------------------------------------
 
 export const control_exceptions = (payload) => {
   const browserId = asString(payload?.browserId);
   if (!browserId) {
-    throw new Error("browserId es obligatorio para control_exceptions.");
+    throw new Error("browserId is required for control_exceptions.");
   }
 
   const exceptionType = asString(payload?.exceptionType, "elementNotFound");
@@ -817,31 +739,29 @@ export const control_exceptions = (payload) => {
   ];
   if (!allowedExceptionTypes.includes(exceptionType)) {
     throw new Error(
-      `exceptionType inválido. Permitidos: ${allowedExceptionTypes.join(", ")}`,
+      `Invalid exceptionType. Allowed: ${allowedExceptionTypes.join(", ")}`,
     );
   }
 
   const allowedActions = ["ignore", "log", "retry", "abort"];
   if (!allowedActions.includes(action)) {
-    throw new Error(
-      `action inválida. Permitidas: ${allowedActions.join(", ")}`,
-    );
+    throw new Error(`Invalid action. Allowed: ${allowedActions.join(", ")}`);
   }
 
   const body = { browserId, exceptionType, action };
 
   if (action === "retry") {
     if (maxRetries === undefined) {
-      throw new Error('maxRetries debe ser al menos 1 cuando action="retry".');
+      throw new Error('maxRetries must be at least 1 when action="retry".');
     }
     if (!logFile) {
-      throw new Error('logFile es obligatorio cuando action="retry".');
+      throw new Error('logFile is required when action="retry".');
     }
     body.maxRetries = maxRetries;
     body.logFile = logFile;
   } else if (action === "log") {
     if (!logFile) {
-      throw new Error('logFile es obligatorio cuando action="log".');
+      throw new Error('logFile is required when action="log".');
     }
     body.logFile = logFile;
   }
@@ -852,11 +772,11 @@ export const control_exceptions = (payload) => {
 export const handle_hooks = (payload) => {
   const browserId = asString(payload?.browserId);
   if (!browserId) {
-    throw new Error("browserId es obligatorio para handle_hooks.");
+    throw new Error("browserId is required for handle_hooks.");
   }
   const callbackCode = asString(payload?.callbackCode);
   if (!callbackCode) {
-    throw new Error("callbackCode (JS) es obligatorio para handle_hooks.");
+    throw new Error("callbackCode (JS) is required for handle_hooks.");
   }
 
   const body = {
@@ -875,7 +795,7 @@ export const handle_hooks = (payload) => {
 };
 
 // ---------------------------------------------
-// Builders (Archivos y Datos)
+// Builders (Files and Data)
 // ---------------------------------------------
 
 export const handle_downloads = (payload) => {
@@ -883,14 +803,12 @@ export const handle_downloads = (payload) => {
   const browserId = asString(payload?.browserId);
 
   if (!browserId) {
-    throw new Error("browserId es obligatorio para handle_downloads.");
+    throw new Error("browserId is required for handle_downloads.");
   }
 
   const allowedActions = ["wait", "save", "validate", "saveAndValidate"];
   if (!allowedActions.includes(action)) {
-    throw new Error(
-      `action inválida. Permitidas: ${allowedActions.join(", ")}`,
-    );
+    throw new Error(`Invalid action. Allowed: ${allowedActions.join(", ")}`);
   }
 
   const saveActions = ["save", "saveAndValidate"];
@@ -903,12 +821,12 @@ export const handle_downloads = (payload) => {
 
   if (saveActions.includes(action) && !path) {
     throw new Error(
-      'path es obligatorio para acciones "save" o "saveAndValidate".',
+      'path is required for "save" or "saveAndValidate" actions.',
     );
   }
   if (validateActions.includes(action) && !expectedFileName) {
     throw new Error(
-      'expectedFileName es obligatorio para acciones que incluyen "validate".',
+      'expectedFileName is required for actions that include "validate".',
     );
   }
   if (
@@ -916,7 +834,7 @@ export const handle_downloads = (payload) => {
     maxSizeKB !== undefined &&
     minSizeKB > maxSizeKB
   ) {
-    throw new Error("minSizeKB no puede ser mayor que maxSizeKB.");
+    throw new Error("minSizeKB cannot be greater than maxSizeKB.");
   }
 
   const body = {
@@ -938,11 +856,10 @@ export const save_results = (payload) => {
   const path = asString(payload?.path);
   const dataVariableName = asString(payload?.dataVariableName);
 
-  if (!browserId)
-    throw new Error("browserId es obligatorio para save_results.");
-  if (!path) throw new Error("path es obligatorio para save_results.");
+  if (!browserId) throw new Error("browserId is required for save_results.");
+  if (!path) throw new Error("path is required for save_results.");
   if (!dataVariableName)
-    throw new Error("dataVariableName es obligatorio para save_results.");
+    throw new Error("dataVariableName is required for save_results.");
 
   const destinationType = asString(
     payload?.destinationType,
@@ -951,7 +868,7 @@ export const save_results = (payload) => {
   const allowedDestinations = ["json", "csv", "txt"];
   if (!allowedDestinations.includes(destinationType)) {
     throw new Error(
-      `destinationType inválido. Permitidos: ${allowedDestinations.join(", ")}`,
+      `Invalid destinationType. Allowed: ${allowedDestinations.join(", ")}`,
     );
   }
 
@@ -959,7 +876,7 @@ export const save_results = (payload) => {
   const allowedEncodings = ["utf-8", "latin1", "ascii"];
   if (!allowedEncodings.includes(encoding)) {
     throw new Error(
-      `encoding inválido. Permitidos: ${allowedEncodings.join(", ")}`,
+      `Invalid encoding. Allowed: ${allowedEncodings.join(", ")}`,
     );
   }
 
@@ -974,7 +891,7 @@ export const save_results = (payload) => {
 
 export const read_data = (payload) => {
   const path = asString(payload?.path);
-  if (!path) throw new Error("path es obligatorio para read_data.");
+  if (!path) throw new Error("path is required for read_data.");
 
   return {
     browserId: asString(payload?.browserId),
@@ -987,7 +904,7 @@ export const read_data = (payload) => {
 };
 
 // ---------------------------------------------
-// Builders (IA y LLM)
+// Builders (AI and LLM)
 // ---------------------------------------------
 
 export const validate_semantic = (payload) => {
@@ -1055,7 +972,7 @@ export const smart_selector = (payload) => {
 };
 
 // ---------------------------------------------
-// Builders (Integración CI/CD y Pruebas)
+// Builders (CI/CD Integration and Testing)
 // ---------------------------------------------
 
 export const integrate_ci = (payload) => {
@@ -1083,7 +1000,7 @@ export const run_tests = (payload) => {
 };
 
 // ---------------------------------------------
-// Builders (Metadatos y CLI)
+// Builders (Metadata and CLI)
 // ---------------------------------------------
 
 export const cli_params = (payload) => {
@@ -1133,11 +1050,40 @@ export const variable = (payload) => {
 };
 
 export const conditional = (payload) => {
-  return {
-    browserId: asString(payload?.browserId),
-    conditions: asJsonString(payload?.conditions, false, '"conditions"'),
-    logic: asString(payload?.logic, "AND"),
-  };
+  const body = { browserId: asString(payload?.browserId) };
+
+  if (Array.isArray(payload?.branches) && payload.branches.length > 0) {
+    body.branches = payload.branches;
+    body.fallbackPath = asString(payload.fallbackPath, "false");
+  }
+
+  if (
+    typeof payload?.conditions === "string" &&
+    payload.conditions.trim() !== ""
+  ) {
+    try {
+      body.conditions = JSON.parse(payload.conditions);
+    } catch {
+      body.conditions = payload.conditions;
+    }
+    body.logic = asString(payload.logic, "AND");
+  } else if (
+    Array.isArray(payload?.conditions) &&
+    payload.conditions.length > 0
+  ) {
+    body.conditions = payload.conditions;
+    body.logic = asString(payload.logic, "AND");
+  }
+
+  if (!body.branches && !body.conditions) {
+    body.branches = [
+      { id: "true", label: "True", expression: "true" },
+      { id: "false", label: "False", expression: "false" },
+    ];
+    body.fallbackPath = "false";
+  }
+
+  return body;
 };
 
 export const loop = (payload) => {

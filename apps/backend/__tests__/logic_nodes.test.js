@@ -8,6 +8,25 @@ describe('Logic Engine Nodes Validation', () => {
         variableManager.clearAll();
     });
 
+    // 0. VariableManager Core
+    describe('VariableManager Core', () => {
+        it('debe resolver valores manteniendo el tipo original (resolveValue)', () => {
+            variableManager.set('count', 10);
+            variableManager.set('isActive', true);
+
+            expect(variableManager.resolveValue('${count}')).toBe(10);
+            expect(variableManager.resolveValue('${isActive}')).toBe(true);
+            expect(variableManager.resolveValue('Count is ${count}')).toBe('Count is 10');
+        });
+
+        it('debe tener acceso a Math, Date y JSON en las expresiones', () => {
+            variableManager.set('val', 5.7);
+            expect(variableManager.evaluate('Math.round(${val})')).toBe(6);
+            expect(variableManager.evaluate('Date.now()')).toBeTypeOf('number');
+            expect(variableManager.evaluate('JSON.stringify({a:1})')).toBe('{"a":1}');
+        });
+    });
+
     // 1. Variable Node
     describe('Variable Node', () => {
         it('debe establecer una variable (set)', async () => {
@@ -94,6 +113,113 @@ describe('Logic Engine Nodes Validation', () => {
             expect(result.success).toBe(true);
             expect(result.data.result).toBe(false);
             expect(result.data.path).toBe('false');
+        });
+
+        it('debe evaluar múltiples ramas dinámicas y devolver el trace completo', async () => {
+            const req = {
+                body: {
+                    branches: [
+                        { id: 'admin', label: 'Admin', expression: 'false' },
+                        { id: 'user', label: 'User', expression: 'true' },
+                        { id: 'guest', label: 'Guest', expression: 'true' },
+                    ],
+                    fallbackPath: 'error',
+                },
+                t: (k) => k,
+            };
+            let result = null;
+            const res = {
+                status: () => res,
+                json: (d) => {
+                    result = d;
+                    return res;
+                },
+            };
+
+            await actions.conditionalAction(req, res);
+
+            expect(result.success).toBe(true);
+            expect(result.data.path).toBe('user');
+            expect(result.data.trace.admin.status).toBe('not_matched');
+            expect(result.data.trace.user.status).toBe('matched');
+            expect(result.data.trace.guest.status).toBe('skipped');
+        });
+
+        it('debe devolver fallbackPath si ninguna rama dinámica coincide', async () => {
+            const req = {
+                body: {
+                    branches: [{ id: 'admin', label: 'Admin', expression: 'false' }],
+                    fallbackPath: 'guest',
+                },
+                t: (k) => k,
+            };
+            let result = null;
+            const res = {
+                status: () => res,
+                json: (d) => {
+                    result = d;
+                    return res;
+                },
+            };
+
+            await actions.conditionalAction(req, res);
+
+            expect(result.success).toBe(true);
+            expect(result.data.path).toBe('guest');
+        });
+
+        it('debe usar rama con expresión vacía como Default/Else', async () => {
+            const req = {
+                body: {
+                    branches: [
+                        { id: 'admin', label: 'Admin', expression: 'false' },
+                        { id: 'default', label: 'Others', expression: '' },
+                    ],
+                    fallbackPath: 'error',
+                },
+                t: (k) => k,
+            };
+            let result = null;
+            const res = {
+                status: () => res,
+                json: (d) => {
+                    result = d;
+                    return res;
+                },
+            };
+
+            await actions.conditionalAction(req, res);
+
+            expect(result.success).toBe(true);
+            expect(result.data.path).toBe('default');
+            expect(result.data.trace.default.status).toBe('matched');
+        });
+
+        it('debe reportar errores de evaluación en el trace', async () => {
+            const req = {
+                body: {
+                    branches: [
+                        { id: 'buggy', label: 'Buggy', expression: 'undefined_var.something' },
+                    ],
+                    fallbackPath: 'fallback',
+                },
+                t: (k) => k,
+            };
+            let result = null;
+            const res = {
+                status: () => res,
+                json: (d) => {
+                    result = d;
+                    return res;
+                },
+            };
+
+            await actions.conditionalAction(req, res);
+
+            expect(result.success).toBe(true);
+            expect(result.data.path).toBe('fallback');
+            expect(result.data.trace.buggy.status).toBe('error');
+            expect(result.data.trace.buggy.error).toBeDefined();
         });
     });
 

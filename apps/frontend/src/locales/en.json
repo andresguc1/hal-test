@@ -336,7 +336,7 @@
       "envVariables": "Env Variables (JSON)",
       "retryOnFail": "Retries on failure",
       "selectorType": "Selector Type",
-      "visible": "Visible (esperar a visible)",
+      "visible": "Visible (wait for visible)",
       "contentType": "Content Type",
       "attribute": "Attribute Name",
       "clearBeforeSet": "Clear before setting",
