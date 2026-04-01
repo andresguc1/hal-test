@@ -78,7 +78,12 @@
     "copied_to_clipboard": "Copiado(s) {{count}} elemento(s) al portapapeles",
     "pasted_from_clipboard": "Pegado(s) {{count}} elemento(s) del portapapeles",
     "cut_to_clipboard": "Cortado(s) {{count}} elemento(s) al portapapeles",
-    "duplicated_elements": "{{count}} elemento(s) duplicado(s)"
+    "duplicated_elements": "{{count}} elemento(s) duplicado(s)",
+    "default": "Por Defecto",
+    "default_path": "Ruta por Defecto (Default)",
+    "true": "Verdadero",
+    "false": "Falso",
+    "optional_label": "Etiqueta visible (opcional)"
   },
   "api_status": {
     "status": "Estado de API",
@@ -359,7 +364,10 @@
       "request_error": "Error en la petición: {{status}} {{statusText}}. Revisa la consola.",
       "connection_error": "Error al ejecutar la acción. Por favor, verifica la conexión con el servidor.",
       "tab_list_title": "Lista de Pestañas ({{count}})",
-      "active_tab": "Activa"
+      "active_tab": "Activa",
+      "switch_cases": "Casos del Switch",
+      "add_case": "Agregar Caso",
+      "no_cases": "No hay casos definidos. Agrega uno para empezar."
     },
     "hints": {
       "selector_select": "Debe ser el selector del elemento principal <select>, no de las opciones <option>.",
@@ -383,7 +391,9 @@
       "timeout": "Time to listen for errors. 0 for indefinite.",
       "args": "Opcional. Argumentos que se pasarán a la función JavaScript.",
       "returnValue": "Si está activo, el resultado del script se guardará en una variable.",
-      "picker_local_only": "Aviso: El Picker solo funciona en la versión local. En la demo web, por favor ingresa el selector manualmente."
+      "picker_local_only": "Aviso: El Picker solo funciona en la versión local. En la demo web, por favor ingresa el selector manualmente.",
+      "switch_logic": "Define los valores exactos que quieres comparar. Cada caso genera una salida.",
+      "default_path_desc": "Siempre se genera una salida \"default\" para cuando el valor no coincide con ningún caso."
     },
     "screenshots": {
       "title": "Capturas de Pantalla",
@@ -496,6 +506,7 @@
       "path": "Ex: ./screenshots/login.png",
       "variableName": "Ex: html_content",
       "filePath": "Ex: ./logs/errors-test.log",
+      "switch_value": "Valor (ej: admin, true, 200)",
       "urlPattern": "**/api/users/login",
       "statusCode": "200",
       "saveToVariable": "responseVar",

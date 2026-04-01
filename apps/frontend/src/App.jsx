@@ -1516,6 +1516,7 @@ function Dashboard() {
           onSave={handleSaveFlow}
           onShowImport={() => setIsImportDialogOpen(true)}
           onShowExport={() => setIsExportDialogOpen(true)}
+          onResetStates={resetNodeStates}
           hasUnsavedChanges={hasUnsavedChanges}
         />
 

@@ -252,6 +252,7 @@ const startServer = async () => {
     }
 };
 
+// Manual reload for schema update
 startServer();
 
 export default app;

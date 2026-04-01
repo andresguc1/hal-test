@@ -3989,23 +3989,48 @@ export const loopAction = async (req, res) => {
 
 export const switchAction = async (req, res) => {
     try {
-        const { variableName, cases, scope = 'flow' } = req.body;
+        let { variableName, cases, scope = 'flow' } = req.body;
+
+        // Clean name (strip interpolation {{ }} and spaces)
+        if (variableName) {
+            variableName = variableName.replace(/\{\{|\}\}/g, '').trim();
+        }
 
         const value = variableManager.get(variableName, scope);
-        const caseMap = typeof cases === 'string' ? JSON.parse(cases) : cases;
 
-        const targetPath = caseMap[String(value)] || caseMap['default'] || 'default';
+        // Normalize cases to object
+        let caseMap = {};
+        if (typeof cases === 'string') {
+            try {
+                caseMap = JSON.parse(cases);
+            } catch (e) {
+                console.warn('[WARN] Switch cases failed to parse as JSON:', cases);
+                caseMap = {};
+            }
+        } else if (Array.isArray(cases)) {
+            // Support array format for backend flexibility
+            cases.forEach((c) => {
+                caseMap[String(c.value).trim()] = c.id;
+            });
+        } else {
+            caseMap = cases || {};
+        }
+
+        const targetPath = caseMap[String(value).trim()] || caseMap['default'] || 'default';
 
         smartEmitLog(
             `[FLOW] Switch evaluated: ${variableName}=${value} -> Path: ${targetPath}`,
             'info',
+            req.body.nodeId,
         );
 
         return res.status(200).json({
             success: true,
             message: `Switch target: ${targetPath}`,
+            path: targetPath, // 🆕 Root level path for executeGraph compatibility
             data: {
                 value,
+                path: targetPath, // 🆕 data level path
                 targetPath,
                 variableName,
             },
@@ -4786,5 +4811,19 @@ export const validateAICredentials = async (req, res) => {
             success: false,
             message: 'Validation failed: ' + (error.message || 'Unknown error'),
         });
+    }
+};
+
+/**
+ * Force-closes all browsers and cleans up orphaned processes
+ */
+export const resetEnvironment = async (req, res) => {
+    try {
+        console.log('[System] Resetting environment...');
+        await browserService.sanitize();
+        res.json({ success: true, message: 'Environment cleaned and resetted' });
+    } catch (error) {
+        console.error('[Reset Error]', error.message);
+        res.status(500).json({ success: false, message: error.message });
     }
 };

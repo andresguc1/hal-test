@@ -584,16 +584,23 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
         }),
       );
 
-      // NEW: Also update outgoing edges for visual feedback!
+      // NOTE: Removed automatic outgoing edge update to allow Switch/Conditional
+      // nodes to strictly control their animated paths.
+    },
+    [setNodes],
+  );
+
+  const updateEdgeStatus = useCallback(
+    (edgeId, state, animated = false) => {
       setEdges((eds) =>
         eds.map((edge) => {
-          if (edge.source === nodeId) {
+          if (edge.id === edgeId) {
             return {
               ...edge,
-              animated: state === "running" || state === "executing",
+              animated,
               data: {
                 ...edge.data,
-                executionState: state, // "executing", "success", "error"
+                executionState: state,
               },
             };
           }
@@ -601,7 +608,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
         }),
       );
     },
-    [setNodes, setEdges],
+    [setEdges],
   );
 
   const resetNodeStates = useCallback(() => {
@@ -2362,47 +2369,85 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
 
             // B. Enqueue Children
             let nextEdges = graphEdges.filter((e) => e.source === node.id);
-            // FIX: Robust path extraction including .data layer from API responses
+            // FIX: Robust path extraction including .data layer, targetPath from backend
             const path = String(
               result?.path ||
                 result?.result?.path ||
                 result?.result?.data?.path ||
+                result?.result?.data?.targetPath ||
+                result?.result?.targetPath ||
                 "",
             )
               .trim()
               .toLowerCase();
 
+            // 🛡️ Robust type detection: check if it's a known branching node
+            const nodeKey = String(
+              node.data?.subType || node.data?.type || node.type || "",
+            ).toLowerCase();
+            const isBranchingNode =
+              nodeKey === "switch" ||
+              nodeKey === "conditional" ||
+              nodeKey === "backend_js";
+            const hasMultipleOutputs = nextEdges.length > 1;
+
+            // 🔀 HANDLE LOGIC BRANCHING
+            const nextNodes = [];
+
+            // 🛡️ Pre-reset all outgoing edges of this node!
+            nextEdges.forEach((e) => updateEdgeStatus(e.id, "default", false));
+
             if (path && path !== "undefined" && path !== "") {
-              console.log(`[FlowManager] Branching on path: "${path}"`);
+              console.log(
+                `[FlowManager] 🔀 Branching Node "${node.id}" (${nodeKey}) winner path: "${path}"`,
+              );
               let filtered = nextEdges.filter(
                 (e) => String(e.sourceHandle || "").toLowerCase() === path,
               );
 
-              // Fallback for legacy (Single output nodes with no handle)
-              if (
-                filtered.length === 0 &&
-                nextEdges.length === 1 &&
-                !nextEdges[0].sourceHandle
-              ) {
-                filtered = nextEdges;
+              // 🛡️ Final strict enforcement for branching nodes or nodes with multiple outputs
+              if (isBranchingNode || hasMultipleOutputs) {
+                if (filtered.length === 0 && nextEdges.length > 0) {
+                  console.warn(
+                    `[FlowManager] 🛑 No matching edge for path "${path}" on node "${node.id}". Stopping branch.`,
+                  );
+                  updateNodeState(node.id, NODE_STATES.ERROR, {
+                    message: `Ruta no encontrada: ${path}`,
+                  });
+                  nextEdges = [];
+                } else {
+                  nextEdges = filtered;
+                }
+              } else if (filtered.length > 0) {
+                // For non-branching nodes, follow the path if it exists
+                nextEdges = filtered;
               }
-
-              // CRITICAL: Removed the "Fallback to all" which caused both branches to run.
-              // If a path IS returned but no edge matches, we stop this branch.
-              if (filtered.length === 0 && nextEdges.length > 0) {
-                console.warn(
-                  `[FlowManager] Path "${path}" matched nothing on canvas. No edges followed.`,
-                );
-              }
-              nextEdges = filtered;
+            } else if (
+              (isBranchingNode || hasMultipleOutputs) &&
+              nextEdges.length > 0
+            ) {
+              // 🛡️ SAFETY: If we should branch but have no path, STOP instead of following all.
+              console.warn(
+                `[FlowManager] ⚠️ Node "${node.id}" requires branching but NO path was resolved. Stopping branch to prevent multi-run.`,
+              );
+              updateNodeState(node.id, NODE_STATES.ERROR, {
+                message: "No se pudo resolver la ruta de ramificación",
+              });
+              nextEdges = [];
             }
 
-            const nextNodes = nextEdges
-              .map((e) => graphNodes.find((n) => n.id === e.target))
-              .filter(Boolean);
+            // 🌟 HIGHLIGHT ONLY THE WINNER EDGES
+            nextEdges.forEach((e) =>
+              updateEdgeStatus(e.id, NODE_STATES.SUCCESS, true),
+            );
+
+            nextEdges.forEach((e) => {
+              const targetNode = graphNodes.find((n) => n.id === e.target);
+              if (targetNode) nextNodes.push(targetNode);
+            });
 
             console.log(
-              `[FlowManager] Enqueuing ${nextNodes.length} children for "${node.id}"`,
+              `[FlowManager] -> Enqueuing ${nextNodes.length} children for "${node.id}"`,
             );
             queue.push(...nextNodes);
           } catch (err) {
@@ -2472,6 +2517,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
       resetNodeStates,
       activeBrowserId, // Added dependency
       updateNodeState,
+      updateEdgeStatus,
       validateFlowStructure,
       t,
       toast,

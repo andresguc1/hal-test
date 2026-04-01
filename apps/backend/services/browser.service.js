@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto';
 import { DEVICE_PRESETS } from '../utils/constants.js';
 import { STORAGE_RUNS_DIR } from '../config/paths.js';
 
-const MAX_BROWSERS = 3;
+const MAX_BROWSERS = 5;
 
 class BrowserManager {
     constructor() {
@@ -12,19 +12,16 @@ class BrowserManager {
 
         // --- Idle Garbage Collector ---
         // Sweeps every 5 minutes to close sessions idle for > 15 minutes
-        this.idleInterval = setInterval(
-            () => {
-                const IDLE_TIMEOUT = 10 * 60 * 1000; // 10 minutes fallback for slow PCs
-                const now = Date.now();
-                for (const [id, lastTime] of this.lastAccessed.entries()) {
-                    if (now - lastTime > IDLE_TIMEOUT) {
-                        console.log(`[GC] Browser ${id} closed due to idle timeout`);
-                        this.delete(id).catch(() => {});
-                    }
+        this.idleInterval = setInterval(() => {
+            const IDLE_TIMEOUT = 5 * 60 * 1000; // 5 minutes (reduced for resilience)
+            const now = Date.now();
+            for (const [id, lastTime] of this.lastAccessed.entries()) {
+                if (now - lastTime > IDLE_TIMEOUT) {
+                    console.log(`[GC] Browser ${id} closed due to idle timeout`);
+                    this.delete(id).catch(() => {});
                 }
-            },
-            3 * 1000 * 60,
-        ); // 3 minutes sweep
+            }
+        }, 60 * 1000); // 1 minute sweep (faster)
     }
 
     /**
@@ -154,7 +151,7 @@ class BrowserManager {
                 '--disable-background-timer-throttling',
                 '--disable-backgrounding-occluded-windows',
                 '--disable-renderer-backgrounding',
-                '--js-flags="--max-old-space-size=4096"',
+                '--js-flags="--max-old-space-size=2048"',
                 '--disable-webgl',
                 '--disable-webgl2',
                 '--disable-3d-apis',
@@ -266,6 +263,17 @@ class BrowserManager {
 
     has(id) {
         return this.browsers.has(id);
+    }
+
+    async sanitize() {
+        console.log('[BrowserService] 🧹 Manual sanitization requested...');
+        const ids = Array.from(this.browsers.keys());
+        for (const id of ids) {
+            await this.delete(id).catch(() => {});
+        }
+
+        // Cleanup only internal app instances
+        console.log('[BrowserService] 🧹 Internal session cleanup complete.');
     }
 
     keys() {

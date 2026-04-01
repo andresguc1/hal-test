@@ -30,7 +30,8 @@ router.post('/inspector/stop', stopInspectorAction);
 router.post('/inspector/launch-remote', launchRemoteAction);
 router.get('/inspector/sessions', getActiveSessionsAction);
 router.get('/variables', actions.getVariables);
-console.log('✅ Inspector routes registered: /start, /stop');
+router.post('/inspector/reset', actions.resetEnvironment);
+console.log('✅ Inspector routes registered: /start, /stop, /reset');
 
 router.use('/runs', runRouter);
 

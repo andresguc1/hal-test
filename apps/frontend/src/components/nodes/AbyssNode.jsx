@@ -62,10 +62,20 @@ const AbyssNode = ({ id, data, selected, type }) => {
     data.configuration?.showOutputs !== false && !safeConfig.terminal;
 
   const isConditional = nodeKey === "conditional";
-  const branches = data.configuration?.branches || [
-    { id: "true", label: "True" },
-    { id: "false", label: "False" },
-  ];
+  const isSwitch = nodeKey === "switch";
+
+  const branches = isConditional
+    ? data.configuration?.branches || [
+        { id: "true", label: t("common.true", "True") },
+        { id: "false", label: t("common.false", "False") },
+      ]
+    : isSwitch
+      ? [
+          ...(data.configuration?.cases || []),
+          { id: "default", label: t("common.default", "Default") },
+        ]
+      : [];
+
   const { color: statusColor, shadow: statusShadow } =
     data.state === "success" || data.state === "error"
       ? {
@@ -319,27 +329,39 @@ const AbyssNode = ({ id, data, selected, type }) => {
       )}
 
       {/* OUTPUT HANDLE */}
-      {showOutputs && isConditional ? (
+      {showOutputs && (isConditional || isSwitch) ? (
         branches.map((branch, idx) => {
           const topPct = `${((idx + 1) * 100) / (branches.length + 1)}%`;
           return (
-            <React.Fragment key={branch.id || idx}>
-              <div
-                className="absolute -right-3 z-10 pointer-events-none flex items-center justify-end"
-                style={{ top: topPct, transform: "translateY(-50%)" }}
-              >
-                <div className="mr-3 bg-[#0f172a]/95 backdrop-blur-xl px-2 py-0.5 rounded text-[9px] font-black tracking-wider text-sky-400 border border-sky-500/30 whitespace-nowrap shadow-lg">
-                  {branch.label || branch.id}
+            <div
+              key={branch.id || idx}
+              className="absolute -right-3 w-3 h-3 group z-20"
+              style={{ top: topPct, transform: "translateY(-50%)" }}
+            >
+              {showDetails && (
+                <div className="absolute left-full ml-4 pointer-events-none flex items-center justify-start opacity-0 group-hover:opacity-100 transition-all duration-200 transform translate-x-2 group-hover:translate-x-0">
+                  <div className="bg-[#0f172a]/95 backdrop-blur-xl px-2 py-0.5 rounded text-[9px] font-black tracking-wider text-sky-400 border border-sky-500/30 whitespace-nowrap shadow-lg uppercase">
+                    {branch.label || branch.value || branch.id}
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* Visual port dot */}
+              <div className="w-3 h-3 bg-sky-400 border-[2px] border-[#0f172a] rounded-full transition-all group-hover:scale-[1.5] shadow-[0_0_10px_rgba(56,189,248,0.5)]" />
+
+              {/* Functional Handle (Invisible but large hit area) */}
               <Handle
                 type="source"
                 id={branch.id}
                 position={Position.Right}
-                style={{ top: topPct }}
-                className="!-right-3 !w-3 !h-3 !bg-sky-400 !border-[2px] !border-[#0f172a] transition-all hover:scale-[1.5] shadow-[0_0_10px_rgba(56,189,248,0.5)]"
+                style={{
+                  top: "50%",
+                  right: "50%",
+                  transform: "translate(50%, -50%)",
+                }}
+                className="!absolute !w-10 !h-10 !bg-transparent !border-none !cursor-pointer z-50"
               />
-            </React.Fragment>
+            </div>
           );
         })
       ) : showOutputs ? (

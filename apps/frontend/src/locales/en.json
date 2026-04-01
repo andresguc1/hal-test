@@ -79,7 +79,12 @@
     "copied_to_clipboard": "Copied {{count}} element(s) to clipboard",
     "pasted_from_clipboard": "Pasted {{count}} element(s) from clipboard",
     "cut_to_clipboard": "Cut {{count}} element(s) to clipboard",
-    "duplicated_elements": "{{count}} element(s) duplicated"
+    "duplicated_elements": "{{count}} element(s) duplicated",
+    "default": "Default",
+    "default_path": "Default Path",
+    "true": "True",
+    "false": "False",
+    "optional_label": "Optional label"
   },
   "api_status": {
     "status": "API Status",
@@ -360,7 +365,10 @@
       "request_error": "Request error: {{status}} {{statusText}}. Check console.",
       "connection_error": "Error executing action. Please check the server connection.",
       "tab_list_title": "Tab List ({{count}})",
-      "active_tab": "Active"
+      "active_tab": "Active",
+      "switch_cases": "Switch Cases",
+      "add_case": "Add Case",
+      "no_cases": "No cases defined. Add one to start."
     },
     "hints": {
       "selector_select": "Must be the selector of the main <select> element, not the <option> elements.",
@@ -384,7 +392,9 @@
       "timeout": "Time to listen for errors. 0 for indefinite.",
       "args": "Optional. Arguments that will be passed to the JavaScript function.",
       "returnValue": "If active, the script result will be saved to a variable.",
-      "picker_local_only": "Warning: The Picker only works in the local version. In the web demo, please enter the selector manually."
+      "picker_local_only": "Warning: The Picker only works in the local version. In the web demo, please enter the selector manually.",
+      "switch_logic": "Define the exact values you want to compare. Each case generates an output.",
+      "default_path_desc": "A 'default' output is always generated for when the value does not match any case."
     },
     "screenshots": {
       "title": "Screenshots",
@@ -497,6 +507,7 @@
       "path": "Ex: ./screenshots/login.png",
       "variableName": "Ex: html_content",
       "filePath": "Ex: ./logs/errors-test.log",
+      "switch_value": "Value (e.g., admin, true, 200)",
       "urlPattern": "**/api/users/login",
       "statusCode": "200",
       "saveToVariable": "responseVar",

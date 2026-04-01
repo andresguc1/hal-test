@@ -12,6 +12,7 @@ import {
   Trash2,
   X,
   Box,
+  RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion as Motion, AnimatePresence } from "motion/react";
@@ -341,6 +342,7 @@ function AppFooter({
   onShowImport,
   onShowExport,
   hasUnsavedChanges,
+  _onResetEnvironment,
   version,
 }) {
   const [activeMenu, setActiveMenu] = useState(null); // 'project' | 'flow' | null

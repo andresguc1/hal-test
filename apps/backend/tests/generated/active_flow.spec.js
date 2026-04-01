@@ -10,11 +10,23 @@ test('Flujo Generado Hal-Test', async ({ page }) => {
         await page.goto('https://www.saucedemo.com');
     });
 
+    await test.step('Set Username', async () => {
+        console.log('⚠️ Acción no implementada o pendiente: variable');
+    });
+
+    await test.step('switch', async () => {
+        console.log('⚠️ Acción no implementada o pendiente: switch');
+    });
+
     await test.step('Set Password', async () => {
         console.log('⚠️ Acción no implementada o pendiente: variable');
     });
 
-    await test.step('Set Username', async () => {
+    await test.step('Execute JavaScript', async () => {
+        console.log('⚠️ Acción no implementada o pendiente: execute_js');
+    });
+
+    await test.step('Set Password', async () => {
         console.log('⚠️ Acción no implementada o pendiente: variable');
     });
 
@@ -30,20 +42,12 @@ test('Flujo Generado Hal-Test', async ({ page }) => {
         await page.click('#login-button');
     });
 
-    await test.step('conditional', async () => {
-        console.log('⚠️ Acción no implementada o pendiente: conditional');
-    });
-
-    await test.step('Resize Viewport', async () => {
-        await page.setViewportSize({ width: 1280, height: 720 });
-    });
-
     await test.step('Reload Page', async () => {
         await page.reload();
     });
 
     await test.step('Evidence', async () => {
-        await page.screenshot({ path: 'screenshot_10.png' });
+        await page.screenshot({ path: 'screenshot_11.png' });
     });
 
     await test.step('Finish Tour', async () => {

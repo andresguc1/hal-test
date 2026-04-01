@@ -225,7 +225,7 @@ describe('Logic Engine Nodes Validation', () => {
 
     // 3. Switch Node
     describe('Switch Node', () => {
-        it('debe devolver la ruta correcta para un caso coincidente', async () => {
+        it('debe devolver la ruta correcta para un caso coincidente (objeto)', async () => {
             variableManager.set('role', 'admin');
             const req = {
                 body: {
@@ -246,7 +246,62 @@ describe('Logic Engine Nodes Validation', () => {
             await actions.switchAction(req, res);
 
             expect(result.success).toBe(true);
+            expect(result.path).toBe('admin_view');
+            expect(result.data.path).toBe('admin_view');
             expect(result.data.targetPath).toBe('admin_view');
+        });
+
+        it('debe devolver la ruta correcta para un caso coincidente (array)', async () => {
+            variableManager.set('status_code', 200);
+            const req = {
+                body: {
+                    variableName: 'status_code',
+                    cases: [
+                        { value: '200', id: 'success_path' },
+                        { value: '404', id: 'not_found_path' },
+                    ],
+                },
+                t: (k) => k,
+            };
+            let result = null;
+            const res = {
+                status: () => res,
+                json: (d) => {
+                    result = d;
+                    return res;
+                },
+            };
+
+            await actions.switchAction(req, res);
+
+            expect(result.success).toBe(true);
+            expect(result.path).toBe('success_path');
+            expect(result.data.path).toBe('success_path');
+            expect(result.data.targetPath).toBe('success_path');
+        });
+
+        it('debe devolver "default" si no hay coincidencia y existe default en el mapa', async () => {
+            variableManager.set('status_code', 500);
+            const req = {
+                body: {
+                    variableName: 'status_code',
+                    cases: { 200: 'ok', default: 'fallback_path' },
+                },
+                t: (k) => k,
+            };
+            let result = null;
+            const res = {
+                status: () => res,
+                json: (d) => {
+                    result = d;
+                    return res;
+                },
+            };
+
+            await actions.switchAction(req, res);
+
+            expect(result.success).toBe(true);
+            expect(result.data.targetPath).toBe('fallback_path');
         });
     });
 

@@ -21,6 +21,8 @@ import {
   Zap,
   GitBranch,
   XCircle,
+  Plus,
+  CornerDownRight,
 } from "lucide-react";
 import { useToast } from "@/hooks/useToast";
 import { useTranslation } from "react-i18next";
@@ -174,6 +176,128 @@ const ConditionalBranchesEditor = ({ value, onChange, variables }) => {
         </span>
         {t("nodes.config.add_branch", "Agregar Nueva Regla")}
       </button>
+    </div>
+  );
+};
+
+const SwitchCasesEditor = ({ value, onChange, _variables }) => {
+  const { t } = useTranslation();
+  const cases = Array.isArray(value) ? value : [];
+
+  const updateCase = (index, field, val) => {
+    const newCases = [...cases];
+    newCases[index] = { ...newCases[index], [field]: val };
+    onChange(newCases);
+  };
+
+  const addCase = () => {
+    const id = `case_${Date.now()}`;
+    onChange([...cases, { id, value: "", label: "" }]);
+  };
+
+  const removeCase = (index) => {
+    const newCases = [...cases];
+    newCases.splice(index, 1);
+    onChange(newCases);
+  };
+
+  return (
+    <div className="space-y-4 mt-4 mb-2">
+      <div className="flex justify-between items-center mb-1">
+        <label className="text-[11px] uppercase tracking-[0.2em] font-black text-indigo-400 ml-1 flex items-center gap-2">
+          <ArrowLeftRight size={14} />
+          {t("nodes.config.switch_cases", "Casos del Switch")}
+        </label>
+        <div className="group relative">
+          <Info
+            size={14}
+            className="text-slate-500 hover:text-indigo-400 cursor-help transition-colors"
+          />
+          <div className="absolute right-0 bottom-full mb-2 w-48 p-2 bg-slate-900 border border-slate-700 rounded-lg text-[10px] text-slate-300 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">
+            {t(
+              "nodes.hints.switch_logic",
+              "Define los valores exactos que quieres comparar. Cada caso genera una salida.",
+            )}
+          </div>
+        </div>
+      </div>
+      <div className="space-y-3">
+        {cases.map((c, index) => (
+          <div
+            key={index}
+            className="px-3 py-3 bg-[#0f172a]/60 border border-indigo-500/20 rounded-xl space-y-2 relative group hover:border-indigo-500/40 transition-all shadow-md"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 flex-1">
+                <div className="w-6 h-6 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0">
+                  <CornerDownRight size={12} className="text-indigo-400" />
+                </div>
+                <input
+                  type="text"
+                  placeholder={t(
+                    "nodes.placeholders.switch_value",
+                    "Valor (ej: admin, true, 200)",
+                  )}
+                  value={c.value}
+                  onChange={(e) => updateCase(index, "value", e.target.value)}
+                  className="w-full bg-transparent border-none p-0 text-xs font-bold text-white focus:outline-none placeholder:text-slate-600 focus:ring-0"
+                />
+              </div>
+              <button
+                onClick={() => removeCase(index)}
+                className="p-1 text-slate-500 hover:text-red-400 transition-colors"
+              >
+                <Trash2 size={12} />
+              </button>
+            </div>
+            <div className="flex items-center gap-2 pl-8 border-t border-white/5 pt-2">
+              <input
+                type="text"
+                placeholder={t(
+                  "common.optional_label",
+                  "Etiqueta visible (opcional)",
+                )}
+                value={c.label}
+                onChange={(e) => updateCase(index, "label", e.target.value)}
+                className="w-full bg-transparent border-none p-0 text-[10px] font-medium text-slate-400 focus:outline-none placeholder:text-slate-700 focus:ring-0"
+              />
+              <div className="bg-black/30 px-1.5 py-0.5 rounded text-[8px] font-mono text-slate-500 shrink-0">
+                ID: {c.id}
+              </div>
+            </div>
+          </div>
+        ))}
+        {cases.length === 0 && (
+          <div className="text-center py-4 border border-dashed border-slate-700 rounded-xl text-slate-500 text-[10px]">
+            {t(
+              "nodes.config.no_cases",
+              "No hay casos definidos. Agrega uno para empezar.",
+            )}
+          </div>
+        )}
+      </div>
+      <button
+        onClick={addCase}
+        className="w-full py-2 bg-indigo-500/5 hover:bg-indigo-500/10 border border-dashed border-indigo-500/30 rounded-xl text-[10px] font-black uppercase tracking-widest text-indigo-400 flex items-center justify-center gap-2 mt-2 transition-all"
+      >
+        <Plus size={12} />
+        {t("nodes.config.add_case", "Agregar Caso")}
+      </button>
+
+      <div className="mt-4 p-3 bg-slate-900/50 border border-slate-800 rounded-lg flex items-start gap-3">
+        <Zap size={14} className="text-amber-400 shrink-0 mt-0.5" />
+        <div className="space-y-0.5">
+          <p className="text-[10px] font-bold text-slate-300 uppercase tracking-tighter leading-none">
+            {t("common.default_path", "Ruta por Defecto (Default)")}
+          </p>
+          <p className="text-[10px] text-slate-500 leading-tight">
+            {t(
+              "nodes.hints.default_path_desc",
+              'Siempre se genera una salida "default" para cuando el valor no coincide con ningún caso.',
+            )}
+          </p>
+        </div>
+      </div>
     </div>
   );
 };
@@ -1561,9 +1685,8 @@ const NODE_INPUTS = {
     },
     {
       key: "cases",
-      label: "Cases (JSON: {value: path})",
-      type: "textarea",
-      placeholder: '{"success": "path1", "error": "path2"}',
+      label: "Switch Cases",
+      type: "switch_cases",
       required: true,
     },
     {
@@ -2396,6 +2519,15 @@ function NodeConfigurationPanel({
       case "conditional_branches":
         return (
           <ConditionalBranchesEditor
+            key={field.key}
+            value={value}
+            variables={variablesMap}
+            onChange={(newVal) => handleConfigUpdate(field.key, newVal)}
+          />
+        );
+      case "switch_cases":
+        return (
+          <SwitchCasesEditor
             key={field.key}
             value={value}
             variables={variablesMap}
