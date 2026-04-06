@@ -2,6 +2,7 @@ import AbyssNode from "./AbyssNode";
 import ComponentNode from "./ComponentNode";
 import InputNode from "./InputNode";
 import OutputNode from "./OutputNode";
+import LoopNode from "./LoopNode";
 import { NODE_TYPE_MAP } from "@/config/nodeConstants";
 
 // DYNAMIC REGISTRY
@@ -15,6 +16,8 @@ const dynamicNodeTypes = Object.keys(NODE_TYPE_MAP).reduce((acc, type) => {
     acc[type] = InputNode;
   } else if (type === "output") {
     acc[type] = OutputNode;
+  } else if (type === "loop") {
+    acc[type] = LoopNode;
   } else {
     acc[type] = AbyssNode;
   }

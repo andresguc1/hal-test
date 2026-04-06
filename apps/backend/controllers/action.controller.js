@@ -14,7 +14,7 @@ import { z } from 'zod';
 import * as fsp from 'fs/promises';
 // import * as fs from 'fs';
 import * as path from 'path';
-import { Flow, Node, Edge } from '../database/init.js';
+import { Flow, Node, Edge, HealingLog } from '../database/init.js';
 import { executionLogger } from '../services/ExecutionLogger.js';
 import { STORAGE_RUNS_DIR, STORAGE_DIR } from '../config/paths.js';
 import { isSafePath } from '../utils/security.js';
@@ -608,7 +608,11 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
         });
     } catch (error) {
         const errorMessage = error?.message || String(error);
-        const status = error.status || 500;
+        const isActionFailure =
+            errorMessage.includes('Timeout') ||
+            errorMessage.includes('selector') ||
+            errorMessage.includes('waiting');
+        const status = error.status || (isActionFailure ? 400 : 500);
         const duration = Date.now() - start;
 
         // --- SELF-HEALING LOGIC ---
@@ -643,35 +647,33 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
 
                         // 3. Ask AI to Heal
                         const userKey = req.headers['x-openai-key'];
+                        // HealingLog is already imported at the top of the file
+
+                        // 📡 BROADCAST: Show user the healing is starting BEFORE calling AI
+                        emitLog({
+                            message: `[Self-Healing] 🔍 AI analyzing DOM for broken selector: ${opts.selector}...`,
+                            nodeId: opts.nodeId,
+                            type: 'info',
+                        });
+
+                        // Limit healing budget: 20s max (leaves time for retry + response)
+                        const healingBudget = Math.min(opts.timeout || 20000, 20000);
+
                         const diagnosis = await selectorHealer.heal({
                             page: currentPage,
                             originalSelector: opts.selector,
                             errorMessage: errorMessage,
                             actionName: actionName,
-                            timeout: opts.timeout || 30000,
+                            timeout: healingBudget,
                             apiKey: userKey || process.env.OPENAI_API_KEY,
                         });
 
                         const healingDuration = Date.now() - healingStart;
                         console.log(`[Self-Healing] AI Repair finished in ${healingDuration}ms`);
 
-                        // --- BROADCAST HEALING STATUS ---
-                        if (runId && opts.nodeId) {
-                            try {
-                                const { emitLog, emitExecutionStatus } =
-                                    await import('../socket.js');
-                                emitExecutionStatus({ stepId: opts.nodeId, status: 'executing' });
-                                emitLog({
-                                    message: `[Self-Healing] AI Repair in progress for ${opts.selector}...`,
-                                    nodeId: opts.nodeId,
-                                    type: 'info',
-                                });
-                            } catch (wsError) {
-                                console.warn(
-                                    '[Self-Healing] Could not broadcast status:',
-                                    wsError.message,
-                                );
-                            }
+                        // --- BROADCAST HEALING STATUS (result) ---
+                        if (opts.nodeId) {
+                            emitExecutionStatus({ stepId: opts.nodeId, status: 'executing' });
                         }
 
                         // 4. Retry if a new selector was found
@@ -679,10 +681,47 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
                             diagnosis.correctedSelector &&
                             diagnosis.correctedSelector !== opts.selector
                         ) {
-                            console.log(
-                                `[Self-Healing] 🩹 AI Suggests: ${diagnosis.correctedSelector} (Confidence: ${diagnosis.confidence})`,
-                            );
+                            const healMsg = `[Self-Healing] 🩹 AI Suggests: ${diagnosis.correctedSelector} (Confidence: ${Math.round(diagnosis.confidence * 100)}%)`;
+                            console.log(healMsg);
                             console.log(`[Self-Healing] Reasoning: ${diagnosis.reasoning}`);
+
+                            // BROADCAST TO TERMINAL
+                            try {
+                                // use named import from line 12
+                                emitLog({
+                                    message: healMsg,
+                                    nodeId: opts.nodeId,
+                                    type: 'info',
+                                });
+                                emitLog({
+                                    message: `[Self-Healed] Diagnosis: ${diagnosis.reasoning}`,
+                                    nodeId: opts.nodeId,
+                                    type: 'info',
+                                });
+                            } catch (err) {
+                                console.warn(
+                                    '[Self-Healing] Could not broadcast diagnosis:',
+                                    err.message,
+                                );
+                            }
+
+                            // PERSIST HEALING LOG
+                            try {
+                                await HealingLog.create({
+                                    nodeId: nodeId || opts.nodeId,
+                                    runId: runId,
+                                    originalSelector: opts.selector,
+                                    newSelector: diagnosis.correctedSelector,
+                                    confidence: diagnosis.confidence,
+                                    reasoning: diagnosis.reasoning,
+                                    verified: diagnosis.verified || false,
+                                });
+                            } catch (logErr) {
+                                console.warn(
+                                    '[Self-Healing] Could not save healing log to DB:',
+                                    logErr.message,
+                                );
+                            }
 
                             // Retry action with NEW selector
                             const newOpts = { ...opts, selector: diagnosis.correctedSelector };
@@ -3968,14 +4007,22 @@ export const conditionalAction = async (req, res) => {
 
 export const loopAction = async (req, res) => {
     try {
-        const { mode, iterations, condition, array, itemVar, maxIterations = 1000 } = req.body;
+        const {
+            mode,
+            iterations,
+            condition,
+            array,
+            itemVar,
+            indexVar,
+            maxIterations = 1000,
+        } = req.body;
 
-        const data = { mode, iterations, condition, array, itemVar, maxIterations };
-
+        // This node is now handled as a Container by the ExecutionService.
+        // When called directly (e.g. for validation), it just returns the config.
         return res.status(200).json({
             success: true,
-            message: req.t('actions.loop.success'),
-            data,
+            message: 'Loop configuration validated',
+            data: { mode, iterations, condition, array, itemVar, indexVar, maxIterations },
         });
     } catch (error) {
         console.error('[ERROR] loopAction:', error.message);

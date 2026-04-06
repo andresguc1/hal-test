@@ -31,7 +31,12 @@ const Node = sequelize.define(
             type: DataTypes.STRING,
             allowNull: false,
         },
+        parentId: {
+            type: DataTypes.STRING,
+            allowNull: true,
+        },
     },
+
     {
         timestamps: true,
     },

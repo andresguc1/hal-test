@@ -538,19 +538,37 @@ IMPORTANT DIRECTIONS:
             const providerInstance = this.getProvider(activeProvider, apiKey);
             const modelRef = providerInstance(activeModel);
 
-            const prompt = `The automation failed to find an element.
-Original Selector: "${originalSelector}"
-Error: "${error}"
-Intent: "${intent}"
+            const prompt = `You are a Senior QA Automation Expert and Selector Repair Specialist.
+The automation failed to find an element in the browser.
 
-DOM Snippet:
+FAILED SELECTOR: "${originalSelector}"
+ERROR MESSAGE: "${error}"
+INTENT: "${intent}"
+
+DOM CONTEXT (Interactive elements with structural breadcrumbs):
 ${domSnippet || 'No DOM available'}
 
-Analyze the DOM to find the most likely correct CSS selector for the intended element.
-Return a JSON object with these exact keys:
-- correctedSelector: a valid CSS selector string
-- confidence: a number between 0 and 1
-- reasoning: a short explanation`;
+ANALYSIS STEPS:
+1. Identify why the original selector failed (e.g., dynamic ID, structure change).
+2. Look for the element that matches the "Intent" and resembles the "Original Selector".
+3. Propose up to 3 alternative CSS selectors, ranked by robustness. Prefer:
+   - data-testid or stable data attributes.
+   - Unique ARIA labels.
+   - Text content + tag name.
+   - Stable class names (avoid dynamic/obfuscated ones).
+
+Response Format (Strict JSON - Return ONLY the JSON block, no markdown, no conversational text):
+{
+  "correctedSelector": "the best single CSS selector",
+  "alternative_selectors": ["list of up to 3 ranked css selectors"],
+  "confidence": number (0.0 to 1.0),
+  "reasoning": "detailed explanation of why the original failed and how the new one was found",
+  "is_breaking_change": boolean
+}
+
+IMPORTANT: Do not wrap the JSON in markdown code blocks. Return it as RAW text.
+If no element is found, return {"correctedSelector": null, "confidence": 0, "reasoning": "No matching element found in DOM context"}
+`;
 
             console.log(`[AIService] Context size: DOM=${domSnippet?.length || 0} chars`);
 
@@ -564,31 +582,57 @@ Return a JSON object with these exact keys:
                 const { text } = await generateText({
                     model: modelRef,
                     prompt,
-                    temperature: 0.2,
-                    abortSignal: AbortSignal.timeout(customTimeout || 120000), // Respect custom timeout or 2 minutes max for local
+                    temperature: 0.1, // Low temperature for stability
+                    abortSignal: AbortSignal.timeout(customTimeout || 25000),
                 });
 
-                console.log(`[AIService] Ollama raw response: ${text.substring(0, 200)}...`);
+                console.log(`[AIService] Ollama raw response: ${text.substring(0, 300)}...`);
 
-                // Parse JSON from response
+                // Robust JSON parsing - handles markdown code blocks or raw JSON
                 const jsonMatch = text.match(/\{[\s\S]*\}/);
                 if (jsonMatch) {
-                    const parsed = JSON.parse(jsonMatch[0]);
-                    return {
-                        correctedSelector:
+                    try {
+                        const parsed = JSON.parse(jsonMatch[0]);
+                        const corrected =
                             parsed.correctedSelector ||
                             parsed.new_selector ||
-                            parsed.selector ||
-                            null,
-                        confidence: parsed.confidence || 0.8,
-                        reasoning: parsed.reasoning || 'AI suggestion',
-                    };
+                            parsed.suggested_selector ||
+                            (parsed.alternative_selectors && parsed.alternative_selectors[0]) ||
+                            null;
+
+                        return {
+                            correctedSelector: corrected,
+                            alternative_selectors:
+                                parsed.alternative_selectors ||
+                                [corrected].slice(0, 1).filter(Boolean),
+                            confidence: parsed.confidence || (corrected ? 0.7 : 0),
+                            reasoning: parsed.reasoning || 'AI repaired based on DOM analysis',
+                            is_breaking_change: !!parsed.is_breaking_change,
+                        };
+                    } catch (pErr) {
+                        console.warn(
+                            '[AIService] Failed to parse candidate JSON. Attempting fallback extraction...',
+                            pErr.message,
+                        );
+
+                        // Fallback: try to find anything that looks like "correctedSelector": "..."
+                        const selectorMatch = text.match(/"correctedSelector":\s*"([^"]+)"/);
+                        if (selectorMatch) {
+                            return {
+                                correctedSelector: selectorMatch[1],
+                                alternative_selectors: [selectorMatch[1]],
+                                confidence: 0.5,
+                                reasoning: 'Extracted via fallback regex',
+                            };
+                        }
+                    }
                 }
 
                 return {
                     correctedSelector: null,
+                    alternative_selectors: [],
                     confidence: 0,
-                    reasoning: 'Could not parse AI response',
+                    reasoning: 'Could not parse structured AI response',
                 };
             }
 
@@ -605,11 +649,13 @@ Return a JSON object with these exact keys:
                 model: modelRef,
                 schema: z.object({
                     correctedSelector: z.string(),
+                    alternative_selectors: z.array(z.string()),
                     confidence: z.number(),
                     reasoning: z.string(),
+                    is_breaking_change: z.boolean(),
                 }),
                 messages: [{ role: 'user', content }],
-                abortSignal: AbortSignal.timeout(customTimeout || 60000), // Respect custom or 1 minute for cloud
+                abortSignal: AbortSignal.timeout(customTimeout || 60000),
             });
 
             return object;

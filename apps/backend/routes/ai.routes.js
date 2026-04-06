@@ -145,7 +145,19 @@ router.post('/heal-selector', async (req, res) => {
             domSnippet: finalDomSnippet || `Target element type: ${nodeType}`,
             originalSelector: failedSelector,
             error: error,
-            intent: `Interact with ${nodeType} (Original selector: ${failedSelector})`,
+            // 🎯 SEMANTIC INTENT: Help the AI by telling it the node's purpose (e.g. 'Enter Username')
+            intent: `${nodeType} action (Targeting "${failedSelector}"). 
+Response Format (Strict JSON - Return ONLY the JSON block, no markdown, no conversational text):
+{
+  "correctedSelector": "the best single CSS selector",
+  "alternative_selectors": ["list of up to 3 ranked css selectors"],
+  "confidence": number (0.0 to 1.0),
+  "reasoning": "detailed explanation of why the original failed and how the new one was found",
+  "is_breaking_change": boolean
+}
+
+IMPORTANT: Do not wrap the JSON in markdown code blocks. Return it as RAW text.
+If no element is found, return {"correctedSelector": null, "confidence": 0, "reasoning": "No matching element found in DOM context"}`,
             provider,
             model,
             apiKey,

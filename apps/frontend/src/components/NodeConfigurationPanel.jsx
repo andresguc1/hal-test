@@ -9,6 +9,9 @@ import {
   ArrowRight,
   FileText,
   ArrowLeftRight,
+} from "lucide-react";
+import { NODE_STATES } from "./hooks/flowStyles";
+import {
   Sparkles,
   Trash2,
   CheckCircle2,
@@ -1707,9 +1710,9 @@ const NODE_INPUTS = {
       label: "Loop Mode",
       type: "select",
       options: [
-        { value: "count", label: "Count" },
-        { value: "while", label: "While" },
-        { value: "forEach", label: "ForEach" },
+        { value: "count", label: "Fixed Count (Repetir N veces)" },
+        { value: "while", label: "While Condition (Mientras se cumpla)" },
+        { value: "forEach", label: "ForEach Item (Para cada elemento)" },
       ],
       default: "count",
       required: true,
@@ -2024,6 +2027,7 @@ function NodeConfigurationPanel({
   viewStack = [], // NEW: Navigation stack for subflow context
   currentProject = null, // NEW: Current project for flow lookup
   onEnterSubFlow = null, // NEW: Navigation handler
+  updateNodeState = null, // NEW: For AI fix commitment
 }) {
   const { t } = useTranslation();
   const toast = useToast();
@@ -2351,7 +2355,7 @@ function NodeConfigurationPanel({
         "/ai/heal-selector",
         {
           failedSelector,
-          nodeType: activeNode.type,
+          nodeType: activeNode.data?.label || activeNode.type,
           browserId:
             activeNode.data?.configuration?.browserId ||
             localStorage.getItem("lastBrowserId"),
@@ -2673,7 +2677,9 @@ function NodeConfigurationPanel({
               {t(`nodes.fields.${field.key}`, field.label)}
               <div className="flex items-center gap-2">
                 {/* AI FIX BUTTON */}
-                {activeNode?.data?.state === "error" && (
+                {(activeNode?.data?.state === "error" ||
+                  activeNode?.data?.error ||
+                  activeNode?.data?.lastError) && (
                   <button
                     onClick={() => handleAutoHeal(value)}
                     className="flex items-center gap-1 px-1.5 py-0.5 rounded transition-colors border text-[10px] bg-red-500/10 hover:bg-red-500/20 text-red-400 border-red-500/20 animate-pulse"
@@ -3487,11 +3493,20 @@ function NodeConfigurationPanel({
                         activeNode?.data?.type === "smart_selector"
                           ? "originalSelector"
                           : "selector";
-                      handleConfigUpdate(targetField, newSelector);
+
+                      // Update config AND clear healed state
+                      updateNodeConfiguration(activeNode.id, {
+                        ...(activeNode.data?.configuration || {}),
+                        [targetField]: newSelector,
+                      });
+
+                      // Reset state to SUCCESS or default so orange border vanishes
+                      updateNodeState(activeNode.id, NODE_STATES.SUCCESS);
+
                       toast.success(
                         t(
                           "actions.smart_selector.applied",
-                          "Selector updated!",
+                          "Selector updated and fix committed!",
                         ),
                       );
                     }

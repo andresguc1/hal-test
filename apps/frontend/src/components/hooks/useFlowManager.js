@@ -592,8 +592,8 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
 
   const updateEdgeStatus = useCallback(
     (edgeId, state, animated = false) => {
-      setEdges((eds) =>
-        eds.map((edge) => {
+      const recursiveEdgeMap = (edges) => {
+        return edges.map((edge) => {
           if (edge.id === edgeId) {
             return {
               ...edge,
@@ -604,11 +604,38 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
               },
             };
           }
+
+          // Recurse into components if they have subflows with edges
+          // Actually, edges in HalTest are top-level unless in data.subFlow.edges.
           return edge;
+        });
+      };
+
+      setNodes((nds) =>
+        nds.map((node) => {
+          if (
+            (node.type === "component" || node.data?.type === "component") &&
+            node.data?.subFlow?.edges
+          ) {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                subFlow: {
+                  ...node.data.subFlow,
+                  edges: recursiveEdgeMap(node.data.subFlow.edges),
+                },
+              },
+            };
+          }
+          return node;
         }),
       );
+
+      // Also update top-level edges
+      setEdges((eds) => recursiveEdgeMap(eds));
     },
-    [setEdges],
+    [setNodes, setEdges],
   );
 
   const resetNodeStates = useCallback(() => {
@@ -749,6 +776,52 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
         targetPosition: "left",
       };
 
+      // SPECIAL CASE: Create backing flow for sub-flow nodes (component/loop)
+      if (typeKey === "component" || typeKey === "loop") {
+        (async () => {
+          try {
+            const flowName = `${label} (${id.slice(0, 4)})`;
+            const response = await projectManager.createFlow(
+              currentProject.id,
+              flowName,
+            );
+            const flowId = response.flow?.id || response.id;
+
+            if (flowId) {
+              // Create default input/output for the new flow
+              await projectManager.updateFlow(currentProject.id, flowId, {
+                nodes: [
+                  {
+                    id: "input-" + Date.now(),
+                    type: "input",
+                    position: { x: 100, y: 150 },
+                    data: { label: "Input", type: "input" },
+                  },
+                  {
+                    id: "output-" + uuidv4(),
+                    type: "output",
+                    position: { x: 600, y: 150 },
+                    data: { label: "Output", type: "output" },
+                  },
+                ],
+                edges: [],
+              });
+
+              // Link the node to the flow
+              setNodes((nds) =>
+                nds.map((n) =>
+                  n.id === id ? { ...n, data: { ...n.data, flowId } } : n,
+                ),
+              );
+              queryClient.invalidateQueries(["project", currentProject.id]);
+            }
+          } catch (error) {
+            console.error("Failed to create backing flow:", error);
+            toast.error("Failed to initialize sub-flow logic.");
+          }
+        })();
+      }
+
       setNodes((nds) => [...nds, newNode]);
       setSelectedNodeId(id);
     },
@@ -877,12 +950,21 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
           return updated;
         }),
       );
-
       // SYNC COMPONENT NAME TO BACKEND
       if (targetFlowId && newName && currentProject?.id) {
         try {
           // 1. Update Backend
-          await projectManager.updateFlow(currentProject.id, targetFlowId, {
+          const pId = currentProject?.id;
+          const fId = targetFlowId;
+
+          if (!pId || !fId) {
+            console.warn(
+              "[FlowManager] Skipping updateFlow: No active project/flow",
+            );
+            return;
+          }
+
+          await projectManager.updateFlow(pId, fId, {
             name: newName,
           });
           // FORCE UPDATE: Invalidate project query to sync flow list and tabs
@@ -1113,7 +1195,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
 
     // -> HANDLE INPUT BOUNDARY
     if (externalIncoming.length > 0) {
-      const inputId = `input_${Date.now()}`;
+      const inputId = `input_${uuidv4()}`;
       const inputNode = {
         id: inputId,
         type: "input",
@@ -1141,11 +1223,11 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
 
     // -> HANDLE OUTPUT BOUNDARY
     if (externalOutgoing.length > 0) {
-      const outputId = `output_${Date.now()}`;
+      const outputId = `output_${uuidv4()}`;
       const outputNode = {
         id: outputId,
         type: "output",
-        position: { x: groupWidth + 100, y: groupHeight / 2 - 25 }, // Right of content
+        position: { x: groupWidth + 200, y: groupHeight / 2 - 25 }, // Right of content
         data: { label: "Output" },
       };
       subNodes.push(outputNode);
@@ -1289,9 +1371,11 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
 
       if (
         componentNode.type !== "component" &&
-        componentNode.data.type !== "component"
+        componentNode.data.type !== "component" &&
+        componentNode.type !== "loop" &&
+        componentNode.data.type !== "loop"
       ) {
-        toast.error("Cannot enter: Not a component node");
+        toast.error("Cannot enter: Not a component or loop node");
         return;
       }
 
@@ -1515,11 +1599,9 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
             localStorage.setItem("lastBrowserId", instanceId);
           }
 
-          // ✨ OPTIMIZACIÓN: Actualización batch
+          // ✨ OPTIMIZACIÓN: Actualización batch recursiva
           setNodes((nds) =>
-            nds.map((node) => {
-              if (node.id !== nodeId) return node;
-
+            updateNodeRecursively(nds, nodeId, (node) => {
               const newConfig = {
                 ...(node.data.configuration || {}),
                 ...(payload || {}),
@@ -1531,6 +1613,17 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
               }
 
               const isHealed = result?.healed === true;
+              if (isHealed && result.newSelector) {
+                console.log(
+                  `[Auto-Patch] Applying AI healed selector to node ${nodeId}:`,
+                  result.newSelector,
+                );
+                // Apply the fix permanently to the configuration
+                newConfig.selector = result.newSelector;
+                newConfig.isAI = true;
+                newConfig.aiReasoning = result.reasoning;
+              }
+
               const finalState = isHealed
                 ? NODE_STATES.HEALED
                 : NODE_STATES.SUCCESS;
@@ -1545,7 +1638,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
                   result,
                   executionTime: duration,
                 },
-                style: getNodeStyle(finalState),
+                style: getNodeStyle(finalState, node.style),
               };
             }),
           );
@@ -2045,74 +2138,86 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
    * Migrate Nodes (Recursive Sub-flow Creation)
    * Essential for portability: creates backing flows for component nodes with embedded subFlow data.
    */
-  const migrateNodes = useCallback(async (nodesToMigrate, targetProjectId) => {
-    if (!targetProjectId) return nodesToMigrate;
+  const migrateNodes = useCallback(
+    async (nodesToMigrate, targetProjectId) => {
+      // 🛡️ DEFENSIVE: Stop migration if project was deleted/switched
+      if (!targetProjectId || targetProjectId !== currentProject?.id) {
+        console.warn(
+          "[FlowManager] Migration aborted: Project mismatch/missing",
+        );
+        return nodesToMigrate;
+      }
 
-    return await Promise.all(
-      nodesToMigrate.map(async (node) => {
-        if (
-          (node.type === "component" || node.data?.type === "component") &&
-          node.data?.subFlow &&
-          node.data.subFlow.nodes // Must have actual nodes to migrate
-        ) {
-          console.log(
-            `[FlowManager] 🧩 Migrating portable component: ${node.data.label}`,
-          );
+      return await Promise.all(
+        nodesToMigrate.map(async (node) => {
+          // Re-check target within the map/loop for depth
+          if (targetProjectId !== currentProject?.id) return node;
 
-          try {
-            // 1. Create the backing flow
-            const response = await projectManager.createFlow(
-              targetProjectId,
-              node.data.subFlow.name || node.data.label || "Sub-flow",
+          if (
+            (node.type === "component" || node.data?.type === "component") &&
+            node.data?.subFlow &&
+            node.data.subFlow.nodes // Must have actual nodes to migrate
+          ) {
+            console.log(
+              `[FlowManager] 🧩 Migrating portable component: ${node.data.label}`,
             );
-            const flowId = response.flow?.id || response.id;
 
-            if (flowId) {
-              // 2. Populate it (Recursive migration if sub-flows within sub-flows exist)
-              const innerNodes = await migrateNodes(
-                node.data.subFlow.nodes,
+            try {
+              // 1. Create the backing flow
+              const response = await projectManager.createFlow(
                 targetProjectId,
+                node.data.subFlow.name || node.data.label || "Sub-flow",
               );
+              const flowId = response.flow?.id || response.id;
 
-              await projectManager.updateFlow(targetProjectId, flowId, {
-                nodes: innerNodes,
-                edges: (node.data.subFlow.edges || []).map((e) => ({
-                  ...e,
-                  type: "custom",
-                  animated: true,
-                })),
-              });
+              if (flowId) {
+                // 2. Populate it (Recursive migration if sub-flows within sub-flows exist)
+                const innerNodes = await migrateNodes(
+                  node.data.subFlow.nodes,
+                  targetProjectId,
+                );
 
-              // 3. Return node linked to new flow, with persistent count
-              return {
-                ...node,
-                data: {
-                  ...node.data,
-                  flowId,
-                  nodeCount: node.data.subFlow.nodes.length,
-                  hasInput: node.data.subFlow.nodes.some(
-                    (n) => n.type === "input",
-                  ),
-                  hasOutput: node.data.subFlow.nodes.some(
-                    (n) => n.type === "output",
-                  ),
-                  configuration: {
-                    ...node.data.configuration,
+                await projectManager.updateFlow(targetProjectId, flowId, {
+                  nodes: innerNodes,
+                  edges: (node.data.subFlow.edges || []).map((e) => ({
+                    ...e,
+                    type: "custom",
+                    animated: true,
+                  })),
+                });
+
+                // 3. Return node linked to new flow, with persistent count
+                return {
+                  ...node,
+                  data: {
+                    ...node.data,
                     flowId,
+                    nodeCount: node.data.subFlow.nodes.length,
+                    hasInput: node.data.subFlow.nodes.some(
+                      (n) => n.type === "input",
+                    ),
+                    hasOutput: node.data.subFlow.nodes.some(
+                      (n) => n.type === "output",
+                    ),
+                    configuration: {
+                      ...node.data.configuration,
+                      flowId,
+                    },
+                    subFlow: undefined, // Clear template data
                   },
-                  subFlow: undefined, // Clear template data
-                },
-              };
+                };
+              }
+            } catch (err) {
+              console.error("Failed to migrate component node:", err);
+              return node;
             }
-          } catch (err) {
-            console.error("Failed to migrate component node:", err);
-            return node;
           }
-        }
-        return node;
-      }),
-    );
-  }, []);
+          return node;
+        }),
+      );
+    },
+    [currentProject],
+  );
 
   const loadStarterTemplate = useCallback(
     async (explicitProjectId = null) => {
@@ -2147,6 +2252,13 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
 
         // 3. Auto-center
         setTimeout(() => {
+          // Double check project still exists after async toast
+          if (currentProject?.id !== pId) return;
+
+          console.log(
+            "[FlowManager] 🚀 Loading starter template for project:",
+            pId,
+          );
           fitView({
             duration: 400,
             padding: { top: 0.1, bottom: 0.1, left: 0.02, right: 0.45 },
@@ -2277,6 +2389,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
         const internalExecuted = new Set();
         const queue = [...startNodes];
         globalStats.total = graphNodes.length; // Update total estimate
+        const healedNodes = []; // Track AI repairs: [{ nodeId, newSelector }]
 
         let lastResult = { success: true }; // To bubble up
 
@@ -2316,10 +2429,22 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
                   result = subResult || { success: true };
                   updateNodeState(
                     node.id,
-                    globalStats.failed > 0
-                      ? NODE_STATES.ERROR
-                      : NODE_STATES.SUCCESS,
+                    result.success ? NODE_STATES.SUCCESS : NODE_STATES.ERROR,
                   );
+                  if (!result.success && stopOnError) {
+                    // Prepend current component to the dive path
+                    const divePath = result.divePath || [];
+                    return {
+                      ...result,
+                      divePath: [node.id, ...divePath],
+                      healedNodes, // Return what we found so far
+                    };
+                  }
+
+                  // If sub-flow had healed nodes, merge them
+                  if (result.healedNodes?.length > 0) {
+                    healedNodes.push(...result.healedNodes);
+                  }
                 }
               }
             } else if (
@@ -2334,7 +2459,13 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
               const action = {
                 nodeId: node.id,
                 type: node.data?.type || node.type,
-                payload: { ...resolvedConfig, browserId, runId },
+                // Use a shorter timeout (8s) for faster failure detection
+                payload: {
+                  ...resolvedConfig,
+                  browserId,
+                  runId,
+                  timeout: resolvedConfig.timeout || 8000,
+                },
               };
               setApiStatus({
                 state: "loading",
@@ -2355,9 +2486,24 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
                   .replace(/\s+/g, "_");
                 flowContext[node.id] = result.result || result;
                 flowContext[slug] = result.result || result;
+
+                // Capture AI Healing for auto-patching
+                if (result.healed && result.newSelector) {
+                  healedNodes.push({
+                    nodeId: node.id,
+                    newSelector: result.newSelector,
+                  });
+                }
               } else {
                 globalStats.failed++;
-                if (stopOnError) return result;
+                if (stopOnError) {
+                  return {
+                    success: false,
+                    error: result.error || "Action failed",
+                    failedNodeId: node.id,
+                    divePath: [],
+                  };
+                }
               }
             } else if (node.type === "output") {
               result = {
@@ -2389,7 +2535,6 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
               nodeKey === "switch" ||
               nodeKey === "conditional" ||
               nodeKey === "backend_js";
-            const hasMultipleOutputs = nextEdges.length > 1;
 
             // 🔀 HANDLE LOGIC BRANCHING
             const nextNodes = [];
@@ -2405,8 +2550,8 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
                 (e) => String(e.sourceHandle || "").toLowerCase() === path,
               );
 
-              // 🛡️ Final strict enforcement for branching nodes or nodes with multiple outputs
-              if (isBranchingNode || hasMultipleOutputs) {
+              // 🛡️ Final strict enforcement for branching nodes only
+              if (isBranchingNode) {
                 if (filtered.length === 0 && nextEdges.length > 0) {
                   console.warn(
                     `[FlowManager] 🛑 No matching edge for path "${path}" on node "${node.id}". Stopping branch.`,
@@ -2422,10 +2567,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
                 // For non-branching nodes, follow the path if it exists
                 nextEdges = filtered;
               }
-            } else if (
-              (isBranchingNode || hasMultipleOutputs) &&
-              nextEdges.length > 0
-            ) {
+            } else if (isBranchingNode && nextEdges.length > 0) {
               // 🛡️ SAFETY: If we should branch but have no path, STOP instead of following all.
               console.warn(
                 `[FlowManager] ⚠️ Node "${node.id}" requires branching but NO path was resolved. Stopping branch to prevent multi-run.`,
@@ -2454,20 +2596,29 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
             console.error(`[FlowManager] Error in node "${node.id}":`, err);
             globalStats.failed++;
             updateNodeState(node.id, NODE_STATES.ERROR, err);
-            if (stopOnError) return { success: false, error: err.message };
+            if (stopOnError) {
+              return {
+                success: false,
+                error: err.message,
+                failedNodeId: node.id,
+                divePath: [],
+              };
+            }
           }
         }
-        return lastResult;
+        return { ...lastResult, healedNodes };
       };
 
       // 2. Start Execution
+      let executionResult = { success: true };
       try {
         // Use nodes from options (fresh from App) or state nodes (may be stale if called immediately after type)
         const nodesToExecute = options.nodes || nodes;
-        await executeGraph(nodesToExecute, edges, 0);
+        executionResult = await executeGraph(nodesToExecute, edges, 0);
       } catch (error) {
         console.error("Execution error:", error);
         globalStats.failed++;
+        executionResult = { success: false, error: error.message };
       } finally {
         // 3. Cleanup & Finalize
         // Only close if keepOpen is FALSE
@@ -2506,6 +2657,10 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
         success: globalStats.failed === 0,
         stats: globalStats,
         browserId,
+        failedNodeId: executionResult?.failedNodeId,
+        divePath: executionResult?.divePath,
+        healedNodes: executionResult?.healedNodes || [],
+        error: executionResult?.error,
       };
     },
     [
@@ -2515,12 +2670,15 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
       currentFlowId,
       executeStep,
       resetNodeStates,
-      activeBrowserId, // Added dependency
+      activeBrowserId,
       updateNodeState,
       updateEdgeStatus,
       validateFlowStructure,
       t,
       toast,
+      setApiStatus,
+      setExecutionStats,
+      setActiveBrowserId,
     ],
   );
 
@@ -2540,7 +2698,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
       console.error("Failed to stop session:", error);
       toast.error("Failed to close browser session");
     }
-  }, [activeBrowserId, setApiStatus, toast]);
+  }, [activeBrowserId, setApiStatus, toast, setActiveBrowserId]);
 
   // ========================================
   // Export and Import Flow Functions
@@ -2842,7 +3000,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
         throw error;
       }
     },
-    [saveToHistory, setNodes, setEdges, setApiStatus],
+    [saveToHistory, setNodes, setEdges, setApiStatus, setExecutionStats],
   );
 
   // ========================================
@@ -3048,7 +3206,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
       });
 
       return selectedNodes.length + selectedEdges.length;
-    }, []),
+    }, [setClipboard]),
 
     cutElements: useCallback(() => {
       const selectedNodes = nodesRef.current.filter((n) => n.selected);

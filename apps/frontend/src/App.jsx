@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect } from "react";
+import { v4 as uuidv4 } from "uuid";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Login from "./components/auth/Login";
 import Signup from "./components/auth/Signup";
@@ -361,7 +362,7 @@ function Dashboard() {
 
       // Create new nodes and layout them
       const mappedNodes = newNodesData.map((nodeData, index) => {
-        const id = `node_${Date.now()}_${index}`;
+        const id = `node_${uuidv4()}`;
         return {
           id,
           type: nodeData.type,
@@ -429,7 +430,7 @@ function Dashboard() {
   // MCP phase 3 granular tools
   const handleMCPAddNode = useCallback(
     async (nodeData) => {
-      const id = `node_${Date.now()}`;
+      const id = `node_${uuidv4()}`;
       const newNode = {
         id,
         type: nodeData.type,
@@ -520,6 +521,24 @@ function Dashboard() {
     }
   }, [setSelectedNodeId]);
 
+  // Navigate to a node: select it AND center the canvas on it
+  const handleNavigateToNode = useCallback(
+    (nodeId) => {
+      if (!nodeId) return;
+      setSelectedNodeId(nodeId);
+      // Small delay so the panel re-renders with the new node first
+      setTimeout(() => {
+        reactFlowFitView({
+          nodes: [{ id: nodeId }],
+          duration: 600,
+          padding: 0.6,
+          maxZoom: 1.2,
+        });
+      }, 80);
+    },
+    [setSelectedNodeId, reactFlowFitView],
+  );
+
   // ========================================
   // CALLBACKS - Footer Actions
   // ========================================
@@ -572,24 +591,73 @@ function Dashboard() {
       }
       // ------------------------------------------
 
-      const result = await executeFlow(); // Returns { success, stats }
+      const result = await executeFlow(); // Returns { success, stats, failedNodeId, divePath, healedNodes }
 
       // 2. Clear loading
       toast.dismiss(toastId);
+
+      // --- AUTO-APPLY AI HEALING ---
+      if (result.healedNodes?.length > 0) {
+        console.log("[App] AI Healed nodes detected:", result.healedNodes);
+        result.healedNodes.forEach((repair) => {
+          updateNodeConfiguration(repair.nodeId, {
+            selector: repair.newSelector,
+          });
+        });
+        toast.success(
+          t("common.ai_repair_applied", {
+            defaultValue: `AI automatically repaired ${result.healedNodes.length} selector(s).`,
+            count: result.healedNodes.length,
+          }),
+          { icon: "🩹", duration: 5000 },
+        );
+      }
+      // -----------------------------
 
       if (result.success) {
         // Success with Duration
         const durationStr = (result.stats?.duration / 1000).toFixed(2);
         toast.success(`${t("common.flow_exec_success")} (${durationStr}s)`);
       } else {
-        // General Failure
-        // Validation errors should be caught above, but if executeFlow fails internally (e.g. max retries):
-        if (result.error && !result.stats) {
+        // Failure with Metadata (AUTO-FOCUS & DIVE-IN)
+        if (result.failedNodeId) {
+          toast.error(
+            `${t("common.flow_exec_error")} (Fail at: ${result.failedNodeId})`,
+          );
+
+          // 🛑 AUTO-NAVIGATION & FOCUS
+          try {
+            // A. Dive Path traversal (sequence of parent components)
+            if (result.divePath && result.divePath.length > 0) {
+              for (const componentId of result.divePath) {
+                await enterComponent(componentId);
+                // Wait for React Flow to load and render the sub-flow nodes
+                await new Promise((r) => setTimeout(r, 600));
+              }
+            }
+
+            // B. Select and Open Node (triggers config panel via derived state)
+            setSelectedNodeId(result.failedNodeId);
+
+            // C. Visual Focus — delay to ensure the node is in the rendered canvas
+            setTimeout(() => {
+              reactFlowFitView({
+                nodes: [{ id: result.failedNodeId }],
+                duration: 800,
+                padding: 0.6,
+                maxZoom: 1.2,
+              });
+            }, 800);
+          } catch (navError) {
+            console.error("[App] Failed auto-focus navigation:", navError);
+          }
+        } else if (result.error && !result.stats) {
+          // General Failure
           if (result.error !== "Max reintentos alcanzados") {
             toast.error(result.error);
           }
         } else {
-          // Failure with Count (Run happened)
+          // Failure with Count (Run happened but no specific node tracked)
           const failedCount = result.stats?.failed || 0;
           toast.error(`${t("common.flow_exec_error")} (${failedCount} failed)`);
         }
@@ -610,6 +678,10 @@ function Dashboard() {
     activeBrowserId,
     stopSession,
     currentFlowId,
+    enterComponent,
+    reactFlowFitView,
+    setSelectedNodeId,
+    updateNodeConfiguration,
   ]);
 
   const ensureProjectAndGetId = useCallback(async () => {
@@ -647,7 +719,7 @@ function Dashboard() {
           responseData.nodes ||
           []
         ).map((node, index) => ({
-          id: node.id || `node_${Date.now()}_${index}`,
+          id: node.id || `node_${uuidv4()}`,
           type: node.type,
           position: node.position || { x: 100 + index * 250, y: 150 },
           data: {
@@ -1004,6 +1076,15 @@ function Dashboard() {
     [addNode, screenToFlowPosition],
   );
 
+  const onNodeDragStop = useCallback((_event, node) => {
+    // Logic for automatic grouping has been removed for Loop nodes
+    // as they now behave as encapsulated sub-flows (Dive-in).
+    if (node.parentId) {
+      // If it was inside something (other than loop) but dropped outside,
+      // we might still want to handle it, but for now we simplify.
+    }
+  }, []);
+
   // ========================================
   // KEYBOARD SHORTCUTS
   // ========================================
@@ -1110,7 +1191,7 @@ function Dashboard() {
       onPaneContextMenu,
       onSelectionContextMenu,
       onNodeDoubleClick: (event, node) => {
-        if (node.type === "component") {
+        if (node.type === "component" || node.type === "loop") {
           enterComponent(node.id);
         } else {
           // Open Step Details Modal on double-click
@@ -1123,6 +1204,7 @@ function Dashboard() {
       },
       onDrop,
       onDragOver,
+      onNodeDragStop,
       nodeTypes, // Custom node types for optimized rendering
       edgeTypes, // Custom edge types with animations
       // Visual feedback for connections
@@ -1148,6 +1230,7 @@ function Dashboard() {
       enterComponent,
       onDrop,
       onDragOver,
+      onNodeDragStop,
       enableSnapping, // Dependency for memo
     ],
   );
@@ -1390,7 +1473,7 @@ function Dashboard() {
               action={selectedAction}
               nodes={nodes}
               edges={edges}
-              onSelectNode={setSelectedNodeId}
+              onSelectNode={handleNavigateToNode}
               nodeId={selectedAction.nodeId}
               type={selectedAction.type}
               initialData={selectedAction.data}
@@ -1411,6 +1494,7 @@ function Dashboard() {
               onCancelPick={handleCancelPicking}
               onUngroup={ungroupNodes}
               onEnterSubFlow={enterComponent}
+              updateNodeState={updateNodeState}
             />
           )}
           {/* Global Settings Modal (Unified Hub) */}

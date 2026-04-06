@@ -1,5 +1,7 @@
 import aiService from './AIService.js';
 
+/* global document, window */
+
 /**
  * SelectorHealer Service
  * Handles DOM compression and AI-powered selector repair.
@@ -21,39 +23,90 @@ class SelectorHealer {
 
     /**
      * In-browser DOM compression script.
-     * To be executed via page.evaluate()
+     * Includes semantic context (breadcrumbs) and proximity-based prioritization.
      */
-    getCompressionScript() {
+    getCompressionScript(_originalSelector) {
         return `
             (() => {
-                const interactiveSelectors = 'button, a, input, select, textarea, [role="button"], [role="link"], [role="searchbox"], [role="img"], [onclick], [aria-label], [title]';
-                const elements = document.querySelectorAll(interactiveSelectors);
-                const simplified = Array.from(elements)
+                const interactiveSelectors = 'button, a, input, select, textarea, label, span, [role="button"], [role="link"], [role="searchbox"], [role="img"], [onclick], [aria-label], [title], [data-testid]';
+                let elements = Array.from(document.querySelectorAll(interactiveSelectors));
+                
+                const simplified = elements
                     .filter(el => {
-                        // Basic visibility check
-                        return el.offsetWidth > 0 && el.offsetHeight > 0 && window.getComputedStyle(el).visibility !== 'hidden';
+                        const style = window.getComputedStyle(el);
+                        return (el.offsetWidth > 0 && el.offsetHeight > 0 && style.visibility !== 'hidden' && style.display !== 'none');
                     })
-                    .slice(0, 500) // Limit to 500 most relevant elements
-                    .map(el => {
-                    const obj = {
-                        tag: el.tagName.toLowerCase(),
-                        id: el.id || undefined,
-                        class: el.className || undefined,
-                        name: el.getAttribute('name') || undefined,
-                        placeholder: el.getAttribute('placeholder') || undefined,
-                        'aria-label': el.getAttribute('aria-label') || undefined,
-                        text: el.textContent.trim().substring(0, 50) || undefined
-                    };
-                    // Remove undefined keys
-                    return Object.entries(obj)
-                        .filter(([_, v]) => v !== undefined)
-                        .map(([k, v]) => \`\${k}="\${v}"\`)
-                        .join(' ');
-                }).join('\\n');
-                console.log(\`[SelectorHealer] Extracted \${elements.length} interactive elements.\`);
+                    .slice(0, 400) 
+                    .map((el, index) => {
+                        const breadcrumbs = [];
+                        let curr = el.parentElement;
+                        for (let i = 0; i < 3 && curr; i++) {
+                            const tag = curr.tagName.toLowerCase();
+                            const id = curr.id ? '#' + curr.id : '';
+                            breadcrumbs.unshift(\`\${tag}\${id}\`);
+                            curr = curr.parentElement;
+                        }
+
+                        const obj = {
+                            ref: index,
+                            tag: el.tagName.toLowerCase(),
+                            id: el.id || undefined,
+                            class: el.className || undefined,
+                            name: el.getAttribute('name') || undefined,
+                            placeholder: el.getAttribute('placeholder') || undefined,
+                            'aria-label': el.getAttribute('aria-label') || undefined,
+                            'data-testid': el.getAttribute('data-testid') || undefined,
+                            text: el.textContent.trim().substring(0, 80) || undefined,
+                            path: breadcrumbs.join(' > ')
+                        };
+                        return Object.entries(obj)
+                            .filter(([_, v]) => v !== undefined && v !== '')
+                            .map(([k, v]) => \`\${k}="\${v}"\`)
+                            .join(' ');
+                    }).join('\\n');
+                
                 return simplified;
             })()
         `;
+    }
+
+    /**
+     * Verifies if a selector is valid, unique, and visible on the page.
+     */
+    async verifySelector(page, selector) {
+        if (!selector) return { valid: false, unique: false, visible: false };
+        try {
+            const stats = await page.evaluate((sel) => {
+                try {
+                    const elements = document.querySelectorAll(sel);
+                    if (elements.length === 0) return { count: 0, visible: false };
+
+                    const first = elements[0];
+                    const rect = first.getBoundingClientRect();
+                    const isVisible =
+                        rect.width > 0 &&
+                        rect.height > 0 &&
+                        window.getComputedStyle(first).visibility !== 'hidden' &&
+                        window.getComputedStyle(first).display !== 'none';
+
+                    return { count: elements.length, visible: isVisible };
+                } catch (e) {
+                    return { error: e.message };
+                }
+            }, selector);
+
+            if (stats.error)
+                return { valid: false, unique: false, visible: false, error: stats.error };
+
+            return {
+                valid: stats.count > 0,
+                unique: stats.count === 1,
+                visible: stats.visible,
+                count: stats.count,
+            };
+        } catch (error) {
+            return { valid: false, unique: false, visible: false, error: error.message };
+        }
     }
 
     async heal({ page, originalSelector, errorMessage, actionName, apiKey, timeout = 30000 }) {
@@ -62,19 +115,18 @@ class SelectorHealer {
                 `[SelectorHealer] Healing selector: ${originalSelector} (Timeout: ${timeout}ms)`,
             );
 
-            // 1. Extract Compressed DOM
+            // 1. Extract Compressed DOM with Semantic Context
             let compressedDOM = '';
             if (page && !page.isClosed()) {
-                // Use a smaller timeout for DOM extraction (e.g., 10s)
                 compressedDOM = await Promise.race([
-                    page.evaluate(this.getCompressionScript()),
+                    page.evaluate(this.getCompressionScript(originalSelector)),
                     new Promise((_, reject) =>
                         setTimeout(() => reject(new Error('DOM extraction timed out')), 10000),
                     ),
                 ]);
             }
 
-            // 2. Delegate to central AI service with structured output
+            // 2. Delegate to AI service requesting multiple candidates
             const result = await aiService.healSelector({
                 screenshotBase64: null,
                 domSnippet: compressedDOM || 'No DOM available',
@@ -83,13 +135,50 @@ class SelectorHealer {
                 intent: `Perform action: ${actionName}`,
                 apiKey: apiKey,
                 provider: 'ollama',
-                timeout: timeout, // Pass the timeout to AIService
+                timeout: timeout,
             });
 
+            // 3. Multi-Candidate Verification Loop (Phase 3)
+            const candidates = result.alternative_selectors || [result.correctedSelector];
+            console.log(
+                `[SelectorHealer] AI suggested ${candidates.length} candidates. Verifying...`,
+            );
+
+            for (const candidate of candidates) {
+                if (!candidate || candidate === originalSelector) continue;
+
+                const verification = await this.verifySelector(page, candidate);
+                if (verification.valid && verification.visible) {
+                    console.log(
+                        `[SelectorHealer] ✅ Verified candidate: ${candidate} (${verification.unique ? 'Unique' : 'Multiple matches: ' + verification.count})`,
+                    );
+
+                    return {
+                        correctedSelector: candidate,
+                        reasoning: result.reasoning,
+                        confidence: verification.unique
+                            ? result.confidence || 0.9
+                            : (result.confidence || 0.9) * 0.7,
+                        verified: true,
+                        isUnique: verification.unique,
+                    };
+                }
+            }
+
+            // Fallback: If no candidate was verified as visible, return the first one if it's at least valid
+            if (result.correctedSelector) {
+                return {
+                    correctedSelector: result.correctedSelector,
+                    reasoning: result.reasoning,
+                    confidence: result.confidence || 0.5,
+                    verified: false,
+                };
+            }
+
             return {
-                correctedSelector: result.correctedSelector,
-                reasoning: result.reasoning,
-                confidence: result.confidence || 0.9,
+                correctedSelector: null,
+                reasoning: 'No valid candidates found during verification',
+                confidence: 0,
             };
         } catch (error) {
             console.error('[SelectorHealer] Error during healing:', error);

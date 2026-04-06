@@ -278,6 +278,7 @@ router.post('/projects', async (req, res) => {
                     data: n.data,
                     position: n.position,
                     flowId: flow.id,
+                    parentId: n.parentId || null,
                 })),
                 { transaction },
             );
@@ -402,22 +403,25 @@ router.post('/projects/:projectId/flows', async (req, res) => {
         const { projectId } = req.params;
         const { name, type, parentId, nodes, edges } = req.body;
 
-        // Check for duplicate flow name in the same project
-        const existingFlow = await Flow.findOne({
-            where: {
-                projectId,
-                name,
-            },
-            transaction,
-        });
+        // Check for duplicate flow name and auto-suffix if needed
+        let finalName = name;
+        let counter = 1;
+        while (true) {
+            const existingFlow = await Flow.findOne({
+                where: {
+                    projectId,
+                    name: finalName,
+                },
+                transaction,
+            });
 
-        if (existingFlow) {
-            throw new Error(`Flow with name "${name}" already exists in this project.`);
+            if (!existingFlow) break;
+            finalName = `${name} (${counter++})`;
         }
 
         const flow = await Flow.create(
             {
-                name,
+                name: finalName,
                 projectId,
                 canvasId: req.body.canvasId || null,
                 type: type || 'main',
@@ -434,6 +438,7 @@ router.post('/projects/:projectId/flows', async (req, res) => {
                     data: n.data,
                     position: n.position,
                     flowId: flow.id,
+                    parentId: n.parentId || null,
                 })),
                 { transaction },
             );
@@ -638,6 +643,7 @@ router.put('/projects/:projectId/flows/:flowId', async (req, res) => {
                     data: n.data,
                     position: n.position,
                     flowId: flow.id,
+                    parentId: n.parentId || null,
                 })),
                 { transaction },
             );

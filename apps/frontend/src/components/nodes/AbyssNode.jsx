@@ -110,9 +110,9 @@ const AbyssNode = ({ id, data, selected, type }) => {
         themeParams.base,
         invalidStyle, // Add validation glow
 
-        // Running Animation (Breathing Glow using Category Color)
-        data.state === "running" &&
-          `ring-4 ring-${colorKey}-500/20 animate-pulse`,
+        // Running/Executing Animation (Breathing Glow using Category Color)
+        (data.state === "running" || data.state === "executing") &&
+          `ring-4 ring-amber-500/30 animate-pulse`,
 
         // Picking Animation (Targeting)
         data.state === "picking" &&
@@ -195,12 +195,10 @@ const AbyssNode = ({ id, data, selected, type }) => {
           </div>
         )}
 
-        {/* Running: Scanning Loader Ring */}
-        {data.state === "running" && (
+        {(data.state === "running" || data.state === "executing") && (
           <div
             className={cn(
-              "w-4 h-4 rounded-full border-2 border-t-transparent animate-spin",
-              `border-${colorKey}-400`,
+              "w-4 h-4 rounded-full border-2 border-t-transparent animate-spin border-amber-400",
             )}
           />
         )}
@@ -218,17 +216,22 @@ const AbyssNode = ({ id, data, selected, type }) => {
         )}
 
         {/* Neutral/Ready LED - Only show if NO active state and valid */}
-        {!data.state && isValid && (
-          <div
-            className={cn(
-              "w-2.5 h-2.5 rounded-full border border-white/20 bg-slate-600",
-            )}
-          />
-        )}
+        {(!data.state ||
+          (data.state !== "executing" &&
+            data.state !== "running" &&
+            data.state !== "success" &&
+            data.state !== "error")) &&
+          isValid && (
+            <div
+              className={cn(
+                "w-2.5 h-2.5 rounded-full border border-white/20 bg-slate-600",
+              )}
+            />
+          )}
       </div>
 
-      {/* SCANNING EFFECT (Running) */}
-      {data.state === "running" && (
+      {/* SCANNING EFFECT (Running/Executing) */}
+      {(data.state === "running" || data.state === "executing") && (
         <div className="absolute inset-0 rounded-lg overflow-hidden pointer-events-none z-10">
           <div
             className={cn(

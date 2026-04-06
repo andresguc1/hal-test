@@ -5,10 +5,12 @@ import { cn } from "@/lib/utils";
 // Parses a string into an array of text segments and variable segments
 // Parses a string into an array of text segments and variable segments
 const parseValue = (value) => {
-  if (!value) return [];
+  if (value === undefined || value === null || value === "") return [];
+  // Coerce to string to handle numbers, booleans, etc.
+  const str = String(value);
   // Support both {{var}} and ${var}
   const regex = /(\{\{[^}]+\}\}|\$\{[^}]+\})/g;
-  const parts = value.split(regex);
+  const parts = str.split(regex);
   return parts.filter(Boolean).map((part) => {
     if (part.startsWith("{{") && part.endsWith("}}")) {
       return {

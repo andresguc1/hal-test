@@ -215,25 +215,34 @@ export async function startInspector(page) {
                 JSON.stringify(data, null, 2),
             );
 
-            // PHASE 4: AI Sanitization
-            try {
-                const sanitized = await ollamaService.sanitizeSelector(
-                    data.selector,
-                    data.htmlContext,
-                );
-                if (sanitized && sanitized.confidence > 0.6) {
-                    console.log(
-                        `[Inspector] ✨ AI Optimized Selector: ${sanitized.sanitizedSelector}`,
-                    );
-                    data.sanitizedSelector = sanitized.sanitizedSelector;
-                    data.isAI = true;
-                    data.aiReasoning = sanitized.reasoning;
-                }
-            } catch (aiError) {
-                console.warn('[Inspector] AI Sanitization failed, using raw:', aiError.message);
-            }
-
+            // 🚀 FAST RESPONSE: Emit raw result immediately so UI feels snappy
             emitElementPicked(data);
+
+            // PHASE 4: AI Sanitization (Async/Non-blocking)
+            // We don't 'await' this so the function returns to the browser context instantly
+            (async () => {
+                try {
+                    const sanitized = await ollamaService.sanitizeSelector(
+                        data.selector,
+                        data.htmlContext,
+                    );
+                    if (sanitized && sanitized.confidence > 0.6) {
+                        console.log(
+                            `[Inspector] ✨ AI Optimized Selector: ${sanitized.sanitizedSelector}`,
+                        );
+                        const updatedData = {
+                            ...data,
+                            sanitizedSelector: sanitized.sanitizedSelector,
+                            isAI: true,
+                            aiReasoning: sanitized.reasoning,
+                        };
+                        // Emit update with AI-optimized selector
+                        emitElementPicked(updatedData);
+                    }
+                } catch (aiError) {
+                    console.warn('[Inspector] AI Sanitization failed:', aiError.message);
+                }
+            })();
         });
         console.log('[Inspector] ✅ onElementSelected function exposed successfully.');
     } catch (error) {

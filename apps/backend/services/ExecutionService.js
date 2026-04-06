@@ -105,12 +105,15 @@ class ExecutionService {
     /**
      * Recursive runner for the graph
      */
-    async runSequence(currentNodes, allNodes, allEdges, state) {
-        for (const node of currentNodes) {
+    async runSequence(currentNodes, allNodes, allEdges, state, parentId = null) {
+        // Filter nodes to only process those at the same level (same parentId)
+        const peerNodes = currentNodes.filter((n) => n.parentId === parentId);
+
+        for (const node of peerNodes) {
             if (state.executedNodeIds.has(node.nodeId)) continue;
 
             // 1. Execute Node
-            const result = await this.executeNode(node, state);
+            const result = await this.executeNode(node, allNodes, allEdges, state);
             state.executedNodeIds.add(node.nodeId);
 
             // 1.1 Store result in VariableManager for downstream interpolation
@@ -121,9 +124,6 @@ class ExecutionService {
                 variableManager.set(`${nodeLabel}.result`, nodeResult, 'flow');
                 // Save by ID (Robust)
                 variableManager.set(`${node.nodeId}.result`, nodeResult, 'flow');
-                console.log(
-                    `[ExecutionService] Saved result for "${nodeLabel}" (${node.nodeId}) to variableManager`,
-                );
             }
 
             // 2. Find next nodes
@@ -132,7 +132,6 @@ class ExecutionService {
             // Branching support: If node returns a specific path/handle direction
             const path = result?.data?.path;
             if (path) {
-                console.log(`[ExecutionService] Filtering edges for path: ${path}`);
                 nextEdges = nextEdges.filter((e) => e.sourceHandle === path);
             }
 
@@ -141,9 +140,8 @@ class ExecutionService {
                 .filter(Boolean);
 
             if (nextNodes.length > 0) {
-                // BFS approach for parallel branches, or sequential DFS.
-                // For now, let's keep it sequential DFS style.
-                await this.runSequence(nextNodes, allNodes, allEdges, state);
+                // Ensure we only follow nodes at the SAME level (same parentId)
+                await this.runSequence(nextNodes, allNodes, allEdges, state, parentId);
             }
         }
     }
@@ -151,8 +149,14 @@ class ExecutionService {
     /**
      * Executes a single node action
      */
-    async executeNode(node, state) {
+    async executeNode(node, allNodes, allEdges, state) {
         const actionType = node.type;
+
+        // SPECIAL CASE: Loop (Composition Container)
+        if (actionType === 'loop') {
+            return await this.executeLoopContainer(node, allNodes, allEdges, state);
+        }
+
         const handlerName = this.getHandlerName(actionType);
         const handler = actions[handlerName];
 
@@ -244,6 +248,142 @@ class ExecutionService {
         }
 
         return resultData;
+    }
+
+    /**
+     * Orchestrates the execution of a Loop acting as an encapsulated sub-flow (Dive-in)
+     */
+    async executeLoopContainer(node, allNodes, allEdges, state) {
+        const config = node.data?.configuration || {};
+        const {
+            mode,
+            iterations,
+            condition,
+            array: arrayInput,
+            itemVar = 'item',
+            indexVar = 'i',
+            maxIterations = 1000,
+            flowId, // NEW: Support for dive-in sub-flows
+        } = config;
+
+        console.log(
+            `[Loop] Starting encapsulated execution for node ${node.nodeId} (Mode: ${mode}, FlowId: ${flowId})`,
+        );
+
+        let subNodes = [];
+        let subEdges = [];
+
+        // 1. Identify children (Support both models for backward compatibility during transition)
+        if (flowId) {
+            // Dive-in model: Load nodes from the linked flow
+            const subFlow = await Flow.findOne({
+                where: { id: flowId },
+                include: [
+                    { model: Node, as: 'nodes' },
+                    { model: Edge, as: 'edges' },
+                ],
+            });
+            if (!subFlow) {
+                throw new Error(`[Loop] Backing flow ${flowId} not found for loop ${node.nodeId}`);
+            }
+            subNodes = subFlow.nodes.map((n) => n.toJSON());
+            subEdges = subFlow.edges.map((e) => e.toJSON());
+        } else {
+            // In-place model (Deprecated): Filter by parentId
+            subNodes = allNodes.filter((n) => n.parentId === node.nodeId);
+            subEdges = allEdges; // We filter edges by node IDs later if needed
+        }
+
+        if (subNodes.length === 0) {
+            console.warn(`[Loop] Loop node ${node.nodeId} has no children. Skipping.`);
+            return { success: true, message: 'Loop skipped (no children)' };
+        }
+
+        // Find entry points within the loop
+        const childNodeIds = new Set(subNodes.map((c) => c.nodeId));
+        // Only consider edges where both source and target are inside the sub-flow
+        const internalEdges = subEdges.filter(
+            (e) => childNodeIds.has(e.target) && childNodeIds.has(e.source),
+        );
+
+        const incomingCount = new Map();
+        subNodes.forEach((c) => incomingCount.set(c.nodeId, 0));
+        internalEdges.forEach((e) => {
+            incomingCount.set(e.target, incomingCount.get(e.target) + 1);
+        });
+
+        const entryNodes = subNodes.filter((c) => incomingCount.get(c.nodeId) === 0);
+        const loopStartNodes = entryNodes.length > 0 ? entryNodes : [subNodes[0]];
+
+        let currentIndex = 0;
+        let finished = false;
+
+        while (!finished && currentIndex < maxIterations) {
+            let shouldContinue = false;
+            let currentItem = null;
+
+            // Evaluating condition...
+            switch (mode) {
+                case 'count': {
+                    const total = Number(variableManager.resolveValue(iterations));
+                    shouldContinue = currentIndex < total;
+                    break;
+                }
+                case 'array': {
+                    let list = [];
+                    if (typeof arrayInput === 'string') {
+                        list = variableManager.resolveValue(arrayInput);
+                    } else if (Array.isArray(arrayInput)) {
+                        list = arrayInput;
+                    }
+                    if (!Array.isArray(list)) list = [];
+                    shouldContinue = currentIndex < list.length;
+                    if (shouldContinue) currentItem = list[currentIndex];
+                    break;
+                }
+
+                case 'while': {
+                    try {
+                        shouldContinue = variableManager.evaluate(condition) === true;
+                    } catch (e) {
+                        shouldContinue = false;
+                    }
+                    break;
+                }
+                default:
+                    shouldContinue = false;
+            }
+
+            if (!shouldContinue) {
+                finished = true;
+                break;
+            }
+
+            // 2. Set Iteration Variables
+            variableManager.set(indexVar, currentIndex, 'flow');
+            if (mode === 'array') {
+                variableManager.set(itemVar, currentItem, 'flow');
+            }
+
+            console.log(`[Loop] Iteration ${currentIndex + 1} for ${node.nodeId}`);
+
+            // 3. Execution sub-graph
+            // Create a local state for the iteration to track executed nodes within this iteration
+            const iterationState = {
+                ...state,
+                executedNodeIds: new Set(), // Fresh set for this iteration
+            };
+
+            await this.runSequence(loopStartNodes, allNodes, allEdges, iterationState, node.nodeId);
+
+            currentIndex++;
+        }
+
+        return {
+            success: true,
+            message: `Loop completed after ${currentIndex} iterations`,
+            data: { totalIterations: currentIndex },
+        };
     }
 
     getHandlerName(nodeType) {
