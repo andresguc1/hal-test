@@ -332,7 +332,10 @@ class ExecutionService {
                 case 'array': {
                     let list = [];
                     if (typeof arrayInput === 'string') {
-                        list = variableManager.resolveValue(arrayInput);
+                        // Try getting as variable first (direct name), then resolve as template
+                        list =
+                            variableManager.get(arrayInput) ||
+                            variableManager.resolveValue(arrayInput);
                     } else if (Array.isArray(arrayInput)) {
                         list = arrayInput;
                     }

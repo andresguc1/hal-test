@@ -93,23 +93,21 @@ export const AIProvider = ({ children }) => {
       );
 
       // Handle the different payload responses from `/ai/chat` vs `/ai/ask` endpoints if needed
-      if (result.message) {
+      let finalContent = result.message || result.text || "";
+      if (
+        !finalContent.trim() &&
+        result.toolCalls &&
+        result.toolCalls.length > 0
+      ) {
+        finalContent = "He ejecutado las acciones solicitadas en el lienzo.";
+      }
+
+      if (finalContent || (result.toolCalls && result.toolCalls.length > 0)) {
         setChatMessages((prev) => [
           ...prev,
           {
             role: "assistant",
-            content: result.message,
-            provider,
-            model: result.model || model,
-            usage: result.usage,
-          },
-        ]);
-      } else if (result.text) {
-        setChatMessages((prev) => [
-          ...prev,
-          {
-            role: "assistant",
-            content: result.text,
+            content: finalContent,
             provider: result.provider || provider,
             model: result.model || model,
             usage: result.usage,

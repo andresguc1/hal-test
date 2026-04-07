@@ -825,7 +825,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
       setNodes((nds) => [...nds, newNode]);
       setSelectedNodeId(id);
     },
-    [saveToHistory, setNodes],
+    [saveToHistory, setNodes, currentProject?.id, queryClient, toast],
   );
 
   // --- GHOST NODES (Phase 2) ---
@@ -1982,17 +1982,23 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
     (nodesToValidate, edgesToValidate) => {
       const errors = [];
 
+      // Filtrar nodos puramente visuales/explicativos
+      const ignoredTypes = ["guide", "note", "comment"];
+      const executionNodes = nodesToValidate.filter(
+        (n) =>
+          !ignoredTypes.includes(n.type) &&
+          !ignoredTypes.includes(n.data?.type),
+      );
+
       // 1. Check for empty flow
-      if (nodesToValidate.length === 0) {
-        errors.push("The flow is empty. Add at least one node.");
+      if (executionNodes.length === 0) {
+        errors.push("The flow is empty. Add at least one execution node.");
         return errors;
       }
 
       // 2. Find Root Nodes (nodes with no incoming edges)
-      // We filter out edges that are part of loops to correctly identify roots in cyclical graphs?
-      // For now, strict root definition: No target handles pointing to it.
       const targets = new Set(edgesToValidate.map((e) => e.target));
-      const roots = nodesToValidate.filter((n) => !targets.has(n.id));
+      const roots = executionNodes.filter((n) => !targets.has(n.id));
 
       // 3. Rule: Mandatory Master Node (Launch Browser)
       // There must be exactly ONE root, and it must be 'launch_browser'

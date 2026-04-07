@@ -195,9 +195,9 @@ class AIService {
             let activeSystem = system || 'You are HAL-9001.';
             if (activeProvider === 'ollama') {
                 activeSystem += `\n\n[OLLAMA_TOOL_INSTRUCTIONS]
-You have access to tools that can manipulate the Visual Canvas. To use them, you MUST include a <tool_call> tag in your response. 
-Output ONLY the <tool_call> tag and nothing else. DO NOT explain, describe, or add any conversational dialogue.
-Format:
+You have access to tools that can manipulate the Visual Canvas. If you need to use a tool to fulfill the user's request, include a <tool_call> tag in your response.
+If the user is just asking a question, analyzing the canvas, or making conversation, answer normally and DO NOT use a <tool_call>.
+Format for tool usage:
 <tool_call name="tool_name">{ "argument_key": "value" }</tool_call>
 
 Supported Tools:

@@ -15,7 +15,6 @@ import { CATEGORY_STYLES } from "@/config/nodeConstants";
 import { NODE_STATES } from "../hooks/flowStyles";
 
 const LoopNode = ({ data, selected }) => {
-
   // 1. Theme & State
   const state = data?.state || NODE_STATES.DEFAULT;
   const isRunning =

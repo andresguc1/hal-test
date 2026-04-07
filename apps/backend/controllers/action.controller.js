@@ -656,8 +656,10 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
                             type: 'info',
                         });
 
-                        // Limit healing budget: 20s max (leaves time for retry + response)
-                        const healingBudget = Math.min(opts.timeout || 20000, 20000);
+                        // Las pruebas manuales a menudo tienen timeouts cortos (ej: 8000ms).
+                        // La reparación con IA local necesita más tiempo de procesamiento.
+                        // Asignamos un presupuesto de al menos 45 segundos para dar margen.
+                        const healingBudget = Math.max(opts.timeout || 45000, 45000);
 
                         const diagnosis = await selectorHealer.heal({
                             page: currentPage,
@@ -4008,21 +4010,95 @@ export const conditionalAction = async (req, res) => {
 export const loopAction = async (req, res) => {
     try {
         const {
+            nodeId,
             mode,
             iterations,
             condition,
-            array,
-            itemVar,
-            indexVar,
+            array: arrayInput,
+            itemVar = 'item',
+            indexVar = 'i',
             maxIterations = 1000,
         } = req.body;
 
-        // This node is now handled as a Container by the ExecutionService.
-        // When called directly (e.g. for validation), it just returns the config.
+        const stateKey = `_loop_state_${nodeId}`;
+        let state = variableManager.get(stateKey);
+
+        if (!state) {
+            state = { index: 0, totalIterations: 0 };
+        }
+
+        let shouldContinue = false;
+        let currentItem = null;
+
+        switch (mode) {
+            case 'count': {
+                const total = Number(variableManager.resolveValue(iterations));
+                shouldContinue = state.index < total;
+                break;
+            }
+            case 'array': {
+                let list = [];
+                if (typeof arrayInput === 'string') {
+                    // Try getting as variable first, then resolve as template
+                    list =
+                        variableManager.get(arrayInput) || variableManager.resolveValue(arrayInput);
+                } else if (Array.isArray(arrayInput)) {
+                    list = arrayInput;
+                }
+                if (!Array.isArray(list)) list = [];
+                shouldContinue = state.index < list.length;
+                if (shouldContinue) currentItem = list[state.index];
+                break;
+            }
+            case 'while': {
+                try {
+                    shouldContinue = variableManager.evaluate(condition) === true;
+                } catch (e) {
+                    shouldContinue = false;
+                }
+                break;
+            }
+            default:
+                shouldContinue = false;
+        }
+
+        // Safety check
+        if (state.index >= maxIterations) {
+            shouldContinue = false;
+        }
+
+        if (!shouldContinue) {
+            variableManager.delete(stateKey);
+            return res.status(200).json({
+                success: true,
+                message: 'Loop completed',
+                data: {
+                    path: 'completed',
+                    totalIterations: state.index,
+                },
+            });
+        }
+
+        // Update variables for this iteration
+        variableManager.set(indexVar, state.index, 'flow');
+        if (mode === 'array') {
+            variableManager.set(itemVar, currentItem, 'flow');
+        }
+
+        // Increment state
+        variableManager.set(stateKey, {
+            index: state.index + 1,
+            totalIterations: state.index + 1,
+        });
+
         return res.status(200).json({
             success: true,
-            message: 'Loop configuration validated',
-            data: { mode, iterations, condition, array, itemVar, indexVar, maxIterations },
+            message: `Loop iteration ${state.index}`,
+            data: {
+                path: 'body',
+                index: state.index,
+                item: currentItem,
+            },
         });
     } catch (error) {
         console.error('[ERROR] loopAction:', error.message);
