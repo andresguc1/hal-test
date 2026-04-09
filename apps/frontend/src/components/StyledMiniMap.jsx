@@ -37,9 +37,6 @@ export default function StyledMiniMap() {
 
     // 3. Resolve Category Color
     if (config && config.color) {
-      // Map color names to HEX values manually or import a map?
-      // Since we need hex for MiniMap, let's map the names to the values we just defined in nodeConstants solid theme.
-      // Actually, we can just use a simple switch or object here for the hexes since they are strict now.
       switch (config.color) {
         case "emerald":
           return "#10b981";
@@ -57,12 +54,24 @@ export default function StyledMiniMap() {
           return "#8b5cf6";
         case "indigo":
           return "#6366f1";
+        case "purple":
+          return "#a855f7";
+        case "fuchsia":
+          return "#d946ef";
+        case "amber":
+          return "#f59e0b";
+        case "yellow":
+          return "#eab308";
         case "lime":
           return "#84cc16";
         case "sky":
           return "#0ea5e9";
         case "slate":
           return "#64748b";
+        case "gray":
+          return "#6b7280";
+        case "red":
+          return "#ef4444";
         default:
           return "#64748b";
       }

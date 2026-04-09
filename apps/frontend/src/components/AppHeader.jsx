@@ -45,7 +45,7 @@ const Breadcrumbs = ({ viewStack, onExit }) => {
       </span>
 
       {viewStack.map((view, index) => (
-        <React.Fragment key={view.id}>
+        <React.Fragment key={`${view.id}-${index}`}>
           <span className="text-[var(--text-secondary)] opacity-50">/</span>
           <span
             onClick={() => (index < viewStack.length - 1 ? onExit() : null)} // Simple logic: clicking breadcrumb pops one level (not robust for deep nested yet)

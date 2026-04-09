@@ -97,25 +97,30 @@ const LoopNode = ({ data, selected }) => {
             {data.customLabel || data.label || "Loop Container"}
           </span>
           {showDetails && (
-            <div className="flex items-center gap-1.5 opacity-70">
-              <Icon size={10} className="text-white" />
-              <span className="text-[9px] font-bold text-white uppercase truncate tracking-tighter">
-                {getSubLabel()}
+            <div className="flex flex-col gap-0.5 mt-1 border-t border-white/10 pt-1">
+              <div className="flex items-center gap-1.5 opacity-70">
+                <Icon size={10} className="text-white" />
+                <span className="text-[9px] font-bold text-white uppercase truncate tracking-tighter">
+                  {getSubLabel()}
+                </span>
+              </div>
+              <span className="text-[9px] font-black uppercase tracking-wider text-white/60 drop-shadow-sm">
+                {data.nodeCount || 0} NODES INSIDE
               </span>
             </div>
           )}
         </div>
       </div>
 
-      {/* DIVE-IN PROMPT */}
-      <div className="mt-3 pt-2 border-t border-white/20">
-        <div className="flex items-center justify-between text-white/50 text-[10px]">
-          <span className="italic flex items-center gap-1">
-            <MoreHorizontal size={12} />
-            Double-click to edit
+      {/* DIVE-IN PROMPT (Improved visibility) */}
+      <div className="mt-3 pt-2 border-t border-white/10">
+        <div className="flex items-center justify-between text-white/50 text-[10px] gap-3">
+          <span className="italic flex items-center gap-1 truncate min-w-0">
+            <MoreHorizontal size={12} className="shrink-0" />
+            <span className="truncate">Double-click to edit</span>
           </span>
-          <span className="px-1.5 py-0.5 rounded bg-white/20 border border-white/10 font-bold text-white/90 shadow-sm">
-            DIVE IN
+          <span className="px-1.5 py-0.5 rounded bg-white/10 border border-white/10 font-bold text-white/90 shadow-sm shrink-0 uppercase text-[9px]">
+            Dive In
           </span>
         </div>
       </div>
@@ -130,4 +135,16 @@ const LoopNode = ({ data, selected }) => {
   );
 };
 
-export default memo(LoopNode);
+function arePropsEqual(prevProps, nextProps) {
+  return (
+    prevProps.selected === nextProps.selected &&
+    prevProps.data?.state === nextProps.data?.state &&
+    prevProps.data?.label === nextProps.data?.label &&
+    prevProps.data?.customLabel === nextProps.data?.customLabel &&
+    prevProps.data?.nodeCount === nextProps.data?.nodeCount &&
+    prevProps.data?.flowId === nextProps.data?.flowId &&
+    prevProps.data?.configuration === nextProps.data?.configuration
+  );
+}
+
+export default memo(LoopNode, arePropsEqual);

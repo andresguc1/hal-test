@@ -261,6 +261,7 @@ function Dashboard() {
     clipboard,
     // clearFlow, // Unused
     groupNodes, // Composition feature
+    loopNodes,
     ungroupNodes,
     viewStack, // Nav stack
     enterComponent,
@@ -928,7 +929,9 @@ function Dashboard() {
     if (
       selected.length === 1 &&
       (selected[0].type === "component" ||
-        selected[0].data?.type === "component")
+        selected[0].data?.type === "component" ||
+        selected[0].type === "loop" ||
+        selected[0].data?.type === "loop")
     ) {
       ungroupNodes(selected[0].id);
     } else {
@@ -1166,12 +1169,57 @@ function Dashboard() {
     [figmaConfig],
   );
 
+  // -------------------------------------------------------------------------
+  // NODE DATA ENRICHMENT
+  // -------------------------------------------------------------------------
+  // Resolve sub-flow information (like node count) dynamically for UI display
+  const enrichedNodes = useMemo(() => {
+    if (!nodes || nodes.length === 0 || !currentProject) return nodes;
+
+    return nodes.map((node) => {
+      const isContainer = ["component", "loop"].includes(
+        node.type || node.data?.type,
+      );
+      if (!isContainer) return node;
+
+      const flowId = node.data?.flowId;
+      if (!flowId) return node;
+
+      const subFlow = currentProject.flows?.find((f) => f.id === flowId);
+      if (!subFlow) return node;
+
+      // Calculate stats
+      const nodeCount = subFlow.nodes?.length || 0;
+      const hasInput = subFlow.nodes?.some((n) => n.type === "input");
+      const hasOutput = subFlow.nodes?.some((n) => n.type === "output");
+
+      // Only update if data has changed to prevent React Flow re-renders
+      if (
+        node.data?.nodeCount === nodeCount &&
+        node.data?.hasInput === hasInput &&
+        node.data?.hasOutput === hasOutput
+      ) {
+        return node;
+      }
+
+      return {
+        ...node,
+        data: {
+          ...node.data,
+          nodeCount,
+          hasInput,
+          hasOutput,
+        },
+      };
+    });
+  }, [nodes, currentProject]);
+
   // Props dinámicas que sí cambian
   const flowConfig = useMemo(
     () => ({
       ...staticFlowProps,
       snapToGrid: enableSnapping, // Controlled by Global Settings
-      nodes,
+      nodes: enrichedNodes,
       edges,
       onNodesChange,
       onEdgesChange,
@@ -1397,13 +1445,19 @@ function Dashboard() {
                         groupNodes();
                         setMenu(null);
                       },
+                      loopSelection: () => {
+                        loopNodes();
+                        setMenu(null);
+                      },
                       ungroup: () => {
                         // Handle ungrouping via context menu
                         // Check if the right-clicked node is a component, or if selection contains one
                         if (
                           menu.data &&
                           (menu.data.type === "component" ||
-                            menu.data.data?.type === "component")
+                            menu.data.data?.type === "component" ||
+                            menu.data.type === "loop" ||
+                            menu.data.data?.type === "loop")
                         ) {
                           ungroupNodes(menu.data.id);
                         } else {

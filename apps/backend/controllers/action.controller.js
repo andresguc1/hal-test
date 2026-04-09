@@ -4079,6 +4079,7 @@ export const loopAction = async (req, res) => {
             return res.status(200).json({
                 success: true,
                 message: 'Loop completed',
+                path: 'completed', // Root level path
                 data: {
                     path: 'completed',
                     totalIterations: state.index,
@@ -4101,6 +4102,7 @@ export const loopAction = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: `Loop iteration ${state.index}`,
+            path: 'body', // Root level path
             data: {
                 path: 'body',
                 index: state.index,

@@ -15,6 +15,7 @@ import {
   LayoutGrid,
   Box,
   Ungroup,
+  Repeat,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NODE_CATEGORIES } from "../config/nodeConstants";
@@ -586,7 +587,9 @@ const ContextMenu = ({
               <Divider />
               {/* UNGROUP OPTION FOR COMPONENTS */}
               {(data?.type === "component" ||
-                data?.data?.type === "component") && (
+                data?.data?.type === "component" ||
+                data?.type === "loop" ||
+                data?.data?.type === "loop") && (
                 <>
                   <ContextMenuItem
                     icon={Ungroup}
@@ -683,6 +686,11 @@ const ContextMenu = ({
                 label="Group Selection"
                 shortcut="^G"
                 onClick={actions.group}
+              />
+              <ContextMenuItem
+                icon={Repeat}
+                label="Iterate Selection"
+                onClick={actions.loopSelection}
               />
               <ContextMenuItem
                 icon={Ungroup}

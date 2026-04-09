@@ -9,6 +9,7 @@ import {
   ArrowRight,
   FileText,
   ArrowLeftRight,
+  Box,
 } from "lucide-react";
 import { NODE_STATES } from "./hooks/flowStyles";
 import {
@@ -2185,6 +2186,44 @@ function NodeConfigurationPanel({
     return { precedingNodes: prev, nextNodes: next };
   }, [activeNode, edges, nodes, viewStack, currentProject, liveVariables]);
 
+  // --- COMPOSITION STATS RESOLUTION ---
+  const resolvedStats = useMemo(() => {
+    if (!activeNode || !currentProject)
+      return { nodeCount: 0, hasInput: false, hasOutput: false };
+
+    const isContainer = ["component", "loop"].includes(
+      activeNode.type || activeNode.data?.type,
+    );
+    if (!isContainer)
+      return { nodeCount: 0, hasInput: false, hasOutput: false };
+
+    const flowId = activeNode.data?.flowId;
+    if (!flowId) return { nodeCount: 0, hasInput: false, hasOutput: false };
+
+    // Find the actual subflow in the project
+    const subFlow = currentProject.flows?.find((f) => f.id === flowId);
+    if (!subFlow) {
+      // Fallback to in-memory snapshot if DB flow not yet in project list
+      const nodesCount =
+        activeNode.data?.nodeCount ?? activeNode.data?.subFlow?.nodes?.length;
+      return {
+        nodeCount: nodesCount || 0,
+        hasInput:
+          activeNode.data?.hasInput ??
+          activeNode.data?.subFlow?.nodes?.some((n) => n.type === "input"),
+        hasOutput:
+          activeNode.data?.hasOutput ??
+          activeNode.data?.subFlow?.nodes?.some((n) => n.type === "output"),
+      };
+    }
+
+    return {
+      nodeCount: subFlow.nodes?.length || 0,
+      hasInput: subFlow.nodes?.some((n) => n.type === "input"),
+      hasOutput: subFlow.nodes?.some((n) => n.type === "output"),
+    };
+  }, [activeNode, currentProject]);
+
   // Utility to safely stringify and truncate large results for preview
   const truncateResult = useCallback((result, maxLen = 1000) => {
     if (!result) return "";
@@ -3296,122 +3335,145 @@ function NodeConfigurationPanel({
           {/* SCROLLABLE CONTENT */}
           <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
             {/* Dynamic Content Switch */}
-            {safeConfig.nodeKey === "component" ||
-            activeNode.type === "component" ? (
-              // --- COMPONENT DASHBOARD ---
-              <div className="space-y-6">
-                {/* Description Card */}
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 text-[10px] uppercase tracking-wider font-bold text-slate-500">
-                    <FileText size={12} />
-                    Description
-                  </label>
-                  <textarea
-                    value={localConfig.description || ""}
-                    onChange={(e) =>
-                      handleConfigUpdate("description", e.target.value)
-                    }
-                    placeholder="Describe what this component does..."
-                    className="w-full h-24 bg-[var(--bg-canvas)]/50 border border-[var(--border-ui)] rounded-lg p-3 text-xs text-[var(--text-main)] focus:outline-none focus:border-indigo-500/50 transition-all placeholder:text-[var(--text-muted)] resize-none"
-                  />
-                </div>
+            {/* Dynamic Content Switch */}
+            {(() => {
+              const isComponent = activeNode.type === "component";
+              const isLoop = activeNode.type === "loop";
 
-                {/* Stats Grid */}
-                <div className="grid grid-cols-2 gap-3">
-                  {/* Node Count */}
-                  <div className="p-3 rounded-lg border border-white/5 bg-white/5 flex flex-col gap-1">
-                    <span className="text-[10px] uppercase text-slate-500 font-bold">
-                      Nodes
-                    </span>
-                    <span className="text-2xl font-bold text-white">
-                      {activeNode.data?.nodeCount ??
-                        (activeNode.data?.subFlow?.nodes?.length || 0)}
-                    </span>
-                  </div>
-                  {/* Connections */}
-                  <div className="p-3 rounded-lg border border-white/5 bg-white/5 flex flex-col gap-1">
-                    <span className="text-[10px] uppercase text-slate-500 font-bold">
-                      I/O
-                    </span>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span
-                        className={cn(
-                          "text-xs font-mono px-1.5 py-0.5 rounded",
-                          (activeNode.data?.hasInput ??
-                            activeNode.data?.subFlow?.nodes?.some(
-                              (n) => n.type === "input",
-                            ))
-                            ? "bg-indigo-500/20 text-indigo-300"
-                            : "bg-white/5 text-slate-500",
-                        )}
-                      >
-                        IN
+              const renderCompositionDashboard = () => (
+                <div className="space-y-6">
+                  {/* Stats Grid */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Node Count */}
+                    <div className="p-3 rounded-lg border border-white/5 bg-white/5 flex flex-col gap-1">
+                      <span className="text-[10px] uppercase text-slate-500 font-bold">
+                        Nodes
                       </span>
-                      <ArrowLeftRight size={12} className="text-slate-600" />
-                      <span
-                        className={cn(
-                          "text-xs font-mono px-1.5 py-0.5 rounded",
-                          (activeNode.data?.hasOutput ??
-                            activeNode.data?.subFlow?.nodes?.some(
-                              (n) => n.type === "output",
-                            ))
-                            ? "bg-amber-500/20 text-amber-300"
-                            : "bg-white/5 text-slate-500",
-                        )}
-                      >
-                        OUT
+                      <span className="text-2xl font-bold text-white">
+                        {resolvedStats.nodeCount}
                       </span>
                     </div>
+                    {/* Connections */}
+                    <div className="p-3 rounded-lg border border-white/5 bg-white/5 flex flex-col gap-1">
+                      <span className="text-[10px] uppercase text-slate-500 font-bold">
+                        I/O
+                      </span>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span
+                          className={cn(
+                            "text-xs font-mono px-1.5 py-0.5 rounded",
+                            resolvedStats.hasInput
+                              ? "bg-indigo-500/20 text-indigo-300"
+                              : "bg-white/5 text-slate-500",
+                          )}
+                        >
+                          IN
+                        </span>
+                        <ArrowLeftRight size={12} className="text-slate-600" />
+                        <span
+                          className={cn(
+                            "text-xs font-mono px-1.5 py-0.5 rounded",
+                            resolvedStats.hasOutput
+                              ? "bg-amber-500/20 text-amber-300"
+                              : "bg-white/5 text-slate-500",
+                          )}
+                        >
+                          OUT
+                        </span>
+                      </div>
+                    </div>
                   </div>
+
+                  {/* Navigation Action */}
+                  <button
+                    onClick={() => {
+                      if (onEnterSubFlow) {
+                        onEnterSubFlow(activeNode.id);
+                        onClose();
+                      }
+                    }}
+                    className="w-full py-4 rounded-xl border border-dashed border-indigo-500/30 bg-indigo-500/5 hover:bg-indigo-500/10 transition-colors flex items-center justify-center gap-3 group"
+                  >
+                    <div className="p-2 bg-indigo-500/20 rounded-lg group-hover:scale-110 transition-transform">
+                      <Layout size={18} className="text-indigo-400" />
+                    </div>
+                    <div className="flex flex-col items-start">
+                      <span className="text-sm font-bold text-indigo-300">
+                        {isLoop ? "Open Loop Logic" : "Open Logic Flow"}
+                      </span>
+                      <span className="text-[10px] text-indigo-400/60">
+                        {isLoop
+                          ? "Dive into iteration internals"
+                          : "Dive into component internals"}
+                      </span>
+                    </div>
+                    <ArrowRight
+                      size={16}
+                      className="ml-auto text-indigo-500/50 group-hover:translate-x-1 transition-transform"
+                    />
+                  </button>
+
+                  {/* Ungroup Action */}
+                  <button
+                    onClick={() => {
+                      if (
+                        confirm(
+                          `Are you sure you want to ungroup this ${isLoop ? "loop" : "component"}? This will dissolve the boundaries.`,
+                        )
+                      ) {
+                        onUngroup(activeNode.id);
+                        onClose();
+                      }
+                    }}
+                    className="w-full py-2 rounded-lg border border-red-500/10 text-red-400/70 hover:bg-red-500/5 hover:text-red-400 text-xs font-medium transition-colors flex items-center justify-center gap-2"
+                  >
+                    {isLoop ? "Ungroup Loop" : "Ungroup Component"}
+                  </button>
                 </div>
+              );
 
-                {/* Navigation Action */}
-                <button
-                  onClick={() => {
-                    if (onEnterSubFlow) {
-                      onEnterSubFlow(activeNode.id);
-                      onClose();
-                    }
-                  }}
-                  className="w-full py-4 rounded-xl border border-dashed border-indigo-500/30 bg-indigo-500/5 hover:bg-indigo-500/10 transition-colors flex items-center justify-center gap-3 group"
-                >
-                  <div className="p-2 bg-indigo-500/20 rounded-lg group-hover:scale-110 transition-transform">
-                    <Layout size={18} className="text-indigo-400" />
+              if (isComponent) {
+                return (
+                  <div className="space-y-6">
+                    {/* Description Card */}
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-2 text-[10px] uppercase tracking-wider font-bold text-slate-500">
+                        <FileText size={12} />
+                        Description
+                      </label>
+                      <textarea
+                        value={localConfig.description || ""}
+                        onChange={(e) =>
+                          handleConfigUpdate("description", e.target.value)
+                        }
+                        placeholder="Describe what this component does..."
+                        className="w-full h-24 bg-[var(--bg-canvas)]/50 border border-[var(--border-ui)] rounded-lg p-3 text-xs text-[var(--text-main)] focus:outline-none focus:border-indigo-500/50 transition-all placeholder:text-[var(--text-muted)] resize-none"
+                      />
+                    </div>
+                    {renderCompositionDashboard()}
                   </div>
-                  <div className="flex flex-col items-start">
-                    <span className="text-sm font-bold text-indigo-300">
-                      Open Logic Flow
-                    </span>
-                    <span className="text-[10px] text-indigo-400/60">
-                      Dive into component internals
-                    </span>
-                  </div>
-                  <ArrowRight
-                    size={16}
-                    className="ml-auto text-indigo-500/50 group-hover:translate-x-1 transition-transform"
-                  />
-                </button>
+                );
+              }
 
-                {/* Ungroup Action */}
-                <button
-                  onClick={() => {
-                    if (
-                      confirm(
-                        "Are you sure you want to ungroup this component? This will dissolve the group boundaries.",
-                      )
-                    ) {
-                      onUngroup(activeNode.id);
-                      onClose();
-                    }
-                  }}
-                  className="w-full py-2 rounded-lg border border-red-500/10 text-red-400/70 hover:bg-red-500/5 hover:text-red-400 text-xs font-medium transition-colors flex items-center justify-center gap-2"
-                >
-                  Ungroup Component
-                </button>
-              </div>
-            ) : (
-              renderNodeInputs()
-            )}
+              if (isLoop) {
+                return (
+                  <div className="space-y-8">
+                    {renderNodeInputs()}
+                    <div className="pt-6 border-t border-white/5 space-y-4">
+                      <div className="flex items-center gap-2 px-1">
+                        <Box size={12} className="text-slate-500" />
+                        <span className="text-[10px] uppercase tracking-wider font-bold text-slate-500">
+                          Composition Details
+                        </span>
+                      </div>
+                      {renderCompositionDashboard()}
+                    </div>
+                  </div>
+                );
+              }
+
+              return renderNodeInputs();
+            })()}
           </div>
 
           {/* Evidence preview for screenshot nodes (shown at bottom, only when not already shown inline via takeScreenshot checkbox) */}

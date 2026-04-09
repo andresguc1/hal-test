@@ -135,15 +135,17 @@ const ComponentNode = ({ id: _id, data, selected }) => {
         </div>
       </div>
 
-      {/* BODY PROMPT (Simplified) */}
-      <div className="mt-3 pt-2 border-t border-white/20">
-        <div className="flex items-center justify-between text-white/50 text-[10px]">
-          <span className="italic flex items-center gap-1">
-            <MoreHorizontal size={12} />
-            Contains Logic
+      {/* BODY PROMPT (Improved visibility) */}
+      <div className="mt-3 pt-2 border-t border-white/10">
+        <div className="flex items-center justify-between text-white/50 text-[10px] gap-2">
+          <span className="italic flex items-center gap-1 truncate min-w-0">
+            <MoreHorizontal size={12} className="shrink-0" />
+            <span className="truncate">
+              {t("nodes.prompts.contains_logic", "Contains Logic")}
+            </span>
           </span>
-          <span className="px-1.5 py-0.5 rounded bg-white/10 border border-white/5 font-mono">
-            OPEN FLOW
+          <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/5 font-mono text-[9px] shrink-0 uppercase">
+            Open
           </span>
         </div>
       </div>

@@ -243,69 +243,89 @@ const GlassMenu = ({
       className="bg-[#0f172a]/90 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden min-w-[240px] flex flex-col p-1 mb-1"
     >
       <div className="max-h-[300px] overflow-y-auto custom-scrollbar p-1 space-y-0.5">
-        {isFlowMenu ? (
-          <>
-            {mainItems.length > 0 && (
-              <div className="px-3 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                Main Flows
-              </div>
-            )}
-            {mainItems.map((item) => (
-              <MenuOption
-                key={item.id}
-                item={item}
-                isActive={item.id === activeId}
-                onClick={onItemClick}
-                onRename={onRename}
-                onDelete={onDelete}
-                icon={GitBranch}
-              />
-            ))}
+        {isFlowMenu
+          ? (() => {
+              const renderedIds = new Set();
+              return (
+                <>
+                  {mainItems.length > 0 && (
+                    <div className="px-3 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      Main Flows
+                    </div>
+                  )}
+                  {mainItems.map((item) => {
+                    if (renderedIds.has(item.id)) return null;
+                    renderedIds.add(item.id);
+                    return (
+                      <MenuOption
+                        key={item.id}
+                        item={item}
+                        isActive={item.id === activeId}
+                        onClick={onItemClick}
+                        onRename={onRename}
+                        onDelete={onDelete}
+                        icon={GitBranch}
+                      />
+                    );
+                  })}
 
-            {componentItems.length > 0 && (
-              <>
-                <div className="my-1 border-t border-white/5" />
-                <div className="px-3 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-                  Components
+                  {componentItems.length > 0 && (
+                    <>
+                      <div className="my-1 border-t border-white/5" />
+                      <div className="px-3 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                        Components
+                      </div>
+                      {componentItems.map((item) => {
+                        if (renderedIds.has(item.id)) return null;
+                        renderedIds.add(item.id);
+                        return (
+                          <MenuOption
+                            key={item.id}
+                            item={item}
+                            isActive={item.id === activeId}
+                            onClick={onItemClick}
+                            onRename={onRename}
+                            onDelete={onDelete}
+                            icon={Box}
+                          />
+                        );
+                      })}
+                    </>
+                  )}
+
+                  {items.length === 0 && (
+                    <div className="px-3 py-4 text-center text-xs text-slate-500 italic">
+                      No flows found
+                    </div>
+                  )}
+                </>
+              );
+            })()
+          : /* Standard Project List */
+            (() => {
+              const renderedIds = new Set();
+              return items && items.length > 0 ? (
+                items.map((item) => {
+                  if (renderedIds.has(item.id)) return null;
+                  renderedIds.add(item.id);
+                  return (
+                    <MenuOption
+                      key={item.id}
+                      item={item}
+                      isActive={item.id === activeId}
+                      onClick={onItemClick}
+                      onRename={onRename}
+                      onDelete={onDelete}
+                      icon={Folder}
+                    />
+                  );
+                })
+              ) : (
+                <div className="px-3 py-4 text-center text-xs text-slate-500 italic">
+                  No items found
                 </div>
-                {componentItems.map((item) => (
-                  <MenuOption
-                    key={item.id}
-                    item={item}
-                    isActive={item.id === activeId}
-                    onClick={onItemClick}
-                    onRename={onRename}
-                    onDelete={onDelete}
-                    icon={Box}
-                  />
-                ))}
-              </>
-            )}
-
-            {items.length === 0 && (
-              <div className="px-3 py-4 text-center text-xs text-slate-500 italic">
-                No flows found
-              </div>
-            )}
-          </>
-        ) : // Standard Project List
-        items && items.length > 0 ? (
-          items.map((item) => (
-            <MenuOption
-              key={item.id}
-              item={item}
-              isActive={item.id === activeId}
-              onClick={onItemClick}
-              onRename={onRename}
-              onDelete={onDelete}
-              icon={Folder}
-            />
-          ))
-        ) : (
-          <div className="px-3 py-4 text-center text-xs text-slate-500 italic">
-            No {type}s found
-          </div>
-        )}
+              );
+            })()}
       </div>
 
       {/* Footer for 'New' action */}

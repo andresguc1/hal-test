@@ -248,8 +248,23 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
     const resolvedEdges =
       typeof newEdges === "function" ? newEdges(edgesRef.current) : newEdges;
 
-    edgesRef.current = resolvedEdges;
-    setEdgesState(resolvedEdges);
+    // ✨ ROBUST DEDUPLICATION: Prevent duplicate edge IDs that crash React Flow
+    const uniqueEdges = [];
+    const seenIds = new Set();
+
+    for (const edge of resolvedEdges) {
+      if (!seenIds.has(edge.id)) {
+        seenIds.add(edge.id);
+        uniqueEdges.push(edge);
+      } else {
+        console.warn(
+          `[useFlowManager] 🛡️ Duplicate edge detected and filtered: ${edge.id}`,
+        );
+      }
+    }
+
+    edgesRef.current = uniqueEdges;
+    setEdgesState(uniqueEdges);
     setHasUnsavedChanges(true); // Mark as dirty on ANY edge change
   }, []);
 
@@ -939,11 +954,16 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
 
       setNodes((nds) =>
         updateNodeRecursively(nds, nodeId, (n) => {
-          // Check if this is a component rename
-          if (n.type === "component" || n.data.type === "component") {
+          // Check if this is a container rename (component or loop)
+          const isContainer =
+            n.type === "component" ||
+            n.data?.type === "component" ||
+            n.type === "loop" ||
+            n.data?.type === "loop";
+          if (isContainer) {
             const proposedName = newConfig.customLabel || newConfig.label;
-            if (proposedName && proposedName !== n.data.label) {
-              targetFlowId = n.data.flowId;
+            if (proposedName && proposedName !== n.data?.label) {
+              targetFlowId = n.data?.flowId;
               newName = proposedName;
             }
           }
@@ -1152,17 +1172,6 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
     if (selectedNodes.length < 2) {
       toast.error(
         t("groups.min_selection", "Select at least 2 nodes to group"),
-      );
-      return;
-    }
-
-    // ⛔ NESTING RULE (V1): Prevent nesting components
-    const hasComponent = selectedNodes.some(
-      (n) => n.type === "component" || n.data?.type === "component",
-    );
-    if (hasComponent) {
-      toast.error(
-        t("groups.no_nesting", "Grouping components is not supported yet"),
       );
       return;
     }
@@ -1385,6 +1394,209 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
     saveFlow,
   ]);
 
+  const loopNodes = useCallback(async () => {
+    // 1. Identify selected nodes
+    const selectedNodes = nodesRef.current.filter((n) => n.selected);
+    if (selectedNodes.length < 2) {
+      toast.error(t("groups.min_selection", "Select at least 2 nodes to loop"));
+      return;
+    }
+
+    saveToHistory();
+
+    // 2. Calculate Bounding Box
+    let minX = Infinity,
+      minY = Infinity,
+      maxX = -Infinity,
+      maxY = -Infinity;
+
+    selectedNodes.forEach((n) => {
+      minX = Math.min(minX, n.position.x);
+      minY = Math.min(minY, n.position.y);
+      maxX = Math.max(maxX, n.position.x + (n.width || 200));
+      maxY = Math.max(maxY, n.position.y + (n.height || 100));
+    });
+
+    const groupWidth = maxX - minX;
+    const groupHeight = maxY - minY;
+
+    // 4. Extract Sub-Flow Logic
+    const selectedNodeIds = new Set(selectedNodes.map((n) => n.id));
+
+    // Internal Edges: Both Source and Target inside group (Keep them)
+    const internalEdges = edgesRef.current.filter(
+      (e) => selectedNodeIds.has(e.source) && selectedNodeIds.has(e.target),
+    );
+
+    // External Incoming: Source OUTSIDE, Target INSIDE (Needs Input Node)
+    const externalIncoming = edgesRef.current.filter(
+      (e) => !selectedNodeIds.has(e.source) && selectedNodeIds.has(e.target),
+    );
+
+    // External Outgoing: Source INSIDE, Target OUTSIDE (Needs Output Node)
+    const externalOutgoing = edgesRef.current.filter(
+      (e) => selectedNodeIds.has(e.source) && !selectedNodeIds.has(e.target),
+    );
+
+    // ---------------------------------------------------------
+    // GENERATE SUB-FLOW NODES (Normalized + Boundaries)
+    // ---------------------------------------------------------
+    const subNodes = selectedNodes.map((n) => ({
+      ...n,
+      position: {
+        x: n.position.x - minX,
+        y: n.position.y - minY,
+      },
+      selected: false,
+      parentNode: null,
+      extent: undefined,
+    }));
+
+    const finalSubEdges = [...(internalEdges || [])];
+
+    // -> HANDLE INPUT BOUNDARY
+    if (externalIncoming.length > 0) {
+      const inputId = `input_${uuidv4()}`;
+      const inputNode = {
+        id: inputId,
+        type: "input",
+        position: { x: -250, y: groupHeight / 2 - 25 },
+        data: { label: "Input", type: "input" },
+      };
+      subNodes.push(inputNode);
+
+      externalIncoming.forEach((edge) => {
+        finalSubEdges.push({
+          id: `e_${inputId}-${edge.target}`,
+          source: inputId,
+          target: edge.target,
+          type: "default",
+          animated: true,
+        });
+      });
+    }
+
+    // -> HANDLE OUTPUT BOUNDARY
+    if (externalOutgoing.length > 0) {
+      const outputId = `output_${uuidv4()}`;
+      const outputNode = {
+        id: outputId,
+        type: "output",
+        position: { x: groupWidth + 200, y: groupHeight / 2 - 25 },
+        data: { label: "Output", type: "output" },
+      };
+      subNodes.push(outputNode);
+
+      externalOutgoing.forEach((edge) => {
+        finalSubEdges.push({
+          id: `e_${edge.source}-${outputId}`,
+          source: edge.source,
+          target: outputId,
+          type: "default",
+          animated: true,
+        });
+      });
+    }
+
+    try {
+      // 5. Create Loop Flow via API
+      const loopName = `Loop ${new Date().toLocaleTimeString()}`;
+      const { flow: newFlow } = await projectManager.createFlow(
+        currentProject.id,
+        loopName,
+        {
+          type: "loop",
+          parentId: currentFlowId,
+          nodes: subNodes,
+          edges: finalSubEdges,
+        },
+      );
+
+      if (!newFlow || !newFlow.id)
+        throw new Error("Failed to create loop flow");
+
+      // REFRESH PROJECT DATA
+      queryClient.setQueryData(["project", currentProject.id], (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          flows: [...(old.flows || []), newFlow],
+        };
+      });
+
+      // 6. Create The Loop Node in Main Flow
+      const loopId = generateNodeId();
+      const loopNode = {
+        id: loopId,
+        type: "loop",
+        position: { x: minX, y: minY },
+        width: groupWidth,
+        height: groupHeight,
+        data: {
+          label: loopName,
+          type: "loop",
+          flowId: newFlow.id,
+          configuration: { mode: "count", iterations: 1 },
+          nodeCount: subNodes.length,
+          hasInput: subNodes.some((n) => n.type === "input"),
+          hasOutput: subNodes.some((n) => n.type === "output"),
+          subFlow: { nodes: subNodes, edges: finalSubEdges },
+        },
+        style: getNodeStyle ? getNodeStyle(NODE_STATES.DEFAULT) : {},
+      };
+
+      // 7. Update Main Flow State
+      const remainingNodes = nodesRef.current.filter(
+        (n) => !selectedNodeIds.has(n.id),
+      );
+
+      const remainingEdges = edgesRef.current.filter(
+        (e) =>
+          !selectedNodeIds.has(e.source) &&
+          !selectedNodeIds.has(e.target) &&
+          !externalIncoming.includes(e) &&
+          !externalOutgoing.includes(e),
+      );
+
+      const newIncomingEdges = externalIncoming.map((e) => ({
+        ...e,
+        id: `e_${e.source}-${loopId}`,
+        target: loopId,
+      }));
+
+      const newOutgoingEdges = externalOutgoing.map((e) => ({
+        ...e,
+        id: `e_${loopId}-${e.target}`,
+        source: loopId,
+      }));
+
+      setNodes([...remainingNodes, loopNode]);
+      setEdges([...remainingEdges, ...newIncomingEdges, ...newOutgoingEdges]);
+
+      await saveFlow();
+
+      setTimeout(() => {
+        setSelectedNodeId(loopId);
+      }, 50);
+
+      toast.success(t("groups.loop_success", "Iterated Selection Created"));
+    } catch (error) {
+      console.error("Failed to loop nodes:", error);
+      toast.error(t("groups.loop_error", "Failed to create iterate selection"));
+    }
+  }, [
+    currentProject,
+    currentFlowId,
+    saveToHistory,
+    setNodes,
+    setEdges,
+    t,
+    setSelectedNodeId,
+    toast,
+    queryClient,
+    saveFlow,
+  ]);
+
   // ========================================
   // COMPOSITION: NAVIGATION (DIVE-IN)
   // ========================================
@@ -1426,19 +1638,25 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
         console.warn("Auto-save before switch failed", e);
       }
 
-      // 2. Push to Stack
+      // 2. Push to Stack (Defensive: Avoid duplicate IDs in breadcrumbs)
       const currentFlowName =
         currentProject?.flows?.find((f) => f.id === currentFlowId)?.name ||
         "Previous Flow";
 
-      setViewStack((prev) => [
-        ...prev,
-        {
-          id: currentFlowId,
-          label: currentFlowName,
-          nodeId: componentId, // Track which node triggered the dive
-        },
-      ]);
+      setViewStack((prev) => {
+        // Prevent adding the same ID consecutively
+        if (prev.length > 0 && prev[prev.length - 1].id === currentFlowId) {
+          return prev;
+        }
+        return [
+          ...prev,
+          {
+            id: currentFlowId,
+            label: currentFlowName,
+            nodeId: componentId, // Track which node triggered the dive
+          },
+        ];
+      });
 
       // 3. Switch Flow
       if (switchFlow) {
@@ -2481,6 +2699,101 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
                   }
                 }
               }
+            } else if (node.type === "loop" || node.data?.type === "loop") {
+              const { flowId } = node.data || {};
+              const config = node.data?.configuration || {};
+
+              updateNodeState(node.id, NODE_STATES.EXECUTING);
+
+              let finished = false;
+              let loopResult = { success: true };
+
+              // LOOP ORCHESTRATION: The frontend runner becomes the loop manager
+              while (
+                !finished &&
+                !executionAbortController.current?.signal.aborted
+              ) {
+                // 1. Ask backend for next iteration state
+                const resolvedConfig = resolveVariables(config, flowContext);
+                const action = {
+                  nodeId: node.id,
+                  type: "loop",
+                  payload: { ...resolvedConfig, browserId, runId },
+                };
+
+                const stepResult = await executeStep(action, options);
+                if (!stepResult.success) {
+                  loopResult = stepResult;
+                  finished = true;
+                  break;
+                }
+
+                // Robust path detection
+                const path = String(
+                  stepResult.path ||
+                    stepResult.result?.path ||
+                    stepResult.result?.data?.path ||
+                    "",
+                )
+                  .trim()
+                  .toLowerCase();
+
+                if (
+                  path === "completed" ||
+                  path === "done" ||
+                  path === "finish"
+                ) {
+                  finished = true;
+                  break;
+                }
+
+                // 2. If path is "body", execute the sub-flow or follow cables
+                // In Composition (Dive In) mode, we expect a flowId
+                if (flowId && (path === "body" || path === "iteration")) {
+                  setApiStatus({
+                    state: "loading",
+                    message: `Loop Iteration ${stepResult.result?.data?.index || ""}...`,
+                  });
+
+                  const subFlow = await projectManager.getFlow(
+                    currentProject.id,
+                    flowId,
+                  );
+                  if (subFlow?.nodes?.length > 0) {
+                    const subResult = await executeGraph(
+                      subFlow.nodes,
+                      subFlow.edges,
+                      depth + 1,
+                    );
+                    if (!subResult.success && stopOnError) {
+                      loopResult = subResult;
+                      finished = true;
+                      break;
+                    }
+                    // Merge healed nodes
+                    if (subResult.healedNodes?.length > 0) {
+                      healedNodes.push(...subResult.healedNodes);
+                    }
+                  } else {
+                    // Protection against empty loops causing infinite busy states
+                    finished = true;
+                  }
+                } else if (!flowId && path === "body") {
+                  // Compatibility with Branching mode (no dive-in)
+                  // In this mode, executeGraph won't repeat automatically because it follows edges.
+                  // But for consistency with the while loop, we break and let the main graph continue.
+                  result = stepResult;
+                  finished = true;
+                } else {
+                  finished = true;
+                }
+              }
+
+              result = loopResult;
+              updateNodeState(
+                node.id,
+                result.success ? NODE_STATES.SUCCESS : NODE_STATES.ERROR,
+              );
             } else if (
               node.type !== "input" &&
               node.type !== "output" &&
@@ -3047,7 +3360,11 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
         (n) => n.id === componentNodeId,
       );
 
-      if (!componentNode || componentNode.data?.type !== "component") {
+      if (
+        !componentNode ||
+        (componentNode.data?.type !== "component" &&
+          componentNode.data?.type !== "loop")
+      ) {
         return; // Safety check
       }
 
@@ -3541,6 +3858,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
     }, [saveToHistory, setNodes, setEdges]),
 
     groupNodes,
+    loopNodes,
     ungroupNodes,
 
     validateLogicalConnection,
