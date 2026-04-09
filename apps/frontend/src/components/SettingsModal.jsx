@@ -58,10 +58,9 @@ export default function SettingsModal({
   const [aiConfig, setAiConfig] = useState({
     activeProvider: "ollama",
     selectedModel: "gemma3",
-    keys: {
-      ollama: "",
-    },
     baseUrl: "http://127.0.0.1:11434",
+    keys: {},
+    temperature: 0.7,
   });
 
   // Load configuration on open
@@ -95,13 +94,6 @@ export default function SettingsModal({
   }, [isOpen]);
 
   // --- Connection Test Logic ---
-
-  // Helper to get models for active provider
-  const getActiveModels = () => {
-    return (
-      providersData.find((p) => p.id === aiConfig.activeProvider)?.models || []
-    );
-  };
 
   // --- Render Helpers ---
   const SidebarItem = ({ id, icon, label }) => {
@@ -262,72 +254,6 @@ export default function SettingsModal({
                   <p className="text-slate-400 text-sm">
                     {t("settings.ai.subtitle")}
                   </p>
-                </div>
-
-                {/* 1. Provider Selection (Drop-down) */}
-                <div className="space-y-4">
-                  <Label className="text-slate-300">
-                    {t("settings.ai.active_provider")}
-                  </Label>
-                  <Select
-                    value={aiConfig.activeProvider}
-                    onValueChange={(val) => {
-                      const firstModel = providersData.find((p) => p.id === val)
-                        ?.models[0].id;
-                      const updatedConfig = {
-                        ...aiConfig,
-                        activeProvider: val,
-                        selectedModel: firstModel,
-                      };
-                      setAiConfig(updatedConfig);
-                      localStorage.setItem(
-                        "hal_ai_config",
-                        JSON.stringify(updatedConfig),
-                      );
-                      window.dispatchEvent(new Event("hal_ai_config_updated"));
-                    }}
-                  >
-                    <SelectTrigger className="w-full bg-slate-900/50 border-slate-800 text-slate-200">
-                      <SelectValue placeholder="Select Provider" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {providersData.map((provider) => (
-                        <SelectItem key={provider.id} value={provider.id}>
-                          {provider.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* 2. Model Selection */}
-                <div className="space-y-4">
-                  <Label className="text-slate-300">
-                    {t("settings.ai.default_model")}
-                  </Label>
-                  <Select
-                    value={aiConfig.selectedModel}
-                    onValueChange={(val) => {
-                      const updatedConfig = { ...aiConfig, selectedModel: val };
-                      setAiConfig(updatedConfig);
-                      localStorage.setItem(
-                        "hal_ai_config",
-                        JSON.stringify(updatedConfig),
-                      );
-                      window.dispatchEvent(new Event("hal_ai_config_updated"));
-                    }}
-                  >
-                    <SelectTrigger className="w-full bg-slate-900/50 border-slate-800 text-slate-200">
-                      <SelectValue placeholder="Select a model" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {getActiveModels().map((m) => (
-                        <SelectItem key={m.id} value={m.id}>
-                          {m.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
                 </div>
 
                 <div className="bg-slate-800/50 h-px w-full my-4" />

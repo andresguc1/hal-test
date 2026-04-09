@@ -5,11 +5,14 @@ export const chatWithTools = async (req, res) => {
         const { messages, browserId, canvasState } = req.body;
         // EXTRACT KEYS
         const rawKey = req.headers['x-ai-api-key'] || process.env.OPENAI_API_KEY;
+        const baseUrl = req.headers['x-ai-base-url'];
         const apiKey = rawKey?.trim();
         const model = req.headers['x-ai-model'] || 'gemma3:latest';
         const provider = req.headers['x-ai-provider'] || 'ollama';
 
-        console.log(`[ChatController] Auth Check: Provider=${provider}, HasKey=${!!apiKey}`);
+        console.log(
+            `[ChatController] Auth Check: Provider=${provider}, HasKey=${!!apiKey}, HasBaseUrl=${!!baseUrl}`,
+        );
 
         if (!apiKey && provider?.toLowerCase() !== 'ollama') {
             console.warn('[ChatController] Auth Failed: Missing API Key for non-Ollama provider');
@@ -105,6 +108,7 @@ You are the system.`;
                 model,
                 provider,
                 apiKey,
+                _baseUrl: baseUrl,
                 maxSteps: 10,
             });
         } catch (err) {

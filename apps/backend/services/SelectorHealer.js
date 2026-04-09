@@ -109,7 +109,7 @@ class SelectorHealer {
         }
     }
 
-    async heal({ page, originalSelector, errorMessage, actionName, apiKey, timeout = 30000 }) {
+    async heal({ page, originalSelector, errorMessage, actionName, aiConfig, timeout = 30000 }) {
         try {
             console.log(
                 `[SelectorHealer] Healing selector: ${originalSelector} (Timeout: ${timeout}ms)`,
@@ -133,8 +133,10 @@ class SelectorHealer {
                 originalSelector: originalSelector,
                 error: errorMessage,
                 intent: `Perform action: ${actionName}`,
-                apiKey: apiKey,
-                provider: 'ollama',
+                apiKey: aiConfig?.apiKey,
+                provider: aiConfig?.provider || 'ollama',
+                model: aiConfig?.model,
+                baseUrl: aiConfig?.baseUrl,
                 timeout: timeout,
             });
 

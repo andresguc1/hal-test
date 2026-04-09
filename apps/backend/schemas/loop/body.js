@@ -11,27 +11,27 @@ export default Joi.object({
     iterations: Joi.when('mode', {
         is: 'count',
         then: Joi.number().integer().min(1).max(1000).required(),
-        otherwise: Joi.forbidden(),
+        otherwise: Joi.any().strip(),
     }),
 
     // For while mode
     condition: Joi.when('mode', {
         is: 'while',
         then: Joi.string().required(),
-        otherwise: Joi.forbidden(),
+        otherwise: Joi.any().strip(),
     }),
 
     // For forEach mode
     array: Joi.when('mode', {
         is: 'forEach',
         then: Joi.string().required(),
-        otherwise: Joi.forbidden(),
+        otherwise: Joi.any().strip(),
     }),
 
     itemVar: Joi.when('mode', {
         is: 'forEach',
         then: Joi.string().required(),
-        otherwise: Joi.forbidden(),
+        otherwise: Joi.any().strip(),
     }),
 
     maxIterations: Joi.number()

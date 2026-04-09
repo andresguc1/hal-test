@@ -646,12 +646,19 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
                             await import('../services/SelectorHealer.js');
 
                         // 3. Ask AI to Heal
-                        const userKey = req.headers['x-openai-key'];
-                        // HealingLog is already imported at the top of the file
+                        const aiConfig = {
+                            apiKey:
+                                req.headers['x-ai-api-key'] ||
+                                req.headers['x-openai-key'] ||
+                                process.env.OPENAI_API_KEY,
+                            provider: req.headers['x-ai-provider'] || 'ollama',
+                            model: req.headers['x-ai-model'],
+                            baseUrl: req.headers['x-ai-base-url'],
+                        };
 
                         // 📡 BROADCAST: Show user the healing is starting BEFORE calling AI
                         emitLog({
-                            message: `[Self-Healing] 🔍 AI analyzing DOM for broken selector: ${opts.selector}...`,
+                            message: `[Self-Healing] 🔍 AI analyzing DOM for broken selector: ${opts.selector} using ${aiConfig.provider}...`,
                             nodeId: opts.nodeId,
                             type: 'info',
                         });
@@ -667,7 +674,7 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
                             errorMessage: errorMessage,
                             actionName: actionName,
                             timeout: healingBudget,
-                            apiKey: userKey || process.env.OPENAI_API_KEY,
+                            aiConfig,
                         });
 
                         const healingDuration = Date.now() - healingStart;

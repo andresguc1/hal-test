@@ -17,8 +17,8 @@ const router = express.Router();
 router.post('/validate', async (req, res) => {
     const { provider, apiKey, baseUrl, model } = req.body;
 
-    // API KEY is strictly required for validation unless it's a "local" check (but even Ollama needs pseudo-auth setup)
-    if (!apiKey) {
+    // API KEY is strictly required for validation unless it's Ollama
+    if (!apiKey && provider !== 'ollama') {
         return res.status(400).json({ success: false, message: 'API Key is required' });
     }
 

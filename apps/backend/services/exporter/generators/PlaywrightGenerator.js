@@ -28,7 +28,7 @@ export class PlaywrightGenerator extends BaseGenerator {
         switch (lang) {
             case 'javascript':
             case 'typescript':
-                return `import { test } from '@playwright/test';\n\ntest('Flujo Generado Hal-Test${extra}', async ({ page }) => {\n    console.log('${this.msg.start}');\n`;
+                return `import { test } from '@playwright/test';\n\ntest(\`Flujo Generado Hal-Test${extra}\`, async ({ page }) => {\n    console.log(\`${this.msg.start}\`);\n`;
             case 'python':
                 return `import asyncio\nfrom playwright.async_api import async_playwright\n\n# ${this.msg.start}\n`;
             case 'java':
@@ -57,7 +57,7 @@ export class PlaywrightGenerator extends BaseGenerator {
             nodeCode = this.generateSteps(subNodes, depth + 1);
 
             if (lang === 'javascript' || lang === 'typescript') {
-                return `${indent}await test.step('📦 ${label}', async () => {\n${nodeCode}\n${indent}});`;
+                return `${indent}await test.step(\`📦 ${label}\`, async () => {\n${nodeCode}\n${indent}});`;
             }
             return `${indent}${commentChar} [GROUP]: ${label}\n${nodeCode}\n${indent}${commentChar} [END GROUP]`;
         }
@@ -68,7 +68,7 @@ export class PlaywrightGenerator extends BaseGenerator {
             nodeCode = mapper.getCode(mapperParams, this.language, index);
         } else {
             if (lang === 'javascript' || lang === 'typescript') {
-                nodeCode = `console.log('${this.msg.not_implemented} ${type}');`;
+                nodeCode = `console.log(\`${this.msg.not_implemented} ${type}\`);`;
             } else if (lang === 'python') {
                 nodeCode = `print('${this.msg.not_implemented} ${type}')`;
             } else {
@@ -78,7 +78,7 @@ export class PlaywrightGenerator extends BaseGenerator {
 
         // Wrap in a test step for JS/TS
         if (lang === 'javascript' || lang === 'typescript') {
-            return `${indent}await test.step('${label}', async () => {\n${indent}    ${nodeCode}\n${indent}});`;
+            return `${indent}await test.step(\`${label}\`, async () => {\n${indent}    ${nodeCode}\n${indent}});`;
         }
 
         return `${indent}${nodeCode}`;
@@ -89,7 +89,7 @@ export class PlaywrightGenerator extends BaseGenerator {
         const commentChar = lang === 'python' ? '#' : '//';
 
         if (lang === 'javascript' || lang === 'typescript') {
-            return `\n    console.log('${this.msg.completed}');\n});`;
+            return `\n    console.log(\`${this.msg.completed}\`);\n});`;
         }
         if (lang === 'java') {
             return `\n        // ${this.msg.completed}\n    }\n}`;

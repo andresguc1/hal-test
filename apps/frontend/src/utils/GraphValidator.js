@@ -32,9 +32,8 @@ export class GraphValidator {
       );
     }
 
-    if (closes.length === 0) {
-      errors.push("Missing mandatory 'close_browser' node.");
-    } else if (closes.length > 1) {
+    // 'close_browser' is now optional (Phase 2 relaxation)
+    if (closes.length > 1) {
       errors.push(
         "More than one 'close_browser' node detected. Only 1 is allowed per flow.",
       );

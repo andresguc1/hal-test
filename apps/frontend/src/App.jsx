@@ -187,7 +187,10 @@ function Dashboard() {
     if (nodes.length > 0) {
       // Small delay to allow rendering
       const timer = setTimeout(() => {
-        reactFlowFitView({ duration: 800, padding: 0.2 });
+        reactFlowFitView({
+          duration: 800,
+          padding: 0.5, // Increased general padding
+        });
       }, 100);
       return () => clearTimeout(timer);
     }
@@ -531,7 +534,7 @@ function Dashboard() {
         reactFlowFitView({
           nodes: [{ id: nodeId }],
           duration: 600,
-          padding: 0.6,
+          padding: 0.8, // More padding when focusing a single node
           maxZoom: 1.2,
         });
       }, 80);
@@ -644,7 +647,7 @@ function Dashboard() {
               reactFlowFitView({
                 nodes: [{ id: result.failedNodeId }],
                 duration: 800,
-                padding: 0.6,
+                padding: 0.8,
                 maxZoom: 1.2,
               });
             }, 800);

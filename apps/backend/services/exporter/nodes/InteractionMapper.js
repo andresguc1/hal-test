@@ -12,12 +12,12 @@ export const InteractionMapper = {
             case 'javascript':
             case 'typescript':
                 return {
-                    click: `await page.click('${selector}');`,
-                    type_text: `await page.fill('${selector}', '${text}');`,
-                    type: `await page.fill('${selector}', '${text}');`,
-                    hover: `await page.hover('${selector}');`,
+                    click: `await page.click(\`${selector}\`);`,
+                    type_text: `await page.fill(\`${selector}\`, \`${text}\`);`,
+                    type: `await page.fill(\`${selector}\`, \`${text}\`);`,
+                    hover: `await page.hover(\`${selector}\`);`,
                     scroll: `await page.mouse.wheel(${params.deltaX || 0}, ${params.deltaY || 500});`,
-                    press_key: `await page.keyboard.press('${params.key || ''}');`,
+                    press_key: `await page.keyboard.press(\`${params.key || ''}\`);`,
                 }[params.actionType || params.type];
             case 'python':
                 return {

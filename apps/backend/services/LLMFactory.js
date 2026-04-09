@@ -29,11 +29,41 @@ class LLMFactory {
             return this.createInstance(fallbackProvider || 'ollama', keyAliasOrId, baseUrl);
         }
 
-        // 3. Force Ollama if requested or as fallback
-        return this.createInstance('ollama', null, baseUrl);
+        // 3. Force requested provider or Ollama as ultimate fallback
+        return this.createInstance(fallbackProvider || 'ollama', null, baseUrl);
     }
 
     createInstance(provider, key, baseUrl) {
+        if (provider === 'openrouter') {
+            return createOpenAI({
+                baseURL: baseUrl || 'https://openrouter.ai/api/v1',
+                apiKey: key,
+                compatibility: 'compatible',
+                fetch: async (url, options) => {
+                    const controller = new AbortController();
+                    const id = setTimeout(() => controller.abort(), 60000); // 1 minute timeout for cloud models
+                    try {
+                        // OpenRouter requires HTTP referer and X-Title if possible, but basic API works without it.
+                        const headers = {
+                            ...options.headers,
+                            'HTTP-Referer': 'http://localhost:5173', // Basic default for local testing
+                            'X-Title': 'HalTest',
+                        };
+                        const response = await fetch(url, {
+                            ...options,
+                            headers,
+                            signal: controller.signal,
+                        });
+                        clearTimeout(id);
+                        return response;
+                    } catch (error) {
+                        clearTimeout(id);
+                        throw error;
+                    }
+                },
+            });
+        }
+
         // We now consolidate everything to Ollama's OpenAI compatible endpoint
         let ollamaUrl = baseUrl || process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434/v1';
         if (ollamaUrl.includes('localhost')) {

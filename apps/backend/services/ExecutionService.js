@@ -105,9 +105,14 @@ class ExecutionService {
     /**
      * Recursive runner for the graph
      */
-    async runSequence(currentNodes, allNodes, allEdges, state, parentId = null) {
+    async runSequence(currentNodes, allNodes, allEdges, state, parentId = null, options = {}) {
+        const { skipParentFilter = false } = options;
+
         // Filter nodes to only process those at the same level (same parentId)
-        const peerNodes = currentNodes.filter((n) => n.parentId === parentId);
+        // If skipParentFilter is true, we trust that currentNodes are already at correctly scoped
+        const peerNodes = skipParentFilter
+            ? currentNodes
+            : currentNodes.filter((n) => n.parentId === parentId);
 
         for (const node of peerNodes) {
             if (state.executedNodeIds.has(node.nodeId)) continue;
@@ -141,7 +146,7 @@ class ExecutionService {
 
             if (nextNodes.length > 0) {
                 // Ensure we only follow nodes at the SAME level (same parentId)
-                await this.runSequence(nextNodes, allNodes, allEdges, state, parentId);
+                await this.runSequence(nextNodes, allNodes, allEdges, state, parentId, options);
             }
         }
     }
@@ -269,6 +274,12 @@ class ExecutionService {
         console.log(
             `[Loop] Starting encapsulated execution for node ${node.nodeId} (Mode: ${mode}, FlowId: ${flowId})`,
         );
+        const nodeLabel = node.data?.customLabel || node.data?.label || 'Loop';
+        emitLog({
+            message: `Executing loop container: "${nodeLabel}"...`,
+            nodeId: node.nodeId,
+            type: 'info',
+        });
 
         let subNodes = [];
         let subEdges = [];
@@ -296,6 +307,11 @@ class ExecutionService {
 
         if (subNodes.length === 0) {
             console.warn(`[Loop] Loop node ${node.nodeId} has no children. Skipping.`);
+            emitLog({
+                message: `Loop "${nodeLabel}" skipped: no internal nodes found.`,
+                nodeId: node.nodeId,
+                type: 'warning',
+            });
             return { success: true, message: 'Loop skipped (no children)' };
         }
 
@@ -318,6 +334,9 @@ class ExecutionService {
         let currentIndex = 0;
         let finished = false;
 
+        const totalIterations =
+            mode === 'count' ? Number(variableManager.resolveValue(iterations)) : 'unknown';
+
         while (!finished && currentIndex < maxIterations) {
             let shouldContinue = false;
             let currentItem = null;
@@ -325,8 +344,7 @@ class ExecutionService {
             // Evaluating condition...
             switch (mode) {
                 case 'count': {
-                    const total = Number(variableManager.resolveValue(iterations));
-                    shouldContinue = currentIndex < total;
+                    shouldContinue = currentIndex < Number(totalIterations);
                     break;
                 }
                 case 'array': {
@@ -368,7 +386,13 @@ class ExecutionService {
                 variableManager.set(itemVar, currentItem, 'flow');
             }
 
-            console.log(`[Loop] Iteration ${currentIndex + 1} for ${node.nodeId}`);
+            const iterLog =
+                mode === 'count'
+                    ? `Loop: Iteration ${currentIndex + 1} of ${totalIterations}`
+                    : `Loop: Iteration ${currentIndex + 1}`;
+
+            emitLog({ message: iterLog, nodeId: node.nodeId, type: 'info' });
+            console.log(`[Loop] ${iterLog} for ${node.nodeId}`);
 
             // 3. Execution sub-graph
             // Create a local state for the iteration to track executed nodes within this iteration
@@ -377,7 +401,18 @@ class ExecutionService {
                 executedNodeIds: new Set(), // Fresh set for this iteration
             };
 
-            await this.runSequence(loopStartNodes, allNodes, allEdges, iterationState, node.nodeId);
+            const sequenceParentId = flowId ? null : node.nodeId;
+
+            await this.runSequence(
+                loopStartNodes,
+                subNodes,
+                subEdges,
+                iterationState,
+                sequenceParentId,
+                {
+                    skipParentFilter: !!flowId,
+                },
+            );
 
             currentIndex++;
         }

@@ -77,26 +77,14 @@ export default function SettingsPage({ onBack }) {
       localStorage.getItem("hal_ollama_base_url") || "http://127.0.0.1:11434",
   };
 
-  const { control, handleSubmit, register, watch } = useForm({
+  const { handleSubmit } = useForm({
     defaultValues,
   });
 
-  const selectedModel = watch("selectedModel");
-
-  const getProvider = (_model) => {
-    return "ollama";
-  };
-
-  const activeProvider = getProvider(selectedModel);
-
-  const onSubmit = async (data) => {
+  const onSubmit = async () => {
     setIsLoading(true);
     await new Promise((resolve) => setTimeout(resolve, 600));
 
-    localStorage.setItem("hal_selected_model", data.selectedModel);
-    localStorage.setItem("hal_openai_key", data.openaiKey);
-    localStorage.setItem("hal_google_key", data.googleKey);
-    localStorage.setItem("hal_anthropic_key", data.anthropicKey);
     if (avatarPreview) localStorage.setItem("hal_user_avatar", avatarPreview);
 
     window.dispatchEvent(new Event("storage"));
@@ -117,8 +105,6 @@ export default function SettingsPage({ onBack }) {
       reader.readAsDataURL(file);
     }
   };
-
-  const modelOptions = [{ value: "gemma3", label: "Gemma 3 (Default)" }];
 
   return (
     // Full-screen overlay on top of everything
@@ -180,92 +166,7 @@ export default function SettingsPage({ onBack }) {
             </div>
           </div>
 
-          {/* Card: AI Configuration */}
-          <div className="border border-hal-neutral-800 rounded-lg p-4 bg-hal-neutral-900/40 backdrop-blur-sm hover:border-hal-neutral-700 transition-colors duration-200">
-            <div className="text-[10px] font-extrabold text-hal-neutral-600 uppercase tracking-[0.2em] mb-3 ml-1 flex items-center gap-2">
-              <Bot className="h-3 w-3" />
-              <span>AI Configuration</span>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-[11px] text-hal-neutral-500 font-medium">
-                Default Model
-              </Label>
-              <Controller
-                name="selectedModel"
-                control={control}
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    {modelOptions.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </Select>
-                )}
-              />
-              <p className="text-[10px] text-hal-neutral-500 italic">
-                Used for all AI operations.
-              </p>
-            </div>
-          </div>
-
-          {/* Card: Access Credentials */}
-          <div className="border border-hal-neutral-800 rounded-lg p-4 bg-hal-neutral-900/40 backdrop-blur-sm hover:border-hal-neutral-700 transition-colors duration-200">
-            <div className="text-[10px] font-extrabold text-hal-neutral-600 uppercase tracking-[0.2em] mb-3 ml-1 flex items-center gap-2">
-              <Key className="h-3 w-3" />
-              <span>Access Credentials</span>
-            </div>
-            <div className="space-y-3">
-              <div className="min-h-[40px]">
-                {activeProvider === "openai" && (
-                  <div className="space-y-1.5">
-                    <Label className="text-[11px] text-hal-neutral-500 font-medium">
-                      OpenAI Key
-                    </Label>
-                    <PasswordInput
-                      placeholder="sk-..."
-                      {...register("openaiKey")}
-                    />
-                  </div>
-                )}
-
-                {activeProvider === "google" && (
-                  <div className="space-y-1.5">
-                    <Label className="text-[11px] text-hal-neutral-500 font-medium">
-                      Google Key
-                    </Label>
-                    <PasswordInput
-                      placeholder="AIza..."
-                      {...register("googleKey")}
-                    />
-                  </div>
-                )}
-
-                {activeProvider === "anthropic" && (
-                  <div className="space-y-1.5">
-                    <Label className="text-[11px] text-hal-neutral-500 font-medium">
-                      Anthropic Key
-                    </Label>
-                    <PasswordInput
-                      placeholder="sk-ant-..."
-                      {...register("anthropicKey")}
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Security Note */}
-              <div className="flex items-start gap-2 p-2.5 rounded bg-hal-neutral-950/50 border border-hal-neutral-900">
-                <ShieldAlert
-                  size={13}
-                  className="text-hal-neutral-600 mt-0.5 shrink-0"
-                />
-                <p className="text-[10px] text-hal-neutral-500 leading-relaxed">
-                  Keys stored locally. Never transmitted.
-                </p>
-              </div>
-            </div>
-          </div>
+          {/* AI Settings are now managed via the dedicated AI & Integrations panel */}
         </div>
       </div>
 

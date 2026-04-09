@@ -25,10 +25,11 @@ const LoopNode = ({ data, selected }) => {
   const themeParams = CATEGORY_STYLES.purple.node;
 
   // 2. Loop Config Info
-  const mode = data.configuration?.mode || "count";
-  const iterations = data.configuration?.iterations || 0;
-  const condition = data.configuration?.condition || "";
-  const array = data.configuration?.array || "";
+  const config = data?.configuration || {};
+  const mode = config.mode || "count";
+  const iterations = config.iterations || 0;
+  const condition = config.condition || "";
+  const array = config.array || "";
 
   const getSubLabel = () => {
     if (mode === "count") return `${iterations} iterations`;

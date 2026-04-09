@@ -179,6 +179,7 @@ export function KeyVaultPanel() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="ollama">Ollama (Local)</SelectItem>
+                  <SelectItem value="openrouter">OpenRouter</SelectItem>
                 </SelectContent>
               </Select>
             </div>

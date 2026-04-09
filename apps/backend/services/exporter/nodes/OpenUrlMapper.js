@@ -16,7 +16,7 @@ export const OpenUrlMapper = {
         switch (lang.toLowerCase()) {
             case 'javascript':
             case 'typescript':
-                return `await page.goto('${url}');`;
+                return `await page.goto(\`${url}\`);`;
             case 'python':
                 return `await page.goto("${url}")`;
             case 'java':

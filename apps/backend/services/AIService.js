@@ -1,6 +1,5 @@
 // services/AIService.js
 import { generateText, generateObject } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
 import { z } from 'zod';
 import { playwrightMcpServer } from './PlaywrightMCPServer.js';
 import { llmFactory } from './LLMFactory.js';
@@ -26,31 +25,21 @@ const repairJson = (str) => {
  * Wraps Vercel AI SDK for text generation and structured output.
  */
 class AIService {
-    getProvider(providerName, apiKey, baseUrl) {
-        // We now exclusively use Ollama as the provider.
-        // Even if another provider is requested, we redirect to Ollama's OpenAI-compatible endpoint.
-        let ollamaUrl = baseUrl || process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434/v1';
-        if (ollamaUrl.includes('localhost')) {
-            ollamaUrl = ollamaUrl.replace('localhost', '127.0.0.1');
-        }
-        if (!ollamaUrl.endsWith('/v1')) {
-            ollamaUrl = `${ollamaUrl.replace(/\/$/, '')}/v1`;
-        }
-
-        return createOpenAI({
-            compatibility: 'compatible',
-            baseURL: ollamaUrl,
-            apiKey: 'ollama',
-        });
-    }
+    // getProvider removed in favor of LLMFactory.getProviderInstance
 
     /**
      * Matrix de Selección de Modelos (2026 Standard)
      * @param {string} taskType - 'coding' | 'massive_context' | 'reasoning' | 'local'
      * @param {string} [preferredProvider] - Optional override
      */
-    selectBestModel(_taskType, _preferredProvider) {
-        // Consolidate to Gemma 3 via Ollama
+    selectBestModel(taskType, preferredProvider) {
+        // If user already specified a valid provider (like openrouter), respect it.
+        // We only provide defaults if not specified.
+        if (preferredProvider === 'openrouter') {
+            return { provider: 'openrouter', model: 'google/gemini-2.0-flash-001' };
+        }
+
+        // Default to Ollama for everything else locally
         const ollamaModel = process.env.OLLAMA_MODEL || 'gemma3:latest';
         return { provider: 'ollama', model: ollamaModel };
     }
@@ -76,26 +65,6 @@ class AIService {
             let activeProvider = provider || selected.provider;
             let activeModel = model || selected.model;
 
-            // Sanitize received model: if it's a known non-Ollama model, ignore it to force fallback
-            const legacyModels = [
-                'gemini',
-                'gpt4',
-                'gpt-4',
-                'claude',
-                'openai',
-                'google',
-                'anthropic',
-            ];
-            if (activeModel && legacyModels.includes(activeModel.toLowerCase())) {
-                activeModel = null;
-            }
-
-            if (!activeModel || activeProvider !== 'ollama') {
-                const best = this.selectBestModel(taskType);
-                activeProvider = best.provider;
-                activeModel = best.model;
-            }
-
             // --- SMART RESOLUTION FOR OLLAMA ---
             if (activeProvider === 'ollama' && activeModel) {
                 activeModel = await this.resolveOllamaModel({
@@ -104,7 +73,11 @@ class AIService {
                 });
             }
 
-            const providerInstance = this.getProvider(activeProvider, apiKey, baseUrl);
+            const providerInstance = llmFactory.getProviderInstance(
+                apiKey || activeProvider,
+                activeProvider,
+                baseUrl,
+            );
             const modelRef = providerInstance(activeModel);
 
             const { text, usage, finishReason } = await generateText({
@@ -369,8 +342,22 @@ IMPORTANT DIRECTIONS:
                 `[AIService] Validating key for provider: ${provider}, apiKey provided: ${!!apiKey}`,
             );
 
+            if (provider === 'openrouter') {
+                if (!apiKey) throw new Error('API Key is required for OpenRouter');
+                const providerInstance = llmFactory.getProviderInstance(apiKey, provider, baseUrl);
+                const modelRef = providerInstance(model || 'google/gemini-2.0-flash-001');
+
+                // Simple test generation to validate key
+                await generateText({
+                    model: modelRef,
+                    prompt: 'ping',
+                    maxTokens: 1,
+                    abortSignal: AbortSignal.timeout(10000),
+                });
+                return true;
+            }
+
             // For Ollama, use healthCheck first for better error messages
-            // We only validate Ollama availability now
             const validationModel = model || process.env.OLLAMA_MODEL || 'gemma3:latest';
             const health = await this.healthCheck({
                 baseUrl: baseUrl || 'http://127.0.0.1:11434',
@@ -520,6 +507,7 @@ IMPORTANT DIRECTIONS:
         provider,
         model: forcedModel,
         timeout: customTimeout,
+        baseUrl,
     }) {
         try {
             // Apply Matrix Logic if no specific model/provider forced
@@ -535,7 +523,11 @@ IMPORTANT DIRECTIONS:
                 `[AIService] Healing selector. Using: ${activeProvider}/${activeModel} (Timeout: ${customTimeout || 'default'}ms)`,
             );
 
-            const providerInstance = this.getProvider(activeProvider, apiKey);
+            const providerInstance = llmFactory.getProviderInstance(
+                apiKey || activeProvider,
+                activeProvider,
+                baseUrl,
+            );
             const modelRef = providerInstance(activeModel);
 
             const prompt = `You are a Senior QA Automation Expert and Selector Repair Specialist.
@@ -672,11 +664,26 @@ If no element is found, return {"correctedSelector": null, "confidence": 0, "rea
             // Matrix Logic: Flow generation is "Reasoning/Planning"
             let selected = this.selectBestModel('reasoning', provider);
 
-            // Allow override
-            const activeProvider = provider || selected.provider;
-            const activeModel = model || selected.model;
+            let activeProvider = provider || selected.provider;
+            let activeModel = model || selected.model;
 
-            const providerInstance = this.getProvider(activeProvider, apiKey, baseUrl);
+            // --- SMART RESOLUTION FOR OLLAMA ---
+            if (activeProvider === 'ollama' && activeModel) {
+                activeModel = await this.resolveOllamaModel({
+                    baseUrl: baseUrl || process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434',
+                    requestedModel: activeModel,
+                });
+            }
+
+            console.log(
+                `[AIService] Generating Flow. Using Matrix: ${activeProvider}/${activeModel}`,
+            );
+
+            const providerInstance = llmFactory.getProviderInstance(
+                apiKey || activeProvider,
+                activeProvider,
+                baseUrl,
+            );
             const modelRef = providerInstance(activeModel);
 
             console.log(
@@ -834,7 +841,11 @@ If no element is found, return {"correctedSelector": null, "confidence": 0, "rea
                 `[AIService] Generating structured data. Using: ${activeProvider}/${activeModel}`,
             );
 
-            const providerInstance = this.getProvider(activeProvider, effectiveKey);
+            const providerInstance = llmFactory.getProviderInstance(
+                effectiveKey || activeProvider,
+                activeProvider,
+                keys?.baseUrl,
+            );
             const modelRef = providerInstance(activeModel);
 
             // Ollama: structured output via prompt Engineering (generateObject might fail)
@@ -900,7 +911,11 @@ If no element is found, return {"correctedSelector": null, "confidence": 0, "rea
 
             const effectiveKey = apiKey || (keys && keys[activeProvider]);
 
-            const providerInstance = this.getProvider(activeProvider, effectiveKey);
+            const providerInstance = llmFactory.getProviderInstance(
+                effectiveKey || activeProvider,
+                activeProvider,
+                keys?.baseUrl,
+            );
             const modelRef = providerInstance(activeModel);
 
             const prompt = `Validate the following content against the given criteria.

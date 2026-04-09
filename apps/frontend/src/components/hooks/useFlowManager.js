@@ -174,6 +174,7 @@ const DEFAULT_NODE_CONFIGS = {
   launch_browser: { headless: false },
   set_viewport: { width: 1280, height: 720 },
   wait_for_timeout: { duration: 1000 },
+  loop: { mode: "count", iterations: 1 },
 };
 
 // ========================================
@@ -776,20 +777,35 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
         targetPosition: "left",
       };
 
+      setNodes((nds) => [...nds, newNode]);
+      setSelectedNodeId(id);
+
       // SPECIAL CASE: Create backing flow for sub-flow nodes (component/loop)
       if (typeKey === "component" || typeKey === "loop") {
+        const projectId = currentProject?.id;
+
+        if (!projectId) {
+          logger.error(
+            "Cannot create backing flow: No active project.",
+            null,
+            "useFlowManager",
+          );
+          toast.error("Please ensure a project is selected first.");
+          return;
+        }
+
         (async () => {
           try {
             const flowName = `${label} (${id.slice(0, 4)})`;
             const response = await projectManager.createFlow(
-              currentProject.id,
+              projectId,
               flowName,
             );
             const flowId = response.flow?.id || response.id;
 
             if (flowId) {
               // Create default input/output for the new flow
-              await projectManager.updateFlow(currentProject.id, flowId, {
+              await projectManager.updateFlow(projectId, flowId, {
                 nodes: [
                   {
                     id: "input-" + Date.now(),
@@ -807,25 +823,37 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
                 edges: [],
               });
 
-              // Link the node to the flow
+              // Link the node to the flow using functional update for state safety
               setNodes((nds) =>
                 nds.map((n) =>
                   n.id === id ? { ...n, data: { ...n.data, flowId } } : n,
                 ),
               );
-              queryClient.invalidateQueries(["project", currentProject.id]);
+
+              // ✨ CRITICAL FIX: Explicitly save the main flow NOW before invalidating
+              // This prevents a race condition where the auto-reload (triggered by query invalidation)
+              // might overwrite the local nodes before they are saved to the backend.
+              await saveFlow(true);
+
+              queryClient.invalidateQueries(["project", projectId]);
+              logger.info(
+                "Backing flow created, linked and main flow saved",
+                { nodeId: id, flowId },
+                "useFlowManager",
+              );
             }
           } catch (error) {
-            console.error("Failed to create backing flow:", error);
+            logger.error(
+              "Failed to create backing flow",
+              error,
+              "useFlowManager",
+            );
             toast.error("Failed to initialize sub-flow logic.");
           }
         })();
       }
-
-      setNodes((nds) => [...nds, newNode]);
-      setSelectedNodeId(id);
     },
-    [saveToHistory, setNodes, currentProject?.id, queryClient, toast],
+    [saveToHistory, setNodes, currentProject, queryClient, toast],
   );
 
   // --- GHOST NODES (Phase 2) ---
