@@ -94,3 +94,5 @@ export { default as switchBodySchema } from './switch/body.js';
 export { default as backendJsBodySchema } from './backend_js/body.js';
 export { default as failFlowBodySchema } from './fail_flow/body.js';
 export { default as componentBodySchema } from './component/body.js';
+export { default as inputBodySchema } from './input/body.js';
+export { default as outputBodySchema } from './output/body.js';

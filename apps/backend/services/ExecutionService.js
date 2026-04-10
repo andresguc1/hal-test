@@ -4,6 +4,7 @@ import * as actions from '../controllers/action.controller.js';
 import { emitLog, emitFlowFinished } from '../socket.js';
 import i18n from '../config/i18n.js';
 import { variableManager } from './VariableManager.js';
+import { executionManager } from './ExecutionManager.js';
 
 class ExecutionService {
     constructor() {
@@ -34,6 +35,8 @@ class ExecutionService {
 
         const nodes = flow.nodes.map((n) => n.toJSON());
         const edges = flow.edges.map((e) => e.toJSON());
+
+        const mode = options.mode || 'e2e';
 
         // 2. Use existing runId or Create a new one
         let runId = options.runId;
@@ -78,10 +81,24 @@ class ExecutionService {
         };
 
         // Emit overall start
-        emitLog({ message: `Starting remote execution of "${flow.name}"`, type: 'info' });
+        emitLog({
+            message: `Starting remote execution of "${flow.name}" (Mode: ${mode})`,
+            type: 'info',
+        });
 
         try {
-            await this.runSequence(currentNodes, nodes, edges, runState);
+            // Use ExecutionManager to handle different execution modes
+            const internalE2EExecute = async (f, s) => {
+                await this.runSequence(currentNodes, nodes, edges, s);
+                return { success: true };
+            };
+
+            await executionManager.execute(
+                mode,
+                { ...flow.toJSON(), nodes, edges },
+                runState,
+                internalE2EExecute,
+            );
 
             console.log(`✅ [ExecutionService] Flow ${flowId} completed successfully`);
             await executionLogger.endRun(runId, 'completed');
@@ -112,11 +129,12 @@ class ExecutionService {
         // If skipParentFilter is true, we trust that currentNodes are already at correctly scoped
         const peerNodes = skipParentFilter
             ? currentNodes
-            : currentNodes.filter((n) => n.parentId === parentId);
+            : currentNodes.filter((n) => (n.parentId || null) === (parentId || null));
 
         for (const node of peerNodes) {
             if (state.executedNodeIds.has(node.nodeId)) continue;
 
+            // 1. Execute Node
             // 1. Execute Node
             const result = await this.executeNode(node, allNodes, allEdges, state);
             state.executedNodeIds.add(node.nodeId);
@@ -129,6 +147,16 @@ class ExecutionService {
                 variableManager.set(`${nodeLabel}.result`, nodeResult, 'flow');
                 // Save by ID (Robust)
                 variableManager.set(`${node.nodeId}.result`, nodeResult, 'flow');
+            }
+
+            // --- FLOW CONTROL SIGNAL DETECTION ---
+            const signalAction = result?.action || result?.data?.action;
+            if (
+                signalAction === 'break' ||
+                signalAction === 'continue' ||
+                signalAction === 'return'
+            ) {
+                return result.action ? result : result.data; // Propagate the inner signal
             }
 
             // 2. Find next nodes
@@ -145,10 +173,78 @@ class ExecutionService {
                 .filter(Boolean);
 
             if (nextNodes.length > 0) {
-                // Ensure we only follow nodes at the SAME level (same parentId)
-                await this.runSequence(nextNodes, allNodes, allEdges, state, parentId, options);
+                // SPECIAL CASE: Branch Node Orchestration
+                if (node.type === 'branch') {
+                    const mode = result?.data?.mode || 'sequential';
+                    console.log(
+                        `[ExecutionService] Branching mode: ${mode} for node ${node.nodeId}`,
+                    );
+
+                    if (mode === 'parallel') {
+                        // All branches run at the same time
+                        const results = await Promise.all(
+                            nextNodes.map((nextNode) =>
+                                this.runSequence(
+                                    [nextNode],
+                                    allNodes,
+                                    allEdges,
+                                    state,
+                                    parentId,
+                                    options,
+                                ),
+                            ),
+                        );
+                        // If any branch returned a signal, propagate the first one
+                        const signal = results.find(
+                            (r) =>
+                                r &&
+                                (r.action === 'break' ||
+                                    r.action === 'continue' ||
+                                    r.action === 'return'),
+                        );
+                        if (signal) return signal;
+                    } else if (mode === 'race') {
+                        // First branch to complete wins
+                        const signal = await Promise.race(
+                            nextNodes.map((nextNode) =>
+                                this.runSequence(
+                                    [nextNode],
+                                    allNodes,
+                                    allEdges,
+                                    state,
+                                    parentId,
+                                    options,
+                                ),
+                            ),
+                        );
+                        if (signal) return signal;
+                    } else {
+                        // Default Sequential: One by one
+                        const signal = await this.runSequence(
+                            nextNodes,
+                            allNodes,
+                            allEdges,
+                            state,
+                            parentId,
+                            options,
+                        );
+                        if (signal) return signal;
+                    }
+                } else {
+                    // Standard sequential following (Default behavior for all other nodes)
+                    const signal = await this.runSequence(
+                        nextNodes,
+                        allNodes,
+                        allEdges,
+                        state,
+                        parentId,
+                        options,
+                    );
+                    if (signal) return signal;
+                }
             }
         }
+        return null; // Normal completion
     }
 
     /**
@@ -403,7 +499,7 @@ class ExecutionService {
 
             const sequenceParentId = flowId ? null : node.nodeId;
 
-            await this.runSequence(
+            const signal = await this.runSequence(
                 loopStartNodes,
                 subNodes,
                 subEdges,
@@ -413,6 +509,21 @@ class ExecutionService {
                     skipParentFilter: !!flowId,
                 },
             );
+
+            // HANDLE FLOW CONTROL SIGNALS
+            if (signal) {
+                if (signal.action === 'break') {
+                    finished = true;
+                    break;
+                }
+                if (signal.action === 'continue') {
+                    currentIndex++;
+                    continue; // Skip to next iteration check
+                }
+                if (signal.action === 'return') {
+                    return signal; // Bubbling up return signal
+                }
+            }
 
             currentIndex++;
         }

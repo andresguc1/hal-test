@@ -248,6 +248,11 @@
       "height": "Alto",
       "button": "Botón del mouse",
       "clearBeforeType": "Limpiar antes de escribir",
+      "flowId": "ID del Sub-flujo",
+      "inputMapping": "Mapeo de Entrada",
+      "outputMapping": "Mapeo de Salida",
+      "parent_variable": "Variable del Padre",
+      "child_variable": "Variable del Hijo",
       "delay": "Retardo por tecla (ms)",
       "selectionCriteria": "Criterio de Selección",
       "selectionValue": "Valor a Seleccionar",
@@ -352,7 +357,8 @@
       "returnValue": "¿Esperar valor de retorno?",
       "executablePath": "Ruta del ejecutable (personalizado)",
       "forceClose": "Forzar cierre (forceClose)",
-      "clearContext": "Limpiar contexto (clearContext)"
+      "clearContext": "Limpiar contexto (clearContext)",
+      "mode": "Modo de Ejecución"
     },
     "config": {
       "save_error": "No se pudo guardar la configuración. Por favor, verifica los datos e intenta nuevamente.",
@@ -367,7 +373,9 @@
       "active_tab": "Activa",
       "switch_cases": "Casos del Switch",
       "add_case": "Agregar Caso",
-      "no_cases": "No hay casos definidos. Agrega uno para empezar."
+      "no_cases": "No hay casos definidos. Agrega uno para empezar.",
+      "add_mapping": "Agregar Mapeo",
+      "no_mappings": "Sin mapeos definidos"
     },
     "hints": {
       "selector_select": "Debe ser el selector del elemento principal <select>, no de las opciones <option>.",
@@ -382,22 +390,15 @@
       "file_paths": "Las rutas deben ser accesibles desde el entorno donde se ejecuta el backend (servidor de automatización).",
       "screenshot_selector": "Dejar vacío para capturar toda la ventana o página (según Full Page).",
       "screenshot_full_page": "Si está activo, desplaza y captura toda la longitud de la página. Ignorado si se usa Selector.",
-      "waitForNavigation": "If active, waits for page to load after form submission. Disable if using AJAX.",
-      "selector": "Leave empty to scroll main window. Use a selector for a specific element.",
-      "force": "If active, ignores visibility checks before dragging.",
-      "fullPage": "If active, captures full page length. Ignored if selector used.",
-      "path": "Path on server. If empty, returns image in response.",
-      "logToFile": "If active, logs save to file. Otherwise, only printed to backend console.",
-      "timeout": "Time to listen for errors. 0 for indefinite.",
       "args": "Opcional. Argumentos que se pasarán a la función JavaScript.",
       "returnValue": "Si está activo, el resultado del script se guardará en una variable.",
       "picker_local_only": "Aviso: El Picker solo funciona en la versión local. En la demo web, por favor ingresa el selector manualmente.",
       "switch_logic": "Define los valores exactos que quieres comparar. Cada caso genera una salida.",
-      "default_path_desc": "Siempre se genera una salida \"default\" para cuando el valor no coincide con ningún caso."
-    },
-    "screenshots": {
-      "title": "Capturas de Pantalla",
-      "loading": "Cargando screenshots...",
+      "default_path_desc": "Siempre se genera una salida \"default\" para cuando el valor no coincide con ningún caso.",
+      "branch_mode": "Define cómo se ejecutarán los nodos siguientes: Paralelo (todos a la vez), Secuencial (uno por uno) o Carrera (el primero en terminar gana).",
+      "flow_control_action": "Break sale de un bucle, Continue salta a la siguiente iteración y Return detiene la ejecución de todo el flujo.",
+      "transform_logic": "Selecciona una operación para manipular un array de datos. Usa las variables 'acc' e 'item' en las expresiones para Reduce.",
+      "component_flow_id": "El ID del flujo que deseas ejecutar como un componente reutilizable.",
       "no_captures": "Sin captura disponible",
       "alt_text": "Resultado de la ejecución",
       "before": "Antes",
@@ -507,6 +508,10 @@
       "variableName": "Ex: html_content",
       "filePath": "Ex: ./logs/errors-test.log",
       "switch_value": "Valor (ej: admin, true, 200)",
+      "flowId": "Ej: 550e8400-e29b-41d4-a716-446655440000",
+      "parent_variable": "Var Padre",
+      "child_variable": "Var Hija",
+      "condition_expression": "Ex: ${status} === 200 (Vacío = Default)",
       "urlPattern": "**/api/users/login",
       "statusCode": "200",
       "saveToVariable": "responseVar",
@@ -538,7 +543,24 @@
       "slowMo": "Ej: 50. Retrasa cada acción para debug.",
       "executablePath": "Ej: /ruta/a/chrome.exe. Usar ejecutable de navegador personalizado."
     },
-    "options": {}
+    "options": {
+      "mode": {
+        "parallel": "Paralelo",
+        "sequential": "Secuencial",
+        "race": "Carrera"
+      },
+      "action": {
+        "break": "Romper (Break)",
+        "continue": "Continuar (Continue)",
+        "return": "Retornar (Return)"
+      },
+      "operation": {
+        "map": "Mapear (Transformar)",
+        "filter": "Filtrar (Seleccionar)",
+        "reduce": "Reducir (Acumular)",
+        "merge": "Combinar (Merge)"
+      }
+    }
   },
   "settings": {
     "sidebar": {

@@ -3918,7 +3918,7 @@ export const resizeViewportAction = (req, res) =>
 
 export const variableAction = async (req, res) => {
     try {
-        const { operation, name, value, scope = 'flow' } = req.body;
+        const { operation = 'set', name, value, scope = 'flow' } = req.body;
 
         let result;
         let message;
@@ -4262,14 +4262,14 @@ export const flowControlAction = async (req, res) => {
         });
     }
 };
-
 export const transformAction = async (req, res) => {
     try {
         const { operation, input, expression, mergeWith, outputVar } = req.body;
 
-        const resolvedInput = variableManager.resolve(input);
         const inputArray =
-            variableManager.get(resolvedInput.replace('${', '').replace('}', ''), 'flow') || [];
+            (typeof input === 'string' ? variableManager.get(input) : null) ||
+            variableManager.resolveValue(input) ||
+            [];
 
         let result;
         switch (operation) {
@@ -4283,8 +4283,25 @@ export const transformAction = async (req, res) => {
                 break;
             case 'merge': {
                 const mergeArray =
-                    variableManager.get(mergeWith.replace('${', '').replace('}', ''), 'flow') || [];
-                result = [...inputArray, ...mergeArray];
+                    (typeof mergeWith === 'string' ? variableManager.get(mergeWith) : null) ||
+                    variableManager.resolveValue(mergeWith) ||
+                    [];
+                result = Array.isArray(mergeArray)
+                    ? [...inputArray, ...mergeArray]
+                    : [...inputArray, mergeArray];
+                break;
+            }
+            case 'reduce': {
+                // For reduce, we evaluate expression(acc, item)
+                // We might need an initial value. In our schema it's optional
+                // If not provided, we use the first element of the array
+                if (inputArray.length === 0) {
+                    result = null;
+                } else {
+                    result = inputArray.reduce((acc, item) => {
+                        return variableManager.evaluate(expression, { acc, item });
+                    });
+                }
                 break;
             }
             default:
@@ -4392,7 +4409,19 @@ export const componentAction = async (req, res) => {
 
         // 2. Prepare subflow execution context
         const { ExecutionService } = await import('../services/ExecutionService.js');
+        const { variableManager: vm } = await import('../services/VariableManager.js');
         const executionService = new ExecutionService();
+
+        // 2.b Handle Input Mapping (Parent -> Child)
+        const inputMapping = configuration?.inputMapping || [];
+        if (Array.isArray(inputMapping)) {
+            for (const mapping of inputMapping) {
+                if (mapping.parentVar && mapping.childVar) {
+                    const val = vm.resolveValue(mapping.parentVar);
+                    vm.set(mapping.childVar, val, 'flow');
+                }
+            }
+        }
 
         // Map database models to the format expected by ExecutionService
         const allNodes = subflow.nodes.map((n) => ({
@@ -4422,6 +4451,17 @@ export const componentAction = async (req, res) => {
         // but it executes nodes and updates variableManager.
         await executionService.runSequence(entryNodes, allNodes, allEdges, subflowState);
 
+        // 3.b Handle Output Mapping (Child -> Parent)
+        const outputMapping = configuration?.outputMapping || [];
+        if (Array.isArray(outputMapping)) {
+            for (const mapping of outputMapping) {
+                if (mapping.childVar && mapping.parentVar) {
+                    const val = vm.get(mapping.childVar, 'flow');
+                    vm.set(mapping.parentVar, val, 'flow');
+                }
+            }
+        }
+
         emitLog({
             message: `Completed subflow: ${flowId}`,
             type: 'success',
@@ -4438,11 +4478,63 @@ export const componentAction = async (req, res) => {
         emitLog({
             message: `Error in subflow: ${error.message}`,
             type: 'error',
-            nodeId: req.body?.nodeId,
+            nodeId: req.body.nodeId,
         });
         return res.status(500).json({
             success: false,
-            message: 'Error executing subflow component',
+            message: 'Error executing subflow',
+            error: error.message,
+        });
+    }
+};
+
+/**
+ * Input Action: Handles parameter declarations in subflows
+ */
+export const inputAction = async (req, res) => {
+    try {
+        const { name, defaultValue } = req.body;
+        const { variableManager } = await import('../services/VariableManager.js');
+
+        // If variable is already set (by componentAction mapping), we keep it.
+        // Otherwise, we set it to the default value if provided.
+        if (!variableManager.has(name, 'flow') && defaultValue !== undefined) {
+            variableManager.set(name, defaultValue, 'flow');
+        }
+
+        return res.status(200).json({
+            success: true,
+            data: { name, value: variableManager.get(name) },
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: 'Error in input action',
+            error: error.message,
+        });
+    }
+};
+
+/**
+ * Output Action: Handles return values in subflows
+ */
+export const outputAction = async (req, res) => {
+    try {
+        const { name, value } = req.body;
+        const { variableManager } = await import('../services/VariableManager.js');
+
+        // Resolve return value
+        const resolvedValue = variableManager.resolveValue(value);
+        variableManager.set(name, resolvedValue, 'flow');
+
+        return res.status(200).json({
+            success: true,
+            data: { name, value: resolvedValue },
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: 'Error in output action',
             error: error.message,
         });
     }
@@ -4991,6 +5083,68 @@ export const validateAICredentials = async (req, res) => {
             success: false,
             message: 'Validation failed: ' + (error.message || 'Unknown error'),
         });
+    }
+};
+
+/**
+ * Action: Security Header Audit
+ * Validates security policies (HSTS, CSP, CORS) without a full browser.
+ */
+export const securityHeaderAuditAction = async (req, res) => {
+    const { url, nodeId } = req.body;
+
+    if (!url) {
+        return res.status(400).json({ success: false, message: 'URL is required' });
+    }
+
+    if (nodeId) {
+        emitExecutionStatus({ stepId: nodeId, status: 'running' });
+        smartEmitLog(`Auditing security headers for: ${url}...`, 'info', nodeId);
+    }
+
+    try {
+        const response = await fetch(url, { method: 'HEAD' });
+        const headers = response.headers;
+
+        const audit = {
+            hsts: headers.has('strict-transport-security'),
+            csp: headers.has('content-security-policy'),
+            xfo: headers.has('x-frame-options'),
+            xcto: headers.has('x-content-type-options'),
+            cors: headers.get('access-control-allow-origin') || 'Restrictive (Default)',
+        };
+
+        const issues = [];
+        if (!audit.hsts) issues.push('HSTS Missing');
+        if (!audit.csp) issues.push('CSP Missing');
+        if (!audit.xfo) issues.push('X-Frame-Options Missing');
+
+        const success = issues.length === 0;
+        const message = success
+            ? 'Security headers are optimal.'
+            : `Audit finished with issues: ${issues.join(', ')}`;
+
+        if (nodeId) {
+            emitExecutionStatus({ stepId: nodeId, status: success ? 'success' : 'warning' });
+            smartEmitLog(message, success ? 'success' : 'warning', nodeId);
+        }
+
+        return res.json({
+            success: true,
+            data: {
+                audit,
+                issues,
+                healthy: success,
+            },
+            message,
+        });
+    } catch (error) {
+        console.error('[SecurityAudit Error]', error.message);
+        if (nodeId) {
+            emitExecutionStatus({ stepId: nodeId, status: 'failed' });
+            smartEmitLog(`Audit failed: ${error.message}`, 'error', nodeId);
+        }
+        return res.status(500).json({ success: false, message: error.message });
     }
 };
 

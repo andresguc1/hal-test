@@ -306,6 +306,100 @@ const SwitchCasesEditor = ({ value, onChange, _variables }) => {
   );
 };
 
+const MappingEditor = ({
+  value,
+  onChange,
+  label,
+  parentKey = "parentVar",
+  childKey = "childVar",
+}) => {
+  const { t } = useTranslation();
+  const mappings = Array.isArray(value) ? value : [];
+
+  const updateMapping = (index, field, val) => {
+    const newMappings = [...mappings];
+    newMappings[index] = { ...newMappings[index], [field]: val };
+    onChange(newMappings);
+  };
+
+  const addMapping = () => {
+    onChange([...mappings, { [parentKey]: "", [childKey]: "" }]);
+  };
+
+  const removeMapping = (index) => {
+    const newMappings = [...mappings];
+    newMappings.splice(index, 1);
+    onChange(newMappings);
+  };
+
+  return (
+    <div className="space-y-3 mt-4 mb-2">
+      <div className="flex justify-between items-center px-1">
+        <label className="text-[10px] uppercase tracking-widest font-black text-slate-500">
+          {label}
+        </label>
+        <span className="text-[9px] text-slate-600 font-medium">
+          PARENT → CHILD
+        </span>
+      </div>
+      <div className="space-y-2">
+        {mappings.map((m, index) => (
+          <div
+            key={index}
+            className="flex items-center gap-2 p-2.5 bg-[#0f172a]/40 rounded-xl border border-white/5 group hover:border-white/10 transition-all shadow-sm"
+          >
+            <div className="flex-1 space-y-1">
+              <input
+                type="text"
+                placeholder={t(
+                  "nodes.placeholders.parent_variable",
+                  "Var Padre",
+                )}
+                value={m[parentKey]}
+                onChange={(e) =>
+                  updateMapping(index, parentKey, e.target.value)
+                }
+                className="w-full bg-transparent border-none text-[10px] font-bold text-white focus:ring-0 p-0 placeholder:text-slate-700"
+              />
+            </div>
+            <div className="flex items-center justify-center w-5 h-5 rounded-full bg-white/5 shrink-0">
+              <ArrowRight size={10} className="text-slate-500" />
+            </div>
+            <div className="flex-1 space-y-1">
+              <input
+                type="text"
+                placeholder={t("nodes.placeholders.child_variable", "Var Hija")}
+                value={m[childKey]}
+                onChange={(e) => updateMapping(index, childKey, e.target.value)}
+                className="w-full bg-transparent border-none text-[10px] font-bold text-sky-400 focus:ring-0 p-0 placeholder:text-slate-700"
+              />
+            </div>
+            <button
+              onClick={() => removeMapping(index)}
+              className="p-1.5 text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500/10 rounded-lg"
+              title={t("common.remove", "Eliminar")}
+            >
+              <Trash2 size={12} />
+            </button>
+          </div>
+        ))}
+        {mappings.length === 0 && (
+          <div className="text-center py-4 border border-dashed border-slate-800 rounded-xl text-slate-600 text-[10px] bg-black/5">
+            {t("nodes.config.no_mappings", "Sin mapeos definidos")}
+          </div>
+        )}
+      </div>
+      <button
+        onClick={addMapping}
+        className="w-full py-2.5 bg-white/5 hover:bg-white/10 border border-dashed border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center justify-center gap-2 mt-1 transition-all active:scale-[0.98]"
+      >
+        <Plus size={12} />
+        {t("nodes.config.add_mapping", "Agregar Mapeo")}
+      </button>
+    </div>
+  );
+};
+
 // --- CONFIGURATION SCHEMA ---
 // Defines available input fields for each node type
 const NODE_INPUTS = {
@@ -1764,8 +1858,9 @@ const NODE_INPUTS = {
         { value: "sequential", label: "Sequential" },
         { value: "race", label: "Race" },
       ],
-      default: "parallel",
+      default: "sequential",
       required: true,
+      hint: "branch_mode",
     },
     {
       key: "timeout",
@@ -1786,6 +1881,7 @@ const NODE_INPUTS = {
         { value: "return", label: "Return" },
       ],
       required: true,
+      hint: "flow_control_action",
     },
     {
       key: "returnValue",
@@ -1809,6 +1905,7 @@ const NODE_INPUTS = {
       ],
       default: "map",
       required: true,
+      hint: "transform_logic",
     },
     {
       key: "input",
@@ -1822,7 +1919,8 @@ const NODE_INPUTS = {
       label: "Expression",
       type: "textarea",
       placeholder: "item.price * 1.1",
-      isVisible: (data) => data && ["map", "filter"].includes(data.operation),
+      isVisible: (data) =>
+        data && ["map", "filter", "reduce"].includes(data.operation),
     },
     {
       key: "mergeWith",
@@ -1996,6 +2094,62 @@ const NODE_INPUTS = {
       label: "Timeout (ms)",
       type: "number",
       placeholder: "900000",
+    },
+  ],
+
+  component: [
+    {
+      key: "flowId",
+      label: "Subflow to Execute",
+      type: "text",
+      placeholder: "Enter Flow ID",
+      required: true,
+      hint: "component_flow_id",
+    },
+    {
+      key: "inputMapping",
+      label: "Input Mapping (Parent -> Child)",
+      type: "mapping",
+      placeholder: "Map variables to subflow",
+    },
+    {
+      key: "outputMapping",
+      label: "Output Mapping (Child -> Parent)",
+      type: "mapping",
+      placeholder: "Map results back to parent",
+    },
+  ],
+
+  input: [
+    {
+      key: "name",
+      label: "Parameter Name",
+      type: "text",
+      placeholder: "my_param",
+      required: true,
+    },
+    {
+      key: "defaultValue",
+      label: "Default Value",
+      type: "text",
+      placeholder: "fallback_value",
+    },
+  ],
+
+  output: [
+    {
+      key: "name",
+      label: "Output Name",
+      type: "text",
+      placeholder: "result_key",
+      required: true,
+    },
+    {
+      key: "value",
+      label: "Value to Return",
+      type: "text",
+      placeholder: "${local_var}",
+      required: true,
     },
   ],
 
@@ -2604,6 +2758,12 @@ function NodeConfigurationPanel({
                 </option>
               ))}
             </select>
+            {field.hint && (
+              <div className="mt-1 flex items-start gap-1.5 p-1.5 rounded bg-indigo-500/5 border border-indigo-500/10 text-[10px] text-slate-400 leading-tight">
+                <Info size={12} className="shrink-0 mt-0.5 opacity-50" />
+                <span>{t(`nodes.hints.${field.hint}`)}</span>
+              </div>
+            )}
             {error && (
               <span className="text-[10px] text-red-400 font-bold ml-1">
                 {error}
@@ -2840,6 +3000,15 @@ function NodeConfigurationPanel({
               </span>
             )}
           </div>
+        );
+      case "mapping":
+        return (
+          <MappingEditor
+            key={field.key}
+            label={field.label}
+            value={value}
+            onChange={(newVal) => handleConfigUpdate(field.key, newVal)}
+          />
         );
       default: // text
         return (

@@ -40,6 +40,17 @@ class VariableManager {
     }
 
     /**
+     * Check if a variable exists
+     * @param {string} name - Variable name
+     * @param {string} scope - 'flow' or 'global'
+     * @returns {boolean} True if exists
+     */
+    has(name, scope = 'flow') {
+        if (!this.scopes[scope]) return false;
+        return Object.prototype.hasOwnProperty.call(this.scopes[scope], name);
+    }
+
+    /**
      * Increment a numeric variable
      * @param {string} name - Variable name
      * @param {number} amount - Amount to increment (default: 1)
@@ -225,16 +236,6 @@ class VariableManager {
             console.error('Expression evaluation error:', error);
             throw new Error(`Failed to evaluate expression: ${expression} - ${error.message}`);
         }
-    }
-
-    /**
-     * Check if a variable exists
-     * @param {string} name - Variable name
-     * @param {string} scope - 'flow' or 'global'
-     * @returns {boolean} True if variable exists
-     */
-    has(name, scope = 'flow') {
-        return Object.prototype.hasOwnProperty.call(this.scopes[scope], name);
     }
 
     /**

@@ -353,7 +353,13 @@
       "returnValue": "Wait for return value?",
       "executablePath": "Executable Path (custom)",
       "forceClose": "Force close (forceClose)",
-      "clearContext": "Clear context (clearContext)"
+      "clearContext": "Clear context (clearContext)",
+      "mode": "Execution Mode",
+      "flowId": "Sub-flow ID",
+      "inputMapping": "Input Mapping",
+      "outputMapping": "Output Mapping",
+      "parent_variable": "Parent Variable",
+      "child_variable": "Child Variable"
     },
     "config": {
       "save_error": "Could not save configuration. Please check the data and try again.",
@@ -368,7 +374,9 @@
       "active_tab": "Active",
       "switch_cases": "Switch Cases",
       "add_case": "Add Case",
-      "no_cases": "No cases defined. Add one to start."
+      "no_cases": "No cases defined. Add one to start.",
+      "add_mapping": "Add Mapping",
+      "no_mappings": "No mappings defined"
     },
     "hints": {
       "selector_select": "Must be the selector of the main <select> element, not the <option> elements.",
@@ -394,7 +402,11 @@
       "returnValue": "If active, the script result will be saved to a variable.",
       "picker_local_only": "Warning: The Picker only works in the local version. In the web demo, please enter the selector manually.",
       "switch_logic": "Define the exact values you want to compare. Each case generates an output.",
-      "default_path_desc": "A 'default' output is always generated for when the value does not match any case."
+      "default_path_desc": "A 'default' output is always generated for when the value does not match any case.",
+      "branch_mode": "Defines how the next nodes will be executed: Parallel (all at once), Sequential (one by one), or Race (first to finish wins).",
+      "flow_control_action": "Break exits a loop, Continue skips to the next iteration, and Return stops the entire flow execution.",
+      "transform_logic": "Select an operation to manipulate an array of data. Use 'acc' and 'item' variables in expressions for Reduce.",
+      "component_flow_id": "The ID of the flow you want to execute as a reusable component."
     },
     "screenshots": {
       "title": "Screenshots",
@@ -508,6 +520,10 @@
       "variableName": "Ex: html_content",
       "filePath": "Ex: ./logs/errors-test.log",
       "switch_value": "Value (e.g., admin, true, 200)",
+      "flowId": "Ex: 550e8400-e29b-41d4-a716-446655440000",
+      "parent_variable": "Parent Var",
+      "child_variable": "Child Var",
+      "condition_expression": "Ex: ${status} === 200 (Empty = Default)",
       "urlPattern": "**/api/users/login",
       "statusCode": "200",
       "saveToVariable": "responseVar",
@@ -539,7 +555,24 @@
       "slowMo": "Ex: 50. Delays each action for debugging.",
       "executablePath": "Ex: /path/to/chrome.exe. Use custom browser executable."
     },
-    "options": {}
+    "options": {
+      "mode": {
+        "parallel": "Parallel",
+        "sequential": "Sequential",
+        "race": "Race"
+      },
+      "action": {
+        "break": "Break",
+        "continue": "Continue",
+        "return": "Return"
+      },
+      "operation": {
+        "map": "Map (Transform)",
+        "filter": "Filter (Select)",
+        "reduce": "Reduce (Accumulate)",
+        "merge": "Merge (Combine)"
+      }
+    }
   },
   "settings": {
     "sidebar": {

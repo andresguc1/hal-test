@@ -484,6 +484,18 @@ const actionRoutes = [
         action: 'componentAction',
         category: 'flow_control',
     },
+    {
+        path: 'input',
+        schema: 'inputBodySchema',
+        action: 'inputAction',
+        category: 'flow_control',
+    },
+    {
+        path: 'output',
+        schema: 'outputBodySchema',
+        action: 'outputAction',
+        category: 'flow_control',
+    },
 
     // ========== AI Integration (LLM) ==========
     {
