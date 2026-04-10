@@ -393,6 +393,11 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
             }
 
             logger.info("Flow loaded", { flowId: flow.id }, "useFlowManager");
+
+            // ✨ AUTO-MAGIC LAYOUT: Automatically organize the canvas on load
+            setTimeout(() => {
+              onLayout("LR");
+            }, 150);
           }
         } catch (err) {
           logger.error("Error loading flow", err, "useFlowManager");
@@ -401,7 +406,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
     };
 
     loadFlowData();
-  }, [currentProject, currentFlowId, setNodes, setEdges, toast, t]); // Satisfy linter while currentProject is the owner of id
+  }, [currentProject, currentFlowId, setNodes, setEdges, toast, t, onLayout]); // Satisfy linter while currentProject is the owner of id
 
   // MANIFIESTO: Bidirectional Sync (Footer -> Canvas)
   // If a flow is renamed in the Footer (Global State), update the Node on Canvas
@@ -411,21 +416,32 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
     setNodes((currentNodes) => {
       let hasChanges = false;
       const newNodes = currentNodes.map((n) => {
-        if (n.type === "component" && n.data?.flowId) {
+        if ((n.type === "component" || n.type === "loop") && n.data?.flowId) {
           const flowRecord = currentProject.flows.find(
             (f) => f.id === n.data.flowId,
           );
-          // If flow exists and name is different, sync it
-          if (flowRecord && flowRecord.name !== n.data.label) {
-            hasChanges = true;
-            return {
-              ...n,
-              data: {
-                ...n.data,
-                label: flowRecord.name,
-                customLabel: flowRecord.name,
-              },
-            };
+
+          if (flowRecord) {
+            const hasNameChanged = flowRecord.name !== n.data.label;
+            // Support syncing updated node count if available from backend
+            const hasCountChanged =
+              flowRecord.nodeCount !== undefined &&
+              flowRecord.nodeCount !== n.data.nodeCount;
+
+            if (hasNameChanged || hasCountChanged) {
+              hasChanges = true;
+              return {
+                ...n,
+                data: {
+                  ...n.data,
+                  ...(hasNameChanged && {
+                    label: flowRecord.name,
+                    customLabel: flowRecord.name,
+                  }),
+                  ...(hasCountChanged && { nodeCount: flowRecord.nodeCount }),
+                },
+              };
+            }
           }
         }
         return n;
@@ -1689,6 +1705,22 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
     // 3. Switch Back
     if (switchFlow) {
       switchFlow(lastView.id);
+    }
+  }, [viewStack, saveFlow, switchFlow]);
+
+  const exitToRoot = useCallback(async () => {
+    if (viewStack.length === 0) return;
+
+    // 1. Save Current (wherever we are)
+    await saveFlow().catch(() => {});
+
+    // 2. Identify Root
+    const root = viewStack[0];
+
+    // 3. Reset Stack and Switch
+    setViewStack([]);
+    if (switchFlow) {
+      switchFlow(root.id);
     }
   }, [viewStack, saveFlow, switchFlow]);
 
@@ -3864,6 +3896,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
     groupNodes,
     loopNodes,
     ungroupNodes,
+    exitToRoot,
 
     validateLogicalConnection,
     validateFlowStructure, // Exposed for external validation

@@ -18,6 +18,7 @@ class ExecutionLogger {
                 status: 'running',
                 trigger: metadata.trigger || 'manual',
                 flow_snapshot: metadata.flowSnapshot || null,
+                browser_version: metadata.browserVersion || null,
             });
             return run.id;
         } catch (error) {
@@ -51,6 +52,9 @@ class ExecutionLogger {
                 input_data: result.input,
                 output_data: result.output,
                 duration_ms: result.duration,
+                memory_hit: !!result.memoryHit,
+                video_timestamp: result.videoTimestamp || null,
+                ai_diagnosis: result.aiDiagnosis || null,
             });
             console.log('[ExecutionLogger.logStep] StepResult created successfully');
         } catch (error) {
@@ -75,6 +79,10 @@ class ExecutionLogger {
 
                 const finishedAt = new Date();
                 const duration = finishedAt.getTime() - new Date(run.started_at).getTime();
+
+                // Aggregated metrics for Executive Dashboard
+                const memoryHits = steps.filter((s) => s.memory_hit).length;
+                const healedCount = steps.filter((s) => s.status === 'healed').length;
 
                 // Video Finalization Logic
                 let videoPath = null;
@@ -102,6 +110,8 @@ class ExecutionLogger {
                     duration_ms: duration,
                     execution_data: executionData,
                     video_path: videoPath,
+                    memory_palace_hits: memoryHits,
+                    total_healed: healedCount,
                 });
             }
         } catch (error) {

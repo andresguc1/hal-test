@@ -15,7 +15,7 @@ import { z } from 'zod';
 import * as fsp from 'fs/promises';
 // import * as fs from 'fs';
 import * as path from 'path';
-import { Flow, Node, Edge, HealingLog } from '../database/init.js';
+import { Flow, Node, Edge, HealingLog, Run } from '../database/init.js';
 import { executionLogger } from '../services/ExecutionLogger.js';
 import { STORAGE_RUNS_DIR, STORAGE_DIR } from '../config/paths.js';
 import { isSafePath } from '../utils/security.js';
@@ -575,6 +575,9 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
                     input: opts,
                     output: result.data || result.traceDetails,
                     screenshot: screenshotPath,
+                    videoTimestamp: req.body.runStartTime
+                        ? (Date.now() - req.body.runStartTime) / 1000
+                        : null,
                 },
             );
         }
@@ -798,16 +801,15 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
                                     runId,
                                     { id: nodeId, type: actionName },
                                     {
-                                        status: 'success',
+                                        status: 'healed',
                                         duration: duration + retryDuration,
                                         input: newOpts,
                                         output: retryResult.data || retryResult.traceDetails,
-                                        metadata: {
-                                            healed: true,
-                                            originalSelector: opts.selector,
-                                            originalError: errorMessage,
-                                            reasoning: diagnosis.reasoning,
-                                        },
+                                        memoryHit: !!diagnosis.isFromVault,
+                                        aiDiagnosis: diagnosis.reasoning,
+                                        videoTimestamp: req.body.runStartTime
+                                            ? (Date.now() - req.body.runStartTime) / 1000
+                                            : null,
                                     },
                                 );
                             }
@@ -845,6 +847,9 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
                     duration,
                     input: opts,
                     error: errorMessage,
+                    videoTimestamp: req.body.runStartTime
+                        ? (Date.now() - req.body.runStartTime) / 1000
+                        : null,
                 },
             );
         }
@@ -991,10 +996,26 @@ export const launchBrowserAction = async (req, res) => {
             '[ACTION] Starting browser launch with options:',
             JSON.stringify(req.body, null, 2),
         );
-        const { browserId } = await browserService.launchBrowser(req.body);
+        const { browserId, version } = await browserService.launchBrowser(req.body);
+
+        // Update Run record with browser version if we are in a run
+        if (runId) {
+            try {
+                const run = await Run.findByPk(runId);
+                if (run) {
+                    await run.update({ browser_version: version });
+                }
+            } catch (err) {
+                console.warn(
+                    '[FlightRecorder] Failed to update run with browser version:',
+                    err.message,
+                );
+            }
+        }
+
         const duration = Date.now() - start;
 
-        console.log(`[SUCCESS] Browser launched with ID: ${browserId}`);
+        console.log(`[SUCCESS] Browser launched with ID: ${browserId} (v${version})`);
         smartEmitLog(`Browser launched with ID: ${browserId}`, 'success', nodeId);
         if (nodeId) emitExecutionStatus({ stepId: nodeId, status: 'success' });
 

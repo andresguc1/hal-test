@@ -1,6 +1,7 @@
 import { executionService } from '../services/ExecutionService.js';
 import { executionLogger } from '../services/ExecutionLogger.js';
 import { Run, StepResult, Flow } from '../database/init.js';
+import { reportExporter } from '../services/exporter/ReportExporter.js';
 
 export const startRunAction = async (req, res) => {
     try {
@@ -150,6 +151,74 @@ export const clearHistoryAction = async (req, res) => {
     try {
         await executionLogger.clearHistory();
         return res.status(200).json({ success: true, message: 'History cleared successfully' });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+export const getReportAnalyticsAction = async (req, res) => {
+    try {
+        const { projectId } = req.query;
+
+        // Fetch last 100 runs for analytics
+        const runs = await Run.findAll({
+            where: projectId ? { project_id: projectId } : {},
+            order: [['started_at', 'DESC']],
+            limit: 100,
+        });
+
+        // 1. Calculate ROI
+        const totalHealed = runs.reduce((acc, r) => acc + (r.total_healed || 0), 0);
+        const timeSavedMinutes = totalHealed * 15; // 15 mins saved per healed test
+        const roiHours = (timeSavedMinutes / 60).toFixed(1);
+
+        // 2. Memory Growth
+        const totalMemoryHits = runs.reduce((acc, r) => acc + (r.memory_palace_hits || 0), 0);
+
+        // 3. Flakiness Heatmap (Failure count per node)
+        // We'll join with StepResult for recent failures
+        const recentFailures = await StepResult.findAll({
+            where: { status: 'failed' },
+            limit: 500,
+            order: [['createdAt', 'DESC']],
+            attributes: ['node_id', 'node_type', 'createdAt'],
+        });
+
+        const nodeFailures = {};
+        recentFailures.forEach((f) => {
+            nodeFailures[f.node_id] = (nodeFailures[f.node_id] || 0) + 1;
+        });
+
+        // Map to a sorted array for the frontend
+        const heatmap = Object.entries(nodeFailures)
+            .map(([nodeId, count]) => ({ nodeId, count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 10);
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                roi: {
+                    healed: totalHealed,
+                    timeSaved: `${roiHours}h`,
+                },
+                memory: {
+                    hits: totalMemoryHits,
+                },
+                heatmap,
+                totalRuns: runs.length,
+            },
+        });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+export const exportReportAction = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const exportPath = await reportExporter.generateSingleFileReport(id);
+        return res.download(exportPath);
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
     }

@@ -51,10 +51,12 @@ import { useTranslation } from "react-i18next";
 import { useTheme } from "next-themes";
 import RunHistoryPanel from "./components/RunHistoryPanel";
 import StepDetailsModal from "./components/StepDetailsModal";
+import ReportDashboard from "./components/reporting/ReportDashboard";
 import { ExportModal } from "./components/modals/ExportModal";
 import { ImportModal } from "./components/modals/ImportModal";
 import { api } from "./utils/api";
 import { useElementPicker } from "./hooks/useElementPicker";
+import { AnimatePresence } from "framer-motion";
 import { NODE_STATES } from "./components/hooks/flowStyles";
 import {
   Terminal,
@@ -81,19 +83,14 @@ import AskAIPanel from "./components/AskAIPanel";
 // ========================================
 
 function Dashboard() {
+  // 1. Utility Hooks
   const { t } = useTranslation();
-
-  // Theme
   const { theme } = useTheme();
-
   const toast = useToast();
-
   const { logs, isPanelVisible, togglePanel } = useLogs();
-
-  // Refs
   const reactFlowWrapper = React.useRef(null);
 
-  // Project Manager Hook
+  // 2. Navigation & Context Hooks
   const {
     projects,
     currentProject,
@@ -109,7 +106,6 @@ function Dashboard() {
     renameProject,
   } = useProjectManager();
 
-  // Settings Context
   const {
     openSettings,
     closeSettings,
@@ -121,56 +117,9 @@ function Dashboard() {
     showMinimap,
   } = useSettings();
 
-  // Migration Effect
-  React.useEffect(() => {
-    const runMigration = async () => {
-      try {
-        const migratedProject = await migrateFromLegacy();
-        if (migratedProject) {
-          toast.success(`✓ ${t("common.migrate_success")}`);
-          loadProjects(); // Invalidate and refetch projects
-        }
-      } catch (error) {
-        console.error("Migration error:", error);
-        toast.error(t("common.migrate_error"));
-      }
-    };
-
-    runMigration();
-  }, [toast, loadProjects, t]);
-
-  // Load project when initial list arrives and no project is selected
-  React.useEffect(() => {
-    if (projects.length > 0 && !currentProject) {
-      // Load most recent project by default
-      loadProject(projects[0].id);
-    }
-  }, [projects, currentProject, loadProject]);
-
-  // Auto-select first flow if project is loaded but no flow selected
-  React.useEffect(() => {
-    if (
-      currentProject &&
-      currentProject.flows &&
-      currentProject.flows.length > 0 &&
-      !currentFlowId
-    ) {
-      // Prefer "Main Flow" if exists, otherwise first one
-      const mainFlow =
-        currentProject.flows.find((f) => f.name === "Main Flow") ||
-        currentProject.flows[0];
-      if (mainFlow) {
-        switchFlow(mainFlow.id);
-        setIsStarterDismissed(false); // Reset dismissal on flow switch
-      }
-    }
-  }, [currentProject, currentFlowId, switchFlow]);
-
-  // React Flow hooks & Figma Interaction
   const { figmaConfig, handlers } = useFigmaInteraction();
   const { zoomIn, zoomOut, fitView } = handlers;
 
-  // Hook de React Flow para acceder a funciones de eliminación
   const {
     getNodes,
     getEdges,
@@ -179,57 +128,7 @@ function Dashboard() {
     fitView: reactFlowFitView,
   } = useReactFlow();
 
-  // Auto-fit view when flow changes
-  React.useEffect(() => {
-    if (nodes.length > 0) {
-      // Small delay to allow rendering
-      const timer = setTimeout(() => {
-        reactFlowFitView({
-          duration: 800,
-          padding: 0.5, // Increased general padding
-        });
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentFlowId, reactFlowFitView]); // Intentionally omitting nodes.length to avoid re-fitting on every node add
-
-  // Panel visibility state
-  const [isCreationPanelVisible, setIsCreationPanelVisible] = useState(false);
-  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
-  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
-  const [isHistoryPanelVisible, setIsHistoryPanelVisible] = useState(false); // HISTORY PANEL
-  const [isVariablePanelVisible, setIsVariablePanelVisible] = useState(false); // VARIABLE EXPLORER
-  const [isAskAIPanelVisible, setIsAskAIPanelVisible] = useState(false); // ASK AI DEBUG CONSOLE
-  const [proposedNodes, setProposedNodes] = useState(null);
-  const [confirmationPromise, setConfirmationPromise] = useState(null);
-  const [creationModal, setCreationModal] = useState({
-    isOpen: false,
-    type: "project",
-  });
-
-  // Execution state for progress bar
-  const [executionProgress, setExecutionProgress] = useState({
-    current: 0,
-    total: 0,
-    status: "",
-  });
-  const [isStarterDismissed, setIsStarterDismissed] = useState(false);
-  const [_isSaving, setIsSaving] = useState(false);
-  const [menu, setMenu] = useState(null);
-  /* --- MODAL STATES --- */
-  // Unused placeholder states removed
-  // const [currentNodeId, setCurrentNodeId] = useState(null);
-
-  // History Panel State
-
-  // Step Details Modal State (for replay mode)
-  const [stepDetailsModal, setStepDetailsModal] = useState({
-    isOpen: false,
-    nodeData: null,
-  });
-
-  // Custom hook para manejar el flujo
+  // 3. Core Flow Management Hub
   const {
     nodes,
     edges,
@@ -239,9 +138,8 @@ function Dashboard() {
     onNodeClick,
     updateNodeConfiguration,
     deleteNode,
-    // executeStep, // Removed unused
     executeFlow,
-    executeSingleNode, // Destructure new function
+    executeSingleNode,
     saveFlow,
     undo,
     redo,
@@ -256,11 +154,10 @@ function Dashboard() {
     cutElements,
     duplicateElements,
     clipboard,
-    // clearFlow, // Unused
-    groupNodes, // Composition feature
+    groupNodes,
     loopNodes,
     ungroupNodes,
-    viewStack, // Nav stack
+    viewStack,
     enterComponent,
     exitComponent,
     setSelectedNodeId,
@@ -268,20 +165,261 @@ function Dashboard() {
     updateNodeState,
     activeBrowserId,
     stopSession,
-    // NEW
     hasUnsavedChanges,
     detectOrphans,
-    projectPath, // Added from useFlowManager
-    isReadOnly, // Added from useFlowManager
-    replayRun, // HISTORY
-    resetNodeStates, // HISTORY
+    projectPath,
+    isReadOnly,
+    replayRun,
+    resetNodeStates,
     loadStarterTemplate,
     isStarterTemplate,
     addGhostNode,
     migrateNodes,
     onLayout,
-    apiStatus, // NEW: added for indicator
+    exitToRoot,
+    apiStatus,
   } = useFlowManager(currentProject, currentFlowId, switchFlow);
+
+  const handleExecuteFlow = useCallback(async () => {
+    // --- UNIVERSAL EXECUTION CONTEXT ---
+    // If we are inside a composite (sub-flow), we should ideally run from the root
+    // to ensure all prerequisite nodes (like launch_browser) are executed.
+    if (viewStack && viewStack.length > 0) {
+      toast.info(
+        t(
+          "common.switching_to_root",
+          "Switching to Main Flow for full execution...",
+        ),
+      );
+      setPendingExecution(true); // Flag to resume once main flow loads
+      await exitToRoot();
+      return; // Stop current execution; Effect will resume it at root level
+    }
+    // ------------------------------------------
+
+    // 0. DRY RUN VALIDATION (Clean UX: No loading toast for instant validation)
+    const validationErrors = validateFlowStructure(nodes, edges);
+    if (validationErrors.length > 0) {
+      toast.error(validationErrors[0], {
+        duration: 5000,
+        style: { border: "1px solid #ef4444", color: "#ef4444" },
+      });
+      return; // Stop here, no processing toast shown.
+    }
+
+    if (!currentFlowId) {
+      toast.info(
+        t(
+          "common.save_before_execute",
+          "Debes guardar el flujo antes de ejecutarlo.",
+        ),
+      );
+      setCreationModal({ isOpen: true, type: "flow" });
+      return;
+    }
+
+    // 1. Show Loading Toast immediately (Duration 0 = indefinite until dismissed)
+    const toastId = toast.loading(t("common.processing"));
+
+    try {
+      // --- EXECUTION ISOLATION (Debug vs E2E) ---
+      if (activeBrowserId) {
+        if (
+          confirm(
+            t(
+              "common.confirm_close_debug",
+              "Active debug session detected. Close it to ensure a clean E2E run?",
+            ),
+          )
+        ) {
+          toast.loading("Closing debug session...", { id: toastId });
+          await stopSession();
+        } else {
+          // If user refuses to close, we abort to prevent collisions
+          toast.dismiss(toastId);
+          toast.info("Execution cancelled to preserve debug session.");
+          return;
+        }
+      }
+      // ------------------------------------------
+
+      const result = await executeFlow(); // Returns { success, stats, failedNodeId, divePath, healedNodes }
+
+      // 2. Clear loading
+      toast.dismiss(toastId);
+
+      // --- AUTO-APPLY AI HEALING ---
+      if (result.healedNodes?.length > 0) {
+        console.log("[App] AI Healed nodes detected:", result.healedNodes);
+        result.healedNodes.forEach((repair) => {
+          updateNodeConfiguration(repair.nodeId, {
+            selector: repair.newSelector,
+          });
+        });
+        toast.success(
+          t("common.ai_repair_applied", {
+            defaultValue: `AI automatically repaired ${result.healedNodes.length} selector(s).`,
+            count: result.healedNodes.length,
+          }),
+        );
+      }
+
+      // --- DEEP DIVE LOGIC (If execution failed inside a composite) ---
+      if (result.success) {
+        toast.success(
+          t("common.flow_exec_success", "Flow executed successfully"),
+        );
+        return;
+      }
+
+      if (!result.success && result.failedNodeId) {
+        try {
+          // Identify if we need to "Dive In" to show the failure
+          if (result.divePath && result.divePath.length > 0) {
+            console.log(
+              "[App] Auto-diving into failure context:",
+              result.divePath,
+            );
+            const componentId = result.divePath[0];
+            await enterComponent(componentId);
+          }
+
+          // B. Select and Open Node (triggers config panel via derived state)
+          setSelectedNodeId(result.failedNodeId);
+
+          // C. Visual Focus — delay to ensure the node is in the rendered canvas
+          setTimeout(() => {
+            reactFlowFitView({
+              nodes: [{ id: result.failedNodeId }],
+              duration: 800,
+              padding: 0.8,
+              maxZoom: 1.2,
+            });
+          }, 800);
+        } catch (navError) {
+          console.error("[App] Failed auto-focus navigation:", navError);
+        }
+      } else if (result.error && !result.stats) {
+        // General Failure
+        if (result.error !== "Max reintentos alcanzados") {
+          toast.error(result.error);
+        }
+      } else {
+        // Failure with Count (Run happened but no specific node tracked)
+        const failedCount = result.stats?.failed || 0;
+        toast.error(`${t("common.flow_exec_error")} (${failedCount} failed)`);
+      }
+    } catch (error) {
+      // 3. Unexpected Error
+      toast.dismiss(toastId);
+      console.error("Error ejecutando flujo:", error);
+      toast.error(t("common.flow_exec_error") + ": " + error.message);
+    }
+  }, [
+    executeFlow,
+    validateFlowStructure,
+    toast,
+    t,
+    nodes,
+    edges,
+    activeBrowserId,
+    stopSession,
+    currentFlowId,
+    enterComponent,
+    reactFlowFitView,
+    setSelectedNodeId,
+    updateNodeConfiguration,
+    viewStack,
+    exitToRoot,
+  ]);
+
+  // 4. Local UI State
+  const [pendingExecution, setPendingExecution] = useState(false);
+  const [isCreationPanelVisible, setIsCreationPanelVisible] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
+  const [isHistoryPanelVisible, setIsHistoryPanelVisible] = useState(false);
+  const [isVariablePanelVisible, setIsVariablePanelVisible] = useState(false);
+  const [isAskAIPanelVisible, setIsAskAIPanelVisible] = useState(false);
+  const [proposedNodes, setProposedNodes] = useState(null);
+  const [confirmationPromise, setConfirmationPromise] = useState(null);
+  const [creationModal, setCreationModal] = useState({
+    isOpen: false,
+    type: "project",
+  });
+  const [executionProgress, setExecutionProgress] = useState({
+    current: 0,
+    total: 0,
+    status: "",
+  });
+  const [isStarterDismissed, setIsStarterDismissed] = useState(false);
+  const [_isSaving, setIsSaving] = useState(false);
+  const [menu, setMenu] = useState(null);
+  const [stepDetailsModal, setStepDetailsModal] = useState({
+    isOpen: false,
+    nodeData: null,
+  });
+  const [reportingRunId, setReportingRunId] = useState(null);
+
+  // 5. Effects
+  React.useEffect(() => {
+    const runMigration = async () => {
+      try {
+        const migratedProject = await migrateFromLegacy();
+        if (migratedProject) {
+          toast.success(`✓ ${t("common.migrate_success")}`);
+          loadProjects();
+        }
+      } catch (error) {
+        console.error("Migration error:", error);
+        toast.error(t("common.migrate_error"));
+      }
+    };
+    runMigration();
+  }, [toast, loadProjects, t]);
+
+  React.useEffect(() => {
+    if (projects.length > 0 && !currentProject) {
+      loadProject(projects[0].id);
+    }
+  }, [projects, currentProject, loadProject]);
+
+  React.useEffect(() => {
+    if (currentProject?.flows?.length > 0 && !currentFlowId) {
+      const mainFlow =
+        currentProject.flows.find((f) => f.name === "Main Flow") ||
+        currentProject.flows[0];
+      if (mainFlow) {
+        switchFlow(mainFlow.id);
+        setIsStarterDismissed(false);
+      }
+    }
+  }, [currentProject, currentFlowId, switchFlow]);
+
+  React.useEffect(() => {
+    if (pendingExecution && viewStack.length === 0 && nodes.length > 0) {
+      const hasLaunchBrowser = nodes.some(
+        (n) => n.type === "launch_browser" || n.data?.type === "launch_browser",
+      );
+      if (hasLaunchBrowser) {
+        console.log("[App] 🚀 Resuming execution at root level...");
+        setPendingExecution(false);
+        handleExecuteFlow();
+      }
+    }
+  }, [pendingExecution, viewStack.length, nodes, handleExecuteFlow]);
+
+  React.useEffect(() => {
+    if (nodes.length > 0) {
+      const timer = setTimeout(() => {
+        reactFlowFitView({
+          duration: 800,
+          padding: 0.5,
+        });
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [currentFlowId, reactFlowFitView, nodes.length]);
 
   // Element Picker Hook
   const { handleStartPicking, handleCancelPicking, handleElementPicked } =
@@ -297,9 +435,16 @@ function Dashboard() {
     });
 
   const handleSelectRun = useCallback(
-    async (runBasic) => {
+    async (runBasic, openReport = false) => {
       if (!runBasic) {
         resetNodeStates();
+        setReportingRunId(null);
+        return;
+      }
+
+      if (openReport) {
+        setReportingRunId(runBasic.id);
+        setIsHistoryPanelVisible(false); // Close history when opening report
         return;
       }
 
@@ -543,147 +688,6 @@ function Dashboard() {
   // ========================================
   // CALLBACKS - Footer Actions
   // ========================================
-
-  const handleExecuteFlow = useCallback(async () => {
-    // 0. DRY RUN VALIDATION (Clean UX: No loading toast for instant validation)
-    const validationErrors = validateFlowStructure(nodes, edges);
-    if (validationErrors.length > 0) {
-      toast.error(validationErrors[0], {
-        duration: 5000,
-        style: { border: "1px solid #ef4444", color: "#ef4444" },
-      });
-      return; // Stop here, no processing toast shown.
-    }
-
-    if (!currentFlowId) {
-      toast.info(
-        t(
-          "common.save_before_execute",
-          "Debes guardar el flujo antes de ejecutarlo.",
-        ),
-      );
-      setCreationModal({ isOpen: true, type: "flow" });
-      return;
-    }
-
-    // 1. Show Loading Toast immediately (Duration 0 = indefinite until dismissed)
-    // 1. Show Loading Toast immediately (Duration 0 = indefinite until dismissed)
-    const toastId = toast.loading(t("common.processing"));
-
-    try {
-      // --- EXECUTION ISOLATION (Debug vs E2E) ---
-      if (activeBrowserId) {
-        if (
-          confirm(
-            t(
-              "common.confirm_close_debug",
-              "Active debug session detected. Close it to ensure a clean E2E run?",
-            ),
-          )
-        ) {
-          toast.loading("Closing debug session...", { id: toastId });
-          await stopSession();
-        } else {
-          // If user refuses to close, we abort to prevent collisions
-          toast.dismiss(toastId);
-          toast.info("Execution cancelled to preserve debug session.");
-          return;
-        }
-      }
-      // ------------------------------------------
-
-      const result = await executeFlow(); // Returns { success, stats, failedNodeId, divePath, healedNodes }
-
-      // 2. Clear loading
-      toast.dismiss(toastId);
-
-      // --- AUTO-APPLY AI HEALING ---
-      if (result.healedNodes?.length > 0) {
-        console.log("[App] AI Healed nodes detected:", result.healedNodes);
-        result.healedNodes.forEach((repair) => {
-          updateNodeConfiguration(repair.nodeId, {
-            selector: repair.newSelector,
-          });
-        });
-        toast.success(
-          t("common.ai_repair_applied", {
-            defaultValue: `AI automatically repaired ${result.healedNodes.length} selector(s).`,
-            count: result.healedNodes.length,
-          }),
-          { icon: "🩹", duration: 5000 },
-        );
-      }
-      // -----------------------------
-
-      if (result.success) {
-        // Success with Duration
-        const durationStr = (result.stats?.duration / 1000).toFixed(2);
-        toast.success(`${t("common.flow_exec_success")} (${durationStr}s)`);
-      } else {
-        // Failure with Metadata (AUTO-FOCUS & DIVE-IN)
-        if (result.failedNodeId) {
-          toast.error(
-            `${t("common.flow_exec_error")} (Fail at: ${result.failedNodeId})`,
-          );
-
-          // 🛑 AUTO-NAVIGATION & FOCUS
-          try {
-            // A. Dive Path traversal (sequence of parent components)
-            if (result.divePath && result.divePath.length > 0) {
-              for (const componentId of result.divePath) {
-                await enterComponent(componentId);
-                // Wait for React Flow to load and render the sub-flow nodes
-                await new Promise((r) => setTimeout(r, 600));
-              }
-            }
-
-            // B. Select and Open Node (triggers config panel via derived state)
-            setSelectedNodeId(result.failedNodeId);
-
-            // C. Visual Focus — delay to ensure the node is in the rendered canvas
-            setTimeout(() => {
-              reactFlowFitView({
-                nodes: [{ id: result.failedNodeId }],
-                duration: 800,
-                padding: 0.8,
-                maxZoom: 1.2,
-              });
-            }, 800);
-          } catch (navError) {
-            console.error("[App] Failed auto-focus navigation:", navError);
-          }
-        } else if (result.error && !result.stats) {
-          // General Failure
-          if (result.error !== "Max reintentos alcanzados") {
-            toast.error(result.error);
-          }
-        } else {
-          // Failure with Count (Run happened but no specific node tracked)
-          const failedCount = result.stats?.failed || 0;
-          toast.error(`${t("common.flow_exec_error")} (${failedCount} failed)`);
-        }
-      }
-    } catch (error) {
-      // 3. Unexpected Error
-      toast.dismiss(toastId);
-      console.error("Error ejecutando flujo:", error);
-      toast.error(t("common.flow_exec_error") + ": " + error.message);
-    }
-  }, [
-    executeFlow,
-    validateFlowStructure,
-    toast,
-    t,
-    nodes,
-    edges,
-    activeBrowserId,
-    stopSession,
-    currentFlowId,
-    enterComponent,
-    reactFlowFitView,
-    setSelectedNodeId,
-    updateNodeConfiguration,
-  ]);
 
   const ensureProjectAndGetId = useCallback(async () => {
     if (currentProject?.id) return currentProject.id;
@@ -1736,6 +1740,14 @@ function Dashboard() {
         {/* TOAST SYSTEM (Positioned relative to Panel) */}
         <HalToaster offsetRight={isConfigurationPanelVisible ? 350 : 0} />
       </div>
+      <AnimatePresence>
+        {reportingRunId && (
+          <ReportDashboard
+            runId={reportingRunId}
+            onClose={() => setReportingRunId(null)}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 }

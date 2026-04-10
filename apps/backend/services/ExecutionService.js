@@ -1,10 +1,12 @@
-import { Flow, Node, Edge, Run } from '../database/init.js';
+import { Flow, Node, Edge, Run, StepResult } from '../database/init.js';
 import { executionLogger } from './ExecutionLogger.js';
 import * as actions from '../controllers/action.controller.js';
 import { emitLog, emitFlowFinished } from '../socket.js';
 import i18n from '../config/i18n.js';
 import { variableManager } from './VariableManager.js';
 import { executionManager } from './ExecutionManager.js';
+import chalk from 'chalk';
+import Table from 'cli-table3';
 
 class ExecutionService {
     constructor() {
@@ -78,6 +80,7 @@ class ExecutionService {
             executedNodeIds: new Set(),
             overrides: options.overrides || {},
             headers: options.headers || {},
+            startTime: Date.now(),
         };
 
         // Emit overall start
@@ -106,6 +109,9 @@ class ExecutionService {
 
             // Signal global completion
             emitFlowFinished({ runId, status: 'completed', flowId });
+
+            // 4. Print CLI Summary
+            await this.printExecutionSummary(runId, flow.name);
         } catch (error) {
             console.error(`❌ [ExecutionService] Flow ${flowId} failed:`, error.message);
             await executionLogger.endRun(runId, 'failed');
@@ -305,6 +311,7 @@ class ExecutionService {
             body: {
                 ...body,
                 runId: state.runId, // Ensure runId is ALWAYS in the body
+                runStartTime: state.startTime,
             },
             t: i18n.t.bind(i18n),
             headers: state.headers || {},
@@ -533,6 +540,59 @@ class ExecutionService {
             message: `Loop completed after ${currentIndex} iterations`,
             data: { totalIterations: currentIndex },
         };
+    }
+
+    async printExecutionSummary(runId, flowName) {
+        try {
+            const run = await Run.findByPk(runId, {
+                include: [{ model: StepResult, as: 'steps' }],
+            });
+
+            if (!run) return;
+
+            const table = new Table({
+                head: [
+                    chalk.cyan('Step'),
+                    chalk.cyan('Node Type'),
+                    chalk.cyan('Status'),
+                    chalk.cyan('Duration'),
+                ],
+                style: { head: [], border: [] },
+            });
+
+            run.steps.forEach((step, idx) => {
+                const statusColor =
+                    step.status === 'completed' || step.status === 'success'
+                        ? chalk.green
+                        : step.status === 'failed'
+                          ? chalk.red
+                          : step.status === 'healed'
+                            ? chalk.yellow
+                            : chalk.white;
+
+                table.push([
+                    idx + 1,
+                    step.node_type,
+                    statusColor(step.status.toUpperCase()),
+                    `${(step.duration / 1000).toFixed(2)}s`,
+                ]);
+            });
+
+            console.log(
+                '\n' + chalk.bold.underline.white(`\nHAL-TEST EXECUTION SUMMARY: ${flowName}`),
+            );
+            console.log(table.toString());
+
+            const stats = chalk.gray(`
+  TOTAL DURATION: ${chalk.white(((run.duration_ms || 0) / 1000).toFixed(2) + 's')}
+  TOTAL HEALED:   ${chalk.yellow(run.total_healed || 0)}
+  MEMORY HITS:    ${chalk.magenta(run.memory_palace_hits || 0)}
+  FINAL STATUS:   ${run.status === 'completed' ? chalk.bgGreen.black(' PASS ') : chalk.bgRed.black(' FAIL ')}
+            `);
+            console.log(stats + '\n');
+        } catch (e) {
+            console.error('[CLI-REPORT] Failed to print summary:', e.message);
+        }
     }
 
     getHandlerName(nodeType) {

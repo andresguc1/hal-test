@@ -157,4 +157,15 @@ export const api = {
     }
     return await response.json();
   },
+
+  getFileUrl(filePath) {
+    if (!filePath) return "";
+    if (filePath.startsWith("http")) return filePath;
+
+    const apiBase =
+      import.meta.env.VITE_API_URL ||
+      (import.meta.env.PROD ? window.location.origin : "http://localhost:2001");
+
+    return `${apiBase.endsWith("/") ? apiBase.slice(0, -1) : apiBase}/${filePath}`;
+  },
 };

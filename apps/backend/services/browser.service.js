@@ -199,7 +199,9 @@ class BrowserManager {
             options: { ...options, launchArgs, maximizeWindow, recordVideo },
         });
 
-        return { browserId, browser };
+        const version = browser.version();
+
+        return { browserId, browser, version };
     }
 
     set(id, entry) {
