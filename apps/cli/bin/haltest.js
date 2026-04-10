@@ -155,12 +155,15 @@ async function runPreRequisiteChecks() {
   // Check Playwright — NON-BLOCKING
   try {
     const { chromium } = await import("playwright");
-    void chromium.executablePath();
+    chromium.executablePath();
     console.log(style(c.green, "  ✅ Playwright  — Chromium browser found."));
   } catch {
     console.log(
-      style(c.yellow, "  ⚠️  Playwright  — Chromium not found.") +
-        style(c.dim, " Run: npx playwright install chromium"),
+      style(c.red + c.bold, "  ❌ Playwright  — Chromium browser is missing!"),
+    );
+    console.log(
+      style(c.white, "     Automation flows require Chromium. Please run:") +
+        style(c.cyan + c.bold, "\n     npx playwright install chromium\n"),
     );
   }
 

@@ -84,9 +84,7 @@ const distPkg = {
   type: cliPkg.type,
   bin: cliPkg.bin,
   files: ["bin", "src", "backend"],
-  scripts: {
-    postinstall: "npx playwright install chromium",
-  },
+  scripts: {},
   dependencies: mergedDeps,
   engines: cliPkg.engines,
   private: false,
