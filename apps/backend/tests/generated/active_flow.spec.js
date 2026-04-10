@@ -30,19 +30,15 @@ test(`Flujo Generado Hal-Test`, async ({ page }) => {
         await page.click(`#login-button`);
     });
 
-    await test.step(`Take Screenshot`, async () => {
-        await page.screenshot({ path: 'screenshot_7.png' });
+    await test.step(`Reload Page`, async () => {
+        await page.reload();
     });
 
-    await test.step(`loop`, async () => {
-        console.log(`⚠️ Acción no implementada o pendiente: loop`);
+    await test.step(`Evidence`, async () => {
+        await page.screenshot({ path: 'screenshot_8.png' });
     });
 
-    await test.step(`Take Screenshot`, async () => {
-        await page.screenshot({ path: 'screenshot_9.png' });
-    });
-
-    await test.step(`Close Browser`, async () => {
+    await test.step(`Finish Tour`, async () => {
         // Browser managed by runner
     });
     console.log(`✅ Flujo completado con éxito.`);

@@ -88,6 +88,10 @@ const getHeaders = async () => {
       if (aiConfig.baseUrl) {
         headers["x-ai-base-url"] = aiConfig.baseUrl;
       }
+      if (aiConfig.useExperienceVault !== undefined) {
+        headers["x-hal-experience-vault"] =
+          aiConfig.useExperienceVault.toString();
+      }
     } catch (e) {
       console.error("Error parsing hal_ai_config", e);
     }

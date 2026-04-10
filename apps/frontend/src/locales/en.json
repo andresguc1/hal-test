@@ -574,6 +574,8 @@
       "temperature": "Temperature",
       "precise": "Precise",
       "creative": "Creative",
+      "experience_vault": "HalTest Experience Vault",
+      "experience_vault_desc": "A local knowledge graph that caches successful self-healing resolutions to optimize future test execution speed.",
       "test_connection": "Test Connection",
       "testing": "Testing...",
       "save_settings": "Save Settings",

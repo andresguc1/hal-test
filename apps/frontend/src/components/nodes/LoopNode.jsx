@@ -10,11 +10,13 @@ import {
   Loader2,
   MoreHorizontal,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { CATEGORY_STYLES } from "@/config/nodeConstants";
 import { NODE_STATES } from "../hooks/flowStyles";
 
-const LoopNode = ({ data, selected }) => {
+const LoopNode = ({ id, data, selected }) => {
+  const { t } = useTranslation();
   // 1. Theme & State
   const state = data?.state || NODE_STATES.DEFAULT;
   const isRunning =
@@ -119,9 +121,12 @@ const LoopNode = ({ data, selected }) => {
             <MoreHorizontal size={12} className="shrink-0" />
             <span className="truncate">Double-click to edit</span>
           </span>
-          <span className="px-1.5 py-0.5 rounded bg-white/10 border border-white/10 font-bold text-white/90 shadow-sm shrink-0 uppercase text-[9px]">
-            Dive In
-          </span>
+          <button
+            onClick={() => data?.onEnterSubFlow?.(id)}
+            className="px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 border border-white/20 font-bold text-white/90 shadow-sm transition-all active:scale-95 cursor-pointer shrink-0 uppercase text-[9px]"
+          >
+            {t("nodes.buttons.dive_in", "Dive In")}
+          </button>
         </div>
       </div>
 

@@ -233,7 +233,7 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
         </div>
       </div>
 
-      {/* Health / Connection Result Badge */}
+      {/* Health / Connection Result Badge (Close to Test Button) */}
       {healthResult && (
         <div
           className={`flex items-center gap-2 p-3 rounded-lg border text-xs ${
@@ -263,7 +263,7 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
         </div>
       )}
 
-      {/* Actions */}
+      {/* Actions (Primary Config) */}
       <div className="flex gap-2 pt-2">
         <Button
           variant="outline"
@@ -286,6 +286,46 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
         >
           {t("settings.ai.save_settings")}
         </Button>
+      </div>
+
+      <div className="border-t border-slate-800/60 pt-6 mt-2 space-y-4">
+        <div className="flex items-center gap-2 px-1">
+          <Cpu size={14} className="text-slate-500" />
+          <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+            HalTest Advanced Behaviors
+          </Label>
+        </div>
+
+        {/* HalTest Experience Vault (Clean Version) */}
+        <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/50 hover:bg-slate-900 transition-colors">
+          <div className="flex items-center justify-between">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-slate-800 text-slate-400">
+                <Server size={18} />
+              </div>
+              <div>
+                <Label className="text-sm font-semibold text-white">
+                  {t("settings.ai.experience_vault")}
+                </Label>
+                <p className="text-[10px] text-slate-400 max-w-[240px] leading-relaxed mt-1">
+                  {t("settings.ai.experience_vault_desc")}
+                </p>
+              </div>
+            </div>
+
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                className="sr-only peer"
+                checked={aiConfig.useExperienceVault ?? true}
+                onChange={(e) =>
+                  updateConfig({ useExperienceVault: e.target.checked })
+                }
+              />
+              <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+            </label>
+          </div>
+        </div>
       </div>
     </div>
   );

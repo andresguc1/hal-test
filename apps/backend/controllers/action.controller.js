@@ -9,6 +9,7 @@ import { traceService } from '../services/trace.service.js';
 import { networkHistoryService } from '../services/NetworkHistoryService.js';
 import { variableManager } from '../services/VariableManager.js';
 import aiService from '../services/AIService.js';
+import experienceVaultService from '../services/ExperienceVaultService.js';
 import { emitExecutionStatus, emitScreenshotReady, emitLog } from '../socket.js';
 import { z } from 'zod';
 import * as fsp from 'fs/promises';
@@ -656,29 +657,64 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
                             baseUrl: req.headers['x-ai-base-url'],
                         };
 
-                        // 📡 BROADCAST: Show user the healing is starting BEFORE calling AI
-                        emitLog({
-                            message: `[Self-Healing] 🔍 AI analyzing DOM for broken selector: ${opts.selector} using ${aiConfig.provider}...`,
-                            nodeId: opts.nodeId,
-                            type: 'info',
-                        });
-
                         // Las pruebas manuales a menudo tienen timeouts cortos (ej: 8000ms).
                         // La reparación con IA local necesita más tiempo de procesamiento.
                         // Asignamos un presupuesto de al menos 45 segundos para dar margen.
                         const healingBudget = Math.max(opts.timeout || 45000, 45000);
 
-                        const diagnosis = await selectorHealer.heal({
-                            page: currentPage,
-                            originalSelector: opts.selector,
-                            errorMessage: errorMessage,
-                            actionName: actionName,
-                            timeout: healingBudget,
-                            aiConfig,
-                        });
+                        // --- EXPERIENCE VAULT: Consultation Phase ---
+                        const useExperienceVault = req.headers['x-hal-experience-vault'] === 'true';
+                        let diagnosis = null;
+                        let contextName = 'Global';
+
+                        if (useExperienceVault) {
+                            if (opts.flowId) {
+                                try {
+                                    const flow = await Flow.findByPk(opts.flowId);
+                                    if (flow) contextName = flow.name;
+                                } catch (e) {
+                                    console.warn(
+                                        '[ExperienceVault] Could not fetch flow name:',
+                                        e.message,
+                                    );
+                                }
+                            }
+
+                            diagnosis = await experienceVaultService.findMemory(
+                                opts.selector,
+                                contextName,
+                                currentPage.url(),
+                            );
+
+                            if (diagnosis) {
+                                emitLog({
+                                    message: `[Experience Vault] 🏛️ Found a relevant memory for this element. Applying solution...`,
+                                    nodeId: opts.nodeId,
+                                    type: 'info',
+                                });
+                            }
+                        }
+
+                        if (!diagnosis) {
+                            // 📡 BROADCAST: Show user the healing is starting BEFORE calling AI
+                            emitLog({
+                                message: `[Self-Healing] 🔍 AI analyzing DOM for broken selector: ${opts.selector} using ${aiConfig.provider}...`,
+                                nodeId: opts.nodeId,
+                                type: 'info',
+                            });
+
+                            diagnosis = await selectorHealer.heal({
+                                page: currentPage,
+                                originalSelector: opts.selector,
+                                errorMessage: errorMessage,
+                                actionName: actionName,
+                                timeout: healingBudget,
+                                aiConfig,
+                            });
+                        }
 
                         const healingDuration = Date.now() - healingStart;
-                        console.log(`[Self-Healing] AI Repair finished in ${healingDuration}ms`);
+                        console.log(`[Self-Healing] Repair finished in ${healingDuration}ms`);
 
                         // --- BROADCAST HEALING STATUS (result) ---
                         if (opts.nodeId) {
@@ -725,9 +761,21 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
                                     reasoning: diagnosis.reasoning,
                                     verified: diagnosis.verified || false,
                                 });
+
+                                // --- EXPERIENCE VAULT: Learning Phase ---
+                                if (useExperienceVault && !diagnosis.isFromVault) {
+                                    await experienceVaultService.saveMemory({
+                                        context: contextName,
+                                        url: currentPage.url(),
+                                        problemSelector: opts.selector,
+                                        solutionSelector: diagnosis.correctedSelector,
+                                        reasoning: diagnosis.reasoning,
+                                        confidence: diagnosis.confidence,
+                                    });
+                                }
                             } catch (logErr) {
                                 console.warn(
-                                    '[Self-Healing] Could not save healing log to DB:',
+                                    '[Self-Healing] Could not save healing log or memory:',
                                     logErr.message,
                                 );
                             }

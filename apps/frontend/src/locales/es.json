@@ -573,6 +573,8 @@
       "temperature": "Temperatura",
       "precise": "Preciso",
       "creative": "Creativo",
+      "experience_vault": "HalTest Experience Vault",
+      "experience_vault_desc": "Grafo de conocimiento local que almacena resoluciones de self-healing exitosas para optimizar la velocidad y estabilidad.",
       "test_connection": "Probar Conexión",
       "testing": "Probando...",
       "save_settings": "Guardar Configuración",

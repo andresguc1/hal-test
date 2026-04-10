@@ -336,6 +336,19 @@ router.get('/projects/:id', async (req, res) => {
                 {
                     model: Flow,
                     as: 'flows',
+                    // Use a safer subquery for SQLite/Postgres
+                    attributes: {
+                        include: [
+                            [
+                                sequelize.literal(`(
+                                    SELECT COUNT(*)
+                                    FROM Nodes
+                                    WHERE Nodes.flowId = flows.id
+                                )`),
+                                'nodeCount',
+                            ],
+                        ],
+                    },
                 },
             ],
             order: [

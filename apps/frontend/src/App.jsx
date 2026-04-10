@@ -33,9 +33,6 @@ const edgeTypes = {
 import ProgressBar from "./components/ProgressBar";
 import ImportDialog from "./components/ImportDialog";
 import ExportDialog from "./components/ExportDialog";
-{
-  /* SettingsDialog removed in favor of internal panel navigation */
-}
 import ContextMenu from "./components/ContextMenu";
 import CreationModal from "./components/CreationModal";
 import StarterOverlay from "./components/StarterOverlay";
@@ -1189,15 +1186,22 @@ function Dashboard() {
       if (!subFlow) return node;
 
       // Calculate stats
-      const nodeCount = subFlow.nodes?.length || 0;
-      const hasInput = subFlow.nodes?.some((n) => n.type === "input");
-      const hasOutput = subFlow.nodes?.some((n) => n.type === "output");
+      const nodeCount =
+        subFlow.nodeCount !== undefined
+          ? subFlow.nodeCount
+          : subFlow.nodes?.length || 0;
+      const hasInput =
+        subFlow.nodes?.some((n) => n.type === "input") || node.data?.hasInput;
+      const hasOutput =
+        subFlow.nodes?.some((n) => n.type === "output") || node.data?.hasOutput;
 
       // Only update if data has changed to prevent React Flow re-renders
+      // IMPORTANT: Also check for onEnterSubFlow presence
       if (
         node.data?.nodeCount === nodeCount &&
         node.data?.hasInput === hasInput &&
-        node.data?.hasOutput === hasOutput
+        node.data?.hasOutput === hasOutput &&
+        node.data?.onEnterSubFlow === enterComponent
       ) {
         return node;
       }
@@ -1209,10 +1213,11 @@ function Dashboard() {
           nodeCount,
           hasInput,
           hasOutput,
+          onEnterSubFlow: enterComponent,
         },
       };
     });
-  }, [nodes, currentProject]);
+  }, [nodes, currentProject, enterComponent]);
 
   // Props dinámicas que sí cambian
   const flowConfig = useMemo(
@@ -1267,7 +1272,7 @@ function Dashboard() {
     }),
     [
       staticFlowProps,
-      nodes,
+      enrichedNodes,
       edges,
       onNodesChange,
       onEdgesChange,

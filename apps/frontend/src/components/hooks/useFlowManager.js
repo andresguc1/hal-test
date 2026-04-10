@@ -36,12 +36,16 @@ import { getLayoutedElements } from "../../utils/layoutUtils";
 const detectOrphans = (nodes, edges) => {
   if (!nodes || nodes.length === 0) return [];
 
-  // Find all Launch Browser nodes (Roots)
-  const roots = nodes.filter((n) => n.type === "launch_browser");
+  // Find all Entry Points (Roots)
+  // We include 'launch_browser' (Main), 'input' (Sub-flows), and 'trigger' (Events)
+  const roots = nodes.filter((n) =>
+    ["launch_browser", "input", "trigger"].includes(n.type),
+  );
   if (roots.length === 0) {
-    // If no launch browser, techincally all are orphans unless it's a component
-    // But for now, let's just return all non-roots
-    return nodes.map((n) => n.id);
+    // If no explicit entry point, we can't determine reachability accurately.
+    // However, to avoid spamming "everything is an orphan", we return empty if there's at least one node.
+    // (A flow with nodes but no entry point IS technically broken, but we'll be silent for now or just warn about missing input)
+    return [];
   }
 
   const visited = new Set();
@@ -868,7 +872,7 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
         })();
       }
     },
-    [saveToHistory, setNodes, currentProject, queryClient, toast],
+    [saveToHistory, setNodes, currentProject, queryClient, toast, saveFlow],
   );
 
   // --- GHOST NODES (Phase 2) ---

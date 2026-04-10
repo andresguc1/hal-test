@@ -8,6 +8,7 @@ import Edge from './models/Edge.js';
 import Run from './models/Run.js';
 import StepResult from './models/StepResult.js';
 import HealingLog from './models/HealingLog.js';
+import ExperienceVault from './models/ExperienceVault.js';
 
 // Define associations
 User.hasMany(Project, { as: 'projects', foreignKey: 'userId', onDelete: 'CASCADE', hooks: true });
@@ -159,7 +160,7 @@ export const initDb = async (_force = false) => {
     }
 };
 
-export { User, Project, Canvas, Flow, Node, Edge, Run, StepResult, HealingLog };
+export { User, Project, Canvas, Flow, Node, Edge, Run, StepResult, HealingLog, ExperienceVault };
 
 // Allow running directly from CLI
 if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith('init.js')) {

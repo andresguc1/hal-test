@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { NODE_TYPE_MAP, CATEGORY_STYLES } from "@/config/nodeConstants";
 import { NODE_STATES } from "../hooks/flowStyles";
 
-const ComponentNode = ({ id: _id, data, selected }) => {
+const ComponentNode = ({ id, data, selected }) => {
   const { t } = useTranslation();
 
   // 1. Config
@@ -144,9 +144,12 @@ const ComponentNode = ({ id: _id, data, selected }) => {
               {t("nodes.prompts.contains_logic", "Contains Logic")}
             </span>
           </span>
-          <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/5 font-mono text-[9px] shrink-0 uppercase">
-            Open
-          </span>
+          <button
+            onClick={() => data?.onEnterSubFlow?.(id)}
+            className="px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 border border-white/20 font-bold text-white/90 shadow-sm transition-all active:scale-95 cursor-pointer shrink-0 uppercase text-[9px]"
+          >
+            {t("nodes.buttons.open", "Open")}
+          </button>
         </div>
       </div>
 
