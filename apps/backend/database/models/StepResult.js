@@ -22,7 +22,7 @@ const StepResult = sequelize.define(
             allowNull: false,
         },
         status: {
-            type: DataTypes.ENUM('pending', 'running', 'success', 'failed', 'skipped'),
+            type: DataTypes.ENUM('pending', 'running', 'success', 'failed', 'skipped', 'healed'),
             defaultValue: 'pending',
         },
         error: {
@@ -43,6 +43,18 @@ const StepResult = sequelize.define(
         },
         duration_ms: {
             type: DataTypes.INTEGER,
+            allowNull: true,
+        },
+        memory_hit: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false,
+        },
+        video_timestamp: {
+            type: DataTypes.FLOAT, // Seconds into the video
+            allowNull: true,
+        },
+        ai_diagnosis: {
+            type: DataTypes.TEXT,
             allowNull: true,
         },
     },

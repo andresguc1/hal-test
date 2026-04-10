@@ -45,6 +45,18 @@ const Run = sequelize.define(
             type: DataTypes.STRING,
             allowNull: true,
         },
+        browser_version: {
+            type: DataTypes.STRING,
+            allowNull: true,
+        },
+        memory_palace_hits: {
+            type: DataTypes.INTEGER,
+            defaultValue: 0,
+        },
+        total_healed: {
+            type: DataTypes.INTEGER,
+            defaultValue: 0,
+        },
     },
     {
         timestamps: true,

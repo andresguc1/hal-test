@@ -26,7 +26,39 @@ const mapFlowData = (flow) => {
     };
 };
 
-// Helper to sort nodes topologically based on edges
+// Helper to get Project with full flow stats (nodeCount)
+const getProjectWithFlowStats = async (projectId) => {
+    return await Project.findByPk(projectId, {
+        include: [
+            {
+                model: Canvas,
+                as: 'canvases',
+                include: [{ model: Flow, as: 'flows' }],
+            },
+            {
+                model: Flow,
+                as: 'flows',
+                attributes: {
+                    include: [
+                        [
+                            sequelize.literal(`(
+                                SELECT COUNT(*)
+                                FROM Nodes
+                                WHERE Nodes.flowId = flows.id
+                            )`),
+                            'nodeCount',
+                        ],
+                    ],
+                },
+            },
+        ],
+        order: [
+            [{ model: Canvas, as: 'canvases' }, 'order', 'ASC'],
+            [{ model: Flow, as: 'flows' }, 'order', 'ASC'],
+            [{ model: Flow, as: 'flows' }, 'createdAt', 'ASC'],
+        ],
+    });
+};
 const sortNodesTopologically = (nodes, edges) => {
     if (!nodes || nodes.length === 0) return [];
 
@@ -196,7 +228,19 @@ router.get('/projects', async (req, res) => {
                 },
                 {
                     model: Flow,
-                    as: 'flows', // Keep legacy flows association if needed
+                    as: 'flows',
+                    attributes: {
+                        include: [
+                            [
+                                sequelize.literal(`(
+                                    SELECT COUNT(*)
+                                    FROM Nodes
+                                    WHERE Nodes.flowId = flows.id
+                                )`),
+                                'nodeCount',
+                            ],
+                        ],
+                    },
                 },
             ],
             order: [
@@ -306,15 +350,7 @@ router.post('/projects', async (req, res) => {
         transactionCommitted = true;
 
         // Return the project with its hierarchy
-        const projectResponse = await Project.findByPk(project.id, {
-            include: [
-                {
-                    model: Canvas,
-                    as: 'canvases',
-                    include: [{ model: Flow, as: 'flows' }],
-                },
-            ],
-        });
+        const projectResponse = await getProjectWithFlowStats(project.id);
 
         res.status(201).json({
             project: projectResponse,
@@ -331,31 +367,7 @@ router.post('/projects', async (req, res) => {
 // Get project with flows
 router.get('/projects/:id', async (req, res) => {
     try {
-        const project = await Project.findByPk(req.params.id, {
-            include: [
-                {
-                    model: Flow,
-                    as: 'flows',
-                    // Use a safer subquery for SQLite/Postgres
-                    attributes: {
-                        include: [
-                            [
-                                sequelize.literal(`(
-                                    SELECT COUNT(*)
-                                    FROM Nodes
-                                    WHERE Nodes.flowId = flows.id
-                                )`),
-                                'nodeCount',
-                            ],
-                        ],
-                    },
-                },
-            ],
-            order: [
-                [{ model: Flow, as: 'flows' }, 'order', 'ASC'],
-                [{ model: Flow, as: 'flows' }, 'createdAt', 'ASC'],
-            ],
-        });
+        const project = await getProjectWithFlowStats(req.params.id);
         if (!project) return res.status(404).json({ error: 'Project not found' });
         res.json(project);
     } catch (error) {
@@ -373,18 +385,7 @@ router.put('/projects/:id', async (req, res) => {
         await project.update({ name, description, activeFlowId });
 
         // Return project with flows
-        const updatedProject = await Project.findByPk(project.id, {
-            include: [
-                {
-                    model: Flow,
-                    as: 'flows',
-                },
-            ],
-            order: [
-                [{ model: Flow, as: 'flows' }, 'order', 'ASC'],
-                [{ model: Flow, as: 'flows' }, 'createdAt', 'ASC'],
-            ],
-        });
+        const updatedProject = await getProjectWithFlowStats(project.id);
         res.json(updatedProject);
     } catch (error) {
         res.status(400).json({ error: error.message });
@@ -475,18 +476,7 @@ router.post('/projects/:projectId/flows', async (req, res) => {
         transactionCommitted = true;
 
         // Return the updated project with all flows
-        const updatedProject = await Project.findByPk(projectId, {
-            include: [
-                {
-                    model: Flow,
-                    as: 'flows',
-                },
-            ],
-            order: [
-                [{ model: Flow, as: 'flows' }, 'order', 'ASC'],
-                [{ model: Flow, as: 'flows' }, 'createdAt', 'ASC'],
-            ],
-        });
+        const updatedProject = await getProjectWithFlowStats(projectId);
 
         const createdFlowWithContent = await Flow.findOne({
             where: { id: flow.id },
@@ -723,18 +713,7 @@ router.put('/projects/:projectId/flows/reorder', async (req, res) => {
 
         await transaction.commit();
 
-        const updatedProject = await Project.findByPk(projectId, {
-            include: [
-                {
-                    model: Flow,
-                    as: 'flows',
-                },
-            ],
-            order: [
-                [{ model: Flow, as: 'flows' }, 'order', 'ASC'],
-                [{ model: Flow, as: 'flows' }, 'createdAt', 'ASC'],
-            ],
-        });
+        const updatedProject = await getProjectWithFlowStats(projectId);
         res.json(updatedProject);
     } catch (error) {
         if (transaction) await transaction.rollback();
@@ -754,18 +733,7 @@ router.delete('/projects/:projectId/flows/:flowId', async (req, res) => {
         await flow.destroy();
 
         // Return the updated project with all remaining flows
-        const updatedProject = await Project.findByPk(projectId, {
-            include: [
-                {
-                    model: Flow,
-                    as: 'flows',
-                },
-            ],
-            order: [
-                [{ model: Flow, as: 'flows' }, 'order', 'ASC'],
-                [{ model: Flow, as: 'flows' }, 'createdAt', 'ASC'],
-            ],
-        });
+        const updatedProject = await getProjectWithFlowStats(projectId);
 
         res.json({
             message: 'Flow deleted',

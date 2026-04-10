@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { api } from "../utils/api";
 import { cn } from "../lib/utils";
-import { History, X, RefreshCw, Trash2, Play } from "lucide-react";
+import { History, X, RefreshCw, Trash2, Play, Activity } from "lucide-react";
 import { AnimatePresence, motion as Motion } from "framer-motion";
 
 export default function RunHistoryPanel({
@@ -207,6 +207,16 @@ export default function RunHistoryPanel({
                   </span>
                 </div>
                 <div className="flex gap-1.5">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelectRun(run, true); // Second param 'true' indicates opening report
+                    }}
+                    className="p-1.5 bg-indigo-500/20 hover:bg-indigo-500/40 rounded-md text-indigo-400 transition-all border border-indigo-500/30"
+                    title="Intelligence Report"
+                  >
+                    <Activity size={12} />
+                  </button>
                   {run.video_path && (
                     <button
                       onClick={(e) => {
@@ -218,7 +228,7 @@ export default function RunHistoryPanel({
                             : "http://localhost:2001");
                         setPlayingVideo(`${apiBase}/${run.video_path}`);
                       }}
-                      className="p-1.5 bg-indigo-500/20 hover:bg-indigo-500/40 rounded-md text-indigo-400 transition-all border border-indigo-500/30"
+                      className="p-1.5 bg-sky-500/20 hover:bg-sky-500/40 rounded-md text-sky-400 transition-all border border-sky-500/30"
                       title="Watch Recording"
                     >
                       <Play size={12} fill="currentColor" />
