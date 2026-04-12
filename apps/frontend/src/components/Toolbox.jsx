@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
-import { motion as Motion, AnimatePresence } from "motion/react";
+import { motion as Motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import {
   ChevronLeft,

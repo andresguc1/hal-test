@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback } from "react";
-import { motion as Motion, AnimatePresence } from "motion/react";
+import { motion as Motion, AnimatePresence } from "framer-motion";
 import {
   X,
   Play,

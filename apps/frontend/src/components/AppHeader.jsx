@@ -1,5 +1,5 @@
 import React, { memo } from "react";
-import { motion as Motion } from "motion/react"; // Renamed to Motion to avoid lint unused warning
+import { motion as Motion } from "framer-motion"; // Renamed to Motion to avoid lint unused warning
 import {
   Sun,
   Moon,

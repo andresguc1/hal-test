@@ -40,12 +40,12 @@ class ExecutionService {
 
         const mode = options.mode || 'e2e';
 
-        // 2. Use existing runId or Create a new one
         let runId = options.runId;
         if (!runId) {
             runId = await executionLogger.startRun(flowId, {
                 flowName: flow.name,
                 trigger: 'api',
+                batchId: options.batchId || null,
                 flowSnapshot: JSON.stringify({ nodes, edges }),
             });
         } else {

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { motion as Motion, AnimatePresence } from "motion/react";
+import { motion as Motion, AnimatePresence } from "framer-motion";
 import { X, Key, Eye, EyeOff, Check, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSettings } from "@/context/SettingsContext";

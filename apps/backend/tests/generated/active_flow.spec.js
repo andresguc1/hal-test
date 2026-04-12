@@ -19,7 +19,7 @@ test(`Flujo Generado Hal-Test`, async ({ page }) => {
     });
 
     await test.step(`Enter Username`, async () => {
-        await page.fill(`input[name='user-name']`, `{{test_user}}`);
+        await page.fill(`#user-name`, `{{test_user}}`);
     });
 
     await test.step(`Enter Password`, async () => {

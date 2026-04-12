@@ -13,6 +13,10 @@ const Run = sequelize.define(
             type: DataTypes.STRING,
             allowNull: true, // Allow null to not block execution if flowId is missing
         },
+        batch_id: {
+            type: DataTypes.STRING,
+            allowNull: true, // Used to group multiple runs from a single Test Runner execution
+        },
         flow_name: {
             type: DataTypes.STRING,
             allowNull: true,

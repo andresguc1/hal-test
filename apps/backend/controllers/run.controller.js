@@ -2,6 +2,32 @@ import { executionService } from '../services/ExecutionService.js';
 import { executionLogger } from '../services/ExecutionLogger.js';
 import { Run, StepResult, Flow } from '../database/init.js';
 import { reportExporter } from '../services/exporter/ReportExporter.js';
+import { testRunnerService } from '../services/TestRunnerService.js';
+
+export const startBatchRunAction = async (req, res) => {
+    try {
+        const { flowIds, projectId, concurrency, overrides } = req.body;
+
+        if (!flowIds || !Array.isArray(flowIds) || flowIds.length === 0) {
+            return res
+                .status(400)
+                .json({ success: false, message: 'Valid flowIds array is required.' });
+        }
+
+        const batchId = await testRunnerService.runBatch(flowIds, projectId, concurrency || 2, {
+            overrides,
+        });
+
+        return res.status(200).json({
+            success: true,
+            batchId,
+            message: `Batch execution initiated with ${flowIds.length} flows and concurrency ${concurrency || 2}`,
+        });
+    } catch (error) {
+        console.error('[RunController] startBatchRunAction Error:', error);
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
 
 export const startRunAction = async (req, res) => {
     try {
@@ -219,6 +245,68 @@ export const exportReportAction = async (req, res) => {
         const { id } = req.params;
         const exportPath = await reportExporter.generateSingleFileReport(id);
         return res.download(exportPath);
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+export const getBatchSummaryAction = async (req, res) => {
+    try {
+        const { batchId } = req.params;
+
+        const runs = await Run.findAll({
+            where: { batch_id: batchId },
+            attributes: ['status', 'flow_id', 'flow_name', 'id', 'duration_ms'],
+        });
+
+        if (!runs || runs.length === 0) {
+            return res.status(404).json({ success: false, message: 'Batch not found' });
+        }
+
+        let passed = 0;
+        let failed = 0;
+        let running = 0;
+
+        runs.forEach((r) => {
+            if (r.status === 'completed') passed++;
+            else if (r.status === 'failed') failed++;
+            else running++;
+        });
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                batchId,
+                total: runs.length,
+                passed,
+                failed,
+                running,
+                runs,
+            },
+        });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+export const getFlowHistoryAction = async (req, res) => {
+    try {
+        const { flowId } = req.params;
+        const runs = await Run.findAll({
+            where: { flow_id: flowId },
+            order: [['started_at', 'DESC']],
+            limit: 10,
+            attributes: [
+                'id',
+                'status',
+                'started_at',
+                'duration_ms',
+                'total_healed',
+                'memory_palace_hits',
+            ],
+        });
+
+        return res.status(200).json({ success: true, data: runs });
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
     }

@@ -15,7 +15,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { motion as Motion, AnimatePresence } from "motion/react";
+import { motion as Motion, AnimatePresence } from "framer-motion";
 
 const FooterButton = ({
   icon: Icon,
@@ -364,6 +364,7 @@ function AppFooter({
   hasUnsavedChanges,
   _onResetEnvironment,
   version,
+  onRunBatch,
 }) {
   const [activeMenu, setActiveMenu] = useState(null); // 'project' | 'flow' | null
   const containerRef = useRef(null);
@@ -508,6 +509,14 @@ function AppFooter({
         />
 
         <div className="h-6 w-px bg-white/10 mx-2" />
+
+        <FooterButton
+          icon={RefreshCw}
+          label="RUN BATCH"
+          variant="outline"
+          onClick={onRunBatch}
+          className="pl-3 pr-4 py-2 hover:bg-yellow-500/10 hover:text-yellow-400 border-yellow-500/20"
+        />
 
         <FooterButton
           icon={Play}

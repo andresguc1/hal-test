@@ -1,5 +1,5 @@
 import React from "react";
-import { motion as Motion, AnimatePresence } from "motion/react";
+import { motion as Motion, AnimatePresence } from "framer-motion";
 import { Sun, Moon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";

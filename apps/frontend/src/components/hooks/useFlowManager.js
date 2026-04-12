@@ -31,6 +31,8 @@ import { api } from "../../utils/api";
 import { useToast } from "../../hooks/useToast"; // Use custom hook instead of direct sonner
 import { useTranslation } from "react-i18next";
 import { getLayoutedElements } from "../../utils/layoutUtils";
+import { projectManager } from "../../utils/ProjectManager";
+import { useSettings } from "../../context/SettingsContext";
 
 // NEW: Orphan Detection Helper
 const detectOrphans = (nodes, edges) => {
@@ -206,10 +208,7 @@ const DEFAULT_EDGE_OPTIONS = {
   },
 };
 
-import { projectManager } from "../../utils/ProjectManager";
-import { useSettings } from "../../context/SettingsContext"; // Assuming this is available
-
-export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
+export function useFlowManager(currentProject, currentFlowId, switchFlow) {
   const queryClient = useQueryClient();
   const { t } = useTranslation();
   const toast = useToast(); // Custom HAL Toast
@@ -345,6 +344,39 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
   const isReadOnly = useMemo(
     () => apiStatus.state === "running",
     [apiStatus.state],
+  );
+
+  // ========================================
+  // OPTIMIZACIÓN 6: Historial con límite
+  // ========================================
+  const saveToHistory = useCallback(() => {
+    setHistory((prev) => ({
+      past: [
+        ...prev.past.slice(-19), // Mantener solo últimos 20
+        { nodes: nodesRef.current, edges: edgesRef.current },
+      ],
+      future: [],
+    }));
+  }, []);
+
+  const onLayout = useCallback(
+    (direction) => {
+      saveToHistory();
+      const [layoutedNodes, layoutedEdges] = getLayoutedElements(
+        nodesRef.current,
+        edgesRef.current,
+        direction || "LR",
+      );
+
+      setNodes(layoutedNodes);
+      setEdges(layoutedEdges);
+
+      // Re-fit view to show the new layout
+      setTimeout(() => {
+        fitView({ duration: 800 });
+      }, 50);
+    },
+    [setNodes, setEdges, saveToHistory, fitView],
   );
 
   // Load flow data
@@ -698,39 +730,6 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
       message: "Node states reset",
     });
   }, [setNodes, setEdges, setExecutionStats, setApiStatus]);
-
-  // ========================================
-  // OPTIMIZACIÓN 6: Historial con límite
-  // ========================================
-  const saveToHistory = useCallback(() => {
-    setHistory((prev) => ({
-      past: [
-        ...prev.past.slice(-19), // Mantener solo últimos 20
-        { nodes: nodesRef.current, edges: edgesRef.current },
-      ],
-      future: [],
-    }));
-  }, []);
-
-  const onLayout = useCallback(
-    (direction) => {
-      saveToHistory();
-      const [layoutedNodes, layoutedEdges] = getLayoutedElements(
-        nodesRef.current,
-        edgesRef.current,
-        direction || "LR",
-      );
-
-      setNodes(layoutedNodes);
-      setEdges(layoutedEdges);
-
-      // Re-fit view to show the new layout
-      setTimeout(() => {
-        fitView({ duration: 800 });
-      }, 50);
-    },
-    [setNodes, setEdges, saveToHistory, fitView],
-  );
 
   const undo = useCallback(() => {
     setHistory((prev) => {
@@ -3916,4 +3915,4 @@ export const useFlowManager = (currentProject, currentFlowId, switchFlow) => {
     isStarterTemplate,
     onLayout,
   };
-};
+}

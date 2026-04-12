@@ -27,10 +27,8 @@ import CustomEdge from "./components/edges/CustomEdge";
 // import ApiKeysModal from "./components/APIKeysModal"; // Deprecated
 import SettingsModal from "./components/SettingsModal";
 import { useSettings } from "./context/SettingsContext";
-const edgeTypes = {
-  custom: CustomEdge,
-};
 import ProgressBar from "./components/ProgressBar";
+
 import ImportDialog from "./components/ImportDialog";
 import ExportDialog from "./components/ExportDialog";
 import ContextMenu from "./components/ContextMenu";
@@ -54,9 +52,15 @@ import StepDetailsModal from "./components/StepDetailsModal";
 import ReportDashboard from "./components/reporting/ReportDashboard";
 import { ExportModal } from "./components/modals/ExportModal";
 import { ImportModal } from "./components/modals/ImportModal";
+import ExecutionDashboard from "./components/reporting/ExecutionDashboard";
 import { api } from "./utils/api";
 import { useElementPicker } from "./hooks/useElementPicker";
 import { AnimatePresence } from "framer-motion";
+
+const edgeTypes = {
+  custom: CustomEdge,
+};
+
 import { NODE_STATES } from "./components/hooks/flowStyles";
 import {
   Terminal,
@@ -341,6 +345,8 @@ function Dashboard() {
   const [isHistoryPanelVisible, setIsHistoryPanelVisible] = useState(false);
   const [isVariablePanelVisible, setIsVariablePanelVisible] = useState(false);
   const [isAskAIPanelVisible, setIsAskAIPanelVisible] = useState(false);
+  const [isExecutionDashboardOpen, setIsExecutionDashboardOpen] =
+    useState(false);
   const [proposedNodes, setProposedNodes] = useState(null);
   const [confirmationPromise, setConfirmationPromise] = useState(null);
   const [creationModal, setCreationModal] = useState({
@@ -1668,6 +1674,14 @@ function Dashboard() {
           onShowExport={() => setIsExportDialogOpen(true)}
           onResetStates={resetNodeStates}
           hasUnsavedChanges={hasUnsavedChanges}
+          onRunBatch={() => setIsExecutionDashboardOpen(true)}
+        />
+
+        <ExecutionDashboard
+          isOpen={isExecutionDashboardOpen}
+          onClose={() => setIsExecutionDashboardOpen(false)}
+          currentProject={currentProject}
+          onViewReport={(id) => setReportingRunId(id)}
         />
 
         <StarterOverlay

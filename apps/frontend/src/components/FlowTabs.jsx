@@ -16,7 +16,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence } from "framer-motion";
 import { tabVariants } from "../utils/motion-variants";
 import { Plus, X, Copy, Pencil, Trash2, FolderGit2 } from "lucide-react";
 

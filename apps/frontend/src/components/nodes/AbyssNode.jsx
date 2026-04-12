@@ -10,6 +10,7 @@ import {
   Globe,
   MousePointer,
   CheckCircle,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NODE_TYPE_MAP, CATEGORY_STYLES } from "@/config/nodeConstants";
