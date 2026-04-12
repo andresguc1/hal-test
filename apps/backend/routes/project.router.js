@@ -128,6 +128,9 @@ const sortNodesTopologically = (nodes, edges) => {
 
 // Helper: Sync active flow to tests/generated/active_flow.spec.js
 const syncActiveFlowToDisk = async (nodes, edges, projectId) => {
+    // Disable in production to prevent 500 errors on read-only filesystems
+    if (process.env.NODE_ENV === 'production') return;
+
     try {
         const sortedNodes = sortNodesTopologically(nodes, edges);
         let flattenedNodes = [];
