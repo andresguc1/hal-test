@@ -43,8 +43,8 @@ const getProjectWithFlowStats = async (projectId) => {
                         [
                             sequelize.literal(`(
                                 SELECT COUNT(*)
-                                FROM Nodes
-                                WHERE Nodes.flowId = flows.id
+                                FROM "Nodes"
+                                WHERE "Nodes"."flowId" = "flows"."id"
                             )`),
                             'nodeCount',
                         ],
@@ -234,8 +234,8 @@ router.get('/projects', async (req, res) => {
                             [
                                 sequelize.literal(`(
                                     SELECT COUNT(*)
-                                    FROM Nodes
-                                    WHERE Nodes.flowId = flows.id
+                                    FROM "Nodes"
+                                    WHERE "Nodes"."flowId" = "flows"."id"
                                 )`),
                                 'nodeCount',
                             ],

@@ -136,24 +136,34 @@ export const initDb = async (_force = false) => {
         }
         isInitialized = true;
     } catch (error) {
-        // Check for Postgres "column does not exist" error (42703) in both original and parent
-        if (
+        // Detailed logging for connection failures
+        console.error(' [DB_INIT] Unable to connect to the database or sync:', {
+            name: error.name,
+            message: error.message,
+            code: error.original?.code || error.parent?.code,
+            sql: error.sql,
+        });
+
+        // Check for Postgres "column does not exist" error (42703) or "relation does not exist" (42P01)
+        const isPostgresSchemaError =
             error.name === 'SequelizeDatabaseError' &&
-            (error.original?.code === '42703' || error.parent?.code === '42703')
-        ) {
+            ['42703', '42P01'].includes(error.original?.code || error.parent?.code);
+
+        if (isPostgresSchemaError || process.env.DB_AUTO_MIGRATE === 'true') {
             console.warn(
-                '⚠️ Schema mismatch detected (missing column). Attempting auto-fix with { alter: true }...',
+                ' [DB_INIT] ⚠️ Schema mismatch or missing tables detected. Attempting auto-fix with { alter: true }...',
             );
             try {
+                // In production, we use alter: true to add missing columns/tables without data loss
                 await sequelize.sync({ alter: true });
-                console.log('✅ Database schema auto-corrected successfully.');
-                return; // Retry success, exit normally
+                console.log(' [DB_INIT] ✅ Database schema auto-corrected successfully.');
+                isInitialized = true;
+                return;
             } catch (alterError) {
-                console.error('❌ Failed to auto-fix schema:', alterError);
-                throw alterError; // Rethrow if fix fails
+                console.error(' [DB_INIT] ❌ Failed to auto-fix schema:', alterError);
+                throw alterError;
             }
         }
-        console.error('Unable to connect to the database or sync:', error);
         throw error;
     } finally {
         isInitializing = false;

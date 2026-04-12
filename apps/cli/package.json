@@ -1,6 +1,6 @@
 {
   "name": "haltest",
-  "version": "1.0.43",
+  "version": "1.0.44",
   "description": "CLI launcher for the HalTest browser automation & orchestration platform",
   "main": "bin/haltest.js",
   "type": "module",
