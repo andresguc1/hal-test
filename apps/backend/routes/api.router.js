@@ -30,6 +30,8 @@ router.post('/inspector/stop', stopInspectorAction);
 router.post('/inspector/launch-remote', launchRemoteAction);
 router.get('/inspector/sessions', getActiveSessionsAction);
 router.get('/variables', actions.getVariables);
+router.post('/variables', actions.updateVariablesAction);
+router.delete('/variables', actions.deleteVariableAction);
 router.post('/inspector/reset', actions.resetEnvironment);
 console.log('✅ Inspector routes registered: /start, /stop, /reset');
 
@@ -570,6 +572,16 @@ const withSocketStatus = (handler) => async (req, res) => {
             emitExecutionStatus({ stepId: nodeId, status: 'running' });
         }
 
+        // 🆕 AUTO-SEED: If the request includes variables, seed them into the VariableManager
+        // This ensures that placeholders like {{user}} are resolved in the current action
+        if (req.body?.variables && typeof req.body.variables === 'object') {
+            const { variables, runId } = req.body;
+            const { variableManager } = await import('../services/VariableManager.js');
+            Object.entries(variables).forEach(([key, value]) => {
+                variableManager.set(key, value, runId);
+            });
+        }
+
         // Intercept res.json to detect success/error from the response
         const originalJson = res.json.bind(res);
         res.json = (body) => {
@@ -582,7 +594,7 @@ const withSocketStatus = (handler) => async (req, res) => {
                             body?.success === false
                                 ? body?.message || body?.error || 'Unknown error'
                                 : null;
-                        emitExecutionStatus({ stepId: nodeId, status, error });
+                        emitExecutionStatus({ stepId: nodeId, status, error, result: body });
                     })
                     .catch(() => {
                         /* socket not ready */

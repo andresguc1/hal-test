@@ -1,12 +1,13 @@
 import { Flow, Node, Edge, Run, StepResult } from '../database/init.js';
 import { executionLogger } from './ExecutionLogger.js';
 import * as actions from '../controllers/action.controller.js';
-import { emitLog, emitFlowFinished } from '../socket.js';
+import { emitLog, emitFlowFinished, emitEdgeStatus, emitExecutionStatus } from '../socket.js';
 import i18n from '../config/i18n.js';
 import { variableManager } from './VariableManager.js';
 import { executionManager } from './ExecutionManager.js';
 import chalk from 'chalk';
 import Table from 'cli-table3';
+import { browserService } from './browser.service.js';
 
 class ExecutionService {
     constructor() {
@@ -76,12 +77,24 @@ class ExecutionService {
         const runState = {
             runId,
             browserId: null,
-            variables: {},
+            variables: options.variables || {},
             executedNodeIds: new Set(),
+            activatedNodeIds: new Set(currentNodes.map((n) => n.nodeId)), // Entry nodes are active by default
+            nodeStates: {}, // nodeId -> state
+            edgeStates: {}, // edgeId -> state
             overrides: options.overrides || {},
             headers: options.headers || {},
             startTime: Date.now(),
         };
+
+        // Initialize all edges to 'idle' visually
+        edges.forEach((e) => {
+            const edgeId = e.edgeId || e.id;
+            if (edgeId) emitEdgeStatus({ edgeId, status: 'idle' });
+        });
+
+        // Initialize isolated variable scope for this run with initial values
+        variableManager.initRun(runId, runState.variables);
 
         // Emit overall start
         emitLog({
@@ -105,6 +118,7 @@ class ExecutionService {
 
             console.log(`✅ [ExecutionService] Flow ${flowId} completed successfully`);
             await executionLogger.endRun(runId, 'completed');
+            variableManager.clear(runId); // Free isolated variables
             emitLog({ message: `Flow execution finished successfully`, type: 'success' });
 
             // Signal global completion
@@ -114,12 +128,24 @@ class ExecutionService {
             await this.printExecutionSummary(runId, flow.name);
         } catch (error) {
             console.error(`❌ [ExecutionService] Flow ${flowId} failed:`, error.message);
-            await executionLogger.endRun(runId, 'failed');
+            await executionLogger.endRun(runId, 'failed').catch(() => {});
+            variableManager.clear(runId); // Free isolated variables on failure too
             emitLog({ message: `Flow execution failed: ${error.message}`, type: 'error' });
 
             // Signal failure
             emitFlowFinished({ runId, status: 'failed', flowId, error: error.message });
             throw error;
+        } finally {
+            // --- AUTOMATIC RESOURCE CLEANUP ---
+            // Ensure the browser launched for this specific run is closed
+            if (runState.browserId) {
+                console.log(
+                    `[Cleanup] Closing browser session ${runState.browserId} for run ${runId}`,
+                );
+                await browserService.delete(runState.browserId).catch((e) => {
+                    console.error(`[Cleanup] Error closing browser: ${e.message}`);
+                });
+            }
         }
 
         return runId;
@@ -132,54 +158,76 @@ class ExecutionService {
         const { skipParentFilter = false } = options;
 
         // Filter nodes to only process those at the same level (same parentId)
-        // If skipParentFilter is true, we trust that currentNodes are already at correctly scoped
         const peerNodes = skipParentFilter
             ? currentNodes
             : currentNodes.filter((n) => (n.parentId || null) === (parentId || null));
 
         for (const node of peerNodes) {
+            // Check if node has already been executed or skipped
             if (state.executedNodeIds.has(node.nodeId)) continue;
 
-            // 1. Execute Node
-            // 1. Execute Node
+            // 1. Activation Check (Execution Token)
+            // Only execute if node was explicitly activated by an incoming successful signal
+            if (!state.activatedNodeIds.has(node.nodeId)) {
+                console.log(`[DPE] Node ${node.nodeId} is in Standby (no signal received yet).`);
+                continue;
+            }
+
+            // 2. Execute Node
             const result = await this.executeNode(node, allNodes, allEdges, state);
             state.executedNodeIds.add(node.nodeId);
 
-            // 1.1 Store result in VariableManager for downstream interpolation
+            // 3. Store result for interpolation
             const nodeLabel = node.data?.customLabel || node.data?.label || node.nodeId;
             if (result && result.success !== false) {
                 const nodeResult = result.data || result;
-                // Save by Label (User friendly)
-                variableManager.set(`${nodeLabel}.result`, nodeResult, 'flow');
-                // Save by ID (Robust)
-                variableManager.set(`${node.nodeId}.result`, nodeResult, 'flow');
+                variableManager.set(`${nodeLabel}.result`, nodeResult, state.runId);
+                variableManager.set(`${node.nodeId}.result`, nodeResult, state.runId);
             }
 
-            // --- FLOW CONTROL SIGNAL DETECTION ---
+            // 4. Flow Control Signals (break, continue, etc.)
             const signalAction = result?.action || result?.data?.action;
-            if (
-                signalAction === 'break' ||
-                signalAction === 'continue' ||
-                signalAction === 'return'
-            ) {
-                return result.action ? result : result.data; // Propagate the inner signal
+            if (['break', 'continue', 'return'].includes(signalAction)) {
+                return result.action ? result : result.data;
             }
 
-            // 2. Find next nodes
-            let nextEdges = allEdges.filter((e) => e.source === node.nodeId);
+            // 5. Identify Next Paths
+            let allNextEdges = allEdges.filter((e) => e.source === node.nodeId);
+            const winnerPath = result?.data?.path || result?.path;
 
-            // Branching support: If node returns a specific path/handle direction
-            const path = result?.data?.path;
-            if (path) {
-                nextEdges = nextEdges.filter((e) => e.sourceHandle === path);
+            // 6. DEAD PATH ELIMINATION (DPE)
+            // Identify edges to activate and edges to kill
+            let activeEdges = allNextEdges;
+            let deadEdges = [];
+
+            if (winnerPath) {
+                // If the node decided a specific path (If/Else, Switch), separate them
+                activeEdges = allNextEdges.filter((e) => e.sourceHandle === winnerPath);
+                deadEdges = allNextEdges.filter((e) => e.sourceHandle !== winnerPath);
+            } else if (allNextEdges.length > 0 && node.type !== 'branch') {
+                // For linear nodes with multiple outgoing edges (broadcast), all are active
+                // unless it's a branching node that failed to report a path.
             }
 
-            const nextNodes = nextEdges
+            // 6.1 Kill Dead Paths Recursively
+            for (const edge of deadEdges) {
+                this.propagateSkip(edge.edgeId || edge.id, allNodes, allEdges, state);
+            }
+
+            // 6.2 Activate Success Paths
+            activeEdges.forEach((edge) => {
+                const edgeId = edge.edgeId || edge.id;
+                emitEdgeStatus({ edgeId, status: 'success' });
+                state.activatedNodeIds.add(edge.target);
+            });
+
+            // 7. Recursive execution of next nodes
+            const nextNodes = activeEdges
                 .map((e) => allNodes.find((n) => n.nodeId === e.target))
                 .filter(Boolean);
 
             if (nextNodes.length > 0) {
-                // SPECIAL CASE: Branch Node Orchestration
+                // SPECIAL CASE: Branch Node Orchestration (Parallel, Race, etc.)
                 if (node.type === 'branch') {
                     const mode = result?.data?.mode || 'sequential';
                     console.log(
@@ -187,7 +235,6 @@ class ExecutionService {
                     );
 
                     if (mode === 'parallel') {
-                        // All branches run at the same time
                         const results = await Promise.all(
                             nextNodes.map((nextNode) =>
                                 this.runSequence(
@@ -200,17 +247,11 @@ class ExecutionService {
                                 ),
                             ),
                         );
-                        // If any branch returned a signal, propagate the first one
                         const signal = results.find(
-                            (r) =>
-                                r &&
-                                (r.action === 'break' ||
-                                    r.action === 'continue' ||
-                                    r.action === 'return'),
+                            (r) => r && ['break', 'continue', 'return'].includes(r.action),
                         );
                         if (signal) return signal;
                     } else if (mode === 'race') {
-                        // First branch to complete wins
                         const signal = await Promise.race(
                             nextNodes.map((nextNode) =>
                                 this.runSequence(
@@ -225,7 +266,6 @@ class ExecutionService {
                         );
                         if (signal) return signal;
                     } else {
-                        // Default Sequential: One by one
                         const signal = await this.runSequence(
                             nextNodes,
                             allNodes,
@@ -237,7 +277,7 @@ class ExecutionService {
                         if (signal) return signal;
                     }
                 } else {
-                    // Standard sequential following (Default behavior for all other nodes)
+                    // Standard sequential following
                     const signal = await this.runSequence(
                         nextNodes,
                         allNodes,
@@ -251,6 +291,44 @@ class ExecutionService {
             }
         }
         return null; // Normal completion
+    }
+
+    /**
+     * Propagates a Skip signal downstream (Dead Path Elimination)
+     */
+    propagateSkip(edgeId, allNodes, allEdges, state) {
+        if (!edgeId) return;
+
+        // 1. Mark edge as skipped
+        if (state.edgeStates[edgeId] === 'skipped') return; // Avoid cyclic loops
+        state.edgeStates[edgeId] = 'skipped';
+        emitEdgeStatus({ edgeId, status: 'skipped' });
+
+        // 2. Find target node
+        const edge = allEdges.find((e) => (e.edgeId || e.id) === edgeId);
+        if (!edge) return;
+
+        const targetNode = allNodes.find((n) => n.nodeId === edge.target);
+        if (!targetNode) return;
+
+        // 3. Check if node should be skipped
+        // A node is skipped if ALL its incoming edges are skipped
+        const incomingEdges = allEdges.filter((e) => e.target === targetNode.nodeId);
+        const allSkipped = incomingEdges.every(
+            (e) => state.edgeStates[e.edgeId || e.id] === 'skipped',
+        );
+
+        if (allSkipped && !state.executedNodeIds.has(targetNode.nodeId)) {
+            console.log(`[DPE] Eliminating Dead Path: Node ${targetNode.nodeId} is now SKIPPED.`);
+            emitExecutionStatus({ stepId: targetNode.nodeId, status: 'skipped' });
+            state.executedNodeIds.add(targetNode.nodeId); // Prevents it from being executed later
+
+            // 4. Recursively skip all outgoing edges
+            const outgoingEdges = allEdges.filter((e) => e.source === targetNode.nodeId);
+            outgoingEdges.forEach((e) =>
+                this.propagateSkip(e.edgeId || e.id, allNodes, allEdges, state),
+            );
+        }
     }
 
     /**
@@ -279,7 +357,7 @@ class ExecutionService {
 
         // Deeply interpolate variables in config strings before executing
         const interpolateStrings = (obj) => {
-            if (typeof obj === 'string') return variableManager.resolve(obj);
+            if (typeof obj === 'string') return variableManager.resolve(obj, state.runId);
             if (Array.isArray(obj)) return obj.map(interpolateStrings);
             if (obj && typeof obj === 'object') {
                 const newObj = {};
@@ -354,6 +432,13 @@ class ExecutionService {
         if (resultData && resultData.browserId) {
             state.browserId = resultData.browserId;
         }
+
+        // 🌟 UNIFIED SUCCESS EMISSION (Included result for frontend edge highlighting)
+        emitExecutionStatus({
+            stepId: node.nodeId,
+            status: 'success',
+            result: resultData?.data || resultData,
+        });
 
         return resultData;
     }
@@ -438,7 +523,9 @@ class ExecutionService {
         let finished = false;
 
         const totalIterations =
-            mode === 'count' ? Number(variableManager.resolveValue(iterations)) : 'unknown';
+            mode === 'count'
+                ? Number(variableManager.resolveValue(iterations, state.runId))
+                : 'unknown';
 
         while (!finished && currentIndex < maxIterations) {
             let shouldContinue = false;
@@ -455,8 +542,8 @@ class ExecutionService {
                     if (typeof arrayInput === 'string') {
                         // Try getting as variable first (direct name), then resolve as template
                         list =
-                            variableManager.get(arrayInput) ||
-                            variableManager.resolveValue(arrayInput);
+                            variableManager.get(arrayInput, state.runId) ||
+                            variableManager.resolveValue(arrayInput, state.runId);
                     } else if (Array.isArray(arrayInput)) {
                         list = arrayInput;
                     }
@@ -468,7 +555,7 @@ class ExecutionService {
 
                 case 'while': {
                     try {
-                        shouldContinue = variableManager.evaluate(condition) === true;
+                        shouldContinue = variableManager.evaluate(condition, state.runId) === true;
                     } catch (e) {
                         shouldContinue = false;
                     }
@@ -484,9 +571,9 @@ class ExecutionService {
             }
 
             // 2. Set Iteration Variables
-            variableManager.set(indexVar, currentIndex, 'flow');
+            variableManager.set(indexVar, currentIndex, state.runId);
             if (mode === 'array') {
-                variableManager.set(itemVar, currentItem, 'flow');
+                variableManager.set(itemVar, currentItem, state.runId);
             }
 
             const iterLog =

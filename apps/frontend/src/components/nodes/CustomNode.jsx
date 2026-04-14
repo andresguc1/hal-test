@@ -28,11 +28,15 @@ function CustomNode({ data, selected }) {
   const NodeIconComponent = getNodeIcon(data?.type, categoryKey);
 
   // 3. Dynamic Styles based on State
-  const isError = state === NODE_STATES.ERROR;
-  const isRunning = state === NODE_STATES.EXECUTING;
-  const isSuccess = state === NODE_STATES.SUCCESS;
-  const isPicking = state === NODE_STATES.PICKING;
-  const isHealed = state === NODE_STATES.HEALED;
+  const isError =
+    state === NODE_STATES.ERROR || state === "failed" || state === "error";
+  const isRunning =
+    state === NODE_STATES.EXECUTING ||
+    state === "running" ||
+    state === "executing";
+  const isSuccess = state === NODE_STATES.SUCCESS || state === "success";
+  const isPicking = state === NODE_STATES.PICKING || state === "picking";
+  const isHealed = state === NODE_STATES.HEALED || state === "healed";
 
   const containerClasses = cn(
     "relative min-w-[240px] rounded-xl overflow-hidden",

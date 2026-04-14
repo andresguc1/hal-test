@@ -10,7 +10,12 @@ import { networkHistoryService } from '../services/NetworkHistoryService.js';
 import { variableManager } from '../services/VariableManager.js';
 import aiService from '../services/AIService.js';
 import experienceVaultService from '../services/ExperienceVaultService.js';
-import { emitExecutionStatus, emitScreenshotReady, emitLog } from '../socket.js';
+import {
+    emitExecutionStatus,
+    emitScreenshotReady,
+    emitLog,
+    emitVariableChange,
+} from '../socket.js';
 import { z } from 'zod';
 import * as fsp from 'fs/promises';
 // import * as fs from 'fs';
@@ -36,7 +41,18 @@ const smartEmitLog = (message, type = 'info', nodeId = null) => {
  */
 export const getVariables = (req, res) => {
     try {
-        const flowVariables = variableManager.getAll('flow');
+        const runId = req.query.runId || req.body.runId;
+
+        // Use specified runId, or fallback to the latest active run, or legacy flow
+        let flowVariables = {};
+        if (runId) {
+            flowVariables = variableManager.getAll(runId);
+        } else {
+            // Fallback: Return legacy_flow variables if no specific run is requested
+            // This ensures the editor UI shows the variables being captured during interactive sessions
+            flowVariables = variableManager.getAll(null);
+        }
+
         const globalVariables = variableManager.getAll('global');
 
         res.json({
@@ -446,7 +462,16 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
 
     // --- VARIABLE RESOLUTION ---
     // Deeply interpolate variables in the request body before any logic
-    const opts = variableManager.resolveRecursive(req.body);
+    const opts = variableManager.resolveRecursive(req.body, runId); // Pass runId for isolation
+
+    // Diagnostic Log: Highlight what the backend actually "sees" after interpolation
+    if (actionName === 'type_text') {
+        console.log(
+            `[ActionController] [DEBUG] ${actionName} text: "${req.body.text}" -> "${opts.text}" (RunId: ${runId || 'None'})`,
+        );
+    } else {
+        console.log(`[ActionController] [DEBUG] ${actionName} options resolved.`);
+    }
     // ---------------------------
 
     let page, context;
@@ -593,11 +618,13 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
         const nodeLabel = label || nodeId || actionName;
         if (result && result.success !== false) {
             const nodeResult = result.data || result;
-            variableManager.set(`${nodeLabel}.result`, nodeResult, 'flow');
+            variableManager.set(`${nodeLabel}.result`, nodeResult, runId);
             if (nodeId) {
-                variableManager.set(`${nodeId}.result`, nodeResult, 'flow');
+                variableManager.set(`${nodeId}.result`, nodeResult, runId);
             }
-            console.log(`[ActionController] Saved result for "${nodeLabel}" to variableManager`);
+            console.log(
+                `[ActionController] Saved result for "${nodeLabel}" to variableManager (Run: ${runId})`,
+            );
         }
         // ----------------------------
 
@@ -2034,7 +2061,7 @@ export const executeJsAction = (req, res) =>
         // 3. Capture return value if requested
         let stored = false;
         if (returnValue && variableName) {
-            variableManager.set(variableName, result, 'flow');
+            variableManager.set(variableName, result, req.body.runId);
             stored = true;
         }
 
@@ -2225,7 +2252,7 @@ export const saveDomAction = (req, res) =>
 
         // Guardar en Variable
         if (variableName) {
-            variableManager.set(variableName, content, 'flow');
+            variableManager.set(variableName, content, req.body.runId);
             results.variableStored = variableName;
         }
 
@@ -2979,7 +3006,7 @@ export const waitForResponseAction = (req, res) =>
             } catch (e) {
                 bodyData = await response.text();
             }
-            variableManager.set(saveToVariable, bodyData, 'flow');
+            variableManager.set(saveToVariable, bodyData, req.body.runId);
         }
 
         return {
@@ -3131,7 +3158,7 @@ export const manageSessionAction = (req, res) =>
                     const cookie = cookies.find((c) => c.name === key);
                     const val = cookie ? cookie.value : null;
                     if (variableName) {
-                        variableManager.set(variableName, val, 'flow');
+                        variableManager.set(variableName, val, req.body.runId);
                     }
                     return {
                         message: `Cookie ${key} obtenida: ${val}`,
@@ -3183,7 +3210,7 @@ export const manageSessionAction = (req, res) =>
                     { storageType, key },
                 );
                 if (variableName) {
-                    variableManager.set(variableName, data, 'flow');
+                    variableManager.set(variableName, data, req.body.runId);
                 }
                 return {
                     message: `${target} obtenido: ${data}`,
@@ -3353,7 +3380,7 @@ export const readDataAction = (req, res) =>
 
         // Persist to variables if requested
         if (variableName) {
-            variableManager.set(variableName, data, 'flow');
+            variableManager.set(variableName, data, req.body.runId);
         }
 
         return {
@@ -3380,7 +3407,7 @@ export const saveResultsAction = (req, res) =>
 
         // Persist path to variable if requested
         if (variableName) {
-            variableManager.set(variableName, savePath, 'flow');
+            variableManager.set(variableName, savePath, req.body.runId);
         }
 
         return {
@@ -3408,7 +3435,7 @@ export const handleDownloadsAction = (req, res) =>
 
         // Persist path to variable if requested
         if (variableName) {
-            variableManager.set(variableName, savePath, 'flow');
+            variableManager.set(variableName, savePath, req.body.runId);
         }
 
         return {
@@ -3546,7 +3573,7 @@ export const returnCodeAction = (req, res) => {
     const { successField = 'success', exitOnFail = true, customCodes, verbose = true } = req.body;
 
     // We look for the success state in the variables (defaulting to the 'success' variable)
-    const isSuccess = variableManager.get(successField, 'flow') !== false;
+    const isSuccess = variableManager.get(successField, req.body.runId) !== false;
 
     let codes = { success: 0, failed: 1 };
     if (customCodes) {
@@ -3939,20 +3966,22 @@ export const resizeViewportAction = (req, res) =>
 
 export const variableAction = async (req, res) => {
     try {
-        const { operation = 'set', name, value, scope = 'flow' } = req.body;
+        const { operation = 'set', name, value, scope = 'flow', runId } = req.body;
 
         let result;
         let message;
 
         switch (operation) {
             case 'set':
-                variableManager.set(name, value, scope);
+                variableManager.set(name, value, runId, scope);
                 result = { name, value, scope, operation: 'set' };
                 message = req.t('actions.variable.set_success', { name, scope });
+                // Emit real-time update
+                emitVariableChange({ name, value, scope, operation: 'set' });
                 break;
 
             case 'get': {
-                const getValue = variableManager.get(name, scope);
+                const getValue = variableManager.get(name, runId);
                 result = { name, value: getValue, scope, operation: 'get' };
                 message = req.t('actions.variable.get_success', { name });
                 break;
@@ -3960,18 +3989,20 @@ export const variableAction = async (req, res) => {
 
             case 'increment': {
                 const amount = typeof value === 'number' ? value : 1;
-                variableManager.increment(name, amount, scope);
-                const newValue = variableManager.get(name, scope);
+                variableManager.increment(name, amount, runId);
+                const newValue = variableManager.get(name, runId);
                 result = { name, value: newValue, amount, scope, operation: 'increment' };
                 message = req.t('actions.variable.increment_success', { name, amount });
+                emitVariableChange({ name, value: newValue, scope, operation: 'increment' });
                 break;
             }
 
             case 'push': {
-                variableManager.push(name, value, scope);
-                const array = variableManager.get(name, scope);
+                variableManager.push(name, value, runId);
+                const array = variableManager.get(name, runId);
                 result = { name, array, scope, operation: 'push' };
                 message = req.t('actions.variable.push_success', { name });
+                emitVariableChange({ name, value: array, scope, operation: 'push' });
                 break;
             }
 
@@ -4097,7 +4128,7 @@ export const loopAction = async (req, res) => {
         } = req.body;
 
         const stateKey = `_loop_state_${nodeId}`;
-        let state = variableManager.get(stateKey);
+        let state = variableManager.get(stateKey, req.body.runId);
 
         if (!state) {
             state = { index: 0, totalIterations: 0 };
@@ -4108,7 +4139,7 @@ export const loopAction = async (req, res) => {
 
         switch (mode) {
             case 'count': {
-                const total = Number(variableManager.resolveValue(iterations));
+                const total = Number(variableManager.resolveValue(iterations, req.body.runId));
                 shouldContinue = state.index < total;
                 break;
             }
@@ -4117,7 +4148,8 @@ export const loopAction = async (req, res) => {
                 if (typeof arrayInput === 'string') {
                     // Try getting as variable first, then resolve as template
                     list =
-                        variableManager.get(arrayInput) || variableManager.resolveValue(arrayInput);
+                        variableManager.get(arrayInput, req.body.runId) ||
+                        variableManager.resolveValue(arrayInput, req.body.runId);
                 } else if (Array.isArray(arrayInput)) {
                     list = arrayInput;
                 }
@@ -4128,7 +4160,7 @@ export const loopAction = async (req, res) => {
             }
             case 'while': {
                 try {
-                    shouldContinue = variableManager.evaluate(condition) === true;
+                    shouldContinue = variableManager.evaluate(condition, req.body.runId) === true;
                 } catch (e) {
                     shouldContinue = false;
                 }
@@ -4144,7 +4176,7 @@ export const loopAction = async (req, res) => {
         }
 
         if (!shouldContinue) {
-            variableManager.delete(stateKey);
+            variableManager.delete(stateKey, req.body.runId);
             return res.status(200).json({
                 success: true,
                 message: 'Loop completed',
@@ -4157,16 +4189,20 @@ export const loopAction = async (req, res) => {
         }
 
         // Update variables for this iteration
-        variableManager.set(indexVar, state.index, 'flow');
+        variableManager.set(indexVar, state.index, req.body.runId);
         if (mode === 'array') {
-            variableManager.set(itemVar, currentItem, 'flow');
+            variableManager.set(itemVar, currentItem, req.body.runId);
         }
 
         // Increment state
-        variableManager.set(stateKey, {
-            index: state.index + 1,
-            totalIterations: state.index + 1,
-        });
+        variableManager.set(
+            stateKey,
+            {
+                index: state.index + 1,
+                totalIterations: state.index + 1,
+            },
+            req.body.runId,
+        );
 
         return res.status(200).json({
             success: true,
@@ -4288,24 +4324,28 @@ export const transformAction = async (req, res) => {
         const { operation, input, expression, mergeWith, outputVar } = req.body;
 
         const inputArray =
-            (typeof input === 'string' ? variableManager.get(input) : null) ||
-            variableManager.resolveValue(input) ||
+            (typeof input === 'string' ? variableManager.get(input, req.body.runId) : null) ||
+            variableManager.resolveValue(input, req.body.runId) ||
             [];
 
         let result;
         switch (operation) {
             case 'map':
-                result = inputArray.map((item) => variableManager.evaluate(expression, { item }));
+                result = inputArray.map((item) =>
+                    variableManager.evaluate(expression, req.body.runId, { item }),
+                );
                 break;
             case 'filter':
                 result = inputArray.filter((item) =>
-                    variableManager.evaluate(expression, { item }),
+                    variableManager.evaluate(expression, req.body.runId, { item }),
                 );
                 break;
             case 'merge': {
                 const mergeArray =
-                    (typeof mergeWith === 'string' ? variableManager.get(mergeWith) : null) ||
-                    variableManager.resolveValue(mergeWith) ||
+                    (typeof mergeWith === 'string'
+                        ? variableManager.get(mergeWith, req.body.runId)
+                        : null) ||
+                    variableManager.resolveValue(mergeWith, req.body.runId) ||
                     [];
                 result = Array.isArray(mergeArray)
                     ? [...inputArray, ...mergeArray]
@@ -4320,7 +4360,7 @@ export const transformAction = async (req, res) => {
                     result = null;
                 } else {
                     result = inputArray.reduce((acc, item) => {
-                        return variableManager.evaluate(expression, { acc, item });
+                        return variableManager.evaluate(expression, req.body.runId, { acc, item });
                     });
                 }
                 break;
@@ -4329,7 +4369,7 @@ export const transformAction = async (req, res) => {
                 result = inputArray;
         }
 
-        variableManager.set(outputVar, result, 'flow');
+        variableManager.set(outputVar, result, req.body.runId);
 
         return res.status(200).json({
             success: true,
@@ -4356,9 +4396,9 @@ export const backendJsAction = async (req, res) => {
             });
         }
 
-        const result = variableManager.evaluate(expression);
+        const result = variableManager.evaluate(expression, req.body.runId);
         const resolvedOutput = outputVar.replace('${', '').replace('}', '');
-        variableManager.set(resolvedOutput, result, 'flow');
+        variableManager.set(resolvedOutput, result, req.body.runId);
 
         console.log(`[FLOW] Backend JS executed. Saved to ${resolvedOutput}`);
 
@@ -4438,8 +4478,8 @@ export const componentAction = async (req, res) => {
         if (Array.isArray(inputMapping)) {
             for (const mapping of inputMapping) {
                 if (mapping.parentVar && mapping.childVar) {
-                    const val = vm.resolveValue(mapping.parentVar);
-                    vm.set(mapping.childVar, val, 'flow');
+                    const val = vm.resolveValue(mapping.parentVar, runId);
+                    vm.set(mapping.childVar, val, runId);
                 }
             }
         }
@@ -4468,17 +4508,20 @@ export const componentAction = async (req, res) => {
             executedNodeIds: new Set(),
         };
 
-        // Note: ExecutionService.runSequence doesn't return a unified result yet,
-        // but it executes nodes and updates variableManager.
-        await executionService.runSequence(entryNodes, allNodes, allEdges, subflowState);
+        const subflowResult = await executionService.runSequence(
+            entryNodes,
+            allNodes,
+            allEdges,
+            subflowState,
+        );
 
         // 3.b Handle Output Mapping (Child -> Parent)
         const outputMapping = configuration?.outputMapping || [];
         if (Array.isArray(outputMapping)) {
             for (const mapping of outputMapping) {
                 if (mapping.childVar && mapping.parentVar) {
-                    const val = vm.get(mapping.childVar, 'flow');
-                    vm.set(mapping.parentVar, val, 'flow');
+                    const val = vm.get(mapping.childVar, runId);
+                    vm.set(mapping.parentVar, val, runId);
                 }
             }
         }
@@ -4492,7 +4535,11 @@ export const componentAction = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: `Subflow ${flowId} executed successfully`,
-            data: { flowId, executedNodes: subflowState.executedNodeIds.size },
+            data: {
+                flowId,
+                executedNodes: subflowState.executedNodeIds.size,
+                path: subflowResult?.action === 'return' ? subflowResult.data : null,
+            },
         });
     } catch (error) {
         console.error('[ERROR] componentAction:', error.message);
@@ -4519,13 +4566,13 @@ export const inputAction = async (req, res) => {
 
         // If variable is already set (by componentAction mapping), we keep it.
         // Otherwise, we set it to the default value if provided.
-        if (!variableManager.has(name, 'flow') && defaultValue !== undefined) {
-            variableManager.set(name, defaultValue, 'flow');
+        if (!variableManager.has(name, req.body.runId) && defaultValue !== undefined) {
+            variableManager.set(name, defaultValue, req.body.runId);
         }
 
         return res.status(200).json({
             success: true,
-            data: { name, value: variableManager.get(name) },
+            data: { name, value: variableManager.get(name, req.body.runId) },
         });
     } catch (error) {
         return res.status(500).json({
@@ -4545,8 +4592,8 @@ export const outputAction = async (req, res) => {
         const { variableManager } = await import('../services/VariableManager.js');
 
         // Resolve return value
-        const resolvedValue = variableManager.resolveValue(value);
-        variableManager.set(name, resolvedValue, 'flow');
+        const resolvedValue = variableManager.resolveValue(value, req.body.runId);
+        variableManager.set(name, resolvedValue, req.body.runId);
 
         return res.status(200).json({
             success: true,
@@ -4616,7 +4663,7 @@ export const callLlmAction = async (req, res) => {
         const resultText = response.text || '';
 
         // Set variable
-        variableManager.set(variableName, resultText, 'flow');
+        variableManager.set(variableName, resultText, req.body.runId);
 
         // Emit log for UI visualization
         emitLog({
@@ -4698,7 +4745,7 @@ ${fields ? `Fields: ${JSON.stringify(fields)}` : ''}`;
             maxTokens,
         });
 
-        variableManager.set(targetVariable, data, 'flow');
+        variableManager.set(targetVariable, data, req.body.runId);
 
         // Emit log for UI visualization
         emitLog({
@@ -4762,7 +4809,7 @@ export const validateSemanticAction = async (req, res) => {
         };
 
         // Resolve inputs (may contain variables like ${text})
-        let criteria = variableManager.resolve(rawCriteria) || '';
+        let criteria = variableManager.resolve(rawCriteria, req.body.runId) || '';
 
         // Zero-Config Fallback
         if (!criteria && autoContext) {
@@ -4788,7 +4835,7 @@ export const validateSemanticAction = async (req, res) => {
             String(result.isValid).toLowerCase() === String(expectedAnswer).toLowerCase() ||
             (result.isValid && String(expectedAnswer).toLowerCase() === 'true');
 
-        variableManager.set(variableName, isMatch, 'flow');
+        variableManager.set(variableName, isMatch, req.body.runId);
 
         emitLog({
             message: `Validación finalizada. Resultado: ${result.isValid} (Coincidencia: ${isMatch})`,
@@ -4896,7 +4943,7 @@ export const extractDomContextAction = async (req, res) => {
             finalContent = response.text || rawContent;
         }
 
-        variableManager.set(variableName, finalContent, 'flow');
+        variableManager.set(variableName, finalContent, req.body.runId);
 
         emitLog({
             message: `Context extracted and saved to ${variableName}`,
@@ -4969,8 +5016,8 @@ export const chainOfThoughtAction = async (req, res) => {
         const thought = thoughtMatch ? thoughtMatch[1].trim() : 'No separate thought extracted.';
         const answer = answerMatch ? answerMatch[1].trim() : text;
 
-        variableManager.set(thoughtVariable, thought, 'flow');
-        variableManager.set(answerVariable, answer, 'flow');
+        variableManager.set(thoughtVariable, thought, req.body.runId);
+        variableManager.set(answerVariable, answer, req.body.runId);
 
         emitLog({
             message: `Razonamiento completado. Resultado guardado en ${answerVariable}.`,
@@ -5044,7 +5091,7 @@ export const smartSelectorAction = async (req, res) => {
         });
 
         const newSelector = result.correctedSelector || originalSelector;
-        variableManager.set(variableName, newSelector, 'flow');
+        variableManager.set(variableName, newSelector, req.body.runId);
 
         emitLog({
             message: `Selector healed: ${newSelector} (Confidence: ${(result.confidence * 100).toFixed(0)}%)`,
@@ -5179,6 +5226,60 @@ export const resetEnvironment = async (req, res) => {
         res.json({ success: true, message: 'Environment cleaned and resetted' });
     } catch (error) {
         console.error('[Reset Error]', error.message);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+/**
+ * Action: Manually Update or Seed Variables
+ * Supports updating flow (run-specific) or global variables.
+ */
+export const updateVariablesAction = async (req, res) => {
+    try {
+        const { variables, runId, scope = 'flow' } = req.body;
+
+        if (!variables || typeof variables !== 'object') {
+            return res.status(400).json({
+                success: false,
+                message: 'Variables object is required',
+            });
+        }
+
+        Object.entries(variables).forEach(([key, value]) => {
+            variableManager.set(key, value, runId, scope);
+            emitVariableChange({ name: key, value, scope, operation: 'set' });
+        });
+
+        res.json({
+            success: true,
+            message: `Updated ${Object.keys(variables).length} variables in ${scope} scope.`,
+        });
+    } catch (error) {
+        console.error('[UpdateVariables Error]', error.message);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+export const deleteVariableAction = async (req, res) => {
+    try {
+        const { name, scope = 'flow', runId } = req.body;
+
+        if (!name) {
+            return res.status(400).json({
+                success: false,
+                message: 'Variable name is required',
+            });
+        }
+
+        variableManager.deleteVariable(name, scope, runId);
+        emitVariableChange({ name, value: undefined, scope, operation: 'delete' });
+
+        res.json({
+            success: true,
+            message: `Deleted variable "${name}" from ${scope} scope.`,
+        });
+    } catch (error) {
+        console.error('[DeleteVariable Error]', error.message);
         res.status(500).json({ success: false, message: error.message });
     }
 };

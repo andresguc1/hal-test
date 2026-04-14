@@ -17,6 +17,10 @@ const Run = sequelize.define(
             type: DataTypes.STRING,
             allowNull: true, // Used to group multiple runs from a single Test Runner execution
         },
+        project_id: {
+            type: DataTypes.STRING,
+            allowNull: true,
+        },
         flow_name: {
             type: DataTypes.STRING,
             allowNull: true,

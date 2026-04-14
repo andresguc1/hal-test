@@ -3,171 +3,271 @@
  *
  * Manages variables across different scopes (flow, global)
  * Provides safe expression evaluation for conditions and values
+ *
+ * Scoping Architecture:
+ *   - Global: Persisted to disk, shared across all flows and sessions
+ *   - Runs: Isolated per execution run (runId), ephemeral
+ *   - Legacy Flow: Backward compatibility for interactive sessions without runId
  */
+
+import * as fs from 'fs';
+import * as path from 'path';
+import { STORAGE_DIR } from '../config/paths.js';
+
+const GLOBALS_FILE = path.join(STORAGE_DIR, 'global_variables.json');
 
 class VariableManager {
     constructor() {
         this.scopes = {
-            global: {}, // Shared across all flows
-            flow: {}, // Specific to current flow execution
+            global: {}, // Persisted: shared across all flows
+            runs: {}, // Ephemeral: Map of runId -> { variables }
+            legacy_flow: {}, // Backward compatibility fallback
         };
+        this._loadGlobals();
+    }
+
+    // ─── Persistence ────────────────────────────────────────────────────────
+
+    /**
+     * Load global variables from disk
+     */
+    _loadGlobals() {
+        try {
+            if (fs.existsSync(GLOBALS_FILE)) {
+                const raw = fs.readFileSync(GLOBALS_FILE, 'utf8');
+                const parsed = JSON.parse(raw);
+                if (parsed && typeof parsed === 'object') {
+                    this.scopes.global = parsed;
+                    console.log(
+                        `[VariableManager] Loaded ${Object.keys(parsed).length} global variables from disk.`,
+                    );
+                }
+            }
+        } catch (err) {
+            console.warn('[VariableManager] Failed to load global variables:', err.message);
+        }
+    }
+
+    /**
+     * Persist global variables to disk
+     */
+    _saveGlobals() {
+        try {
+            // Ensure storage directory exists
+            const dir = path.dirname(GLOBALS_FILE);
+            if (!fs.existsSync(dir)) {
+                fs.mkdirSync(dir, { recursive: true });
+            }
+            fs.writeFileSync(GLOBALS_FILE, JSON.stringify(this.scopes.global, null, 2), 'utf8');
+        } catch (err) {
+            console.error('[VariableManager] Failed to save global variables:', err.message);
+        }
+    }
+
+    // ─── Core CRUD ──────────────────────────────────────────────────────────
+
+    /**
+     * Initializes a scope for a specific run
+     * @param {string} runId
+     * @param {object} initialVariables - Variables to seed the run with
+     */
+    initRun(runId, initialVariables = {}) {
+        if (!runId) return;
+        if (!this.scopes.runs[runId]) {
+            this.scopes.runs[runId] = { ...initialVariables };
+            console.log(
+                `[VariableManager] Run ${runId} initialized with ${Object.keys(initialVariables).length} variables.`,
+            );
+        }
     }
 
     /**
      * Set a variable value
      * @param {string} name - Variable name
      * @param {any} value - Variable value
-     * @param {string} scope - 'flow' or 'global'
+     * @param {string} runId - Run ID for isolation
+     * @param {string} scope - 'flow', 'global', or 'run'
      */
-    set(name, value, scope = 'flow') {
-        if (!this.scopes[scope]) {
-            throw new Error(`Invalid scope: ${scope}`);
+    set(name, value, runId = null, scope = 'flow') {
+        if (scope === 'global') {
+            this.scopes.global[name] = value;
+            this._saveGlobals();
+            return;
         }
-        this.scopes[scope][name] = value;
+
+        if (runId) {
+            this.initRun(runId);
+            this.scopes.runs[runId][name] = value;
+        } else {
+            // Default to legacy_flow if no runId and not global
+            this.scopes.legacy_flow[name] = value;
+        }
     }
 
     /**
-     * Get a variable value
-     * @param {string} name - Variable name
-     * @param {string} scope - 'flow' or 'global'
-     * @returns {any} Variable value
+     * Get a variable value with cascading resolution:
+     *   1. Run-specific scope (isolation)
+     *   2. Global scope (shared constants)
+     *   3. Legacy/Session scope (backward compat)
      */
-    get(name, scope = 'flow') {
-        if (!this.scopes[scope]) {
-            throw new Error(`Invalid scope: ${scope}`);
+    get(name, runId = null) {
+        // 1. Try Run-specific scope first (Isolation)
+        if (runId && this.scopes.runs[runId] && this.scopes.runs[runId][name] !== undefined) {
+            return this.scopes.runs[runId][name];
         }
-        return this.scopes[scope][name];
+
+        // 2. Try Global scope (Constants / Config)
+        if (this.scopes.global && this.scopes.global[name] !== undefined) {
+            return this.scopes.global[name];
+        }
+
+        // 3. Fallback to Legacy/Session scope
+        if (this.scopes.legacy_flow[name] !== undefined) {
+            return this.scopes.legacy_flow[name];
+        }
+
+        return undefined;
     }
 
     /**
      * Check if a variable exists
-     * @param {string} name - Variable name
-     * @param {string} scope - 'flow' or 'global'
-     * @returns {boolean} True if exists
      */
     has(name, scope = 'flow') {
-        if (!this.scopes[scope]) return false;
-        return Object.prototype.hasOwnProperty.call(this.scopes[scope], name);
+        if (scope === 'global') return name in this.scopes.global;
+        return name in this.scopes.legacy_flow;
     }
 
     /**
      * Increment a numeric variable
-     * @param {string} name - Variable name
-     * @param {number} amount - Amount to increment (default: 1)
-     * @param {string} scope - 'flow' or 'global'
      */
-    increment(name, amount = 1, scope = 'flow') {
-        const current = this.get(name, scope) || 0;
+    increment(name, amount = 1, runId = null) {
+        const current = this.get(name, runId) || 0;
         if (typeof current !== 'number') {
             throw new Error(`Cannot increment non-numeric variable: ${name}`);
         }
-        this.set(name, current + amount, scope);
+        this.set(name, current + amount, runId);
     }
 
     /**
      * Push value to array variable
-     * @param {string} name - Variable name
-     * @param {any} value - Value to push
-     * @param {string} scope - 'flow' or 'global'
      */
-    push(name, value, scope = 'flow') {
-        const current = this.get(name, scope);
+    push(name, value, runId = null) {
+        const current = this.get(name, runId);
         if (!Array.isArray(current)) {
             throw new Error(`Cannot push to non-array variable: ${name}`);
         }
         current.push(value);
-        this.set(name, current, scope);
+        this.set(name, current, runId);
     }
 
     /**
      * Get all variables in a scope
-     * @param {string} scope - 'flow' or 'global'
-     * @returns {object} All variables
      */
-    getAll(scope = 'flow') {
-        return { ...this.scopes[scope] };
+    getAll(runId = null) {
+        if (runId === 'global') {
+            return { ...this.scopes.global };
+        }
+        if (runId && this.scopes.runs[runId]) {
+            return { ...this.scopes.runs[runId] };
+        }
+        // Return legacy_flow for null runId (interactive sessions)
+        return { ...this.scopes.legacy_flow };
+    }
+
+    /**
+     * Delete a specific variable
+     * @param {string} name - Variable name
+     * @param {string} scope - 'global' or 'flow'
+     * @param {string} runId - Run ID (for run-scoped deletion)
+     */
+    deleteVariable(name, scope = 'flow', runId = null) {
+        if (scope === 'global') {
+            delete this.scopes.global[name];
+            this._saveGlobals();
+            return true;
+        }
+        if (runId && this.scopes.runs[runId]) {
+            delete this.scopes.runs[runId][name];
+            return true;
+        }
+        delete this.scopes.legacy_flow[name];
+        return true;
     }
 
     /**
      * Clear all variables in a scope
-     * @param {string} scope - 'flow' or 'global'
      */
-    clear(scope = 'flow') {
-        this.scopes[scope] = {};
+    clear(runId = null) {
+        if (runId) {
+            delete this.scopes.runs[runId];
+        } else {
+            this.scopes.legacy_flow = {};
+        }
     }
 
     /**
      * Clear all variables in all scopes
      */
     clearAll() {
-        this.scopes.flow = {};
+        this.scopes.runs = {};
+        this.scopes.legacy_flow = {};
         this.scopes.global = {};
+        this._saveGlobals();
     }
+
+    // ─── Resolution Engine ──────────────────────────────────────────────────
 
     /**
      * Resolve variable references in a string
      * Example: "Hello ${name}" -> "Hello John"
-     *
-     * @param {string} template - String with ${var} placeholders
-     * @returns {string} Resolved string
      */
-    resolve(template) {
+    resolve(template, runId = null) {
         if (typeof template !== 'string') return template;
 
         // Match both ${varName} and {{varName}}
-        return template.replace(/(?:\$\{([^}]+)\})|(?:\{\{([^}]+)\}\})/g, (match, p1, p2) => {
-            const varName = (p1 || p2).trim();
+        const resolved = template.replace(
+            /(?:\$\{([^}]+)\})|(?:\{\{([^}]+)\}\})/g,
+            (match, p1, p2) => {
+                const varName = (p1 || p2).trim();
+                const value = this.get(varName, runId);
+                return value !== undefined ? value : match;
+            },
+        );
 
-            // Try flow scope first, then global
-            let value = this.scopes.flow[varName];
-            if (value === undefined) {
-                value = this.scopes.global[varName];
-            }
-
-            return value !== undefined ? value : match;
-        });
+        return resolved;
     }
 
     /**
      * Resolve variable references keeping the original type if the template is just a variable
      * Example: "${count}" -> 10 (number)
-     *
-     * @param {string} template - String with ${var} placeholders
-     * @returns {any} Resolved value or original template
      */
-    resolveValue(template) {
+    resolveValue(template, runId = null) {
         if (typeof template !== 'string') return template;
 
-        // Check if the entire string is exactly one variable reference: ${varName} or {{varName}}
+        // Check if the entire string is exactly one variable reference
         const singleVarRegex = /^(?:\$\{([^}]+)\}|\{\{([^}]+)\}\})$/;
         const match = template.trim().match(singleVarRegex);
 
         if (match) {
             const varName = (match[1] || match[2]).trim();
-            // Try flow scope first, then global
-            let value = this.scopes.flow[varName];
-            if (value === undefined) {
-                value = this.scopes.global[varName];
-            }
+            const value = this.get(varName, runId);
             if (value !== undefined) return value;
         }
 
-        // If not a single variable, or variable not found, use standard string resolution
-        return this.resolve(template);
+        // If not a single variable, use standard string resolution
+        return this.resolve(template, runId);
     }
 
     /**
      * Recursively resolve variable references in an object or array
-     * @param {any} obj - Object, array, or string to resolve
-     * @returns {any} Resolved object
      */
-    resolveRecursive(obj) {
-        if (typeof obj === 'string') return this.resolveValue(obj);
-        if (Array.isArray(obj)) return obj.map((item) => this.resolveRecursive(item));
+    resolveRecursive(obj, runId = null) {
+        if (typeof obj === 'string') return this.resolveValue(obj, runId);
+        if (Array.isArray(obj)) return obj.map((item) => this.resolveRecursive(item, runId));
         if (obj && typeof obj === 'object') {
             const newObj = {};
             for (const [k, v] of Object.entries(obj)) {
-                newObj[k] = this.resolveRecursive(v);
+                newObj[k] = this.resolveRecursive(v, runId);
             }
             return newObj;
         }
@@ -176,37 +276,28 @@ class VariableManager {
 
     /**
      * Safely evaluate an expression with variables
-     * Uses a restricted context for security
-     *
-     * @param {string} expression - Expression to evaluate (e.g., "${counter} > 10")
-     * @param {object} additionalContext - Additional values for evaluation
-     * @returns {any} Evaluation result
      */
-    evaluate(expression, additionalContext = {}) {
+    evaluate(expression, runId = null, additionalContext = {}) {
         if (typeof expression !== 'string') {
             return expression;
         }
 
         // First resolve variable references keeping types if possible
-        const resolved = this.resolveValue(expression);
+        const resolved = this.resolveValue(expression, runId);
 
         // If it's already resolved to a non-string value, return it
         if (typeof resolved !== 'string') {
             return resolved;
         }
 
-        // If it's just a variable reference (but was not found/resolved to non-string), return it
         const hasContext = Object.keys(additionalContext).length > 0;
         if (!resolved.includes('${') && resolved === expression && !hasContext) {
-            // If it's a boolean/null/undefined literal, evaluate it properly
             if (resolved === 'true') return true;
             if (resolved === 'false') return false;
             if (resolved === 'null') return null;
             if (resolved === 'undefined') return undefined;
 
-            // If it looks like an expression (has operators, parentheses, or dots), proceed to evaluate
-            // Added (.) for property access like Math.round and () for function calls like Date.now()
-            if (/[><=!&|().]/.test(resolved)) {
+            if (/[><&=!|().]/.test(resolved)) {
                 // proceed to evaluate
             } else {
                 return resolved;
@@ -218,19 +309,16 @@ class VariableManager {
             Math,
             Date,
             JSON,
-            ...this.scopes.flow,
             ...this.scopes.global,
+            ...(runId ? this.scopes.runs[runId] : this.scopes.legacy_flow),
             ...additionalContext,
         };
 
         try {
-            // Safe evaluation using Function constructor with limited scope
-            // This prevents access to dangerous globals
             const func = new Function(
                 ...Object.keys(context),
                 `'use strict'; return (${resolved});`,
             );
-
             return func(...Object.values(context));
         } catch (error) {
             console.error('Expression evaluation error:', error);
@@ -239,27 +327,15 @@ class VariableManager {
     }
 
     /**
-     * Delete a variable
-     * @param {string} name - Variable name
-     * @param {string} scope - 'flow' or 'global'
-     */
-    delete(name, scope = 'flow') {
-        delete this.scopes[scope][name];
-    }
-
-    /**
      * Evaluate a single condition
-     * @param {object} condition - Condition object with left, operator, right
-     * @returns {boolean} - Result of the condition evaluation
      */
-    evaluateCondition(condition) {
+    evaluateCondition(condition, runId = null) {
         const { left, operator, right } = condition;
 
-        // Resolve variable interpolations with type safety
-        let resolvedLeft = this.resolveValue(left);
-        let resolvedRight = right !== undefined ? this.resolveValue(right) : undefined;
+        let resolvedLeft = this.resolveValue(left, runId);
+        let resolvedRight = right !== undefined ? this.resolveValue(right, runId) : undefined;
 
-        // Type coercion for comparison: if one is boolean, try to convert other to boolean
+        // Type coercion for booleans
         if (typeof resolvedLeft === 'boolean' && typeof resolvedRight === 'string') {
             if (resolvedRight === 'true') resolvedRight = true;
             if (resolvedRight === 'false') resolvedRight = false;
@@ -299,7 +375,6 @@ class VariableManager {
             case 'contains':
                 return String(resolvedLeft).includes(String(resolvedRight));
             case 'exists': {
-                // Check if variable exists (left should be a variable name)
                 const varName = String(left).replace(/\${(.+)}/, '$1');
                 return this.has(varName, 'flow') || this.has(varName, 'global');
             }
@@ -310,9 +385,6 @@ class VariableManager {
 
     /**
      * Evaluate multiple conditions with AND/OR logic
-     * @param {array} conditions - Array of condition objects
-     * @param {string} logic - 'AND' or 'OR'
-     * @returns {boolean} - Result of the combined evaluation
      */
     evaluateConditions(conditions, logic = 'AND') {
         if (!Array.isArray(conditions) || conditions.length === 0) {

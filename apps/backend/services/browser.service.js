@@ -11,9 +11,9 @@ class BrowserManager {
         this.lastAccessed = new Map();
 
         // --- Idle Garbage Collector ---
-        // Sweeps every 5 minutes to close sessions idle for > 15 minutes
+        // Sweeps frequently to close sessions idle for > 2 minutes
         this.idleInterval = setInterval(() => {
-            const IDLE_TIMEOUT = 5 * 60 * 1000; // 5 minutes (reduced for resilience)
+            const IDLE_TIMEOUT = 2 * 60 * 1000; // 2 minutes (reduced from 5)
             const now = Date.now();
             for (const [id, lastTime] of this.lastAccessed.entries()) {
                 if (now - lastTime > IDLE_TIMEOUT) {
@@ -21,7 +21,7 @@ class BrowserManager {
                     this.delete(id).catch(() => {});
                 }
             }
-        }, 60 * 1000); // 1 minute sweep (faster)
+        }, 30 * 1000); // 30 seconds sweep (faster)
     }
 
     /**
@@ -41,13 +41,18 @@ class BrowserManager {
             recordVideo = true, // Default to true if not specified
         } = options;
 
-        // FORCE headless mode in production (servers don't have X11/Display)
-        // BYPASS this if we are in HAL_CLI_MODE (local execution via NPX/Launcher)
+        // --- HEADLESS LOGIC ---
+        // Respect the user's manual preference if provided exactly.
+        // Otherwise, force headless in production servers (except CLI mode).
         const isProduction = process.env.NODE_ENV === 'production';
         const isCliMode = process.env.HAL_CLI_MODE === 'true';
 
-        if (isProduction && !headless && !isCliMode) {
-            console.log('[BrowserService] Production environment detected - forcing headless mode');
+        if (options.headless !== undefined) {
+            headless = options.headless === true || options.headless === 'true';
+        } else if (isProduction && !isCliMode) {
+            console.log(
+                '[BrowserService] Production environment detected - defaulting to headless',
+            );
             headless = true;
         }
 
@@ -276,6 +281,20 @@ class BrowserManager {
 
         // Cleanup only internal app instances
         console.log('[BrowserService] 🧹 Internal session cleanup complete.');
+
+        // 🚀 HARD CLEANUP: Wipe any orphaned playwright-related processes
+        // Only if we are on Linux/Mac
+        if (process.platform === 'linux' || process.platform === 'darwin') {
+            try {
+                const { exec } = await import('child_process');
+                // Kill all chromium processes launched by playwright that might have been orphaned
+                // We use -f to match the full command line
+                exec('pkill -f "chrome|chromium|playwright"');
+                console.log('[BrowserService] 🚀 OS-level pkill executed for orphaned processes.');
+            } catch (e) {
+                console.warn('[BrowserService] Failed to run OS-level pkill:', e.message);
+            }
+        }
     }
 
     keys() {

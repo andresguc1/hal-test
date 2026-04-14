@@ -56,12 +56,23 @@ export const getIO = () => {
 
 // ─── Existing emitters ────────────────────────────────────────────────────────
 
-export const emitExecutionStatus = ({ stepId, status, error = null }) => {
+export const emitExecutionStatus = ({ stepId, status, error = null, result = null }) => {
     if (io) {
         console.log(`📡 [Socket.io] Emitting execution-status: ${stepId} -> ${status}`);
-        io.emit('execution-status', { stepId, status, error });
+        io.emit('execution-status', { stepId, status, error, result });
     } else {
         console.warn('⚠️ [Socket.io] Skipping emission: Socket.io server not initialized');
+    }
+};
+
+export const emitEdgeStatus = ({ edgeId, status }) => {
+    if (io) {
+        console.log(`📡 [Socket.io] Emitting edge-status: ${edgeId} -> ${status}`);
+        io.emit('edge-status', { edgeId, status });
+    } else {
+        console.warn(
+            '⚠️ [Socket.io] Skipping emission: Socket.io server not initialized (edge-status)',
+        );
     }
 };
 
@@ -98,6 +109,12 @@ export const emitFlowFinished = ({ runId, status, flowId, error = null }) => {
     if (io) {
         console.log(`📡 [Socket.io] Emitting flow-finished: ${runId} -> ${status}`);
         io.emit('flow-finished', { runId, status, flowId, error });
+    }
+};
+
+export const emitVariableChange = ({ name, value, scope, operation }) => {
+    if (io) {
+        io.emit('variable-change', { name, value, scope, operation, timestamp: Date.now() });
     }
 };
 

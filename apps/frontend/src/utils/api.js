@@ -29,9 +29,10 @@ const getHeaders = async () => {
   // Skip Supabase Session if Auth is disabled (ONLY allowed in non-production)
   const isProd = import.meta.env.MODE === "production";
   const isAuthEnabled = import.meta.env.VITE_AUTH_ENABLED !== "false";
+  const isLocalMode = import.meta.env.VITE_HALTEST_MODE === "local";
 
-  if (!isProd && !isAuthEnabled) {
-    headers["Authorization"] = `Bearer local-dev-token`;
+  if (isLocalMode || (!isProd && !isAuthEnabled)) {
+    headers["Authorization"] = `Bearer local-guest-token`;
   } else {
     // Supabase Auth
     const {
@@ -144,11 +145,15 @@ export const api = {
     return await response.json();
   },
 
-  async delete(endpoint) {
-    const response = await fetch(normalizeUrl(API_BASE_URL, endpoint), {
+  async delete(endpoint, data = null) {
+    const options = {
       method: "DELETE",
       headers: await getHeaders(),
-    });
+    };
+    if (data) {
+      options.body = JSON.stringify(data);
+    }
+    const response = await fetch(normalizeUrl(API_BASE_URL, endpoint), options);
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(

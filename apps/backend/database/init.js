@@ -39,6 +39,38 @@ Edge.belongsTo(Flow, { as: 'flow', foreignKey: 'flowId' });
 Run.hasMany(StepResult, { as: 'steps', foreignKey: 'run_id', onDelete: 'CASCADE', hooks: true });
 StepResult.belongsTo(Run, { as: 'run', foreignKey: 'run_id' });
 
+// Health Check to detect missing columns in production (Render/Postgres)
+const checkSchemaHealth = async () => {
+    try {
+        console.log(' [DB_INIT] Running schema health check...');
+        // Check critical new columns that often cause 500s if missing
+        await sequelize.query('SELECT "parentId" FROM "Nodes" LIMIT 1', {
+            logging: false,
+        });
+        await sequelize.query('SELECT "batch_id" FROM "execution_runs" LIMIT 1', {
+            logging: false,
+        });
+        console.log(' [DB_INIT] ✅ Schema health check passed.');
+    } catch (error) {
+        const isMissingColumn =
+            error.name === 'SequelizeDatabaseError' &&
+            ['42703', 'SQLITE_ERROR'].some((code) =>
+                (error.original?.code || error.message).includes(code),
+            );
+
+        if (isMissingColumn) {
+            console.warn(
+                ' [DB_INIT] ⚠️ Schema mismatch detected via health check. Attempting auto-fix with { alter: true }...',
+            );
+            await sequelize.sync({ alter: true });
+            console.log(' [DB_INIT] ✅ Database schema auto-corrected successfully.');
+        } else {
+            console.error(' [DB_INIT] ❌ Schema health check failed with unexpected error:', error);
+            // Don't throw here, let the main initDb handle it if it's fatal
+        }
+    }
+};
+
 let isInitializing = false;
 let isInitialized = false;
 
@@ -61,8 +93,12 @@ export const initDb = async (_force = false) => {
         // Note: SQLite has limited ALTER TABLE support.
         // For schema changes, delete the database file and restart.
 
-        await sequelize.sync({ alter: _force });
+        const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
+        await sequelize.sync({ alter: _force || isDev });
         console.log('Database synchronized');
+
+        // Pre-flight Schema Health Check (especially for PostgreSQL/Production)
+        await checkSchemaHealth();
 
         // Seed initial project if empty
         const count = await Project.count();

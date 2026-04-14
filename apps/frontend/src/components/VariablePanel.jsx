@@ -1,5 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { io } from "socket.io-client";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { api } from "../utils/api";
 import { cn } from "../lib/utils";
 import {
@@ -12,21 +11,17 @@ import {
   ChevronRight,
   Copy,
   Check,
+  Plus,
+  Save,
+  Trash2,
+  Pencil,
+  ArrowRightLeft,
 } from "lucide-react";
-
-const getSocketURL = () => {
-  const apiUrl = import.meta.env.VITE_API_URL;
-  if (apiUrl) return apiUrl.replace(/\/api$/, "");
-  return window.location.hostname === "localhost" ||
-    window.location.hostname === "127.0.0.1"
-    ? "http://127.0.0.1:2001"
-    : window.location.origin;
-};
 
 // Max characters to display before truncating
 const MAX_DISPLAY_LENGTH = 200;
 
-// Format a value for display, with optional truncation
+// Format a value for display
 const formatValue = (value) => {
   if (value === null || value === undefined) return "null";
   if (typeof value === "object") {
@@ -35,10 +30,22 @@ const formatValue = (value) => {
   return String(value);
 };
 
-// Single variable card component
-const VariableCard = ({ varKey, value, accentColor = "emerald" }) => {
+// ─── Variable Card (Single Variable Display) ────────────────────────────────
+
+const VariableCard = ({
+  varKey,
+  value,
+  accentColor = "emerald",
+  source,
+  onDelete,
+  onEdit,
+  onMigrateScope,
+  scopeLabel,
+}) => {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState("");
 
   const formatted = formatValue(value);
   const isLong = formatted.length > MAX_DISPLAY_LENGTH;
@@ -51,6 +58,21 @@ const VariableCard = ({ varKey, value, accentColor = "emerald" }) => {
     navigator.clipboard.writeText(`{{${varKey}}}`);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
+  };
+
+  const handleStartEdit = (e) => {
+    e.stopPropagation();
+    setEditValue(formatValue(value));
+    setIsEditing(true);
+  };
+
+  const handleSaveEdit = () => {
+    if (onEdit) onEdit(varKey, editValue);
+    setIsEditing(false);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
   };
 
   const accentColors = {
@@ -74,16 +96,23 @@ const VariableCard = ({ varKey, value, accentColor = "emerald" }) => {
       )}
     >
       <div className="flex items-center justify-between mb-2">
-        <span
-          className={cn(
-            "text-[10px] font-mono font-bold tracking-tight px-1.5 py-0.5 rounded border max-w-[180px] truncate",
-            colors.badge,
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span
+            className={cn(
+              "text-[10px] font-mono font-bold tracking-tight px-1.5 py-0.5 rounded border max-w-[140px] truncate",
+              colors.badge,
+            )}
+            title={varKey}
+          >
+            {varKey}
+          </span>
+          {source === "node" && (
+            <span className="text-[8px] text-slate-600 bg-slate-800 px-1 py-0.5 rounded font-bold uppercase">
+              📄 node
+            </span>
           )}
-          title={varKey}
-        >
-          {varKey}
-        </span>
-        <div className="flex items-center gap-1.5">
+        </div>
+        <div className="flex items-center gap-1">
           <span className="text-[9px] text-slate-600 uppercase font-bold">
             {typeof value === "object"
               ? Array.isArray(value)
@@ -91,6 +120,7 @@ const VariableCard = ({ varKey, value, accentColor = "emerald" }) => {
                 : "object"
               : typeof value}
           </span>
+          {/* Action buttons — visible on hover */}
           <button
             onClick={handleCopy}
             className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-white/10 text-slate-500 hover:text-slate-300 transition-all"
@@ -102,90 +132,325 @@ const VariableCard = ({ varKey, value, accentColor = "emerald" }) => {
               <Copy size={10} />
             )}
           </button>
+          {onEdit && (
+            <button
+              onClick={handleStartEdit}
+              className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-white/10 text-slate-500 hover:text-slate-300 transition-all"
+              title="Edit value"
+            >
+              <Pencil size={10} />
+            </button>
+          )}
+          {onMigrateScope && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onMigrateScope(varKey, value);
+              }}
+              className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-white/10 text-slate-500 hover:text-slate-300 transition-all"
+              title={`Move to ${scopeLabel === "flow" ? "Global" : "Flow"} scope`}
+            >
+              <ArrowRightLeft size={10} />
+            </button>
+          )}
+          {onDelete && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(varKey);
+              }}
+              className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-white/10 text-red-400 hover:text-red-300 transition-all"
+              title="Delete variable"
+            >
+              <Trash2 size={10} />
+            </button>
+          )}
         </div>
       </div>
-      <div
-        className={cn(
-          "text-xs text-slate-300 font-mono bg-black/20 p-2.5 rounded border border-white/5 group-hover:border-white/10 transition-colors overflow-hidden",
-          "max-h-40 overflow-y-auto custom-scrollbar whitespace-pre-wrap break-all",
-        )}
-      >
-        {displayText}
-        {isLong && !expanded && <span className="text-slate-600">…</span>}
-      </div>
-      {isLong && (
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="flex items-center gap-1 mt-1.5 text-[10px] text-slate-500 hover:text-slate-300 transition-colors"
-        >
-          {expanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
-          {expanded ? "Collapse" : `Show all (${formatted.length} chars)`}
-        </button>
+
+      {isEditing ? (
+        <div className="space-y-2">
+          <textarea
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-xs text-slate-100 focus:border-emerald-500/50 outline-none transition-colors min-h-[60px] font-mono"
+            autoFocus
+          />
+          <div className="flex gap-1.5">
+            <button
+              onClick={handleSaveEdit}
+              className="flex-1 text-[9px] font-bold py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white uppercase tracking-wider"
+            >
+              Save
+            </button>
+            <button
+              onClick={handleCancelEdit}
+              className="px-2 text-[9px] font-bold py-1 rounded bg-white/5 hover:bg-white/10 text-slate-400 uppercase tracking-wider"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div
+            className={cn(
+              "text-xs text-slate-300 font-mono bg-black/20 p-2.5 rounded border border-white/5 group-hover:border-white/10 transition-colors overflow-hidden",
+              "max-h-40 overflow-y-auto custom-scrollbar whitespace-pre-wrap break-all",
+            )}
+          >
+            {displayText}
+            {isLong && !expanded && <span className="text-slate-600">…</span>}
+          </div>
+          {isLong && (
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className="flex items-center gap-1 mt-1.5 text-[10px] text-slate-500 hover:text-slate-300 transition-colors"
+            >
+              {expanded ? (
+                <ChevronDown size={10} />
+              ) : (
+                <ChevronRight size={10} />
+              )}
+              {expanded ? "Collapse" : `Show all (${formatted.length} chars)`}
+            </button>
+          )}
+        </>
       )}
     </div>
   );
 };
 
-export default function VariablePanel({ isOpen, onClose }) {
-  const [variables, setVariables] = useState({ flow: {}, global: {} });
-  const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState("flow"); // 'flow' | 'global'
+// ─── Main Variable Panel ─────────────────────────────────────────────────────
 
-  const loadVariables = useCallback(async () => {
+export default function VariablePanel({
+  isOpen,
+  onClose,
+  nodes = [],
+  onDeleteNode,
+  onUpdateNode,
+  onAddNode,
+}) {
+  const [globalVariables, setGlobalVariables] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState("flow");
+  const [isAdding, setIsAdding] = useState(false);
+  const [newVar, setNewVar] = useState({ key: "", value: "" });
+
+  // ─── Flow Variables: Derived from Canvas Nodes (Reactive) ────────────────
+
+  const flowVariableEntries = useMemo(() => {
+    const entries = [];
+    if (!nodes || !Array.isArray(nodes)) return entries;
+
+    nodes.forEach((node) => {
+      if (
+        (node.type === "variable" || node.data?.type === "variable") &&
+        node.data?.configuration
+      ) {
+        const config = node.data.configuration;
+        const scope = config.scope || "flow";
+        if (scope === "flow" && config.name) {
+          entries.push({
+            key: config.name,
+            value: config.value ?? "",
+            nodeId: node.id,
+            source: "node",
+          });
+        }
+      }
+    });
+
+    return entries;
+  }, [nodes]);
+
+  const flowVariablesMap = useMemo(() => {
+    const map = {};
+    flowVariableEntries.forEach((entry) => {
+      map[entry.key] = entry;
+    });
+    return map;
+  }, [flowVariableEntries]);
+
+  // ─── Global Variables: Fetched from Backend ──────────────────────────────
+
+  const loadGlobalVariables = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get("/variables");
+      const res = await api.get("/variables?runId=global-static");
       if (res.success) {
-        // Deduplicate: remove from flow any key that already exists in global
-        const globalKeys = new Set(Object.keys(res.data.global || {}));
-        const dedupedFlow = {};
-        Object.entries(res.data.flow || {}).forEach(([key, val]) => {
-          if (!globalKeys.has(key)) {
-            dedupedFlow[key] = val;
-          }
-        });
-        setVariables({
-          flow: dedupedFlow,
-          global: res.data.global || {},
-        });
+        setGlobalVariables(res.data.global || {});
       }
     } catch (error) {
-      console.error("Failed to load variables:", error);
+      console.error("Failed to load global variables:", error);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Load on open
+  // Load globals on open
   useEffect(() => {
     if (isOpen) {
-      loadVariables();
+      loadGlobalVariables();
     }
-  }, [isOpen, loadVariables]);
+  }, [isOpen, loadGlobalVariables]);
 
-  // Auto-refresh: listen for execution-status events via socket
+  // ─── Socket: Listen for real-time variable changes ───────────────────────
+
   useEffect(() => {
     if (!isOpen) return;
 
-    const socket = io(getSocketURL(), { autoConnect: true });
+    const socket = window.__HAL_SOCKET__;
+    if (!socket) return;
 
-    socket.on("execution-status", (data) => {
-      if (data?.status === "success" || data?.status === "failed") {
-        setTimeout(() => loadVariables(), 300);
+    const handler = (data) => {
+      if (data?.scope === "global") {
+        // Refresh globals from backend when a global variable changes
+        loadGlobalVariables();
       }
-    });
-
-    return () => {
-      socket.disconnect();
     };
-  }, [isOpen, loadVariables]);
+
+    socket.on("variable-change", handler);
+    return () => {
+      socket.off("variable-change", handler);
+    };
+  }, [isOpen, loadGlobalVariables]);
+
+  // ─── CRUD Handlers ──────────────────────────────────────────────────────
+
+  const handleAddVariable = async () => {
+    if (!newVar.key.trim()) return;
+
+    if (activeTab === "flow") {
+      // Create a variable node on canvas
+      if (onAddNode) {
+        onAddNode("variable", {
+          configuration: {
+            operation: "set",
+            name: newVar.key,
+            value: newVar.value,
+            scope: "flow",
+          },
+        });
+      }
+    } else {
+      // Save to backend as global
+      try {
+        await api.post("/variables", {
+          variables: { [newVar.key]: newVar.value },
+          scope: "global",
+        });
+        loadGlobalVariables();
+      } catch (error) {
+        console.error("Failed to add global variable:", error);
+      }
+    }
+
+    setNewVar({ key: "", value: "" });
+    setIsAdding(false);
+  };
+
+  const handleDeleteFlowVariable = (varKey) => {
+    const entry = flowVariablesMap[varKey];
+    if (entry?.nodeId && onDeleteNode) {
+      onDeleteNode(entry.nodeId);
+    }
+  };
+
+  const handleDeleteGlobalVariable = async (varKey) => {
+    try {
+      await api.delete("/variables", { name: varKey, scope: "global" });
+      loadGlobalVariables();
+    } catch (error) {
+      console.error("Failed to delete global variable:", error);
+    }
+  };
+
+  const handleEditFlowVariable = (varKey, newValue) => {
+    const entry = flowVariablesMap[varKey];
+    if (entry?.nodeId && onUpdateNode) {
+      onUpdateNode(entry.nodeId, {
+        value: newValue,
+      });
+    }
+  };
+
+  const handleEditGlobalVariable = async (varKey, newValue) => {
+    try {
+      await api.post("/variables", {
+        variables: { [varKey]: newValue },
+        scope: "global",
+      });
+      loadGlobalVariables();
+    } catch (error) {
+      console.error("Failed to edit global variable:", error);
+    }
+  };
+
+  const handleMigrateToGlobal = async (varKey, value) => {
+    // 1. Save to global backend
+    try {
+      await api.post("/variables", {
+        variables: { [varKey]: value },
+        scope: "global",
+      });
+      await loadGlobalVariables();
+      setActiveTab("global"); // Switch tab to show the result
+    } catch (error) {
+      console.error("Failed to migrate to global:", error);
+      return;
+    }
+
+    // 2. Update flow variable node scope on canvas instead of deleting it
+    const entry = flowVariablesMap[varKey];
+    if (entry?.nodeId && onUpdateNode) {
+      onUpdateNode(entry.nodeId, {
+        scope: "global",
+        label: `Global: ${varKey}`, // Visual feedback
+      });
+    }
+  };
+
+  const handleMigrateToFlow = async (varKey, value) => {
+    // 1. Create variable node on canvas
+    if (onAddNode) {
+      onAddNode("variable", {
+        configuration: {
+          operation: "set",
+          name: varKey,
+          value:
+            typeof value === "object"
+              ? JSON.stringify(value, null, 2)
+              : String(value),
+          scope: "flow",
+        },
+      });
+      setActiveTab("flow"); // Switch tab to show the node in the list
+    }
+
+    // 2. Delete from global backend
+    await handleDeleteGlobalVariable(varKey);
+  };
+
+  // ─── Rendering ──────────────────────────────────────────────────────────
 
   if (!isOpen) return null;
 
-  const currentVars = activeTab === "flow" ? variables.flow : variables.global;
-  const varEntries = Object.entries(currentVars);
-  const flowCount = Object.keys(variables.flow).length;
-  const globalCount = Object.keys(variables.global).length;
+  const flowCount = flowVariableEntries.length;
+  const globalCount = Object.keys(globalVariables).length;
+
+  const currentEntries =
+    activeTab === "flow"
+      ? flowVariableEntries.map((e) => ({
+          key: e.key,
+          value: e.value,
+          source: e.source,
+        }))
+      : Object.entries(globalVariables).map(([key, value]) => ({
+          key,
+          value,
+          source: "backend",
+        }));
 
   return (
     <div className="relative h-full flex flex-col shrink-0 w-full sm:w-72 md:w-80 lg:w-96 glass-panel z-[var(--z-hud)] border-l border-white/5 bg-[#0f172a]/95 backdrop-blur-xl shadow-2xl">
@@ -201,12 +466,26 @@ export default function VariablePanel({ isOpen, onClose }) {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={loadVariables}
-            className="p-1.5 hover:bg-white/10 rounded-md text-slate-400 hover:text-slate-200 transition-colors"
-            title="Refresh"
+            onClick={() => setIsAdding(!isAdding)}
+            className={cn(
+              "p-1.5 rounded-md transition-colors",
+              isAdding
+                ? "bg-emerald-500/20 text-emerald-400"
+                : "text-slate-400 hover:bg-white/10 hover:text-slate-200",
+            )}
+            title="Add Variable"
           >
-            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+            <Plus size={14} />
           </button>
+          {activeTab === "global" && (
+            <button
+              onClick={loadGlobalVariables}
+              className="p-1.5 hover:bg-white/10 rounded-md text-slate-400 hover:text-slate-200 transition-colors"
+              title="Refresh Globals"
+            >
+              <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+            </button>
+          )}
           <button
             onClick={onClose}
             className="p-1.5 hover:bg-white/10 rounded-md text-slate-400 hover:text-slate-200 transition-colors"
@@ -228,7 +507,7 @@ export default function VariablePanel({ isOpen, onClose }) {
           )}
         >
           <Layers size={12} />
-          Flow Scope
+          📄 Flow Scope
           {flowCount > 0 && (
             <span
               className={cn(
@@ -252,7 +531,7 @@ export default function VariablePanel({ isOpen, onClose }) {
           )}
         >
           <Globe size={12} />
-          Global Scope
+          🌐 Global Scope
           {globalCount > 0 && (
             <span
               className={cn(
@@ -268,34 +547,97 @@ export default function VariablePanel({ isOpen, onClose }) {
         </button>
       </div>
 
+      {/* ADD VARIABLE FORM */}
+      {isAdding && (
+        <div className="p-3 border-b border-white/5 bg-slate-900/60 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="space-y-2">
+            <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+              Variable Name
+            </label>
+            <input
+              type="text"
+              value={newVar.key}
+              onChange={(e) => setNewVar({ ...newVar, key: e.target.value })}
+              placeholder="e.g. test_user"
+              className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-xs text-slate-100 placeholder:text-slate-600 focus:border-emerald-500/50 outline-none transition-colors"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+              Value
+            </label>
+            <textarea
+              value={newVar.value}
+              onChange={(e) => setNewVar({ ...newVar, value: e.target.value })}
+              placeholder="Value..."
+              className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-xs text-slate-100 placeholder:text-slate-600 focus:border-emerald-500/50 outline-none transition-colors min-h-[60px]"
+            />
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={handleAddVariable}
+              disabled={!newVar.key.trim()}
+              className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:hover:bg-emerald-600 text-white text-[10px] font-bold py-1.5 rounded transition-colors uppercase tracking-wider"
+            >
+              <Save size={12} />
+              Save to {activeTab}
+            </button>
+            <button
+              onClick={() => setIsAdding(false)}
+              className="px-3 bg-white/5 hover:bg-white/10 text-slate-400 text-[10px] font-bold rounded transition-colors uppercase tracking-wider"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* CONTENT */}
       <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2">
-        {loading && varEntries.length === 0 ? (
+        {loading && currentEntries.length === 0 ? (
           <div className="flex items-center justify-center p-8 text-slate-500 text-xs text-center">
             <div className="flex flex-col items-center gap-3">
               <RefreshCw size={24} className="animate-spin opacity-30 px-1" />
               <span>Fetching active environment...</span>
             </div>
           </div>
-        ) : varEntries.length === 0 ? (
+        ) : currentEntries.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-8 text-slate-500 text-xs gap-3 text-center">
             <Database size={32} className="opacity-20" />
             <div className="flex flex-col gap-1">
               <span className="font-bold text-slate-400">Empty Scope</span>
               <span className="text-[10px] text-slate-600 leading-relaxed">
-                No variables captured in {activeTab} scope yet.
-                {activeTab === "flow" && " Run a node to populate this scope."}
+                {activeTab === "flow"
+                  ? "No variable nodes in this flow. Add a Variable node to the canvas or click + above."
+                  : "No global variables set. Click + to create one."}
               </span>
             </div>
           </div>
         ) : (
           <div className="space-y-2">
-            {varEntries.map(([key, value]) => (
+            {currentEntries.map((entry) => (
               <VariableCard
-                key={key}
-                varKey={key}
-                value={value}
+                key={entry.key}
+                varKey={entry.key}
+                value={entry.value}
+                source={entry.source}
                 accentColor={activeTab === "flow" ? "emerald" : "sky"}
+                scopeLabel={activeTab}
+                onDelete={
+                  activeTab === "flow"
+                    ? handleDeleteFlowVariable
+                    : handleDeleteGlobalVariable
+                }
+                onEdit={
+                  activeTab === "flow"
+                    ? handleEditFlowVariable
+                    : handleEditGlobalVariable
+                }
+                onMigrateScope={
+                  activeTab === "flow"
+                    ? handleMigrateToGlobal
+                    : handleMigrateToFlow
+                }
               />
             ))}
           </div>
@@ -314,6 +656,11 @@ export default function VariablePanel({ isOpen, onClose }) {
             {"{{variableName}}"}
           </span>{" "}
           in any node input to reference these values.
+          {activeTab === "flow" && (
+            <span className="block mt-1 text-emerald-500/50">
+              Flow scope has priority over Global scope (shadowing).
+            </span>
+          )}
         </p>
       </div>
     </div>

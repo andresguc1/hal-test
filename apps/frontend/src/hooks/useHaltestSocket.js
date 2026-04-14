@@ -16,20 +16,20 @@ const getSocketURL = () => {
 
 const SOCKET_URL = getSocketURL();
 
-export const useHaltestSocket = (
+export const useHaltestSocket = ({
   setNodes,
   setEdges,
   onElementPicked,
   onLogReceived,
   onTerminalOutput,
   onCodegenAction,
-  getCanvasState, // NEW: Function to return { nodes, edges }
-  onProposeNodes, // CHANGED: Manejar propuesta de nodos
-  onAddNode, // NEW: Granular node addition
-  onConnectNodes, // NEW: Granular node connection
-  onRemoveNode, // NEW: Node removal
-  onUpdateNode, // NEW: Node update
-) => {
+  getCanvasState,
+  onProposeNodes,
+  onAddNode,
+  onConnectNodes,
+  onRemoveNode,
+  onUpdateNode,
+}) => {
   const socketRef = useRef(null);
   const onElementPickedRef = useRef(onElementPicked);
   const setNodesRef = useRef(setNodes);
@@ -84,6 +84,7 @@ export const useHaltestSocket = (
 
     socket.on("connect", () => {
       console.log("Haltest Socket: ✅ Connected (ID:", socket.id, ")");
+      window.__HAL_SOCKET__ = socket; // Expose for VariablePanel real-time sync
     });
 
     socket.on("connect_error", (error) => {
@@ -92,9 +93,10 @@ export const useHaltestSocket = (
 
     socket.on("execution-status", (data) => {
       if (!data || !data.stepId) return;
-      const { stepId, status, error } = data;
+      const { stepId, status, error, result } = data;
       console.log(`Haltest Socket: ⚡ Event [${stepId}] -> ${status}`);
 
+      // 1. UPDATE NODES
       if (setNodesRef.current) {
         setNodesRef.current((nds) => {
           if (!Array.isArray(nds)) return nds;
@@ -106,8 +108,8 @@ export const useHaltestSocket = (
                   ...node.data,
                   state: status,
                   error: error || node.data.error,
-                  result: data.result
-                    ? { ...node.data.result, ...data.result }
+                  result: result
+                    ? { ...node.data.result, ...result }
                     : node.data.result,
                   formattedOutput: data.output || node.data.formattedOutput,
                 },
@@ -117,20 +119,33 @@ export const useHaltestSocket = (
           });
         });
       }
+    });
+
+    socket.on("edge-status", (data) => {
+      if (!data || !data.edgeId) return;
+      const { edgeId, status } = data;
+      console.log(`Haltest Socket: ⚡ Edge [${edgeId}] -> ${status}`);
 
       if (setEdgesRef.current) {
-        setEdgesRef.current((eds) =>
-          eds.map((edge) => {
-            if (edge.source === stepId) {
+        setEdgesRef.current((eds) => {
+          if (!Array.isArray(eds)) return eds;
+          return eds.map((edge) => {
+            // Match by id or custom edgeId property
+            if (
+              edge.id === edgeId ||
+              (edge.data && edge.data.edgeId === edgeId)
+            ) {
               return {
                 ...edge,
-                animated: status === "running",
-                data: { ...edge.data, executionState: status },
+                data: {
+                  ...edge.data,
+                  executionState: status,
+                },
               };
             }
             return edge;
-          }),
-        );
+          });
+        });
       }
     });
 
