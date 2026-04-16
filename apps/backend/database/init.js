@@ -93,9 +93,10 @@ export const initDb = async (_force = false) => {
         // Note: SQLite has limited ALTER TABLE support.
         // For schema changes, delete the database file and restart.
 
-        const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
-        await sequelize.sync({ alter: _force || isDev });
-        console.log('Database synchronized');
+        const shouldAlter = _force || process.env.DB_AUTO_MIGRATE === 'true';
+
+        await sequelize.sync({ alter: shouldAlter });
+        console.log(`Database synchronized (Alter: ${shouldAlter})`);
 
         // Pre-flight Schema Health Check (especially for PostgreSQL/Production)
         await checkSchemaHealth();

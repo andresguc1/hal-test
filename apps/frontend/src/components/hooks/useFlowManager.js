@@ -1014,6 +1014,12 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
                 newConfig.description !== undefined
                   ? newConfig.description
                   : n.data.description,
+              // ENSURE COMPONENT METADATA IS PRESERVED
+              subFlow: n.data.subFlow || undefined,
+              nodeCount: n.data.nodeCount || 0,
+              hasInput: n.data.hasInput || false,
+              hasOutput: n.data.hasOutput || false,
+              flowId: n.data.flowId || undefined,
             },
           };
 
@@ -1843,6 +1849,20 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
           // Inject takeScreenshot if present in payload (Flight Recorder)
           if (payload?.takeScreenshot !== undefined) {
             bodyToSend.takeScreenshot = payload.takeScreenshot;
+          }
+
+          // Inject label for variable management (VariableManager requires human-readable labels)
+          // We prioritize an explicit label if provided in the action,
+          // then customLabel, then the default label from the store.
+          const nodeLabel =
+            action.label ||
+            storeNode?.data?.customLabel ||
+            storeNode?.data?.label ||
+            NODE_LABELS[type] ||
+            storeNode?.id ||
+            nodeId;
+          if (nodeLabel) {
+            bodyToSend.label = nodeLabel;
           }
         } catch (builderError) {
           console.error(`Error in payload builder for ${type}:`, builderError);
@@ -2724,21 +2744,41 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
                     depth + 1,
                   );
                   result = subResult || { success: true };
-                  updateNodeState(
-                    node.id,
-                    result.success ? NODE_STATES.SUCCESS : NODE_STATES.ERROR,
+
+                  const finalNodeState = result.success
+                    ? NODE_STATES.SUCCESS
+                    : NODE_STATES.ERROR;
+                  updateNodeState(node.id, finalNodeState);
+
+                  // ✨ INCOMING DATA CONTRACT: Store the sub-flow result on the component
+                  // node itself so the next node's "Incoming Data" panel can display it.
+                  const componentResult = {
+                    status: result.success ? "success" : "error",
+                    data: result,
+                    error: result.success
+                      ? null
+                      : { message: result.error || "Sub-flow failed" },
+                  };
+                  setNodes((nds) =>
+                    updateNodeRecursively(nds, node.id, (n) => ({
+                      ...n,
+                      data: {
+                        ...n.data,
+                        result: componentResult,
+                        state: finalNodeState,
+                      },
+                    })),
                   );
+
                   if (!result.success && stopOnError) {
-                    // Prepend current component to the dive path
                     const divePath = result.divePath || [];
                     return {
                       ...result,
                       divePath: [node.id, ...divePath],
-                      healedNodes, // Return what we found so far
+                      healedNodes,
                     };
                   }
 
-                  // If sub-flow had healed nodes, merge them
                   if (result.healedNodes?.length > 0) {
                     healedNodes.push(...result.healedNodes);
                   }
@@ -2851,6 +2891,7 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
               const action = {
                 nodeId: node.id,
                 type: node.data?.type || node.type,
+                label: node.data?.customLabel || node.data?.label,
                 // Use a shorter timeout (8s) for faster failure detection
                 payload: {
                   ...resolvedConfig,
@@ -3112,9 +3153,9 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
       validateFlowStructure,
       t,
       toast,
-      setApiStatus,
       setExecutionStats,
       setActiveBrowserId,
+      setNodes,
     ],
   );
 

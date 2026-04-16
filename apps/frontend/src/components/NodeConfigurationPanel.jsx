@@ -36,174 +36,189 @@ import { api } from "../utils/api";
 import EvidenceCard from "./EvidenceCard"; // New component import
 import VariableInput from "./VariableInput";
 
-const ConditionalBranchesEditor = ({ value, onChange, variables }) => {
-  const { t } = useTranslation();
-  const branches =
-    Array.isArray(value) && value.length > 0
-      ? value
-      : [
-          { id: "true", label: "True", expression: "" },
-          { id: "false", label: "False", expression: "" },
-        ];
+const ConditionalBranchesEditor = React.memo(
+  ({ value, onChange, variables }) => {
+    const { t } = useTranslation();
+    const branches = useMemo(() => {
+      return Array.isArray(value) && value.length > 0
+        ? value
+        : [
+            { id: "true", label: "True", expression: "" },
+            { id: "false", label: "False", expression: "" },
+          ];
+    }, [value]);
 
-  const updateBranch = (index, field, val) => {
-    const newBranches = [...branches];
-    newBranches[index] = { ...newBranches[index], [field]: val };
-    onChange(newBranches);
-  };
+    const updateBranch = React.useCallback(
+      (index, field, val) => {
+        const newBranches = [...branches];
+        newBranches[index] = { ...newBranches[index], [field]: val };
+        onChange(newBranches);
+      },
+      [branches, onChange],
+    );
 
-  const addBranch = () => {
-    onChange([
-      ...branches,
-      { id: `branch_${Date.now()}`, label: "Nueva", expression: "" },
-    ]);
-  };
+    const addBranch = React.useCallback(() => {
+      onChange([
+        ...branches,
+        { id: `branch_${Date.now()}`, label: "Nueva", expression: "" },
+      ]);
+    }, [branches, onChange]);
 
-  const removeBranch = (index) => {
-    if (branches.length <= 1) return; // Prevent deleting last
-    const newBranches = [...branches];
-    newBranches.splice(index, 1);
-    onChange(newBranches);
-  };
+    const removeBranch = React.useCallback(
+      (index) => {
+        if (branches.length <= 1) return; // Prevent deleting last
+        const newBranches = [...branches];
+        newBranches.splice(index, 1);
+        onChange(newBranches);
+      },
+      [branches, onChange],
+    );
 
-  return (
-    <div className="space-y-4 mt-4 mb-2">
-      <div className="flex justify-between items-center mb-1">
-        <label className="text-[11px] uppercase tracking-[0.2em] font-black text-sky-400 ml-1 flex items-center gap-2">
-          <Split size={14} />
-          {t("nodes.config.branching_rules", "Reglas de Bifurcación")}
-        </label>
-        <div className="group relative">
-          <Info
-            size={14}
-            className="text-slate-500 hover:text-sky-400 cursor-help transition-colors"
-          />
-          <div className="absolute right-0 bottom-full mb-2 w-48 p-2 bg-slate-900 border border-slate-700 rounded-lg text-[10px] text-slate-300 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">
-            {t(
-              "nodes.hints.conditional_logic",
-              'La primera coincidencia detiene la evaluación. Deja vacío para "Si no..." (Else).',
-            )}
+    return (
+      <div className="space-y-4 mt-4 mb-2">
+        <div className="flex justify-between items-center mb-1">
+          <label className="text-[11px] uppercase tracking-[0.2em] font-black text-sky-400 ml-1 flex items-center gap-2">
+            <Split size={14} />
+            {t("nodes.config.branching_rules", "Reglas de Bifurcación")}
+          </label>
+          <div className="group relative">
+            <Info
+              size={14}
+              className="text-slate-500 hover:text-sky-400 cursor-help transition-colors"
+            />
+            <div className="absolute right-0 bottom-full mb-2 w-48 p-2 bg-slate-900 border border-slate-700 rounded-lg text-[10px] text-slate-300 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">
+              {t(
+                "nodes.hints.conditional_logic",
+                'La primera coincidencia detiene la evaluación. Deja vacío para "Si no..." (Else).',
+              )}
+            </div>
           </div>
         </div>
-      </div>
-      <div className="space-y-4">
-        {branches.map((branch, index) => {
-          const isDefault = !branch.expression;
-          const isTrue = branch.id === "true";
-          const isFalse = branch.id === "false";
+        <div className="space-y-4">
+          {branches.map((branch, index) => {
+            const isDefault = !branch.expression;
+            const isTrue = branch.id === "true";
+            const isFalse = branch.id === "false";
 
-          return (
-            <div
-              key={index}
-              className="px-4 py-4 bg-[#0f172a]/80 border border-sky-500/20 rounded-2xl space-y-3 relative group hover:border-sky-500/50 transition-all shadow-lg hover:shadow-sky-500/5"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 flex-1">
-                  <div
-                    className={cn(
-                      "w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border",
-                      isTrue
-                        ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
-                        : isFalse
-                          ? "bg-red-500/10 border-red-500/30 text-red-400"
-                          : "bg-sky-500/10 border-sky-500/30 text-sky-400",
-                    )}
-                  >
-                    {isTrue ? (
-                      <CheckCircle2 size={16} />
-                    ) : isFalse ? (
-                      <XCircle size={16} />
-                    ) : (
-                      <GitBranch size={16} />
-                    )}
+            return (
+              <div
+                key={branch.id || `branch-${index}`}
+                className="px-4 py-4 bg-[#0f172a]/80 border border-sky-500/20 rounded-2xl space-y-3 relative group hover:border-sky-500/50 transition-all shadow-lg hover:shadow-sky-500/5"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 flex-1">
+                    <div
+                      className={cn(
+                        "w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border",
+                        isTrue
+                          ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
+                          : isFalse
+                            ? "bg-red-500/10 border-red-500/30 text-red-400"
+                            : "bg-sky-500/10 border-sky-500/30 text-sky-400",
+                      )}
+                    >
+                      {isTrue ? (
+                        <CheckCircle2 size={16} />
+                      ) : isFalse ? (
+                        <XCircle size={16} />
+                      ) : (
+                        <GitBranch size={16} />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-tighter block mb-0.5">
+                        {index === 0 ? "IF (SI...)" : "ELSE IF (O SI...)"}
+                      </span>
+                      <input
+                        type="text"
+                        placeholder="Etiqueta (ej: Login Exitoso)"
+                        value={branch.label}
+                        onChange={(e) =>
+                          updateBranch(index, "label", e.target.value)
+                        }
+                        className="w-full bg-transparent border-none p-0 text-xs font-bold text-white focus:outline-none placeholder:text-slate-600 focus:ring-0"
+                      />
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-tighter block mb-0.5">
-                      {index === 0 ? "IF (SI...)" : "ELSE IF (O SI...)"}
-                    </span>
-                    <input
-                      type="text"
-                      placeholder="Etiqueta (ej: Login Exitoso)"
-                      value={branch.label}
-                      onChange={(e) =>
-                        updateBranch(index, "label", e.target.value)
-                      }
-                      className="w-full bg-transparent border-none p-0 text-xs font-bold text-white focus:outline-none placeholder:text-slate-600 focus:ring-0"
-                    />
+
+                  <div className="flex items-center gap-2">
+                    <div className="bg-black/30 px-2 py-0.5 rounded border border-white/5 text-[9px] font-mono text-slate-400">
+                      ID: {branch.id}
+                    </div>
+                    <button
+                      onClick={() => removeBranch(index)}
+                      className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
+                      title="Eliminar Ruta"
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <div className="bg-black/30 px-2 py-0.5 rounded border border-white/5 text-[9px] font-mono text-slate-400">
-                    ID: {branch.id}
-                  </div>
-                  <button
-                    onClick={() => removeBranch(index)}
-                    className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
-                    title="Eliminar Ruta"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="relative">
-                <VariableInput
-                  value={branch.expression || ""}
-                  variables={variables}
-                  placeholder={t(
-                    "nodes.placeholders.condition_expression",
-                    "Ex: ${status} === 200 (Vacío = Default)",
+                <div className="relative">
+                  <VariableInput
+                    value={branch.expression || ""}
+                    variables={variables}
+                    placeholder={t(
+                      "nodes.placeholders.condition_expression",
+                      "Ex: ${status} === 200 (Vacío = Default)",
+                    )}
+                    onChange={(e) =>
+                      updateBranch(index, "expression", e.target.value)
+                    }
+                    className="bg-black/40 border-sky-500/20 focus:border-sky-500/50 min-h-[38px] text-[11px] py-2"
+                  />
+                  {isDefault && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-2 py-0.5 bg-sky-500/10 border border-sky-500/20 rounded text-[9px] font-black text-sky-400 pointer-events-none uppercase tracking-widest">
+                      <Zap size={10} fill="currentColor" />
+                      DEFAULT
+                    </div>
                   )}
-                  onChange={(e) =>
-                    updateBranch(index, "expression", e.target.value)
-                  }
-                  className="bg-black/40 border-sky-500/20 focus:border-sky-500/50 min-h-[38px] text-[11px] py-2"
-                />
-                {isDefault && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-2 py-0.5 bg-sky-500/10 border border-sky-500/20 rounded text-[9px] font-black text-sky-400 pointer-events-none uppercase tracking-widest">
-                    <Zap size={10} fill="currentColor" />
-                    DEFAULT
-                  </div>
-                )}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
+        <button
+          onClick={addBranch}
+          className="w-full py-3 bg-sky-500/5 hover:bg-sky-500/10 border border-dashed border-sky-500/30 rounded-2xl text-[11px] font-black uppercase tracking-widest text-sky-400 flex items-center justify-center gap-3 mt-4 transition-all hover:border-sky-500/60 active:scale-95 group"
+        >
+          <span className="w-5 h-5 rounded-full bg-sky-500/20 flex items-center justify-center group-hover:bg-sky-500/40 transition-colors">
+            <GitBranch size={12} />
+          </span>
+          {t("nodes.config.add_branch", "Agregar Nueva Regla")}
+        </button>
       </div>
-      <button
-        onClick={addBranch}
-        className="w-full py-3 bg-sky-500/5 hover:bg-sky-500/10 border border-dashed border-sky-500/30 rounded-2xl text-[11px] font-black uppercase tracking-widest text-sky-400 flex items-center justify-center gap-3 mt-4 transition-all hover:border-sky-500/60 active:scale-95 group"
-      >
-        <span className="w-5 h-5 rounded-full bg-sky-500/20 flex items-center justify-center group-hover:bg-sky-500/40 transition-colors">
-          <GitBranch size={12} />
-        </span>
-        {t("nodes.config.add_branch", "Agregar Nueva Regla")}
-      </button>
-    </div>
-  );
-};
+    );
+  },
+);
 
-const SwitchCasesEditor = ({ value, onChange, _variables }) => {
+const SwitchCasesEditor = React.memo(({ value, onChange, _variables }) => {
   const { t } = useTranslation();
-  const cases = Array.isArray(value) ? value : [];
+  const cases = useMemo(() => (Array.isArray(value) ? value : []), [value]);
 
-  const updateCase = (index, field, val) => {
-    const newCases = [...cases];
-    newCases[index] = { ...newCases[index], [field]: val };
-    onChange(newCases);
-  };
+  const updateCase = React.useCallback(
+    (index, field, val) => {
+      const newCases = [...cases];
+      newCases[index] = { ...newCases[index], [field]: val };
+      onChange(newCases);
+    },
+    [cases, onChange],
+  );
 
-  const addCase = () => {
+  const addCase = React.useCallback(() => {
     const id = `case_${Date.now()}`;
     onChange([...cases, { id, value: "", label: "" }]);
-  };
+  }, [cases, onChange]);
 
-  const removeCase = (index) => {
-    const newCases = [...cases];
-    newCases.splice(index, 1);
-    onChange(newCases);
-  };
+  const removeCase = React.useCallback(
+    (index) => {
+      const newCases = [...cases];
+      newCases.splice(index, 1);
+      onChange(newCases);
+    },
+    [cases, onChange],
+  );
 
   return (
     <div className="space-y-4 mt-4 mb-2">
@@ -228,7 +243,7 @@ const SwitchCasesEditor = ({ value, onChange, _variables }) => {
       <div className="space-y-3">
         {cases.map((c, index) => (
           <div
-            key={index}
+            key={c.id}
             className="px-3 py-3 bg-[#0f172a]/60 border border-indigo-500/20 rounded-xl space-y-2 relative group hover:border-indigo-500/40 transition-all shadow-md"
           >
             <div className="flex items-center justify-between gap-2">
@@ -249,7 +264,7 @@ const SwitchCasesEditor = ({ value, onChange, _variables }) => {
               </div>
               <button
                 onClick={() => removeCase(index)}
-                className="p-1 text-slate-500 hover:text-red-400 transition-colors"
+                className="p-1.5 text-slate-600 hover:text-red-400 transition-colors"
               >
                 <Trash2 size={12} />
               </button>
@@ -304,7 +319,7 @@ const SwitchCasesEditor = ({ value, onChange, _variables }) => {
       </div>
     </div>
   );
-};
+});
 
 const MappingEditor = ({
   value,
@@ -345,7 +360,7 @@ const MappingEditor = ({
       <div className="space-y-2">
         {mappings.map((m, index) => (
           <div
-            key={index}
+            key={`mapping-${index}`}
             className="flex items-center gap-2 p-2.5 bg-[#0f172a]/40 rounded-xl border border-white/5 group hover:border-white/10 transition-all shadow-sm"
           >
             <div className="flex-1 space-y-1">
@@ -422,6 +437,12 @@ const NODE_INPUTS = {
       label: "📸 Take Screenshot",
       type: "checkbox",
       defaultValue: true,
+    },
+    {
+      key: "continueOnError",
+      label: "🛡️ Continue on failure (Soft Fail)",
+      type: "checkbox",
+      defaultValue: false,
     },
   ],
   launch_browser: [
@@ -621,6 +642,12 @@ const NODE_INPUTS = {
       type: "checkbox",
       defaultValue: true,
     },
+    {
+      key: "continueOnError",
+      label: "🛡️ Continue on failure (Soft Fail)",
+      type: "checkbox",
+      defaultValue: false,
+    },
   ],
   type_text: [
     {
@@ -643,6 +670,12 @@ const NODE_INPUTS = {
       type: "checkbox",
       defaultValue: true,
     },
+    {
+      key: "continueOnError",
+      label: "🛡️ Continue on failure (Soft Fail)",
+      type: "checkbox",
+      defaultValue: false,
+    },
   ],
   hover: [
     {
@@ -662,6 +695,12 @@ const NODE_INPUTS = {
       label: "📸 Take Screenshot",
       type: "checkbox",
       defaultValue: true,
+    },
+    {
+      key: "continueOnError",
+      label: "🛡️ Continue on failure (Soft Fail)",
+      type: "checkbox",
+      defaultValue: false,
     },
   ],
 
@@ -739,6 +778,12 @@ const NODE_INPUTS = {
       label: "📸 Take Screenshot",
       type: "checkbox",
       defaultValue: true,
+    },
+    {
+      key: "continueOnError",
+      label: "🛡️ Continue on failure (Soft Fail)",
+      type: "checkbox",
+      defaultValue: false,
     },
   ],
 
@@ -827,6 +872,12 @@ const NODE_INPUTS = {
       label: "📸 Take Screenshot",
       type: "checkbox",
       defaultValue: true,
+    },
+    {
+      key: "continueOnError",
+      label: "🛡️ Continue on failure (Soft Fail)",
+      type: "checkbox",
+      defaultValue: false,
     },
   ],
   scroll: [
@@ -1129,6 +1180,12 @@ const NODE_INPUTS = {
       label: "📸 Take Screenshot",
       type: "checkbox",
       defaultValue: true,
+    },
+    {
+      key: "continueOnError",
+      label: "🛡️ Continue on failure (Soft Fail)",
+      type: "checkbox",
+      defaultValue: false,
     },
   ],
   save_dom: [
@@ -2126,7 +2183,6 @@ const NODE_INPUTS = {
       label: "Parameter Name",
       type: "text",
       placeholder: "my_param",
-      required: true,
     },
     {
       key: "defaultValue",
@@ -2142,14 +2198,12 @@ const NODE_INPUTS = {
       label: "Output Name",
       type: "text",
       placeholder: "result_key",
-      required: true,
     },
     {
       key: "value",
       label: "Value to Return",
       type: "text",
       placeholder: "${local_var}",
-      required: true,
     },
   ],
 
@@ -2352,29 +2406,53 @@ function NodeConfigurationPanel({
       return { nodeCount: 0, hasInput: false, hasOutput: false };
 
     const flowId = activeNode.data?.flowId;
-    if (!flowId) return { nodeCount: 0, hasInput: false, hasOutput: false };
 
-    // Find the actual subflow in the project
-    const subFlow = currentProject.flows?.find((f) => f.id === flowId);
-    if (!subFlow) {
-      // Fallback to in-memory snapshot if DB flow not yet in project list
-      const nodesCount =
-        activeNode.data?.nodeCount ?? activeNode.data?.subFlow?.nodes?.length;
-      return {
-        nodeCount: nodesCount || 0,
-        hasInput:
+    // Find the actual subflow in the project (if flowId exists)
+    const subFlow = flowId
+      ? currentProject.flows?.find((f) => f.id === flowId)
+      : null;
+
+    // Prioritize "live" data directly on the node (crucial for editing and starter flows)
+    const localNodes = activeNode.data?.subFlow?.nodes;
+    const localNodeCount = activeNode.data?.nodeCount;
+
+    const nodeCount =
+      (localNodes?.length || 0) > 0
+        ? localNodes.length
+        : (subFlow?.nodes?.length ?? localNodeCount ?? 0);
+
+    const hasInput =
+      (localNodes?.length || 0) > 0
+        ? localNodes.some((n) => n.type === "input")
+        : (subFlow?.nodes?.some((n) => n.type === "input") ??
           activeNode.data?.hasInput ??
-          activeNode.data?.subFlow?.nodes?.some((n) => n.type === "input"),
-        hasOutput:
+          false);
+
+    const hasOutput =
+      (localNodes?.length || 0) > 0
+        ? localNodes.some((n) => n.type === "output")
+        : (subFlow?.nodes?.some((n) => n.type === "output") ??
           activeNode.data?.hasOutput ??
-          activeNode.data?.subFlow?.nodes?.some((n) => n.type === "output"),
-      };
+          false);
+
+    // Debug: Log the resolution process to help identify data drift issues
+    if (activeNode.data?.subFlow || subFlow) {
+      console.debug("[NodeConfig] Resolving Composition Stats for:", {
+        nodeId: activeNode.id,
+        flowId,
+        strategy: localNodes
+          ? "local_nodes"
+          : subFlow
+            ? "project_flow"
+            : "local_count",
+        nodeCount,
+      });
     }
 
     return {
-      nodeCount: subFlow.nodes?.length || 0,
-      hasInput: subFlow.nodes?.some((n) => n.type === "input"),
-      hasOutput: subFlow.nodes?.some((n) => n.type === "output"),
+      nodeCount: Number.isFinite(nodeCount) ? nodeCount : 0,
+      hasInput,
+      hasOutput,
     };
   }, [activeNode, currentProject]);
 
@@ -2508,6 +2586,62 @@ function NodeConfigurationPanel({
         });
       }
     }, 200); // Reduced to 200ms for snappier feel and to reduce race window
+  };
+
+  // Helper to render node execution results (emitted data)
+  const renderEmittedData = () => {
+    const result = activeNode.data?.result;
+    if (!result) {
+      return (
+        <div className="text-[10px] text-slate-600 italic px-1 bg-white/5 p-3 rounded-lg border border-dashed border-white/5">
+          No data emitted yet. Run the flow to see results.
+        </div>
+      );
+    }
+
+    const resultData = result.data !== undefined ? result.data : result;
+
+    return (
+      <div className="relative group/emitted">
+        <div className="text-[11px] text-slate-300 font-mono line-clamp-10 bg-black/40 p-3 rounded-xl pr-12 max-h-64 overflow-y-auto custom-scrollbar border border-white/10 shadow-inner">
+          {truncateResult(resultData, 3000)}
+        </div>
+        <div className="absolute right-2 top-2 flex flex-col gap-1.5 opacity-0 group-hover/emitted:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
+          <button
+            onClick={() => {
+              const text =
+                typeof result === "object"
+                  ? JSON.stringify(result, null, 2)
+                  : String(result);
+              navigator.clipboard.writeText(text);
+              toast.success("Copied to clipboard", {
+                icon: "📋",
+                id: "copy-toast",
+              });
+            }}
+            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 shadow-xl border border-white/10 hover:border-white/20 transition-all"
+            title="Copy Result"
+          >
+            <Copy size={12} />
+          </button>
+          <button
+            onClick={() =>
+              setInspectedData({
+                title:
+                  activeNode.data?.customLabel ||
+                  activeNode.data?.label ||
+                  activeNode.type,
+                content: result,
+              })
+            }
+            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 shadow-xl border border-white/10 hover:border-white/20 transition-all"
+            title="Fullscreen Inspector"
+          >
+            <Maximize2 size={12} />
+          </button>
+        </div>
+      </div>
+    );
   };
 
   // AI AUTO-HEAL HANDLER
@@ -2707,39 +2841,41 @@ function NodeConfigurationPanel({
   const globalModel = aiConfig.selectedModel || "gemma3";
   const globalProvider = aiConfig.activeProvider || "ollama";
 
-  const renderInput = (field) => {
+  const renderInput = (field, index = 0) => {
     // Read from LOCAL state for performance
-    const value = localConfig[field.key] ?? "";
-    const error = validationErrors[field.key];
+    const dataKey = field.key || field.name;
+    const reactKey = dataKey || `field-${index}`;
+    const value = localConfig[dataKey] ?? "";
+    const error = validationErrors[dataKey];
 
     switch (field.type) {
       case "conditional_branches":
         return (
           <ConditionalBranchesEditor
-            key={field.key}
+            key={reactKey}
             value={value}
             variables={variablesMap}
-            onChange={(newVal) => handleConfigUpdate(field.key, newVal)}
+            onChange={(newVal) => handleConfigUpdate(dataKey, newVal)}
           />
         );
       case "switch_cases":
         return (
           <SwitchCasesEditor
-            key={field.key}
+            key={reactKey}
             value={value}
             variables={variablesMap}
-            onChange={(newVal) => handleConfigUpdate(field.key, newVal)}
+            onChange={(newVal) => handleConfigUpdate(dataKey, newVal)}
           />
         );
       case "select":
         return (
-          <div key={field.key} className="space-y-1.5">
+          <div key={reactKey} className="space-y-1.5">
             <label className="text-[10px] uppercase tracking-wider font-semibold text-slate-500 ml-1">
-              {t(`nodes.fields.${field.key}`, field.label)}
+              {t(`nodes.fields.${dataKey}`, field.label)}
             </label>
             <select
               value={value}
-              onChange={(e) => handleConfigUpdate(field.key, e.target.value)}
+              onChange={(e) => handleConfigUpdate(dataKey, e.target.value)}
               className={cn(
                 "w-full bg-[var(--bg-canvas)]/50 border border-[var(--border-ui)] rounded-lg px-3 py-2 text-xs text-[var(--text-main)] focus:outline-none focus:border-indigo-500/50 transition-all !pointer-events-auto !cursor-pointer",
                 error && "border-red-500/50 focus:border-red-500 bg-red-500/5",
@@ -2748,9 +2884,9 @@ function NodeConfigurationPanel({
               <option value="" disabled>
                 {t("common.select_default", "Select an option...")}
               </option>
-              {field.options?.map((opt) => (
+              {field.options?.map((opt, i) => (
                 <option
-                  key={opt.value}
+                  key={opt.value || `opt-${i}`}
                   value={opt.value}
                   className="bg-slate-800 text-white"
                 >
@@ -2773,10 +2909,10 @@ function NodeConfigurationPanel({
         );
       case "textarea":
         return (
-          <div key={field.key} className="space-y-1.5">
+          <div key={reactKey} className="space-y-1.5">
             <div className="flex justify-between items-center">
               <label className="text-[10px] uppercase tracking-wider font-semibold text-slate-500 ml-1">
-                {t(`nodes.fields.${field.key}`, field.label)}
+                {t(`nodes.fields.${dataKey}`, field.label)}
               </label>
               {error && (
                 <span className="text-[10px] text-red-400 font-bold animate-pulse">
@@ -2790,10 +2926,10 @@ function NodeConfigurationPanel({
               variables={variablesMap}
               hasError={!!error}
               placeholder={t(
-                `nodes.placeholders.${field.key}`,
+                `nodes.placeholders.${dataKey}`,
                 field.placeholder,
               )}
-              onChange={(e) => handleConfigUpdate(field.key, e.target.value)}
+              onChange={(e) => handleConfigUpdate(dataKey, e.target.value)}
               className="w-full min-h-[100px] text-xs font-mono !pointer-events-auto !cursor-text !select-text py-2 px-3"
             />
           </div>
@@ -2812,14 +2948,12 @@ function NodeConfigurationPanel({
         const hasScreenshot = field.key === "takeScreenshot" && screenshotUrl;
 
         return (
-          <div key={field.key} className="space-y-2">
+          <div key={reactKey} className="space-y-2">
             <label className="flex items-center gap-3 p-3 rounded-lg border border-[var(--border-ui)] bg-[var(--bg-canvas)]/50 cursor-pointer hover:bg-[var(--bg-canvas)] transition-colors">
               <input
                 type="checkbox"
                 checked={!!value}
-                onChange={(e) =>
-                  handleConfigUpdate(field.key, e.target.checked)
-                }
+                onChange={(e) => handleConfigUpdate(dataKey, e.target.checked)}
                 className="w-4 h-4 rounded border-[var(--border-ui)] text-indigo-500 focus:ring-offset-0 focus:ring-indigo-500/50 bg-[var(--bg-node)] !pointer-events-auto !cursor-pointer"
               />
               <span className="text-xs font-medium text-[var(--text-main)] select-none">
@@ -2844,10 +2978,10 @@ function NodeConfigurationPanel({
       }
       case "number":
         return (
-          <div key={field.key} className="space-y-1.5">
+          <div key={reactKey} className="space-y-1.5">
             <div className="flex justify-between items-center">
               <label className="text-[10px] uppercase tracking-wider font-semibold text-slate-500 ml-1">
-                {t(`nodes.fields.${field.key}`, field.label)}
+                {t(`nodes.fields.${dataKey}`, field.label)}
               </label>
               {error && (
                 <span className="text-[10px] text-red-400 font-bold animate-pulse">
@@ -2871,9 +3005,9 @@ function NodeConfigurationPanel({
         );
       case "selector":
         return (
-          <div key={field.key} className="space-y-1.5">
+          <div key={reactKey} className="space-y-1.5">
             <label className="text-[10px] uppercase tracking-wider font-semibold text-slate-500 ml-1 flex items-center justify-between">
-              {t(`nodes.fields.${field.key}`, field.label)}
+              {t(`nodes.fields.${dataKey}`, field.label)}
               <div className="flex items-center gap-2">
                 {/* AI FIX BUTTON */}
                 {(activeNode?.data?.state === "error" ||
@@ -2955,10 +3089,10 @@ function NodeConfigurationPanel({
                 variables={variablesMap}
                 hasError={!!error}
                 placeholder={t(
-                  `nodes.placeholders.${field.key}`,
+                  `nodes.placeholders.${dataKey}`,
                   field.placeholder,
                 )}
-                onChange={(e) => handleConfigUpdate(field.key, e.target.value)}
+                onChange={(e) => handleConfigUpdate(dataKey, e.target.value)}
                 className="w-full pr-8 text-xs font-mono !pointer-events-auto !cursor-text !select-text px-3 py-2"
               />
               <div
@@ -3004,18 +3138,18 @@ function NodeConfigurationPanel({
       case "mapping":
         return (
           <MappingEditor
-            key={field.key}
+            key={reactKey}
             label={field.label}
             value={value}
-            onChange={(newVal) => handleConfigUpdate(field.key, newVal)}
+            onChange={(newVal) => handleConfigUpdate(dataKey, newVal)}
           />
         );
       default: // text
         return (
-          <div key={field.key} className="space-y-1.5">
+          <div key={reactKey} className="space-y-1.5">
             <div className="flex justify-between items-center">
               <label className="text-[10px] uppercase tracking-wider font-semibold text-slate-500 ml-1">
-                {t(`nodes.fields.${field.key}`, field.label)}
+                {t(`nodes.fields.${dataKey}`, field.label)}
               </label>
               {error && (
                 <span className="text-[10px] text-red-400 font-bold animate-pulse">
@@ -3029,10 +3163,10 @@ function NodeConfigurationPanel({
               variables={variablesMap}
               hasError={!!error}
               placeholder={t(
-                `nodes.placeholders.${field.key}`,
+                `nodes.placeholders.${dataKey}`,
                 field.placeholder,
               )}
-              onChange={(e) => handleConfigUpdate(field.key, e.target.value)}
+              onChange={(e) => handleConfigUpdate(dataKey, e.target.value)}
               className="w-full text-xs font-mono !pointer-events-auto !cursor-text !select-text px-3 py-2"
             />
           </div>
@@ -3081,6 +3215,19 @@ function NodeConfigurationPanel({
           </div>
         )}
 
+        {/* CURRENT NODE RESULT (Emitted Data) */}
+        {activeNode.data?.result && (
+          <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
+            <div className="flex items-center gap-2 px-1">
+              <Sparkles size={12} className="text-amber-500" />
+              <span className="text-[10px] uppercase tracking-wider font-bold text-slate-500">
+                Latest Result
+              </span>
+            </div>
+            {renderEmittedData()}
+          </div>
+        )}
+
         {/* PRECEDING NODES DATA (Visibility into flow values) */}
         {(precedingNodes.length > 0 || isConditional) && (
           <div className="space-y-3 mt-4 pt-4 border-t border-white/5">
@@ -3107,7 +3254,10 @@ function NodeConfigurationPanel({
                   className="p-2 rounded-lg bg-slate-900/40 border border-white/5 overflow-hidden"
                 >
                   <div className="flex justify-between items-center mb-1">
-                    <span className="text-[10px] font-medium text-slate-400">
+                    <span className="text-[10px] font-medium text-slate-400 flex items-center gap-1.5">
+                      {pn.type === "component" && (
+                        <Box size={10} className="text-indigo-400" />
+                      )}
                       {pn.data?.customLabel || pn.data?.label || pn.type}
                     </span>
                     <span className="text-[9px] px-1 py-0.5 rounded bg-slate-800 text-slate-500 font-mono">
@@ -3117,7 +3267,12 @@ function NodeConfigurationPanel({
                   {pn.data?.result ? (
                     <div className="relative group/data">
                       <div className="text-[11px] text-slate-300 font-mono line-clamp-6 bg-black/30 p-2.5 rounded pr-12 max-h-48 overflow-y-auto custom-scrollbar border border-white/5">
-                        {truncateResult(pn.data.result, 2000)}
+                        {truncateResult(
+                          pn.data.result.data !== undefined
+                            ? pn.data.result.data
+                            : pn.data.result,
+                          2000,
+                        )}
                       </div>
                       <div className="absolute right-1 top-1 flex flex-col gap-1 opacity-0 group-hover/data:opacity-100 transition-opacity">
                         <button
@@ -3519,7 +3674,7 @@ function NodeConfigurationPanel({
                         Nodes
                       </span>
                       <span className="text-2xl font-bold text-white">
-                        {resolvedStats.nodeCount}
+                        {resolvedStats.nodeCount ?? 0}
                       </span>
                     </div>
                     {/* Connections */}
@@ -3582,6 +3737,17 @@ function NodeConfigurationPanel({
                     />
                   </button>
 
+                  {/* EMITTED DATA (Live Results) */}
+                  <div className="pt-6 border-t border-white/5 space-y-4">
+                    <div className="flex items-center gap-2 px-1">
+                      <Sparkles size={12} className="text-amber-500" />
+                      <span className="text-[10px] uppercase tracking-wider font-bold text-slate-500">
+                        Result & Emitted Data
+                      </span>
+                    </div>
+                    {renderEmittedData()}
+                  </div>
+
                   {/* Ungroup Action */}
                   <button
                     onClick={() => {
@@ -3619,7 +3785,11 @@ function NodeConfigurationPanel({
                         className="w-full h-24 bg-[var(--bg-canvas)]/50 border border-[var(--border-ui)] rounded-lg p-3 text-xs text-[var(--text-main)] focus:outline-none focus:border-indigo-500/50 transition-all placeholder:text-[var(--text-muted)] resize-none"
                       />
                     </div>
-                    {renderCompositionDashboard()}
+                    {/* Component configuration inputs like mapping */}
+                    {renderNodeInputs()}
+                    <div className="pt-6 border-t border-white/5 space-y-4">
+                      {renderCompositionDashboard()}
+                    </div>
                   </div>
                 );
               }

@@ -177,10 +177,10 @@ class ExecutionService {
             const result = await this.executeNode(node, allNodes, allEdges, state);
             state.executedNodeIds.add(node.nodeId);
 
-            // 3. Store result for interpolation
+            // 3. Store result for interpolation — even on error, so downstream nodes can inspect it
             const nodeLabel = node.data?.customLabel || node.data?.label || node.nodeId;
-            if (result && result.success !== false) {
-                const nodeResult = result.data || result;
+            if (result) {
+                const nodeResult = result.data !== undefined ? result.data : result;
                 variableManager.set(`${nodeLabel}.result`, nodeResult, state.runId);
                 variableManager.set(`${node.nodeId}.result`, nodeResult, state.runId);
             }
@@ -356,26 +356,45 @@ class ExecutionService {
         const config = node.data?.configuration || {};
 
         // Deeply interpolate variables in config strings before executing
-        const interpolateStrings = (obj) => {
+        const interpolateStrings = (obj, currentKey = '') => {
+            // OPT-OUT: Prevent destroying JS conditional expressions or scripts
+            const excludedKeys = [
+                'branches',
+                'conditions',
+                'expression',
+                'conditionScript',
+                'script',
+            ];
+            if (excludedKeys.includes(currentKey)) return obj;
+
             if (typeof obj === 'string') return variableManager.resolve(obj, state.runId);
-            if (Array.isArray(obj)) return obj.map(interpolateStrings);
+            if (Array.isArray(obj)) return obj.map((item) => interpolateStrings(item, currentKey));
             if (obj && typeof obj === 'object') {
                 const newObj = {};
                 for (const [k, v] of Object.entries(obj)) {
-                    newObj[k] = interpolateStrings(v);
+                    newObj[k] = interpolateStrings(v, k);
                 }
                 return newObj;
             }
             return obj;
         };
 
-        const body = interpolateStrings({
+        const interpolatedBody = interpolateStrings({
             ...node.data, // Generic data
             ...config, // Specific configuration (keys like 'url', 'selector', etc.)
+        });
+
+        const body = {
+            ...interpolatedBody,
             nodeId: node.nodeId,
+            label: node.data?.customLabel || node.data?.label || actionType,
             runId: state.runId,
             browserId: state.browserId,
-        });
+        };
+
+        console.log(
+            `[DEBUG] Final Execution Body for ${node.nodeId}: Label="${body.label}", RunId="${body.runId}"`,
+        );
 
         // Apply browser launch overrides
         if (actionType === 'launch_browser') {
@@ -423,7 +442,22 @@ class ExecutionService {
         }
 
         if (resultData && resultData.success === false) {
-            const errMsg = resultData.error || resultData.message || `Node ${node.nodeId} failed`;
+            const errMsg =
+                resultData.error?.message ||
+                resultData.error ||
+                resultData.message ||
+                `Node ${node.nodeId} failed`;
+
+            // Store the error result so downstream conditionals can read it
+            // (e.g. a Conditional node checking {{component.result.status}} === 'error')
+            const nodeLabel = node.data?.customLabel || node.data?.label || node.nodeId;
+            const errorResult = resultData.data || {
+                status: 'error',
+                error: { message: errMsg },
+            };
+            variableManager.set(`${nodeLabel}.result`, errorResult, state.runId);
+            variableManager.set(`${node.nodeId}.result`, errorResult, state.runId);
+
             // Error is already logged by controller/emitLog, we just throw to stop flow
             throw new Error(errMsg);
         }

@@ -23,6 +23,7 @@ class VariableManager {
             runs: {}, // Ephemeral: Map of runId -> { variables }
             legacy_flow: {}, // Backward compatibility fallback
         };
+        this.lastRunId = null; // Track the most recent execution for context
         this._loadGlobals();
     }
 
@@ -73,12 +74,20 @@ class VariableManager {
      */
     initRun(runId, initialVariables = {}) {
         if (!runId) return;
-        if (!this.scopes.runs[runId]) {
+        if (runId) {
             this.scopes.runs[runId] = { ...initialVariables };
+            this.lastRunId = runId;
             console.log(
                 `[VariableManager] Run ${runId} initialized with ${Object.keys(initialVariables).length} variables.`,
             );
         }
+    }
+
+    /**
+     * Gets the most recent runId for context fallback
+     */
+    getActiveRunId() {
+        return this.lastRunId;
     }
 
     /**
@@ -98,6 +107,8 @@ class VariableManager {
         if (runId) {
             this.initRun(runId);
             this.scopes.runs[runId][name] = value;
+            this.lastRunId = runId; // Update last active run
+            return;
         } else {
             // Default to legacy_flow if no runId and not global
             this.scopes.legacy_flow[name] = value;
@@ -111,22 +122,72 @@ class VariableManager {
      *   3. Legacy/Session scope (backward compat)
      */
     get(name, runId = null) {
-        // 1. Try Run-specific scope first (Isolation)
-        if (runId && this.scopes.runs[runId] && this.scopes.runs[runId][name] !== undefined) {
-            return this.scopes.runs[runId][name];
+        if (!name) return undefined;
+
+        // Fallback to active run if not specified and we're not explicitly asking for global
+        const effectiveRunId = runId || this.getActiveRunId();
+        const scope = this.scopes.runs[effectiveRunId] || this.scopes.legacy_flow;
+        const globalScope = this.scopes.global || {};
+
+        // Support dot notation for nested properties (e.g. "Wait Element (Adv).result.status")
+        // We use a "Longest Prefix Match" strategy because keys themselves can contain dots (e.g. ".result")
+        const parts = name.split('.');
+        console.log(
+            `[DEBUG] VariableManager.get: Resolving "${name}" in ${parts.length} parts: [${parts.join(', ')}]`,
+        );
+
+        let rootValue = undefined;
+        let rootKeyIndex = -1;
+
+        // Try to find the longest substring of 'parts' that exists as a key in either scope
+        for (let i = parts.length; i >= 1; i--) {
+            const potentialKey = parts.slice(0, i).join('.');
+            console.log(`[DEBUG] VariableManager.get: Trying potentialKey="${potentialKey}"`);
+
+            // Prioritize Run-specific scope
+            if (scope[potentialKey] !== undefined) {
+                rootValue = scope[potentialKey];
+                rootKeyIndex = i - 1;
+                console.log(
+                    `[DEBUG] VariableManager.get: Found "${potentialKey}" in run/legacy scope`,
+                );
+                break;
+            }
+
+            // Then Global scope
+            if (globalScope[potentialKey] !== undefined) {
+                rootValue = globalScope[potentialKey];
+                rootKeyIndex = i - 1;
+                console.log(`[DEBUG] VariableManager.get: Found "${potentialKey}" in global scope`);
+                break;
+            }
         }
 
-        // 2. Try Global scope (Constants / Config)
-        if (this.scopes.global && this.scopes.global[name] !== undefined) {
-            return this.scopes.global[name];
+        // If root not found, return undefined
+        if (rootValue === undefined) {
+            console.log(
+                `[DEBUG] VariableManager.get: Variable "${name}" NOT FOUND in any scope (effectiveRunId: ${effectiveRunId})`,
+            );
+            return undefined;
         }
 
-        // 3. Fallback to Legacy/Session scope
-        if (this.scopes.legacy_flow[name] !== undefined) {
-            return this.scopes.legacy_flow[name];
+        // If no nesting beyond the found rootKey, return rootValue
+        if (rootKeyIndex === parts.length - 1) {
+            return rootValue;
         }
 
-        return undefined;
+        // Resolve remaining nested path parts
+        let current = rootValue;
+        for (let i = rootKeyIndex + 1; i < parts.length; i++) {
+            const part = parts[i];
+            if (current !== null && typeof current === 'object' && part in current) {
+                current = current[part];
+            } else {
+                return undefined;
+            }
+        }
+
+        return current;
     }
 
     /**
@@ -282,29 +343,7 @@ class VariableManager {
             return expression;
         }
 
-        // First resolve variable references keeping types if possible
-        const resolved = this.resolveValue(expression, runId);
-
-        // If it's already resolved to a non-string value, return it
-        if (typeof resolved !== 'string') {
-            return resolved;
-        }
-
-        const hasContext = Object.keys(additionalContext).length > 0;
-        if (!resolved.includes('${') && resolved === expression && !hasContext) {
-            if (resolved === 'true') return true;
-            if (resolved === 'false') return false;
-            if (resolved === 'null') return null;
-            if (resolved === 'undefined') return undefined;
-
-            if (/[><&=!|().]/.test(resolved)) {
-                // proceed to evaluate
-            } else {
-                return resolved;
-            }
-        }
-
-        // Create safe evaluation context
+        // Create initial context
         const context = {
             Math,
             Date,
@@ -314,14 +353,63 @@ class VariableManager {
             ...additionalContext,
         };
 
+        let codeExpression = expression;
+        const varRegex = /(?:\$\{([^}]+)\})|(?:\{\{([^}]+)\}\})/g;
+        let match;
+        let aliasCounter = 0;
+        const aliasMap = {}; // alias -> value
+
+        // Use a set to track already processed variable strings to avoid redundant replacements
+        const processedMatches = new Set();
+
+        // 1. Find all variable placeholders and map them to safe aliases
+        while ((match = varRegex.exec(expression)) !== null) {
+            const rawMatch = match[0];
+            if (processedMatches.has(rawMatch)) continue;
+            processedMatches.add(rawMatch);
+
+            const varName = (match[1] || match[2]).trim();
+            const value = this.get(varName, runId);
+
+            // Generate a safe JS identifier as an alias
+            const alias = `__v${aliasCounter++}`;
+            aliasMap[alias] = value;
+
+            // Replace all occurrences of this exact placeholder with the alias
+            // We use split/join for global replacement of the string
+            codeExpression = codeExpression.split(rawMatch).join(alias);
+        }
+
+        // 2. Prepare function parameters
+        const keys = Object.keys(aliasMap);
+        const values = Object.values(aliasMap);
+
+        // Add other context variables (only valid JS identifiers)
+        const identifierRegex = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/;
+        Object.entries(context).forEach(([key, val]) => {
+            if (identifierRegex.test(key) && !Object.prototype.hasOwnProperty.call(aliasMap, key)) {
+                keys.push(key);
+                values.push(val);
+            }
+        });
+
+        // 3. Final cleanup of the expression:
+        // If there are still ${} or {{}} left (e.g. malformed or unresolved),
+        // they will cause syntax errors in new Function.
+        // BUT we've already replaced everything that matched regex.
+
         try {
-            const func = new Function(
-                ...Object.keys(context),
-                `'use strict'; return (${resolved});`,
+            // Function constructor uses 'keys' as parameter names
+            const func = new Function(...keys, `'use strict'; return (${codeExpression});`);
+            const result = func(...values);
+            console.log(
+                `[DEBUG] VariableManager.evaluate: "${expression}" -> "${codeExpression}" (Aliases: ${keys.join(', ')}) => ${result}`,
             );
-            return func(...Object.values(context));
+            return result;
         } catch (error) {
-            console.error('Expression evaluation error:', error);
+            console.error('[ERROR] VariableManager.evaluate:', error.message);
+            console.debug('[DEBUG] Failed Expression:', expression);
+            console.debug('[DEBUG] Compiled Code:', codeExpression);
             throw new Error(`Failed to evaluate expression: ${expression} - ${error.message}`);
         }
     }
@@ -361,9 +449,11 @@ class VariableManager {
 
         switch (operator) {
             case '===':
-                return resolvedLeft === resolvedRight;
+            case '==':
+                return resolvedLeft == resolvedRight;
             case '!==':
-                return resolvedLeft !== resolvedRight;
+            case '!=':
+                return resolvedLeft != resolvedRight;
             case '>':
                 return Number(resolvedLeft) > Number(resolvedRight);
             case '<':
@@ -375,8 +465,10 @@ class VariableManager {
             case 'contains':
                 return String(resolvedLeft).includes(String(resolvedRight));
             case 'exists': {
-                const varName = String(left).replace(/\${(.+)}/, '$1');
-                return this.has(varName, 'flow') || this.has(varName, 'global');
+                const varName = String(left)
+                    .replace(/\$\{(.+)\}/, '$1')
+                    .replace(/\{\{(.+)\}\}/, '$1');
+                return this.get(varName, runId) !== undefined;
             }
             default:
                 throw new Error(`Unknown operator: ${operator}`);
@@ -386,12 +478,12 @@ class VariableManager {
     /**
      * Evaluate multiple conditions with AND/OR logic
      */
-    evaluateConditions(conditions, logic = 'AND') {
+    evaluateConditions(conditions, logic = 'AND', runId = null) {
         if (!Array.isArray(conditions) || conditions.length === 0) {
             throw new Error('Conditions must be a non-empty array');
         }
 
-        const results = conditions.map((cond) => this.evaluateCondition(cond));
+        const results = conditions.map((cond) => this.evaluateCondition(cond, runId));
 
         if (logic === 'AND') {
             return results.every((r) => r === true);

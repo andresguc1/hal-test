@@ -48,9 +48,14 @@ export const getVariables = (req, res) => {
         if (runId) {
             flowVariables = variableManager.getAll(runId);
         } else {
-            // Fallback: Return legacy_flow variables if no specific run is requested
-            // This ensures the editor UI shows the variables being captured during interactive sessions
-            flowVariables = variableManager.getAll(null);
+            // Check if there's an active run we can use for context
+            const activeRunId = variableManager.getActiveRunId?.();
+            if (activeRunId) {
+                flowVariables = variableManager.getAll(activeRunId);
+            } else {
+                // Fallback: Return legacy_flow variables if no specific run is requested
+                flowVariables = variableManager.getAll(null);
+            }
         }
 
         const globalVariables = variableManager.getAll('global');
@@ -458,11 +463,37 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
     const start = Date.now();
     const runId = req.body.runId; // Extract runId if present
     const nodeId = req.body.nodeId; // Extract nodeId if present
-    const label = req.body.label || req.body.customLabel;
 
     // --- VARIABLE RESOLUTION ---
     // Deeply interpolate variables in the request body before any logic
     const opts = variableManager.resolveRecursive(req.body, runId); // Pass runId for isolation
+
+    // --- LABEL SAFETY NET ---
+    let finalLabel = opts.label || req.body.label || req.body.customLabel;
+
+    if (!finalLabel && nodeId) {
+        try {
+            // DB-aware resolution: If label is missing from the payload, fetch it from source
+            const nodeRecord = await Node.findOne({ where: { nodeId } });
+            if (nodeRecord && nodeRecord.data) {
+                finalLabel = nodeRecord.data.customLabel || nodeRecord.data.label;
+                console.log(
+                    `[ActionController] [DEBUG] Recovered label from DB for ${nodeId}: "${finalLabel}"`,
+                );
+            }
+        } catch (dbErr) {
+            console.warn(
+                '[ActionController] [WARN] Failed to recover label from DB:',
+                dbErr.message,
+            );
+        }
+    }
+
+    const label = finalLabel || nodeId || actionName;
+    console.log(
+        `[ActionController] [DEBUG] Resolved Label for execution: "${label}" (Action: ${actionName})`,
+    );
+    // -------------------------
 
     // Diagnostic Log: Highlight what the backend actually "sees" after interpolation
     if (actionName === 'type_text') {
@@ -470,7 +501,7 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
             `[ActionController] [DEBUG] ${actionName} text: "${req.body.text}" -> "${opts.text}" (RunId: ${runId || 'None'})`,
         );
     } else {
-        console.log(`[ActionController] [DEBUG] ${actionName} options resolved.`);
+        console.log(`[ActionController] [DEBUG] actionName=${actionName} options resolved.`);
     }
     // ---------------------------
 
@@ -615,9 +646,14 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
 
         // --- VARIABLE PERSISTENCE ---
         // Save result to variableManager for downstream reuse
-        const nodeLabel = label || nodeId || actionName;
+        const nodeLabel = label; // Use the robustly resolved label from the beginning
         if (result && result.success !== false) {
+            // Standardize output: Ensure status is present for conditional logic
             const nodeResult = result.data || result;
+            if (typeof nodeResult === 'object' && nodeResult !== null && !nodeResult.status) {
+                nodeResult.status = 'success';
+            }
+
             variableManager.set(`${nodeLabel}.result`, nodeResult, runId);
             if (nodeId) {
                 variableManager.set(`${nodeId}.result`, nodeResult, runId);
@@ -657,214 +693,260 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
             errorMessage.includes('parsing css selector') ||
             errorMessage.includes('is not a valid selector');
 
-        if (isSelectorError && opts.selector && (runId || opts.debugMode)) {
+        if (
+            isSelectorError &&
+            opts.selector &&
+            (runId || opts.debugMode) &&
+            !opts.continueOnError
+        ) {
             console.log(
                 `[Self-Healing] Detected selector failure for: ${opts.selector}. Starting AI repair...`,
             );
             const healingStart = Date.now();
-            try {
-                // 1. Get current page context
-                const validation = validateBrowser(req, targetBrowserId || opts.browserId);
-                if (!validation.error) {
-                    const browserInstance = validation.entry.browser || validation.entry;
-                    const browserContexts = browserInstance.contexts();
-                    const pages = browserContexts[0]?.pages() || [];
-                    const currentPage = pages[pages.length - 1];
 
-                    if (currentPage && !currentPage.isClosed()) {
-                        // 2. Import Healer (Dynamically or at top)
-                        const { default: selectorHealer } =
-                            await import('../services/SelectorHealer.js');
+            // HARD CAP: Self-healing must complete within this window.
+            // Ollama can be slow, but we cannot freeze the user's flow indefinitely.
+            // 20s is enough time for a local model to respond; cloud providers are much faster.
+            const HEALING_HARD_CAP_MS = 20000;
 
-                        // 3. Ask AI to Heal
-                        const aiConfig = {
-                            apiKey:
-                                req.headers['x-ai-api-key'] ||
-                                req.headers['x-openai-key'] ||
-                                process.env.OPENAI_API_KEY,
-                            provider: req.headers['x-ai-provider'] || 'ollama',
-                            model: req.headers['x-ai-model'],
-                            baseUrl: req.headers['x-ai-base-url'],
-                        };
+            // Wrap the entire healing block in a race against the hard cap.
+            // If healing times out, we fall through to the standard error response below.
+            const healingPromise = (async () => {
+                try {
+                    // 1. Get current page context
+                    const validation = validateBrowser(req, targetBrowserId || opts.browserId);
+                    if (!validation.error) {
+                        const browserInstance = validation.entry.browser || validation.entry;
+                        const browserContexts = browserInstance.contexts();
+                        const pages = browserContexts[0]?.pages() || [];
+                        const currentPage = pages[pages.length - 1];
 
-                        // Las pruebas manuales a menudo tienen timeouts cortos (ej: 8000ms).
-                        // La reparación con IA local necesita más tiempo de procesamiento.
-                        // Asignamos un presupuesto de al menos 45 segundos para dar margen.
-                        const healingBudget = Math.max(opts.timeout || 45000, 45000);
+                        if (currentPage && !currentPage.isClosed()) {
+                            // 2. Import Healer
+                            const { default: selectorHealer } =
+                                await import('../services/SelectorHealer.js');
 
-                        // --- EXPERIENCE VAULT: Consultation Phase ---
-                        const useExperienceVault = req.headers['x-hal-experience-vault'] === 'true';
-                        let diagnosis = null;
-                        let contextName = 'Global';
+                            // 3. Ask AI to Heal
+                            const aiConfig = {
+                                apiKey:
+                                    req.headers['x-ai-api-key'] ||
+                                    req.headers['x-openai-key'] ||
+                                    process.env.OPENAI_API_KEY,
+                                provider: req.headers['x-ai-provider'] || 'ollama',
+                                model: req.headers['x-ai-model'],
+                                baseUrl: req.headers['x-ai-base-url'],
+                            };
 
-                        if (useExperienceVault) {
-                            if (opts.flowId) {
-                                try {
-                                    const flow = await Flow.findByPk(opts.flowId);
-                                    if (flow) contextName = flow.name;
-                                } catch (e) {
-                                    console.warn(
-                                        '[ExperienceVault] Could not fetch flow name:',
-                                        e.message,
-                                    );
+                            // Healing budget is capped to avoid freezing the request.
+                            // We give 15s to the AI, leaving 5s for verification/retry overhead.
+                            const healingBudget =
+                                Math.min(
+                                    Math.max(opts.timeout || 0, 0),
+                                    15000, // Hard ceiling
+                                ) || 15000;
+
+                            // --- EXPERIENCE VAULT: Consultation Phase ---
+                            const useExperienceVault =
+                                req.headers['x-hal-experience-vault'] === 'true';
+                            let diagnosis = null;
+                            let contextName = 'Global';
+
+                            if (useExperienceVault) {
+                                if (opts.flowId) {
+                                    try {
+                                        const flow = await Flow.findByPk(opts.flowId);
+                                        if (flow) contextName = flow.name;
+                                    } catch (e) {
+                                        console.warn(
+                                            '[ExperienceVault] Could not fetch flow name:',
+                                            e.message,
+                                        );
+                                    }
                                 }
-                            }
 
-                            diagnosis = await experienceVaultService.findMemory(
-                                opts.selector,
-                                contextName,
-                                currentPage.url(),
-                            );
-
-                            if (diagnosis) {
-                                emitLog({
-                                    message: `[Experience Vault] 🏛️ Found a relevant memory for this element. Applying solution...`,
-                                    nodeId: opts.nodeId,
-                                    type: 'info',
-                                });
-                            }
-                        }
-
-                        if (!diagnosis) {
-                            // 📡 BROADCAST: Show user the healing is starting BEFORE calling AI
-                            emitLog({
-                                message: `[Self-Healing] 🔍 AI analyzing DOM for broken selector: ${opts.selector} using ${aiConfig.provider}...`,
-                                nodeId: opts.nodeId,
-                                type: 'info',
-                            });
-
-                            diagnosis = await selectorHealer.heal({
-                                page: currentPage,
-                                originalSelector: opts.selector,
-                                errorMessage: errorMessage,
-                                actionName: actionName,
-                                timeout: healingBudget,
-                                aiConfig,
-                            });
-                        }
-
-                        const healingDuration = Date.now() - healingStart;
-                        console.log(`[Self-Healing] Repair finished in ${healingDuration}ms`);
-
-                        // --- BROADCAST HEALING STATUS (result) ---
-                        if (opts.nodeId) {
-                            emitExecutionStatus({ stepId: opts.nodeId, status: 'executing' });
-                        }
-
-                        // 4. Retry if a new selector was found
-                        if (
-                            diagnosis.correctedSelector &&
-                            diagnosis.correctedSelector !== opts.selector
-                        ) {
-                            const healMsg = `[Self-Healing] 🩹 AI Suggests: ${diagnosis.correctedSelector} (Confidence: ${Math.round(diagnosis.confidence * 100)}%)`;
-                            console.log(healMsg);
-                            console.log(`[Self-Healing] Reasoning: ${diagnosis.reasoning}`);
-
-                            // BROADCAST TO TERMINAL
-                            try {
-                                // use named import from line 12
-                                emitLog({
-                                    message: healMsg,
-                                    nodeId: opts.nodeId,
-                                    type: 'info',
-                                });
-                                emitLog({
-                                    message: `[Self-Healed] Diagnosis: ${diagnosis.reasoning}`,
-                                    nodeId: opts.nodeId,
-                                    type: 'info',
-                                });
-                            } catch (err) {
-                                console.warn(
-                                    '[Self-Healing] Could not broadcast diagnosis:',
-                                    err.message,
+                                diagnosis = await experienceVaultService.findMemory(
+                                    opts.selector,
+                                    contextName,
+                                    currentPage.url(),
                                 );
-                            }
 
-                            // PERSIST HEALING LOG
-                            try {
-                                await HealingLog.create({
-                                    nodeId: nodeId || opts.nodeId,
-                                    runId: runId,
-                                    originalSelector: opts.selector,
-                                    newSelector: diagnosis.correctedSelector,
-                                    confidence: diagnosis.confidence,
-                                    reasoning: diagnosis.reasoning,
-                                    verified: diagnosis.verified || false,
-                                });
-
-                                // --- EXPERIENCE VAULT: Learning Phase ---
-                                if (useExperienceVault && !diagnosis.isFromVault) {
-                                    await experienceVaultService.saveMemory({
-                                        context: contextName,
-                                        url: currentPage.url(),
-                                        problemSelector: opts.selector,
-                                        solutionSelector: diagnosis.correctedSelector,
-                                        reasoning: diagnosis.reasoning,
-                                        confidence: diagnosis.confidence,
+                                if (diagnosis) {
+                                    emitLog({
+                                        message: `[Experience Vault] 🏛️ Found a relevant memory for this element. Applying solution...`,
+                                        nodeId: opts.nodeId,
+                                        type: 'info',
                                     });
                                 }
-                            } catch (logErr) {
-                                console.warn(
-                                    '[Self-Healing] Could not save healing log or memory:',
-                                    logErr.message,
-                                );
                             }
 
-                            // Retry action with NEW selector
-                            const newOpts = { ...opts, selector: diagnosis.correctedSelector };
+                            if (!diagnosis) {
+                                // 📡 BROADCAST: Show user the healing is starting BEFORE calling AI
+                                emitLog({
+                                    message: `[Self-Healing] 🔍 AI analyzing DOM for broken selector: ${opts.selector} using ${aiConfig.provider}... (${healingBudget / 1000}s budget)`,
+                                    nodeId: opts.nodeId,
+                                    type: 'info',
+                                });
 
-                            const retryStart = Date.now();
-                            const retryResult = await actionLogic(
-                                currentPage,
-                                newOpts,
-                                targetBrowserId,
-                                context,
-                            );
-                            const retryDuration = Date.now() - retryStart;
-
-                            // --- FLIGHT RECORDER: Log Healed Success ---
-                            if (runId && nodeId) {
-                                await executionLogger.logStep(
-                                    runId,
-                                    { id: nodeId, type: actionName },
-                                    {
-                                        status: 'healed',
-                                        duration: duration + retryDuration,
-                                        input: newOpts,
-                                        output: retryResult.data || retryResult.traceDetails,
-                                        memoryHit: !!diagnosis.isFromVault,
-                                        aiDiagnosis: diagnosis.reasoning,
-                                        videoTimestamp: req.body.runStartTime
-                                            ? (Date.now() - req.body.runStartTime) / 1000
-                                            : null,
-                                    },
-                                );
+                                diagnosis = await selectorHealer.heal({
+                                    page: currentPage,
+                                    originalSelector: opts.selector,
+                                    errorMessage: errorMessage,
+                                    actionName: actionName,
+                                    timeout: healingBudget,
+                                    aiConfig,
+                                });
                             }
 
-                            if (nodeId) emitExecutionStatus({ stepId: nodeId, status: 'healed' });
+                            const healingDuration = Date.now() - healingStart;
+                            console.log(`[Self-Healing] Repair finished in ${healingDuration}ms`);
 
-                            return res.status(200).json({
-                                success: true,
-                                message: `Self-Healed: ${retryResult.message}`,
-                                browserId: targetBrowserId,
-                                durationMs: duration + retryDuration,
-                                data: retryResult.data || {},
-                                healed: true,
-                                originalSelector: opts.selector,
-                                newSelector: diagnosis.correctedSelector,
-                                reasoning: diagnosis.reasoning,
-                            });
+                            // --- BROADCAST HEALING STATUS (result) ---
+                            if (opts.nodeId) {
+                                emitExecutionStatus({ stepId: opts.nodeId, status: 'executing' });
+                            }
+
+                            // 4. Retry if a new selector was found
+                            if (
+                                diagnosis.correctedSelector &&
+                                diagnosis.correctedSelector !== opts.selector
+                            ) {
+                                const healMsg = `[Self-Healing] 🩹 AI Suggests: ${diagnosis.correctedSelector} (Confidence: ${Math.round(diagnosis.confidence * 100)}%)`;
+                                console.log(healMsg);
+                                console.log(`[Self-Healing] Reasoning: ${diagnosis.reasoning}`);
+
+                                // BROADCAST TO TERMINAL
+                                try {
+                                    emitLog({
+                                        message: healMsg,
+                                        nodeId: opts.nodeId,
+                                        type: 'info',
+                                    });
+                                    emitLog({
+                                        message: `[Self-Healed] Diagnosis: ${diagnosis.reasoning}`,
+                                        nodeId: opts.nodeId,
+                                        type: 'info',
+                                    });
+                                } catch (err) {
+                                    console.warn(
+                                        '[Self-Healing] Could not broadcast diagnosis:',
+                                        err.message,
+                                    );
+                                }
+
+                                // PERSIST HEALING LOG
+                                try {
+                                    await HealingLog.create({
+                                        nodeId: nodeId || opts.nodeId,
+                                        runId: runId,
+                                        originalSelector: opts.selector,
+                                        newSelector: diagnosis.correctedSelector,
+                                        confidence: diagnosis.confidence,
+                                        reasoning: diagnosis.reasoning,
+                                        verified: diagnosis.verified || false,
+                                    });
+
+                                    // --- EXPERIENCE VAULT: Learning Phase ---
+                                    if (useExperienceVault && !diagnosis.isFromVault) {
+                                        await experienceVaultService.saveMemory({
+                                            context: contextName,
+                                            url: currentPage.url(),
+                                            problemSelector: opts.selector,
+                                            solutionSelector: diagnosis.correctedSelector,
+                                            reasoning: diagnosis.reasoning,
+                                            confidence: diagnosis.confidence,
+                                        });
+                                    }
+                                } catch (logErr) {
+                                    console.warn(
+                                        '[Self-Healing] Could not save healing log or memory:',
+                                        logErr.message,
+                                    );
+                                }
+
+                                // Retry action with NEW selector
+                                const newOpts = { ...opts, selector: diagnosis.correctedSelector };
+
+                                const retryStart = Date.now();
+                                const retryResult = await actionLogic(
+                                    currentPage,
+                                    newOpts,
+                                    targetBrowserId,
+                                    context,
+                                );
+                                const retryDuration = Date.now() - retryStart;
+
+                                // --- FLIGHT RECORDER: Log Healed Success ---
+                                if (runId && nodeId) {
+                                    await executionLogger.logStep(
+                                        runId,
+                                        { id: nodeId, type: actionName },
+                                        {
+                                            status: 'healed',
+                                            duration: duration + retryDuration,
+                                            input: newOpts,
+                                            output: retryResult.data || retryResult.traceDetails,
+                                            memoryHit: !!diagnosis.isFromVault,
+                                            aiDiagnosis: diagnosis.reasoning,
+                                            videoTimestamp: req.body.runStartTime
+                                                ? (Date.now() - req.body.runStartTime) / 1000
+                                                : null,
+                                        },
+                                    );
+                                }
+
+                                if (nodeId)
+                                    emitExecutionStatus({ stepId: nodeId, status: 'healed' });
+
+                                return res.status(200).json({
+                                    success: true,
+                                    message: `Self-Healed: ${retryResult.message}`,
+                                    browserId: targetBrowserId,
+                                    durationMs: duration + retryDuration,
+                                    data: retryResult.data || {},
+                                    healed: true,
+                                    originalSelector: opts.selector,
+                                    newSelector: diagnosis.correctedSelector,
+                                    reasoning: diagnosis.reasoning,
+                                });
+                            }
                         }
                     }
+                } catch (healError) {
+                    console.error('[Self-Healing] Logic failed:', healError.message);
+                    emitLog({
+                        message: `[Self-Healing] ⚠️ AI repair failed: ${healError.message}`,
+                        nodeId: opts.nodeId,
+                        type: 'warning',
+                    });
+                    // Fallthrough to standard error handling
                 }
-            } catch (healError) {
-                console.error('[Self-Healing] Logic failed:', healError);
-                // Fallthrough to standard error handling
+            })(); // end healingPromise IIFE
+
+            const healingTimeout = new Promise((resolve) =>
+                setTimeout(() => resolve('__HEALING_TIMEOUT__'), HEALING_HARD_CAP_MS),
+            );
+
+            const healingOutcome = await Promise.race([healingPromise, healingTimeout]);
+
+            if (healingOutcome === '__HEALING_TIMEOUT__') {
+                console.warn(
+                    `[Self-Healing] ⏱️ Hard cap of ${HEALING_HARD_CAP_MS / 1000}s exceeded. Falling through to error response.`,
+                );
+                emitLog({
+                    message: `[Self-Healing] ⏱️ AI did not respond within ${HEALING_HARD_CAP_MS / 1000}s. Reporting original error.`,
+                    nodeId: opts.nodeId,
+                    type: 'warning',
+                });
+            } else if (healingOutcome !== undefined) {
+                // The healing returned a response directly (success or no-selector case)
+                // If res was already sent, healingPromise resolves with the res.json() return value.
+                // In Express, calling res.json() multiple times would throw, so we check headersSent.
+                if (res.headersSent) return;
             }
         }
         // --------------------------
 
-        // --- FLIGHT RECORDER: Log Failure ---
+        // --- FLIGHT RECORDER: Log Failure (Initial) ---
         if (runId && nodeId) {
             await executionLogger.logStep(
                 runId,
@@ -924,24 +1006,50 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
             }
         }
 
-        if (runId && nodeId) {
-            executionLogger.logStep(
-                runId,
-                { id: nodeId, type: actionName },
-                {
-                    status: 'failed',
-                    error: errorMessage,
-                    duration,
-                    input: opts,
-                    screenshot: errorScreenshotPath,
-                },
+        // --- SOFT FAIL (CONTINUE ON ERROR) LOGIC ---
+        if (opts.continueOnError) {
+            console.log(
+                `[ActionController] Soft Fail enabled for ${actionName}. Carrying result to next node...`,
             );
+
+            // Broadcast warning instead of error
+            smartEmitLog(`${actionName} failed (Soft Fail): ${errorMessage}`, 'warning', nodeId);
+            if (nodeId) {
+                emitExecutionStatus({
+                    stepId: nodeId,
+                    status: 'failed', // Keep failed visual in UI
+                    error: errorMessage,
+                });
+            }
+
+            // PERSIST FAILED STATE TO VARIABLE MANAGER
+            const nodeLabel = label || nodeId || actionName;
+            const errorResult = {
+                status: 'failed',
+                success: false,
+                error: errorMessage,
+                durationMs: duration,
+                screenshot: errorScreenshotPath,
+            };
+            variableManager.set(`${nodeLabel}.result`, errorResult, runId);
+            if (nodeId) {
+                variableManager.set(`${nodeId}.result`, errorResult, runId);
+            }
+
+            // RETURN SUCCESS TO MOTOR (Trick Motor into continuing)
+            return res.status(200).json({
+                success: true,
+                status: 'failed',
+                message: `Soft Fail: ${errorMessage}`,
+                browserId: targetBrowserId,
+                durationMs: duration,
+                data: errorResult,
+                screenshot: errorScreenshotPath,
+            });
         }
-        // ------------------------------------------------
+        // -------------------------------------------
 
-        console.error(`[ERROR] ${actionName}:`, errorMessage);
-
-        // 6. Respond with Error
+        // Standard Hard Failure Respond
         if (nodeId) {
             emitExecutionStatus({ stepId: nodeId, status: 'failed', error: errorMessage });
             smartEmitLog(`${actionName} failed: ${errorMessage}`, 'error', nodeId);
@@ -2600,6 +2708,28 @@ export const waitConditionalAction = async (req, res) => {
     }
 };
 
+// --- LOG ERROR FILTERING ---
+const NOISY_DOMAINS = [
+    'backtrace.io',
+    'google-analytics.com',
+    'doubleclick.net',
+    'sentry.io',
+    'segment.io',
+    'hotjar.com',
+    'facebook.net',
+    'facebook.com/tr',
+    'clarity.ms',
+    'browser-sync',
+];
+
+/**
+ * Checks if a log message or URL belongs to a known noisy third-party domain
+ */
+const isNoisyLog = (text, url = '') => {
+    const combined = (text + ' ' + url).toLowerCase();
+    return NOISY_DOMAINS.some((domain) => combined.includes(domain));
+};
+
 export const logErrorsAction = (req, res) =>
     executePlaywrightAction(req, res, 'log_errors', async (page, opts) => {
         const { enable } = opts;
@@ -2608,28 +2738,50 @@ export const logErrorsAction = (req, res) =>
             const attachToPage = (p) => {
                 p.on('console', (msg) => {
                     if (msg.type() === 'error') {
-                        const message = `[Browser Console] ${msg.text()}`;
+                        const content = msg.text();
+                        if (isNoisyLog(content)) return; // Skip noisy analytics/tracking errors
+
+                        // Skip redundant generic network failures from console (already captured by network monitor with URL)
+                        if (content.includes('net::ERR_FAILED')) return;
+
+                        const message = `[Browser Console] ${content}`;
                         console.log(message);
                         smartEmitLog(message, 'error', opts.nodeId);
                         // Update node state to warning to give visual feedback
-                        emitExecutionStatus(opts.nodeId, 'warning', {
-                            message: 'Errors detected in console',
+                        emitExecutionStatus({
+                            stepId: opts.nodeId,
+                            status: 'warning',
+                            error: { message: 'Errors detected in console' },
                         });
                     }
                 });
                 p.on('pageerror', (err) => {
-                    const message = `[Browser Error] ${err.message}`;
+                    const content = err.message;
+                    if (isNoisyLog(content)) return;
+
+                    const message = `[Browser Error] ${content}`;
                     console.log(message);
                     smartEmitLog(message, 'error', opts.nodeId);
-                    emitExecutionStatus(opts.nodeId, 'warning', { message: 'Page error detected' });
+                    emitExecutionStatus({
+                        stepId: opts.nodeId,
+                        status: 'warning',
+                        error: { message: 'Page error detected' },
+                    });
                 });
                 p.on('requestfailed', (request) => {
+                    const url = request.url();
                     const failure = request.failure();
-                    const message = `[Network Error] Failed to load: ${request.url()} - ${failure?.errorText || 'Unknown error'}`;
+                    const errorText = failure?.errorText || 'Unknown error';
+
+                    if (isNoisyLog(errorText, url)) return;
+
+                    const message = `[Network Error] Failed to load: ${url} - ${errorText}`;
                     console.log(message);
                     smartEmitLog(message, 'error', opts.nodeId);
-                    emitExecutionStatus(opts.nodeId, 'warning', {
-                        message: 'Network resource failed to load',
+                    emitExecutionStatus({
+                        stepId: opts.nodeId,
+                        status: 'warning',
+                        error: { message: 'Network resource failed to load' },
                     });
                 });
             };
@@ -4030,10 +4182,14 @@ export const variableAction = async (req, res) => {
 
 export const conditionalAction = async (req, res) => {
     try {
-        const { conditions, logic = 'AND', branches, fallbackPath = 'false' } = req.body;
+        const { conditions, logic = 'AND', branches, fallbackPath = 'false', runId } = req.body;
+        console.log(
+            `[DEBUG] conditionalAction - runId: ${runId}, branches count: ${branches?.length || 0}`,
+        );
 
         // NEW LOGIC: Dynamic Branches Evaluation
         if (branches && Array.isArray(branches) && branches.length > 0) {
+            console.log('[DEBUG] Evaluating branches:', JSON.stringify(branches, null, 2));
             let matchedBranch = null;
             const trace = {};
 
@@ -4050,14 +4206,21 @@ export const conditionalAction = async (req, res) => {
                     status = 'matched';
                 } else {
                     try {
-                        const branchResult = variableManager.evaluate(branch.expression);
+                        const branchResult = variableManager.evaluate(branch.expression, runId);
                         branchMatched = branchResult === true;
                         status = branchMatched ? 'matched' : 'not_matched';
+                        console.log(
+                            `[DEBUG] Branch '${branch.label || branch.id}' evaluation: ${branch.expression} => ${branchResult} (matched: ${branchMatched})`,
+                        );
                     } catch (exprError) {
                         branchError = exprError.message;
                         status = 'error';
-                        console.warn(
-                            `[WARN] Failed to evaluate branch '${branch.id}': ${exprError.message}`,
+                        console.error(
+                            `[ERROR] Failed to evaluate branch '${branch.id}': ${exprError.message}`,
+                        );
+                        // Halt execution and bubble up the error so the node fails explicitly
+                        throw new Error(
+                            `Expression error in branch '${branch.label || branch.id}': ${exprError.message}`,
                         );
                     }
                 }
@@ -4080,6 +4243,7 @@ export const conditionalAction = async (req, res) => {
 
             return res.status(200).json({
                 success: true,
+                status: finalResult ? 'true' : 'false',
                 message: matchedBranch
                     ? `Condition matched branch: ${matchedBranch.label || matchedBranch.id}`
                     : `No conditions matched, routing to fallback`,
@@ -4092,10 +4256,11 @@ export const conditionalAction = async (req, res) => {
         }
 
         // LEGACY LOGIC: Single conditions array -> true/false
-        const result = variableManager.evaluateConditions(conditions, logic);
+        const result = variableManager.evaluateConditions(conditions, logic, runId);
 
         return res.status(200).json({
             success: true,
+            status: result ? 'true' : 'false',
             message: req.t('actions.conditional.success'),
             data: {
                 result,
@@ -4440,7 +4605,7 @@ export const failFlowAction = async (req, res) => {
  */
 export const componentAction = async (req, res) => {
     try {
-        const { configuration, nodeId, runId } = req.body;
+        const { configuration, nodeId, label, runId } = req.body;
         const flowId = configuration?.flowId || req.body.flowId;
 
         if (!flowId) {
@@ -4502,10 +4667,17 @@ export const componentAction = async (req, res) => {
         }
 
         // 3. Run subflow
+        // CRITICAL: activatedNodeIds must include entry nodes so runSequence activation check passes
         const subflowState = {
             runId: runId || `subrun_${Date.now()}`,
-            browserId: req.body.browserId, // Extract from body if provided
+            browserId: req.body.browserId,
             executedNodeIds: new Set(),
+            activatedNodeIds: new Set(entryNodes.map((n) => n.nodeId)),
+            edgeStates: {},
+            variables: {},
+            overrides: {},
+            headers: req.headers || {},
+            startTime: Date.now(),
         };
 
         const subflowResult = await executionService.runSequence(
@@ -4526,20 +4698,52 @@ export const componentAction = async (req, res) => {
             }
         }
 
+        // 🌟 GUARANTEED STRUCTURED OUTPUT
+        // runSequence returns null on normal completion (no flow control signal).
+        // Always build a valid contract object so the next node has data to inspect.
+        const rawResult = subflowResult?.action === 'return' ? subflowResult.data : subflowResult;
+        const nodeLabel = label || configuration?.label || nodeId || 'Component';
+
+        const structuredResult = rawResult || {
+            status: 'success',
+            data: {
+                flowId,
+                executedNodes: subflowState.executedNodeIds.size,
+                label: nodeLabel,
+            },
+        };
+
+        // Always ensure a `status` field exists on the output
+        if (!structuredResult.status) {
+            structuredResult.status = 'success';
+        }
+
+        // Store result for downstream variable interpolation (e.g. {{Login.result.status}})
+        vm.set(`${nodeId}.result`, structuredResult, runId);
+        vm.set(`${nodeLabel}.result`, structuredResult, runId);
+
+        // Also store in legacy_flow scope for interactive (non-run) sessions
+        if (!runId || runId.startsWith('interactive-')) {
+            vm.set(`${nodeId}.result`, structuredResult, null);
+            vm.set(`${nodeLabel}.result`, structuredResult, null);
+        }
+
+        console.log(
+            `[ComponentAction] ✅ Result stored for "${nodeLabel}" (Run: ${runId || 'legacy'}):`,
+            JSON.stringify(structuredResult).substring(0, 200),
+        );
+
         emitLog({
-            message: `Completed subflow: ${flowId}`,
+            message: `Completed subflow: ${flowId} (${subflowState.executedNodeIds.size} nodes executed)`,
             type: 'success',
             nodeId,
         });
 
         return res.status(200).json({
             success: true,
+            status: 'success',
             message: `Subflow ${flowId} executed successfully`,
-            data: {
-                flowId,
-                executedNodes: subflowState.executedNodeIds.size,
-                path: subflowResult?.action === 'return' ? subflowResult.data : null,
-            },
+            data: structuredResult,
         });
     } catch (error) {
         console.error('[ERROR] componentAction:', error.message);
@@ -4548,10 +4752,33 @@ export const componentAction = async (req, res) => {
             type: 'error',
             nodeId: req.body.nodeId,
         });
-        return res.status(500).json({
+
+        // Always return a structured error payload so the flow can handle it gracefully
+        const { configuration: cfg, nodeId: nid, label: lbl, runId: rid } = req.body;
+        const errLabel = lbl || cfg?.label || nid || 'Component';
+        const errorPayload = {
+            status: 'error',
+            data: { label: errLabel, flowId: cfg?.flowId || req.body.flowId },
+            error: { message: error.message, code: 'COMPONENT_EXECUTION_ERROR' },
+        };
+
+        // Store error result so conditional nodes downstream can inspect it
+        try {
+            const { variableManager: vm2 } = await import('../services/VariableManager.js');
+            if (nid) vm2.set(`${nid}.result`, errorPayload, rid || null);
+            if (errLabel) vm2.set(`${errLabel}.result`, errorPayload, rid || null);
+        } catch (_) {
+            /* non-fatal */
+        }
+
+        return res.status(200).json({
+            // Note: 200 status so ExecutionService doesn't throw on soft failures;
+            // success:false signals the flow engine to handle the error path.
             success: false,
+            status: 'error',
             message: 'Error executing subflow',
-            error: error.message,
+            error: { message: error.message, code: 'COMPONENT_EXECUTION_ERROR' },
+            data: errorPayload,
         });
     }
 };
@@ -4597,7 +4824,8 @@ export const outputAction = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            data: { name, value: resolvedValue },
+            action: 'return', // Signal to runSequence to bubble up this data
+            data: resolvedValue || { name, value: resolvedValue },
         });
     } catch (error) {
         return res.status(500).json({
