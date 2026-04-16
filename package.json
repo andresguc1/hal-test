@@ -44,6 +44,13 @@
     },
     "packageManager": "pnpm@9.15.4",
     "pnpm": {
+        "overrides": {
+            "socket.io-parser": "4.2.6",
+            "hono": "4.12.14",
+            "ajv": "8.18.0",
+            "body-parser": "2.2.2",
+            "qs": "6.15.1"
+        },
         "onlyBuiltDependencies": [
             "better-sqlite3",
             "sqlite3",
