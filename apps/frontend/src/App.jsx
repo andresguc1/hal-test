@@ -56,6 +56,8 @@ import ExecutionDashboard from "./components/reporting/ExecutionDashboard";
 import { api } from "./utils/api";
 import { useElementPicker } from "./hooks/useElementPicker";
 import { AnimatePresence } from "framer-motion";
+import GuestModeModal from "./components/modals/GuestModeModal";
+import { useAuth } from "./context/AuthContext";
 
 const edgeTypes = {
   custom: CustomEdge,
@@ -174,7 +176,7 @@ function Dashboard() {
     projectPath,
     isReadOnly,
     replayRun,
-    resetNodeStates,
+    resetExecutionStates,
     loadStarterTemplate,
     isStarterTemplate,
     addGhostNode,
@@ -365,6 +367,25 @@ function Dashboard() {
     isOpen: false,
     nodeData: null,
   });
+  const { user, authMode } = useAuth();
+  const isGuest = user?.isGuest || authMode === "local";
+
+  const [isGuestModeModalOpen, setIsGuestModeModalOpen] = useState(false);
+
+  const handleSyncCloud = useCallback(() => {
+    if (isGuest) {
+      setIsGuestModeModalOpen(true);
+    } else {
+      toast.info("Syncing to HalTest Cloud...");
+      // Implementation for cloud sync would go here
+    }
+  }, [isGuest, toast]);
+
+  const handleLoginRedirect = useCallback(() => {
+    setIsGuestModeModalOpen(false);
+    window.location.href = "/login"; // Or trigger Supabase login flow
+  }, []);
+
   const [reportingRunId, setReportingRunId] = useState(null);
 
   // 5. Effects
@@ -417,6 +438,9 @@ function Dashboard() {
 
   React.useEffect(() => {
     if (nodes.length > 0) {
+      // Trigger layout organize when opening/switching flows
+      onLayout("LR");
+
       const timer = setTimeout(() => {
         reactFlowFitView({
           duration: 800,
@@ -425,7 +449,7 @@ function Dashboard() {
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [currentFlowId, reactFlowFitView, nodes.length]);
+  }, [currentFlowId, reactFlowFitView, nodes.length, onLayout]);
 
   // Element Picker Hook
   const { handleStartPicking, handleCancelPicking, handleElementPicked } =
@@ -443,7 +467,7 @@ function Dashboard() {
   const handleSelectRun = useCallback(
     async (runBasic, openReport = false) => {
       if (!runBasic) {
-        resetNodeStates();
+        resetExecutionStates();
         setReportingRunId(null);
         return;
       }
@@ -468,7 +492,7 @@ function Dashboard() {
         toast.error("Failed to load run history");
       }
     },
-    [replayRun, resetNodeStates, toast],
+    [replayRun, resetExecutionStates, toast],
   );
 
   // Logs Context
@@ -548,6 +572,8 @@ function Dashboard() {
     [setNodes, setEdges],
   );
 
+  /* handleMCPProposeNodes removed to satisfy lint - unused */
+  /*
   const handleMCPProposeNodes = useCallback(
     async (nodes) => {
       return new Promise((resolve, reject) => {
@@ -558,6 +584,7 @@ function Dashboard() {
     },
     [setIsAskAIPanelVisible],
   );
+  */
 
   const handleConfirmProposal = useCallback(async () => {
     if (proposedNodes && confirmationPromise) {
@@ -580,6 +607,8 @@ function Dashboard() {
   }, [confirmationPromise]);
 
   // MCP phase 3 granular tools
+  /* handleMCPAddNode removed to satisfy lint - unused */
+  /*
   const handleMCPAddNode = useCallback(
     async (nodeData) => {
       const id = `node_${uuidv4()}`;
@@ -598,6 +627,7 @@ function Dashboard() {
     },
     [setNodes],
   );
+  */
 
   const handleMCPConnectNodes = useCallback(
     async ({ sourceId, targetId }) => {
@@ -630,20 +660,17 @@ function Dashboard() {
     [updateNodeConfiguration],
   );
 
-  const socket = useHaltestSocket(
+  const socket = useHaltestSocket({
     setNodes,
     setEdges,
-    handleElementPicked,
-    addLog,
-    null, // onTerminalOutput (handled elsewhere or passed via ref)
-    handleCodegenAction,
-    getCanvasState, // MCP Phase 3
-    handleMCPProposeNodes, // Proponer en vez de inyectar directamente
-    handleMCPAddNode, // Granular
-    handleMCPConnectNodes, // Granular
-    handleMCPRemoveNode,
-    handleMCPUpdateNode,
-  );
+    onElementPicked: handleElementPicked,
+    onLogReceived: addLog,
+    onTerminalOutput: null,
+    onCodegenAction: handleCodegenAction,
+    onConnectNodes: handleMCPConnectNodes,
+    onRemoveNode: handleMCPRemoveNode,
+    onUpdateNode: handleMCPUpdateNode,
+  });
 
   // Computed values
   const isConfigurationPanelVisible = selectedAction !== null;
@@ -1359,6 +1386,13 @@ function Dashboard() {
           activeBrowserId={activeBrowserId}
           onStopSession={stopSession}
           apiStatus={apiStatus}
+          onSyncCloud={handleSyncCloud}
+        />
+
+        <GuestModeModal
+          isOpen={isGuestModeModalOpen}
+          onClose={() => setIsGuestModeModalOpen(false)}
+          onLogin={handleLoginRedirect}
         />
 
         {/* 2. Content Wrapper */}
@@ -1376,10 +1410,18 @@ function Dashboard() {
             />
           ) : isVariablePanelVisible ? (
             <VariablePanel
-              isOpen={true}
+              currentFlowId={currentFlowId}
+              projectId={currentProject?.id}
+              isOpen={isVariablePanelVisible}
+              nodes={nodes}
               onClose={() => {
                 setIsVariablePanelVisible(false);
                 setIsCreationPanelVisible(true);
+              }}
+              onDeleteNode={deleteNode}
+              onUpdateNode={updateNodeConfiguration}
+              onAddNode={(type, configData) => {
+                addNode(type, { x: 100, y: 100 }, configData);
               }}
             />
           ) : (
@@ -1672,7 +1714,7 @@ function Dashboard() {
           onSave={handleSaveFlow}
           onShowImport={() => setIsImportDialogOpen(true)}
           onShowExport={() => setIsExportDialogOpen(true)}
-          onResetStates={resetNodeStates}
+          onResetStates={resetExecutionStates}
           hasUnsavedChanges={hasUnsavedChanges}
           onRunBatch={() => setIsExecutionDashboardOpen(true)}
         />

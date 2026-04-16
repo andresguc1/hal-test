@@ -8,12 +8,15 @@ import {
   Info,
   Database,
   Sparkles,
+  Cloud,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
 import { useTranslation } from "react-i18next";
 import UserMenu from "./UserMenu";
 import HalLogo from "./HalLogo";
+import { useAuth } from "../context/AuthContext";
 
 const HeaderButton = ({ onClick, children, title, className }) => (
   <Motion.button
@@ -78,15 +81,18 @@ function AppHeader({
   isAskAIVisible,
   selectedProject,
   selectedFlow,
-  viewStack,
-  onExitComponent,
   activeBrowserId,
   onStopSession,
   isStarterTemplate,
+  onSyncCloud,
   apiStatus = { state: "idle" },
+  viewStack = [],
+  onExitComponent,
 }) {
   const { theme, setTheme } = useTheme();
   const { t } = useTranslation();
+  const { user, authMode } = useAuth();
+  const isGuest = user?.isGuest || authMode === "local";
 
   // Local state to manage temporary visibility of success/error messages
   const [indicatorState, setIndicatorState] = React.useState("idle");
@@ -224,6 +230,15 @@ function AppHeader({
           </span>
         </h1>
 
+        {/* MODE INDICATOR */}
+        {isGuest && (
+          <div className="hidden lg:flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-500/10 border border-slate-500/20 ml-2 animate-in fade-in slide-in-from-left-2 duration-700">
+            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter">
+              Guest Mode
+            </span>
+          </div>
+        )}
+
         {/* SESSION INDICATOR */}
         {renderIndicator()}
       </div>
@@ -317,6 +332,23 @@ function AppHeader({
           )}
         >
           <Database size={18} />
+        </HeaderButton>
+
+        <HeaderButton
+          onClick={onSyncCloud}
+          title="Sync to Cloud"
+          className={cn(
+            isGuest
+              ? "text-indigo-400 hover:text-indigo-300 bg-indigo-500/5 border border-indigo-500/10"
+              : "text-indigo-500 bg-indigo-500/10",
+          )}
+        >
+          <Cloud size={18} />
+          {isGuest && (
+            <span className="ml-2 text-[10px] font-bold uppercase tracking-tight hidden md:inline">
+              Sync
+            </span>
+          )}
         </HeaderButton>
 
         <HeaderButton

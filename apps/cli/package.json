@@ -27,7 +27,7 @@
     "open": "^10.1.0",
     "ora": "^8.2.0",
     "socket.io-client": "^4.8.3",
-    "terminal-image": "^4.2.0"
+    "terminal-image": "^4.3.0"
   },
   "engines": {
     "node": ">=20.0.0"

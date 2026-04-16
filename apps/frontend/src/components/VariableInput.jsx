@@ -56,7 +56,7 @@ export const VariableInput = ({
     }
   };
 
-  const parsedParts = parseValue(value);
+  const parsedParts = React.useMemo(() => parseValue(value), [value]);
 
   const renderBackgroundContent = () => {
     return parsedParts.map((part, i) => {
@@ -73,10 +73,10 @@ export const VariableInput = ({
               <Tooltip.Trigger asChild>
                 <span
                   className={cn(
-                    "rounded px-1.5 py-0.5 -mx-0.5 pointer-events-auto cursor-help transition-colors",
+                    "rounded px-1.5 py-0.5 -mx-0.5 pointer-events-auto cursor-help transition-colors font-mono",
                     isValid
-                      ? "bg-indigo-500/25 text-indigo-300 font-bold ring-1 ring-indigo-500/30 shadow-[0_0_10px_rgba(99,102,241,0.2)]"
-                      : "bg-amber-500/20 text-amber-400 font-medium border-b-2 border-dashed border-amber-500/50",
+                      ? "bg-indigo-500/25 text-indigo-300 ring-1 ring-indigo-500/30 shadow-[0_0_10px_rgba(99,102,241,0.2)]"
+                      : "bg-amber-500/20 text-amber-400 border-b-2 border-dashed border-amber-500/50",
                   )}
                 >
                   <span className="opacity-40 select-none mr-0.5">
@@ -134,7 +134,7 @@ export const VariableInput = ({
         );
       }
       return (
-        <span key={i} className="text-slate-300 pointer-events-none">
+        <span key={i} className="text-slate-300 pointer-events-none font-mono">
           {part.text}
         </span>
       );
@@ -152,6 +152,7 @@ export const VariableInput = ({
         className={cn(
           className,
           "absolute inset-0 pointer-events-none overflow-hidden !m-0 !outline-none focus:!ring-0",
+          "font-mono antialiased",
           "!text-transparent !bg-transparent border-transparent",
           isTextarea ? "whitespace-pre-wrap break-words" : "whitespace-pre",
           "z-0",
@@ -186,8 +187,8 @@ export const VariableInput = ({
         spellCheck={false}
         className={cn(
           className,
-          "relative z-10",
-          "text-transparent caret-white selection:bg-indigo-500/30 selection:text-transparent",
+          "relative z-10 font-mono antialiased",
+          "text-transparent caret-indigo-500 selection:bg-indigo-500/40 selection:text-white",
           "!bg-transparent placeholder-transparent",
         )}
         {...props}

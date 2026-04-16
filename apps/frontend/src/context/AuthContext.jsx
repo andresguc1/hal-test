@@ -9,38 +9,73 @@ export const AuthProvider = ({ children }) => {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const [authMode, setAuthMode] = useState("cloud"); // "local" | "cloud"
+
   useEffect(() => {
-    const isAuthEnabled = import.meta.env.VITE_AUTH_ENABLED !== "false";
-    const isProd = import.meta.env.MODE === "production";
+    const initAuth = async () => {
+      try {
+        // 1. Detect Mode from Backend
+        const res = await fetch("/api/status").catch(() => null);
+        const status = res ? await res.json().catch(() => ({})) : {};
+        const isLocal =
+          status.mode === "local" ||
+          import.meta.env.VITE_HALTEST_MODE === "local";
 
-    if (!isProd && !isAuthEnabled) {
-      setUser({
-        id: "local-dev-user",
-        email: "local@haltest.dev",
-        role: "admin",
-      });
-      setSession({ access_token: "local-dev-token" });
-      setLoading(false);
-      return;
-    }
+        setAuthMode(isLocal ? "local" : "cloud");
 
-    // Check active sessions and sets the user
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+        if (isLocal) {
+          console.log("[Auth] Local Mode Detected - Enabling Guest Session");
+          setUser({
+            id: "guest-user",
+            email: "guest@haltest.dev",
+            role: "guest",
+            isGuest: true,
+          });
+          setSession({ access_token: "local-guest-token" });
+          setLoading(false);
+          return;
+        }
 
-    // Listen for changes on auth state (sign in, sign out, etc.)
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+        // 2. Cloud Mode - Regular Supabase Auth
+        const isAuthEnabled = import.meta.env.VITE_AUTH_ENABLED !== "false";
+        const isProd = import.meta.env.MODE === "production";
 
-    return () => subscription.unsubscribe();
+        if (!isProd && !isAuthEnabled) {
+          setUser({
+            id: "local-dev-user",
+            email: "local@haltest.dev",
+            role: "admin",
+          });
+          setSession({ access_token: "local-dev-token" });
+          setLoading(false);
+          return;
+        }
+
+        // Check active sessions
+        const {
+          data: { session: initialSession },
+        } = await supabase.auth.getSession();
+        setSession(initialSession);
+        setUser(initialSession?.user ?? null);
+        setLoading(false);
+
+        // Listen for changes
+        const {
+          data: { subscription },
+        } = supabase.auth.onAuthStateChange((_event, session) => {
+          setSession(session);
+          setUser(session?.user ?? null);
+          setLoading(false);
+        });
+
+        return () => subscription.unsubscribe();
+      } catch (err) {
+        console.error("Auth Init Error:", err);
+        setLoading(false);
+      }
+    };
+
+    initAuth();
   }, []);
 
   const signIn = async (email, password) => {
@@ -106,6 +141,7 @@ export const AuthProvider = ({ children }) => {
     user,
     session,
     loading,
+    authMode,
   };
 
   return (

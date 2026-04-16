@@ -325,7 +325,7 @@ if (isAlreadyRunning) {
     env: {
       ...process.env,
       NODE_ENV: process.env.NODE_ENV || "production",
-      HAL_CLI_MODE: "true",
+      HALTEST_MODE: "local",
     },
   });
 

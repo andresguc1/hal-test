@@ -116,6 +116,8 @@ app.get('/api/status', (req, res) => {
         status: 'ok',
         message: 'HaltTest API is up and running 🚀',
         version: '1.0.0-NO-MCP',
+        mode: process.env.HALTEST_MODE || 'cloud',
+        auth_enabled: process.env.AUTH_ENABLED !== 'false',
         timestamp: new Date().toISOString(),
     });
 });

@@ -90736,13 +90736,11 @@ var LPe = class extends Hm {
             const n = this.options;
             ((this.options = this.#e.defaultMutationOptions(t)),
                 Mx(this.options, n) ||
-                    this.#e
-                        .getMutationCache()
-                        .notify({
-                            type: 'observerOptionsUpdated',
-                            mutation: this.#n,
-                            observer: this,
-                        }),
+                    this.#e.getMutationCache().notify({
+                        type: 'observerOptionsUpdated',
+                        mutation: this.#n,
+                        observer: this,
+                    }),
                 n?.mutationKey &&
                 this.options.mutationKey &&
                 ed(n.mutationKey) !== ed(this.options.mutationKey)

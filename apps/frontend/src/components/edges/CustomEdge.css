@@ -1,0 +1,47 @@
+/* CustomEdge.css */
+
+@keyframes dashdraw {
+  from {
+    stroke-dashoffset: 10;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes particle-glow {
+  0% {
+    filter: drop-shadow(0 0 2px rgba(245, 158, 11, 0.4));
+  }
+  50% {
+    filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.8));
+  }
+  100% {
+    filter: drop-shadow(0 0 2px rgba(245, 158, 11, 0.4));
+  }
+}
+
+.edge-running {
+  stroke-dasharray: 5, 5;
+  animation: dashdraw 0.5s linear infinite;
+}
+
+.edge-success {
+  stroke-dasharray: none;
+  animation: none;
+}
+
+.edge-error {
+  stroke-dasharray: none;
+  animation: none;
+}
+
+.edge-healed {
+  stroke-dasharray: none;
+  animation: none;
+}
+
+.edge-skipped {
+  stroke-dasharray: 2, 4; /* Punteado */
+  animation: none;
+}
