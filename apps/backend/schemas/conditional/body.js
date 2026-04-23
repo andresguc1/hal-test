@@ -44,11 +44,35 @@ export default Joi.object({
                 label: Joi.string()
                     .required()
                     .description('Display label for the UI (e.g. "Is Logged In")'),
-                expression: Joi.string()
-                    .allow('')
-                    .description(
-                        'Javascript expression to evaluate, e.g. "${status} === 200". Leave empty for a Default/Else branch that matches if no previous branch does.',
-                    ),
+                expression: Joi.alternatives([
+                    Joi.string().allow(''),
+                    Joi.object({
+                        left: Joi.alternatives()
+                            .try(Joi.string(), Joi.number(), Joi.boolean())
+                            .allow('')
+                            .required(),
+                        operator: Joi.string()
+                            .valid(
+                                '===',
+                                '==',
+                                '!==',
+                                '!=',
+                                '>',
+                                '<',
+                                '>=',
+                                '<=',
+                                'contains',
+                                'exists',
+                            )
+                            .required(),
+                        right: Joi.alternatives()
+                            .try(Joi.string(), Joi.number(), Joi.boolean())
+                            .allow('')
+                            .optional(),
+                    }),
+                ]).description(
+                    'Javascript expression (string) or Structured Rule (object). Leave empty for Default branch.',
+                ),
             }),
         )
         .min(1)
@@ -60,6 +84,7 @@ export default Joi.object({
         .description('Fallback destination ID to use if no branch matches (default: "false")'),
 })
     .or('conditions', 'branches')
+    .unknown(true)
     .meta({
         description:
             'Evaluates conditions and determines execution path (supports dual or multiple dynamic branches)',

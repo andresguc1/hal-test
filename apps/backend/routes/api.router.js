@@ -574,33 +574,96 @@ const withSocketStatus = (handler) => async (req, res) => {
 
         // 🆕 AUTO-SEED: If the request includes variables, seed them into the VariableManager
         // This ensures that placeholders like {{user}} are resolved in the current action
-        if (req.body?.variables && typeof req.body.variables === 'object') {
-            const { variables, runId } = req.body;
-            const { variableManager } = await import('../services/VariableManager.js');
-            Object.entries(variables).forEach(([key, value]) => {
-                variableManager.set(key, value, runId);
-            });
+        const { nodeId: bodyNodeId, runId, variables } = req.body;
+        console.log(
+            `[API Router] Execution Interceptor: Node=${bodyNodeId || 'unknown'}, RunId=${runId || 'none'}`,
+        );
+
+        // 🟢 SEED VARIABLE CONTEXT
+        // Required for atomic runs (Run Node) to resolve {{PreviousNode.result}}
+        if (variables && typeof variables === 'object') {
+            try {
+                const { variableManager } = await import('../services/VariableManager.js');
+                // We use the provided runId or a default fallback
+                const effectiveRunId = runId || 'atomic_run';
+                const varKeys = Object.keys(variables);
+                console.log(
+                    `[API Router] Seeding ${varKeys.length} variables into RunId=${effectiveRunId}. Keys: ${varKeys.slice(0, 5).join(', ')}`,
+                );
+                variableManager.initRun(effectiveRunId, variables);
+                // Ensure the body has the same runId so controller uses the correct scope
+                req.body.runId = effectiveRunId;
+            } catch (err) {
+                console.warn('[API Router] Failed to seed variable context:', err.message);
+            }
         }
 
-        // Intercept res.json to detect success/error from the response
+        // Intercept res.json to detect success/error from the response and enforce standard schema
         const originalJson = res.json.bind(res);
         res.json = (body) => {
+            // 🆕 STANDARD RESPONSE DECORATOR
+            // Enforce a consistent contract for all nodes so Conditional nodes can rely on them
+            const standardBody = {
+                success: body?.success !== undefined ? !!body.success : true,
+                status: body?.status || (body?.success === false ? 'error' : 'success'),
+                message:
+                    body?.message ||
+                    (body?.success === false ? 'Action failed' : 'Action completed'),
+                timestamp: new Date().toISOString(),
+                nodeId: nodeId || body?.nodeId || null,
+                ...body, // Keep original data at root for backward compatibility
+            };
+
             // Only emit if handler didn't already handle socket events itself
             if (nodeId && !req._socketStatusHandled) {
                 import('../socket.js')
                     .then(({ emitExecutionStatus }) => {
-                        const status = body?.success === false ? 'error' : 'success';
+                        const status = standardBody.status;
                         const error =
-                            body?.success === false
-                                ? body?.message || body?.error || 'Unknown error'
+                            standardBody.success === false
+                                ? standardBody.message || 'Unknown error'
                                 : null;
-                        emitExecutionStatus({ stepId: nodeId, status, error, result: body });
+                        emitExecutionStatus({
+                            stepId: nodeId,
+                            status,
+                            error,
+                            result: standardBody,
+                        });
                     })
                     .catch(() => {
                         /* socket not ready */
                     });
             }
-            return originalJson(body);
+
+            // 💾 ATOMIC RUN MEMORY PERSISTENCE:
+            // If we have a successful result and a runId, save it to the singleton VariableManager
+            // This mimics ExecutionService behavior, making strictly-typed atomic runs work seamlessly!
+            if (standardBody.success !== false) {
+                const rID = req.body.runId || 'atomic_run';
+                // Use a non-blocking background promise to avoid slowing down API response
+                import('../services/VariableManager.js')
+                    .then(({ variableManager }) => {
+                        const label =
+                            req.body.configuration?.customLabel ||
+                            req.body.configuration?.label ||
+                            req.body.label;
+                        const type =
+                            req.body.type || req.url.split('/').pop().replace('_action', ''); // Fallback type extraction
+
+                        if (nodeId) variableManager.set(`${nodeId}.result`, standardBody, rID);
+                        if (label) variableManager.set(`${label}.result`, standardBody, rID);
+                        if (type) variableManager.set(`${type}.result`, standardBody, rID);
+
+                        console.log(
+                            `[API Router] 💾 Auto-Saved Atomic Result for: ${type || label || nodeId} in runId: ${rID}`,
+                        );
+                    })
+                    .catch((err) =>
+                        console.error('[API Router] Failed atomic variable save:', err.message),
+                    );
+            }
+
+            return originalJson(standardBody);
         };
 
         return await handler(req, res);

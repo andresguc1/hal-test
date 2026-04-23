@@ -27,6 +27,8 @@ import {
   XCircle,
   Plus,
   CornerDownRight,
+  Check,
+  AlertTriangle,
 } from "lucide-react";
 import { useToast } from "@/hooks/useToast";
 import { useTranslation } from "react-i18next";
@@ -40,18 +42,91 @@ const ConditionalBranchesEditor = React.memo(
   ({ value, onChange, variables }) => {
     const { t } = useTranslation();
     const branches = useMemo(() => {
-      return Array.isArray(value) && value.length > 0
-        ? value
-        : [
-            { id: "true", label: "True", expression: "" },
-            { id: "false", label: "False", expression: "" },
-          ];
+      let activeValue = value;
+      if (typeof value === "string" && value.startsWith("[")) {
+        try {
+          activeValue = JSON.parse(value);
+        } catch {
+          activeValue = [];
+        }
+      }
+
+      const safeBranches =
+        Array.isArray(activeValue) && activeValue.length > 0
+          ? activeValue
+          : [
+              {
+                id: "true",
+                label: "True",
+                expression: { left: "", operator: "==", right: "" },
+                mode: "simple",
+              },
+              { id: "false", label: "Else", expression: "", mode: "advanced" },
+            ];
+
+      // Sanitization: Ensure each branch has a mode that matches its expression
+      return safeBranches.map((b) => {
+        // Prevent literal "[object Object]" strings from corrupting the UI
+        let cleanExpr = b.expression;
+        if (
+          (typeof cleanExpr === "string" && cleanExpr === "[object Object]") ||
+          cleanExpr === null
+        ) {
+          cleanExpr = "";
+        }
+
+        const hasStructuredExpr =
+          cleanExpr && typeof cleanExpr === "object" && "left" in cleanExpr;
+        return {
+          ...b,
+          expression: cleanExpr,
+          mode: b.mode || (hasStructuredExpr ? "simple" : "advanced"),
+        };
+      });
     }, [value]);
 
     const updateBranch = React.useCallback(
       (index, field, val) => {
         const newBranches = [...branches];
-        newBranches[index] = { ...newBranches[index], [field]: val };
+        const currentBranch = { ...newBranches[index] };
+
+        // Handle nested expression object update
+        if (field.startsWith("expr_")) {
+          const subField = field.replace("expr_", "");
+          const currentExpr =
+            typeof currentBranch.expression === "object" &&
+            currentBranch.expression !== null
+              ? { ...currentBranch.expression }
+              : { left: "", operator: "==", right: "" };
+
+          currentExpr[subField] = val;
+          currentBranch.expression = currentExpr;
+          currentBranch.mode = "simple";
+        } else {
+          currentBranch[field] = val;
+        }
+
+        newBranches[index] = currentBranch;
+        onChange(newBranches);
+      },
+      [branches, onChange],
+    );
+
+    const toggleMode = React.useCallback(
+      (index) => {
+        const newBranches = [...branches];
+        const branch = { ...newBranches[index] };
+
+        // SAFE TOGGLE: Ensure we transition between clean states
+        if (branch.mode === "simple") {
+          branch.mode = "advanced";
+          branch.expression = ""; // Advanced mode uses a string
+        } else {
+          branch.mode = "simple";
+          branch.expression = { left: "", operator: "==", right: "" }; // Simple mode uses an object
+        }
+
+        newBranches[index] = branch;
         onChange(newBranches);
       },
       [branches, onChange],
@@ -60,7 +135,12 @@ const ConditionalBranchesEditor = React.memo(
     const addBranch = React.useCallback(() => {
       onChange([
         ...branches,
-        { id: `branch_${Date.now()}`, label: "Nueva", expression: "" },
+        {
+          id: `branch_${Date.now()}`,
+          label: "Nueva",
+          expression: { left: "", operator: "==", right: "" },
+          mode: "simple",
+        },
       ]);
     }, [branches, onChange]);
 
@@ -74,6 +154,67 @@ const ConditionalBranchesEditor = React.memo(
       [branches, onChange],
     );
 
+    const operators = [
+      { label: "==", value: "==" },
+      { label: "!=", value: "!=" },
+      { label: ">", value: ">" },
+      { label: "<", value: "<" },
+      { label: ">=", value: ">=" },
+      { label: "<=", value: "<=" },
+      { label: "Contains", value: "contains" },
+      { label: "Exists", value: "exists" },
+    ];
+
+    // Get value suggestions based on selected left variable
+    const getValueSuggestions = (leftRef) => {
+      if (!leftRef || typeof leftRef !== "string") return [];
+
+      const varNameMatch = leftRef.match(/\{\{([^}]+)\}\}/);
+      if (!varNameMatch) return [];
+
+      const fullPath = varNameMatch[1];
+      const parts = fullPath.split(".");
+      const nodeName = parts[0];
+      const propName = parts[1];
+
+      // Normalization helper for prefix matching
+      const normalize = (str) =>
+        str
+          .replace(/\s*\(Library\)\s*/i, "")
+          .replace(/[^a-zA-Z0-9]/g, "")
+          .toLowerCase();
+      const normNodeName = normalize(nodeName);
+
+      // Find the key in variables that matches the normalized name
+      const realNodeKey = Object.keys(variables).find(
+        (k) => normalize(k) === normNodeName,
+      );
+      const nodeData = realNodeKey ? variables[realNodeKey] : null;
+
+      if (!nodeData) return [];
+
+      const value = propName ? nodeData[propName] : nodeData;
+
+      const suggestions = [];
+      if (value !== undefined && value !== null && typeof value !== "object") {
+        suggestions.push(String(value));
+      }
+
+      // Add smart defaults for common fields
+      if (propName === "status") {
+        ["success", "error", "loading", "pending"].forEach((s) => {
+          if (!suggestions.includes(s)) suggestions.push(s);
+        });
+      }
+      if (propName === "success") {
+        ["true", "false"].forEach((s) => {
+          if (!suggestions.includes(s)) suggestions.push(s);
+        });
+      }
+
+      return suggestions.slice(0, 10);
+    };
+
     return (
       <div className="space-y-4 mt-4 mb-2">
         <div className="flex justify-between items-center mb-1">
@@ -81,29 +222,23 @@ const ConditionalBranchesEditor = React.memo(
             <Split size={14} />
             {t("nodes.config.branching_rules", "Reglas de Bifurcación")}
           </label>
-          <div className="group relative">
-            <Info
-              size={14}
-              className="text-slate-500 hover:text-sky-400 cursor-help transition-colors"
-            />
-            <div className="absolute right-0 bottom-full mb-2 w-48 p-2 bg-slate-900 border border-slate-700 rounded-lg text-[10px] text-slate-300 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">
-              {t(
-                "nodes.hints.conditional_logic",
-                'La primera coincidencia detiene la evaluación. Deja vacío para "Si no..." (Else).',
-              )}
-            </div>
-          </div>
         </div>
         <div className="space-y-4">
           {branches.map((branch, index) => {
-            const isDefault = !branch.expression;
+            const hasStructuredExpr =
+              branch.expression &&
+              typeof branch.expression === "object" &&
+              "left" in branch.expression;
+            // FORCED MODE DETECTION: If it looks like a rule, it IS simple mode.
+            const isAdvanced = branch.mode === "advanced" && !hasStructuredExpr;
+            const isDefault = isAdvanced && !branch.expression;
             const isTrue = branch.id === "true";
             const isFalse = branch.id === "false";
 
             return (
               <div
-                key={branch.id || `branch-${index}`}
-                className="px-4 py-4 bg-[#0f172a]/80 border border-sky-500/20 rounded-2xl space-y-3 relative group hover:border-sky-500/50 transition-all shadow-lg hover:shadow-sky-500/5"
+                key={`branch-${branch.id}-${index}`}
+                className="px-4 py-4 bg-[#0f172a]/80 border border-sky-500/20 rounded-2xl space-y-3 relative group hover:border-sky-500/50 transition-all shadow-lg"
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3 flex-1">
@@ -131,8 +266,8 @@ const ConditionalBranchesEditor = React.memo(
                       </span>
                       <input
                         type="text"
-                        placeholder="Etiqueta (ej: Login Exitoso)"
-                        value={branch.label}
+                        placeholder="Etiqueta"
+                        value={String(branch.label || "")}
                         onChange={(e) =>
                           updateBranch(index, "label", e.target.value)
                         }
@@ -142,13 +277,20 @@ const ConditionalBranchesEditor = React.memo(
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <div className="bg-black/30 px-2 py-0.5 rounded border border-white/5 text-[9px] font-mono text-slate-400">
-                      ID: {branch.id}
-                    </div>
+                    <button
+                      onClick={() => toggleMode(index)}
+                      className={cn(
+                        "px-2 py-1 rounded text-[9px] font-black uppercase tracking-tighter transition-all border",
+                        isAdvanced
+                          ? "bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20"
+                          : "bg-indigo-500/10 border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/20",
+                      )}
+                    >
+                      {isAdvanced ? "Advanced (JS)" : "Simple (Rule)"}
+                    </button>
                     <button
                       onClick={() => removeBranch(index)}
                       className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
-                      title="Eliminar Ruta"
                     >
                       <Trash2 size={14} />
                     </button>
@@ -156,22 +298,226 @@ const ConditionalBranchesEditor = React.memo(
                 </div>
 
                 <div className="relative">
-                  <VariableInput
-                    value={branch.expression || ""}
-                    variables={variables}
-                    placeholder={t(
-                      "nodes.placeholders.condition_expression",
-                      "Ex: ${status} === 200 (Vacío = Default)",
-                    )}
-                    onChange={(e) =>
-                      updateBranch(index, "expression", e.target.value)
-                    }
-                    className="bg-black/40 border-sky-500/20 focus:border-sky-500/50 min-h-[38px] text-[11px] py-2"
-                  />
+                  {isAdvanced ? (
+                    <VariableInput
+                      value={
+                        typeof branch.expression === "string"
+                          ? branch.expression
+                          : ""
+                      }
+                      variables={variables}
+                      placeholder={t(
+                        "nodes.placeholders.condition_expression",
+                        "Ex: ${status} === 200",
+                      )}
+                      onChange={(e) =>
+                        updateBranch(index, "expression", e.target.value)
+                      }
+                      className="bg-black/40 border-sky-500/20 focus:border-sky-500/50 min-h-[38px] text-[11px] py-2"
+                    />
+                  ) : (
+                    <div className="flex flex-col gap-3 p-3 bg-black/40 rounded-2xl border border-white/5 shadow-inner">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase px-1">
+                          IF
+                        </span>
+
+                        {/* Intelligent Variable Selector */}
+                        <div className="flex-1 min-w-[200px]">
+                          <select
+                            className="w-full bg-slate-800/80 border-white/10 rounded-xl text-[11px] font-bold text-sky-300 px-3 h-9 focus:ring-2 focus:ring-sky-500/30 transition-all outline-none appearance-none cursor-pointer"
+                            value={branch.expression?.left || ""}
+                            onChange={(e) =>
+                              updateBranch(index, "expr_left", e.target.value)
+                            }
+                          >
+                            <option value="">Selecciona Variable...</option>
+                            {Object.entries(variables || {}).map(
+                              ([nodeName, nodeVal]) => {
+                                if (nodeName.includes(".result")) return null;
+                                if (!nodeVal || typeof nodeVal !== "object")
+                                  return null;
+
+                                const label = `🟢 ${nodeName}`;
+                                const options = [];
+
+                                // Recursive flattener for dropdown options
+                                const extractOptions = (
+                                  obj,
+                                  prefix = "",
+                                  depth = 0,
+                                ) => {
+                                  if (
+                                    depth > 2 ||
+                                    !obj ||
+                                    typeof obj !== "object"
+                                  )
+                                    return;
+
+                                  Object.entries(obj).forEach(([prop, val]) => {
+                                    if (
+                                      prop === "result" ||
+                                      prop.startsWith("_")
+                                    )
+                                      return; // skip internal
+
+                                    const fullPropPath = prefix
+                                      ? `${prefix}.${prop}`
+                                      : prop;
+                                    const isObj =
+                                      val &&
+                                      typeof val === "object" &&
+                                      !Array.isArray(val);
+
+                                    // Icons: ⚓ core, 📄 primitive, 📦 object
+                                    const coreFields = [
+                                      "status",
+                                      "success",
+                                      "statusCode",
+                                      "error",
+                                      "message",
+                                      "data",
+                                    ];
+                                    const icon = coreFields.includes(prop)
+                                      ? "⚓ "
+                                      : isObj
+                                        ? "📦 "
+                                        : "📄 ";
+
+                                    if (!isObj || depth === 2) {
+                                      options.push({
+                                        id: `${nodeName}.${fullPropPath}`,
+                                        path: `{{${nodeName}.${fullPropPath}}}`,
+                                        label: `${icon}${fullPropPath}`,
+                                        type: Array.isArray(val)
+                                          ? "array"
+                                          : typeof val,
+                                      });
+                                    }
+
+                                    if (isObj && depth < 2) {
+                                      extractOptions(
+                                        val,
+                                        fullPropPath,
+                                        depth + 1,
+                                      );
+                                    }
+                                  });
+                                };
+
+                                extractOptions(nodeVal);
+
+                                return (
+                                  <optgroup key={nodeName} label={label}>
+                                    {options.map((opt) => (
+                                      <option key={opt.id} value={opt.path}>
+                                        {opt.label} ({opt.type})
+                                      </option>
+                                    ))}
+                                  </optgroup>
+                                );
+                              },
+                            )}
+                          </select>
+                        </div>
+
+                        <div className="w-16">
+                          <select
+                            value={branch.expression?.operator || "=="}
+                            onChange={(e) =>
+                              updateBranch(
+                                index,
+                                "expr_operator",
+                                e.target.value,
+                              )
+                            }
+                            className="w-full bg-slate-800 border-white/10 rounded-xl text-[11px] font-black text-white px-2 h-9 text-center focus:ring-2 focus:ring-sky-500/30 outline-none cursor-pointer"
+                          >
+                            {operators.map((op) => (
+                              <option key={op.value} value={op.value}>
+                                {op.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="flex-1 min-w-[120px]">
+                          <VariableInput
+                            value={branch.expression?.right || ""}
+                            variables={variables}
+                            suggestions={getValueSuggestions(
+                              branch.expression?.left,
+                            )}
+                            placeholder="Valor"
+                            onChange={(e) =>
+                              updateBranch(index, "expr_right", e.target.value)
+                            }
+                            className="bg-slate-800/80 border-white/10 text-[11px] h-9 rounded-xl focus:border-sky-500/40"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Sub-label for validation/preview */}
+                      {branch.expression?.left && (
+                        <div className="flex items-center justify-between px-2">
+                          <div className="text-[9px] text-slate-500 font-medium italic">
+                            Preview:{" "}
+                            {typeof branch.expression?.left === "string"
+                              ? branch.expression.left
+                              : "..."}{" "}
+                            {String(branch.expression?.operator || "==")}{" "}
+                            {typeof branch.expression?.right === "string"
+                              ? branch.expression.right
+                              : "..."}
+                          </div>
+
+                          {/* LIVE VALIDATION INDICATOR */}
+                          {(() => {
+                            const leftRaw = branch.expression.left || "";
+                            const varNameMatch =
+                              leftRaw.match(/\{\{([^}]+)\}\}/);
+                            if (varNameMatch) {
+                              const fullPath = varNameMatch[1];
+                              const parts = fullPath.split(".");
+                              const nodeName = parts[0];
+                              const propName = parts[1];
+
+                              const nodeData = variables[nodeName];
+                              const exists =
+                                nodeData &&
+                                (propName === undefined
+                                  ? true
+                                  : Object.prototype.hasOwnProperty.call(
+                                      nodeData,
+                                      propName,
+                                    ));
+
+                              if (nodeData && !exists) {
+                                return (
+                                  <div className="flex items-center gap-1 text-[9px] font-black text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 animate-pulse">
+                                    <AlertTriangle size={10} />
+                                    PROPERTY "{propName}" NOT FOUND IN DATA
+                                  </div>
+                                );
+                              } else if (exists) {
+                                return (
+                                  <div className="flex items-center gap-1 text-[9px] font-black text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                                    <Check size={10} />
+                                    DATA READY
+                                  </div>
+                                );
+                              }
+                            }
+                            return null;
+                          })()}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   {isDefault && (
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-2 py-0.5 bg-sky-500/10 border border-sky-500/20 rounded text-[9px] font-black text-sky-400 pointer-events-none uppercase tracking-widest">
                       <Zap size={10} fill="currentColor" />
-                      DEFAULT
+                      DEFAULT/ELSE
                     </div>
                   )}
                 </div>
@@ -181,11 +527,9 @@ const ConditionalBranchesEditor = React.memo(
         </div>
         <button
           onClick={addBranch}
-          className="w-full py-3 bg-sky-500/5 hover:bg-sky-500/10 border border-dashed border-sky-500/30 rounded-2xl text-[11px] font-black uppercase tracking-widest text-sky-400 flex items-center justify-center gap-3 mt-4 transition-all hover:border-sky-500/60 active:scale-95 group"
+          className="w-full py-3 bg-sky-500/5 hover:bg-sky-500/10 border border-dashed border-sky-500/30 rounded-2xl text-[11px] font-black uppercase tracking-widest text-sky-400 flex items-center justify-center gap-3 mt-2 transition-all"
         >
-          <span className="w-5 h-5 rounded-full bg-sky-500/20 flex items-center justify-center group-hover:bg-sky-500/40 transition-colors">
-            <GitBranch size={12} />
-          </span>
+          <Plus size={12} />
           {t("nodes.config.add_branch", "Agregar Nueva Regla")}
         </button>
       </div>
@@ -207,7 +551,7 @@ const SwitchCasesEditor = React.memo(({ value, onChange, _variables }) => {
   );
 
   const addCase = React.useCallback(() => {
-    const id = `case_${Date.now()}`;
+    const id = `case_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
     onChange([...cases, { id, value: "", label: "" }]);
   }, [cases, onChange]);
 
@@ -1814,12 +2158,17 @@ const NODE_INPUTS = {
 
   conditional: [
     {
+      key: "debugMode",
+      label: "🛡️ Enable Debug Logs (Tracing)",
+      type: "checkbox",
+      defaultValue: false,
+    },
+    {
       key: "branches",
       label: "Branches",
-      type: "conditional_branches", // Custom type for rendering
+      type: "conditional_branches",
       required: true,
     },
-    // Keep legacy fallback input just in case for older nodes, but mostly hidden
     {
       key: "fallbackPath",
       label: "Fallback Destination ID",
@@ -3923,16 +4272,19 @@ function NodeConfigurationPanel({
             {/* Primary Action */}
             <button
               onClick={async () => {
-                await onExecute({
-                  ...activeNode,
-                  data: {
-                    ...activeNode.data,
-                    configuration: {
-                      ...(activeNode.data?.configuration || {}),
-                      ...localConfig,
+                await onExecute(
+                  {
+                    ...activeNode,
+                    data: {
+                      ...activeNode.data,
+                      configuration: {
+                        ...(activeNode.data?.configuration || {}),
+                        ...localConfig,
+                      },
                     },
                   },
-                });
+                  { variables: variablesMap },
+                );
                 await refreshVariables();
               }}
               disabled={hasErrors} // Block execution if validation/mandatory fields fail

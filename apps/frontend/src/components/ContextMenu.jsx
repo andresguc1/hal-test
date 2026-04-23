@@ -16,6 +16,7 @@ import {
   Box,
   Ungroup,
   Repeat,
+  EyeOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NODE_CATEGORIES } from "../config/nodeConstants";
@@ -606,6 +607,21 @@ const ContextMenu = ({
                 onClick={() => {}}
                 disabled
               />
+              <ContextMenuItem
+                icon={EyeOff}
+                label={data?.data?.disabled ? "Enable Node" : "Disable Node"}
+                onClick={() => actions.toggleDisabled(data.id)}
+              />
+              <ContextMenuItem
+                icon={EyeOff}
+                label="Enable Downstream Segment"
+                onClick={() => actions.setSegmentDisabled(data.id, false)}
+              />
+              <ContextMenuItem
+                icon={EyeOff}
+                label="Disable Downstream Segment"
+                onClick={() => actions.setSegmentDisabled(data.id, true)}
+              />
               <Divider />
               <ContextMenuItem
                 icon={Copy}
@@ -691,6 +707,11 @@ const ContextMenu = ({
                 icon={Repeat}
                 label="Iterate Selection"
                 onClick={actions.loopSelection}
+              />
+              <ContextMenuItem
+                icon={EyeOff}
+                label="Disable / Enable Selection"
+                onClick={() => actions.toggleDisabled()}
               />
               <ContextMenuItem
                 icon={Ungroup}

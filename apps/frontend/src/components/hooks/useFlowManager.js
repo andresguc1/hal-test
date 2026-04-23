@@ -427,10 +427,8 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
 
             logger.info("Flow loaded", { flowId: flow.id }, "useFlowManager");
 
-            // ✨ AUTO-MAGIC LAYOUT: Automatically organize the canvas on load
-            setTimeout(() => {
-              onLayout("LR");
-            }, 150);
+            // ✨ AUTO-MAGIC LAYOUT: Automatic organization on load disabled to give user full control.
+            // The user can still trigger it manually via the Magic Organize button.
           }
         } catch (err) {
           logger.error("Error loading flow", err, "useFlowManager");
@@ -2288,20 +2286,89 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
   // ========================================
 
   /**
+   * Repairs legacy IDs in edges to match descriptive IDs (starter_launch, etc.)
+   */
+  const repairLegacyStarterEdges = useCallback((nodes, edges) => {
+    const legacyMap = {
+      e1: "starter_launch",
+      1: "starter_launch",
+      2: "starter_open",
+      varu: "starter_var_user",
+      varp: "starter_var_pass",
+      3: "starter_login_group",
+      r: "starter_reload",
+      screenshot: "starter_screenshot",
+      5: "starter_screenshot",
+      6: "starter_close",
+    };
+
+    let repairedCount = 0;
+    const newEdges = edges.map((edge) => {
+      let source = String(edge.source);
+      let target = String(edge.target);
+      let edgeRepaired = false;
+
+      if (legacyMap[source]) {
+        source = legacyMap[source];
+        edgeRepaired = true;
+      }
+      if (legacyMap[target]) {
+        target = legacyMap[target];
+        edgeRepaired = true;
+      }
+
+      if (edgeRepaired) {
+        repairedCount++;
+        return { ...edge, source, target };
+      }
+      return edge;
+    });
+
+    if (repairedCount > 0) {
+      console.log(`[Repair] Fixed ${repairedCount} legacy edges.`);
+      return newEdges;
+    }
+    return null;
+  }, []);
+
+  /**
    * Validates the flow before execution
    * @returns {Array<string>} Array of error messages (empty if valid)
    */
   const validateFlowStructure = useCallback(
     (nodesToValidate, edgesToValidate) => {
+      // --- AUTO-REPAIR: Fix legacy ID mismatches (Dotted lines fix) ---
+      const repairedEdges = repairLegacyStarterEdges(
+        nodesToValidate,
+        edgesToValidate,
+      );
+      if (repairedEdges) {
+        setEdges(repairedEdges);
+        // We use the repaired edges for the rest of this validation pass
+        edgesToValidate = repairedEdges;
+      }
+
       const errors = [];
 
       // Filtrar nodos puramente visuales/explicativos
-      const ignoredTypes = ["guide", "note", "comment"];
-      const executionNodes = nodesToValidate.filter(
-        (n) =>
-          !ignoredTypes.includes(n.type) &&
-          !ignoredTypes.includes(n.data?.type),
-      );
+      const ignoredTypes = [
+        "guide",
+        "note",
+        "comment",
+        "annotation",
+        "label",
+        "sticky",
+      ];
+      const executionNodes = nodesToValidate.filter((n) => {
+        const typeMatch =
+          ignoredTypes.includes(n.type) || ignoredTypes.includes(n.data?.type);
+        const isDisabled = n.data?.disabled;
+
+        if (typeMatch || isDisabled) {
+          return false;
+        }
+        return true;
+      });
 
       // 1. Check for empty flow
       if (executionNodes.length === 0) {
@@ -2396,7 +2463,9 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
 
       // 5. Rule: Browser Uniqueness (Global check)
       const launchNodes = nodesToValidate.filter(
-        (n) => n.type === "launch_browser" || n.data?.type === "launch_browser",
+        (n) =>
+          (n.type === "launch_browser" || n.data?.type === "launch_browser") &&
+          !n.data?.disabled,
       );
       if (launchNodes.length > 1) {
         errors.push(
@@ -2405,10 +2474,16 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
       }
 
       // 6. Enforce GraphValidator Check
+      const executionEdges = edgesToValidate.filter((e) => {
+        const sourceInExecution = executionNodes.some((n) => n.id === e.source);
+        const targetInExecution = executionNodes.some((n) => n.id === e.target);
+        return sourceInExecution && targetInExecution;
+      });
+
       try {
         const result = GraphValidator.validate({
-          nodes: nodesToValidate,
-          edges: edgesToValidate,
+          nodes: executionNodes,
+          edges: executionEdges,
         });
         if (!result.valid) {
           errors.push(...result.errors);
@@ -2419,7 +2494,7 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
 
       return errors;
     },
-    [],
+    [repairLegacyStarterEdges, setEdges],
   );
 
   /**
@@ -2428,7 +2503,7 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
    * @param {Object} nodeWithOverrides - The node object with current panel configuration
    */
   const executeSingleNode = useCallback(
-    async (nodeWithOverrides) => {
+    async (nodeWithOverrides, extraOptions = {}) => {
       // 1. Validar que recibimos un objeto válido
       if (!nodeWithOverrides || !nodeWithOverrides.id) {
         console.error("executeSingleNode: Invalid Argument", nodeWithOverrides);
@@ -2443,9 +2518,8 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
       updateNodeState(id, NODE_STATES.EXECUTING);
 
       // 3. Delegation to executeStep
-      // executeStep(nodeId, type, payload, browserId, runId)
-      // Note: runId is null for atomic debug to avoid polluting history or tracking as flow run
-      const result = await executeStep(id, type, config);
+      // executeStep(nodeId, type, payload, browserId, runId, options)
+      const result = await executeStep(id, type, config, extraOptions);
 
       // 4. Feedback is handled inside executeStep (Socket events)
       return result;
@@ -2685,17 +2759,27 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
       const executeGraph = async (graphNodes, graphEdges, depth = 0) => {
         if (depth > 10) throw new Error("Max recursion depth exceeded");
 
-        // Find root nodes if depth 0 and graphNodes is just the whole list
-        let startNodes = graphNodes;
-        if (depth === 0 && graphNodes.length > 1) {
+        // --- FILTER INACTIVE NODES/EDGES ---
+        const activeNodes = graphNodes.filter((n) => !n.data?.disabled);
+        const activeEdges = graphEdges.filter((e) => {
+          const s = activeNodes.find((n) => n.id === e.source);
+          const t = activeNodes.find((n) => n.id === e.target);
+          return s && t;
+        });
+
+        if (activeNodes.length === 0) return;
+
+        // Find root nodes if depth 0 and activeNodes is just the whole list
+        let startNodes = activeNodes;
+        if (depth === 0 && activeNodes.length > 1) {
           const incomingCount = new Map();
-          graphNodes.forEach((n) => incomingCount.set(n.id, 0));
-          graphEdges.forEach((e) => {
+          activeNodes.forEach((n) => incomingCount.set(n.id, 0));
+          activeEdges.forEach((e) => {
             if (incomingCount.has(e.target)) {
               incomingCount.set(e.target, incomingCount.get(e.target) + 1);
             }
           });
-          startNodes = graphNodes.filter((n) => incomingCount.get(n.id) === 0);
+          startNodes = activeNodes.filter((n) => incomingCount.get(n.id) === 0);
 
           // Fallback if everyone has an incoming edge (cycle)
           if (startNodes.length === 0 && graphNodes.length > 0) {
@@ -2705,7 +2789,7 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
 
         const internalExecuted = new Set();
         const queue = [...startNodes];
-        globalStats.total = graphNodes.length; // Update total estimate
+        globalStats.total = activeNodes.length; // Update total estimate
         const healedNodes = []; // Track AI repairs: [{ nodeId, newSelector }]
 
         let lastResult = { success: true }; // To bubble up
@@ -2884,10 +2968,16 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
               node.type !== "output" &&
               node.type !== "annotation"
             ) {
-              const resolvedConfig = resolveVariables(
-                node.data?.configuration || {},
-                flowContext,
-              );
+              // 🛡️ Logic nodes should NOT be resolved on frontend because stringification
+              // destroys original types (boolean, number). We let backend VariableManager do it.
+              const nodeType = node.data?.type || node.type;
+              const isLogicNode =
+                nodeType === "conditional" || nodeType === "wait_conditional";
+
+              const resolvedConfig = isLogicNode
+                ? node.data?.configuration || {}
+                : resolveVariables(node.data?.configuration || {}, flowContext);
+
               const action = {
                 nodeId: node.id,
                 type: node.data?.type || node.type,
@@ -2951,7 +3041,7 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
             }
 
             // B. Enqueue Children
-            let nextEdges = graphEdges.filter((e) => e.source === node.id);
+            let nextEdges = activeEdges.filter((e) => e.source === node.id);
             // FIX: Robust path extraction including .data layer, targetPath from backend
             const path = String(
               result?.path ||
@@ -2990,11 +3080,20 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
               console.log(
                 `[FlowManager] 🔀 Branching Node "${node.id}" (${nodeKey}) winner path: "${path}"`,
               );
-              let filtered = nextEdges.filter(
-                (e) =>
-                  String(e.sourceHandle || "").toLowerCase() === path ||
-                  String(e.targetHandle || "").toLowerCase() === path,
-              );
+              let filtered = nextEdges.filter((e) => {
+                const handle = String(e.sourceHandle || "").toLowerCase();
+                const targetPath = String(path).toLowerCase();
+                if (handle === targetPath) return true;
+
+                // 🛡️ Alias Tolerance: Mapping common alternative names
+                if (
+                  targetPath === "false" &&
+                  (handle === "else" || handle === "fallback")
+                )
+                  return true;
+                if (targetPath === "else" && handle === "false") return true;
+                return false;
+              });
 
               // 🛡️ Final strict enforcement
               if (shouldEnforceStrictPath || isBranchingNode) {
@@ -3060,7 +3159,7 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
             });
 
             nextEdges.forEach((e) => {
-              const targetNode = graphNodes.find((n) => n.id === e.target);
+              const targetNode = activeNodes.find((n) => n.id === e.target);
               if (targetNode) nextNodes.push(targetNode);
             });
 
@@ -3480,6 +3579,206 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
     [saveToHistory, setNodes, setEdges, setApiStatus, setExecutionStats],
   );
 
+  /**
+   * Toggles the disabled state of a node and all its successors (downstream)
+   */
+  const setSegmentDisabled = useCallback(
+    (nodeId, isDisabled) => {
+      const segmentNodes = new Set();
+      const queue = [nodeId];
+
+      while (queue.length > 0) {
+        const currentId = queue.shift();
+        if (!segmentNodes.has(currentId)) {
+          segmentNodes.add(currentId);
+          edges
+            .filter((e) => e.source === currentId)
+            .forEach((e) => queue.push(e.target));
+        }
+      }
+
+      setNodes((nds) =>
+        nds.map((node) => {
+          if (segmentNodes.has(node.id)) {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                disabled: isDisabled,
+              },
+            };
+          }
+          return node;
+        }),
+      );
+
+      // Visual feedback for edges
+      setEdges((eds) =>
+        eds.map((edge) => {
+          if (segmentNodes.has(edge.source) || segmentNodes.has(edge.target)) {
+            const sourceNode = nodes.find((n) => n.id === edge.source);
+            const targetNode = nodes.find((n) => n.id === edge.target);
+
+            // An edge is considered disabled if either its source or target is disabled
+            // Note: During the setNodes update, the 'nodes' array here is still stale.
+            // We use the segmentNodes set to check new state.
+            const isSourceDisabled = segmentNodes.has(edge.source)
+              ? isDisabled
+              : sourceNode?.data?.disabled;
+            const isTargetDisabled = segmentNodes.has(edge.target)
+              ? isDisabled
+              : targetNode?.data?.disabled;
+
+            if (isSourceDisabled || isTargetDisabled) {
+              return {
+                ...edge,
+                animated: false,
+                style: { ...edge.style, strokeDasharray: "5,5", opacity: 0.3 },
+              };
+            }
+            return {
+              ...edge,
+              animated: true,
+              style: { ...edge.style, strokeDasharray: "none", opacity: 1 },
+            };
+          }
+          return edge;
+        }),
+      );
+
+      toast.info(
+        isDisabled
+          ? t("nodes.segment_disabled", "Segment disabled")
+          : t("nodes.segment_enabled", "Segment enabled"),
+      );
+    },
+    [nodes, edges, setNodes, setEdges, t, toast],
+  );
+
+  const toggleDisabled = useCallback(
+    (nodeId) => {
+      setNodes((nds) =>
+        nds.map((node) => {
+          if (node.id === nodeId) {
+            const isDisabled = !node.data?.disabled;
+            return {
+              ...node,
+              data: { ...node.data, disabled: isDisabled },
+            };
+          }
+          return node;
+        }),
+      );
+
+      // Re-evaluate edges tied to this node
+      setEdges((eds) => {
+        const targetNode = nodes.find((n) => n.id === nodeId);
+        const newDisabledState = !targetNode?.data?.disabled;
+
+        return eds.map((edge) => {
+          if (edge.source === nodeId || edge.target === nodeId) {
+            if (newDisabledState) {
+              return {
+                ...edge,
+                animated: false,
+                style: { ...edge.style, strokeDasharray: "5,5", opacity: 0.3 },
+              };
+            } else {
+              // Check if the OTHER end is also disabled before re-enabling
+              const otherId =
+                edge.source === nodeId ? edge.target : edge.source;
+              const otherNode = nodes.find((n) => n.id === otherId);
+              if (otherNode?.data?.disabled) return edge;
+
+              return {
+                ...edge,
+                animated: true,
+                style: { ...edge.style, strokeDasharray: "none", opacity: 1 },
+              };
+            }
+          }
+          return edge;
+        });
+      });
+    },
+    [nodes, setNodes, setEdges],
+  );
+
+  /**
+   * Toggles the disabled state for one or more nodes and their connected edges.
+   */
+  const toggleNodesDisabled = useCallback(
+    (nodeIds, forcedState) => {
+      saveToHistory();
+      const idsToUpdate = Array.isArray(nodeIds) ? nodeIds : [nodeIds];
+
+      setNodes((nds) => {
+        const nextNodes = nds.map((node) => {
+          if (idsToUpdate.includes(node.id)) {
+            const isDisabled =
+              forcedState !== undefined ? forcedState : !node.data.disabled;
+            return {
+              ...node,
+              data: { ...node.data, disabled: isDisabled },
+            };
+          }
+          return node;
+        });
+
+        // 2. Sync Edge Dimming based on connected node states
+        const disabledIds = new Set(
+          nextNodes.filter((n) => n.data?.disabled).map((n) => n.id),
+        );
+        setEdges((eds) =>
+          eds.map((edge) => {
+            const isDimmed =
+              disabledIds.has(edge.source) || disabledIds.has(edge.target);
+            return {
+              ...edge,
+              style: isDimmed
+                ? { opacity: 0.3, strokeDasharray: "5 5", stroke: "#64748b" }
+                : { opacity: 1, strokeDasharray: "none", stroke: "#38bdf8" },
+              animated: !isDimmed && edge.animated !== false,
+            };
+          }),
+        );
+
+        return nextNodes;
+      });
+    },
+    [saveToHistory, setNodes, setEdges],
+  );
+
+  /**
+   * Disables/Enables a node and ALl its downstream nodes (segment).
+   */
+  const toggleDownstreamDisabled = useCallback(
+    (startNodeId, forcedState) => {
+      const getSuccessors = (nodeId, allEdges) => {
+        const successors = new Set();
+        const stack = [nodeId];
+        while (stack.length > 0) {
+          const curr = stack.pop();
+          allEdges
+            .filter((e) => e.source === curr)
+            .forEach((e) => {
+              if (!successors.has(e.target)) {
+                successors.add(e.target);
+                stack.push(e.target);
+              }
+            });
+        }
+        return Array.from(successors);
+      };
+
+      const successorIds = getSuccessors(startNodeId, edges);
+      const allIds = [startNodeId, ...successorIds];
+
+      toggleNodesDisabled(allIds, forcedState);
+    },
+    [edges, toggleNodesDisabled],
+  );
+
   // ========================================
   // UNGROUPING LOGIC (Inverse of groupNodes)
   // ========================================
@@ -3563,7 +3862,7 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
               source: mainEdge.source,
               target: innerEdge.target,
               sourceHandle: mainEdge.sourceHandle,
-              targetHandle: innerEdge.targetHandle,
+              targetHandle: mainEdge.targetHandle,
               type: "default",
               animated: true,
             });
@@ -3590,8 +3889,8 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
               id: `e_${innerEdge.source}-${mainEdge.target}`,
               source: innerEdge.source,
               target: mainEdge.target,
-              sourceHandle: innerEdge.sourceHandle,
-              targetHandle: innerEdge.targetHandle,
+              sourceHandle: mainEdge.sourceHandle,
+              targetHandle: mainEdge.targetHandle,
               type: "default",
               animated: true,
             });
@@ -4009,5 +4308,9 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
     loadStarterTemplate,
     isStarterTemplate,
     onLayout,
+    toggleNodesDisabled,
+    toggleDisabled,
+    setSegmentDisabled,
+    toggleDownstreamDisabled,
   };
 }

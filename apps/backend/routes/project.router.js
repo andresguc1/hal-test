@@ -132,12 +132,20 @@ const syncActiveFlowToDisk = async (nodes, edges, projectId) => {
     if (process.env.NODE_ENV === 'production') return;
 
     try {
-        const sortedNodes = sortNodesTopologically(nodes, edges);
+        const activeNodes = nodes.filter((n) => !n.data?.disabled);
+        const activeEdges = edges.filter((e) => {
+            const s = activeNodes.find((n) => (n.id || n.nodeId) === e.source);
+            const t = activeNodes.find((n) => (n.id || n.nodeId) === e.target);
+            return s && t;
+        });
+
+        const sortedNodes = sortNodesTopologically(activeNodes, activeEdges);
         let flattenedNodes = [];
 
         const flatten = async (currentNodes) => {
             const IGNORED_TYPES = ['input', 'output', 'annotation', 'note'];
             for (const n of currentNodes) {
+                if (n.data?.disabled) continue; // Skip disabled nodes
                 if (n.type === 'component' || n.data?.type === 'component') {
                     const flowId = n.data?.configuration?.flowId || n.data?.flowId;
                     if (flowId && projectId) {

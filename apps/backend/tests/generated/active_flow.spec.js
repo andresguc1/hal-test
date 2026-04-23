@@ -10,11 +10,11 @@ test(`Flujo Generado Hal-Test`, async ({ page }) => {
         await page.goto(`https://www.saucedemo.com`);
     });
 
-    await test.step(`Global: test_password`, async () => {
+    await test.step(`Set Password`, async () => {
         console.log(`⚠️ Acción no implementada o pendiente: variable`);
     });
 
-    await test.step(`Global: test_user`, async () => {
+    await test.step(`Set Username`, async () => {
         console.log(`⚠️ Acción no implementada o pendiente: variable`);
     });
 
@@ -30,19 +30,8 @@ test(`Flujo Generado Hal-Test`, async ({ page }) => {
         await page.click(`#login-button`);
     });
 
-    await test.step(`Wait Element (Adv)`, async () => {
-        await page.waitForSelector('[data-test="secondary-header"]', {
-            state: 'attached',
-            timeout: 8000,
-        });
-    });
-
     await test.step(`conditional`, async () => {
         console.log(`⚠️ Acción no implementada o pendiente: conditional`);
-    });
-
-    await test.step(`Log Errors`, async () => {
-        page.on('pageerror', (error) => console.error('Page error:', error));
     });
 
     await test.step(`Reload Page`, async () => {
@@ -50,7 +39,11 @@ test(`Flujo Generado Hal-Test`, async ({ page }) => {
     });
 
     await test.step(`Evidence`, async () => {
-        await page.screenshot({ path: 'screenshot_11.png' });
+        await page.screenshot({ path: 'screenshot_9.png' });
+    });
+
+    await test.step(`Finish Tour`, async () => {
+        // Browser managed by runner
     });
     console.log(`✅ Flujo completado con éxito.`);
 });

@@ -18,10 +18,14 @@ export class GraphValidator {
 
     // 1. Uniqueness / Singleton Rules
     const launches = nodes.filter(
-      (n) => n.type === "launch_browser" || n.data?.type === "launch_browser",
+      (n) =>
+        (n.type === "launch_browser" || n.data?.type === "launch_browser") &&
+        !n.data?.disabled,
     );
     const closes = nodes.filter(
-      (n) => n.type === "close_browser" || n.data?.type === "close_browser",
+      (n) =>
+        (n.type === "close_browser" || n.data?.type === "close_browser") &&
+        !n.data?.disabled,
     );
 
     if (launches.length === 0) {
@@ -83,10 +87,14 @@ export class GraphValidator {
           queue.push(...neighbors);
         }
       }
+      const activeNodes = nodes.filter((n) => !n.data?.disabled);
 
-      if (visited.size < nodes.length) {
+      if (visited.size < activeNodes.length) {
+        const unreachableIds = activeNodes
+          .filter((n) => !visited.has(n.id))
+          .map((n) => n.id || n.nodeId);
         errors.push(
-          "Found unreachable nodes. All nodes must be connected to the main flow.",
+          `Found unreachable nodes: [${unreachableIds.join(", ")}]. All nodes must be connected to the main flow starting from 'Launch Browser'.`,
         );
       }
     }

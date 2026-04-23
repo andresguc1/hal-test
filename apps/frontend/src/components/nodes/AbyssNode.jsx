@@ -66,14 +66,29 @@ const AbyssNode = ({ id, data, selected, type }) => {
   const isSwitch = nodeKey === "switch";
 
   const branches = isConditional
-    ? data.configuration?.branches || [
-        { id: "true", label: t("common.true", "True") },
-        { id: "false", label: t("common.false", "False") },
-      ]
+    ? (() => {
+        const configBranches = data.configuration?.branches || [];
+        // Only add fallback "Else" handle if no branch with id "false" already exists
+        const hasFalseBranch = configBranches.some((b) => b.id === "false");
+        return hasFalseBranch
+          ? configBranches
+          : [
+              ...configBranches,
+              {
+                id: "false",
+                label: t("common.fallback", "Else"),
+                isFallback: true,
+              },
+            ];
+      })()
     : isSwitch
       ? [
           ...(data.configuration?.cases || []),
-          { id: "default", label: t("common.default", "Default") },
+          {
+            id: "default",
+            label: t("common.default", "Default"),
+            isFallback: true,
+          },
         ]
       : [];
 
@@ -100,7 +115,7 @@ const AbyssNode = ({ id, data, selected, type }) => {
         borderColor: statusColor || undefined,
         boxShadow: statusShadow || undefined,
         minHeight:
-          isConditional && showOutputs
+          (isConditional || isSwitch) && showOutputs
             ? Math.max(80, branches.length * 40)
             : undefined,
         transition:
@@ -134,6 +149,9 @@ const AbyssNode = ({ id, data, selected, type }) => {
         // GHOST STYLE (Phase 2)
         data.isGhost &&
           "border-dashed opacity-80 border-white/40 grayscale-[0.5]",
+
+        // DISABLED STATE
+        data.disabled && "opacity-40 grayscale brightness-75",
       )}
     >
       {/* INPUT HANDLE */}
@@ -332,49 +350,61 @@ const AbyssNode = ({ id, data, selected, type }) => {
         </div>
       )}
 
-      {/* OUTPUT HANDLE */}
-      {showOutputs && (isConditional || isSwitch) ? (
-        branches.map((branch, idx) => {
-          const topPct = `${((idx + 1) * 100) / (branches.length + 1)}%`;
-          return (
-            <div
-              key={branch.id || idx}
-              className="absolute -right-3 w-3 h-3 group z-20"
-              style={{ top: topPct, transform: "translateY(-50%)" }}
-            >
-              {showDetails && (
-                <div className="absolute left-full ml-4 pointer-events-none flex items-center justify-start opacity-0 group-hover:opacity-100 transition-all duration-200 transform translate-x-2 group-hover:translate-x-0">
-                  <div className="bg-[#0f172a]/95 backdrop-blur-xl px-2 py-0.5 rounded text-[9px] font-black tracking-wider text-sky-400 border border-sky-500/30 whitespace-nowrap shadow-lg uppercase">
-                    {branch.label || branch.value || branch.id}
-                  </div>
+      {/* OUTPUT HANDLES */}
+      {showOutputs && (isConditional || isSwitch)
+        ? branches.map((branch, idx) => {
+            const topPct = `${((idx + 1) * 100) / (branches.length + 1)}%`;
+            return (
+              <React.Fragment key={branch.id || idx}>
+                {/* Visual port dot (Behind the handle) */}
+                <div
+                  className="absolute -right-3 w-3 h-3 z-10 pointer-events-none"
+                  style={{ top: topPct, transform: "translateY(-50%)" }}
+                >
+                  <div className="w-3 h-3 bg-sky-400 border-[2px] border-[#0f172a] rounded-full shadow-[0_0_10px_rgba(56,189,248,0.5)]" />
+
+                  {showDetails && (
+                    <div className="absolute left-full ml-4 top-1/2 -translate-y-1/2 pointer-events-none flex items-center justify-start group-hover:opacity-100 transition-all duration-200">
+                      <div
+                        className={cn(
+                          "px-2 py-0.5 rounded text-[9px] font-black tracking-wider border whitespace-nowrap shadow-lg",
+                          branch.isFallback
+                            ? "bg-slate-800/90 text-slate-400 border-slate-700/50"
+                            : "bg-[#0f172a]/95 text-sky-400 border-sky-500/30",
+                        )}
+                      >
+                        {branch.label || branch.value || branch.id}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
 
-              {/* Visual port dot */}
-              <div className="w-3 h-3 bg-sky-400 border-[2px] border-[#0f172a] rounded-full transition-all group-hover:scale-[1.5] shadow-[0_0_10px_rgba(56,189,248,0.5)]" />
-
-              {/* Functional Handle (Invisible but large hit area) */}
-              <Handle
-                type="source"
-                id={branch.id}
-                position={Position.Right}
-                style={{
-                  top: "50%",
-                  right: "50%",
-                  transform: "translate(50%, -50%)",
-                }}
-                className="!absolute !w-10 !h-10 !bg-transparent !border-none !cursor-pointer z-50"
-              />
-            </div>
-          );
-        })
-      ) : showOutputs ? (
-        <Handle
-          type="source"
-          position={Position.Right}
-          className="!-right-3 !w-3 !h-3 !bg-white !border-[2px] !border-black/20 transition-colors"
-        />
-      ) : null}
+                {/* Functional Handle (Always reachable) */}
+                <Handle
+                  type="source"
+                  id={branch.id}
+                  position={Position.Right}
+                  style={{
+                    top: topPct,
+                    right: -12, // -3px * 4 approximately to match visual dot center
+                    width: 24,
+                    height: 24,
+                    backgroundColor: "transparent",
+                    border: "none",
+                    transform: "translate(50%, -50%)",
+                    zIndex: 50,
+                  }}
+                />
+              </React.Fragment>
+            );
+          })
+        : showOutputs && (
+            <Handle
+              type="source"
+              position={Position.Right}
+              className="!-right-3 !w-3 !h-3 !bg-white !border-[2px] !border-black/20 transition-colors"
+            />
+          )}
     </div>
   );
 };
@@ -386,7 +416,9 @@ function arePropsEqual(prevProps, nextProps) {
   return (
     prevProps.id === nextProps.id &&
     prevProps.selected === nextProps.selected &&
-    prevProps.data === nextProps.data // Strict usage of immutable data
+    prevProps.data?.state === nextProps.data?.state &&
+    prevProps.data?.configuration === nextProps.data?.configuration &&
+    prevProps.data?.error === nextProps.data?.error
   );
 }
 
