@@ -30,5 +30,5 @@ const waitConditionalBodySchema = Joi.object({
     browserId: Joi.string().allow(null, '').optional(),
 });
 
-// Bloquea cualquier campo extra que no esté definido.
-export default waitConditionalBodySchema;
+// Bloquea cualquier campo extra que no esté definido por defecto, lo flexibilizamos.
+export default waitConditionalBodySchema.unknown(true);

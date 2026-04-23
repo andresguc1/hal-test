@@ -13,10 +13,14 @@ export class GraphValidator {
 
         // 1. Uniqueness / Singleton Rules
         const launches = nodes.filter(
-            (n) => n.type === 'launch_browser' || n.data?.type === 'launch_browser',
+            (n) =>
+                (n.type === 'launch_browser' || n.data?.type === 'launch_browser') &&
+                !n.data?.disabled,
         );
         const closes = nodes.filter(
-            (n) => n.type === 'close_browser' || n.data?.type === 'close_browser',
+            (n) =>
+                (n.type === 'close_browser' || n.data?.type === 'close_browser') &&
+                !n.data?.disabled,
         );
 
         if (launches.length === 0) {
@@ -47,11 +51,17 @@ export class GraphValidator {
 
         const edgeErrors = [];
         edges.forEach((e) => {
-            if (!nodeMap.has(e.source)) {
+            const source = nodeMap.get(e.source);
+            const target = nodeMap.get(e.target);
+
+            // Skip edges connected to disabled nodes
+            if (source?.data?.disabled || target?.data?.disabled) return;
+
+            if (!source) {
                 edgeErrors.push(`Edge references invalid source node: ${e.source}`);
                 return;
             }
-            if (!nodeMap.has(e.target)) {
+            if (!target) {
                 edgeErrors.push(`Edge references invalid target node: ${e.target}`);
                 return;
             }
@@ -78,9 +88,13 @@ export class GraphValidator {
                 }
             }
 
-            if (visited.size < nodes.length) {
+            const activeNodes = nodes.filter((n) => !n.data?.disabled);
+            if (visited.size < activeNodes.length) {
+                const unreachableIds = activeNodes
+                    .filter((n) => !visited.has(n.nodeId || n.id))
+                    .map((n) => n.nodeId || n.id);
                 errors.push(
-                    'Found unreachable nodes. All nodes must be connected to the main flow.',
+                    `Found unreachable nodes: [${unreachableIds.join(', ')}]. All nodes must be connected to the main flow starting from 'Launch Browser'.`,
                 );
             }
         }

@@ -184,6 +184,8 @@ function Dashboard() {
     onLayout,
     exitToRoot,
     apiStatus,
+    toggleNodesDisabled,
+    toggleDownstreamDisabled,
   } = useFlowManager(currentProject, currentFlowId, switchFlow);
 
   const handleExecuteFlow = useCallback(async () => {
@@ -438,9 +440,7 @@ function Dashboard() {
 
   React.useEffect(() => {
     if (nodes.length > 0) {
-      // Trigger layout organize when opening/switching flows
-      onLayout("LR");
-
+      // Just fit view when switching flows, do not force a magic layout automatically
       const timer = setTimeout(() => {
         reactFlowFitView({
           duration: 800,
@@ -449,7 +449,7 @@ function Dashboard() {
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [currentFlowId, reactFlowFitView, nodes.length, onLayout]);
+  }, [currentFlowId, reactFlowFitView, onLayout, nodes.length]);
 
   // Element Picker Hook
   const { handleStartPicking, handleCancelPicking, handleElementPicked } =
@@ -1060,6 +1060,27 @@ function Dashboard() {
     [setMenu],
   );
 
+  const handleToggleDisabled = useCallback(
+    (nodeId) => {
+      // If we are in 'selection' mode, toggle everything selected
+      if (menu?.type === "selection" && menu.data?.nodes) {
+        toggleNodesDisabled(menu.data.nodes.map((n) => n.id));
+      } else {
+        toggleNodesDisabled(Array.isArray(nodeId) ? nodeId : [nodeId]);
+      }
+      setMenu(null);
+    },
+    [toggleNodesDisabled, menu],
+  );
+
+  const handleToggleDownstream = useCallback(
+    (nodeId) => {
+      toggleDownstreamDisabled(nodeId);
+      setMenu(null);
+    },
+    [toggleDownstreamDisabled],
+  );
+
   // ========================================
   // KEYBOARD SHORTCUTS (Moved here to access handlers)
   // ========================================
@@ -1544,6 +1565,9 @@ function Dashboard() {
                       canPaste:
                         clipboard.nodes.length > 0 ||
                         clipboard.edges.length > 0,
+                      cleanLayout: () => onLayout("LR"),
+                      toggleDisabled: handleToggleDisabled,
+                      toggleDownstream: handleToggleDownstream,
                     }}
                   />
                 )}

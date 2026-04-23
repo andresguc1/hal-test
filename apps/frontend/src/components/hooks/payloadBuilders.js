@@ -1050,7 +1050,10 @@ export const variable = (payload) => {
 };
 
 export const conditional = (payload) => {
-  const body = { browserId: asString(payload?.browserId) };
+  const body = {
+    browserId: asString(payload?.browserId),
+    debugMode: asBoolean(payload?.debugMode, false),
+  };
 
   if (Array.isArray(payload?.branches) && payload.branches.length > 0) {
     body.branches = payload.branches;
@@ -1097,6 +1100,17 @@ export const loop = (payload) => {
     maxIterations: asNumber(payload?.maxIterations, 1000, 1),
   };
 };
+
+export const switch_node = (payload) => {
+  return {
+    browserId: asString(payload?.browserId),
+    variableName: asString(payload?.variableName),
+    cases: Array.isArray(payload?.cases) ? payload.cases : [],
+    scope: asString(payload?.scope, "flow"),
+  };
+};
+
+export { switch_node as switch };
 
 export const branch = (payload) => {
   return {

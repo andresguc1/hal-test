@@ -41,7 +41,7 @@ const smartEmitLog = (message, type = 'info', nodeId = null) => {
  */
 export const getVariables = (req, res) => {
     try {
-        const runId = req.query.runId || req.body.runId;
+        const runId = req.query.runId || req.body?.runId;
 
         // Use specified runId, or fallback to the latest active run, or legacy flow
         let flowVariables = {};
@@ -4182,12 +4182,35 @@ export const variableAction = async (req, res) => {
 
 export const conditionalAction = async (req, res) => {
     try {
-        const { conditions, logic = 'AND', branches, fallbackPath = 'false', runId } = req.body;
+        const {
+            conditions,
+            logic = 'AND',
+            branches,
+            fallbackPath = 'false',
+            runId,
+            variables,
+        } = req.body;
         console.log(
-            `[DEBUG] conditionalAction - runId: ${runId}, branches count: ${branches?.length || 0}`,
+            `[DEBUG] conditionalAction - runId: ${runId}, variables: ${Object.keys(variables || {}).length}, branches: ${branches?.length || 0}`,
         );
 
-        // NEW LOGIC: Dynamic Branches Evaluation
+        // Debug mode for detailed tracing
+        const debugMode = req.body.debugMode || req.body.configuration?.debugMode || false;
+
+        if (debugMode) {
+            smartEmitLog(
+                `[Conditional] Starting evaluation (Logic: ${logic}, Branches: ${branches?.length || 0})`,
+                'info',
+                req.body.nodeId,
+            );
+            // Log available variables for debugging resolution issues
+            const allVars = variableManager.getAll(runId);
+            console.log(
+                `[Conditional] Available variables for runId=${runId}:`,
+                Object.keys(allVars),
+            );
+        }
+
         if (branches && Array.isArray(branches) && branches.length > 0) {
             console.log('[DEBUG] Evaluating branches:', JSON.stringify(branches, null, 2));
             let matchedBranch = null;
@@ -4197,20 +4220,88 @@ export const conditionalAction = async (req, res) => {
                 let branchMatched = false;
                 let branchError = null;
                 let status = 'pending';
+                let evaluatedExprInfo = '';
+                let resolvedLeft = undefined;
+                let resolvedRight = undefined;
 
                 if (matchedBranch) {
                     status = 'skipped';
-                } else if (!branch.expression || branch.expression.trim() === '') {
+                } else if (
+                    !branch.expression ||
+                    (typeof branch.expression === 'string' && branch.expression.trim() === '')
+                ) {
                     // Default branch matches if no previous branch matched
                     branchMatched = true;
                     status = 'matched';
+                    evaluatedExprInfo = 'Default/Fallback branch';
                 } else {
                     try {
-                        const branchResult = variableManager.evaluate(branch.expression, runId);
-                        branchMatched = branchResult === true;
+                        let branchResult;
+                        if (typeof branch.expression === 'object') {
+                            // Structured Rule
+                            const { left, operator, right } = branch.expression;
+                            resolvedLeft = variableManager.resolveValue(left, runId);
+                            resolvedRight = variableManager.resolveValue(right, runId);
+
+                            // Strict undefined conversion for uninterpreted variables
+                            const isUnres = (v) =>
+                                typeof v === 'string' && (v.includes('{{') || v.includes('${'));
+                            if (isUnres(resolvedLeft)) {
+                                resolvedLeft = undefined;
+                            }
+                            if (isUnres(resolvedRight)) {
+                                resolvedRight = undefined;
+                            }
+
+                            const rightOriginal = right !== undefined ? right : 'undefined';
+
+                            console.log(
+                                `[Conditional] Original: ${left} ${operator} ${rightOriginal}`,
+                            );
+                            console.log(
+                                `[Conditional] Resuelto: ${JSON.stringify(resolvedLeft)} ${operator} ${JSON.stringify(resolvedRight)}`,
+                            );
+
+                            // Warn explicitly if left couldn't be resolved
+                            if (resolvedLeft === undefined) {
+                                console.warn(
+                                    `[Conditional] ⚠️ WARNING: Variable "${left}" could not be resolved. ` +
+                                        `Check that the upstream node result is stored correctly.`,
+                                );
+                            }
+
+                            branchResult = variableManager.evaluateStructured(
+                                branch.expression,
+                                runId,
+                            );
+                            console.log(`[Conditional] Resultado: ${branchResult}`);
+
+                            evaluatedExprInfo = `Original: ${left} ${operator} ${rightOriginal} | Resuelto: ${JSON.stringify(resolvedLeft)} ${operator} ${JSON.stringify(resolvedRight)} | Resultado: ${branchResult === true}`;
+                            branchMatched = branchResult === true;
+                        } else {
+                            // Raw Expression
+                            branchResult = variableManager.evaluate(
+                                branch.expression,
+                                runId,
+                                {},
+                                true,
+                            );
+                            evaluatedExprInfo = `Original: ${branch.expression} | Resultado: ${branchResult === true}`;
+                            branchMatched = branchResult === true;
+                        }
+
                         status = branchMatched ? 'matched' : 'not_matched';
+
+                        if (debugMode) {
+                            smartEmitLog(
+                                `[Conditional] Branch "${branch.label || branch.id}": ${evaluatedExprInfo} => ${branchResult}`,
+                                branchMatched ? 'success' : 'info',
+                                req.body.nodeId,
+                            );
+                        }
+
                         console.log(
-                            `[DEBUG] Branch '${branch.label || branch.id}' evaluation: ${branch.expression} => ${branchResult} (matched: ${branchMatched})`,
+                            `[DEBUG] Branch '${branch.label || branch.id}' evaluation: ${evaluatedExprInfo} => ${branchResult} (matched: ${branchMatched})`,
                         );
                     } catch (exprError) {
                         branchError = exprError.message;
@@ -4218,10 +4309,14 @@ export const conditionalAction = async (req, res) => {
                         console.error(
                             `[ERROR] Failed to evaluate branch '${branch.id}': ${exprError.message}`,
                         );
-                        // Halt execution and bubble up the error so the node fails explicitly
-                        throw new Error(
-                            `Expression error in branch '${branch.label || branch.id}': ${exprError.message}`,
-                        );
+
+                        if (debugMode) {
+                            smartEmitLog(
+                                `[Conditional] Branch "${branch.label || branch.id}" ERROR: ${exprError.message}`,
+                                'error',
+                                req.body.nodeId,
+                            );
+                        }
                     }
                 }
 
@@ -4231,6 +4326,9 @@ export const conditionalAction = async (req, res) => {
                     error: branchError,
                     label: branch.label,
                     expression: branch.expression,
+                    evaluatedInfo: evaluatedExprInfo,
+                    resolvedLeft,
+                    resolvedRight,
                 };
 
                 if (branchMatched && !matchedBranch) {
@@ -4240,6 +4338,18 @@ export const conditionalAction = async (req, res) => {
 
             const finalPath = matchedBranch ? matchedBranch.id : fallbackPath;
             const finalResult = !!matchedBranch;
+
+            console.log(
+                `[Conditional] ✅ Final Decision: path="${finalPath}", result=${finalResult}`,
+            );
+
+            if (debugMode) {
+                smartEmitLog(
+                    `[Conditional] Evaluation finished. Selected Path: ${finalPath}`,
+                    'success',
+                    req.body.nodeId,
+                );
+            }
 
             return res.status(200).json({
                 success: true,
@@ -4274,6 +4384,72 @@ export const conditionalAction = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: req.t('actions.conditional.error'),
+            error: error.message,
+        });
+    }
+};
+
+export const switchAction = async (req, res) => {
+    try {
+        const { variableName, cases, runId } = req.body;
+
+        console.log(
+            `[DEBUG] switchAction - runId: ${runId}, variable: ${variableName}, cases count: ${Array.isArray(cases) ? cases.length : Object.keys(cases || {}).length}`,
+        );
+
+        // 1. Resolve the variable value
+        let resolvedValue = variableManager.get(variableName, runId);
+
+        if (resolvedValue === undefined && typeof variableName === 'string') {
+            if (variableName.includes('{{') || variableName.includes('${')) {
+                resolvedValue = variableManager.resolveValue(variableName, runId);
+            } else {
+                // Try resolving as a potential path like "node.result.status"
+                resolvedValue = variableManager.resolveValue(`{{${variableName}}}`, runId);
+            }
+        }
+
+        console.log(`[DEBUG] switchAction - Resolved value for '${variableName}':`, resolvedValue);
+
+        // 2. Find matching case
+        let matchedCaseId = null;
+        const normalizedResolved = String(resolvedValue ?? '').trim();
+
+        if (Array.isArray(cases)) {
+            const matchedCase = cases.find((c) => {
+                const normalizedCaseValue = String(c.value ?? '').trim();
+                return normalizedCaseValue === normalizedResolved;
+            });
+            if (matchedCase) matchedCaseId = matchedCase.id;
+        } else if (cases && typeof cases === 'object') {
+            // Support object-based cases: { "value": "targetPath" }
+            if (normalizedResolved in cases) {
+                matchedCaseId = cases[normalizedResolved];
+            } else if ('default' in cases) {
+                matchedCaseId = cases.default;
+            }
+        }
+
+        const finalPath = matchedCaseId || 'default';
+
+        return res.status(200).json({
+            success: true,
+            message: matchedCaseId
+                ? `Switch matched case: ${matchedCaseId}`
+                : `No switch cases matched, routing to default`,
+            path: finalPath, // Backward compatibility: path at root
+            data: {
+                resolvedValue,
+                path: finalPath,
+                targetPath: finalPath, // Backward compatibility: targetPath in data
+                matchedCaseId: matchedCaseId || null,
+            },
+        });
+    } catch (error) {
+        console.error('[ERROR] switchAction:', error.message);
+        return res.status(500).json({
+            success: false,
+            message: 'Error executing switch action',
             error: error.message,
         });
     }
@@ -4384,64 +4560,6 @@ export const loopAction = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: req.t('actions.loop.error'),
-            error: error.message,
-        });
-    }
-};
-
-export const switchAction = async (req, res) => {
-    try {
-        let { variableName, cases, scope = 'flow' } = req.body;
-
-        // Clean name (strip interpolation {{ }} and spaces)
-        if (variableName) {
-            variableName = variableName.replace(/\{\{|\}\}/g, '').trim();
-        }
-
-        const value = variableManager.get(variableName, scope);
-
-        // Normalize cases to object
-        let caseMap = {};
-        if (typeof cases === 'string') {
-            try {
-                caseMap = JSON.parse(cases);
-            } catch (e) {
-                console.warn('[WARN] Switch cases failed to parse as JSON:', cases);
-                caseMap = {};
-            }
-        } else if (Array.isArray(cases)) {
-            // Support array format for backend flexibility
-            cases.forEach((c) => {
-                caseMap[String(c.value).trim()] = c.id;
-            });
-        } else {
-            caseMap = cases || {};
-        }
-
-        const targetPath = caseMap[String(value).trim()] || caseMap['default'] || 'default';
-
-        smartEmitLog(
-            `[FLOW] Switch evaluated: ${variableName}=${value} -> Path: ${targetPath}`,
-            'info',
-            req.body.nodeId,
-        );
-
-        return res.status(200).json({
-            success: true,
-            message: `Switch target: ${targetPath}`,
-            path: targetPath, // 🆕 Root level path for executeGraph compatibility
-            data: {
-                value,
-                path: targetPath, // 🆕 data level path
-                targetPath,
-                variableName,
-            },
-        });
-    } catch (error) {
-        console.error('[ERROR] switchAction:', error.message);
-        return res.status(500).json({
-            success: false,
-            message: 'Error executing switch action',
             error: error.message,
         });
     }
@@ -4700,13 +4818,22 @@ export const componentAction = async (req, res) => {
 
         // 🌟 GUARANTEED STRUCTURED OUTPUT
         // runSequence returns null on normal completion (no flow control signal).
-        // Always build a valid contract object so the next node has data to inspect.
-        const rawResult = subflowResult?.action === 'return' ? subflowResult.data : subflowResult;
+        // always build a valid contract object so the next node has data to inspect.
         const nodeLabel = label || configuration?.label || nodeId || 'Component';
-
-        const structuredResult = rawResult || {
-            status: 'success',
+        const structuredResult = {
+            success: subflowResult?.success !== false,
+            status:
+                subflowResult?.status || (subflowResult?.success === false ? 'error' : 'success'),
+            message:
+                subflowResult?.message ||
+                `Subflow ${nodeLabel} completed: ${subflowState.executedNodeIds.size} nodes executed.`,
             data: {
+                ...(subflowResult?.data ||
+                    (subflowResult && typeof subflowResult === 'object' ? subflowResult : {})),
+                success: subflowResult?.success !== false,
+                status:
+                    subflowResult?.status ||
+                    (subflowResult?.success === false ? 'error' : 'success'),
                 flowId,
                 executedNodes: subflowState.executedNodeIds.size,
                 label: nodeLabel,
@@ -4719,13 +4846,18 @@ export const componentAction = async (req, res) => {
         }
 
         // Store result for downstream variable interpolation (e.g. {{Login.result.status}})
+        // We store it both with and without .result suffix to match frontend expectations
         vm.set(`${nodeId}.result`, structuredResult, runId);
         vm.set(`${nodeLabel}.result`, structuredResult, runId);
+        vm.set(nodeId, structuredResult, runId);
+        vm.set(nodeLabel, structuredResult, runId);
 
         // Also store in legacy_flow scope for interactive (non-run) sessions
         if (!runId || runId.startsWith('interactive-')) {
             vm.set(`${nodeId}.result`, structuredResult, null);
             vm.set(`${nodeLabel}.result`, structuredResult, null);
+            vm.set(nodeId, structuredResult, null);
+            vm.set(nodeLabel, structuredResult, null);
         }
 
         console.log(

@@ -6,6 +6,8 @@ import i18n from '../config/i18n.js';
 import { variableManager } from './VariableManager.js';
 import { executionManager } from './ExecutionManager.js';
 import chalk from 'chalk';
+
+console.log(`[ExecutionService] 🔥 Service File Loaded at ${new Date().toISOString()}`);
 import Table from 'cli-table3';
 import { browserService } from './browser.service.js';
 
@@ -66,11 +68,13 @@ class ExecutionService {
             incomingEdgesCount.set(e.target, count + 1);
         });
 
-        let currentNodes = nodes.filter((n) => incomingEdgesCount.get(n.nodeId) === 0);
+        let currentNodes = nodes.filter(
+            (n) => incomingEdgesCount.get(n.nodeId) === 0 && !n.data?.disabled,
+        );
 
         if (currentNodes.length === 0 && nodes.length > 0) {
-            // Fallback: If it's a cycle or something messy, pick the first node
-            currentNodes = [nodes[0]];
+            // Fallback: If it's a cycle or something messy, pick the first non-disabled node
+            currentNodes = [nodes.find((n) => !n.data?.disabled) || nodes[0]];
         }
 
         // Context state for the run
@@ -163,24 +167,31 @@ class ExecutionService {
             : currentNodes.filter((n) => (n.parentId || null) === (parentId || null));
 
         for (const node of peerNodes) {
-            // Check if node has already been executed or skipped
-            if (state.executedNodeIds.has(node.nodeId)) continue;
+            // Check if node is explicitly disabled or already executed
+            if (node.data?.disabled) continue;
+            if (state.executedNodeIds && state.executedNodeIds.has(node.nodeId)) continue;
 
             // 1. Activation Check (Execution Token)
             // Only execute if node was explicitly activated by an incoming successful signal
-            if (!state.activatedNodeIds.has(node.nodeId)) {
+            if (state.activatedNodeIds && !state.activatedNodeIds.has(node.nodeId)) {
                 console.log(`[DPE] Node ${node.nodeId} is in Standby (no signal received yet).`);
                 continue;
             }
 
             // 2. Execute Node
             const result = await this.executeNode(node, allNodes, allEdges, state);
+            console.log(
+                `[ExecutionService] Node ${node.nodeId} execution finished. Result success: ${!!result}`,
+            );
             state.executedNodeIds.add(node.nodeId);
 
             // 3. Store result for interpolation — even on error, so downstream nodes can inspect it
             const nodeLabel = node.data?.customLabel || node.data?.label || node.nodeId;
             if (result) {
                 const nodeResult = result.data !== undefined ? result.data : result;
+                console.log(
+                    `[ExecutionService] 💾 Storing variable: "${nodeLabel}.result" for runId: ${state.runId}`,
+                );
                 variableManager.set(`${nodeLabel}.result`, nodeResult, state.runId);
                 variableManager.set(`${node.nodeId}.result`, nodeResult, state.runId);
             }
@@ -201,9 +212,24 @@ class ExecutionService {
             let deadEdges = [];
 
             if (winnerPath) {
+                // Log for debugging path-to-edge mapping
+                const availableHandles = allNextEdges
+                    .map((e) => e.sourceHandle || 'default')
+                    .join(', ');
+                console.log(
+                    `[DPE] Node ${node.nodeId}: winnerPath="${winnerPath}", available handles=[${availableHandles}]`,
+                );
+
                 // If the node decided a specific path (If/Else, Switch), separate them
                 activeEdges = allNextEdges.filter((e) => e.sourceHandle === winnerPath);
                 deadEdges = allNextEdges.filter((e) => e.sourceHandle !== winnerPath);
+
+                if (activeEdges.length === 0 && allNextEdges.length > 0) {
+                    console.warn(
+                        `[DPE] ⚠️ No edges matched winnerPath="${winnerPath}" for node ${node.nodeId}. ` +
+                            `Available handles: [${availableHandles}]. All outgoing edges will be treated as dead.`,
+                    );
+                }
             } else if (allNextEdges.length > 0 && node.type !== 'branch') {
                 // For linear nodes with multiple outgoing edges (broadcast), all are active
                 // unless it's a branching node that failed to report a path.
@@ -468,10 +494,24 @@ class ExecutionService {
         }
 
         // 🌟 UNIFIED SUCCESS EMISSION (Included result for frontend edge highlighting)
+        const nodeLabel = node.data?.customLabel || node.data?.label || node.nodeId;
+        const finalResult = resultData?.data !== undefined ? resultData.data : resultData;
+
+        console.log(
+            `[ExecutionService] 💾 Storing success variable: "${nodeLabel}.result" for runId: ${state.runId}`,
+        );
+        variableManager.set(`${nodeLabel}.result`, finalResult, state.runId);
+        variableManager.set(`${node.nodeId}.result`, finalResult, state.runId);
+
+        // Also store by Node Type (e.g. "open_url") to support generic UI placeholders like {{Open URL.url}}
+        if (node.type) {
+            variableManager.set(`${node.type}.result`, finalResult, state.runId);
+        }
+
         emitExecutionStatus({
             stepId: node.nodeId,
             status: 'success',
-            result: resultData?.data || resultData,
+            result: finalResult,
         });
 
         return resultData;
@@ -552,7 +592,6 @@ class ExecutionService {
 
         const entryNodes = subNodes.filter((c) => incomingCount.get(c.nodeId) === 0);
         const loopStartNodes = entryNodes.length > 0 ? entryNodes : [subNodes[0]];
-
         let currentIndex = 0;
         let finished = false;
 

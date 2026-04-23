@@ -41,6 +41,15 @@ class ExecutionLogger {
             return;
         }
 
+        const { variableManager } = await import('./VariableManager.js');
+        console.log(
+            `[ExecutionLogger][VM_INSTANCE=${variableManager.instanceId}] Logging step for node: ${nodeData?.id}`,
+        );
+        const all = variableManager.getAll(runId);
+        console.log(
+            `[ExecutionLogger] Available variables in VM at this point: ${Object.keys(all).join(', ')}`,
+        );
+
         try {
             console.log('[ExecutionLogger.logStep] Creating StepResult in DB...');
             await StepResult.create({

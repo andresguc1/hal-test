@@ -6,8 +6,8 @@ import { cn } from "@/lib/utils";
 // Parses a string into an array of text segments and variable segments
 const parseValue = (value) => {
   if (value === undefined || value === null || value === "") return [];
-  // Coerce to string to handle numbers, booleans, etc.
-  const str = String(value);
+  // Coerce to string to handle objects consistently (prevents [object Object] in background layer)
+  const str = typeof value === "object" ? JSON.stringify(value) : String(value);
   // Support both {{var}} and ${var}
   const regex = /(\{\{[^}]+\}\}|\$\{[^}]+\})/g;
   const parts = str.split(regex);
@@ -42,10 +42,12 @@ export const VariableInput = ({
   variables = {},
   type = "text",
   hasError = false,
+  suggestions = [], // New prop for autocomplete suggestions
   ...props
 }) => {
   const containerRef = useRef(null);
   const bgRef = useRef(null);
+  const datalistId = React.useId(); // Unique ID for datalist
   const [isFocused, setIsFocused] = useState(false);
 
   // Sync scrolling between foreground and background
@@ -175,7 +177,13 @@ export const VariableInput = ({
       {/* Actual interactive input */}
       <Component
         type={isTextarea ? undefined : type}
-        value={value}
+        value={
+          typeof value === "object"
+            ? JSON.stringify(value)
+            : value === "[object Object]"
+              ? ""
+              : value
+        }
         onChange={onChange}
         onScroll={handleScroll}
         onFocus={() => setIsFocused(true)}
@@ -185,6 +193,7 @@ export const VariableInput = ({
         data-lpignore="true"
         data-1p-ignore="true"
         spellCheck={false}
+        list={suggestions?.length > 0 ? datalistId : undefined}
         className={cn(
           className,
           "relative z-10 font-mono antialiased",
@@ -193,6 +202,15 @@ export const VariableInput = ({
         )}
         {...props}
       />
+
+      {/* Suggestion list */}
+      {suggestions?.length > 0 && (
+        <datalist id={datalistId}>
+          {suggestions.map((s, idx) => (
+            <option key={idx} value={s} />
+          ))}
+        </datalist>
+      )}
 
       {/* Visible background box for the input (since input is transparent bg) */}
       <div

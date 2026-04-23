@@ -367,6 +367,22 @@ export const NODE_INPUTS = {
     },
   ],
 
+  output: [
+    {
+      key: "name",
+      label: "Output Name",
+      type: "text",
+      placeholder: "result_key",
+      required: true,
+    },
+    {
+      key: "value",
+      label: "Value to Return",
+      type: "text",
+      placeholder: "{{variable}}",
+      required: true,
+    },
+  ],
   // Default fallback
   default: [
     {
@@ -374,6 +390,21 @@ export const NODE_INPUTS = {
       label: "Selector",
       type: "selector",
       placeholder: "Enter selector...",
+    },
+  ],
+  switch: [
+    {
+      key: "variableName",
+      label: "Variable to Evaluate",
+      type: "text",
+      placeholder: "status",
+      required: true,
+    },
+    {
+      key: "cases",
+      label: "Cases",
+      type: "switch_cases",
+      required: true,
     },
   ],
 };
@@ -424,6 +455,8 @@ export const getSmartLabel = (nodeType, config = {}) => {
       return config.headless ? "Browser (Headless)" : "Browser (Visible)";
     case "take_screenshot":
       return config.path ? `Snap: ${truncate(config.path, 20)}` : null;
+    case "switch":
+      return config.variableName ? `Switch: ${config.variableName}` : "Switch";
     default:
       return null;
   }
