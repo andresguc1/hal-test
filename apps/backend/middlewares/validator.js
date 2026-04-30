@@ -74,6 +74,9 @@ const validate = (schemas) => (req, res, next) => {
     const originalBrowserId = req.body && req.body.browserId;
     const originalTakeScreenshot = req.body && req.body.takeScreenshot;
     const originalDebugMode = req.body && req.body.debugMode;
+    const originalContinueOnError = req.body && req.body.continueOnError;
+    const originalLabel = req.body && req.body.label;
+    const originalCustomLabel = req.body && req.body.customLabel;
 
     if (value.body) {
         req.body = value.body;
@@ -82,6 +85,10 @@ const validate = (schemas) => (req, res, next) => {
         if (originalBrowserId) req.body.browserId = originalBrowserId;
         if (originalTakeScreenshot !== undefined) req.body.takeScreenshot = originalTakeScreenshot;
         if (originalDebugMode !== undefined) req.body.debugMode = originalDebugMode;
+        if (originalContinueOnError !== undefined)
+            req.body.continueOnError = originalContinueOnError;
+        if (originalLabel !== undefined) req.body.label = originalLabel;
+        if (originalCustomLabel !== undefined) req.body.customLabel = originalCustomLabel;
     }
     if (value.params) {
         req.params = value.params;

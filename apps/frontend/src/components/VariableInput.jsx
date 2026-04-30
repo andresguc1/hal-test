@@ -7,7 +7,12 @@ import { cn } from "@/lib/utils";
 const parseValue = (value) => {
   if (value === undefined || value === null || value === "") return [];
   // Coerce to string to handle objects consistently (prevents [object Object] in background layer)
-  const str = typeof value === "object" ? JSON.stringify(value) : String(value);
+  const str =
+    typeof value === "object" && value !== null
+      ? JSON.stringify(value)
+      : value === undefined || value === null
+        ? ""
+        : String(value);
   // Support both {{var}} and ${var}
   const regex = /(\{\{[^}]+\}\}|\$\{[^}]+\})/g;
   const parts = str.split(regex);
@@ -40,6 +45,7 @@ export const VariableInput = ({
   placeholder = "",
   className = "",
   variables = {},
+  contextualVariables = null, // New prop to track valid flow context
   type = "text",
   hasError = false,
   suggestions = [], // New prop for autocomplete suggestions
@@ -63,11 +69,37 @@ export const VariableInput = ({
   const renderBackgroundContent = () => {
     return parsedParts.map((part, i) => {
       if (part.type === "variable") {
-        const varValue = variables[part.key];
+        // Handle nested paths (e.g. "Login Steps.status")
+        const resolveNested = (obj, path) => {
+          if (!path.includes(".")) return obj[path];
+          const parts = path.split(".");
+          let curr = obj;
+          for (const p of parts) {
+            if (curr === null || curr === undefined || typeof curr !== "object")
+              return undefined;
+            curr =
+              curr[p] !== undefined
+                ? curr[p]
+                : curr.data
+                  ? curr.data[p]
+                  : undefined;
+          }
+          return curr;
+        };
+        const varValue = resolveNested(variables, part.key);
         const hasValue =
           varValue !== undefined && varValue !== null && varValue !== "";
         const displayValue = hasValue ? varValue : "No data emitted yet";
         const isValid = varValue !== undefined;
+
+        // Context validation
+        const isOutOfContext =
+          contextualVariables && !contextualVariables[part.key.split(".")[0]];
+        const statusColor = !isValid
+          ? "amber"
+          : isOutOfContext
+            ? "rose"
+            : "indigo";
 
         return (
           <Tooltip.Provider key={i} delayDuration={100}>
@@ -76,9 +108,11 @@ export const VariableInput = ({
                 <span
                   className={cn(
                     "rounded px-1.5 py-0.5 -mx-0.5 pointer-events-auto cursor-help transition-colors font-mono",
-                    isValid
+                    statusColor === "indigo"
                       ? "bg-indigo-500/25 text-indigo-300 ring-1 ring-indigo-500/30 shadow-[0_0_10px_rgba(99,102,241,0.2)]"
-                      : "bg-amber-500/20 text-amber-400 border-b-2 border-dashed border-amber-500/50",
+                      : statusColor === "rose"
+                        ? "bg-rose-500/20 text-rose-400 border-b-2 border-rose-500/50"
+                        : "bg-amber-500/20 text-amber-400 border-b-2 border-dashed border-amber-500/50",
                   )}
                 >
                   <span className="opacity-40 select-none mr-0.5">
@@ -100,11 +134,17 @@ export const VariableInput = ({
                       <div
                         className={cn(
                           "w-2 h-2 rounded-full",
-                          isValid ? "bg-indigo-400" : "bg-amber-400",
+                          statusColor === "indigo"
+                            ? "bg-indigo-400"
+                            : statusColor === "rose"
+                              ? "bg-rose-400"
+                              : "bg-amber-400",
                         )}
                       />
                       <span className="font-bold text-[10px] uppercase tracking-widest text-slate-400">
-                        Variable Value
+                        {statusColor === "rose"
+                          ? "Out of Context"
+                          : "Variable Value"}
                       </span>
                     </div>
                     <span className="font-mono text-[9px] text-slate-500 px-1.5 py-0.5 bg-black/40 rounded border border-white/5">
@@ -118,6 +158,16 @@ export const VariableInput = ({
                       ? JSON.stringify(displayValue, null, 2)
                       : String(displayValue)}
                   </div>
+
+                  {isOutOfContext && isValid && (
+                    <div className="mt-2 text-[10px] text-rose-400/80 italic flex items-center gap-1">
+                      <span>
+                        ⚠️ This node is not directly connected to the current
+                        node. The variable might not be available during
+                        execution.
+                      </span>
+                    </div>
+                  )}
 
                   {!isValid && (
                     <div className="mt-2 text-[10px] text-amber-400/80 italic flex items-center gap-1">
@@ -176,6 +226,7 @@ export const VariableInput = ({
 
       {/* Actual interactive input */}
       <Component
+        id={props.id}
         type={isTextarea ? undefined : type}
         value={
           typeof value === "object"

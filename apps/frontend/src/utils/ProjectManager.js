@@ -32,11 +32,17 @@ class ProjectManager {
 
   async getProject(projectId) {
     try {
-      const project = await api.get(`/projects/${projectId}`);
-      return project;
-    } catch (err) {
-      logger.error("Failed to get project", err, "ProjectManager");
-      return null;
+      console.log(`[ProjectManager] Fetching project: ${projectId}`);
+      const response = await api.get(`/projects/${projectId}`);
+      return response;
+    } catch (error) {
+      if (error.message?.includes("status: 404")) {
+        console.error(
+          `[ProjectManager] Project NOT FOUND: ${projectId}`,
+          error,
+        );
+      }
+      throw error;
     }
   }
 

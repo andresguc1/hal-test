@@ -41,6 +41,13 @@ class ExecutionService {
         const nodes = flow.nodes.map((n) => n.toJSON());
         const edges = flow.edges.map((e) => e.toJSON());
 
+        console.log(`[ExecutionService] 📊 Loaded ${nodes.length} nodes for execution:`);
+        nodes.forEach((n) => {
+            console.log(
+                `   - ID: ${n.nodeId}, Type: ${n.type}, Parent: ${n.parentId || 'NULL'}, Label: ${n.data?.label || n.data?.customLabel || 'N/A'}`,
+            );
+        });
+
         const mode = options.mode || 'e2e';
 
         let runId = options.runId;
@@ -158,8 +165,16 @@ class ExecutionService {
     /**
      * Recursive runner for the graph
      */
-    async runSequence(currentNodes, allNodes, allEdges, state, parentId = null, options = {}) {
+    async runSequence(currentNodes, allNodes, allEdges, state = {}, parentId = null, options = {}) {
         const { skipParentFilter = false } = options;
+
+        if (!state.executedNodeIds) state.executedNodeIds = new Set();
+        if (!state.activatedNodeIds) state.activatedNodeIds = new Set();
+
+        // Ensure all entry points for this sequence are activated
+        currentNodes.forEach((n) => {
+            if (n && n.nodeId) state.activatedNodeIds.add(n.nodeId);
+        });
 
         // Filter nodes to only process those at the same level (same parentId)
         const peerNodes = skipParentFilter
@@ -194,6 +209,48 @@ class ExecutionService {
                 );
                 variableManager.set(`${nodeLabel}.result`, nodeResult, state.runId);
                 variableManager.set(`${node.nodeId}.result`, nodeResult, state.runId);
+
+                // 3.b Parent Synchronization (Live Status for Groups/Components)
+                if (node.parentId) {
+                    console.log(
+                        `[ExecutionService] 👨‍👦 Node "${nodeLabel}" has parent: ${node.parentId}`,
+                    );
+                    const parentNode = allNodes.find((n) => n.nodeId === node.parentId);
+                    if (parentNode) {
+                        const parentLabel =
+                            parentNode.data?.customLabel ||
+                            parentNode.data?.label ||
+                            parentNode.nodeId;
+                        console.log(
+                            `[ExecutionService] 🔗 Syncing result to parent: "${parentLabel}"`,
+                        );
+
+                        // Check if the current parent result already has a soft fail
+                        const existingParentResult =
+                            variableManager.get(`${parentLabel}.result`, state.runId) || {};
+                        const hasSoftFail =
+                            existingParentResult.status === 'softfailed' ||
+                            nodeResult.status === 'softfailed';
+
+                        const parentResult = {
+                            success: !hasSoftFail, // IMPORTANT: The VariableManager data should reflect the fail!
+                            status: hasSoftFail ? 'failed' : 'running',
+                            lastNode: nodeLabel,
+                            data: {
+                                ...(typeof nodeResult === 'object' ? nodeResult : {}),
+                                status: hasSoftFail ? 'failed' : 'running',
+                                success: !hasSoftFail,
+                                label: parentLabel,
+                            },
+                        };
+                        variableManager.set(`${parentLabel}.result`, parentResult, state.runId);
+                        variableManager.set(`${node.parentId}.result`, parentResult, state.runId);
+                    } else {
+                        console.log(
+                            `[ExecutionService] ⚠️ Parent ${node.parentId} not found in allNodes list.`,
+                        );
+                    }
+                }
             }
 
             // 4. Flow Control Signals (break, continue, etc.)
@@ -363,108 +420,109 @@ class ExecutionService {
     async executeNode(node, allNodes, allEdges, state) {
         const actionType = node.type;
 
+        let resultData = null;
+
         // SPECIAL CASE: Loop (Composition Container)
         if (actionType === 'loop') {
-            return await this.executeLoopContainer(node, allNodes, allEdges, state);
-        }
+            resultData = await this.executeLoopContainer(node, allNodes, allEdges, state);
+        } else {
+            const handlerName = this.getHandlerName(actionType);
+            const handler = actions[handlerName];
 
-        const handlerName = this.getHandlerName(actionType);
-        const handler = actions[handlerName];
-
-        if (!handler) {
-            const error = `No handler found for node type: ${actionType}`;
-            emitLog({ message: error, type: 'error', nodeId: node.nodeId });
-            throw new Error(error);
-        }
-
-        // Logic to extract parameters.
-        // In HAL-TEST, configuration is often stored in node.data.configuration
-        const config = node.data?.configuration || {};
-
-        // Deeply interpolate variables in config strings before executing
-        const interpolateStrings = (obj, currentKey = '') => {
-            // OPT-OUT: Prevent destroying JS conditional expressions or scripts
-            const excludedKeys = [
-                'branches',
-                'conditions',
-                'expression',
-                'conditionScript',
-                'script',
-            ];
-            if (excludedKeys.includes(currentKey)) return obj;
-
-            if (typeof obj === 'string') return variableManager.resolve(obj, state.runId);
-            if (Array.isArray(obj)) return obj.map((item) => interpolateStrings(item, currentKey));
-            if (obj && typeof obj === 'object') {
-                const newObj = {};
-                for (const [k, v] of Object.entries(obj)) {
-                    newObj[k] = interpolateStrings(v, k);
-                }
-                return newObj;
+            if (!handler) {
+                const error = `No handler found for node type: ${actionType}`;
+                emitLog({ message: error, type: 'error', nodeId: node.nodeId });
+                throw new Error(error);
             }
-            return obj;
-        };
 
-        const interpolatedBody = interpolateStrings({
-            ...node.data, // Generic data
-            ...config, // Specific configuration (keys like 'url', 'selector', etc.)
-        });
+            // Logic to extract parameters.
+            // In HAL-TEST, configuration is often stored in node.data.configuration
+            const config = node.data?.configuration || {};
 
-        const body = {
-            ...interpolatedBody,
-            nodeId: node.nodeId,
-            label: node.data?.customLabel || node.data?.label || actionType,
-            runId: state.runId,
-            browserId: state.browserId,
-        };
+            // Deeply interpolate variables in config strings before executing
+            const interpolateStrings = (obj, currentKey = '') => {
+                // OPT-OUT: Prevent destroying JS conditional expressions or scripts
+                const excludedKeys = ['branches', 'conditions', 'conditionScript', 'script'];
+                if (excludedKeys.includes(currentKey)) return obj;
 
-        console.log(
-            `[DEBUG] Final Execution Body for ${node.nodeId}: Label="${body.label}", RunId="${body.runId}"`,
-        );
+                // Special case for 'expression':
+                // If it's a string, it's JS code -> EXCLUDE from interpolation.
+                // If it's an object, it's a structured rule -> ALLOW interpolation of its properties.
+                if (currentKey === 'expression' && typeof obj === 'string') return obj;
 
-        // Apply browser launch overrides
-        if (actionType === 'launch_browser') {
-            Object.assign(body, state.overrides);
-        }
+                if (typeof obj === 'string') return variableManager.resolve(obj, state.runId);
+                if (Array.isArray(obj))
+                    return obj.map((item) => interpolateStrings(item, currentKey));
+                if (obj && typeof obj === 'object') {
+                    const newObj = {};
+                    for (const [k, v] of Object.entries(obj)) {
+                        newObj[k] = interpolateStrings(v, k);
+                    }
+                    return newObj;
+                }
+                return obj;
+            };
 
-        console.log(`[ExecutionService] Executing node: ${node.nodeId} (${actionType})`);
-
-        // Prepare Mock Request and Response
-        const req = {
-            body: {
-                ...body,
-                runId: state.runId, // Ensure runId is ALWAYS in the body
-                runStartTime: state.startTime,
-            },
-            t: i18n.t.bind(i18n),
-            headers: state.headers || {},
-            // Needed for some controllers
-            params: {},
-        };
-
-        let resultData = null;
-        const res = {
-            statusCode: 200,
-            status: (code) => {
-                res.statusCode = code;
-                return res;
-            },
-            json: (data) => {
-                resultData = data;
-                return res;
-            },
-        };
-
-        // Call the controller action
-        try {
-            await handler(req, res);
-        } catch (err) {
-            emitLog({
-                message: `Critical error in node ${node.nodeId}: ${err.message}`,
-                type: 'error',
-                nodeId: node.nodeId,
+            const interpolatedBody = interpolateStrings({
+                ...node.data, // Generic data
+                ...config, // Specific configuration (keys like 'url', 'selector', etc.)
             });
-            throw err;
+
+            const body = {
+                ...interpolatedBody,
+                nodeId: node.nodeId,
+                label: node.data?.customLabel || node.data?.label || actionType,
+                runId: state.runId,
+                browserId: state.browserId,
+            };
+
+            console.log(
+                `[DEBUG] Final Execution Body for ${node.nodeId}: Label="${body.label}", RunId="${body.runId}"`,
+            );
+
+            // Apply browser launch overrides
+            if (actionType === 'launch_browser') {
+                Object.assign(body, state.overrides);
+            }
+
+            console.log(`[ExecutionService] Executing node: ${node.nodeId} (${actionType})`);
+
+            // Prepare Mock Request and Response
+            const req = {
+                body: {
+                    ...body,
+                    runId: state.runId, // Ensure runId is ALWAYS in the body
+                    runStartTime: state.startTime,
+                },
+                t: i18n.t.bind(i18n),
+                headers: state.headers || {},
+                // Needed for some controllers
+                params: {},
+            };
+
+            const res = {
+                statusCode: 200,
+                status: (code) => {
+                    res.statusCode = code;
+                    return res;
+                },
+                json: (data) => {
+                    resultData = data;
+                    return res;
+                },
+            };
+
+            // Call the controller action
+            try {
+                await handler(req, res);
+            } catch (err) {
+                emitLog({
+                    message: `Critical error in node ${node.nodeId}: ${err.message}`,
+                    type: 'error',
+                    nodeId: node.nodeId,
+                });
+                throw err;
+            }
         }
 
         if (resultData && resultData.success === false) {
@@ -478,7 +536,9 @@ class ExecutionService {
             // (e.g. a Conditional node checking {{component.result.status}} === 'error')
             const nodeLabel = node.data?.customLabel || node.data?.label || node.nodeId;
             const errorResult = resultData.data || {
-                status: 'error',
+                status: resultData.status || 'failed',
+                success: false,
+                recovered: resultData.recovered || false,
                 error: { message: errMsg },
             };
             variableManager.set(`${nodeLabel}.result`, errorResult, state.runId);
@@ -496,6 +556,13 @@ class ExecutionService {
         // 🌟 UNIFIED SUCCESS EMISSION (Included result for frontend edge highlighting)
         const nodeLabel = node.data?.customLabel || node.data?.label || node.nodeId;
         const finalResult = resultData?.data !== undefined ? resultData.data : resultData;
+
+        // Standardize output: Ensure status and recovered are present for conditional logic
+        if (finalResult && typeof finalResult === 'object') {
+            if (!finalResult.status) finalResult.status = resultData?.status || 'success';
+            if (finalResult.recovered === undefined)
+                finalResult.recovered = resultData?.recovered || false;
+        }
 
         console.log(
             `[ExecutionService] 💾 Storing success variable: "${nodeLabel}.result" for runId: ${state.runId}`,
@@ -594,6 +661,7 @@ class ExecutionService {
         const loopStartNodes = entryNodes.length > 0 ? entryNodes : [subNodes[0]];
         let currentIndex = 0;
         let finished = false;
+        let hasSoftFail = false;
 
         const totalIterations =
             mode === 'count'
@@ -693,12 +761,24 @@ class ExecutionService {
             }
 
             currentIndex++;
+
+            // AGGREGATE SOFT FAILS FROM THIS ITERATION
+            for (const executedNodeId of iterationState.executedNodeIds) {
+                const nodeResult = variableManager.get(`${executedNodeId}.result`, state.runId);
+                if (nodeResult && nodeResult.status === 'softfailed') {
+                    hasSoftFail = true;
+                }
+            }
         }
 
         return {
-            success: true,
+            success: true, // MUST remain true to trick the Engine into continuing the main flow
             message: `Loop completed after ${currentIndex} iterations`,
-            data: { totalIterations: currentIndex },
+            data: {
+                totalIterations: currentIndex,
+                success: !hasSoftFail, // Expose internal failure via 'data' so conditional nodes can branch correctly!
+                status: hasSoftFail ? 'softfailed' : 'success',
+            },
         };
     }
 

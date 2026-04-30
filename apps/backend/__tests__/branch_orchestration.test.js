@@ -6,6 +6,8 @@ import { variableManager } from '../services/VariableManager.js';
 vi.mock('../socket.js', () => ({
     emitLog: vi.fn(),
     emitFlowFinished: vi.fn(),
+    emitExecutionStatus: vi.fn(),
+    emitEdgeStatus: vi.fn(),
 }));
 
 describe('ExecutionService - Branch Orchestration', () => {
@@ -43,7 +45,8 @@ describe('ExecutionService - Branch Orchestration', () => {
             return { success: true };
         });
 
-        const state = { executedNodeIds: new Set() };
+        const state = { executedNodeIds: new Set(), activatedNodeIds: new Set() };
+        state.activatedNodeIds.add(branchNode.nodeId);
 
         const startTime = Date.now();
         await executionService.runSequence([branchNode], allNodes, allEdges, state);
@@ -82,7 +85,8 @@ describe('ExecutionService - Branch Orchestration', () => {
             return { success: true };
         });
 
-        const state = { executedNodeIds: new Set() };
+        const state = { executedNodeIds: new Set(), activatedNodeIds: new Set() };
+        state.activatedNodeIds.add(branchNode.nodeId);
 
         const startTime = Date.now();
         await executionService.runSequence([branchNode], allNodes, allEdges, state);
@@ -121,7 +125,8 @@ describe('ExecutionService - Branch Orchestration', () => {
             return { success: true };
         });
 
-        const state = { executedNodeIds: new Set() };
+        const state = { executedNodeIds: new Set(), activatedNodeIds: new Set() };
+        state.activatedNodeIds.add(branchNode.nodeId);
 
         const startTime = Date.now();
         await executionService.runSequence([branchNode], allNodes, allEdges, state);

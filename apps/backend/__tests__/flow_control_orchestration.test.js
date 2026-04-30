@@ -5,6 +5,8 @@ import { variableManager } from '../services/VariableManager.js';
 vi.mock('../socket.js', () => ({
     emitLog: vi.fn(),
     emitFlowFinished: vi.fn(),
+    emitExecutionStatus: vi.fn(),
+    emitEdgeStatus: vi.fn(),
 }));
 
 describe('ExecutionService - Flow Control Orchestration', () => {
@@ -42,11 +44,16 @@ describe('ExecutionService - Flow Control Orchestration', () => {
         const allNodes = [loopNode, checkNode, breakNode];
         const allEdges = [{ source: 'check-break', target: 'signal-break', sourceHandle: 'true' }];
 
-        const state = { executedNodeIds: new Set(), runId: 'test-run' };
+        const state = {
+            executedNodeIds: new Set(),
+            activatedNodeIds: new Set(),
+            runId: 'test-run',
+        };
+        state.activatedNodeIds.add(loopNode.nodeId);
         await executionService.runSequence([loopNode], allNodes, allEdges, state, null);
 
         // It should have executed 3 iterations (index 0, 1, 2)
-        const iCounter = variableManager.get('i');
+        const iCounter = variableManager.get('i', state.runId);
         expect(iCounter).toBe(2);
     });
 
@@ -75,14 +82,19 @@ describe('ExecutionService - Flow Control Orchestration', () => {
         const allNodes = [loopNode, continueNode, skipNode];
         const allEdges = [{ source: 'signal-continue', target: 'should-skip' }];
 
-        const state = { executedNodeIds: new Set(), runId: 'test-run' };
+        const state = {
+            executedNodeIds: new Set(),
+            activatedNodeIds: new Set(),
+            runId: 'test-run',
+        };
+        state.activatedNodeIds.add(loopNode.nodeId);
         await executionService.runSequence([loopNode], allNodes, allEdges, state, null);
 
         expect(variableManager.get('skipped_at_0')).toBeUndefined();
         expect(variableManager.get('skipped_at_1')).toBeUndefined();
         expect(variableManager.get('skipped_at_2')).toBeUndefined();
 
-        const iCounter = variableManager.get('i');
+        const iCounter = variableManager.get('i', state.runId);
         expect(iCounter).toBe(2);
     });
 
@@ -109,7 +121,12 @@ describe('ExecutionService - Flow Control Orchestration', () => {
         const allNodes = [loopNode, returnNode, nextNode];
         const allEdges = [{ source: 'loop-1', target: 'after-loop' }];
 
-        const state = { executedNodeIds: new Set(), runId: 'test-run' };
+        const state = {
+            executedNodeIds: new Set(),
+            activatedNodeIds: new Set(),
+            runId: 'test-run',
+        };
+        state.activatedNodeIds.add(loopNode.nodeId);
         const finalResult = await executionService.runSequence(
             [loopNode],
             allNodes,

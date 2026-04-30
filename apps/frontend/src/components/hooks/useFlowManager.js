@@ -2729,6 +2729,9 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
           const projectId = currentProject?.id;
           if (!projectId) throw new Error("Current Project ID is missing.");
 
+          console.log(
+            `[useFlowManager] Starting execution: Project=${projectId}, Flow=${currentFlowId}`,
+          );
           const { runId: newRunId } = await projectManager.createRun(
             projectId,
             currentFlowId,
@@ -4181,12 +4184,48 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
               };
             }
 
+            const isHealed =
+              step.result?.healed === true ||
+              step.result?.status === "healed" ||
+              step.result?.data?.healed === true ||
+              step.result?.data?.status === "healed";
+
+            let newConfig = { ...node.data.config };
+            if (isHealed) {
+              const healedVal =
+                step.result.healedValue || step.result.data?.healedValue;
+              const originalVal =
+                step.result.originalValue || step.result.data?.originalValue;
+
+              if (healedVal) {
+                // Update configuration locally (persistent for this session)
+                newConfig.selector = healedVal;
+                newConfig.isAI = true;
+                newConfig.healed = true;
+                newConfig.originalValue = originalVal;
+                newConfig.healedValue = healedVal;
+                newConfig.healingConfidence =
+                  step.result.healingConfidence ||
+                  step.result.data?.healingConfidence;
+                newConfig.aiReasoning =
+                  step.result.reasoning || step.result.data?.reasoning;
+              }
+            }
+
             let nodeState = NODE_STATES.IDLE;
-            if (step.status === "success") nodeState = NODE_STATES.SUCCESS;
+            if (isHealed) {
+              nodeState = NODE_STATES.HEALED;
+            } else if (step.status === "success")
+              nodeState = NODE_STATES.SUCCESS;
             else if (step.status === "failed") nodeState = NODE_STATES.ERROR;
             else if (step.status === "skipped") nodeState = NODE_STATES.SKIPPED;
             else if (step.status === "running")
               nodeState = NODE_STATES.EXECUTING;
+            else if (
+              step.result?.status === "softfailed" ||
+              step.result?.data?.status === "softfailed"
+            )
+              nodeState = NODE_STATES.WARNING;
 
             return {
               ...node,

@@ -49,10 +49,10 @@ export const PROFESSIONAL_COLORS = {
     borderWidth: "1px",
   },
   [NODE_STATES.HEALED]: {
-    background: "#fffbeb", // amber-50
-    border: "#f59e0b", // amber-500
-    text: "#b45309", // amber-700
-    shadow: "0 0 12px rgba(245,158,11,0.2)",
+    background: "#f5f3ff", // violet-50
+    border: "#8b5cf6", // violet-500
+    text: "#5b21b6", // violet-800
+    shadow: "0 0 15px rgba(139,92,246,0.25)",
     borderWidth: "2px",
   },
   [NODE_STATES.ERROR]: {

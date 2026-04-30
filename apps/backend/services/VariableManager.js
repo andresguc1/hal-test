@@ -121,10 +121,39 @@ class VariableManager {
         // Detailed log for debugging resolution failures
         console.log(`[VariableManager][ID=${this.instanceId}] get("${name}", runId="${rid}")`);
 
-        // 3. INTELLIGENT NODE RESOLUTION (Dot-path aware fuzzy matching)
-        // Helps "Open URL.url" match node "Open: www.saucedemo.com"
-        const normalize = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+        // 1. Search in Run Scope
         const currentScope = rid && this.scopes.runs[rid] ? this.scopes.runs[rid] : {};
+        const runValue = this._getFromScopeIntelligent(name, currentScope);
+        if (runValue !== undefined) return runValue;
+
+        // 2. Search in Legacy Flow Scope
+        const legacyValue = this._getFromScopeIntelligent(name, this.scopes.legacy_flow);
+        if (legacyValue !== undefined) return legacyValue;
+
+        // 3. Search in Global Scope
+        const globalValue = this._getFromScopeIntelligent(name, this.scopes.global);
+        if (globalValue !== undefined) return globalValue;
+
+        return undefined;
+    }
+
+    /**
+     * Internal helper to find a variable in a specific scope using intelligent matching
+     */
+    _getFromScopeIntelligent(name, scope) {
+        if (!scope || typeof scope !== 'object') return undefined;
+
+        // First try direct access or direct .result access (fast path)
+        if (Object.prototype.hasOwnProperty.call(scope, name)) return scope[name];
+        if (Object.prototype.hasOwnProperty.call(scope, `${name}.result`))
+            return scope[`${name}.result`];
+
+        // Intelligent resolution (Dotted path + Normalization)
+        const normalize = (s) =>
+            s
+                .toLowerCase()
+                .replace(/\s*\(library\)\s*/g, '') // Also handle Library suffix
+                .replace(/[^a-z0-9]/g, '');
 
         let targetNode = name;
         let propertyPath = [];
@@ -137,38 +166,52 @@ class VariableManager {
 
         const normalizedTarget = normalize(targetNode);
 
-        // Search through all keys in the current run scope
-        for (const [key, value] of Object.entries(currentScope || {})) {
+        const keys = Object.keys(scope);
+        let bestMatch = null;
+
+        for (const [key, value] of Object.entries(scope)) {
             const isResult = key.endsWith('.result');
             const nodeLabel = isResult ? key.replace('.result', '') : key;
             const normLabel = normalize(nodeLabel);
 
-            // Match if: Exact normalized match, or starts with (e.g. "Open" matching "Open: URL")
-            if (
-                normLabel === normalizedTarget ||
-                normLabel.startsWith(normalizedTarget) ||
-                normalizedTarget.startsWith(normLabel)
-            ) {
+            if (normLabel === normalizedTarget) {
+                // Exact match found!
                 console.log(
-                    `[VariableManager] 🌀 Intelligent match: "${targetNode}" -> Node "${nodeLabel}"`,
+                    `[VariableManager] 🎯 Exact match: "${targetNode}" -> Node "${nodeLabel}"`,
                 );
+                if (propertyPath.length === 0) return value;
+                return this._drill(value, propertyPath);
+            }
 
-                let result = value;
-                // If we have a property path, drill into the object
-                for (const prop of propertyPath) {
-                    if (result && typeof result === 'object' && prop in result) {
-                        result = result[prop];
-                    } else {
-                        result = undefined;
-                        break;
-                    }
-                }
-
-                if (result !== undefined) return result;
+            if (normLabel.startsWith(normalizedTarget)) {
+                // Potential namespace/group match (e.g. "Login Steps - Enter Username")
+                bestMatch = { key, value, label: nodeLabel };
             }
         }
 
-        return undefined;
+        // If no exact match but we have a partial match, and the user is asking for status/success,
+        // we can infer the group status from its children.
+        if (bestMatch && (propertyPath.includes('status') || propertyPath.includes('success'))) {
+            console.log(
+                `[VariableManager] 🌓 Namespace fallback: "${targetNode}" inferred from child "${bestMatch.label}"`,
+            );
+            const syntheticGroup = {
+                success: true,
+                status: 'success',
+                data: { success: true, status: true, label: targetNode },
+            };
+            if (propertyPath.length === 0) return syntheticGroup;
+            return this._drill(syntheticGroup, propertyPath);
+        }
+
+        if (keys.length > 0) {
+            console.log(
+                `[VariableManager] ❌ No intelligent match for "${targetNode}" among ${keys.length} keys.`,
+            );
+        }
+
+        // Final fallback for legacy dotted paths that might not be result-aware
+        return this._getFromScope(name, scope);
     }
 
     _getFromScope(name, scope) {
@@ -208,9 +251,18 @@ class VariableManager {
         for (let i = 0; i < parts.length; i++) {
             if (curr === null || curr === undefined || typeof curr !== 'object') return undefined;
             const p = parts[i];
+
             if (p in curr) {
                 curr = curr[p];
-            } else if (p === 'data' && i + 1 < parts.length && parts[i + 1] in curr) {
+            } else if (curr.data && typeof curr.data === 'object' && p in curr.data) {
+                // AUTO-DIVE: If property not at root, check inside .data (common in action results)
+                curr = curr.data[p];
+            } else if (
+                (p === 'data' || p === 'result') &&
+                i + 1 < parts.length &&
+                parts[i + 1] in curr
+            ) {
+                // SKIP-DATA/RESULT: If user specified .data or .result but it's already flattened in current object
                 continue;
             } else {
                 return undefined;
@@ -221,17 +273,36 @@ class VariableManager {
 
     set(name, value, runId = null) {
         if (!name) return;
-        if (runId) {
-            console.log(
-                `[VariableManager][ID=${this.instanceId}] set("${name}", value, runId="${runId}")`,
-            );
-            if (!this.scopes.runs[runId]) this.scopes.runs[runId] = {};
-            this.scopes.runs[runId][name] = value;
-            this.lastRunId = runId;
-        } else {
-            console.log(`[VariableManager] set("${name}", value, scope=GLOBAL)`);
-            this.scopes.global[name] = value;
+
+        // Ensure we don't store circular references or huge objects
+        const sanitizedValue = this._sanitize(value);
+
+        if (runId === 'global') {
+            this.scopes.global[name] = sanitizedValue;
             this._saveGlobals();
+            console.log(
+                `[VariableManager] 📝 SET [Global] "${name}" =`,
+                typeof sanitizedValue === 'object' ? '{...}' : sanitizedValue,
+            );
+            return;
+        }
+
+        const rid = runId || this.getActiveRunId();
+        if (rid) {
+            if (!this.scopes.runs[rid]) {
+                this.scopes.runs[rid] = {};
+            }
+            this.scopes.runs[rid][name] = sanitizedValue;
+            console.log(
+                `[VariableManager] 📝 SET [Run:${rid}] "${name}" =`,
+                typeof sanitizedValue === 'object' ? '{...}' : sanitizedValue,
+            );
+        } else {
+            this.scopes.legacy_flow[name] = sanitizedValue;
+            console.log(
+                `[VariableManager] 📝 SET [LegacyFlow] "${name}" =`,
+                typeof sanitizedValue === 'object' ? '{...}' : sanitizedValue,
+            );
         }
     }
 
@@ -300,56 +371,101 @@ class VariableManager {
 
     evaluateCondition(cond, runId = null) {
         const { left, operator, right } = cond;
+
         // Phase 1 + 2: Parse and Resolve
         let rL = this.resolveValue(left, runId);
         let rR = right !== undefined ? this.resolveValue(right, runId) : undefined;
 
+        console.log(`[VariableManager] 🔍 Evaluating: "${left}" [${operator}] "${right}"`);
+        console.log(`[VariableManager] 📦 Resolved Left:`, rL, `(${typeof rL})`);
+        console.log(`[VariableManager] 📦 Resolved Right:`, rR, `(${typeof rR})`);
+
         // Prevent strictly unresolved placeholders from being evaluated as literal strings
         const isUnres = (v) => typeof v === 'string' && (v.includes('{{') || v.includes('${'));
-        if (isUnres(rL)) rL = undefined;
-        if (typeof rR === 'string' && isUnres(rR)) rR = undefined;
 
-        if (rL === undefined && operator !== 'exists') return false;
-
-        // Type Normalization: Ensure comparing same types if possible
-        if (typeof rL === 'boolean' && typeof rR === 'string') {
-            const n = rR.trim().toLowerCase();
-            if (n === 'true') rR = true;
-            else if (n === 'false') rR = false;
-        } else if (typeof rR === 'boolean' && typeof rL === 'string') {
-            const n = rL.trim().toLowerCase();
-            if (n === 'true') rL = true;
-            else if (n === 'false') rL = false;
+        if (isUnres(rL)) {
+            console.warn(
+                `[VariableManager] ⚠️ Left operand "${rL}" is unresolved. Treating as undefined.`,
+            );
+            rL = undefined;
+        }
+        if (typeof rR === 'string' && isUnres(rR)) {
+            console.warn(
+                `[VariableManager] ⚠️ Right operand "${rR}" is unresolved. Treating as undefined.`,
+            );
+            rR = undefined;
         }
 
-        if (typeof rL === 'number' && typeof rR === 'string' && rR !== '' && !isNaN(rR))
-            rR = Number(rR);
-        else if (typeof rR === 'number' && typeof rL === 'string' && rL !== '' && !isNaN(rL))
-            rL = Number(rL);
+        if (rL === undefined && operator !== 'exists') {
+            console.log(
+                `[VariableManager] ❌ Evaluation failed: Left operand is undefined and operator is not "exists"`,
+            );
+            return false;
+        }
+
+        // Type Normalization: Ensure comparing same types if possible
+        const normalizeBoolean = (val) => {
+            if (typeof val === 'boolean') return val;
+            if (typeof val === 'string') {
+                const n = val.trim().toLowerCase();
+                if (n === 'true' || n === 'yes' || n === '1' || n === 'success') return true;
+                if (n === 'false' || n === 'no' || n === '0' || n === 'error' || n === 'fail')
+                    return false;
+            }
+            return val;
+        };
+
+        const nL = normalizeBoolean(rL);
+        const nR = normalizeBoolean(rR);
+
+        // If one is boolean, try to compare as booleans
+        if (typeof nL === 'boolean' || typeof nR === 'boolean') {
+            rL = !!nL;
+            rR = !!nR;
+        } else {
+            // Numeric normalization
+            if (typeof rL === 'number' && typeof rR === 'string' && rR !== '' && !isNaN(rR))
+                rR = Number(rR);
+            else if (typeof rR === 'number' && typeof rL === 'string' && rL !== '' && !isNaN(rL))
+                rL = Number(rL);
+        }
 
         // Phase 3: Compare resolved values
+        let finalResult = false;
         switch (operator) {
             case '===':
             case '==':
-                return rL == rR;
+                finalResult = rL == rR;
+                break;
             case '!==':
             case '!=':
-                return rL != rR;
+                finalResult = rL != rR;
+                break;
             case '>':
-                return Number(rL) > Number(rR);
+                finalResult = Number(rL) > Number(rR);
+                break;
             case '<':
-                return Number(rL) < Number(rR);
+                finalResult = Number(rL) < Number(rR);
+                break;
             case '>=':
-                return Number(rL) >= Number(rR);
+                finalResult = Number(rL) >= Number(rR);
+                break;
             case '<=':
-                return Number(rL) <= Number(rR);
+                finalResult = Number(rL) <= Number(rR);
+                break;
             case 'contains':
-                return rL !== undefined && rR !== undefined && String(rL).includes(String(rR));
+                finalResult =
+                    rL !== undefined && rR !== undefined && String(rL).includes(String(rR));
+                break;
             case 'exists':
-                return this.has(String(left).replace(/[{}$]/g, ''), runId);
+                finalResult = this.has(String(left).replace(/[{}$]/g, ''), runId);
+                break;
             default:
-                return false;
+                finalResult = false;
         }
+
+        console.log(`[VariableManager] ✅ Result: ${finalResult} (${rL} ${operator} ${rR})`);
+        return finalResult;
     }
 
     evaluateConditions(conds, logic = 'AND', runId = null) {
@@ -357,6 +473,22 @@ class VariableManager {
             this.evaluateCondition(c, runId),
         );
         return logic === 'AND' ? res.every((r) => r === true) : res.some((r) => r === true);
+    }
+
+    _sanitize(value) {
+        if (value === null || value === undefined) return value;
+        if (typeof value !== 'object') return value;
+
+        try {
+            // Simple serialization check for circularity and serialization safety
+            return JSON.parse(JSON.stringify(value));
+        } catch (err) {
+            console.warn(
+                '[VariableManager] ⚠️ Sanitization failed, returning simplified string:',
+                err.message,
+            );
+            return String(value);
+        }
     }
 }
 

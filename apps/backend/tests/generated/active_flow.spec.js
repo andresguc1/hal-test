@@ -30,16 +30,12 @@ test(`Flujo Generado Hal-Test`, async ({ page }) => {
         await page.click(`#login-button`);
     });
 
-    await test.step(`conditional`, async () => {
-        console.log(`⚠️ Acción no implementada o pendiente: conditional`);
-    });
-
     await test.step(`Reload Page`, async () => {
         await page.reload();
     });
 
     await test.step(`Evidence`, async () => {
-        await page.screenshot({ path: 'screenshot_9.png' });
+        await page.screenshot({ path: 'screenshot_8.png' });
     });
 
     await test.step(`Finish Tour`, async () => {

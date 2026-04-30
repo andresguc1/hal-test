@@ -114,7 +114,7 @@ describe('Loop Node Validation', () => {
         it('debe iterar mientras la condición sea verdadera', async () => {
             variableManager.set('counter', 0);
             const nodeId = 'loop_while';
-            const req = mockReq({ nodeId, mode: 'while', condition: 'counter < 2' });
+            const req = mockReq({ nodeId, mode: 'while', condition: '${counter} < 2' });
 
             // Iteración 1
             let res = mockRes();

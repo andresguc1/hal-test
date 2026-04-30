@@ -51,7 +51,7 @@ describe('Module Composition Actions', () => {
         });
 
         it('should NOT overwrite existing variable with default', async () => {
-            variableManager.set('param1', 'existing-val', 'flow');
+            variableManager.set('param1', 'existing-val');
             const req = { body: { name: 'param1', defaultValue: 'default-val' } };
             const res = { status: vi.fn().mockReturnThis(), json: vi.fn() };
 
@@ -63,7 +63,7 @@ describe('Module Composition Actions', () => {
 
     describe('outputAction', () => {
         it('should resolve and set output variable', async () => {
-            variableManager.set('local_res', 123, 'flow');
+            variableManager.set('local_res', 123);
             const req = { body: { name: 'final_res', value: '${local_res}' } };
             const res = { status: vi.fn().mockReturnThis(), json: vi.fn() };
 
@@ -82,7 +82,7 @@ describe('Module Composition Actions', () => {
             };
             Flow.findByPk.mockResolvedValue(mockSubflow);
 
-            variableManager.set('source_var', 'hello', 'flow');
+            variableManager.set('source_var', 'hello');
 
             const req = {
                 body: {
@@ -98,7 +98,7 @@ describe('Module Composition Actions', () => {
 
             // We need to simulate that runSequence sets the result_var
             runSequenceMock.mockImplementation(async () => {
-                variableManager.set('result_var', 'world', 'flow');
+                variableManager.set('result_var', 'world');
             });
 
             await componentAction(req, res);

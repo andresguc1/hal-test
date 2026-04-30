@@ -375,7 +375,25 @@
       "add_case": "Agregar Caso",
       "no_cases": "No hay casos definidos. Agrega uno para empezar.",
       "add_mapping": "Agregar Mapeo",
-      "no_mappings": "Sin mapeos definidos"
+      "no_mappings": "Sin mapeos definidos",
+      "conditional": {
+        "control_logic": "Lógica de Control",
+        "if": "Si",
+        "else_if": "O si",
+        "else_fallback": "Si nada coincide",
+        "escape_route": "Ruta de escape final",
+        "js_mode": "JS",
+        "rule_mode": "REGLA",
+        "placeholder_label": "Nombre de la ruta...",
+        "placeholder_fallback": "Ir por defecto...",
+        "placeholder_var": "Variable...",
+        "placeholder_val": "Valor...",
+        "values_label": "Valores:",
+        "resolves": "Resuelve:",
+        "waiting_data": "Esperando datos...",
+        "match": "CUMPLE",
+        "no_match": "NO CUMPLE"
+      }
     },
     "hints": {
       "selector_select": "Debe ser el selector del elemento principal <select>, no de las opciones <option>.",

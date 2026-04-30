@@ -34,6 +34,12 @@ const waitForElementBodySchema = Joi.object({
 
     // 5. takeScreenshot (Opcional)
     takeScreenshot: Joi.boolean().default(false).optional(),
+
+    // 6. scrollIntoView (Opcional)
+    scrollIntoView: Joi.boolean().default(false).optional(),
+
+    // 7. continueOnError (Opcional)
+    continueOnError: Joi.boolean().default(false).optional(),
 });
 
 export default waitForElementBodySchema;

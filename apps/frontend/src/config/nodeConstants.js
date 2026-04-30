@@ -169,7 +169,90 @@ export const NODE_TYPE_MAP = Object.entries(NODE_CATEGORIES).reduce(
   {},
 );
 
-// 3. STYLE DEFINITIONS (SOLID THEME)
+// 3. NODE OUTPUT SCHEMAS (Static fallback for UX)
+export const NODE_OUTPUTS = {
+  launch_browser: {
+    browserId: "string",
+    status: "string",
+    success: "boolean",
+  },
+  open_url: {
+    url: "string",
+    status: "number",
+    success: "boolean",
+    message: "string",
+  },
+  find_element: {
+    found: "boolean",
+    count: "number",
+    selector: "string",
+    success: "boolean",
+  },
+  click: {
+    success: "boolean",
+    selector: "string",
+    message: "string",
+  },
+  type_text: {
+    success: "boolean",
+    text: "string",
+    selector: "string",
+    message: "string",
+  },
+  select_option: {
+    success: "boolean",
+    value: "string",
+    selector: "string",
+  },
+  get_set_content: {
+    success: "boolean",
+    content: "string",
+    type: "string",
+  },
+  execute_js: {
+    success: "boolean",
+    result: "any",
+    message: "string",
+  },
+  call_llm: {
+    success: "boolean",
+    result: "string",
+    usage: "object",
+  },
+  generate_data: {
+    success: "boolean",
+    data: "any",
+  },
+  extract_dom_context: {
+    success: "boolean",
+    context: "string",
+  },
+  take_screenshot: {
+    success: "boolean",
+    path: "string",
+    url: "string",
+  },
+  run_tests: {
+    success: "boolean",
+    passed: "number",
+    failed: "number",
+    total: "number",
+  },
+  component: {
+    success: "boolean",
+    data: "object",
+  },
+  wait: {
+    success: "boolean",
+    duration: "number",
+  },
+  branch: {
+    success: "boolean",
+    path: "string",
+  },
+};
+
+// 4. STYLE DEFINITIONS (SOLID THEME)
 // Strict strict synchronization.
 // Nodes are SOLID colored blocks. Text is WHITE.
 // Selected nodes get a WHITE border and colored glow.

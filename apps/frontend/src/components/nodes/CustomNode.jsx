@@ -5,7 +5,13 @@
 
 import React, { memo } from "react";
 import { Handle, Position } from "@xyflow/react";
-import { CheckCircle, XCircle, Loader2, AlertCircle } from "lucide-react";
+import {
+  CheckCircle,
+  XCircle,
+  Loader2,
+  AlertCircle,
+  Sparkles,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { NODE_STATES, CATEGORY_COLORS } from "../hooks/flowStyles";
@@ -58,7 +64,7 @@ function CustomNode({ data, selected }) {
 
     // Healed State
     isHealed &&
-      "border-amber-500/50 bg-amber-500/10 shadow-[0_0_15px_-3px_rgba(245,158,11,0.3)]",
+      "border-violet-500/50 bg-violet-500/10 shadow-[0_0_20px_-3px_rgba(139,92,246,0.4)] ring-1 ring-violet-500/30",
 
     // Running State
     isRunning &&
@@ -87,7 +93,9 @@ function CustomNode({ data, selected }) {
               ? "#0ea5e9"
               : isHealed
                 ? "#f59e0b"
-                : categoryColor,
+                : isHealed
+                  ? "#8b5cf6"
+                  : categoryColor,
         }}
       />
 
@@ -105,7 +113,9 @@ function CustomNode({ data, selected }) {
                   ? "#0ea5e9"
                   : isHealed
                     ? "#f59e0b"
-                    : categoryColor,
+                    : isHealed
+                      ? "#8b5cf6"
+                      : categoryColor,
           }}
         >
           {isRunning ? (
@@ -113,7 +123,7 @@ function CustomNode({ data, selected }) {
           ) : isPicking ? (
             <div className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-20"></div>
           ) : isHealed ? (
-            <span className="text-2xl">🩹</span>
+            <Sparkles size={24} className="animate-pulse" />
           ) : null}
 
           {isRunning || isHealed ? null : isError ? ( // Loader already rendered above
@@ -144,7 +154,7 @@ function CustomNode({ data, selected }) {
               "text-sm font-bold text-[var(--text-main)] leading-tight truncate pr-2",
               isError && "text-red-400",
               isPicking && "text-sky-400",
-              isHealed && "text-amber-400",
+              isHealed && "text-violet-400",
             )}
           >
             {t(`nodes.labels.${data?.type}`) || data?.label || "Node"}
@@ -162,7 +172,7 @@ function CustomNode({ data, selected }) {
                 className={cn(
                   "text-[10px] font-mono mt-1 truncate max-w-[150px] px-1 py-0.5 rounded border",
                   isHealed
-                    ? "text-amber-500/80 bg-amber-500/10 border-amber-500/20"
+                    ? "text-violet-500/80 bg-violet-500/10 border-violet-500/20"
                     : "text-cyan-500/80 bg-cyan-500/10 border-cyan-500/20",
                 )}
               >
@@ -171,11 +181,22 @@ function CustomNode({ data, selected }) {
             ))}
         </div>
 
-        {isSuccess && (
+        {isSuccess && !isHealed && (
           <CheckCircle
             size={14}
             className="text-green-500 absolute top-3 right-3 opacity-80"
           />
+        )}
+
+        {/* AI Badge */}
+        {isHealed && (
+          <div
+            className="absolute top-2 right-2 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-violet-500 text-[10px] font-bold text-white shadow-lg border border-violet-400 animate-bounce-subtle z-10"
+            title={`Auto-Healed: ${data.configuration?.originalValue} -> ${data.configuration?.healedValue}`}
+          >
+            <Sparkles size={10} fill="currentColor" />
+            <span>IA</span>
+          </div>
         )}
       </div>
 

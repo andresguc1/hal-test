@@ -25,7 +25,7 @@ jobs:
       - name: 📦 Setup pnpm
         uses: pnpm/action-setup@v2
         with:
-          version: 8
+          version: 9.15.4
 
       - name: 🟢 Setup Node.js
         uses: actions/setup-node@v4
@@ -35,6 +35,9 @@ jobs:
 
       - name: 📥 Install dependencies
         run: pnpm install
+
+      - name: 🎭 Install Playwright browsers
+        run: npx playwright install chromium --with-deps
 
       - name: 🔍 Run ESLint
         run: pnpm run lint
@@ -50,7 +53,11 @@ jobs:
           NODE_ENV: test
           AUTH_ENABLED: 'false'
           VITE_AUTH_ENABLED: 'false'
-        continue-on-error: true # Don't fail build on test errors (for now)
+
+      - name: 🧪 Run frontend tests
+        run: cd apps/frontend && pnpm test
+        env:
+          NODE_ENV: test
 
   # ========================================
   # JOB 2: Build Verification

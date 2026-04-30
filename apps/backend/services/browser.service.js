@@ -1,7 +1,16 @@
 import { chromium, firefox, webkit } from 'playwright';
 import { randomUUID } from 'crypto';
 import { DEVICE_PRESETS } from '../utils/constants.js';
-import { STORAGE_RUNS_DIR } from '../config/paths.js';
+import { STORAGE_DIR, STORAGE_RUNS_DIR } from '../config/paths.js';
+import fs from 'fs';
+
+// Redirect Playwright/Chromium temp files to /var/tmp to avoid /tmp ENOSPC issues
+// while keeping the path short enough (<108 chars) to avoid UNIX socket SIGTRAP crashes.
+const BROWSER_TMP_DIR = '/var/tmp/hal_browser_tmp';
+if (!fs.existsSync(BROWSER_TMP_DIR)) {
+    fs.mkdirSync(BROWSER_TMP_DIR, { recursive: true });
+}
+process.env.TMPDIR = BROWSER_TMP_DIR;
 
 const MAX_BROWSERS = 5;
 
@@ -72,12 +81,22 @@ class BrowserManager {
         // 2. Process arguments (args comes as a string from the frontend)
         let launchArgs = [];
         if (typeof args === 'string' && args.trim().length > 0) {
-            // Split by space respecting single/double quotes if necessary
-            // For initial simplicity: split by space
             launchArgs = args.split(' ').filter((arg) => arg.length > 0);
         } else if (Array.isArray(args)) {
-            launchArgs = args;
+            launchArgs = [...args];
         }
+
+        // --- SANITIZATION & DEDUPLICATION ---
+        // Explicitly remove flags known to cause crashes or conflicts
+        const forbiddenFlags = [
+            '--no-zygote',
+            '--disable-features=CDPScreenshotNewSurface',
+            '--enable-features=CDPScreenshotNewSurface',
+        ];
+        launchArgs = launchArgs.filter((arg) => !forbiddenFlags.includes(arg));
+
+        // Deduplicate
+        launchArgs = [...new Set(launchArgs)];
 
         // 3. Configure Window Size and Mobile Simulation
         const preset = DEVICE_PRESETS[devicePreset] || DEVICE_PRESETS.Desktop;
@@ -144,31 +163,17 @@ class BrowserManager {
         // 4. Inject Stability Flags for Chromium
         if (browserType === 'chromium') {
             const stabilityArgs = [
-                '--disable-features=CDPScreenshotNewSurface',
                 '--disable-gpu',
                 '--no-sandbox',
                 '--disable-dev-shm-usage',
-                '--no-zygote',
-                '--disable-gpu-sandbox',
-                '--disable-accelerated-2d-canvas',
-                '--disable-gpu-compositing',
-                '--font-render-hinting=none',
-                '--disable-background-timer-throttling',
-                '--disable-backgrounding-occluded-windows',
-                '--disable-renderer-backgrounding',
-                '--js-flags="--max-old-space-size=2048"',
-                '--disable-webgl',
-                '--disable-webgl2',
-                '--disable-3d-apis',
-                '--mute-audio',
                 '--disable-setuid-sandbox',
                 '--disable-blink-features=AutomationControlled',
-                '--disable-disk-cache',
-                '--disable-application-cache',
+                '--disable-software-rasterizer',
+                '--disable-extensions',
             ];
 
             if (headless) {
-                stabilityArgs.push('--disable-software-rasterizer');
+                // Additional headless specific flags if any
             }
 
             launchArgs.push(...stabilityArgs);

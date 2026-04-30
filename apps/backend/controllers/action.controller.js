@@ -468,6 +468,12 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
     // Deeply interpolate variables in the request body before any logic
     const opts = variableManager.resolveRecursive(req.body, runId); // Pass runId for isolation
 
+    // Ensure continueOnError is strictly boolean
+    if (opts.continueOnError === 'true' || opts.continueOnError === '1')
+        opts.continueOnError = true;
+    if (opts.continueOnError === 'false' || opts.continueOnError === '0')
+        opts.continueOnError = false;
+
     // --- LABEL SAFETY NET ---
     let finalLabel = opts.label || req.body.label || req.body.customLabel;
 
@@ -650,8 +656,9 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
         if (result && result.success !== false) {
             // Standardize output: Ensure status is present for conditional logic
             const nodeResult = result.data || result;
-            if (typeof nodeResult === 'object' && nodeResult !== null && !nodeResult.status) {
-                nodeResult.status = 'success';
+            if (typeof nodeResult === 'object' && nodeResult !== null) {
+                if (!nodeResult.status) nodeResult.status = 'success';
+                if (nodeResult.recovered === undefined) nodeResult.recovered = false;
             }
 
             variableManager.set(`${nodeLabel}.result`, nodeResult, runId);
@@ -666,6 +673,8 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
 
         return res.status(200).json({
             success: true,
+            status: 'success',
+            recovered: false,
             message: result.message,
             browserId: targetBrowserId,
             durationMs: duration,
@@ -894,19 +903,51 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
                                     );
                                 }
 
-                                if (nodeId)
+                                if (nodeId) {
                                     emitExecutionStatus({ stepId: nodeId, status: 'healed' });
+                                }
+
+                                // --- VARIABLE PERSISTENCE (Healed Path) ---
+                                const nodeLabel = label;
+                                const healedResult = {
+                                    ...(retryResult.data || retryResult),
+                                    status: 'healed',
+                                    recovered: true,
+                                    healed: true,
+                                    originalValue: opts.selector,
+                                    healedValue: diagnosis.correctedSelector,
+                                    healingConfidence: diagnosis.confidence,
+                                    reasoning: diagnosis.reasoning,
+                                };
+                                variableManager.set(`${nodeLabel}.result`, healedResult, runId);
+                                if (nodeId)
+                                    variableManager.set(`${nodeId}.result`, healedResult, runId);
 
                                 return res.status(200).json({
                                     success: true,
+                                    status: 'healed',
+                                    recovered: true,
+                                    healed: true,
                                     message: `Self-Healed: ${retryResult.message}`,
                                     browserId: targetBrowserId,
                                     durationMs: duration + retryDuration,
-                                    data: retryResult.data || {},
-                                    healed: true,
-                                    originalSelector: opts.selector,
-                                    newSelector: diagnosis.correctedSelector,
+                                    data: healedResult,
+                                    healedValue: diagnosis.correctedSelector,
+                                    originalValue: opts.selector,
+                                    healingConfidence: diagnosis.confidence,
                                     reasoning: diagnosis.reasoning,
+                                });
+                            } else {
+                                // HEALING FAILED TO FIND A WORKABLE SELECTOR
+                                const failReason = diagnosis.correctedSelector
+                                    ? `Suggested selector '${diagnosis.correctedSelector}' failed verification.`
+                                    : diagnosis.reasoning ||
+                                      'AI could not find a replacement selector.';
+
+                                emitLog({
+                                    message: `[Self-Healing] ❌ Repair attempt finished without success: ${failReason}`,
+                                    nodeId: opts.nodeId,
+                                    type: 'warning',
                                 });
                             }
                         }
@@ -1025,8 +1066,9 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
             // PERSIST FAILED STATE TO VARIABLE MANAGER
             const nodeLabel = label || nodeId || actionName;
             const errorResult = {
-                status: 'failed',
+                status: 'softfailed',
                 success: false,
+                recovered: false,
                 error: errorMessage,
                 durationMs: duration,
                 screenshot: errorScreenshotPath,
@@ -1039,7 +1081,8 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
             // RETURN SUCCESS TO MOTOR (Trick Motor into continuing)
             return res.status(200).json({
                 success: true,
-                status: 'failed',
+                status: 'softfailed',
+                recovered: false,
                 message: `Soft Fail: ${errorMessage}`,
                 browserId: targetBrowserId,
                 durationMs: duration,
@@ -1056,6 +1099,8 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
         }
         return res.status(status).json({
             success: false,
+            status: 'failed',
+            recovered: false,
             message: errorMessage || `${req.t('common.error_internal')} (${actionName})`,
             error: errorMessage,
             selector: opts.selector,
@@ -4193,21 +4238,24 @@ export const conditionalAction = async (req, res) => {
         console.log(
             `[DEBUG] conditionalAction - runId: ${runId}, variables: ${Object.keys(variables || {}).length}, branches: ${branches?.length || 0}`,
         );
+        console.log(
+            `[Conditional] 📥 Config:`,
+            JSON.stringify(req.body.configuration || {}, null, 2),
+        );
 
         // Debug mode for detailed tracing
         const debugMode = req.body.debugMode || req.body.configuration?.debugMode || false;
+
+        // Always log basic info to console for developer visibility
+        console.log(`[Conditional] Starting evaluation for node: ${req.body.nodeId || 'unknown'}`);
+        const allVars = variableManager.getAll(runId);
+        console.log(`[Conditional] Available variables:`, Object.keys(allVars));
 
         if (debugMode) {
             smartEmitLog(
                 `[Conditional] Starting evaluation (Logic: ${logic}, Branches: ${branches?.length || 0})`,
                 'info',
                 req.body.nodeId,
-            );
-            // Log available variables for debugging resolution issues
-            const allVars = variableManager.getAll(runId);
-            console.log(
-                `[Conditional] Available variables for runId=${runId}:`,
-                Object.keys(allVars),
             );
         }
 
@@ -4247,11 +4295,25 @@ export const conditionalAction = async (req, res) => {
                             const isUnres = (v) =>
                                 typeof v === 'string' && (v.includes('{{') || v.includes('${'));
                             if (isUnres(resolvedLeft)) {
+                                console.log(
+                                    `[Conditional] ❌ UNRESOLVED LEFT: "${left}" -> Check if node exists!`,
+                                );
+                                console.warn(
+                                    `[Conditional] 🔴 Left operand UNRESOLVED: ${resolvedLeft}`,
+                                );
                                 resolvedLeft = undefined;
                             }
                             if (isUnres(resolvedRight)) {
+                                console.log(`[Conditional] ❌ UNRESOLVED RIGHT: "${right}"`);
+                                console.warn(
+                                    `[Conditional] 🔴 Right operand UNRESOLVED: ${resolvedRight}`,
+                                );
                                 resolvedRight = undefined;
                             }
+
+                            console.log(
+                                `[Conditional] 🔍 VALIDATING: [${resolvedLeft}] ${operator} [${resolvedRight}]`,
+                            );
 
                             const rightOriginal = right !== undefined ? right : 'undefined';
 
@@ -4265,8 +4327,8 @@ export const conditionalAction = async (req, res) => {
                             // Warn explicitly if left couldn't be resolved
                             if (resolvedLeft === undefined) {
                                 console.warn(
-                                    `[Conditional] ⚠️ WARNING: Variable "${left}" could not be resolved. ` +
-                                        `Check that the upstream node result is stored correctly.`,
+                                    `[Conditional] ⚠️ WARNING: Variable "${left}" could not be resolved in runId ${runId}. ` +
+                                        `Check that the upstream node "${left.replace(/[{}]/g, '').split('.')[0]}" result is stored correctly.`,
                                 );
                             }
 
@@ -4724,6 +4786,7 @@ export const failFlowAction = async (req, res) => {
 export const componentAction = async (req, res) => {
     try {
         const { configuration, nodeId, label, runId } = req.body;
+        const nodeLabel = label || configuration?.label || nodeId || 'Component';
         const flowId = configuration?.flowId || req.body.flowId;
 
         if (!flowId) {
@@ -4767,12 +4830,34 @@ export const componentAction = async (req, res) => {
             }
         }
 
+        // 🌟 PRE-INITIALIZE COMPONENT RESULT
+        // This allows internal nodes (like a Conditional node) to reference the component's status
+        // even before it has finished executing the entire subflow.
+        const initialResult = {
+            success: true,
+            status: 'running',
+            message: `Subflow "${nodeLabel}" is currently executing...`,
+            data: { status: true, success: true, label: nodeLabel },
+        };
+        vm.set(`${nodeId}.result`, initialResult, runId);
+        vm.set(`${nodeLabel}.result`, initialResult, runId);
+        vm.set(nodeId, initialResult, runId);
+        vm.set(nodeLabel, initialResult, runId);
+        console.log(`[Component] 🚀 Pre-initialized variables for: "${nodeLabel}" (ID: ${nodeId})`);
+
         // Map database models to the format expected by ExecutionService
-        const allNodes = subflow.nodes.map((n) => ({
-            nodeId: n.nodeId, // Use nodeId field which corresponds to React Flow ID
-            type: n.type,
-            data: n.data,
-        }));
+        console.log(`[Component] 📦 Subflow "${subflow.name}" has ${subflow.nodes.length} nodes.`);
+        const allNodes = subflow.nodes.map((n) => {
+            console.log(
+                `   - Node: "${n.data?.label || n.nodeId}" (Type: ${n.type}, Parent: ${n.parentId || 'NONE'})`,
+            );
+            return {
+                nodeId: n.nodeId,
+                type: n.type,
+                data: n.data,
+                parentId: n.parentId, // CRITICAL FIX: Ensure parentId is preserved!
+            };
+        });
         const allEdges = subflow.edges.map((e) => ({
             source: e.source,
             target: e.target,
@@ -4819,7 +4904,6 @@ export const componentAction = async (req, res) => {
         // 🌟 GUARANTEED STRUCTURED OUTPUT
         // runSequence returns null on normal completion (no flow control signal).
         // always build a valid contract object so the next node has data to inspect.
-        const nodeLabel = label || configuration?.label || nodeId || 'Component';
         const structuredResult = {
             success: subflowResult?.success !== false,
             status:

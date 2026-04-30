@@ -376,7 +376,25 @@
       "add_case": "Add Case",
       "no_cases": "No cases defined. Add one to start.",
       "add_mapping": "Add Mapping",
-      "no_mappings": "No mappings defined"
+      "no_mappings": "No mappings defined",
+      "conditional": {
+        "control_logic": "Flow Control",
+        "if": "When",
+        "else_if": "Or when",
+        "else_fallback": "Default fallback",
+        "escape_route": "Final escape route",
+        "js_mode": "JS",
+        "rule_mode": "RULE",
+        "placeholder_label": "Route name...",
+        "placeholder_fallback": "Go default...",
+        "placeholder_var": "Variable...",
+        "placeholder_val": "Value...",
+        "values_label": "Values:",
+        "resolves": "Resolves:",
+        "waiting_data": "Waiting for data...",
+        "match": "MATCH",
+        "no_match": "NO MATCH"
+      }
     },
     "hints": {
       "selector_select": "Must be the selector of the main <select> element, not the <option> elements.",

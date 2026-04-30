@@ -24,6 +24,15 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(version),
   },
 
+  // === TEST CONFIGURATION ===
+  test: {
+    globals: true,
+    environment: "jsdom",
+    setupFiles: ["./vitest.setup.js"],
+    include: ["src/**/*.test.{js,jsx}"],
+    exclude: ["node_modules", "dist"],
+  },
+
   // === PROXY PARA BACKEND ===
   server: {
     port: parseInt(process.env.VITE_PORT) || 5173,

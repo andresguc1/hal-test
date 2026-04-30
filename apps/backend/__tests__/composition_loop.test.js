@@ -109,7 +109,7 @@ describe('Composition Loop Execution', () => {
                     return await executionService.executeLoopContainer(node, nodes, edges, st);
 
                 // Verificar variables en cada ejecución
-                const currentUser = variableManager.get('user');
+                const currentUser = variableManager.get('user', st.runId);
                 if (node.nodeId === 'child-log') {
                     childCalls.push({ nodeId: node.nodeId, user: currentUser });
                 }

@@ -379,7 +379,10 @@ router.post('/projects', async (req, res) => {
 router.get('/projects/:id', async (req, res) => {
     try {
         const project = await getProjectWithFlowStats(req.params.id);
-        if (!project) return res.status(404).json({ error: 'Project not found' });
+        if (!project) {
+            console.warn(`[ProjectRouter] Project NOT FOUND: ID=${req.params.id}`);
+            return res.status(404).json({ error: 'Project not found' });
+        }
         res.json(project);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -391,7 +394,10 @@ router.put('/projects/:id', async (req, res) => {
     try {
         const { name, description, activeFlowId } = req.body;
         const project = await Project.findByPk(req.params.id);
-        if (!project) return res.status(404).json({ error: 'Project not found' });
+        if (!project) {
+            console.warn(`[ProjectRouter] Project NOT FOUND for update: ID=${req.params.id}`);
+            return res.status(404).json({ error: 'Project not found' });
+        }
 
         await project.update({ name, description, activeFlowId });
 
@@ -407,7 +413,10 @@ router.put('/projects/:id', async (req, res) => {
 router.delete('/projects/:id', async (req, res) => {
     try {
         const project = await Project.findByPk(req.params.id);
-        if (!project) return res.status(404).json({ error: 'Project not found' });
+        if (!project) {
+            console.warn(`[ProjectRouter] Project NOT FOUND for deletion: ID=${req.params.id}`);
+            return res.status(404).json({ error: 'Project not found' });
+        }
 
         await project.destroy();
         res.json({ message: 'Project deleted' });
@@ -736,10 +745,11 @@ router.put('/projects/:projectId/flows/reorder', async (req, res) => {
 router.delete('/projects/:projectId/flows/:flowId', async (req, res) => {
     try {
         const { projectId, flowId } = req.params;
+
         const flow = await Flow.findOne({
             where: { id: flowId, projectId: projectId },
         });
-        if (!flow) return res.status(404).json({ error: 'Flow found' });
+        if (!flow) return res.status(404).json({ error: 'Flow not found' });
 
         await flow.destroy();
 

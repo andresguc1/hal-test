@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useCallback } from "react";
+import * as Tooltip from "@radix-ui/react-tooltip";
 import { motion as Motion, AnimatePresence } from "framer-motion";
 import {
   X,
@@ -29,17 +30,23 @@ import {
   CornerDownRight,
   Check,
   AlertTriangle,
+  Database,
+  List,
 } from "lucide-react";
 import { useToast } from "@/hooks/useToast";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
-import { CATEGORY_STYLES, NODE_TYPE_MAP } from "@/config/nodeConstants";
+import {
+  CATEGORY_STYLES,
+  NODE_TYPE_MAP,
+  NODE_OUTPUTS,
+} from "@/config/nodeConstants";
 import { api } from "../utils/api";
 import EvidenceCard from "./EvidenceCard"; // New component import
 import VariableInput from "./VariableInput";
 
 const ConditionalBranchesEditor = React.memo(
-  ({ value, onChange, variables }) => {
+  ({ value, onChange, variables, allVariables }) => {
     const { t } = useTranslation();
     const branches = useMemo(() => {
       let activeValue = value;
@@ -68,6 +75,28 @@ const ConditionalBranchesEditor = React.memo(
       return safeBranches.map((b) => {
         // Prevent literal "[object Object]" strings from corrupting the UI
         let cleanExpr = b.expression;
+
+        // Structured expression deep cleaning
+        if (cleanExpr && typeof cleanExpr === "object" && "left" in cleanExpr) {
+          cleanExpr = {
+            ...cleanExpr,
+            left:
+              typeof cleanExpr.left === "string" &&
+              cleanExpr.left === "[object Object]"
+                ? ""
+                : typeof cleanExpr.left === "object"
+                  ? ""
+                  : cleanExpr.left,
+            right:
+              typeof cleanExpr.right === "string" &&
+              cleanExpr.right === "[object Object]"
+                ? ""
+                : typeof cleanExpr.right === "object"
+                  ? ""
+                  : cleanExpr.right,
+          };
+        }
+
         if (
           (typeof cleanExpr === "string" && cleanExpr === "[object Object]") ||
           cleanExpr === null
@@ -84,6 +113,51 @@ const ConditionalBranchesEditor = React.memo(
         };
       });
     }, [value]);
+
+    // Flattened variable paths for VariableInput suggestions
+    const availableVariablePaths = useMemo(() => {
+      const paths = [];
+      Object.entries(variables || {}).forEach(([nodeName, nodeVal]) => {
+        if (nodeName.includes(".result") || nodeName === "global") return;
+        if (!nodeVal || typeof nodeVal !== "object") return;
+
+        const extract = (obj, prefix = "", depth = 0) => {
+          if (depth > 2 || !obj || typeof obj !== "object") return;
+          Object.entries(obj).forEach(([prop, val]) => {
+            if (prop === "result" || prop.substring(0, 1) === "_") return;
+
+            const fullPropPath = prefix ? `${prefix}.${prop}` : prop;
+            const isObj = val && typeof val === "object" && !Array.isArray(val);
+
+            // Suggest the full path
+            paths.push(`{{${nodeName}.${fullPropPath}}}`);
+
+            // FLATTENING: If it's inside 'data', also suggest it without 'data.' prefix
+            if (prefix === "data") {
+              paths.push(`{{${nodeName}.${prop}}}`);
+            }
+
+            if (isObj && depth < 2) extract(val, fullPropPath, depth + 1);
+          });
+        };
+        extract(nodeVal);
+
+        // Ensure common status/success are always suggested if they exist in the result
+        if (nodeVal.status && !paths.includes(`{{${nodeName}.status}}`))
+          paths.push(`{{${nodeName}.status}}`);
+        if (nodeVal.success && !paths.includes(`{{${nodeName}.success}}`))
+          paths.push(`{{${nodeName}.success}}`);
+        if (nodeVal.data?.success && !paths.includes(`{{${nodeName}.success}}`))
+          paths.push(`{{${nodeName}.success}}`);
+      });
+
+      if (variables?.global) {
+        Object.keys(variables.global).forEach((k) =>
+          paths.push(`{{global.${k}}}`),
+        );
+      }
+      return paths;
+    }, [variables]);
 
     const updateBranch = React.useCallback(
       (index, field, val) => {
@@ -165,263 +239,341 @@ const ConditionalBranchesEditor = React.memo(
       { label: "Exists", value: "exists" },
     ];
 
+    // Helper to resolve variables in the frontend for live validation
+    const resolveVariableValue = React.useCallback(
+      (val) => {
+        if (!val || typeof val !== "string") return val;
+
+        const match = val.match(/\{\{([^}]+)\}\}/);
+        if (!match) return val;
+
+        const fullPath = match[1];
+        const parts = fullPath.split(".");
+        const nodeName = parts[0];
+        const propPath = parts.slice(1);
+
+        const normalize = (str) =>
+          str
+            .toLowerCase()
+            .replace(/\s*\(library\)\s*/g, "")
+            .replace(/[^a-z0-9]/g, "");
+
+        const normNodeName = normalize(nodeName);
+
+        // Recursive driller
+        const drill = (obj, pathParts) => {
+          let curr = obj;
+          for (const p of pathParts) {
+            if (curr === null || curr === undefined || typeof curr !== "object")
+              return undefined;
+            if (p in curr) {
+              curr = curr[p];
+            } else {
+              return undefined;
+            }
+          }
+          return curr;
+        };
+
+        const realNodeKey = Object.keys(variables || {}).find(
+          (k) => normalize(k) === normNodeName,
+        );
+
+        if (!realNodeKey) return undefined;
+
+        const nodeData = variables[realNodeKey];
+        return drill(nodeData, propPath);
+      },
+      [variables],
+    );
+
     // Get value suggestions based on selected left variable
-    const getValueSuggestions = (leftRef) => {
-      if (!leftRef || typeof leftRef !== "string") return [];
+    const getValueSuggestions = React.useCallback(
+      (leftRef) => {
+        if (!leftRef || typeof leftRef !== "string") return [];
 
-      const varNameMatch = leftRef.match(/\{\{([^}]+)\}\}/);
-      if (!varNameMatch) return [];
+        const varNameMatch = leftRef.match(/\{\{([^}]+)\}\}/);
+        if (!varNameMatch) return [];
 
-      const fullPath = varNameMatch[1];
-      const parts = fullPath.split(".");
-      const nodeName = parts[0];
-      const propName = parts[1];
+        const fullPath = varNameMatch[1];
+        const parts = fullPath.split(".");
+        const propName = parts[parts.length - 1];
 
-      // Normalization helper for prefix matching
-      const normalize = (str) =>
-        str
-          .replace(/\s*\(Library\)\s*/i, "")
-          .replace(/[^a-zA-Z0-9]/g, "")
-          .toLowerCase();
-      const normNodeName = normalize(nodeName);
+        const value = resolveVariableValue(leftRef);
 
-      // Find the key in variables that matches the normalized name
-      const realNodeKey = Object.keys(variables).find(
-        (k) => normalize(k) === normNodeName,
-      );
-      const nodeData = realNodeKey ? variables[realNodeKey] : null;
+        const suggestions = [];
+        if (
+          value !== undefined &&
+          value !== null &&
+          typeof value !== "object"
+        ) {
+          suggestions.push(String(value));
+        }
 
-      if (!nodeData) return [];
+        // Add smart defaults for common fields
+        if (propName === "status") {
+          ["success", "error", "loading", "pending"].forEach((s) => {
+            if (!suggestions.includes(s)) suggestions.push(s);
+          });
+        }
+        if (propName === "success") {
+          ["true", "false"].forEach((s) => {
+            if (!suggestions.includes(s)) suggestions.push(s);
+          });
+        }
 
-      const value = propName ? nodeData[propName] : nodeData;
+        return suggestions.slice(0, 10);
+      },
+      [resolveVariableValue],
+    );
 
-      const suggestions = [];
-      if (value !== undefined && value !== null && typeof value !== "object") {
-        suggestions.push(String(value));
-      }
+    // Helper to evaluate conditions in real-time
+    const evaluateSimpleCondition = React.useCallback(
+      (left, op, right) => {
+        let rL = resolveVariableValue(left);
+        let rR = resolveVariableValue(right);
 
-      // Add smart defaults for common fields
-      if (propName === "status") {
-        ["success", "error", "loading", "pending"].forEach((s) => {
-          if (!suggestions.includes(s)) suggestions.push(s);
-        });
-      }
-      if (propName === "success") {
-        ["true", "false"].forEach((s) => {
-          if (!suggestions.includes(s)) suggestions.push(s);
-        });
-      }
+        if (rL === undefined) return null; // Cannot evaluate yet
 
-      return suggestions.slice(0, 10);
-    };
+        // Type Normalization (Match backend VariableManager)
+        if (
+          typeof rL === "number" &&
+          typeof rR === "string" &&
+          rR !== "" &&
+          !isNaN(rR)
+        )
+          rR = Number(rR);
+        if (
+          typeof rR === "number" &&
+          typeof rL === "string" &&
+          rL !== "" &&
+          !isNaN(rL)
+        )
+          rL = Number(rL);
+        if (typeof rL === "boolean" && typeof rR === "string") {
+          const n = rR.trim().toLowerCase();
+          if (n === "true") rR = true;
+          else if (n === "false") rR = false;
+        }
+
+        switch (op) {
+          case "==":
+            return rL == rR;
+          case "!=":
+            return rL != rR;
+          case ">":
+            return Number(rL) > Number(rR);
+          case "<":
+            return Number(rL) < Number(rR);
+          case ">=":
+            return Number(rL) >= Number(rR);
+          case "<=":
+            return Number(rL) <= Number(rR);
+          case "contains":
+            return (
+              rL !== undefined &&
+              rR !== undefined &&
+              String(rL).includes(String(rR))
+            );
+          case "exists":
+            return rL !== undefined;
+          default:
+            return false;
+        }
+      },
+      [resolveVariableValue],
+    );
 
     return (
-      <div className="space-y-4 mt-4 mb-2">
-        <div className="flex justify-between items-center mb-1">
-          <label className="text-[11px] uppercase tracking-[0.2em] font-black text-sky-400 ml-1 flex items-center gap-2">
-            <Split size={14} />
-            {t("nodes.config.branching_rules", "Reglas de Bifurcación")}
-          </label>
+      <div className="space-y-4 mt-2 mb-2">
+        <div className="flex justify-between items-center px-1">
+          <div className="flex items-center gap-2">
+            <div className="w-1.5 h-4 bg-sky-500 rounded-full" />
+            <label className="text-[11px] uppercase tracking-[0.2em] font-black text-slate-400">
+              {t("nodes.config.conditional.control_logic", "Lógica de Control")}
+            </label>
+          </div>
+          <span className="text-[9px] font-bold text-slate-600 bg-slate-800/50 px-2 py-0.5 rounded-full border border-white/5">
+            {branches.length}{" "}
+            {branches.length === 1
+              ? t("common.rule", "regla")
+              : t("common.rules", "reglas")}
+          </span>
         </div>
-        <div className="space-y-4">
+
+        <div className="space-y-3">
           {branches.map((branch, index) => {
             const hasStructuredExpr =
               branch.expression &&
               typeof branch.expression === "object" &&
               "left" in branch.expression;
-            // FORCED MODE DETECTION: If it looks like a rule, it IS simple mode.
             const isAdvanced = branch.mode === "advanced" && !hasStructuredExpr;
             const isDefault = isAdvanced && !branch.expression;
             const isTrue = branch.id === "true";
             const isFalse = branch.id === "false";
+            const isElseBranch = isFalse || isDefault;
 
             return (
               <div
                 key={`branch-${branch.id}-${index}`}
-                className="px-4 py-4 bg-[#0f172a]/80 border border-sky-500/20 rounded-2xl space-y-3 relative group hover:border-sky-500/50 transition-all shadow-lg"
+                className={cn(
+                  "rounded-2xl transition-all duration-200 overflow-hidden",
+                  isElseBranch
+                    ? "bg-slate-900/40 border border-slate-800"
+                    : "bg-[#0f172a] border border-slate-800 hover:border-sky-500/30 shadow-xl shadow-black/20",
+                )}
               >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 flex-1">
+                {/* Cabecera de la Regla */}
+                <div
+                  className={cn(
+                    "flex items-center justify-between px-4 py-2 border-b",
+                    isElseBranch
+                      ? "border-slate-800/50 bg-slate-800/20"
+                      : "border-white/5 bg-white/[0.02]",
+                  )}
+                >
+                  <div className="flex items-center gap-2.5">
                     <div
                       className={cn(
-                        "w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border",
+                        "w-5 h-5 rounded-md flex items-center justify-center shrink-0 shadow-inner",
                         isTrue
-                          ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
-                          : isFalse
-                            ? "bg-red-500/10 border-red-500/30 text-red-400"
-                            : "bg-sky-500/10 border-sky-500/30 text-sky-400",
+                          ? "bg-emerald-500/20 text-emerald-400"
+                          : isElseBranch
+                            ? "bg-slate-700/50 text-slate-500"
+                            : "bg-sky-500/20 text-sky-400",
                       )}
                     >
                       {isTrue ? (
-                        <CheckCircle2 size={16} />
-                      ) : isFalse ? (
-                        <XCircle size={16} />
+                        <Check size={12} strokeWidth={3} />
+                      ) : isElseBranch ? (
+                        <CornerDownRight size={12} />
                       ) : (
-                        <GitBranch size={16} />
+                        <GitBranch size={12} />
                       )}
                     </div>
-                    <div className="flex-1">
-                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-tighter block mb-0.5">
-                        {index === 0 ? "IF (SI...)" : "ELSE IF (O SI...)"}
-                      </span>
-                      <input
-                        type="text"
-                        placeholder="Etiqueta"
-                        value={String(branch.label || "")}
-                        onChange={(e) =>
-                          updateBranch(index, "label", e.target.value)
-                        }
-                        className="w-full bg-transparent border-none p-0 text-xs font-bold text-white focus:outline-none placeholder:text-slate-600 focus:ring-0"
-                      />
-                    </div>
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-tight">
+                      {isElseBranch
+                        ? t(
+                            "nodes.config.conditional.else_fallback",
+                            "Si nada coincide",
+                          )
+                        : index === 0
+                          ? t("nodes.config.conditional.if", "Si")
+                          : t("nodes.config.conditional.else_if", "O si")}
+                    </span>
+                    <input
+                      type="text"
+                      placeholder={
+                        isElseBranch
+                          ? t(
+                              "nodes.config.conditional.placeholder_fallback",
+                              "Ir por defecto...",
+                            )
+                          : t(
+                              "nodes.config.conditional.placeholder_label",
+                              "Nombre de la ruta...",
+                            )
+                      }
+                      value={String(branch.label || "")}
+                      onChange={(e) =>
+                        updateBranch(index, "label", e.target.value)
+                      }
+                      className="bg-transparent border-none p-0 text-[11px] font-bold text-white/90 focus:outline-none placeholder:text-slate-700 focus:ring-0 min-w-[80px]"
+                    />
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => toggleMode(index)}
-                      className={cn(
-                        "px-2 py-1 rounded text-[9px] font-black uppercase tracking-tighter transition-all border",
-                        isAdvanced
-                          ? "bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20"
-                          : "bg-indigo-500/10 border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/20",
-                      )}
-                    >
-                      {isAdvanced ? "Advanced (JS)" : "Simple (Rule)"}
-                    </button>
-                    <button
-                      onClick={() => removeBranch(index)}
-                      className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
+                  {!isElseBranch && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => toggleMode(index)}
+                        className={cn(
+                          "text-[8px] font-black px-1.5 py-0.5 rounded border transition-colors",
+                          isAdvanced
+                            ? "bg-amber-500/10 border-amber-500/20 text-amber-400"
+                            : "bg-slate-800 border-white/5 text-slate-500 hover:text-slate-300",
+                        )}
+                      >
+                        {isAdvanced
+                          ? t("nodes.config.conditional.js_mode", "JS")
+                          : t("nodes.config.conditional.rule_mode", "REGLA")}
+                      </button>
+                      <button
+                        onClick={() => removeBranch(index)}
+                        className="p-1 text-slate-600 hover:text-red-400 transition-colors"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  )}
                 </div>
 
-                <div className="relative">
-                  {isAdvanced ? (
-                    <VariableInput
-                      value={
-                        typeof branch.expression === "string"
-                          ? branch.expression
-                          : ""
-                      }
-                      variables={variables}
-                      placeholder={t(
-                        "nodes.placeholders.condition_expression",
-                        "Ex: ${status} === 200",
-                      )}
-                      onChange={(e) =>
-                        updateBranch(index, "expression", e.target.value)
-                      }
-                      className="bg-black/40 border-sky-500/20 focus:border-sky-500/50 min-h-[38px] text-[11px] py-2"
-                    />
+                {/* Cuerpo de la Regla */}
+                <div className="p-4">
+                  {isElseBranch ? (
+                    <div className="flex items-center gap-3 text-slate-500">
+                      <div className="h-px flex-1 bg-gradient-to-r from-transparent to-slate-800" />
+                      <span className="text-[10px] font-medium italic">
+                        {t(
+                          "nodes.config.conditional.escape_route",
+                          "Ruta de escape final",
+                        )}
+                      </span>
+                      <div className="h-px flex-1 bg-gradient-to-l from-transparent to-slate-800" />
+                    </div>
+                  ) : isAdvanced ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-[9px] font-bold text-slate-600 uppercase mb-1">
+                        <Terminal size={10} />{" "}
+                        {t(
+                          "nodes.fields.conditionScript",
+                          "Script de Condición",
+                        )}
+                      </div>
+                      <VariableInput
+                        value={
+                          typeof branch.expression === "string"
+                            ? branch.expression
+                            : ""
+                        }
+                        variables={variables}
+                        placeholder={t(
+                          "nodes.placeholders.condition_expression",
+                          "ej: ${status} === 200",
+                        )}
+                        onChange={(e) =>
+                          updateBranch(index, "expression", e.target.value)
+                        }
+                        className="bg-black/40 border-slate-800 focus:border-sky-500/50 min-h-[40px] text-[11px] rounded-xl"
+                      />
+                    </div>
                   ) : (
-                    <div className="flex flex-col gap-3 p-3 bg-black/40 rounded-2xl border border-white/5 shadow-inner">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase px-1">
-                          IF
-                        </span>
-
-                        {/* Intelligent Variable Selector */}
-                        <div className="flex-1 min-w-[200px]">
-                          <select
-                            className="w-full bg-slate-800/80 border-white/10 rounded-xl text-[11px] font-bold text-sky-300 px-3 h-9 focus:ring-2 focus:ring-sky-500/30 transition-all outline-none appearance-none cursor-pointer"
-                            value={branch.expression?.left || ""}
+                    <div className="space-y-3">
+                      {/* Fila de la Sentencia Natural */}
+                      <div className="flex flex-wrap items-center gap-2 bg-slate-900/40 p-2 rounded-xl border border-white/5">
+                        {/* Izquierda (Variable) */}
+                        <div className="flex-1 min-w-[140px] relative">
+                          <VariableInput
+                            id={`var-input-left-${index}`}
+                            value={String(branch.expression?.left || "")}
                             onChange={(e) =>
                               updateBranch(index, "expr_left", e.target.value)
                             }
-                          >
-                            <option value="">Selecciona Variable...</option>
-                            {Object.entries(variables || {}).map(
-                              ([nodeName, nodeVal]) => {
-                                if (nodeName.includes(".result")) return null;
-                                if (!nodeVal || typeof nodeVal !== "object")
-                                  return null;
-
-                                const label = `🟢 ${nodeName}`;
-                                const options = [];
-
-                                // Recursive flattener for dropdown options
-                                const extractOptions = (
-                                  obj,
-                                  prefix = "",
-                                  depth = 0,
-                                ) => {
-                                  if (
-                                    depth > 2 ||
-                                    !obj ||
-                                    typeof obj !== "object"
-                                  )
-                                    return;
-
-                                  Object.entries(obj).forEach(([prop, val]) => {
-                                    if (
-                                      prop === "result" ||
-                                      prop.startsWith("_")
-                                    )
-                                      return; // skip internal
-
-                                    const fullPropPath = prefix
-                                      ? `${prefix}.${prop}`
-                                      : prop;
-                                    const isObj =
-                                      val &&
-                                      typeof val === "object" &&
-                                      !Array.isArray(val);
-
-                                    // Icons: ⚓ core, 📄 primitive, 📦 object
-                                    const coreFields = [
-                                      "status",
-                                      "success",
-                                      "statusCode",
-                                      "error",
-                                      "message",
-                                      "data",
-                                    ];
-                                    const icon = coreFields.includes(prop)
-                                      ? "⚓ "
-                                      : isObj
-                                        ? "📦 "
-                                        : "📄 ";
-
-                                    if (!isObj || depth === 2) {
-                                      options.push({
-                                        id: `${nodeName}.${fullPropPath}`,
-                                        path: `{{${nodeName}.${fullPropPath}}}`,
-                                        label: `${icon}${fullPropPath}`,
-                                        type: Array.isArray(val)
-                                          ? "array"
-                                          : typeof val,
-                                      });
-                                    }
-
-                                    if (isObj && depth < 2) {
-                                      extractOptions(
-                                        val,
-                                        fullPropPath,
-                                        depth + 1,
-                                      );
-                                    }
-                                  });
-                                };
-
-                                extractOptions(nodeVal);
-
-                                return (
-                                  <optgroup key={nodeName} label={label}>
-                                    {options.map((opt) => (
-                                      <option key={opt.id} value={opt.path}>
-                                        {opt.label} ({opt.type})
-                                      </option>
-                                    ))}
-                                  </optgroup>
-                                );
-                              },
+                            variables={variables}
+                            allVariables={allVariables}
+                            suggestions={availableVariablePaths}
+                            placeholder={t(
+                              "nodes.config.conditional.placeholder_var",
+                              "Variable...",
                             )}
-                          </select>
+                            className="bg-slate-800/40 border-transparent text-[11px] h-8 rounded-lg focus:bg-slate-800 focus:border-sky-500/30 pr-8"
+                          />
+                          <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-600">
+                            <ChevronDown size={12} />
+                          </div>
                         </div>
 
-                        <div className="w-16">
+                        {/* Operador */}
+                        <div className="w-14">
                           <select
                             value={branch.expression?.operator || "=="}
                             onChange={(e) =>
@@ -431,7 +583,7 @@ const ConditionalBranchesEditor = React.memo(
                                 e.target.value,
                               )
                             }
-                            className="w-full bg-slate-800 border-white/10 rounded-xl text-[11px] font-black text-white px-2 h-9 text-center focus:ring-2 focus:ring-sky-500/30 outline-none cursor-pointer"
+                            className="w-full bg-slate-800/80 border-white/5 rounded-lg text-[11px] font-black text-sky-400 h-8 text-center appearance-none cursor-pointer focus:ring-1 focus:ring-sky-500/50 outline-none"
                           >
                             {operators.map((op) => (
                               <option key={op.value} value={op.value}>
@@ -441,83 +593,126 @@ const ConditionalBranchesEditor = React.memo(
                           </select>
                         </div>
 
-                        <div className="flex-1 min-w-[120px]">
+                        {/* Derecha (Valor) */}
+                        <div className="flex-1 min-w-[100px]">
                           <VariableInput
                             value={branch.expression?.right || ""}
-                            variables={variables}
+                            variables={allVariables || variables}
+                            contextualVariables={variables}
                             suggestions={getValueSuggestions(
                               branch.expression?.left,
                             )}
-                            placeholder="Valor"
+                            placeholder={t(
+                              "nodes.config.conditional.placeholder_val",
+                              "Valor...",
+                            )}
                             onChange={(e) =>
                               updateBranch(index, "expr_right", e.target.value)
                             }
-                            className="bg-slate-800/80 border-white/10 text-[11px] h-9 rounded-xl focus:border-sky-500/40"
+                            className="bg-slate-800/40 border-transparent text-[11px] h-8 rounded-lg focus:bg-slate-800 focus:border-sky-500/30"
                           />
                         </div>
                       </div>
 
-                      {/* Sub-label for validation/preview */}
+                      {/* Sugerencias de Valores Rápidos */}
+                      {(() => {
+                        const suggestedValues = getValueSuggestions(
+                          branch.expression?.left,
+                        );
+                        if (suggestedValues.length > 0) {
+                          return (
+                            <div className="flex items-center gap-2 pl-1">
+                              <span className="text-[9px] font-bold text-slate-600 uppercase">
+                                {t(
+                                  "nodes.config.conditional.values_label",
+                                  "Valores:",
+                                )}
+                              </span>
+                              <div className="flex gap-1">
+                                {suggestedValues.map((val) => (
+                                  <button
+                                    key={val}
+                                    onClick={() =>
+                                      updateBranch(index, "expr_right", val)
+                                    }
+                                    className={cn(
+                                      "px-2 py-0.5 rounded-full text-[9px] font-black border transition-all uppercase tracking-tight",
+                                      branch.expression?.right === val
+                                        ? "bg-sky-500/20 border-sky-500/40 text-sky-400 shadow-lg shadow-sky-500/10"
+                                        : "bg-slate-800 border-white/5 text-slate-500 hover:text-slate-300 hover:bg-slate-700",
+                                    )}
+                                  >
+                                    {val}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
+
+                      {/* Resultado de Validación Live */}
                       {branch.expression?.left && (
-                        <div className="flex items-center justify-between px-2">
-                          <div className="text-[9px] text-slate-500 font-medium italic">
-                            Preview:{" "}
-                            {typeof branch.expression?.left === "string"
-                              ? branch.expression.left
-                              : "..."}{" "}
-                            {String(branch.expression?.operator || "==")}{" "}
-                            {typeof branch.expression?.right === "string"
-                              ? branch.expression.right
-                              : "..."}
+                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/5">
+                          <div className="flex items-center gap-2 text-[9px] font-mono text-slate-600">
+                            <span className="opacity-50">
+                              {t(
+                                "nodes.config.conditional.resolves",
+                                "Resuelve:",
+                              )}
+                            </span>
+                            <span className="text-slate-400 italic">
+                              {(() => {
+                                const rL = resolveVariableValue(
+                                  branch.expression?.left,
+                                );
+                                const rR = resolveVariableValue(
+                                  branch.expression?.right,
+                                );
+                                return `${rL === undefined ? "?" : JSON.stringify(rL)} ${branch.expression?.operator || "=="} ${rR === undefined ? "?" : JSON.stringify(rR)}`;
+                              })()}
+                            </span>
                           </div>
 
-                          {/* LIVE VALIDATION INDICATOR */}
                           {(() => {
-                            const leftRaw = branch.expression.left || "";
-                            const varNameMatch =
-                              leftRaw.match(/\{\{([^}]+)\}\}/);
-                            if (varNameMatch) {
-                              const fullPath = varNameMatch[1];
-                              const parts = fullPath.split(".");
-                              const nodeName = parts[0];
-                              const propName = parts[1];
-
-                              const nodeData = variables[nodeName];
-                              const exists =
-                                nodeData &&
-                                (propName === undefined
-                                  ? true
-                                  : Object.prototype.hasOwnProperty.call(
-                                      nodeData,
-                                      propName,
-                                    ));
-
-                              if (nodeData && !exists) {
-                                return (
-                                  <div className="flex items-center gap-1 text-[9px] font-black text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 animate-pulse">
-                                    <AlertTriangle size={10} />
-                                    PROPERTY "{propName}" NOT FOUND IN DATA
-                                  </div>
-                                );
-                              } else if (exists) {
-                                return (
-                                  <div className="flex items-center gap-1 text-[9px] font-black text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                                    <Check size={10} />
-                                    DATA READY
-                                  </div>
-                                );
-                              }
+                            const evaluation = evaluateSimpleCondition(
+                              branch.expression?.left,
+                              branch.expression?.operator || "==",
+                              branch.expression?.right,
+                            );
+                            if (evaluation === true) {
+                              return (
+                                <div className="flex items-center gap-1 text-[9px] font-black text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                                  <div className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
+                                  {t(
+                                    "nodes.config.conditional.match",
+                                    "CUMPLE",
+                                  )}
+                                </div>
+                              );
+                            } else if (evaluation === false) {
+                              return (
+                                <div className="flex items-center gap-1 text-[9px] font-black text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-md border border-rose-500/20">
+                                  <div className="w-1 h-1 rounded-full bg-rose-400" />
+                                  {t(
+                                    "nodes.config.conditional.no_match",
+                                    "NO CUMPLE",
+                                  )}
+                                </div>
+                              );
                             }
-                            return null;
+                            return (
+                              <span className="text-[9px] text-slate-700 italic">
+                                {t(
+                                  "nodes.config.conditional.waiting_data",
+                                  "Esperando datos...",
+                                )}
+                              </span>
+                            );
                           })()}
                         </div>
                       )}
-                    </div>
-                  )}
-                  {isDefault && (
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-2 py-0.5 bg-sky-500/10 border border-sky-500/20 rounded text-[9px] font-black text-sky-400 pointer-events-none uppercase tracking-widest">
-                      <Zap size={10} fill="currentColor" />
-                      DEFAULT/ELSE
                     </div>
                   )}
                 </div>
@@ -525,12 +720,16 @@ const ConditionalBranchesEditor = React.memo(
             );
           })}
         </div>
+
         <button
           onClick={addBranch}
-          className="w-full py-3 bg-sky-500/5 hover:bg-sky-500/10 border border-dashed border-sky-500/30 rounded-2xl text-[11px] font-black uppercase tracking-widest text-sky-400 flex items-center justify-center gap-3 mt-2 transition-all"
+          className="w-full py-2.5 bg-slate-900/50 hover:bg-sky-500/5 border border-dashed border-slate-800 hover:border-sky-500/30 rounded-xl text-[10px] font-black uppercase tracking-[0.1em] text-slate-500 hover:text-sky-400 flex items-center justify-center gap-2 transition-all group"
         >
-          <Plus size={12} />
-          {t("nodes.config.add_branch", "Agregar Nueva Regla")}
+          <Plus
+            size={12}
+            className="group-hover:rotate-90 transition-transform"
+          />
+          {t("nodes.config.add_branch", "Añadir Condición")}
         </button>
       </div>
     );
@@ -2670,22 +2869,39 @@ function NodeConfigurationPanel({
       .map((id) => nodes.find((n) => n.id === id))
       .filter(Boolean)
       .map((n) => {
-        // Enrich with live variable result if available
+        // Enrich with live variable result OR static schema fallback
         const nodeLabel = n.data?.customLabel || n.data?.label || n.id;
         const liveResult =
           liveVariables[`${nodeLabel}.result`] ||
           liveVariables[`${n.id}.result`];
 
+        // Priority Mapping
+        let finalResult = {};
+        let dataSource = "static";
+
         if (liveResult !== undefined) {
-          return {
-            ...n,
-            data: {
-              ...n.data,
-              result: liveResult,
-            },
-          };
+          finalResult = liveResult;
+          dataSource = "live";
+        } else if (n.data?.result !== undefined) {
+          finalResult = n.data.result;
+          dataSource = "persisted";
+        } else {
+          finalResult = {};
+          dataSource = "static";
         }
-        return n;
+
+        return {
+          ...n,
+          id: n.id,
+          data: {
+            ...n.data,
+            result:
+              typeof finalResult === "object"
+                ? { ...finalResult, _dataSource: dataSource }
+                : finalResult,
+            isStaticSchema: dataSource === "static",
+          },
+        };
       });
 
     // --- SUBFLOW CONTEXT ENRICHMENT ---
@@ -3123,6 +3339,13 @@ function NodeConfigurationPanel({
     if (liveVariables && typeof liveVariables === "object") {
       Object.entries(liveVariables).forEach(([key, val]) => {
         map[key] = val;
+        // Also provide a version without .result for easier access in the UI
+        if (key.endsWith(".result")) {
+          const baseKey = key.replace(".result", "");
+          if (!(baseKey in map)) {
+            map[baseKey] = val;
+          }
+        }
       });
     }
 
@@ -3146,6 +3369,27 @@ function NodeConfigurationPanel({
           map[pn.data.label] = pn.data.result;
         }
       });
+    }
+
+    return map;
+  }, [precedingNodes, liveVariables]);
+
+  // Filtered variables for Conditional Node selection (Context-aware)
+  const contextualVariablesMap = React.useMemo(() => {
+    const map = {};
+    if (!precedingNodes || precedingNodes.length === 0) return map;
+
+    precedingNodes.forEach((pn) => {
+      const nodeLabel = pn.data?.customLabel || pn.data?.label || pn.id;
+      if (pn.data?.result !== undefined) {
+        map[nodeLabel] = pn.data.result;
+        map[pn.id] = pn.data.result;
+      }
+    });
+
+    // Include global variables as a standard source
+    if (liveVariables?.global) {
+      map["global"] = liveVariables.global;
     }
 
     return map;
@@ -3203,7 +3447,8 @@ function NodeConfigurationPanel({
           <ConditionalBranchesEditor
             key={reactKey}
             value={value}
-            variables={variablesMap}
+            variables={contextualVariablesMap}
+            allVariables={variablesMap}
             onChange={(newVal) => handleConfigUpdate(dataKey, newVal)}
           />
         );
@@ -3371,23 +3616,37 @@ function NodeConfigurationPanel({
                     <span>Fix</span>
                   </button>
                 )}
-                <span className="text-[9px] text-indigo-400 opacity-70">
-                  CSS / XPath
-                </span>
-
-                {/* AI SANITIZED INDICATOR (Phase 4) */}
-                {activeNode?.data?.configuration?.isAI && (
-                  <span
-                    className="flex items-center gap-1 px-1.5 py-0.5 rounded border text-[9px] bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                    title={
-                      activeNode?.data?.configuration?.aiReasoning ||
-                      "Optimized by local AI"
-                    }
-                  >
-                    <Sparkles size={10} />
-                    <span>AI OPTIMIZED</span>
+                {/* AI INDICATORS */}
+                <div className="flex items-center gap-1.5">
+                  {activeNode?.data?.configuration?.healed && (
+                    <span
+                      className="flex items-center gap-1 px-1.5 py-0.5 rounded border text-[9px] bg-violet-500/10 text-violet-400 border-violet-500/20 animate-pulse"
+                      title={
+                        activeNode?.data?.configuration?.aiReasoning ||
+                        "Automatically repaired by AI"
+                      }
+                    >
+                      <Sparkles size={10} />
+                      <span>AI REPAIRED</span>
+                    </span>
+                  )}
+                  {activeNode?.data?.configuration?.isAI &&
+                    !activeNode?.data?.configuration?.healed && (
+                      <span
+                        className="flex items-center gap-1 px-1.5 py-0.5 rounded border text-[9px] bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                        title={
+                          activeNode?.data?.configuration?.aiReasoning ||
+                          "Optimized by local AI"
+                        }
+                      >
+                        <Sparkles size={10} />
+                        <span>AI OPTIMIZED</span>
+                      </span>
+                    )}
+                  <span className="text-[9px] text-indigo-400 opacity-70">
+                    CSS / XPath
                   </span>
-                )}
+                </div>
                 <button
                   type="button"
                   onClick={() => {
@@ -3423,14 +3682,58 @@ function NodeConfigurationPanel({
                   )}
                   <span>
                     {activeNode?.data?.state === "picking"
-                      ? "Picking... (Cancel)"
-                      : window.location.hostname !== "localhost"
-                        ? "Remote Pick"
-                        : "Pick"}
+                      ? t("common.cancel", "Cancel")
+                      : t("common.pick", "Pick")}
                   </span>
                 </button>
               </div>
             </label>
+
+            {/* AI HEALED ALERT & DIFF */}
+            {activeNode?.data?.configuration?.healed && (
+              <Motion.div
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-1 p-2 rounded-lg bg-violet-500/10 border border-violet-500/20 space-y-1.5"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-violet-400 uppercase tracking-tight">
+                    <Sparkles size={12} fill="currentColor" />
+                    <span>AI Correction Applied</span>
+                  </div>
+                  <div className="text-[9px] font-medium text-violet-400/60 bg-violet-500/5 px-1 rounded border border-violet-500/10">
+                    {Math.round(
+                      (activeNode.data.configuration.healingConfidence || 0) *
+                        100,
+                    )}
+                    % Confidence
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-[9px]">
+                  <div className="space-y-0.5">
+                    <div className="text-slate-500 uppercase tracking-tighter font-bold">
+                      Original
+                    </div>
+                    <div className="px-1.5 py-1 rounded bg-red-500/5 border border-red-500/10 text-red-400/80 line-through truncate font-mono">
+                      {activeNode.data.configuration.originalValue}
+                    </div>
+                  </div>
+                  <div className="space-y-0.5">
+                    <div className="text-violet-500 uppercase tracking-tighter font-bold">
+                      Healed
+                    </div>
+                    <div className="px-1.5 py-1 rounded bg-violet-500/10 border border-violet-500/20 text-violet-300 font-bold truncate font-mono">
+                      {activeNode.data.configuration.healedValue}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-[10px] text-violet-300/70 italic leading-snug px-1 pt-1 border-t border-violet-500/10">
+                  "{activeNode.data.configuration.aiReasoning}"
+                </div>
+              </Motion.div>
+            )}
             <div className="relative">
               <VariableInput
                 type="text"
@@ -3609,19 +3912,21 @@ function NodeConfigurationPanel({
                       )}
                       {pn.data?.customLabel || pn.data?.label || pn.type}
                     </span>
-                    <span className="text-[9px] px-1 py-0.5 rounded bg-slate-800 text-slate-500 font-mono">
-                      {`{{${pn.data?.label || pn.id}.result}}`}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      {pn.data?.isStaticSchema && (
+                        <span className="text-[8px] px-1 bg-amber-500/10 text-amber-500/70 border border-amber-500/20 rounded uppercase font-bold tracking-tighter">
+                          Schema Only
+                        </span>
+                      )}
+                      <span className="text-[9px] px-1 py-0.5 rounded bg-slate-800 text-slate-500 font-mono">
+                        {`{{${pn.data?.customLabel || pn.data?.label || pn.id}.result}}`}
+                      </span>
+                    </div>
                   </div>
                   {pn.data?.result ? (
                     <div className="relative group/data">
                       <div className="text-[11px] text-slate-300 font-mono line-clamp-6 bg-black/30 p-2.5 rounded pr-12 max-h-48 overflow-y-auto custom-scrollbar border border-white/5">
-                        {truncateResult(
-                          pn.data.result.data !== undefined
-                            ? pn.data.result.data
-                            : pn.data.result,
-                          2000,
-                        )}
+                        {truncateResult(pn.data.result, 2000)}
                       </div>
                       <div className="absolute right-1 top-1 flex flex-col gap-1 opacity-0 group-hover/data:opacity-100 transition-opacity">
                         <button

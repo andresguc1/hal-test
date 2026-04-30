@@ -295,6 +295,7 @@ export const click = (payload = {}) => {
     browserId: asString(payload?.browserId),
     timeout: asNumber(payload?.timeout, 30000, 1),
     takeScreenshot: asBoolean(payload?.takeScreenshot, true),
+    continueOnError: asBoolean(payload?.continueOnError, false),
   };
 };
 
@@ -318,6 +319,7 @@ export const type_text = (payload = {}) => {
     timeout: asNumber(payload?.timeout, 30000, 1),
     browserId: asString(payload?.browserId),
     takeScreenshot: asBoolean(payload?.takeScreenshot, true),
+    continueOnError: asBoolean(payload?.continueOnError, false),
   };
 };
 
@@ -352,6 +354,7 @@ export const scroll = (payload) => {
     timeout: asNumber(payload?.timeout, 30000, 1),
     browserId: asString(payload?.browserId),
     takeScreenshot: asBoolean(payload?.takeScreenshot, true),
+    continueOnError: asBoolean(payload?.continueOnError, false),
   };
 };
 
@@ -414,6 +417,7 @@ export const drag_drop = (payload) => {
     timeout: asNumber(payload?.timeout, 30000, 1),
     browserId: asString(payload?.browserId),
     takeScreenshot: asBoolean(payload?.takeScreenshot, true),
+    continueOnError: asBoolean(payload?.continueOnError, false),
   };
 };
 
@@ -429,6 +433,7 @@ export const hover = (payload) => {
     timeout: asNumber(payload?.timeout, 30000, 1),
     browserId: asString(payload?.browserId),
     takeScreenshot: asBoolean(payload?.takeScreenshot, true),
+    continueOnError: asBoolean(payload?.continueOnError, false),
   };
 };
 
@@ -443,6 +448,7 @@ export const wait_for_element = (payload) => {
     timeout: asNumber(payload?.timeout, 30000, 0),
     browserId: asString(payload?.browserId),
     takeScreenshot: asBoolean(payload?.takeScreenshot, true),
+    continueOnError: asBoolean(payload?.continueOnError, false),
   };
 };
 
