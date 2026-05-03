@@ -142,13 +142,22 @@ const syncActiveFlowToDisk = async (nodes, edges, projectId) => {
         const sortedNodes = sortNodesTopologically(activeNodes, activeEdges);
         let flattenedNodes = [];
 
-        const flatten = async (currentNodes) => {
+        const flatten = async (currentNodes, visitedFlows = new Set()) => {
             const IGNORED_TYPES = ['input', 'output', 'annotation', 'note'];
             for (const n of currentNodes) {
                 if (n.data?.disabled) continue; // Skip disabled nodes
                 if (n.type === 'component' || n.data?.type === 'component') {
                     const flowId = n.data?.configuration?.flowId || n.data?.flowId;
                     if (flowId && projectId) {
+                        if (visitedFlows.has(flowId)) {
+                            console.warn(
+                                `[ProjectRouter] Circular dependency detected for flowId: ${flowId}`,
+                            );
+                            continue;
+                        }
+                        const newVisited = new Set(visitedFlows);
+                        newVisited.add(flowId);
+
                         const { Flow, Node, Edge } = await import('../database/init.js');
                         const flow = await Flow.findOne({
                             where: { id: flowId, projectId },
@@ -166,7 +175,7 @@ const syncActiveFlowToDisk = async (nodes, edges, projectId) => {
                                 mappedSubFlow.edges,
                             );
                             // Flatten the sorted sub-nodes
-                            await flatten(sortedSubNodes);
+                            await flatten(sortedSubNodes, newVisited);
                         }
                     }
                 } else if (!IGNORED_TYPES.includes(n.type)) {

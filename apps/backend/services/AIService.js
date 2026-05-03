@@ -347,13 +347,24 @@ IMPORTANT DIRECTIONS:
                 const providerInstance = llmFactory.getProviderInstance(apiKey, provider, baseUrl);
                 const modelRef = providerInstance(model || 'google/gemini-2.0-flash-001');
 
-                // Simple test generation to validate key
-                await generateText({
+                // Ultra-robust timeout using Promise.race to avoid "Delay aborted" crash
+                const validationPromise = generateText({
                     model: modelRef,
                     prompt: 'ping',
                     maxTokens: 1,
-                    abortSignal: AbortSignal.timeout(10000),
                 });
+
+                const timeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Validation Timeout (10s)')), 10000),
+                );
+
+                try {
+                    await Promise.race([validationPromise, timeoutPromise]);
+                } catch (valErr) {
+                    // We only rethrow if it's NOT a timeout or a known benign error
+                    if (valErr.message.includes('Timeout')) throw valErr;
+                    console.warn('[AIService] Benign validation warning:', valErr.message);
+                }
                 return true;
             }
 
@@ -543,11 +554,12 @@ ${domSnippet || 'No DOM available'}
 ANALYSIS STEPS:
 1. Identify why the original selector failed (e.g., dynamic ID, structure change).
 2. Look for the element that matches the "Intent" and resembles the "Original Selector".
-3. Propose up to 3 alternative CSS selectors, ranked by robustness. Prefer:
-   - data-testid or stable data attributes.
-   - Unique ARIA labels.
-   - Text content + tag name.
-   - Stable class names (avoid dynamic/obfuscated ones).
+3. Propose up to 3 alternative CSS selectors, ranked by robustness. STRICT PRIORITIZATION:
+   - PRIORITY 1 (Best): Custom semantic attributes like [data-test], [data-testid], [data-qa], [data-cy].
+   - PRIORITY 2 (Very Good): Unique ARIA attributes ([aria-label], [role="button"], etc.) that clearly identify the element's function.
+   - PRIORITY 3 (Good): Tag names combined with unique stable classes or partial text matches.
+   - PRIORITY 4 (Fallback): Structural paths, but only if they start from a stable ID (e.g., #header-id >> .btn).
+   - AVOID: Auto-generated dynamic classes (e.g., .css-1ax2b3), absolute indexes (e.g., div:nth-child(5)), and fragile structural-only paths.
 
 Response Format (Strict JSON - Return ONLY the JSON block, no markdown, no conversational text):
 {

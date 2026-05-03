@@ -34,7 +34,7 @@ const HeaderButton = ({ onClick, children, title, className }) => (
   </Motion.button>
 );
 
-const Breadcrumbs = ({ viewStack, onExit }) => {
+const Breadcrumbs = ({ viewStack, onExit, currentFlowName }) => {
   if (!viewStack || viewStack.length === 0) return null;
 
   return (
@@ -44,7 +44,7 @@ const Breadcrumbs = ({ viewStack, onExit }) => {
         onClick={() => onExit()}
         className="text-[var(--text-secondary)] hover:text-indigo-400 cursor-pointer transition-colors"
       >
-        Main Flow
+        Main
       </span>
 
       {viewStack.map((view, index) => (
@@ -63,6 +63,12 @@ const Breadcrumbs = ({ viewStack, onExit }) => {
           </span>
         </React.Fragment>
       ))}
+
+      {/* Current Level */}
+      <span className="text-[var(--text-secondary)] opacity-50">/</span>
+      <span className="text-indigo-500 font-medium truncate max-w-[200px]">
+        {currentFlowName}
+      </span>
 
       {/* Current Level (if needed, but usually viewStack includes current level logic) */}
     </div>
@@ -247,7 +253,13 @@ function AppHeader({
       <div className="hidden sm:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 w-full max-w-[320px] md:max-w-[450px] lg:max-w-lg justify-center pointer-events-none">
         <div className="pointer-events-auto flex items-center gap-3 text-sm select-none whitespace-nowrap">
           {viewStack && viewStack.length > 0 ? (
-            <Breadcrumbs viewStack={viewStack} onExit={onExitComponent} />
+            <Breadcrumbs
+              viewStack={viewStack}
+              onExit={onExitComponent}
+              currentFlowName={
+                selectedFlow?.name || t("header.unknown", "Unknown")
+              }
+            />
           ) : selectedProject ? (
             <>
               <span className="text-[var(--text-primary)] font-semibold tracking-tight truncate max-w-[100px] md:max-w-[150px] lg:max-w-[200px]">

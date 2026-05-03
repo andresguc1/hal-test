@@ -12,15 +12,37 @@ class ExperienceVaultService {
      * @param {string} problemSelector - The faulty selector.
      * @param {string} context - The context (e.g. flow name).
      * @param {string} url - Current page URL (optional).
+     * @param {string} nodeId - The specific node ID (optional).
      * @returns {Promise<Object|null>}
      */
-    async findMemory(problemSelector, context, _url = '') {
+    async findMemory(problemSelector, context, _url = '', nodeId = null) {
         try {
             console.log(
                 `[ExperienceVault] Searching for solution for: "${problemSelector}" in context: "${context}"`,
             );
 
-            // Try exact match first on selector and context
+            // 1. Try match by nodeId first (High Priority - Revert to known good)
+            if (nodeId) {
+                let nodeMemory = await ExperienceVault.findOne({
+                    where: { nodeId },
+                    order: [['updatedAt', 'DESC']],
+                });
+
+                if (nodeMemory && nodeMemory.solutionSelector !== problemSelector) {
+                    console.log(
+                        `[ExperienceVault] 🎯 Found previous successful selector for node: ${nodeId}`,
+                    );
+                    return {
+                        correctedSelector: nodeMemory.solutionSelector,
+                        reasoning: `[Experience-Vault] Reverting to previously known good selector for this node.`,
+                        confidence: 1.0,
+                        isFromVault: true,
+                        source: 'memory_node',
+                    };
+                }
+            }
+
+            // 2. Try exact match first on selector and context
             let memory = await ExperienceVault.findOne({
                 where: {
                     problemSelector,
@@ -74,9 +96,17 @@ class ExperienceVaultService {
      * Saves a successful repair into the vault.
      * @param {Object} data - Context, url, problemSelector, solutionSelector, reasoning, confidence
      */
-    async saveMemory({ context, url, problemSelector, solutionSelector, reasoning, confidence }) {
+    async saveMemory({
+        context,
+        url,
+        problemSelector,
+        solutionSelector,
+        reasoning,
+        confidence,
+        nodeId,
+    }) {
         try {
-            if (!problemSelector || !solutionSelector || problemSelector === solutionSelector) {
+            if (!problemSelector || !solutionSelector) {
                 return null;
             }
 
@@ -104,6 +134,7 @@ class ExperienceVaultService {
             memory = await ExperienceVault.create({
                 context,
                 url,
+                nodeId,
                 problemSelector,
                 solutionSelector,
                 reasoning,

@@ -39,6 +39,38 @@ Edge.belongsTo(Flow, { as: 'flow', foreignKey: 'flowId' });
 Run.hasMany(StepResult, { as: 'steps', foreignKey: 'run_id', onDelete: 'CASCADE', hooks: true });
 StepResult.belongsTo(Run, { as: 'run', foreignKey: 'run_id' });
 
+const safeSync = async (options) => {
+    const isSqlite = sequelize.getDialect() === 'sqlite';
+    if (isSqlite && options.alter) {
+        try {
+            await sequelize.query('PRAGMA foreign_keys = OFF');
+            const [results] = await sequelize.query(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE '%_backup'",
+            );
+            for (const row of results) {
+                if (row.name) {
+                    await sequelize.query(`DROP TABLE IF EXISTS "${row.name}"`);
+                    console.log(` [DB_INIT] 🧹 Dropped orphaned backup table: ${row.name}`);
+                }
+            }
+        } catch (e) {
+            console.warn(' [DB_INIT] ⚠️ Error preparing SQLite for alter:', e.message);
+        }
+    }
+
+    try {
+        await sequelize.sync(options);
+    } finally {
+        if (isSqlite && options.alter) {
+            try {
+                await sequelize.query('PRAGMA foreign_keys = ON');
+            } catch (e) {
+                console.warn(' [DB_INIT] ⚠️ Error restoring SQLite foreign keys:', e.message);
+            }
+        }
+    }
+};
+
 // Health Check to detect missing columns in production (Render/Postgres)
 const checkSchemaHealth = async () => {
     try {
@@ -48,6 +80,9 @@ const checkSchemaHealth = async () => {
             logging: false,
         });
         await sequelize.query('SELECT "batch_id" FROM "execution_runs" LIMIT 1', {
+            logging: false,
+        });
+        await sequelize.query('SELECT "nodeId" FROM "ExperienceVaults" LIMIT 1', {
             logging: false,
         });
         console.log(' [DB_INIT] ✅ Schema health check passed.');
@@ -62,7 +97,7 @@ const checkSchemaHealth = async () => {
             console.warn(
                 ' [DB_INIT] ⚠️ Schema mismatch detected via health check. Attempting auto-fix with { alter: true }...',
             );
-            await sequelize.sync({ alter: true });
+            await safeSync({ alter: true });
             console.log(' [DB_INIT] ✅ Database schema auto-corrected successfully.');
         } else {
             console.error(' [DB_INIT] ❌ Schema health check failed with unexpected error:', error);
@@ -95,8 +130,26 @@ export const initDb = async (_force = false) => {
 
         const shouldAlter = _force || process.env.DB_AUTO_MIGRATE === 'true';
 
-        await sequelize.sync({ alter: shouldAlter });
-        console.log(`Database synchronized (Alter: ${shouldAlter})`);
+        try {
+            await safeSync({ alter: shouldAlter });
+            console.log(`Database synchronized (Alter: ${shouldAlter})`);
+        } catch (syncError) {
+            const isMissingColumn =
+                syncError.name === 'SequelizeDatabaseError' &&
+                ['42703', 'SQLITE_ERROR'].some((code) =>
+                    (syncError.original?.code || syncError.message).includes(code),
+                );
+
+            if (isMissingColumn && !shouldAlter) {
+                console.warn(
+                    ' [DB_INIT] ⚠️ Schema mismatch detected during sync. Attempting auto-fix with { alter: true }...',
+                );
+                await safeSync({ alter: true });
+                console.log(' [DB_INIT] ✅ Database schema auto-corrected successfully.');
+            } else {
+                throw syncError;
+            }
+        }
 
         // Pre-flight Schema Health Check (especially for PostgreSQL/Production)
         await checkSchemaHealth();
@@ -192,7 +245,7 @@ export const initDb = async (_force = false) => {
             );
             try {
                 // In production, we use alter: true to add missing columns/tables without data loss
-                await sequelize.sync({ alter: true });
+                await safeSync({ alter: true });
                 console.log(' [DB_INIT] ✅ Database schema auto-corrected successfully.');
                 isInitialized = true;
                 return;

@@ -14,6 +14,7 @@ export const NODE_STATES = {
   SKIPPED: "skipped",
   PICKING: "picking",
   HEALED: "healed",
+  SOFTFAILED: "softfailed",
 };
 
 export const PROFESSIONAL_COLORS = {
@@ -68,6 +69,13 @@ export const PROFESSIONAL_COLORS = {
     text: "#92400e", // amber-800
     shadow: "0 2px 6px rgba(217,119,6,0.15)",
     borderWidth: "1px",
+  },
+  [NODE_STATES.SOFTFAILED]: {
+    background: "#fff7ed", // orange-50
+    border: "#f97316", // orange-500
+    text: "#c2410c", // orange-700
+    shadow: "0 2px 8px rgba(249,115,22,0.2)",
+    borderWidth: "2px",
   },
   [NODE_STATES.SKIPPED]: {
     background: "#f8fafc", // slate-50

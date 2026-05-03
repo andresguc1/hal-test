@@ -43,6 +43,8 @@ function CustomNode({ data, selected }) {
   const isSuccess = state === NODE_STATES.SUCCESS || state === "success";
   const isPicking = state === NODE_STATES.PICKING || state === "picking";
   const isHealed = state === NODE_STATES.HEALED || state === "healed";
+  const isSoftFailed =
+    state === NODE_STATES.SOFTFAILED || state === "softfailed";
 
   const containerClasses = cn(
     "relative min-w-[240px] rounded-xl overflow-hidden",
@@ -61,6 +63,10 @@ function CustomNode({ data, selected }) {
     // Error State (Overrides everything)
     isError &&
       "border-red-500/50 bg-red-950/20 animate-shake-error ring-1 ring-red-500/30",
+
+    // Softfailed State
+    isSoftFailed &&
+      "border-orange-500/50 bg-orange-500/10 ring-1 ring-orange-500/30",
 
     // Healed State
     isHealed &&
@@ -89,10 +95,10 @@ function CustomNode({ data, selected }) {
         style={{
           backgroundColor: isError
             ? "#ef4444"
-            : isPicking
-              ? "#0ea5e9"
-              : isHealed
-                ? "#f59e0b"
+            : isSoftFailed
+              ? "#f97316"
+              : isPicking
+                ? "#0ea5e9"
                 : isHealed
                   ? "#8b5cf6"
                   : categoryColor,
@@ -107,12 +113,12 @@ function CustomNode({ data, selected }) {
           style={{
             color: isError
               ? "#ef4444"
-              : isRunning
-                ? "#60a5fa"
-                : isPicking
-                  ? "#0ea5e9"
-                  : isHealed
-                    ? "#f59e0b"
+              : isSoftFailed
+                ? "#f97316"
+                : isRunning
+                  ? "#60a5fa"
+                  : isPicking
+                    ? "#0ea5e9"
                     : isHealed
                       ? "#8b5cf6"
                       : categoryColor,
@@ -126,7 +132,7 @@ function CustomNode({ data, selected }) {
             <Sparkles size={24} className="animate-pulse" />
           ) : null}
 
-          {isRunning || isHealed ? null : isError ? ( // Loader already rendered above
+          {isRunning || isHealed ? null : isError || isSoftFailed ? ( // Loader already rendered above
             <AlertCircle size={24} />
           ) : (
             <NodeIconComponent
@@ -153,6 +159,7 @@ function CustomNode({ data, selected }) {
             className={cn(
               "text-sm font-bold text-[var(--text-main)] leading-tight truncate pr-2",
               isError && "text-red-400",
+              isSoftFailed && "text-orange-400",
               isPicking && "text-sky-400",
               isHealed && "text-violet-400",
             )}
@@ -196,6 +203,19 @@ function CustomNode({ data, selected }) {
           >
             <Sparkles size={10} fill="currentColor" />
             <span>IA</span>
+          </div>
+        )}
+
+        {/* Error Detail Tooltip (Visible on Error/Softfail) */}
+        {(isError || isSoftFailed) && data?.error && (
+          <div className="absolute -bottom-1 left-3 right-3 translate-y-full bg-slate-900/95 backdrop-blur-md border border-red-500/30 rounded-lg p-2 text-[10px] text-red-200 shadow-2xl z-50 pointer-events-none animate-in fade-in slide-in-from-top-1 duration-200">
+            <div className="flex items-center gap-1.5 mb-1 text-red-400 font-bold uppercase tracking-wider">
+              <AlertCircle size={10} />
+              <span>{isSoftFailed ? "Soft failure" : "Execution Error"}</span>
+            </div>
+            <div className="line-clamp-2 italic">
+              {typeof data.error === "string" ? data.error : data.error.message}
+            </div>
           </div>
         )}
       </div>

@@ -10,6 +10,8 @@ import chalk from 'chalk';
 console.log(`[ExecutionService] 🔥 Service File Loaded at ${new Date().toISOString()}`);
 import Table from 'cli-table3';
 import { browserService } from './browser.service.js';
+import { actionRoutes } from '../routes/api.router.js';
+import * as schemas from '../schemas/index.js';
 
 class ExecutionService {
     constructor() {
@@ -64,6 +66,32 @@ class ExecutionService {
             if (run) {
                 await run.update({ flow_snapshot: JSON.stringify({ nodes, edges }) });
             }
+        }
+
+        // 2.5 PRE-EXECUTION VALIDATION (Double-Check)
+        try {
+            console.log(
+                `[ExecutionService] 🛡️ Validating graph structure and node configurations...`,
+            );
+            await this.validateGraph(nodes, edges);
+            console.log(`[ExecutionService] ✅ Graph validation successful.`);
+        } catch (validationError) {
+            console.error(
+                `❌ [ExecutionService] Pre-execution validation failed:`,
+                validationError.message,
+            );
+
+            // Signal failure with node metadata for UI auto-focus
+            emitFlowFinished({
+                runId,
+                status: 'failed',
+                flowId,
+                error: validationError.message,
+                failedNodeId: validationError.failedNodeId,
+                divePath: validationError.divePath,
+            });
+
+            throw validationError;
         }
 
         // 3. Execution logic (BFS/DFS traversal)
@@ -162,6 +190,70 @@ class ExecutionService {
         return runId;
     }
 
+    async validateGraph(nodes, edges, divePath = []) {
+        for (const node of nodes) {
+            if (node.data?.disabled) continue;
+
+            const type = node.type || node.data?.type;
+
+            // Skip non-action nodes (guide, note, etc.)
+            const ignoredTypes = [
+                'guide',
+                'note',
+                'comment',
+                'annotation',
+                'label',
+                'sticky',
+                'input',
+                'output',
+            ];
+            if (ignoredTypes.includes(type)) continue;
+
+            // Find matching route for schema validation
+            const route = actionRoutes.find((r) => r.path === type);
+
+            if (route && route.schema && schemas[route.schema]) {
+                const schema = schemas[route.schema];
+                const config = node.data?.configuration || {};
+
+                // Execute Joi validation
+                const { error } = schema.validate(config, {
+                    abortEarly: true,
+                    stripUnknown: true,
+                });
+
+                if (error) {
+                    const label = node.data?.customLabel || node.data?.label || type;
+                    const message = error.details[0].message.replace(/['"]/g, '');
+                    const fullError = new Error(
+                        `Configuration Error in node "${label}": ${message}`,
+                    );
+                    fullError.failedNodeId = node.nodeId;
+                    fullError.divePath = divePath;
+                    throw fullError;
+                }
+            }
+
+            // RECURSIVE VALIDATION: Dive into Components or Loops pointing to sub-flows
+            const flowId = node.data?.configuration?.flowId || node.data?.flowId;
+            if ((type === 'component' || type === 'loop') && flowId) {
+                const subFlow = await Flow.findOne({
+                    where: { id: flowId },
+                    include: [
+                        { model: Node, as: 'nodes' },
+                        { model: Edge, as: 'edges' },
+                    ],
+                });
+
+                if (subFlow) {
+                    const subNodes = subFlow.nodes.map((n) => n.toJSON());
+                    const subEdges = subFlow.edges.map((e) => e.toJSON());
+                    await this.validateGraph(subNodes, subEdges, [...divePath, node.nodeId]);
+                }
+            }
+        }
+    }
+
     /**
      * Recursive runner for the graph
      */
@@ -225,21 +317,26 @@ class ExecutionService {
                             `[ExecutionService] 🔗 Syncing result to parent: "${parentLabel}"`,
                         );
 
-                        // Check if the current parent result already has a soft fail
                         const existingParentResult =
                             variableManager.get(`${parentLabel}.result`, state.runId) || {};
-                        const hasSoftFail =
-                            existingParentResult.status === 'softfailed' ||
-                            nodeResult.status === 'softfailed';
+
+                        const isHardFail = nodeResult.status === 'failed';
+                        const isSoftFail =
+                            nodeResult.status === 'softfailed' ||
+                            existingParentResult.status === 'softfailed';
 
                         const parentResult = {
-                            success: !hasSoftFail, // IMPORTANT: The VariableManager data should reflect the fail!
-                            status: hasSoftFail ? 'failed' : 'running',
+                            success: !isHardFail,
+                            status: isHardFail ? 'failed' : isSoftFail ? 'softfailed' : 'running',
                             lastNode: nodeLabel,
                             data: {
                                 ...(typeof nodeResult === 'object' ? nodeResult : {}),
-                                status: hasSoftFail ? 'failed' : 'running',
-                                success: !hasSoftFail,
+                                status: isHardFail
+                                    ? 'failed'
+                                    : isSoftFail
+                                      ? 'softfailed'
+                                      : 'running',
+                                success: !isHardFail,
                                 label: parentLabel,
                             },
                         };
@@ -431,7 +528,11 @@ class ExecutionService {
 
             if (!handler) {
                 const error = `No handler found for node type: ${actionType}`;
-                emitLog({ message: error, type: 'error', nodeId: node.nodeId });
+                emitLog({
+                    message: `[NodeError] NodeId=${node.nodeId} Type=${actionType} Error="${error}"`,
+                    type: 'error',
+                    nodeId: node.nodeId,
+                });
                 throw new Error(error);
             }
 
@@ -577,7 +678,7 @@ class ExecutionService {
 
         emitExecutionStatus({
             stepId: node.nodeId,
-            status: 'success',
+            status: finalResult?.status || 'success',
             result: finalResult,
         });
 

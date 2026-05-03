@@ -23,49 +23,89 @@ class SelectorHealer {
 
     /**
      * In-browser DOM compression script.
-     * Includes semantic context (breadcrumbs) and proximity-based prioritization.
+     * Delegated aggressively to the browser for performance on heavy pages.
+     * Includes proximity-based prioritization if an original selector is provided.
      */
-    getCompressionScript(_originalSelector) {
+    getCompressionScript(originalSelector) {
+        // Sanitize originalSelector for use in template string
+        const sanitizedSelector = (originalSelector || '')
+            .replace(/\\/g, '\\\\')
+            .replace(/"/g, '\\"');
+
         return `
             (() => {
-                const interactiveSelectors = 'button, a, input, select, textarea, label, span, [role="button"], [role="link"], [role="searchbox"], [role="img"], [onclick], [aria-label], [title], [data-testid]';
+                const interactiveSelectors = 'button, a, input, select, textarea, label, [role="button"], [role="link"], [role="searchbox"], [onclick], [data-testid], [aria-label]';
+                
+                // 1. Get potential candidates
                 let elements = Array.from(document.querySelectorAll(interactiveSelectors));
                 
-                const simplified = elements
-                    .filter(el => {
-                        const style = window.getComputedStyle(el);
-                        return (el.offsetWidth > 0 && el.offsetHeight > 0 && style.visibility !== 'hidden' && style.display !== 'none');
-                    })
-                    .slice(0, 400) 
-                    .map((el, index) => {
-                        const breadcrumbs = [];
-                        let curr = el.parentElement;
-                        for (let i = 0; i < 3 && curr; i++) {
-                            const tag = curr.tagName.toLowerCase();
-                            const id = curr.id ? '#' + curr.id : '';
-                            breadcrumbs.unshift(\`\${tag}\${id}\`);
-                            curr = curr.parentElement;
-                        }
+                // 2. Efficient visibility filtering (Avoid getComputedStyle when possible)
+                elements = elements.filter(el => {
+                    if (el.offsetWidth <= 0 || el.offsetHeight <= 0) return false;
+                    // Only call getComputedStyle if it passes layout check
+                    const style = window.getComputedStyle(el);
+                    return style.visibility !== 'hidden' && style.display !== 'none' && style.opacity !== '0';
+                });
 
-                        const obj = {
-                            ref: index,
-                            tag: el.tagName.toLowerCase(),
-                            id: el.id || undefined,
-                            class: el.className || undefined,
-                            name: el.getAttribute('name') || undefined,
-                            placeholder: el.getAttribute('placeholder') || undefined,
-                            'aria-label': el.getAttribute('aria-label') || undefined,
-                            'data-testid': el.getAttribute('data-testid') || undefined,
-                            text: el.textContent.trim().substring(0, 80) || undefined,
-                            path: breadcrumbs.join(' > ')
-                        };
-                        return Object.entries(obj)
-                            .filter(([_, v]) => v !== undefined && v !== '')
-                            .map(([k, v]) => \`\${k}="\${v}"\`)
-                            .join(' ');
-                    }).join('\\n');
-                
-                return simplified;
+                // 3. Proximity-based Prioritization
+                let targetLocation = null;
+                const origSelector = "${sanitizedSelector}";
+                if (origSelector) {
+                    try {
+                        let targetEl = document.querySelector(origSelector);
+                        if (!targetEl) {
+                            // Fallback: try to find the nearest parent if selector is partially valid
+                            const parts = origSelector.split(/[> ]+/);
+                            for (let i = parts.length - 1; i >= 1; i--) {
+                                try {
+                                    const sub = parts.slice(0, i).join(' ');
+                                    targetEl = document.querySelector(sub);
+                                    if (targetEl) break;
+                                } catch(e) {}
+                            }
+                        }
+                        if (targetEl) {
+                            const r = targetEl.getBoundingClientRect();
+                            targetLocation = { x: r.left + r.width/2, y: r.top + r.height/2 };
+                        }
+                    } catch(e) {}
+                }
+
+                if (targetLocation) {
+                    elements.sort((a, b) => {
+                        const ra = a.getBoundingClientRect();
+                        const rb = b.getBoundingClientRect();
+                        const distA = Math.sqrt(Math.pow(ra.left + ra.width/2 - targetLocation.x, 2) + Math.pow(ra.top + ra.height/2 - targetLocation.y, 2));
+                        const distB = Math.sqrt(Math.pow(rb.left + rb.width/2 - targetLocation.x, 2) + Math.pow(rb.top + rb.height/2 - targetLocation.y, 2));
+                        return distA - distB;
+                    });
+                }
+
+                // 4. Compact Representation (Max 500 elements)
+                return elements.slice(0, 500).map((el, index) => {
+                    const breadcrumbs = [];
+                    let curr = el.parentElement;
+                    for (let i = 0; i < 3 && curr; i++) {
+                        breadcrumbs.unshift(curr.tagName.toLowerCase() + (curr.id ? '#' + curr.id : ''));
+                        curr = curr.parentElement;
+                    }
+
+                    const obj = {
+                        ref: index,
+                        tag: el.tagName.toLowerCase(),
+                        id: el.id || undefined,
+                        class: el.className ? el.className.split(' ').slice(0, 3).join('.') : undefined,
+                        text: el.textContent.trim().substring(0, 60) || undefined,
+                        'aria-label': el.getAttribute('aria-label') || undefined,
+                        'data-testid': el.getAttribute('data-testid') || undefined,
+                        path: breadcrumbs.join(' > ')
+                    };
+                    
+                    return Object.entries(obj)
+                        .filter(([_, v]) => v !== undefined && v !== '')
+                        .map(([k, v]) => \`\${k}="\${v}"\`)
+                        .join(' ');
+                }).join('\\n');
             })()
         `;
     }
@@ -109,7 +149,15 @@ class SelectorHealer {
         }
     }
 
-    async heal({ page, originalSelector, errorMessage, actionName, aiConfig, timeout = 30000 }) {
+    async heal({
+        page,
+        originalSelector,
+        errorMessage,
+        actionName,
+        aiConfig,
+        timeout = 30000,
+        onProgress = null,
+    }) {
         try {
             console.log(
                 `[SelectorHealer] Healing selector: ${originalSelector} (Timeout: ${timeout}ms)`,
@@ -127,6 +175,7 @@ class SelectorHealer {
             }
 
             // 2. Delegate to AI service requesting multiple candidates
+            const aiStart = Date.now();
             const result = await aiService.healSelector({
                 screenshotBase64: null,
                 domSnippet: compressedDOM || 'No DOM available',
@@ -139,6 +188,8 @@ class SelectorHealer {
                 baseUrl: aiConfig?.baseUrl,
                 timeout: timeout,
             });
+            const aiResponseTime = Date.now() - aiStart;
+            const domSize = compressedDOM?.length || 0;
 
             // 3. Multi-Candidate Verification Loop (Phase 3)
             const candidates = result.alternative_selectors || [result.correctedSelector];
@@ -146,11 +197,28 @@ class SelectorHealer {
                 `[SelectorHealer] AI suggested ${candidates.length} candidates. Verifying...`,
             );
 
-            for (const candidate of candidates) {
+            for (let i = 0; i < candidates.length; i++) {
+                const candidate = candidates[i];
                 if (!candidate || candidate === originalSelector) continue;
+
+                if (onProgress) {
+                    onProgress({
+                        step: 'verifying_candidate',
+                        candidate,
+                        index: i + 1,
+                        total: candidates.length,
+                    });
+                }
 
                 const verification = await this.verifySelector(page, candidate);
                 if (verification.valid && verification.visible) {
+                    if (onProgress) {
+                        onProgress({
+                            step: 'candidate_success',
+                            candidate,
+                            unique: verification.unique,
+                        });
+                    }
                     console.log(
                         `[SelectorHealer] ✅ Verified candidate: ${candidate} (${verification.unique ? 'Unique' : 'Multiple matches: ' + verification.count})`,
                     );
@@ -163,6 +231,13 @@ class SelectorHealer {
                             : (result.confidence || 0.9) * 0.7,
                         verified: true,
                         isUnique: verification.unique,
+                        metadata: {
+                            aiResponseTime,
+                            domSize,
+                            model: aiConfig?.model || 'ollama',
+                            provider: aiConfig?.provider || 'ollama',
+                            candidateCount: candidates.length,
+                        },
                     };
                 }
             }
@@ -174,6 +249,12 @@ class SelectorHealer {
                     reasoning: result.reasoning,
                     confidence: result.confidence || 0.5,
                     verified: false,
+                    metadata: {
+                        aiResponseTime,
+                        domSize,
+                        model: aiConfig?.model || 'ollama',
+                        provider: aiConfig?.provider || 'ollama',
+                    },
                 };
             }
 
@@ -181,6 +262,12 @@ class SelectorHealer {
                 correctedSelector: null,
                 reasoning: 'No valid candidates found during verification',
                 confidence: 0,
+                metadata: {
+                    aiResponseTime,
+                    domSize,
+                    model: aiConfig?.model || 'ollama',
+                    provider: aiConfig?.provider || 'ollama',
+                },
             };
         } catch (error) {
             console.error('[SelectorHealer] Error during healing:', error);

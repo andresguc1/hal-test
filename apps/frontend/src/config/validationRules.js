@@ -1,5 +1,28 @@
+// apps/frontend/src/config/validationRules.js
+
+/**
+ * Unified NODE_INPUTS schema.
+ * Defines available input fields for each node type and their validation rules.
+ * This is the SOURCE OF TRUTH for both the Configuration Panel and the Execution Validator.
+ */
 export const NODE_INPUTS = {
-  // Browser
+  // --- BROWSER MANAGEMENT ---
+  launch_browser: [
+    { key: "headless", label: "Headless Mode", type: "checkbox" },
+    {
+      key: "devicePreset",
+      label: "📱 Device Template",
+      type: "select",
+      options: [
+        { label: "🖥️ Desktop (1280x720)", value: "Desktop" },
+        { label: "📱 iPhone SE", value: "iPhone SE" },
+        { label: "📱 iPhone XR", value: "iPhone XR" },
+        { label: "📱 Pixel 5", value: "Pixel 5" },
+        { label: "🖥️ MacBook Air 13", value: "MacBook Air 13" },
+      ],
+    },
+    { key: "slowMo", label: "Slow Mo (ms)", type: "number", placeholder: "50" },
+  ],
   open_url: [
     {
       key: "url",
@@ -14,10 +37,53 @@ export const NODE_INPUTS = {
       type: "number",
       placeholder: "30000",
     },
+    {
+      key: "takeScreenshot",
+      label: "📸 Take Screenshot",
+      type: "checkbox",
+      defaultValue: true,
+    },
+    {
+      key: "continueOnError",
+      label: "🛡️ Continue on failure (Soft Fail)",
+      type: "checkbox",
+      defaultValue: false,
+    },
   ],
-  launch_browser: [
-    { key: "headless", label: "Headless Mode", type: "checkbox" },
-    { key: "slowMo", label: "Slow Mo (ms)", type: "number", placeholder: "50" },
+  close_browser: [
+    {
+      key: "reason",
+      label: "Reason (Optional)",
+      type: "text",
+      placeholder: "Finished execution",
+    },
+  ],
+  manage_tabs: [
+    {
+      key: "action",
+      label: "Action",
+      type: "select",
+      options: [
+        { label: "New Tab", value: "new" },
+        { label: "Switch Tab", value: "switch" },
+        { label: "Close Tab", value: "close" },
+        { label: "List Tabs", value: "list" },
+      ],
+      required: true,
+    },
+    {
+      key: "url",
+      label: "URL (for New Tab)",
+      type: "text",
+      placeholder: "https://...",
+      isVisible: (config) => config.action === "new",
+    },
+    {
+      key: "tabIndex",
+      label: "Tab Index (for Switch)",
+      type: "number",
+      placeholder: "0",
+    },
   ],
   resize_viewport: [
     {
@@ -35,21 +101,48 @@ export const NODE_INPUTS = {
       required: true,
     },
   ],
+  reload_page: [],
+  go_back: [],
+  go_forward: [],
 
-  // User Actions
+  // --- USER SIMULATION ---
   click: [
     {
       key: "selector",
       label: "Selector",
       type: "selector",
-      placeholder: ".btn-primary",
+      placeholder: "CSS, XPath, or Pick ✨",
       required: true,
+    },
+    {
+      key: "clickType",
+      label: "Click Type",
+      type: "select",
+      options: [
+        { label: "Left Click", value: "left" },
+        { label: "Right Click", value: "right" },
+        { label: "Double Click", value: "double" },
+        { label: "Middle Click", value: "middle" },
+      ],
+      defaultValue: "left",
     },
     {
       key: "timeout",
       label: "Timeout (ms)",
       type: "number",
       placeholder: "30000",
+    },
+    {
+      key: "takeScreenshot",
+      label: "📸 Take Screenshot",
+      type: "checkbox",
+      defaultValue: true,
+    },
+    {
+      key: "continueOnError",
+      label: "🛡️ Continue on failure (Soft Fail)",
+      type: "checkbox",
+      defaultValue: false,
     },
   ],
   type_text: [
@@ -68,6 +161,144 @@ export const NODE_INPUTS = {
       required: true,
     },
     { key: "delay", label: "Delay (ms)", type: "number", placeholder: "0" },
+    {
+      key: "clearFirst",
+      label: "Clear field before typing?",
+      type: "checkbox",
+      defaultValue: true,
+    },
+    {
+      key: "takeScreenshot",
+      label: "📸 Take Screenshot",
+      type: "checkbox",
+      defaultValue: true,
+    },
+    {
+      key: "continueOnError",
+      label: "🛡️ Continue on failure (Soft Fail)",
+      type: "checkbox",
+      defaultValue: false,
+    },
+  ],
+  select_option: [
+    {
+      key: "selector",
+      label: "Selector",
+      type: "selector",
+      placeholder: "select#country",
+      required: true,
+    },
+    {
+      key: "selectionValue",
+      label: "Value / Label / Index",
+      type: "text",
+      placeholder: "US",
+      required: true,
+    },
+    {
+      key: "takeScreenshot",
+      label: "📸 Take Screenshot",
+      type: "checkbox",
+      defaultValue: true,
+    },
+    {
+      key: "continueOnError",
+      label: "🛡️ Continue on failure (Soft Fail)",
+      type: "checkbox",
+      defaultValue: false,
+    },
+  ],
+  submit_form: [
+    {
+      key: "selector",
+      label: "Form Selector",
+      type: "selector",
+      placeholder: "form#login",
+      required: true,
+    },
+    {
+      key: "takeScreenshot",
+      label: "📸 Take Screenshot",
+      type: "checkbox",
+      defaultValue: true,
+    },
+  ],
+  scroll: [
+    {
+      key: "selector",
+      label: "Container Selector (Optional)",
+      type: "selector",
+      placeholder: "body or .scrollable-div",
+    },
+    {
+      key: "scrollToEnd",
+      label: "Scroll to Bottom (Infinite)",
+      type: "checkbox",
+    },
+    {
+      key: "direction",
+      label: "Direction",
+      type: "select",
+      options: [
+        { label: "Down", value: "down" },
+        { label: "Up", value: "up" },
+        { label: "Right", value: "right" },
+        { label: "Left", value: "left" },
+      ],
+      required: true,
+      isVisible: (config) => !config.scrollToEnd,
+    },
+    {
+      key: "amount",
+      label: "Pixels Amount",
+      type: "number",
+      placeholder: "500",
+      isVisible: (config) => !config.scrollToEnd,
+    },
+    {
+      key: "maxScrolls",
+      label: "Max Scroll Attempts",
+      type: "number",
+      placeholder: "50",
+      isVisible: (config) => config.scrollToEnd === true,
+    },
+    {
+      key: "behavior",
+      label: "Behavior",
+      type: "select",
+      options: [
+        { label: "Smooth", value: "smooth" },
+        { label: "Instant (Auto)", value: "auto" },
+      ],
+    },
+    {
+      key: "takeScreenshot",
+      label: "📸 Take Screenshot",
+      type: "checkbox",
+      defaultValue: true,
+    },
+  ],
+  drag_drop: [
+    {
+      key: "sourceSelector",
+      label: "Source (Drag)",
+      type: "selector",
+      placeholder: "#item-1",
+      required: true,
+    },
+    {
+      key: "targetSelector",
+      label: "Target (Drop)",
+      type: "selector",
+      placeholder: "#bin",
+      required: true,
+    },
+    {
+      key: "takeScreenshot",
+      label: "📸 Take Screenshot",
+      type: "checkbox",
+      defaultValue: true,
+    },
   ],
   hover: [
     {
@@ -79,17 +310,17 @@ export const NODE_INPUTS = {
     },
   ],
 
-  // Sync
-  wait_for_timeout: [
+  // --- DOM / CODE ---
+  find_element: [
     {
-      key: "duration",
-      label: "Duration (ms)",
-      type: "number",
-      placeholder: "1000",
+      key: "selector",
+      label: "Selector",
+      type: "selector",
+      placeholder: ".element",
       required: true,
     },
   ],
-  wait_visible: [
+  get_set_content: [
     {
       key: "selector",
       label: "Selector",
@@ -98,14 +329,67 @@ export const NODE_INPUTS = {
       required: true,
     },
     {
+      key: "action",
+      label: "Action",
+      type: "select",
+      options: [
+        { label: "Get Text", value: "getText" },
+        { label: "Set Text", value: "setText" },
+        { label: "Get HTML", value: "getHTML" },
+      ],
+      required: true,
+    },
+    {
+      key: "value",
+      label: "Value (for Set)",
+      type: "text",
+      isVisible: (config) => config.action === "setText",
+    },
+  ],
+  execute_js: [
+    {
+      key: "script",
+      label: "JavaScript Script",
+      type: "textarea",
+      placeholder: "return document.title;",
+      required: true,
+    },
+  ],
+  wait_for_element: [
+    {
+      key: "selector",
+      label: "Selector",
+      type: "selector",
+      placeholder: ".element",
+      required: true,
+    },
+    {
+      key: "condition",
+      label: "Condition",
+      type: "select",
+      options: [
+        { label: "Visible", value: "visible" },
+        { label: "Hidden", value: "hidden" },
+        { label: "Attached (Exist)", value: "attached" },
+        { label: "Detached (Removed)", value: "detached" },
+      ],
+      required: true,
+    },
+    {
       key: "timeout",
       label: "Timeout (ms)",
       type: "number",
       placeholder: "30000",
     },
+    {
+      key: "takeScreenshot",
+      label: "📸 Take Screenshot",
+      type: "checkbox",
+      defaultValue: true,
+    },
   ],
 
-  // Diagnostics
+  // --- DIAGNOSTICS ---
   take_screenshot: [
     { key: "fullPage", label: "Full Page", type: "checkbox" },
     {
@@ -135,298 +419,104 @@ export const NODE_INPUTS = {
       placeholder: "domContent",
     },
   ],
-
-  // Form Interaction
-  select_option: [
+  log_errors: [
     {
-      key: "selector",
-      label: "Selector",
-      type: "selector",
-      placeholder: "select#country",
-      required: true,
-    },
-    {
-      key: "selectionValue",
-      label: "Value / Label / Index",
-      type: "text",
-      placeholder: "US",
-      required: true,
+      key: "enable",
+      label: "Enable Console Logging",
+      type: "checkbox",
+      defaultValue: true,
     },
   ],
-  drag_drop: [
+  listen_events: [
     {
-      key: "sourceSelector",
-      label: "Source (Drag)",
-      type: "selector",
-      placeholder: "#item-1",
-      required: true,
-    },
-    {
-      key: "targetSelector",
-      label: "Target (Drop)",
-      type: "selector",
-      placeholder: "#bin",
-      required: true,
-    },
-  ],
-  manage_tabs: [
-    {
-      key: "action",
-      label: "Action",
+      key: "eventType",
+      label: "Event Type",
       type: "select",
       options: [
-        { label: "New Tab", value: "new" },
-        { label: "Switch Tab", value: "switch" },
-        { label: "Close Tab", value: "close" },
-        { label: "List Tabs", value: "list" },
+        { label: "Click", value: "click" },
+        { label: "Input / Typed", value: "input" },
+        { label: "Network Request", value: "request" },
+        { label: "Network Response", value: "response" },
+        { label: "Console Message", value: "console" },
       ],
       required: true,
     },
   ],
 
-  // AI & Analytics
-  call_llm: [
-    { key: "provider", label: "Provider", type: "select", required: true },
-    { key: "model", label: "Model", type: "text" },
-    { key: "prompt", label: "Prompt", type: "textarea", required: true },
+  // --- LOGIC & FLOW ---
+  variable: [
+    { key: "name", label: "Variable Name", type: "text", required: true },
+    { key: "value", label: "Initial Value", type: "text" },
   ],
-  generate_data: [
-    { key: "provider", label: "Provider", type: "select", required: true },
-    { key: "model", label: "Model", type: "text" },
-    { key: "prompt", label: "Description", type: "textarea", required: true },
-    { key: "expectedFormat", label: "Format", type: "select", required: true },
-  ],
-  validate_semantic: [
-    { key: "provider", label: "Provider", type: "select", required: true },
-    { key: "model", label: "Model", type: "text" },
-    {
-      key: "sourceTextVariable",
-      label: "Source Variable",
-      type: "text",
-      required: true,
-    },
-    {
-      key: "validationPrompt",
-      label: "Prompt",
-      type: "textarea",
-      required: true,
-    },
-  ],
-
-  // Synchronization
-  wait_navigation: [
-    {
-      key: "waitUntil",
-      label: "Wait Until",
-      type: "text",
-      placeholder: "load",
-    },
-  ],
-  wait_network: [
-    {
-      key: "idleTime",
-      label: "Idle Time (ms)",
-      type: "number",
-      placeholder: "500",
-    },
-  ],
-  wait_conditional: [
+  conditional: [
     {
       key: "expression",
-      label: "JS Expression (Truthy)",
+      label: "Condition (JS Expression)",
       type: "text",
-      placeholder: "window.ready === true",
+      placeholder: "results.count \u003e 0",
       required: true,
     },
   ],
-
-  // Advanced
-  submit_form: [
-    {
-      key: "selector",
-      label: "Form Selector",
-      type: "selector",
-      placeholder: "form#login",
-      required: true,
-    },
-  ],
-  upload_file: [
-    {
-      key: "selector",
-      label: "Input Selector",
-      type: "selector",
-      placeholder: "input[type='file']",
-      required: true,
-    },
-    {
-      key: "files",
-      label: "File Paths (JSON Array)",
-      type: "text",
-      placeholder: '["path/to/file.png"]',
-      required: true,
-    },
-  ],
-
-  // Advanced
-  execute_js: [
-    {
-      key: "script",
-      label: "JavaScript Script",
-      type: "textarea",
-      placeholder: "return document.title;",
-      required: true,
-    },
-  ],
-
-  // Network Control
-  intercept_request: [
-    {
-      key: "urlPattern",
-      label: "URL Pattern (Glob/Regex)",
-      type: "text",
-      placeholder: "**/api/v1/*",
-      required: true,
-    },
-  ],
-  mock_response: [
-    {
-      key: "urlPattern",
-      label: "URL Pattern",
-      type: "text",
-      placeholder: "**/users",
-      required: true,
-    },
-    {
-      key: "body",
-      label: "Response Body (JSON)",
-      type: "textarea",
-      placeholder: '{"success": true}',
-      required: true,
-    },
-  ],
-  block_resource: [
-    {
-      key: "urlPattern",
-      label: "URL Pattern",
-      type: "text",
-      placeholder: "*.google-analytics.com",
-      required: true,
-    },
-  ],
-
-  // Files & Data
-  read_file: [
-    {
-      key: "selector",
-      label: "Selector",
-      type: "selector",
-      placeholder: ".element-to-read",
-      required: true,
-    },
+  loop: [
     {
       key: "type",
-      label: "Content Type",
+      label: "Loop Type",
       type: "select",
       options: [
-        { label: "Text", value: "text" },
-        { label: "HTML", value: "html" },
+        { label: "Fixed Count", value: "fixed" },
+        { label: "While (Condition)", value: "while" },
+        { label: "Each (Array)", value: "each" },
       ],
       required: true,
     },
-  ],
-  write_file: [
     {
-      key: "path",
-      label: "Save Path",
+      key: "flowId",
+      label: "Sub-flow ID",
       type: "text",
-      placeholder: "./output/results.json",
-      required: true,
-    },
-    {
-      key: "data",
-      label: "Data / Content",
-      type: "textarea",
-      placeholder: "Content or {{variable}}",
       required: true,
     },
   ],
-  download_file: [
+  component: [
     {
-      key: "selector",
-      label: "Download Button Selector",
-      type: "selector",
-      placeholder: ".download-btn",
+      key: "flowId",
+      label: "Component (Sub-flow) ID",
+      type: "text",
       required: true,
     },
+  ],
+  pause: [
     {
-      key: "path",
-      label: "Save Path",
-      type: "text",
-      placeholder: "./downloads/report.pdf",
+      key: "duration",
+      label: "Duration (ms)",
+      type: "number",
+      placeholder: "2000",
       required: true,
     },
   ],
 
-  output: [
-    {
-      key: "name",
-      label: "Output Name",
-      type: "text",
-      placeholder: "result_key",
-      required: true,
-    },
-    {
-      key: "value",
-      label: "Value to Return",
-      type: "text",
-      placeholder: "{{variable}}",
-      required: true,
-    },
-  ],
-  // Default fallback
+  // --- DEFAULT FALLBACK ---
   default: [
     {
       key: "selector",
       label: "Selector",
       type: "selector",
       placeholder: "Enter selector...",
-    },
-  ],
-  switch: [
-    {
-      key: "variableName",
-      label: "Variable to Evaluate",
-      type: "text",
-      placeholder: "status",
-      required: true,
-    },
-    {
-      key: "cases",
-      label: "Cases",
-      type: "switch_cases",
-      required: true,
+      required: true, // We want all selectors to be required by default in the validator
     },
   ],
 };
 
+/**
+ * Validates a node configuration based on the rules defined above.
+ */
 export const validateNodeConfig = (nodeType, config = {}) => {
-  const rules = NODE_INPUTS[nodeType] || [];
-
-  // Special logic for save_dom: either path OR variableName must be present
-  if (nodeType === "save_dom") {
-    const hasPath = !!config.path?.trim();
-    const hasVar = !!config.variableName?.trim();
-    if (!hasPath && !hasVar) {
-      return { isValid: false, error: "Requires Path or Variable Name" };
-    }
-    return { isValid: true };
-  }
+  const rules = NODE_INPUTS[nodeType] || NODE_INPUTS.default;
 
   for (const rule of rules) {
     if (rule.required) {
       const value = config[rule.key];
       if (value === null || value === undefined || value === "") {
-        return { isValid: false, missingField: rule.label };
+        return { isValid: false, missingField: rule.label, fieldKey: rule.key };
       }
     }
   }
@@ -434,29 +524,47 @@ export const validateNodeConfig = (nodeType, config = {}) => {
   return { isValid: true };
 };
 
+/**
+ * Truncates a string to a maximum length.
+ */
 export const truncate = (str, n) => {
-  if (!str) return str;
+  if (!str) return "";
   return str.length > n ? str.substr(0, n - 1) + "..." : str;
 };
 
+/**
+ * Generates a human-readable label for a node based on its configuration.
+ */
 export const getSmartLabel = (nodeType, config = {}) => {
+  if (!config) return null;
+
   switch (nodeType) {
     case "open_url":
       return config.url
         ? `Open: ${truncate(config.url.replace(/^https?:\/\//, ""), 20)}`
         : null;
     case "click":
-      return config.selector ? `Click: ${truncate(config.selector, 18)}` : null;
+      return config.selector ? `Click: ${truncate(config.selector, 20)}` : null;
     case "type_text":
-      return config.text ? `Type: "${truncate(config.text, 15)}"` : null;
-    case "wait_for_timeout":
-      return config.duration ? `Wait: ${config.duration}ms` : null;
-    case "launch_browser":
-      return config.headless ? "Browser (Headless)" : "Browser (Visible)";
-    case "take_screenshot":
-      return config.path ? `Snap: ${truncate(config.path, 20)}` : null;
-    case "switch":
-      return config.variableName ? `Switch: ${config.variableName}` : "Switch";
+      return config.selector
+        ? `Type in: ${truncate(config.selector, 15)}`
+        : null;
+    case "select_option":
+      return config.selector
+        ? `Select in: ${truncate(config.selector, 15)}`
+        : null;
+    case "hover":
+      return config.selector ? `Hover: ${truncate(config.selector, 20)}` : null;
+    case "wait_for_element":
+      return config.selector ? `Wait: ${truncate(config.selector, 20)}` : null;
+    case "execute_js":
+      return "Execute JS";
+    case "pause":
+      return `Pause: ${config.duration}ms`;
+    case "component":
+      return config.label || "Sub-flow";
+    case "loop":
+      return "Loop";
     default:
       return null;
   }

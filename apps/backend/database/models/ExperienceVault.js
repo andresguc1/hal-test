@@ -22,6 +22,10 @@ const ExperienceVault = sequelize.define(
             type: DataTypes.TEXT, // The URL where the failure happened
             allowNull: true,
         },
+        nodeId: {
+            type: DataTypes.STRING, // Link to the specific node in the flow
+            allowNull: true,
+        },
         problemSelector: {
             type: DataTypes.TEXT, // The broken selector
             allowNull: false,
@@ -52,6 +56,9 @@ const ExperienceVault = sequelize.define(
         indexes: [
             {
                 fields: ['problemSelector', 'context'],
+            },
+            {
+                fields: ['nodeId'],
             },
         ],
     },

@@ -41,7 +41,7 @@ router.use('/runs', runRouter);
 // DECLARATIVE ROUTE CONFIGURATION
 // ==========================================================
 
-const actionRoutes = [
+export const actionRoutes = [
     // ========== Navigation and Environment ==========
     {
         path: 'launch_browser',

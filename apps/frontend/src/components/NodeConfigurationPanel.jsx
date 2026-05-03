@@ -41,6 +41,7 @@ import {
   NODE_TYPE_MAP,
   NODE_OUTPUTS,
 } from "@/config/nodeConstants";
+import { NODE_INPUTS } from "@/config/validationRules";
 import { api } from "../utils/api";
 import EvidenceCard from "./EvidenceCard"; // New component import
 import VariableInput from "./VariableInput";
@@ -958,1813 +959,7 @@ const MappingEditor = ({
   );
 };
 
-// --- CONFIGURATION SCHEMA ---
-// Defines available input fields for each node type
-const NODE_INPUTS = {
-  // Browser
-  open_url: [
-    {
-      key: "url",
-      label: "URL",
-      type: "text",
-      placeholder: "https://example.com",
-    },
-    {
-      key: "timeout",
-      label: "Timeout (ms)",
-      type: "number",
-      placeholder: "30000",
-    },
-    {
-      key: "takeScreenshot",
-      label: "📸 Take Screenshot",
-      type: "checkbox",
-      defaultValue: true,
-    },
-    {
-      key: "continueOnError",
-      label: "🛡️ Continue on failure (Soft Fail)",
-      type: "checkbox",
-      defaultValue: false,
-    },
-  ],
-  launch_browser: [
-    { key: "headless", label: "Headless Mode", type: "checkbox" },
-    {
-      key: "devicePreset",
-      label: "📱 Device Template",
-      type: "select",
-      options: [
-        { label: "🖥️ Desktop (1280x720)", value: "Desktop" },
-        { label: "📱 iPhone SE", value: "iPhone SE" },
-        { label: "📱 iPhone XR", value: "iPhone XR" },
-        { label: "📱 iPhone 12 Pro", value: "iPhone 12 Pro" },
-        { label: "📱 iPhone 14 Pro Max", value: "iPhone 14 Pro Max" },
-        { label: "📱 Pixel 7", value: "Pixel 7" },
-        { label: "📱 Samsung Galaxy S22", value: "Samsung Galaxy S22" },
-        {
-          label: "📱 Samsung Galaxy S20 Ultra",
-          value: "Samsung Galaxy S20 Ultra",
-        },
-        { label: "📟 iPad Mini", value: "iPad Mini" },
-        { label: "📟 iPad Air", value: "iPad Air" },
-        { label: "📟 iPad Pro", value: "iPad Pro" },
-        { label: "📟 Tablet (Generic)", value: "Tablet" },
-        { label: "⚙️ Custom Size", value: "Custom" },
-      ],
-      default: "Desktop",
-    },
-    { key: "slowMo", label: "Slow Mo (ms)", type: "number", placeholder: "50" },
-    {
-      key: "recordVideo",
-      label: "📹 Record Video",
-      type: "checkbox",
-      defaultValue: true,
-    },
-    {
-      key: "args",
-      label: "Extra Browser Arguments",
-      type: "text",
-      placeholder: "--enable-logging --v=1",
-    },
-    { key: "maximizeWindow", label: "Maximize Window", type: "checkbox" },
-    {
-      key: "width",
-      label: "Viewport Width",
-      type: "number",
-      placeholder: "1280",
-      isVisible: (data) =>
-        !data.maximizeWindow && data.devicePreset === "Custom",
-    },
-    {
-      key: "height",
-      label: "Viewport Height",
-      type: "number",
-      placeholder: "720",
-      isVisible: (data) =>
-        !data.maximizeWindow && data.devicePreset === "Custom",
-    },
-    {
-      key: "isMobile",
-      label: "📱 Is Mobile Simulation",
-      type: "checkbox",
-      isVisible: (data) =>
-        !data.maximizeWindow && data.devicePreset === "Custom",
-    },
-    {
-      key: "hasTouch",
-      label: "👆 Enable Touch Support",
-      type: "checkbox",
-      isVisible: (data) =>
-        !data.maximizeWindow && data.devicePreset === "Custom",
-    },
-    {
-      key: "networkProfile",
-      label: "Initial Throttling Profile",
-      type: "select",
-      options: [
-        { label: "No throttling", value: "No throttling" },
-        { label: "WiFi fast", value: "WiFi fast" },
-        { label: "WiFi slow", value: "WiFi slow" },
-        { label: "4G", value: "4G" },
-        { label: "Fast 3G", value: "Fast 3G" },
-        { label: "Slow 3G", value: "Slow 3G" },
-        { label: "2G", value: "2G" },
-        { label: "High Latency", value: "High Latency" },
-        { label: "Custom", value: "Custom" },
-        { label: "Offline", value: "Offline" },
-      ],
-      default: "No throttling",
-    },
-    {
-      key: "offline",
-      label: "Offline Mode",
-      type: "checkbox",
-      isVisible: (data) => data.networkProfile === "Custom",
-    },
-    {
-      key: "latency",
-      label: "Start-up Latency (ms)",
-      type: "number",
-      placeholder: "e.g. 150",
-      isVisible: (data) => data.networkProfile === "Custom",
-    },
-    {
-      key: "downloadThroughput",
-      label: "Download (Kbps)",
-      type: "number",
-      placeholder: "e.g. 1600",
-      isVisible: (data) => data.networkProfile === "Custom",
-    },
-    {
-      key: "uploadThroughput",
-      label: "Upload (Kbps)",
-      type: "number",
-      placeholder: "e.g. 750",
-      isVisible: (data) => data.networkProfile === "Custom",
-    },
-  ],
-  resize_viewport: [
-    {
-      key: "devicePreset",
-      label: "📱 Device Template",
-      type: "select",
-      options: [
-        { label: "🖥️ Desktop (1280x720)", value: "Desktop" },
-        { label: "📱 iPhone SE", value: "iPhone SE" },
-        { label: "📱 iPhone XR", value: "iPhone XR" },
-        { label: "📱 iPhone 12 Pro", value: "iPhone 12 Pro" },
-        { label: "📱 iPhone 14 Pro Max", value: "iPhone 14 Pro Max" },
-        { label: "📱 Pixel 7", value: "Pixel 7" },
-        { label: "📱 Samsung Galaxy S22", value: "Samsung Galaxy S22" },
-        {
-          label: "📱 Samsung Galaxy S20 Ultra",
-          value: "Samsung Galaxy S20 Ultra",
-        },
-        { label: "📟 iPad Mini", value: "iPad Mini" },
-        { label: "📟 iPad Air", value: "iPad Air" },
-        { label: "📟 iPad Pro", value: "iPad Pro" },
-        { label: "📟 Tablet (Generic)", value: "Tablet" },
-        { label: "⚙️ Custom Size", value: "Custom" },
-      ],
-      default: "Custom",
-    },
-    {
-      key: "width",
-      label: "Width (px)",
-      type: "number",
-      placeholder: "1280",
-      isVisible: (data) => !data.devicePreset || data.devicePreset === "Custom",
-    },
-    {
-      key: "height",
-      label: "Height (px)",
-      type: "number",
-      placeholder: "720",
-      isVisible: (data) => !data.devicePreset || data.devicePreset === "Custom",
-    },
-  ],
-
-  find_element: [
-    {
-      key: "selector",
-      label: "Selector",
-      type: "selector",
-      placeholder: ".my-element",
-    },
-    {
-      key: "timeout",
-      label: "Timeout (ms)",
-      type: "number",
-      placeholder: "30000",
-    },
-    {
-      key: "takeScreenshot",
-      label: "📸 Take Screenshot",
-      type: "checkbox",
-      defaultValue: true,
-    },
-  ],
-  // User Actions
-  click: [
-    {
-      key: "selector",
-      label: "Selector",
-      type: "selector",
-      placeholder: ".btn-primary",
-    },
-    {
-      key: "timeout",
-      label: "Timeout (ms)",
-      type: "number",
-      placeholder: "30000",
-    },
-    {
-      key: "takeScreenshot",
-      label: "📸 Take Screenshot",
-      type: "checkbox",
-      defaultValue: true,
-    },
-    {
-      key: "continueOnError",
-      label: "🛡️ Continue on failure (Soft Fail)",
-      type: "checkbox",
-      defaultValue: false,
-    },
-  ],
-  type_text: [
-    {
-      key: "selector",
-      label: "Selector",
-      type: "selector",
-      placeholder: "input[name='q']",
-    },
-    {
-      key: "text",
-      label: "Text to Type",
-      type: "text",
-      placeholder: "Hello World",
-      required: true, // Marked as required
-    },
-    { key: "delay", label: "Delay (ms)", type: "number", placeholder: "0" },
-    {
-      key: "takeScreenshot",
-      label: "📸 Take Screenshot",
-      type: "checkbox",
-      defaultValue: true,
-    },
-    {
-      key: "continueOnError",
-      label: "🛡️ Continue on failure (Soft Fail)",
-      type: "checkbox",
-      defaultValue: false,
-    },
-  ],
-  hover: [
-    {
-      key: "selector",
-      label: "Selector",
-      type: "selector",
-      placeholder: ".menu-item",
-    },
-    {
-      key: "timeout",
-      label: "Timeout (ms)",
-      type: "number",
-      placeholder: "30000",
-    },
-    {
-      key: "takeScreenshot",
-      label: "📸 Take Screenshot",
-      type: "checkbox",
-      defaultValue: true,
-    },
-    {
-      key: "continueOnError",
-      label: "🛡️ Continue on failure (Soft Fail)",
-      type: "checkbox",
-      defaultValue: false,
-    },
-  ],
-
-  // Sync
-  check: [
-    {
-      key: "selector",
-      label: "Selector",
-      type: "selector",
-      placeholder: ".checkbox",
-    },
-    {
-      key: "takeScreenshot",
-      label: "📸 Take Screenshot",
-      type: "checkbox",
-      defaultValue: true,
-    },
-  ],
-  uncheck: [
-    {
-      key: "selector",
-      label: "Selector",
-      type: "selector",
-      placeholder: ".checkbox",
-    },
-    {
-      key: "takeScreenshot",
-      label: "📸 Take Screenshot",
-      type: "checkbox",
-      defaultValue: true,
-    },
-  ],
-
-  pause: [
-    {
-      key: "duration",
-      label: "Duration (ms)",
-      type: "number",
-      placeholder: "1000",
-    },
-  ],
-  wait_for_element: [
-    {
-      key: "selector",
-      label: "Selector",
-      type: "selector",
-      placeholder: ".element",
-    },
-    {
-      key: "condition",
-      label: "Condition",
-      type: "select",
-      options: [
-        { label: "Visible", value: "visible" },
-        { label: "Hidden", value: "hidden" },
-        { label: "Attached (Exist)", value: "attached" },
-        { label: "Detached (Removed)", value: "detached" },
-      ],
-      required: true,
-    },
-    {
-      key: "scrollIntoView",
-      label: "Scroll into view?",
-      type: "checkbox",
-      default: false,
-    },
-    {
-      key: "timeout",
-      label: "Timeout (ms)",
-      type: "number",
-      placeholder: "30000",
-    },
-    {
-      key: "takeScreenshot",
-      label: "📸 Take Screenshot",
-      type: "checkbox",
-      defaultValue: true,
-    },
-    {
-      key: "continueOnError",
-      label: "🛡️ Continue on failure (Soft Fail)",
-      type: "checkbox",
-      defaultValue: false,
-    },
-  ],
-
-  // Diagnostics
-  take_screenshot: [
-    {
-      key: "selector",
-      label: "Selector (Optional)",
-      type: "selector",
-      placeholder: ".element-to-capture",
-    },
-    { key: "fullPage", label: "Full Page", type: "checkbox" },
-    {
-      key: "format",
-      label: "Format",
-      type: "select",
-      options: [
-        { label: "PNG", value: "png" },
-        { label: "JPEG", value: "jpeg" },
-      ],
-    },
-    {
-      key: "quality",
-      label: "Quality (JPEG only)",
-      type: "number",
-      placeholder: "100",
-    },
-    {
-      key: "path",
-      label: "Filename (Optional)",
-      type: "text",
-      placeholder: "screenshot.png",
-    },
-    {
-      key: "timeout",
-      label: "Timeout (ms)",
-      type: "number",
-      placeholder: "30000",
-    },
-  ],
-
-  // Browser Management
-  manage_tabs: [
-    {
-      key: "action",
-      label: "Action",
-      type: "select",
-      options: [
-        { label: "New Tab", value: "new" },
-        { label: "Switch Tab", value: "switch" },
-        { label: "Close Tab", value: "close" },
-        { label: "List Tabs", value: "list" },
-      ],
-      required: true,
-    },
-    {
-      key: "url",
-      label: "URL (for New Tab)",
-      type: "text",
-      placeholder: "https://example.com",
-    },
-    {
-      key: "tabIndex",
-      label: "Tab Index (for Switch)",
-      type: "number",
-      placeholder: "0",
-    },
-  ],
-
-  // User Actions (Extended)
-  select_option: [
-    {
-      key: "selector",
-      label: "Selector",
-      type: "selector",
-      placeholder: "select#country",
-    },
-    {
-      key: "selectionValue",
-      label: "Value / Label / Index",
-      type: "text",
-      placeholder: "US",
-    },
-    {
-      key: "takeScreenshot",
-      label: "📸 Take Screenshot",
-      type: "checkbox",
-      defaultValue: true,
-    },
-    {
-      key: "continueOnError",
-      label: "🛡️ Continue on failure (Soft Fail)",
-      type: "checkbox",
-      defaultValue: false,
-    },
-  ],
-  scroll: [
-    {
-      key: "selector",
-      label: "Container Selector (Optional)",
-      type: "selector",
-      placeholder: "body or .scrollable-div",
-    },
-    {
-      key: "scrollToEnd",
-      label: "Scroll to Bottom (Infinite)",
-      type: "checkbox",
-    },
-    {
-      key: "direction",
-      label: "Direction",
-      type: "select",
-      options: [
-        { label: "Down", value: "down" },
-        { label: "Up", value: "up" },
-        { label: "Right", value: "right" },
-        { label: "Left", value: "left" },
-      ],
-      required: true,
-      isVisible: (config) => !config.scrollToEnd,
-    },
-    {
-      key: "amount",
-      label: "Pixels Amount",
-      type: "number",
-      placeholder: "500",
-      isVisible: (config) => !config.scrollToEnd,
-    },
-    {
-      key: "maxScrolls",
-      label: "Max Scroll Attempts",
-      type: "number",
-      placeholder: "50",
-      isVisible: (config) => config.scrollToEnd === true,
-    },
-    {
-      key: "waitTime",
-      label: "Wait Between Scrolls (ms)",
-      type: "number",
-      placeholder: "2000",
-      isVisible: (config) => config.scrollToEnd === true,
-    },
-    {
-      key: "behavior",
-      label: "Behavior",
-      type: "select",
-      options: [
-        { label: "Smooth", value: "smooth" },
-        { label: "Instant (Auto)", value: "auto" },
-      ],
-    },
-    {
-      key: "takeScreenshot",
-      label: "📸 Take Screenshot",
-      type: "checkbox",
-      defaultValue: true,
-    },
-  ],
-  drag_drop: [
-    {
-      key: "sourceSelector",
-      label: "Source (Drag)",
-      type: "selector",
-      placeholder: "#item-1",
-      required: true,
-    },
-    {
-      key: "targetSelector",
-      label: "Target (Drop)",
-      type: "selector",
-      placeholder: "#bin",
-      required: true,
-    },
-    {
-      key: "steps",
-      label: "Animation Steps",
-      type: "number",
-      placeholder: "10",
-    },
-    {
-      key: "force",
-      label: "Force Action (Skip Checks)",
-      type: "checkbox",
-    },
-    {
-      key: "takeScreenshot",
-      label: "📸 Take Screenshot",
-      type: "checkbox",
-      defaultValue: true,
-    },
-  ],
-  upload_file: [
-    {
-      key: "selector",
-      label: "Input Selector",
-      type: "selector",
-      placeholder: "input[type='file']",
-    },
-    {
-      key: "files",
-      label: "File Paths (Comma-separated)",
-      type: "text",
-      placeholder: "file1.png, file2.png",
-    },
-    {
-      key: "takeScreenshot",
-      label: "📸 Take Screenshot",
-      type: "checkbox",
-      defaultValue: true,
-    },
-  ],
-  read_file: [
-    {
-      key: "selector",
-      label: "Selector",
-      type: "selector",
-      placeholder: ".element-to-read",
-    },
-    {
-      key: "type",
-      label: "Content Type",
-      type: "select",
-      options: [
-        { label: "Text", value: "text" },
-        { label: "HTML", value: "html" },
-      ],
-      default: "text",
-    },
-    {
-      key: "variableName",
-      label: "Variable Name",
-      type: "text",
-      placeholder: "e.g. extractedText",
-    },
-    {
-      key: "timeout",
-      label: "Timeout (ms)",
-      type: "number",
-      placeholder: "30000",
-    },
-  ],
-  write_file: [
-    {
-      key: "path",
-      label: "Save Path",
-      type: "text",
-      placeholder: "./output/results.json",
-      required: true,
-    },
-    {
-      key: "data",
-      label: "Data / Content",
-      type: "textarea",
-      placeholder: "Content or {{variable}}",
-      required: true,
-    },
-    {
-      key: "variableName",
-      label: "Capture Saved Path (Variable Name)",
-      type: "text",
-      placeholder: "e.g. logPath",
-    },
-  ],
-  download_file: [
-    {
-      key: "selector",
-      label: "Download Button Selector",
-      type: "selector",
-      placeholder: ".download-btn",
-      required: true,
-    },
-    {
-      key: "path",
-      label: "Save Path",
-      type: "text",
-      placeholder: "./downloads/report.pdf",
-      required: true,
-    },
-    {
-      key: "variableName",
-      label: "Capture Download Path (Variable Name)",
-      type: "text",
-      placeholder: "e.g. downloadPath",
-    },
-    {
-      key: "timeout",
-      label: "Timeout (ms)",
-      type: "number",
-      placeholder: "30000",
-    },
-  ],
-  submit_form: [
-    {
-      key: "selector",
-      label: "Form Selector",
-      type: "selector",
-      placeholder: "form#login",
-    },
-    {
-      key: "takeScreenshot",
-      label: "📸 Take Screenshot",
-      type: "checkbox",
-      defaultValue: true,
-    },
-  ],
-
-  // Code & DOM
-  execute_js: [
-    {
-      key: "script",
-      label: "JavaScript Script",
-      type: "textarea",
-      placeholder: "// Your script here\nreturn document.title;",
-      required: true,
-    },
-    {
-      key: "returnValue",
-      label: "Capture Result?",
-      type: "checkbox",
-    },
-    {
-      key: "variableName",
-      label: "Variable Name",
-      type: "text",
-      placeholder: "resultVariableName",
-      isVisible: (config) => config.returnValue === true,
-      required: true,
-    },
-    {
-      key: "args",
-      label: "Arguments (JSON)",
-      type: "text",
-      placeholder: '{"key": "value"}',
-    },
-  ],
-  get_set_content: [
-    {
-      key: "selector",
-      label: "Selector",
-      type: "selector",
-      placeholder: ".element",
-    },
-    {
-      key: "action",
-      label: "Action",
-      type: "select",
-      options: [
-        { label: "Get", value: "get" },
-        { label: "Set", value: "set" },
-      ],
-      required: true,
-    },
-    {
-      key: "contentType",
-      label: "Content Type",
-      type: "select",
-      options: [
-        { label: "Text", value: "text" },
-        { label: "HTML", value: "html" },
-        { label: "Value", value: "value" },
-        { label: "Attribute", value: "attribute" },
-      ],
-      required: true,
-    },
-    {
-      key: "attribute",
-      label: "Attribute Name",
-      type: "text",
-      placeholder: "href",
-      isVisible: (config) => config.contentType === "attribute",
-    },
-    {
-      key: "value",
-      label: "Value to Set",
-      type: "text",
-      placeholder: "New value...",
-      isVisible: (config) => config.action === "set",
-    },
-    {
-      key: "clearBeforeSet",
-      label: "Clear before setting",
-      type: "checkbox",
-      isVisible: (config) =>
-        config.action === "set" && config.contentType === "value",
-    },
-    {
-      key: "timeout",
-      label: "Timeout (ms)",
-      type: "number",
-      placeholder: "30000",
-    },
-    {
-      key: "takeScreenshot",
-      label: "📸 Take Screenshot",
-      type: "checkbox",
-      defaultValue: true,
-    },
-    {
-      key: "continueOnError",
-      label: "🛡️ Continue on failure (Soft Fail)",
-      type: "checkbox",
-      defaultValue: false,
-    },
-  ],
-  save_dom: [
-    {
-      key: "selector",
-      label: "Selector (Optional)",
-      type: "selector",
-      placeholder: "body",
-    },
-    {
-      key: "path",
-      label: "File Path",
-      type: "text",
-      placeholder: "page.html",
-    },
-    {
-      key: "variableName",
-      label: "Variable Name",
-      type: "text",
-      placeholder: "domContent",
-    },
-    {
-      key: "timeout",
-      label: "Timeout (ms)",
-      type: "number",
-      placeholder: "30000",
-    },
-    {
-      key: "takeScreenshot",
-      label: "📸 Take Screenshot",
-      type: "checkbox",
-      defaultValue: true,
-    },
-  ],
-  log_errors: [
-    {
-      key: "enable",
-      label: "Enable Console Logging",
-      type: "checkbox",
-      defaultValue: true,
-    },
-    {
-      key: "logToFile",
-      label: "Log to File",
-      type: "checkbox",
-      defaultValue: false,
-    },
-    {
-      key: "filePath",
-      label: "Log File Path (Optional)",
-      type: "text",
-      placeholder: "logs/browser_errors.log",
-      isVisible: (config) => config.logToFile,
-    },
-  ],
-  listen_events: [
-    {
-      key: "eventType",
-      label: "Event Type",
-      type: "select",
-      options: [
-        { label: "Click", value: "click" },
-        { label: "Input / Typed", value: "input" },
-        { label: "Change", value: "change" },
-        { label: "Submit", value: "submit" },
-        { label: "Dialog (Alert/Confirm)", value: "dialog" },
-        { label: "Network Request", value: "request" },
-        { label: "Network Response", value: "response" },
-        { label: "Console Message", value: "console" },
-      ],
-      required: true,
-    },
-    {
-      key: "selector",
-      label: "Selector (Optional for DOM events)",
-      type: "selector",
-      placeholder: ".btn-to-watch",
-      isVisible: (config) =>
-        config &&
-        ["click", "input", "change", "submit"].includes(config.eventType),
-    },
-    {
-      key: "urlPattern",
-      label: "URL Pattern (Glob/Regex)",
-      type: "text",
-      placeholder: "**/api/v1/*",
-      isVisible: (config) =>
-        config && ["request", "response"].includes(config.eventType),
-    },
-    {
-      key: "method",
-      label: "HTTP Method",
-      type: "select",
-      options: [
-        { label: "All", value: "" },
-        { label: "GET", value: "GET" },
-        { label: "POST", value: "POST" },
-        { label: "PUT", value: "PUT" },
-        { label: "DELETE", value: "DELETE" },
-      ],
-      isVisible: (config) => ["request", "response"].includes(config.eventType),
-    },
-    {
-      key: "timeout",
-      label: "Listening Timeout (ms, 0 = indefinite)",
-      type: "number",
-      placeholder: "0",
-    },
-    {
-      key: "logToFile",
-      label: "Log to File",
-      type: "checkbox",
-      defaultValue: false,
-    },
-    {
-      key: "filePath",
-      label: "Log File Path",
-      type: "text",
-      placeholder: "logs/events.jsonl",
-      isVisible: (config) => config.logToFile,
-      required: true,
-    },
-  ],
-
-  // AI
-  // ⚠️ These are the ONLY node types that produce AI result data for the Result panel.
-  call_llm: [
-    {
-      key: "prompt",
-      label: "Prompt",
-      type: "textarea",
-      placeholder: "IA Instruction...",
-    },
-    {
-      key: "system",
-      label: "System Prompt",
-      type: "textarea",
-      placeholder: "Optional: System behavior",
-    },
-    {
-      key: "variableName",
-      label: "Variable Name",
-      type: "text",
-      defaultValue: "llmResult",
-    },
-    {
-      key: "maxTokens",
-      label: "Token Limit",
-      type: "number",
-      defaultValue: 2048,
-    },
-  ],
-  generate_data: [
-    {
-      key: "description",
-      label: "Data Description",
-      type: "textarea",
-      placeholder:
-        "Describe the structured data you want to generate (e.g., 'Generate 5 users').",
-    },
-    {
-      key: "expectedFormat",
-      label: "Format",
-      type: "select",
-      options: [
-        { label: "JSON", value: "json" },
-        { label: "CSV", value: "csv" },
-        { label: "Text", value: "text" },
-      ],
-      default: "json",
-    },
-    {
-      key: "count",
-      label: "Quantity",
-      type: "number",
-      defaultValue: 1,
-    },
-    {
-      key: "variableName",
-      label: "Output Variable",
-      type: "text",
-      defaultValue: "generatedData",
-    },
-    {
-      key: "maxTokens",
-      label: "Token Limit",
-      type: "number",
-      defaultValue: 2048,
-      placeholder: "2048",
-    },
-  ],
-  validate_semantic: [
-    {
-      key: "sourceTextVariable",
-      label: "Source Text Variable",
-      type: "text",
-      placeholder: "${myText}",
-    },
-    {
-      key: "validationPrompt",
-      label: "Validation Prompt",
-      type: "textarea",
-      placeholder: "Does the text contain grammatical errors?",
-    },
-    {
-      key: "expectedAnswer",
-      label: "Expected Answer",
-      type: "text",
-      placeholder: "true / false",
-    },
-    {
-      key: "variableName",
-      label: "Variable Name",
-      type: "text",
-      defaultValue: "semanticValid",
-    },
-    {
-      key: "maxTokens",
-      label: "Token Limit",
-      type: "number",
-      defaultValue: 2048,
-    },
-  ],
-
-  extract_dom_context: [
-    {
-      key: "selector",
-      label: "Selector (Optional)",
-      type: "selector",
-      placeholder: "e.g. #content or .article-body",
-    },
-    {
-      key: "extractionType",
-      label: "Extraction Type",
-      type: "select",
-      options: [
-        { label: "Text Only", value: "text" },
-        { label: "Full HTML", value: "html" },
-        { label: "Markdown", value: "markdown" },
-      ],
-      default: "text",
-    },
-    {
-      key: "variableName",
-      label: "Variable Name",
-      type: "text",
-      defaultValue: "domContext",
-    },
-    {
-      key: "maxTokens",
-      label: "Token Limit",
-      type: "number",
-      defaultValue: 2048,
-    },
-  ],
-  chain_of_thought: [
-    {
-      key: "instruction",
-      label: "Instruction / Question",
-      type: "textarea",
-      placeholder: "Describe the complex task the IA should reason about...",
-    },
-    {
-      key: "thoughtVariable",
-      label: "Thought Variable",
-      type: "text",
-      defaultValue: "aiThought",
-    },
-    {
-      key: "answerVariable",
-      label: "Final Answer Variable",
-      type: "text",
-      defaultValue: "aiAnswer",
-    },
-    {
-      key: "maxTokens",
-      label: "Token Limit",
-      type: "number",
-      defaultValue: 2048,
-    },
-  ],
-  smart_selector: [
-    {
-      key: "originalSelector",
-      label: "Original Selector (Failed)",
-      type: "selector",
-      placeholder: "e.g. button#submit",
-    },
-    {
-      key: "intent",
-      label: "Intent / Goal",
-      type: "text",
-      placeholder: "e.g. Click on the login button",
-    },
-    {
-      key: "variableName",
-      label: "Variable Name",
-      type: "text",
-      defaultValue: "suggestedSelector",
-    },
-    {
-      key: "maxTokens",
-      label: "Token Limit",
-      type: "number",
-      defaultValue: 2048,
-    },
-  ],
-
-  // Sync (Extended)
-  wait_navigation: [
-    {
-      key: "url",
-      label: "Target URL / Pattern (Optional)",
-      type: "text",
-      placeholder: "**/success",
-    },
-    {
-      key: "waitUntil",
-      label: "Wait Until",
-      type: "select",
-      options: [
-        { label: "Load", value: "load" },
-        { label: "DOM Content Loaded", value: "domcontentloaded" },
-        { label: "Network Idle", value: "networkidle" },
-      ],
-      required: true,
-    },
-    {
-      key: "timeout",
-      label: "Timeout (ms)",
-      type: "number",
-      default: 30000,
-    },
-  ],
-  wait_network: [
-    {
-      key: "idleTime",
-      label: "Idle Time (ms)",
-      type: "number",
-      placeholder: "500",
-    },
-  ],
-  wait_conditional: [
-    {
-      key: "waitType",
-      label: "Wait For",
-      type: "select",
-      options: [
-        { label: "🌐 Browser Expression (JS)", value: "browser" },
-        { label: "🧠 Variable Condition", value: "variable" },
-      ],
-      default: "browser",
-    },
-    {
-      key: "expression",
-      label: "Condition (JS or JSON)",
-      type: "textarea",
-      placeholder:
-        'browser: window.ready === true\nvariable: {"left": "${status}", "operator": "===", "right": "complete"}',
-      required: true,
-    },
-    {
-      key: "timeout",
-      label: "Timeout (ms)",
-      type: "number",
-      default: 30000,
-    },
-    {
-      key: "polling",
-      label: "Polling Interval (ms)",
-      type: "number",
-      default: 100,
-      isVisible: (data) => data.waitType === "browser",
-    },
-  ],
-
-  // Network
-  // Network Consolidated
-  configure_route: [
-    {
-      key: "urlPattern",
-      label: "URL Pattern",
-      type: "text",
-      placeholder: "**/api/*",
-      required: true,
-    },
-    {
-      key: "routeAction",
-      label: "Action",
-      type: "select",
-      options: [
-        { label: "Block Request (Abort)", value: "abort" },
-        { label: "Mock Response", value: "mock" },
-        { label: "Modify Headers", value: "modify_headers" },
-        { label: "Log Only", value: "log" },
-      ],
-      default: "abort",
-      required: true,
-    },
-    {
-      key: "method",
-      label: "Method Filter (Optional)",
-      type: "select",
-      options: [
-        { label: "Any", value: "ALL" },
-        { label: "GET", value: "GET" },
-        { label: "POST", value: "POST" },
-        { label: "PUT", value: "PUT" },
-        { label: "DELETE", value: "DELETE" },
-      ],
-    },
-    {
-      key: "statusCode",
-      label: "Mock Status",
-      type: "number",
-      default: 200,
-      isVisible: (data) => data.routeAction === "mock",
-    },
-    {
-      key: "responseBody",
-      label: "Mock Body (JSON/Text)",
-      type: "textarea",
-      placeholder: '{"success": true}',
-      isVisible: (data) => data.routeAction === "mock",
-    },
-    {
-      key: "headers",
-      label: "Headers (JSON)",
-      type: "textarea",
-      placeholder: '{"Content-Type": "application/json"}',
-      isVisible: (data) =>
-        data.routeAction === "mock" || data.routeAction === "modify_headers",
-    },
-  ],
-
-  wait_network_match: [
-    {
-      key: "urlPattern",
-      label: "URL Pattern",
-      type: "text",
-      placeholder: "**/api/success",
-      required: true,
-    },
-    {
-      key: "type",
-      label: "Wait For",
-      type: "select",
-      options: [
-        { label: "Response (Complete)", value: "response" },
-        { label: "Request (Sent)", value: "request" },
-      ],
-      default: "response",
-    },
-    {
-      key: "method",
-      label: "Method Filter (Optional)",
-      type: "select",
-      options: [
-        { label: "Any", value: "ALL" },
-        { label: "GET", value: "GET" },
-        { label: "POST", value: "POST" },
-        { label: "PUT", value: "PUT" },
-        { label: "DELETE", value: "DELETE" },
-      ],
-    },
-    {
-      key: "statusCode",
-      label: "Expected Status",
-      type: "number",
-      placeholder: "e.g. 200",
-      isVisible: (data) => data.type === "response",
-    },
-    {
-      key: "timeout",
-      label: "Timeout (ms)",
-      type: "number",
-      default: 30000,
-    },
-  ],
-
-  manage_session: [
-    {
-      key: "target",
-      label: "Target",
-      type: "select",
-      options: [
-        { label: "Cookie", value: "cookie" },
-        { label: "Local Storage", value: "local_storage" },
-        { label: "Session Storage", value: "session_storage" },
-        { label: "HTTP Header", value: "header" },
-        { label: "Query Param", value: "query" },
-      ],
-      default: "cookie",
-      required: true,
-    },
-    {
-      key: "action",
-      label: "Action",
-      type: "select",
-      options: [
-        { label: "Get", value: "get" },
-        { label: "Set", value: "set" },
-        { label: "Delete", value: "delete" },
-        { label: "Clear All", value: "clear" },
-      ],
-      default: "get",
-      required: true,
-    },
-    {
-      key: "key",
-      label: "Key / Name",
-      type: "text",
-      placeholder: "e.g. auth_token",
-      isVisible: (data) =>
-        data && ["get", "set", "delete"].includes(data.action),
-      required: true,
-    },
-    {
-      key: "value",
-      label: "Value",
-      type: "textarea",
-      placeholder: "Enter value or {{variable}}",
-      isVisible: (data) => data.action === "set",
-      required: true,
-    },
-    {
-      key: "variableName",
-      label: "Save to Variable",
-      type: "text",
-      placeholder: "e.g. my_token",
-      isVisible: (data) => data.action === "get",
-      required: true,
-    },
-  ],
-
-  set_network_conditions: [
-    {
-      key: "profile",
-      label: "Throttling Profile",
-      type: "select",
-      options: [
-        { label: "No throttling", value: "No throttling" },
-        { label: "WiFi fast", value: "WiFi fast" },
-        { label: "WiFi slow", value: "WiFi slow" },
-        { label: "4G", value: "4G" },
-        { label: "Fast 3G", value: "Fast 3G" },
-        { label: "Slow 3G", value: "Slow 3G" },
-        { label: "2G", value: "2G" },
-        { label: "High Latency", value: "High Latency" },
-        { label: "Custom", value: "Custom" },
-        { label: "Offline", value: "Offline" },
-      ],
-      default: "No throttling",
-      required: true,
-    },
-    {
-      key: "offline",
-      label: "Offline Mode",
-      type: "checkbox",
-      isVisible: (data) => data.profile === "Custom",
-    },
-    {
-      key: "latency",
-      label: "Latency (ms)",
-      type: "number",
-      placeholder: "e.g. 150",
-      isVisible: (data) => data.profile === "Custom",
-    },
-    {
-      key: "downloadThroughput",
-      label: "Download (Kbps)",
-      type: "number",
-      placeholder: "e.g. 1600",
-      isVisible: (data) => data.profile === "Custom",
-    },
-    {
-      key: "uploadThroughput",
-      label: "Upload (Kbps)",
-      type: "number",
-      placeholder: "e.g. 750",
-      isVisible: (data) => data.profile === "Custom",
-    },
-  ],
-
-  variable: [
-    {
-      key: "operation",
-      label: "Operation",
-      type: "select",
-      options: [
-        { value: "set", label: "Set" },
-        { value: "get", label: "Get" },
-        { value: "increment", label: "Increment" },
-        { value: "push", label: "Push" },
-      ],
-      default: "set",
-      required: true,
-    },
-    {
-      key: "name",
-      label: "Variable Name",
-      type: "text",
-      placeholder: "counter",
-      required: true,
-    },
-    {
-      key: "value",
-      label: "Value",
-      type: "textarea",
-      placeholder: "42 or [1,2,3]",
-      isVisible: (data) =>
-        data && ["set", "increment", "push"].includes(data.operation),
-    },
-    {
-      key: "scope",
-      label: "Scope",
-      type: "select",
-      options: [
-        { value: "flow", label: "Flow" },
-        { value: "global", label: "Global" },
-      ],
-      default: "flow",
-      required: true,
-    },
-  ],
-
-  conditional: [
-    {
-      key: "debugMode",
-      label: "🛡️ Enable Debug Logs (Tracing)",
-      type: "checkbox",
-      defaultValue: false,
-    },
-    {
-      key: "branches",
-      label: "Branches",
-      type: "conditional_branches",
-      required: true,
-    },
-    {
-      key: "fallbackPath",
-      label: "Fallback Destination ID",
-      type: "text",
-      placeholder: "false",
-      default: "false",
-      required: false,
-    },
-  ],
-
-  switch: [
-    {
-      key: "variableName",
-      label: "Variable to Evaluate",
-      type: "text",
-      placeholder: "status",
-      required: true,
-    },
-    {
-      key: "cases",
-      label: "Switch Cases",
-      type: "switch_cases",
-      required: true,
-    },
-    {
-      key: "scope",
-      label: "Variable Scope",
-      type: "select",
-      options: [
-        { value: "flow", label: "Flow" },
-        { value: "global", label: "Global" },
-      ],
-      default: "flow",
-    },
-  ],
-
-  loop: [
-    {
-      key: "mode",
-      label: "Loop Mode",
-      type: "select",
-      options: [
-        { value: "count", label: "Fixed Count (Repetir N veces)" },
-        { value: "while", label: "While Condition (Mientras se cumpla)" },
-        { value: "forEach", label: "ForEach Item (Para cada elemento)" },
-      ],
-      default: "count",
-      required: true,
-    },
-    {
-      key: "iterations",
-      label: "Iterations",
-      type: "number",
-      placeholder: "10",
-      isVisible: (data) => data.mode === "count",
-    },
-    {
-      key: "condition",
-      label: "While Condition",
-      type: "textarea",
-      placeholder: "${counter} < 100",
-      isVisible: (data) => data.mode === "while",
-    },
-    {
-      key: "array",
-      label: "Array Variable",
-      type: "text",
-      placeholder: "${items}",
-      isVisible: (data) => data.mode === "forEach",
-    },
-    {
-      key: "itemVar",
-      label: "Item Var Name",
-      type: "text",
-      placeholder: "currentItem",
-      isVisible: (data) => data.mode === "forEach",
-    },
-    {
-      key: "maxIterations",
-      label: "Max Iterations",
-      type: "number",
-      default: 1000,
-    },
-  ],
-
-  branch: [
-    {
-      key: "mode",
-      label: "Execution Mode",
-      type: "select",
-      options: [
-        { value: "parallel", label: "Parallel" },
-        { value: "sequential", label: "Sequential" },
-        { value: "race", label: "Race" },
-      ],
-      default: "sequential",
-      required: true,
-      hint: "branch_mode",
-    },
-    {
-      key: "timeout",
-      label: "Timeout (ms)",
-      type: "number",
-      default: 30000,
-    },
-  ],
-
-  flow_control: [
-    {
-      key: "action",
-      label: "Control Action",
-      type: "select",
-      options: [
-        { value: "break", label: "Break" },
-        { value: "continue", label: "Continue" },
-        { value: "return", label: "Return" },
-      ],
-      required: true,
-      hint: "flow_control_action",
-    },
-    {
-      key: "returnValue",
-      label: "Return Value (JSON)",
-      type: "textarea",
-      placeholder: '{"status": "success"}',
-      isVisible: (data) => data.action === "return",
-    },
-  ],
-
-  transform: [
-    {
-      key: "operation",
-      label: "Transform Operation",
-      type: "select",
-      options: [
-        { value: "map", label: "Map" },
-        { value: "filter", label: "Filter" },
-        { value: "reduce", label: "Reduce" },
-        { value: "merge", label: "Merge" },
-      ],
-      default: "map",
-      required: true,
-      hint: "transform_logic",
-    },
-    {
-      key: "input",
-      label: "Input Array",
-      type: "text",
-      placeholder: "${items}",
-      required: true,
-    },
-    {
-      key: "expression",
-      label: "Expression",
-      type: "textarea",
-      placeholder: "item.price * 1.1",
-      isVisible: (data) =>
-        data && ["map", "filter", "reduce"].includes(data.operation),
-    },
-    {
-      key: "mergeWith",
-      label: "Merge With Array",
-      type: "text",
-      placeholder: "${otherItems}",
-      isVisible: (data) => data.operation === "merge",
-    },
-    {
-      key: "outputVar",
-      label: "Output Variable",
-      type: "text",
-      placeholder: "processedItems",
-      required: true,
-    },
-  ],
-
-  cli_params: [
-    {
-      key: "paramName",
-      label: "Parameter Name",
-      type: "text",
-      placeholder: "--targetEnv",
-      required: true,
-    },
-    {
-      key: "paramType",
-      label: "Parameter Type",
-      type: "select",
-      options: [
-        { label: "string", value: "string" },
-        { label: "number", value: "number" },
-        { label: "boolean", value: "boolean" },
-        { label: "json", value: "json" },
-      ],
-      default: "string",
-    },
-    {
-      key: "defaultValue",
-      label: "Default Value",
-      type: "text",
-      placeholder: "default_value",
-    },
-    {
-      key: "required",
-      label: "Required",
-      type: "checkbox",
-      default: true,
-    },
-    {
-      key: "validationCode",
-      label: "Validation Code (JS)",
-      type: "textarea",
-      placeholder: "if (value !== 'dev') throw new Error('invalid');",
-    },
-  ],
-
-  return_code: [
-    {
-      key: "successField",
-      label: "Success Field",
-      type: "text",
-      placeholder: "success",
-      required: true,
-    },
-    {
-      key: "exitOnFail",
-      label: "Exit on Failure",
-      type: "checkbox",
-      default: true,
-    },
-    {
-      key: "customCodes",
-      label: "Custom Codes (JSON)",
-      type: "textarea",
-      placeholder: '{ "success": 0, "failed": 1 }',
-    },
-    {
-      key: "verbose",
-      label: "Verbose Logs",
-      type: "checkbox",
-      default: true,
-    },
-  ],
-
-  integrate_ci: [
-    {
-      key: "provider",
-      label: "CI Provider",
-      type: "select",
-      options: [
-        { label: "GitLab", value: "gitlab" },
-        { label: "GitHub", value: "github" },
-        { label: "Jenkins", value: "jenkins" },
-        { label: "Bitbucket", value: "bitbucket" },
-      ],
-      default: "gitlab",
-      required: true,
-    },
-    {
-      key: "saveArtifacts",
-      label: "Save Artifacts",
-      type: "checkbox",
-      default: true,
-    },
-    {
-      key: "outputPath",
-      label: "Output Path",
-      type: "text",
-      placeholder: "gitlab-artifacts",
-    },
-    {
-      key: "uploadReports",
-      label: "Upload Reports",
-      type: "checkbox",
-      default: false,
-    },
-    {
-      key: "envVariables",
-      label: "Env Variables (JSON)",
-      type: "textarea",
-      placeholder: '{ "VAR": "value" }',
-    },
-    {
-      key: "retryOnFail",
-      label: "Retry on Failure",
-      type: "number",
-      placeholder: "0",
-    },
-    {
-      key: "verbose",
-      label: "Verbose Logs",
-      type: "checkbox",
-      default: true,
-    },
-  ],
-
-  run_tests: [
-    {
-      key: "testSuite",
-      label: "Test Suite Path",
-      type: "text",
-      placeholder: "tests/",
-      required: true,
-    },
-    {
-      key: "parallel",
-      label: "Run Parallel",
-      type: "checkbox",
-      default: true,
-    },
-    {
-      key: "retries",
-      label: "Retries",
-      type: "number",
-      placeholder: "0",
-    },
-    {
-      key: "reportFormat",
-      label: "Report Format",
-      type: "select",
-      options: [
-        { label: "JUnit", value: "junit" },
-        { label: "HTML", value: "html" },
-        { label: "JSON", value: "json" },
-      ],
-      default: "junit",
-    },
-    {
-      key: "timeout",
-      label: "Timeout (ms)",
-      type: "number",
-      placeholder: "900000",
-    },
-  ],
-
-  component: [
-    {
-      key: "flowId",
-      label: "Subflow to Execute",
-      type: "text",
-      placeholder: "Enter Flow ID",
-      required: true,
-      hint: "component_flow_id",
-    },
-    {
-      key: "inputMapping",
-      label: "Input Mapping (Parent -> Child)",
-      type: "mapping",
-      placeholder: "Map variables to subflow",
-    },
-    {
-      key: "outputMapping",
-      label: "Output Mapping (Child -> Parent)",
-      type: "mapping",
-      placeholder: "Map results back to parent",
-    },
-  ],
-
-  input: [
-    {
-      key: "name",
-      label: "Parameter Name",
-      type: "text",
-      placeholder: "my_param",
-    },
-    {
-      key: "defaultValue",
-      label: "Default Value",
-      type: "text",
-      placeholder: "fallback_value",
-    },
-  ],
-
-  output: [
-    {
-      key: "name",
-      label: "Output Name",
-      type: "text",
-      placeholder: "result_key",
-    },
-    {
-      key: "value",
-      label: "Value to Return",
-      type: "text",
-      placeholder: "${local_var}",
-    },
-  ],
-
-  // Default fallback
-  default: [
-    {
-      key: "selector",
-      label: "Selector",
-      type: "selector",
-      placeholder: "Enter selector...",
-    },
-  ],
-};
+// --- CONFIGURATION SCHEMA MOVED TO @/config/validationRules ---
 
 function NodeConfigurationPanel({
   isVisible,
@@ -2911,7 +1106,6 @@ function NodeConfigurationPanel({
     if (isEntryNode && viewStack.length > 0 && currentProject) {
       const lastView = viewStack[viewStack.length - 1];
       if (lastView.nodeId) {
-        // Find the parent flow's component node
         const parentFlow = currentProject.flows?.find(
           (f) => f.id === lastView.id,
         );
@@ -2920,7 +1114,6 @@ function NodeConfigurationPanel({
             (n) => n.nodeId === lastView.nodeId || n.id === lastView.nodeId,
           );
           if (parentComponentNode) {
-            // Check if it's already in the list (unlikely as it's from another flow)
             if (!prev.some((n) => n.id === parentComponentNode.id)) {
               const nodeLabel =
                 parentComponentNode.data?.customLabel ||
@@ -2934,7 +1127,7 @@ function NodeConfigurationPanel({
 
               prev.push({
                 ...parentComponentNode,
-                id: parentComponentNode.nodeId || parentComponentNode.id, // Ensure consistent ID
+                id: parentComponentNode.nodeId || parentComponentNode.id,
                 data: {
                   ...parentComponentNode.data,
                   label: parentComponentNode.data?.label || "Component Input",
@@ -2959,7 +1152,6 @@ function NodeConfigurationPanel({
     return { precedingNodes: prev, nextNodes: next };
   }, [activeNode, edges, nodes, viewStack, currentProject, liveVariables]);
 
-  // --- COMPOSITION STATS RESOLUTION ---
   const resolvedStats = useMemo(() => {
     if (!activeNode || !currentProject)
       return { nodeCount: 0, hasInput: false, hasOutput: false };
@@ -2972,12 +1164,10 @@ function NodeConfigurationPanel({
 
     const flowId = activeNode.data?.flowId;
 
-    // Find the actual subflow in the project (if flowId exists)
     const subFlow = flowId
       ? currentProject.flows?.find((f) => f.id === flowId)
       : null;
 
-    // Prioritize "live" data directly on the node (crucial for editing and starter flows)
     const localNodes = activeNode.data?.subFlow?.nodes;
     const localNodeCount = activeNode.data?.nodeCount;
 
@@ -3000,20 +1190,6 @@ function NodeConfigurationPanel({
           activeNode.data?.hasOutput ??
           false);
 
-    // Debug: Log the resolution process to help identify data drift issues
-    if (activeNode.data?.subFlow || subFlow) {
-      console.debug("[NodeConfig] Resolving Composition Stats for:", {
-        nodeId: activeNode.id,
-        flowId,
-        strategy: localNodes
-          ? "local_nodes"
-          : subFlow
-            ? "project_flow"
-            : "local_count",
-        nodeCount,
-      });
-    }
-
     return {
       nodeCount: Number.isFinite(nodeCount) ? nodeCount : 0,
       hasInput,
@@ -3021,14 +1197,11 @@ function NodeConfigurationPanel({
     };
   }, [activeNode, currentProject]);
 
-  // Utility to safely stringify and truncate large results for preview
   const truncateResult = useCallback((result, maxLen = 1000) => {
     if (!result) return "";
     try {
       const str =
-        typeof result === "object"
-          ? JSON.stringify(result) // No indentation for preview
-          : String(result);
+        typeof result === "object" ? JSON.stringify(result) : String(result);
       if (str.length > maxLen) {
         return str.substring(0, maxLen) + "... (truncated)";
       }
@@ -3039,17 +1212,15 @@ function NodeConfigurationPanel({
     }
   }, []);
 
-  // Local state for immediate performance (fix typing lag)
   const [localConfig, setLocalConfig] = React.useState(
     activeNode?.data?.configuration || {},
   );
-  // HEADER RENAMING STATE
   const [localLabel, setLocalLabel] = React.useState(
     activeNode?.data?.customLabel || activeNode?.data?.label || "",
   );
 
-  const [lightboxUrl, setLightboxUrl] = useState(null); // Lightbox modal state
-  const [inspectedData, setInspectedData] = useState(null); // Full data view state
+  const [lightboxUrl, setLightboxUrl] = useState(null);
+  const [inspectedData, setInspectedData] = useState(null);
   const lastSyncedConfigRef = React.useRef({
     config: activeNode?.data?.configuration || {},
     nodeId: activeNode?.id,
@@ -3057,18 +1228,14 @@ function NodeConfigurationPanel({
   });
   const updateTimeoutRef = React.useRef(null);
 
-  // Sync LOCAL <-> GLOBAL
-  // Optimized for Element Picker: Ensures picked values are reflected even if local state exists.
   React.useEffect(() => {
     if (!activeNode) return;
 
     const globalConfig = activeNode?.data?.configuration || {};
     const nodeState = activeNode?.data?.state;
 
-    // A. Detect Node Switch -> Force reset
     const hasNodeChanged = activeNode.id !== lastSyncedConfigRef.current.nodeId;
 
-    // B. Detect Pick Completion (Captured State change from Picking -> Default/Success)
     const justFinishedPicking =
       nodeState !== "picking" &&
       lastSyncedConfigRef.current.nodeState === "picking";
@@ -3080,18 +1247,16 @@ function NodeConfigurationPanel({
       ? JSON.stringify(lastSyncedConfigRef.current.config)
       : "{}";
 
-    // DRIFT: Global is different from what we thought we synced.
-    // This happens if an external source (AI, Picker, Undo) changed the node data.
     const isExternalDrift = globalConfigStr !== lastConfigStr;
+    const isHealedChange =
+      globalConfig.healed && !lastSyncedConfigRef.current.config.healed;
 
-    if (hasNodeChanged || justFinishedPicking || isExternalDrift) {
-      console.log("[NodeConfig] 🔄 EXTERNAL SYNC TRIGGERED. Reason:", {
-        hasNodeChanged,
-        justFinishedPicking,
-        isExternalDrift,
-      });
-
-      // Prioritize external changes (AI, Picker) over local unsaved changes
+    if (
+      hasNodeChanged ||
+      justFinishedPicking ||
+      isExternalDrift ||
+      isHealedChange
+    ) {
       if (updateTimeoutRef.current) {
         clearTimeout(updateTimeoutRef.current);
       }
@@ -3109,18 +1274,7 @@ function NodeConfigurationPanel({
       return;
     }
 
-    // Always update state ref to catch the Picking -> Default transition next time
     lastSyncedConfigRef.current.nodeState = nodeState;
-
-    // Debug: Log what's in the active node configuration
-    console.log("[NodeConfig] 🔍 Active Node Config Check:", {
-      nodeId: activeNode?.id,
-      hasConfig: !!globalConfig,
-      configKeys: Object.keys(globalConfig),
-      selectorValue: globalConfig?.selector,
-      isExternalDrift,
-      justFinishedPicking,
-    });
   }, [
     activeNode,
     activeNode?.id,
@@ -3130,18 +1284,23 @@ function NodeConfigurationPanel({
     activeNode?.data?.state,
   ]);
 
-  // Helper to handle partial configuration updates safely
   const handleConfigUpdate = (key, value) => {
-    // 1. Update LOCAL state immediately (Instant Feedback)
-    console.log(`[NodeConfig] Updating ${key} to:`, value);
-    const newConfig = { ...localConfig, [key]: value };
+    let newConfig = { ...localConfig, [key]: value };
+
+    if (key === "selector" || key === "originalSelector") {
+      newConfig.healed = undefined;
+      newConfig.healedFrom = undefined;
+      newConfig.healedValue = undefined;
+      newConfig.originalValue = undefined;
+      newConfig.aiReasoning = undefined;
+      newConfig.healingConfidence = undefined;
+    }
+
     setLocalConfig(newConfig);
 
-    // 2. Debounce update to GLOBAL state (Performance)
     if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
 
     updateTimeoutRef.current = setTimeout(() => {
-      // Track what we are sending in the ref to avoid "echo" loop in useEffect
       lastSyncedConfigRef.current.config = newConfig;
 
       if (activeNode) {
@@ -3150,10 +1309,9 @@ function NodeConfigurationPanel({
           ...newConfig,
         });
       }
-    }, 200); // Reduced to 200ms for snappier feel and to reduce race window
+    }, 200);
   };
 
-  // Helper to render node execution results (emitted data)
   const renderEmittedData = () => {
     const result = activeNode.data?.result;
     if (!result) {
@@ -3209,22 +1367,18 @@ function NodeConfigurationPanel({
     );
   };
 
-  // AI AUTO-HEAL HANDLER
   const handleAutoHeal = async (failedSelector) => {
-    // 1. Create an AbortController specifically for the AI request
     const aiAbortController = new AbortController();
 
-    // 2. Clear previous toast if any
     toast.dismiss("ai-heal-toast");
 
-    // 3. Show Loading Toast with Abort Button
     toast.loading(
       <div className="flex flex-col gap-1">
         <span className="font-semibold text-xs text-amber-500">
           AI Repair Mode (Ollama/Gemma 3) 🧠
         </span>
         <span className="text-[10px] opacity-80 leading-tight">
-          Analyzing DOM context... This can take 1-2 mins on local machines.
+          Analyzing DOM context...
         </span>
       </div>,
       {
@@ -3242,7 +1396,6 @@ function NodeConfigurationPanel({
     );
 
     try {
-      console.log(`[AI-Fix] Requesting heal for selector: ${failedSelector}`);
       const data = await api.post(
         "/ai/heal-selector",
         {
@@ -3258,10 +1411,7 @@ function NodeConfigurationPanel({
         },
       );
 
-      console.log(`[AI-Fix] Response received:`, data);
-
       if (data && data.suggestion) {
-        // Correctly identify field to update (Smart Selector uses originalSelector)
         const targetField =
           activeNode.data?.type === "smart_selector"
             ? "originalSelector"
@@ -3283,14 +1433,12 @@ function NodeConfigurationPanel({
     }
   };
 
-  // --- VALIDATION LOGIC (Moved Up) ---
   const validationErrors = useMemo(() => {
     const errors = {};
-    const inputs = definedInputs || []; // Safety check
+    const inputs = definedInputs || [];
     inputs.forEach((field) => {
       const value = localConfig[field.key];
 
-      // 1. Required Check
       if (
         field.required &&
         (value === undefined || value === "" || value === null)
@@ -3299,12 +1447,9 @@ function NodeConfigurationPanel({
         return;
       }
 
-      // Skip if empty and not required
       if (!value && value !== 0 && !field.required) return;
 
-      // 2. Numeric Check
       if (field.type === "number") {
-        // Allow variables {{...}}
         if (typeof value === "string" && value.trim().startsWith("{{")) return;
 
         const num = Number(value);
@@ -3320,10 +1465,8 @@ function NodeConfigurationPanel({
 
   const hasErrors = Object.keys(validationErrors).length > 0;
 
-  // Cleanup
   React.useEffect(() => () => clearTimeout(updateTimeoutRef.current), []);
 
-  // Determine screenshot URL for nodes that produce captures (used for evidence preview)
   const nodeScreenshotUrl =
     activeNode?.data?.replayData?.screenshot_path ||
     activeNode?.data?.result?.screenshot ||
@@ -3331,15 +1474,12 @@ function NodeConfigurationPanel({
     activeNode?.data?.screenshots?.after?.path ||
     null;
 
-  // Prepare dynamic variables map for VariableInput
   const variablesMap = React.useMemo(() => {
     const map = {};
 
-    // 1. Merge live variables from backend (highest priority - actual execution results)
     if (liveVariables && typeof liveVariables === "object") {
       Object.entries(liveVariables).forEach(([key, val]) => {
         map[key] = val;
-        // Also provide a version without .result for easier access in the UI
         if (key.endsWith(".result")) {
           const baseKey = key.replace(".result", "");
           if (!(baseKey in map)) {
@@ -3349,11 +1489,9 @@ function NodeConfigurationPanel({
       });
     }
 
-    // 2. Merge from preceding nodes (fallback for pre-execution state)
     if (precedingNodes) {
       precedingNodes.forEach((pn) => {
         if (pn.data?.result !== undefined) {
-          // Only set if not already provided by liveVariables
           if (!(`${pn.id}.result` in map)) {
             map[`${pn.id}.result`] = pn.data.result;
           }
@@ -3374,7 +1512,6 @@ function NodeConfigurationPanel({
     return map;
   }, [precedingNodes, liveVariables]);
 
-  // Filtered variables for Conditional Node selection (Context-aware)
   const contextualVariablesMap = React.useMemo(() => {
     const map = {};
     if (!precedingNodes || precedingNodes.length === 0) return map;
@@ -3387,7 +1524,6 @@ function NodeConfigurationPanel({
       }
     });
 
-    // Include global variables as a standard source
     if (liveVariables?.global) {
       map["global"] = liveVariables.global;
     }
@@ -3421,7 +1557,6 @@ function NodeConfigurationPanel({
     );
   }
 
-  // CRITICAL FIX: Stop event propagation to prevent ReactFlow from stealing focus
   const stopPropagation = (e) => {
     e.stopPropagation();
     e.nativeEvent.stopImmediatePropagation?.();
@@ -3429,13 +1564,11 @@ function NodeConfigurationPanel({
 
   const colorKey = safeConfig.color;
 
-  // Placeholder helpers
   const aiConfig = JSON.parse(localStorage.getItem("hal_ai_config") || "{}");
   const globalModel = aiConfig.selectedModel || "gemma3";
   const globalProvider = aiConfig.activeProvider || "ollama";
 
   const renderInput = (field, index = 0) => {
-    // Read from LOCAL state for performance
     const dataKey = field.key || field.name;
     const reactKey = dataKey || `field-${index}`;
     const value = localConfig[dataKey] ?? "";
@@ -3529,10 +1662,6 @@ function NodeConfigurationPanel({
           </div>
         );
       case "checkbox": {
-        // ... (existing checkbox logic kept largely same, simplified for clarity here) ...
-        // Special handling for takeScreenshot: show inline preview if available
-        // Special handling for takeScreenshot: show inline preview if available
-        // PRIORITIZATION: 1. Historical Replay Data 2. Live Result 3. Legacy
         const screenshotUrl =
           activeNode.data?.replayData?.screenshot_path ||
           activeNode.data?.result?.screenshot ||
@@ -3555,7 +1684,6 @@ function NodeConfigurationPanel({
               </span>
             </label>
 
-            {/* EVIDENCE CARD (Abstracted) */}
             {hasScreenshot && (
               <EvidenceCard
                 screenshotUrl={screenshotUrl}
@@ -3564,7 +1692,7 @@ function NodeConfigurationPanel({
                   activeNode.data?.result?.durationMs ||
                   activeNode.data?.result?.duration
                 }
-                timestamp={Date.now()} // Auto-cache bust handled by EvidenceCard
+                timestamp={Date.now()}
               />
             )}
           </div>
@@ -3603,7 +1731,6 @@ function NodeConfigurationPanel({
             <label className="text-[10px] uppercase tracking-wider font-semibold text-slate-500 ml-1 flex items-center justify-between">
               {t(`nodes.fields.${dataKey}`, field.label)}
               <div className="flex items-center gap-2">
-                {/* AI FIX BUTTON */}
                 {(activeNode?.data?.state === "error" ||
                   activeNode?.data?.error ||
                   activeNode?.data?.lastError) && (
@@ -3616,7 +1743,6 @@ function NodeConfigurationPanel({
                     <span>Fix</span>
                   </button>
                 )}
-                {/* AI INDICATORS */}
                 <div className="flex items-center gap-1.5">
                   {activeNode?.data?.configuration?.healed && (
                     <span
@@ -3651,17 +1777,11 @@ function NodeConfigurationPanel({
                   type="button"
                   onClick={() => {
                     if (activeNode?.data?.state === "picking") {
-                      console.log("[NodeConfig] User clicked CANCEL picking");
                       onCancelPick && onCancelPick();
                     } else {
-                      console.log(
-                        "[NodeConfig] User clicked START picking for field:",
-                        field.key,
-                      );
                       onStartPick && onStartPick(field.key);
                     }
                   }}
-                  // Enabled even if picking, to allow cancel
                   disabled={false}
                   className={cn(
                     "flex items-center gap-1 px-1.5 py-0.5 rounded transition-colors border text-[10px]",
@@ -3689,7 +1809,6 @@ function NodeConfigurationPanel({
               </div>
             </label>
 
-            {/* AI HEALED ALERT & DIFF */}
             {activeNode?.data?.configuration?.healed && (
               <Motion.div
                 initial={{ opacity: 0, y: -5 }}
@@ -3757,7 +1876,6 @@ function NodeConfigurationPanel({
               />
             </div>
 
-            {/* Warning Patch for WEB Demo (Phase 3: Resolved) */}
             <div
               className={cn(
                 "mt-1 flex items-start gap-1.5 p-2 rounded border text-[10px] leading-tight max-w-[280px]",
@@ -3796,7 +1914,7 @@ function NodeConfigurationPanel({
             onChange={(newVal) => handleConfigUpdate(dataKey, newVal)}
           />
         );
-      default: // text
+      default:
         return (
           <div key={reactKey} className="space-y-1.5">
             <div className="flex justify-between items-center">
@@ -3867,7 +1985,6 @@ function NodeConfigurationPanel({
           </div>
         )}
 
-        {/* CURRENT NODE RESULT (Emitted Data) */}
         {activeNode.data?.result && (
           <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
             <div className="flex items-center gap-2 px-1">
@@ -3880,7 +1997,6 @@ function NodeConfigurationPanel({
           </div>
         )}
 
-        {/* PRECEDING NODES DATA (Visibility into flow values) */}
         {(precedingNodes.length > 0 || isConditional) && (
           <div className="space-y-3 mt-4 pt-4 border-t border-white/5">
             <div className="flex items-center justify-between px-1">
@@ -3974,7 +2090,6 @@ function NodeConfigurationPanel({
           </div>
         )}
 
-        {/* AI Result Visualization */}
         {aiResult && (
           <div className="mt-6 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
             <div className="flex items-center gap-2 px-1">
@@ -3987,10 +2102,8 @@ function NodeConfigurationPanel({
             </div>
 
             <div className="rounded-xl border border-white/10 bg-gradient-to-br from-slate-800/50 to-slate-900/80 p-4 shadow-xl overflow-hidden relative group">
-              {/* Background Glow */}
               <div className="absolute -top-12 -right-12 w-24 h-24 bg-indigo-500/10 blur-3xl group-hover:bg-indigo-500/20 transition-colors duration-500" />
 
-              {/* Extracted Content (DOM Context) */}
               {aiResult.content && typeof aiResult.content === "string" && (
                 <div className="space-y-2 mb-4">
                   <div className="flex items-center justify-between">
@@ -4010,7 +2123,6 @@ function NodeConfigurationPanel({
                 </div>
               )}
 
-              {/* Call LLM Result */}
               {aiResult.response && typeof aiResult.response === "string" && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -4030,7 +2142,6 @@ function NodeConfigurationPanel({
                 </div>
               )}
 
-              {/* Chain of Thought Result */}
               {(aiResult.thought || aiResult.answer) && (
                 <div className="space-y-3">
                   {aiResult.thought && (
@@ -4072,7 +2183,6 @@ function NodeConfigurationPanel({
                 </div>
               )}
 
-              {/* Generate Data Result */}
               {aiResult.result && aiResult.isValid === undefined && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -4115,7 +2225,6 @@ function NodeConfigurationPanel({
                 </div>
               )}
 
-              {/* Validate Semantic Result */}
               {(aiResult.isValid !== undefined ||
                 aiResult.result?.isValid !== undefined) && (
                 <div className="space-y-3">
@@ -4181,7 +2290,6 @@ function NodeConfigurationPanel({
                 </div>
               )}
 
-              {/* Universal Fallback: show raw data for unrecognized AI result shapes */}
               {!aiResult.content &&
                 !aiResult.response &&
                 !aiResult.thought &&
@@ -4200,7 +2308,6 @@ function NodeConfigurationPanel({
                   </div>
                 )}
 
-              {/* Usage Stats Footer */}
               {aiResult.usage && (
                 <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-[9px] text-slate-600 font-mono uppercase tracking-tighter">
                   <span>Tokens: {aiResult.usage.totalTokens || 0}</span>
@@ -4235,7 +2342,6 @@ function NodeConfigurationPanel({
             "w-full sm:w-80 md:w-[400px] h-full glass-panel z-[var(--z-popover)] flex flex-col !pointer-events-auto !cursor-auto !select-text relative shadow-2xl",
           )}
         >
-          {/* HEADER */}
           <div
             className={cn(
               "h-14 shrink-0 flex items-center justify-between px-5 border-b",
@@ -4265,7 +2371,6 @@ function NodeConfigurationPanel({
                   onChange={(e) => {
                     setLocalLabel(e.target.value);
 
-                    // MANIFIESTO: Live Update (Debounced)
                     if (updateTimeoutRef.current)
                       clearTimeout(updateTimeoutRef.current);
 
@@ -4278,14 +2383,12 @@ function NodeConfigurationPanel({
                           customLabel: finalLabel,
                         });
                       }
-                    }, 300); // 300ms debounce for typing comfort
+                    }, 300);
                   }}
-                  // onBlur removed - handled by debounce
                 />
               </div>
             </div>
 
-            {/* HEADER ACTIONS */}
             <div className="flex items-center gap-1">
               <button
                 onClick={() => {
@@ -4310,19 +2413,14 @@ function NodeConfigurationPanel({
             </div>
           </div>
 
-          {/* SCROLLABLE CONTENT */}
           <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
-            {/* Dynamic Content Switch */}
-            {/* Dynamic Content Switch */}
             {(() => {
-              const isComponent = activeNode.type === "component";
-              const isLoop = activeNode.type === "loop";
+              const isComponent = nodeKey === "component";
+              const isLoop = nodeKey === "loop";
 
               const renderCompositionDashboard = () => (
                 <div className="space-y-6">
-                  {/* Stats Grid */}
                   <div className="grid grid-cols-2 gap-3">
-                    {/* Node Count */}
                     <div className="p-3 rounded-lg border border-white/5 bg-white/5 flex flex-col gap-1">
                       <span className="text-[10px] uppercase text-slate-500 font-bold">
                         Nodes
@@ -4331,7 +2429,6 @@ function NodeConfigurationPanel({
                         {resolvedStats.nodeCount ?? 0}
                       </span>
                     </div>
-                    {/* Connections */}
                     <div className="p-3 rounded-lg border border-white/5 bg-white/5 flex flex-col gap-1">
                       <span className="text-[10px] uppercase text-slate-500 font-bold">
                         I/O
@@ -4362,7 +2459,6 @@ function NodeConfigurationPanel({
                     </div>
                   </div>
 
-                  {/* Navigation Action */}
                   <button
                     onClick={() => {
                       if (onEnterSubFlow) {
@@ -4391,7 +2487,6 @@ function NodeConfigurationPanel({
                     />
                   </button>
 
-                  {/* EMITTED DATA (Live Results) */}
                   <div className="pt-6 border-t border-white/5 space-y-4">
                     <div className="flex items-center gap-2 px-1">
                       <Sparkles size={12} className="text-amber-500" />
@@ -4402,7 +2497,6 @@ function NodeConfigurationPanel({
                     {renderEmittedData()}
                   </div>
 
-                  {/* Ungroup Action */}
                   <button
                     onClick={() => {
                       if (
@@ -4424,7 +2518,6 @@ function NodeConfigurationPanel({
               if (isComponent) {
                 return (
                   <div className="space-y-6">
-                    {/* Description Card */}
                     <div className="space-y-2">
                       <label className="flex items-center gap-2 text-[10px] uppercase tracking-wider font-bold text-slate-500">
                         <FileText size={12} />
@@ -4439,7 +2532,6 @@ function NodeConfigurationPanel({
                         className="w-full h-24 bg-[var(--bg-canvas)]/50 border border-[var(--border-ui)] rounded-lg p-3 text-xs text-[var(--text-main)] focus:outline-none focus:border-indigo-500/50 transition-all placeholder:text-[var(--text-muted)] resize-none"
                       />
                     </div>
-                    {/* Component configuration inputs like mapping */}
                     {renderNodeInputs()}
                     <div className="pt-6 border-t border-white/5 space-y-4">
                       {renderCompositionDashboard()}
@@ -4491,6 +2583,7 @@ function NodeConfigurationPanel({
           <div className="p-4 border-t border-[var(--border-ui)] bg-[var(--bg-panel)] shrink-0 space-y-3">
             {/* AI Suggestion / Healed Banner */}
             {(activeNode?.data?.state === "healed" ||
+              activeNode?.data?.configuration?.healed ||
               (activeNode?.data?.type === "smart_selector" &&
                 activeNode?.data?.result?.suggestedSelector)) && (
               <div className="mb-4 bg-violet-500/10 border border-violet-500/30 rounded-xl p-4 space-y-3 shadow-xl shadow-violet-500/5 backdrop-blur-md">
@@ -4517,11 +2610,15 @@ function NodeConfigurationPanel({
                         </span>
                       )}
                     </div>
-                    {activeNode.data.result?.reasoning && (
+                    {activeNode.data.configuration?.aiReasoning ||
+                    activeNode.data.result?.reasoning ? (
                       <p className="text-[10px] text-violet-300/80 leading-relaxed line-clamp-2 italic">
-                        "{activeNode.data.result.reasoning}"
+                        "
+                        {activeNode.data.configuration?.aiReasoning ||
+                          activeNode.data.result?.reasoning}
+                        "
                       </p>
-                    )}
+                    ) : null}
                   </div>
                 </div>
 
@@ -4531,7 +2628,8 @@ function NodeConfigurationPanel({
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="flex-1 font-mono text-xs text-violet-200 bg-violet-500/5 p-2 rounded border border-violet-500/10 truncate">
-                      {activeNode.data.result?.suggestedSelector ||
+                      {activeNode.data.configuration?.healedValue ||
+                        activeNode.data.result?.suggestedSelector ||
                         activeNode.data.result?.newSelector}
                     </div>
                   </div>
@@ -4541,7 +2639,9 @@ function NodeConfigurationPanel({
                   onClick={() => {
                     const resData = activeNode?.data?.result || {};
                     const newSelector =
-                      resData.suggestedSelector || resData.newSelector;
+                      activeNode?.data?.configuration?.healedValue ||
+                      resData.suggestedSelector ||
+                      resData.newSelector;
 
                     if (newSelector) {
                       const targetField =
@@ -4553,6 +2653,12 @@ function NodeConfigurationPanel({
                       updateNodeConfiguration(activeNode.id, {
                         ...(activeNode.data?.configuration || {}),
                         [targetField]: newSelector,
+                        healed: undefined,
+                        healedFrom: undefined,
+                        healedValue: undefined,
+                        originalValue: undefined,
+                        aiReasoning: undefined,
+                        healingConfidence: undefined,
                       });
 
                       // Reset state to SUCCESS or default so orange border vanishes
@@ -4561,7 +2667,7 @@ function NodeConfigurationPanel({
                       toast.success(
                         t(
                           "actions.smart_selector.applied",
-                          "Selector updated and fix committed!",
+                          "Fix acknowledged!",
                         ),
                       );
                     }
@@ -4569,7 +2675,7 @@ function NodeConfigurationPanel({
                   className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold uppercase tracking-widest transition-all shadow-lg hover:shadow-violet-500/20 active:scale-[0.98]"
                 >
                   <Sparkles size={14} fill="currentColor" />
-                  Apply Suggested Fix
+                  Acknowledge Fix
                 </button>
               </div>
             )}

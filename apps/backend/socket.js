@@ -147,3 +147,13 @@ export const emitCodegenAction = (sessionId, action) => {
         io.emit('codegen:action-detected', { ...action, sessionId });
     }
 };
+/**
+ * Notifies the frontend when a node has been auto-healed (via AI or Memory).
+ * @param {{ nodeId: string, originalSelector: string, newSelector: string, source: 'memory'|'ai', reasoning: string }} data
+ */
+export const emitAutoHealingUpdate = (data) => {
+    if (io) {
+        console.log(`📡 [Socket.io] Emitting auto_healing_update for node: ${data.nodeId}`);
+        io.emit('auto_healing_update', { ...data, timestamp: Date.now() });
+    }
+};

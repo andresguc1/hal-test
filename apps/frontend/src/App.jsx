@@ -59,10 +59,6 @@ import { AnimatePresence } from "framer-motion";
 import GuestModeModal from "./components/modals/GuestModeModal";
 import { useAuth } from "./context/AuthContext";
 
-const edgeTypes = {
-  custom: CustomEdge,
-};
-
 import { NODE_STATES } from "./components/hooks/flowStyles";
 import {
   Terminal,
@@ -84,6 +80,10 @@ import TerminalPanel from "./components/TerminalPanel";
 import VariablePanel from "./components/VariablePanel";
 import AskAIPanel from "./components/AskAIPanel";
 
+const edgeTypes = {
+  custom: CustomEdge,
+};
+
 // ========================================
 // DASHBOARD COMPONENT (Main Work Area)
 // ========================================
@@ -93,7 +93,7 @@ function Dashboard() {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const toast = useToast();
-  const { logs, isPanelVisible, togglePanel } = useLogs();
+  const { logs, addLog, isPanelVisible, togglePanel } = useLogs();
   const reactFlowWrapper = React.useRef(null);
 
   // 2. Navigation & Context Hooks
@@ -166,6 +166,7 @@ function Dashboard() {
     viewStack,
     enterComponent,
     exitComponent,
+    deepNavigate,
     setSelectedNodeId,
     validateFlowStructure,
     updateNodeState,
@@ -182,7 +183,6 @@ function Dashboard() {
     addGhostNode,
     migrateNodes,
     onLayout,
-    exitToRoot,
     apiStatus,
     toggleNodesDisabled,
     toggleDownstreamDisabled,
@@ -190,28 +190,34 @@ function Dashboard() {
 
   const handleExecuteFlow = useCallback(async () => {
     // --- UNIVERSAL EXECUTION CONTEXT ---
-    // If we are inside a composite (sub-flow), we should ideally run from the root
-    // to ensure all prerequisite nodes (like launch_browser) are executed.
-    if (viewStack && viewStack.length > 0) {
-      toast.info(
-        t(
-          "common.switching_to_root",
-          "Switching to Main Flow for full execution...",
-        ),
-      );
-      setPendingExecution(true); // Flag to resume once main flow loads
-      await exitToRoot();
-      return; // Stop current execution; Effect will resume it at root level
-    }
+    // We stay in the current view context (sub-flow or root) to allow local monitoring.
+    // The engine handles global initialization automatically.
     // ------------------------------------------
 
     // 0. DRY RUN VALIDATION (Clean UX: No loading toast for instant validation)
     const validationErrors = validateFlowStructure(nodes, edges);
     if (validationErrors.length > 0) {
-      toast.error(validationErrors[0], {
+      const firstError = validationErrors[0];
+      const errorMsg =
+        typeof firstError === "string" ? firstError : firstError.message;
+      const errorNodeId =
+        typeof firstError === "string" ? null : firstError.nodeId;
+
+      toast.error(errorMsg, {
         duration: 5000,
         style: { border: "1px solid #ef4444", color: "#ef4444" },
       });
+
+      if (errorNodeId) {
+        addLog(
+          `[ValidationError] NodeId=${errorNodeId} Error="${errorMsg}"`,
+          "error",
+          errorNodeId,
+        );
+        handleNavigateToNode(errorNodeId);
+      } else {
+        addLog(`[ValidationError] Error="${errorMsg}"`, "error");
+      }
       return; // Stop here, no processing toast shown.
     }
 
@@ -282,28 +288,28 @@ function Dashboard() {
 
       if (!result.success && result.failedNodeId) {
         try {
-          // Identify if we need to "Dive In" to show the failure
-          if (result.divePath && result.divePath.length > 0) {
-            console.log(
-              "[App] Auto-diving into failure context:",
-              result.divePath,
-            );
-            const componentId = result.divePath[0];
-            await enterComponent(componentId);
-          }
+          // Show error toast for immediate feedback
+          const errorMsg = result.error || t("common.flow_exec_error");
+          toast.error(`✗ ${errorMsg}`, {
+            duration: 5000,
+            style: { border: "1px solid #ef4444", color: "#ef4444" },
+          });
 
-          // B. Select and Open Node (triggers config panel via derived state)
-          setSelectedNodeId(result.failedNodeId);
+          // Explicit console log for the user
+          console.error(
+            `%c[ExecutionError] NodeId=${result.failedNodeId} Error="${errorMsg}"`,
+            "color: #ef4444; font-weight: bold; font-size: 12px;",
+          );
 
-          // C. Visual Focus — delay to ensure the node is in the rendered canvas
-          setTimeout(() => {
-            reactFlowFitView({
-              nodes: [{ id: result.failedNodeId }],
-              duration: 800,
-              padding: 0.8,
-              maxZoom: 1.2,
-            });
-          }, 800);
+          // Synchronize with Internal Execution Log
+          addLog(
+            `[NodeError] NodeId=${result.failedNodeId} Error="${errorMsg}"`,
+            "error",
+            result.failedNodeId,
+          );
+
+          // Use deepNavigate to handle multi-level sub-flow traversal and node focus
+          await deepNavigate(result.divePath || [], result.failedNodeId);
         } catch (navError) {
           console.error("[App] Failed auto-focus navigation:", navError);
         }
@@ -333,12 +339,10 @@ function Dashboard() {
     activeBrowserId,
     stopSession,
     currentFlowId,
-    enterComponent,
-    reactFlowFitView,
-    setSelectedNodeId,
     updateNodeConfiguration,
-    viewStack,
-    exitToRoot,
+    deepNavigate,
+    addLog,
+    handleNavigateToNode,
   ]);
 
   // 4. Local UI State
@@ -495,9 +499,6 @@ function Dashboard() {
     [replayRun, resetExecutionStates, toast],
   );
 
-  // Logs Context
-  const { addLog } = useLogs();
-
   // Socket setup
   const handleCodegenAction = useCallback(
     (data) => {
@@ -572,8 +573,6 @@ function Dashboard() {
     [setNodes, setEdges],
   );
 
-  /* handleMCPProposeNodes removed to satisfy lint - unused */
-  /*
   const handleMCPProposeNodes = useCallback(
     async (nodes) => {
       return new Promise((resolve, reject) => {
@@ -584,7 +583,6 @@ function Dashboard() {
     },
     [setIsAskAIPanelVisible],
   );
-  */
 
   const handleConfirmProposal = useCallback(async () => {
     if (proposedNodes && confirmationPromise) {
@@ -607,8 +605,6 @@ function Dashboard() {
   }, [confirmationPromise]);
 
   // MCP phase 3 granular tools
-  /* handleMCPAddNode removed to satisfy lint - unused */
-  /*
   const handleMCPAddNode = useCallback(
     async (nodeData) => {
       const id = `node_${uuidv4()}`;
@@ -627,7 +623,6 @@ function Dashboard() {
     },
     [setNodes],
   );
-  */
 
   const handleMCPConnectNodes = useCallback(
     async ({ sourceId, targetId }) => {
@@ -660,6 +655,24 @@ function Dashboard() {
     [updateNodeConfiguration],
   );
 
+  // Navigate to a node: select it AND center the canvas on it
+  const handleNavigateToNode = useCallback(
+    (nodeId) => {
+      if (!nodeId) return;
+      setSelectedNodeId(nodeId);
+      // Small delay so the panel re-renders with the new node first
+      setTimeout(() => {
+        reactFlowFitView({
+          nodes: [{ id: nodeId }],
+          duration: 600,
+          padding: 0.8, // More padding when focusing a single node
+          maxZoom: 1.2,
+        });
+      }, 80);
+    },
+    [setSelectedNodeId, reactFlowFitView],
+  );
+
   const socket = useHaltestSocket({
     setNodes,
     setEdges,
@@ -667,9 +680,13 @@ function Dashboard() {
     onLogReceived: addLog,
     onTerminalOutput: null,
     onCodegenAction: handleCodegenAction,
+    getCanvasState,
+    onProposeNodes: handleMCPProposeNodes,
+    onAddNode: handleMCPAddNode,
     onConnectNodes: handleMCPConnectNodes,
     onRemoveNode: handleMCPRemoveNode,
     onUpdateNode: handleMCPUpdateNode,
+    toast,
   });
 
   // Computed values
@@ -700,23 +717,20 @@ function Dashboard() {
     }
   }, [setSelectedNodeId]);
 
-  // Navigate to a node: select it AND center the canvas on it
-  const handleNavigateToNode = useCallback(
-    (nodeId) => {
-      if (!nodeId) return;
-      setSelectedNodeId(nodeId);
-      // Small delay so the panel re-renders with the new node first
-      setTimeout(() => {
-        reactFlowFitView({
-          nodes: [{ id: nodeId }],
-          duration: 600,
-          padding: 0.8, // More padding when focusing a single node
-          maxZoom: 1.2,
-        });
-      }, 80);
-    },
-    [setSelectedNodeId, reactFlowFitView],
-  );
+  // Navigate to a node moved up.
+  useEffect(() => {
+    const handleFocusRequest = (e) => {
+      const { nodeId, divePath } = e.detail;
+      if (divePath && divePath.length > 0) {
+        deepNavigate(divePath, nodeId);
+      } else {
+        handleNavigateToNode(nodeId);
+      }
+    };
+    window.addEventListener("hal:focus-node", handleFocusRequest);
+    return () =>
+      window.removeEventListener("hal:focus-node", handleFocusRequest);
+  }, [deepNavigate, handleNavigateToNode]);
 
   // ========================================
   // CALLBACKS - Footer Actions

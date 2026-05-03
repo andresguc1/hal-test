@@ -25,6 +25,16 @@ if (isProduction && process.env.DATABASE_URL) {
         dialect: 'sqlite',
         storage: path.join(__dirname, '../database.sqlite'),
         logging: false,
+        retry: {
+            match: [/SQLITE_BUSY/],
+            max: 10,
+        },
+        pool: {
+            max: 5,
+            min: 0,
+            idle: 10000,
+            acquire: 30000,
+        },
         dialectOptions: {
             // Enable Foreign Keys in SQLite
             // mode: 6 = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE

@@ -25,6 +25,7 @@ import {
   wouldCreateCycle,
   resolveVariables,
 } from "../../utils/flowUtils";
+import { validateNodeConfig } from "../../config/validationRules";
 import { logger } from "../../utils/logger";
 import screenshotManager from "../../utils/ScreenshotManager";
 import { api } from "../../utils/api";
@@ -33,6 +34,7 @@ import { useTranslation } from "react-i18next";
 import { getLayoutedElements } from "../../utils/layoutUtils";
 import { projectManager } from "../../utils/ProjectManager";
 import { useSettings } from "../../context/SettingsContext";
+import { useLogs } from "../../context/LogContext";
 
 // NEW: Orphan Detection Helper
 const detectOrphans = (nodes, edges) => {
@@ -211,6 +213,7 @@ const DEFAULT_EDGE_OPTIONS = {
 export function useFlowManager(currentProject, currentFlowId, switchFlow) {
   const queryClient = useQueryClient();
   const { t } = useTranslation();
+  const { addLog } = useLogs();
   const toast = useToast(); // Custom HAL Toast
   const { getViewport, fitView } = useReactFlow();
 
@@ -244,7 +247,6 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
 
     nodesRef.current = uniqueNodes;
     setNodesState(uniqueNodes);
-    setHasUnsavedChanges(true); // Mark as dirty on ANY node change
   }, []);
 
   const setEdges = useCallback((newEdges) => {
@@ -268,7 +270,6 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
 
     edgesRef.current = uniqueEdges;
     setEdgesState(uniqueEdges);
-    setHasUnsavedChanges(true); // Mark as dirty on ANY edge change
   }, []);
 
   const [selectedNodeId, setSelectedNodeId] = useState(null);
@@ -384,14 +385,7 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
   useEffect(() => {
     const loadFlowData = async () => {
       if (currentProject && currentFlowId) {
-        // Prevent fetching a deleted flow due to React state batching lag
-        if (
-          currentProject.flows &&
-          !currentProject.flows.some((f) => f.id === currentFlowId)
-        ) {
-          return;
-        }
-
+        console.log(`[FlowManager] Loading flow: ${currentFlowId}`);
         try {
           lastLoadedFlowId.current = currentFlowId; // Mark start of load
 
@@ -505,12 +499,13 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
   // OPTIMIZACIÓN 4: useCallback con deps correctas
   const saveFlow = useCallback(
     async (silent = false) => {
-      if (!currentProject || !currentFlowId) return;
+      const targetFlowId = currentFlowId;
+      if (!currentProject || !targetFlowId) return;
 
       // Prevent saving to a deleted flow
       if (
         currentProject.flows &&
-        !currentProject.flows.some((f) => f.id === currentFlowId)
+        !currentProject.flows.some((f) => f.id === targetFlowId)
       ) {
         return;
       }
@@ -525,7 +520,7 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
       try {
         await projectManager.updateFlow(
           currentProject.id,
-          currentFlowId,
+          targetFlowId,
           flowData,
         );
 
@@ -760,6 +755,7 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
   // ========================================
   const addNode = useCallback(
     (typeKey, position = null, initialData = null) => {
+      setHasUnsavedChanges(true);
       saveToHistory();
       const id = generateNodeId();
       const label = NODE_LABELS[typeKey] || typeKey;
@@ -951,6 +947,7 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
 
   const deleteNode = useCallback(
     (nodeId) => {
+      setHasUnsavedChanges(true);
       saveToHistory();
       setNodes((nds) => nds.filter((n) => n.id !== nodeId));
       setEdges((eds) =>
@@ -966,6 +963,7 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
 
   const updateNodeConfiguration = useCallback(
     async (nodeId, newConfig) => {
+      setHasUnsavedChanges(true);
       saveToHistory();
 
       let targetFlowId = null;
@@ -1628,9 +1626,6 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
   // ========================================
   // COMPOSITION: NAVIGATION (DIVE-IN)
   // ========================================
-  // ========================================
-  // COMPOSITION: NAVIGATION (DIVE-IN)
-  // ========================================
   const enterComponent = useCallback(
     async (componentId) => {
       const componentNode = nodesRef.current.find((n) => n.id === componentId);
@@ -1647,43 +1642,84 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
         return;
       }
 
-      const { flowId } = componentNode.data;
-      if (!flowId) {
-        if (componentNode.data.subFlow) {
-          toast.error(
-            "Legacy component detected. Please ungroup and regroup to migrate.",
+      let flowId = componentNode.data.flowId;
+
+      // 🛡️ ON-THE-FLY MIGRATION: If it's a template component (subFlow) without a DB ID, migrate it now.
+      if (!flowId && componentNode.data.subFlow) {
+        try {
+          const toastId = toast.loading("Migrating component to project...");
+          const migratedNodes = await migrateNodes(
+            [componentNode],
+            currentProject?.id,
           );
+          const migratedNode = migratedNodes[0];
+
+          if (migratedNode?.data?.flowId) {
+            flowId = migratedNode.data.flowId;
+            // Update local state so the node now has the ID
+            setNodes((prev) =>
+              prev.map((n) => (n.id === componentId ? migratedNode : n)),
+            );
+            toast.dismiss(toastId);
+          } else {
+            throw new Error("Migration failed to return a flowId");
+          }
+        } catch (err) {
+          console.error("[FlowManager] On-the-fly migration failed:", err);
+          toast.error("Failed to initialize component. Please try ungrouping.");
           return;
         }
+      }
+
+      if (!flowId) {
         toast.error("Component flow ID missing.");
         return;
       }
 
-      // 1. Save Current Flow
-      try {
-        await saveFlow();
-      } catch (e) {
-        console.warn("Auto-save before switch failed", e);
+      if (flowId === currentFlowId) {
+        toast.error("Circular reference detected: Component points to itself.");
+        return;
       }
+
+      // 1. Save Current Flow (Non-blocking to ensure smooth UI transition)
+      saveFlow().catch((e) => {
+        console.warn("Auto-save before switch failed", e);
+      });
 
       // 2. Push to Stack (Defensive: Avoid duplicate IDs in breadcrumbs)
       const currentFlowName =
         currentProject?.flows?.find((f) => f.id === currentFlowId)?.name ||
-        "Previous Flow";
+        "Flow";
+
+      console.log(
+        `[FlowManager] Entering component: ${componentId} from ${currentFlowId} (${currentFlowName})`,
+      );
 
       setViewStack((prev) => {
-        // Prevent adding the same ID consecutively
+        // Avoid duplicates
         if (prev.length > 0 && prev[prev.length - 1].id === currentFlowId) {
           return prev;
         }
-        return [
-          ...prev,
-          {
+
+        // If we are at root, we don't need to push "Main Flow" as a label since it's already the Link
+        const label = prev.length === 0 ? null : currentFlowName;
+
+        const newStack = [...prev];
+        if (label) {
+          newStack.push({
             id: currentFlowId,
-            label: currentFlowName,
-            nodeId: componentId, // Track which node triggered the dive
-          },
-        ];
+            label: label,
+            nodeId: componentId,
+          });
+        } else {
+          // Push a minimal entry just to track the ID for returning
+          newStack.push({
+            id: currentFlowId,
+            label: "Main",
+            nodeId: componentId,
+          });
+        }
+        return newStack;
       });
 
       // 3. Switch Flow
@@ -1693,7 +1729,72 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
         console.error("switchFlow function is missing in useFlowManager");
       }
     },
-    [currentFlowId, currentProject, saveFlow, switchFlow, toast],
+    [
+      currentFlowId,
+      currentProject,
+      saveFlow,
+      switchFlow,
+      toast,
+      migrateNodes,
+      setNodes,
+    ],
+  );
+
+  /**
+   * Navigates recursively through sub-flows to focus on a target node.
+   */
+  const deepNavigate = useCallback(
+    async (divePath, targetNodeId) => {
+      console.log(
+        `[FlowManager] 🧭 Deep Navigating: [${(divePath || []).join(" -> ")}] -> Target: ${targetNodeId || "none"}`,
+      );
+
+      // 1. Process Dive Path (Sub-flow levels)
+      if (divePath && divePath.length > 0) {
+        for (const componentId of divePath) {
+          // Find node in CURRENT view
+          const node = nodesRef.current.find((n) => n.id === componentId);
+          if (node) {
+            await enterComponent(componentId);
+            // Give React a moment to switch flow and useEffect to load nodes
+            // Increased delay for sub-flow loading stability
+            await sleep(800);
+          }
+        }
+      }
+
+      // 2. Final Selection and Focus
+      if (targetNodeId) {
+        setSelectedNodeId(targetNodeId);
+
+        // Retry logic for fitView because React Flow might not have nodes rendered yet
+        let retries = 15;
+        const attemptFocus = () => {
+          // We check the React Flow internal store via nodesRef.current (synced)
+          const currentNodes = nodesRef.current;
+          const nodeExists = currentNodes.some((n) => n.id === targetNodeId);
+
+          if (nodeExists) {
+            console.log(`[FlowManager] 🎯 Focusing node: ${targetNodeId}`);
+            fitView({
+              nodes: [{ id: targetNodeId }],
+              duration: 800,
+              padding: 0.4, // Balanced padding
+              maxZoom: 1.2, // Prevent extreme zoom-in
+            });
+          } else if (retries > 0) {
+            retries--;
+            setTimeout(attemptFocus, 300);
+          } else {
+            console.warn(
+              `[FlowManager] ⚠️ Failed to focus node ${targetNodeId} after retries.`,
+            );
+          }
+        };
+        setTimeout(attemptFocus, 200);
+      }
+    },
+    [enterComponent, fitView, setSelectedNodeId],
   );
 
   const exitComponent = useCallback(async () => {
@@ -1720,7 +1821,7 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
     if (viewStack.length === 0) return;
 
     // 1. Save Current (wherever we are)
-    await saveFlow().catch(() => {});
+    saveFlow().catch(() => {});
 
     // 2. Identify Root
     const root = viewStack[0];
@@ -1934,9 +2035,15 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
                 newConfig.aiReasoning = result.reasoning;
               }
 
+              const isSoftFail =
+                result?.status === "softfailed" ||
+                result?.data?.status === "softfailed";
+
               const finalState = isHealed
                 ? NODE_STATES.HEALED
-                : NODE_STATES.SUCCESS;
+                : isSoftFail
+                  ? NODE_STATES.SOFTFAILED
+                  : NODE_STATES.SUCCESS;
 
               return {
                 ...node,
@@ -2065,6 +2172,14 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
             message: `✗ Failure: ${error.message}`,
             details: lastErrorDetails,
           });
+
+          // Synchronize with Execution Log
+          addLog(
+            `[NodeError] NodeId=${nodeId} Error="${error.message}"`,
+            "error",
+            nodeId,
+          );
+
           setIsLoading(false);
 
           return {
@@ -2087,6 +2202,7 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
       activeRunId,
       setApiStatus,
       setIsLoading,
+      addLog,
     ],
   );
 
@@ -2137,7 +2253,7 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
         });
         return;
       }
-
+      setHasUnsavedChanges(true);
       saveToHistory();
 
       // Agregar edge con ID único y label
@@ -2213,12 +2329,16 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
   );
 
   const onNodesChange = useCallback(
-    (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
+    (changes) => {
+      setHasUnsavedChanges(true);
+      setNodes((nds) => applyNodeChanges(changes, nds));
+    },
     [setNodes],
   );
 
   const onEdgesChange = useCallback(
     (changes) => {
+      setHasUnsavedChanges(true);
       // Guardar historial si se está eliminando un edge
       const hasRemove = changes.some((change) => change.type === "remove");
       if (hasRemove) {
@@ -2370,6 +2490,27 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
         return true;
       });
 
+      // 0.5 Check for mandatory configuration fields
+      for (const n of executionNodes) {
+        const type = n.data?.subType || n.data?.type || n.type;
+        const config = n.data?.configuration || {};
+
+        const validation = validateNodeConfig(type, config);
+        if (!validation.isValid) {
+          const label = n.data?.customLabel || n.data?.label || type;
+          errors.push({
+            message:
+              t("nodes.error.missing_field", {
+                node: label,
+                field: validation.missingField,
+              }) ||
+              `Node "${label}" is missing required field: ${validation.missingField}`,
+            nodeId: n.id,
+            fieldKey: validation.fieldKey,
+          });
+        }
+      }
+
       // 1. Check for empty flow
       if (executionNodes.length === 0) {
         errors.push("The flow is empty. Add at least one execution node.");
@@ -2494,7 +2635,7 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
 
       return errors;
     },
-    [repairLegacyStarterEdges, setEdges],
+    [repairLegacyStarterEdges, setEdges, t],
   );
 
   /**
@@ -2704,7 +2845,9 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
       if (!options.nodes) {
         const validationErrors = validateFlowStructure(nodes, edges);
         if (validationErrors.length > 0) {
-          const errorMsg = validationErrors[0]; // Show first error
+          const firstError = validationErrors[0];
+          const errorMsg =
+            typeof firstError === "string" ? firstError : firstError.message;
           // toast.error(errorMsg); // REMOVED: Managed by App.jsx to avoid overlap
           setApiStatus({
             state: "error",
@@ -2759,8 +2902,13 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
       setApiStatus({ state: "loading", message: "Preparing execution..." });
 
       // Recursive Execution Function (Path-Aware Graph Traversal)
-      const executeGraph = async (graphNodes, graphEdges, depth = 0) => {
-        if (depth > 10) throw new Error("Max recursion depth exceeded");
+      const executeGraph = async (
+        graphNodes,
+        graphEdges,
+        depth = 0,
+        visitedFlows = new Set(),
+      ) => {
+        if (depth > 15) throw new Error("Max recursion depth exceeded");
 
         // --- FILTER INACTIVE NODES/EDGES ---
         const activeNodes = graphNodes.filter((n) => !n.data?.disabled);
@@ -2807,7 +2955,7 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
           let result = { success: true };
           lastResult = result; // Important: update bubble-up target
           console.log(
-            `[FlowManager] -> Executing: "${node.id}" (${node.type})`,
+            `[FlowManager] ${"  ".repeat(depth)}-> Executing: "${node.id}" (${node.type})`,
           );
 
           try {
@@ -2815,6 +2963,15 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
             if (node.type === "component" || node.data?.type === "component") {
               const { flowId } = node.data || {};
               if (flowId) {
+                if (visitedFlows.has(flowId)) {
+                  const cycleMsg = `[FlowManager] 🛑 Circular dependency detected! Component "${node.id}" points to flow ${flowId} which is already in the execution stack.`;
+                  console.error(cycleMsg);
+                  addLog(cycleMsg, "error", node.id);
+                  updateNodeState(node.id, NODE_STATES.ERROR, {
+                    message: "Dependencia circular detectada",
+                  });
+                  return { success: false, error: "Circular dependency" };
+                }
                 setApiStatus({
                   state: "loading",
                   message: `Entering component: ${node.data.label || "Sub-flow"}...`,
@@ -2824,16 +2981,25 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
                   flowId,
                 );
                 if (subFlow?.nodes?.length > 0) {
+                  const newVisited = new Set(visitedFlows);
+                  newVisited.add(flowId);
+
                   updateNodeState(node.id, NODE_STATES.EXECUTING);
                   const subResult = await executeGraph(
                     subFlow.nodes,
                     subFlow.edges,
                     depth + 1,
+                    newVisited,
                   );
                   result = subResult || { success: true };
 
+                  const isSoftFail =
+                    result.status === "softfailed" ||
+                    result.data?.status === "softfailed";
                   const finalNodeState = result.success
-                    ? NODE_STATES.SUCCESS
+                    ? isSoftFail
+                      ? NODE_STATES.SOFTFAILED
+                      : NODE_STATES.SUCCESS
                     : NODE_STATES.ERROR;
                   updateNodeState(node.id, finalNodeState);
 
@@ -3018,10 +3184,10 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
                 flowContext[slug] = result.result || result;
 
                 // Capture AI Healing for auto-patching
-                if (result.healed && result.newSelector) {
+                if (result.healed && result.healedValue) {
                   healedNodes.push({
                     nodeId: node.id,
-                    newSelector: result.newSelector,
+                    newSelector: result.healedValue,
                   });
                 }
               } else {
@@ -3104,9 +3270,9 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
                   // Only ERROR if it's a strict logic node.
                   // For components, if path doesn't match, maybe we follow defaults or stop silently.
                   if (shouldEnforceStrictPath) {
-                    console.warn(
-                      `[FlowManager] 🛑 No matching edge for path "${path}" on node "${node.id}". Stopping branch.`,
-                    );
+                    const warnMsg = `[FlowManager] 🛑 No matching edge for path "${path}" on node "${node.id}". Stopping branch.`;
+                    console.warn(warnMsg);
+                    addLog(warnMsg, "warning", node.id);
                     updateNodeState(node.id, NODE_STATES.ERROR, {
                       message: `Ruta no encontrada: ${path}`,
                     });
@@ -3124,9 +3290,9 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
               }
             } else if (shouldEnforceStrictPath && nextEdges.length > 0) {
               // 🛡️ SAFETY: If we MUST branch but have no path, STOP.
-              console.warn(
-                `[FlowManager] ⚠️ Node "${node.id}" requires branching but NO path was resolved.`,
-              );
+              const warnMsg = `[FlowManager] ⚠️ Node "${node.id}" requires branching but NO path was resolved.`;
+              console.warn(warnMsg);
+              addLog(warnMsg, "warning", node.id);
               updateNodeState(node.id, NODE_STATES.ERROR, {
                 message: "No se pudo resolver la ruta de ramificación",
               });
@@ -3255,6 +3421,7 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
       validateFlowStructure,
       t,
       toast,
+      addLog,
       setExecutionStats,
       setActiveBrowserId,
       setNodes,
@@ -4225,7 +4392,7 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
               step.result?.status === "softfailed" ||
               step.result?.data?.status === "softfailed"
             )
-              nodeState = NODE_STATES.WARNING;
+              nodeState = NODE_STATES.SOFTFAILED;
 
             return {
               ...node,
@@ -4329,6 +4496,7 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
     loopNodes,
     ungroupNodes,
     exitToRoot,
+    deepNavigate,
 
     validateLogicalConnection,
     validateFlowStructure, // Exposed for external validation

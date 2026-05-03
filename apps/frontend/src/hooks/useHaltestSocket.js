@@ -29,6 +29,7 @@ export const useHaltestSocket = ({
   onConnectNodes,
   onRemoveNode,
   onUpdateNode,
+  toast,
 }) => {
   const socketRef = useRef(null);
   const onElementPickedRef = useRef(onElementPicked);
@@ -42,6 +43,7 @@ export const useHaltestSocket = ({
   const onConnectNodesRef = useRef(onConnectNodes);
   const onRemoveNodeRef = useRef(onRemoveNode);
   const onUpdateNodeRef = useRef(onUpdateNode);
+  const onLogReceivedRef = useRef(onLogReceived);
 
   // Update refs when props change (always keep latest)
   useEffect(() => {
@@ -56,6 +58,7 @@ export const useHaltestSocket = ({
     onConnectNodesRef.current = onConnectNodes;
     onRemoveNodeRef.current = onRemoveNode;
     onUpdateNodeRef.current = onUpdateNode;
+    onLogReceivedRef.current = onLogReceived;
   }, [
     onElementPicked,
     setNodes,
@@ -68,7 +71,10 @@ export const useHaltestSocket = ({
     onConnectNodes,
     onRemoveNode,
     onUpdateNode,
+    onLogReceived,
   ]);
+
+  // Handle socket connection and listeners
 
   useEffect(() => {
     console.log("Haltest Socket: 🔄 Connecting to", SOCKET_URL);
@@ -95,6 +101,24 @@ export const useHaltestSocket = ({
       if (!data || !data.stepId) return;
       const { stepId, status, error, result } = data;
       console.log(`Haltest Socket: ⚡ Event [${stepId}] -> ${status}`);
+
+      // Log structured error to console
+      if (status === "failed" || status === "softfailed") {
+        const errorMsg = error || "Unknown error";
+        console.error(
+          `%c[NodeError] NodeId=${stepId} Status=${status} Error="${errorMsg}"`,
+          "color: #ef4444; font-weight: bold;",
+        );
+
+        // Record in Execution Log
+        if (onLogReceivedRef.current) {
+          onLogReceivedRef.current(
+            `[NodeError] NodeId=${stepId} Status=${status} Error="${errorMsg}"`,
+            status === "softfailed" ? "warning" : "error",
+            stepId,
+          );
+        }
+      }
 
       // 1. UPDATE NODES
       if (setNodesRef.current) {
@@ -149,6 +173,31 @@ export const useHaltestSocket = ({
       }
     });
 
+    socket.on("flow-finished", (data) => {
+      console.log("Haltest Socket: 🏁 Flow finished", data);
+      const { status, error, failedNodeId, divePath } = data;
+
+      if (status === "failed" && error) {
+        if (toast) {
+          toast.error(`Execution Failed: ${error}`, {
+            duration: 8000,
+            style: { border: "1px solid #ef4444", color: "#ef4444" },
+          });
+        }
+
+        // If the backend provided a specific node that failed (e.g. validation error)
+        if (failedNodeId && onLogReceived) {
+          onLogReceived(`[BackendError] ${error}`, "error", failedNodeId);
+          // Trigger navigation/focus if possible via a global event or another callback
+          window.dispatchEvent(
+            new CustomEvent("hal:focus-node", {
+              detail: { nodeId: failedNodeId, divePath },
+            }),
+          );
+        }
+      }
+    });
+
     socket.on("disconnect", (reason) => {
       console.warn("Haltest Socket: 🔌 Disconnected (Reason:", reason, ")");
     });
@@ -191,6 +240,64 @@ export const useHaltestSocket = ({
       const { message, type, nodeId } = data;
       if (onLogReceived) {
         onLogReceived(message, type, nodeId);
+      }
+    });
+
+    socket.on("auto_healing_update", (data) => {
+      const { nodeId, newSelector, source, reasoning } = data;
+      console.log(`[HaltestSocket] 🩹 Auto-healing update for node: ${nodeId}`);
+
+      // 1. UPDATE NODES (Real-time sync of the configuration)
+      if (onUpdateNodeRef.current) {
+        onUpdateNodeRef.current(nodeId, {
+          selector: newSelector, // Important: update the actual selector so it works!
+          healed: true,
+          healedFrom: source,
+          aiReasoning: reasoning,
+          healedValue: newSelector,
+          originalValue: data.originalSelector,
+          healingConfidence: data.confidence || 1.0,
+        });
+      } else if (setNodesRef.current) {
+        // Fallback to manual update if onUpdateNode is not provided
+        setNodesRef.current((nds) => {
+          if (!Array.isArray(nds)) return nds;
+          return nds.map((node) => {
+            if (node.id === nodeId) {
+              const newConfig = {
+                ...(node.data?.configuration || {}),
+                selector: newSelector,
+                healed: true,
+                healedFrom: source,
+                aiReasoning: reasoning,
+                healedValue: newSelector,
+                originalValue: data.originalSelector,
+                healingConfidence: data.confidence || 1.0,
+              };
+
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  configuration: newConfig,
+                  healed: true,
+                  healedFrom: source,
+                  healingReasoning: reasoning,
+                },
+              };
+            }
+            return node;
+          });
+        });
+      }
+
+      // 2. TRIGGER NOTIFICATION
+      if (toast) {
+        toast.success(`Node repaired via ${source.toUpperCase()}`, {
+          description: `New selector: ${newSelector}`,
+          duration: 5000,
+          icon: "🩹",
+        });
       }
     });
 
@@ -314,7 +421,7 @@ export const useHaltestSocket = ({
         socket.disconnect();
       }
     };
-  }, [onLogReceived]);
+  }, [onLogReceived, toast]);
 
   return socketRef.current;
 };
