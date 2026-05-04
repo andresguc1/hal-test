@@ -1226,6 +1226,11 @@ function NodeConfigurationPanel({
     nodeId: activeNode?.id,
     nodeState: activeNode?.data?.state,
   });
+
+  // Track the last prop value to distinguish between external changes and our own updates
+  const lastPropConfigRef = React.useRef(
+    JSON.stringify(activeNode?.data?.configuration || {}),
+  );
   const updateTimeoutRef = React.useRef(null);
 
   React.useEffect(() => {
@@ -1240,23 +1245,33 @@ function NodeConfigurationPanel({
       nodeState !== "picking" &&
       lastSyncedConfigRef.current.nodeState === "picking";
 
-    const globalConfigStr = activeNode?.data?.configuration
-      ? JSON.stringify(activeNode.data.configuration)
-      : "{}";
-    const lastConfigStr = lastSyncedConfigRef.current.config
-      ? JSON.stringify(lastSyncedConfigRef.current.config)
-      : "{}";
+    const globalConfigStr = JSON.stringify(globalConfig);
+    const lastConfigStr = JSON.stringify(lastSyncedConfigRef.current.config);
+    const lastPropStr = lastPropConfigRef.current;
 
-    const isExternalDrift = globalConfigStr !== lastConfigStr;
-    const isHealedChange =
-      globalConfig.healed && !lastSyncedConfigRef.current.config.healed;
+    const hasConfigChangedInProps = globalConfigStr !== lastPropStr;
+    const matchesOurLastSent = globalConfigStr === lastConfigStr;
 
-    if (
+    // We only reset local state if:
+    // 1. The node actually changed (switching selection)
+    // 2. We just finished picking an element (explicit override)
+    // 3. The props changed to something that is NOT what we last sent (external drift)
+    const shouldReset =
       hasNodeChanged ||
       justFinishedPicking ||
-      isExternalDrift ||
-      isHealedChange
-    ) {
+      (hasConfigChangedInProps && !matchesOurLastSent);
+
+    if (shouldReset) {
+      if (hasConfigChangedInProps && !matchesOurLastSent && !hasNodeChanged) {
+        console.log(
+          `[NodeConfig] 🚨 External drift detected for ${activeNode.id}.`,
+          {
+            prop: globalConfig,
+            lastSent: lastSyncedConfigRef.current.config,
+          },
+        );
+      }
+
       if (updateTimeoutRef.current) {
         clearTimeout(updateTimeoutRef.current);
       }
@@ -1271,10 +1286,13 @@ function NodeConfigurationPanel({
         nodeId: activeNode.id,
         nodeState: nodeState,
       };
+      lastPropConfigRef.current = globalConfigStr;
       return;
     }
 
+    // Keep state in sync even if we don't reset localConfig
     lastSyncedConfigRef.current.nodeState = nodeState;
+    lastPropConfigRef.current = globalConfigStr;
   }, [
     activeNode,
     activeNode?.id,
@@ -1285,31 +1303,37 @@ function NodeConfigurationPanel({
   ]);
 
   const handleConfigUpdate = (key, value) => {
-    let newConfig = { ...localConfig, [key]: value };
+    setLocalConfig((prev) => {
+      const newConfig = { ...prev, [key]: value };
 
-    if (key === "selector" || key === "originalSelector") {
-      newConfig.healed = undefined;
-      newConfig.healedFrom = undefined;
-      newConfig.healedValue = undefined;
-      newConfig.originalValue = undefined;
-      newConfig.aiReasoning = undefined;
-      newConfig.healingConfidence = undefined;
-    }
-
-    setLocalConfig(newConfig);
-
-    if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
-
-    updateTimeoutRef.current = setTimeout(() => {
-      lastSyncedConfigRef.current.config = newConfig;
-
-      if (activeNode) {
-        updateNodeConfiguration(activeNode.id, {
-          ...(activeNode.data?.configuration || {}),
-          ...newConfig,
-        });
+      if (key === "selector" || key === "originalSelector") {
+        newConfig.healed = undefined;
+        newConfig.healedFrom = undefined;
+        newConfig.healedValue = undefined;
+        newConfig.originalValue = undefined;
+        newConfig.aiReasoning = undefined;
+        newConfig.healingConfidence = undefined;
       }
-    }, 200);
+
+      if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+
+      updateTimeoutRef.current = setTimeout(() => {
+        console.log(
+          `[NodeConfig] 📤 Sending update for ${activeNode.id}`,
+          newConfig,
+        );
+        lastSyncedConfigRef.current.config = newConfig;
+
+        if (activeNode) {
+          updateNodeConfiguration(activeNode.id, {
+            ...(activeNode.data?.configuration || {}),
+            ...newConfig,
+          });
+        }
+      }, 200);
+
+      return newConfig;
+    });
   };
 
   const renderEmittedData = () => {

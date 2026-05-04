@@ -1104,6 +1104,10 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
 
   const updateNodeConfiguration = useCallback(
     async (nodeId, newConfig) => {
+      console.log(
+        `[useFlowManager] 🔄 updateNodeConfiguration called for node: ${nodeId}`,
+        newConfig,
+      );
       setHasUnsavedChanges(true);
       saveToHistory();
 
@@ -1131,7 +1135,6 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
             data: {
               ...n.data,
               configuration: {
-                ...(n.data?.configuration || {}),
                 ...newConfig,
               },
               // LIFT customLabel to top-level data for easy access
