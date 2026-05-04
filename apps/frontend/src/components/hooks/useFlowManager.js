@@ -222,7 +222,6 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
   const edgesRef = useRef([]);
 
   const [nodes, setNodesState] = useState([]);
-  const [edges, setEdgesState] = useState([]);
 
   // Sync ref with state
   const setNodes = useCallback((newNodes) => {
@@ -249,6 +248,8 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
     setNodesState(uniqueNodes);
   }, []);
 
+  const [edges, setEdgesState] = useState([]);
+
   const setEdges = useCallback((newEdges) => {
     const resolvedEdges =
       typeof newEdges === "function" ? newEdges(edgesRef.current) : newEdges;
@@ -271,6 +272,147 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
     edgesRef.current = uniqueEdges;
     setEdgesState(uniqueEdges);
   }, []);
+
+  /**
+   * Migrate Nodes (Recursive Sub-flow Creation)
+   * Essential for portability: creates backing flows for component nodes with embedded subFlow data.
+   */
+  const migrateNodes = useCallback(async (nodesToMigrate, targetProjectId) => {
+    // 🛡️ DEFENSIVE: Ensure we have a valid target destination
+    if (!targetProjectId) {
+      console.warn(
+        "[FlowManager] Migration aborted: No target project ID provided",
+      );
+      return nodesToMigrate;
+    }
+
+    return await Promise.all(
+      nodesToMigrate.map(async (node) => {
+        // No longer strictly locking to currentProject?.id during async land
+        // but we still ensure node is landable.
+
+        if (
+          (node.type === "component" || node.data?.type === "component") &&
+          node.data?.subFlow &&
+          node.data.subFlow.nodes // Must have actual nodes to migrate
+        ) {
+          console.log(
+            `[FlowManager] 🧩 Migrating portable component: ${node.data.label}`,
+          );
+
+          try {
+            // 1. Create the backing flow
+            const response = await projectManager.createFlow(
+              targetProjectId,
+              node.data.subFlow.name || node.data.label || "Sub-flow",
+            );
+            const flowId = response.flow?.id || response.id;
+
+            if (flowId) {
+              // 2. Populate it (Recursive migration if sub-flows within sub-flows exist)
+              const innerNodes = await migrateNodes(
+                node.data.subFlow.nodes,
+                targetProjectId,
+              );
+
+              await projectManager.updateFlow(targetProjectId, flowId, {
+                nodes: innerNodes,
+                edges: (node.data.subFlow.edges || []).map((e) => ({
+                  ...e,
+                  type: "custom",
+                  animated: true,
+                })),
+              });
+
+              // 3. Return node linked to new flow, with persistent count
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  flowId,
+                  nodeCount: node.data.subFlow.nodes.length,
+                  hasInput: node.data.subFlow.nodes.some(
+                    (n) => n.type === "input",
+                  ),
+                  hasOutput: node.data.subFlow.nodes.some(
+                    (n) => n.type === "output",
+                  ),
+                  configuration: {
+                    ...node.data.configuration,
+                    flowId,
+                  },
+                  subFlow: undefined, // Clear template data
+                },
+              };
+            }
+          } catch (err) {
+            console.error("Failed to migrate component node:", err);
+            return node;
+          }
+        }
+        return node;
+      }),
+    );
+  }, []);
+
+  const [isStarterTemplate, setIsStarterTemplate] = useState(false);
+
+  const loadStarterTemplate = useCallback(
+    async (explicitProjectId = null) => {
+      const pId = explicitProjectId || currentProject?.id;
+      if (!pId) return;
+
+      const toastId = toast.loading(
+        t("common.loading_starter", "Initializing Hal-Test Tour..."),
+      );
+
+      try {
+        // 1. Process Nodes and create sub-flows (Using migration logic)
+        const processedNodes = await migrateNodes(STARTER_TEMPLATE.nodes, pId);
+
+        // 2. Apply to state
+        setNodes(processedNodes);
+        setEdges(
+          STARTER_TEMPLATE.edges.map((e) => ({
+            ...e,
+            type: "custom",
+            animated: true,
+          })),
+        );
+
+        setIsStarterTemplate(true);
+        setHasUnsavedChanges(true);
+
+        toast.dismiss(toastId);
+        toast.success(
+          t("common.starter_template_loaded", "Starter Template loaded!"),
+        );
+
+        // 3. Auto-center
+        setTimeout(() => {
+          // Double check project still exists after async toast
+          if (currentProject?.id !== pId) return;
+
+          console.log(
+            "[FlowManager] 🚀 Loading starter template for project:",
+            pId,
+          );
+          fitView({
+            duration: 400,
+            padding: { top: 0.1, bottom: 0.1, left: 0.02, right: 0.45 },
+            includeNodes: true,
+            minZoom: 0.1,
+            maxZoom: 0.95,
+          });
+        }, 300);
+      } catch (err) {
+        toast.dismiss(toastId);
+        console.error("[FlowManager] Error loading starter template:", err);
+        toast.error("Failed to initialize tour.");
+      }
+    },
+    [currentProject, setNodes, setEdges, t, toast, fitView, migrateNodes],
+  );
 
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const selectedAction = useMemo(() => {
@@ -314,7 +456,6 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
 
   // PERSISTENT SESSION STATE
   const [activeBrowserId, setActiveBrowserId] = useState(null);
-  const [isStarterTemplate, setIsStarterTemplate] = useState(false);
 
   const executionAbortController = useRef(null);
   const lastLoadedFlowId = useRef(null); // Ref for preventing race conditions
@@ -2666,145 +2807,6 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
       return result;
     },
     [executeStep, updateNodeState, toast],
-  );
-
-  /**
-   * Migrate Nodes (Recursive Sub-flow Creation)
-   * Essential for portability: creates backing flows for component nodes with embedded subFlow data.
-   */
-  const migrateNodes = useCallback(async (nodesToMigrate, targetProjectId) => {
-    // 🛡️ DEFENSIVE: Ensure we have a valid target destination
-    if (!targetProjectId) {
-      console.warn(
-        "[FlowManager] Migration aborted: No target project ID provided",
-      );
-      return nodesToMigrate;
-    }
-
-    return await Promise.all(
-      nodesToMigrate.map(async (node) => {
-        // No longer strictly locking to currentProject?.id during async land
-        // but we still ensure node is landable.
-
-        if (
-          (node.type === "component" || node.data?.type === "component") &&
-          node.data?.subFlow &&
-          node.data.subFlow.nodes // Must have actual nodes to migrate
-        ) {
-          console.log(
-            `[FlowManager] 🧩 Migrating portable component: ${node.data.label}`,
-          );
-
-          try {
-            // 1. Create the backing flow
-            const response = await projectManager.createFlow(
-              targetProjectId,
-              node.data.subFlow.name || node.data.label || "Sub-flow",
-            );
-            const flowId = response.flow?.id || response.id;
-
-            if (flowId) {
-              // 2. Populate it (Recursive migration if sub-flows within sub-flows exist)
-              const innerNodes = await migrateNodes(
-                node.data.subFlow.nodes,
-                targetProjectId,
-              );
-
-              await projectManager.updateFlow(targetProjectId, flowId, {
-                nodes: innerNodes,
-                edges: (node.data.subFlow.edges || []).map((e) => ({
-                  ...e,
-                  type: "custom",
-                  animated: true,
-                })),
-              });
-
-              // 3. Return node linked to new flow, with persistent count
-              return {
-                ...node,
-                data: {
-                  ...node.data,
-                  flowId,
-                  nodeCount: node.data.subFlow.nodes.length,
-                  hasInput: node.data.subFlow.nodes.some(
-                    (n) => n.type === "input",
-                  ),
-                  hasOutput: node.data.subFlow.nodes.some(
-                    (n) => n.type === "output",
-                  ),
-                  configuration: {
-                    ...node.data.configuration,
-                    flowId,
-                  },
-                  subFlow: undefined, // Clear template data
-                },
-              };
-            }
-          } catch (err) {
-            console.error("Failed to migrate component node:", err);
-            return node;
-          }
-        }
-        return node;
-      }),
-    );
-  }, []);
-
-  const loadStarterTemplate = useCallback(
-    async (explicitProjectId = null) => {
-      const pId = explicitProjectId || currentProject?.id;
-      if (!pId) return;
-
-      const toastId = toast.loading(
-        t("common.loading_starter", "Initializing Hal-Test Tour..."),
-      );
-
-      try {
-        // 1. Process Nodes and create sub-flows (Using migration logic)
-        const processedNodes = await migrateNodes(STARTER_TEMPLATE.nodes, pId);
-
-        // 2. Apply to state
-        setNodes(processedNodes);
-        setEdges(
-          STARTER_TEMPLATE.edges.map((e) => ({
-            ...e,
-            type: "custom",
-            animated: true,
-          })),
-        );
-
-        setIsStarterTemplate(true);
-        setHasUnsavedChanges(true);
-
-        toast.dismiss(toastId);
-        toast.success(
-          t("common.starter_template_loaded", "Starter Template loaded!"),
-        );
-
-        // 3. Auto-center
-        setTimeout(() => {
-          // Double check project still exists after async toast
-          if (currentProject?.id !== pId) return;
-
-          console.log(
-            "[FlowManager] 🚀 Loading starter template for project:",
-            pId,
-          );
-          fitView({
-            duration: 400,
-            padding: { top: 0.1, bottom: 0.1, left: 0.02, right: 0.45 },
-            includeNodes: true,
-            minZoom: 0.1,
-            maxZoom: 0.95,
-          });
-        }, 300);
-      } catch (err) {
-        toast.dismiss(toastId);
-        console.error("[FlowManager] Error loading starter template:", err);
-        toast.error("Failed to initialize tour.");
-      }
-    },
-    [currentProject, setNodes, setEdges, t, toast, fitView, migrateNodes],
   );
 
   const executeFlow = useCallback(

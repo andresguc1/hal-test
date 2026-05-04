@@ -188,6 +188,24 @@ function Dashboard() {
     toggleDownstreamDisabled,
   } = useFlowManager(currentProject, currentFlowId, switchFlow);
 
+  // Navigate to a node: select it AND center the canvas on it
+  const handleNavigateToNode = useCallback(
+    (nodeId) => {
+      if (!nodeId) return;
+      setSelectedNodeId(nodeId);
+      // Small delay so the panel re-renders with the new node first
+      setTimeout(() => {
+        reactFlowFitView({
+          nodes: [{ id: nodeId }],
+          duration: 600,
+          padding: 0.8, // More padding when focusing a single node
+          maxZoom: 1.2,
+        });
+      }, 80);
+    },
+    [setSelectedNodeId, reactFlowFitView],
+  );
+
   const handleExecuteFlow = useCallback(async () => {
     // --- UNIVERSAL EXECUTION CONTEXT ---
     // We stay in the current view context (sub-flow or root) to allow local monitoring.
@@ -653,24 +671,6 @@ function Dashboard() {
       return { success: true };
     },
     [updateNodeConfiguration],
-  );
-
-  // Navigate to a node: select it AND center the canvas on it
-  const handleNavigateToNode = useCallback(
-    (nodeId) => {
-      if (!nodeId) return;
-      setSelectedNodeId(nodeId);
-      // Small delay so the panel re-renders with the new node first
-      setTimeout(() => {
-        reactFlowFitView({
-          nodes: [{ id: nodeId }],
-          duration: 600,
-          padding: 0.8, // More padding when focusing a single node
-          maxZoom: 1.2,
-        });
-      }, 80);
-    },
-    [setSelectedNodeId, reactFlowFitView],
   );
 
   const socket = useHaltestSocket({

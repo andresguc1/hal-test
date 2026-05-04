@@ -464,17 +464,20 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
     const start = Date.now();
     const runId = req.body.runId; // Extract runId if present
     const nodeId = req.body.nodeId; // Extract nodeId if present
-    const useExperienceVault = req.headers['x-hal-experience-vault'] !== 'false';
+    const useExperienceVault = req.headers?.['x-hal-experience-vault'] !== 'false';
 
     // --- VARIABLE RESOLUTION ---
     // Deeply interpolate variables in the request body before any logic
     const opts = variableManager.resolveRecursive(req.body, runId); // Pass runId for isolation
 
-    // Ensure continueOnError is strictly boolean
+    // Ensure continueOnError and takeScreenshot are strictly boolean
     if (opts.continueOnError === 'true' || opts.continueOnError === '1')
         opts.continueOnError = true;
     if (opts.continueOnError === 'false' || opts.continueOnError === '0')
         opts.continueOnError = false;
+
+    if (opts.takeScreenshot === 'true' || opts.takeScreenshot === '1') opts.takeScreenshot = true;
+    if (opts.takeScreenshot === 'false' || opts.takeScreenshot === '0') opts.takeScreenshot = false;
 
     // --- LABEL SAFETY NET ---
     let finalLabel = opts.label || req.body.label || req.body.customLabel;
@@ -1083,7 +1086,7 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
 
         // --- FLIGHT RECORDER: Forensic Capture (Auto-error Screenshot) ---
         let errorScreenshotPath = null;
-        if (page && !page.isClosed()) {
+        if (page && !page.isClosed() && opts.takeScreenshot !== false) {
             try {
                 // Use structured storage: storage/runs/{runId}/error_{nodeId}_{timestamp}.png
                 const runFolder = runId || 'orphan';
@@ -1338,7 +1341,16 @@ export const openUrlAction = async (req, res) => {
     }
 
     try {
-        const { url, waitUntil = 'domcontentloaded', timeout = 30000 } = req.body ?? {};
+        // --- VARIABLE RESOLUTION ---
+        const opts = variableManager.resolveRecursive(req.body, runId);
+
+        // Coerce booleans
+        if (opts.takeScreenshot === 'true' || opts.takeScreenshot === '1')
+            opts.takeScreenshot = true;
+        if (opts.takeScreenshot === 'false' || opts.takeScreenshot === '0')
+            opts.takeScreenshot = false;
+
+        const { url, waitUntil = 'domcontentloaded', timeout = 30000, takeScreenshot } = opts ?? {};
 
         if (!url) {
             return res
@@ -1407,7 +1419,6 @@ export const openUrlAction = async (req, res) => {
 
         // --- FLIGHT RECORDER: Optional Screenshot on Success ---
         let screenshotPath = null;
-        const { takeScreenshot } = req.body;
         if (takeScreenshot && page && !page.isClosed() && runId && nodeId) {
             try {
                 const screenshotsDir = path.join(STORAGE_RUNS_DIR, runId);
@@ -1437,7 +1448,7 @@ export const openUrlAction = async (req, res) => {
                 {
                     status: 'success',
                     duration,
-                    input: req.body,
+                    input: opts,
                     output: { url, browserId },
                     screenshot: screenshotPath,
                 },
