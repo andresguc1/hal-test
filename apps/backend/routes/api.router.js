@@ -584,13 +584,20 @@ const withSocketStatus = (handler) => async (req, res) => {
         if (variables && typeof variables === 'object') {
             try {
                 const { variableManager } = await import('../services/VariableManager.js');
-                // We use the provided runId or a default fallback
+                // We use the provided runId OR fallback to 'atomic_run' for shared context
                 const effectiveRunId = runId || 'atomic_run';
                 const varKeys = Object.keys(variables);
+
                 console.log(
-                    `[API Router] Seeding ${varKeys.length} variables into RunId=${effectiveRunId}. Keys: ${varKeys.slice(0, 5).join(', ')}`,
+                    `[API Router] Seeding ${varKeys.length} variables. EffectiveRunId: ${effectiveRunId}`,
                 );
+
+                // Seed both the specific runId (if provided) and the atomic_run shared scope
                 variableManager.initRun(effectiveRunId, variables);
+                if (effectiveRunId !== 'atomic_run') {
+                    variableManager.initRun('atomic_run', variables);
+                }
+
                 // Ensure the body has the same runId so controller uses the correct scope
                 req.body.runId = effectiveRunId;
             } catch (err) {

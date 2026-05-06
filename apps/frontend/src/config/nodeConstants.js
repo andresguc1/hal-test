@@ -170,7 +170,10 @@ export const NODE_TYPE_MAP = Object.entries(NODE_CATEGORIES).reduce(
 );
 
 // 3. NODE OUTPUT SCHEMAS (Static fallback for UX)
+// Defines the expected output contract for each node type.
+// Used as a design-time preview when no execution data exists.
 export const NODE_OUTPUTS = {
+  // --- Browser Management ---
   launch_browser: {
     browserId: "string",
     status: "string",
@@ -178,16 +181,40 @@ export const NODE_OUTPUTS = {
   },
   open_url: {
     url: "string",
-    status: "number",
+    browserId: "string",
+    status: "string",
+    success: "boolean",
+    message: "string",
+    durationMs: "number",
+  },
+  close_browser: {
     success: "boolean",
     message: "string",
   },
-  find_element: {
-    found: "boolean",
-    count: "number",
-    selector: "string",
+  manage_tabs: {
+    success: "boolean",
+    tabs: "array",
+    activeIndex: "number",
+    message: "string",
+  },
+  resize_viewport: {
+    success: "boolean",
+    width: "number",
+    height: "number",
+  },
+  go_back: {
+    success: "boolean",
+    url: "string",
+  },
+  go_forward: {
+    success: "boolean",
+    url: "string",
+  },
+  reload_page: {
     success: "boolean",
   },
+
+  // --- User Simulation ---
   click: {
     success: "boolean",
     selector: "string",
@@ -204,6 +231,41 @@ export const NODE_OUTPUTS = {
     value: "string",
     selector: "string",
   },
+  submit_form: {
+    success: "boolean",
+    selector: "string",
+    message: "string",
+  },
+  scroll: {
+    success: "boolean",
+    direction: "string",
+    amount: "number",
+    message: "string",
+  },
+  drag_drop: {
+    success: "boolean",
+    sourceSelector: "string",
+    targetSelector: "string",
+    message: "string",
+  },
+  hover: {
+    success: "boolean",
+    selector: "string",
+    message: "string",
+  },
+  upload_file: {
+    success: "boolean",
+    files: "string",
+    message: "string",
+  },
+
+  // --- DOM / Code ---
+  find_element: {
+    found: "boolean",
+    count: "number",
+    selector: "string",
+    success: "boolean",
+  },
   get_set_content: {
     success: "boolean",
     content: "string",
@@ -214,6 +276,81 @@ export const NODE_OUTPUTS = {
     result: "any",
     message: "string",
   },
+
+  // --- Waits ---
+  wait_for_element: {
+    success: "boolean",
+    found: "boolean",
+    selector: "string",
+  },
+  wait_visible: {
+    success: "boolean",
+    selector: "string",
+  },
+  wait_navigation: {
+    success: "boolean",
+    url: "string",
+  },
+  wait_network: {
+    success: "boolean",
+    idleTime: "number",
+  },
+  wait_conditional: {
+    success: "boolean",
+    result: "boolean",
+  },
+  pause: {
+    success: "boolean",
+    duration: "number",
+  },
+
+  // --- Diagnostics ---
+  take_screenshot: {
+    success: "boolean",
+    path: "string",
+    url: "string",
+  },
+  save_dom: {
+    success: "boolean",
+    path: "string",
+    content: "string",
+  },
+  log_errors: {
+    success: "boolean",
+    errors: "array",
+  },
+  listen_events: {
+    success: "boolean",
+    events: "array",
+  },
+
+  // --- Network ---
+  configure_route: {
+    success: "boolean",
+    message: "string",
+  },
+  wait_network_match: {
+    success: "boolean",
+    url: "string",
+    status: "number",
+    body: "any",
+  },
+  set_network_conditions: {
+    success: "boolean",
+    profile: "string",
+  },
+
+  // --- Session ---
+  manage_session: {
+    success: "boolean",
+    message: "string",
+  },
+  persist_session: {
+    success: "boolean",
+    path: "string",
+  },
+
+  // --- AI / LLM ---
   call_llm: {
     success: "boolean",
     result: "string",
@@ -227,28 +364,84 @@ export const NODE_OUTPUTS = {
     success: "boolean",
     context: "string",
   },
-  take_screenshot: {
+  validate_semantic: {
+    success: "boolean",
+    result: "boolean",
+    reasoning: "string",
+  },
+  chain_of_thought: {
+    success: "boolean",
+    thought: "string",
+    answer: "string",
+  },
+  smart_selector: {
+    success: "boolean",
+    selector: "string",
+    confidence: "number",
+  },
+
+  // --- Flow Control ---
+  variable: {
+    success: "boolean",
+    name: "string",
+    value: "any",
+  },
+  conditional: {
     success: "boolean",
     path: "string",
-    url: "string",
+    evaluated: "boolean",
   },
+  switch: {
+    success: "boolean",
+    matchedCase: "string",
+    value: "any",
+  },
+  loop: {
+    success: "boolean",
+    iterations: "number",
+    lastResult: "any",
+  },
+  branch: {
+    success: "boolean",
+    path: "string",
+  },
+  flow_control: {
+    success: "boolean",
+    action: "string",
+  },
+  transform: {
+    success: "boolean",
+    result: "any",
+  },
+
+  // --- Files & Data ---
+  read_file: {
+    success: "boolean",
+    data: "any",
+    rowCount: "number",
+  },
+  write_file: {
+    success: "boolean",
+    path: "string",
+  },
+  download_file: {
+    success: "boolean",
+    fileName: "string",
+    fileSize: "number",
+  },
+
+  // --- Composition ---
+  component: {
+    success: "boolean",
+    data: "object",
+  },
+
+  // --- Testing ---
   run_tests: {
     success: "boolean",
     passed: "number",
     failed: "number",
     total: "number",
-  },
-  component: {
-    success: "boolean",
-    data: "object",
-  },
-  wait: {
-    success: "boolean",
-    duration: "number",
-  },
-  branch: {
-    success: "boolean",
-    path: "string",
   },
 };
 

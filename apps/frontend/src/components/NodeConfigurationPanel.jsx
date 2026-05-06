@@ -11,6 +11,8 @@ import {
   FileText,
   ArrowLeftRight,
   Box,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { NODE_STATES } from "./hooks/flowStyles";
 import {
@@ -47,7 +49,7 @@ import EvidenceCard from "./EvidenceCard"; // New component import
 import VariableInput from "./VariableInput";
 
 const ConditionalBranchesEditor = React.memo(
-  ({ value, onChange, variables, allVariables }) => {
+  ({ value, onChange, variables, allVariables, precedingNodes }) => {
     const { t } = useTranslation();
     const branches = useMemo(() => {
       let activeValue = value;
@@ -115,50 +117,115 @@ const ConditionalBranchesEditor = React.memo(
       });
     }, [value]);
 
-    // Flattened variable paths for VariableInput suggestions
+    // Refined variable paths for a cleaner UI
     const availableVariablePaths = useMemo(() => {
-      const paths = [];
+      const suggestions = [];
+      const noiseKeys = [
+        "healedNodes",
+        "replayData",
+        "trace",
+        "lastError",
+        "error",
+        "config",
+        "configuration",
+        "data",
+      ];
+      const processedNodeIds = new Set();
+
       Object.entries(variables || {}).forEach(([nodeName, nodeVal]) => {
         if (nodeName.includes(".result") || nodeName === "global") return;
         if (!nodeVal || typeof nodeVal !== "object") return;
 
+        // 1. Find the real node to get its type and label
+        const matchingNode = precedingNodes?.find(
+          (pn) => pn.data?.label === nodeName || pn.id === nodeName,
+        );
+        const nodeId = matchingNode?.id || nodeName;
+
+        // 2. Deduplicate groups
+        if (processedNodeIds.has(nodeId)) return;
+        processedNodeIds.add(nodeId);
+
+        const displayLabel = matchingNode?.data?.label || nodeName;
+        const nodeType = matchingNode?.data?.type || matchingNode?.type;
+        const nodeSchema = NODE_OUTPUTS[nodeType] || {};
+
+        const nodeGroup = {
+          nodeLabel: displayLabel,
+          nodeId: nodeId,
+          items: [],
+        };
+
         const extract = (obj, prefix = "", depth = 0) => {
-          if (depth > 2 || !obj || typeof obj !== "object") return;
+          if (depth > 1 || !obj || typeof obj !== "object") return;
+
           Object.entries(obj).forEach(([prop, val]) => {
-            if (prop === "result" || prop.substring(0, 1) === "_") return;
+            if (
+              prop === "result" ||
+              prop.substring(0, 1) === "_" ||
+              noiseKeys.includes(prop)
+            )
+              return;
 
             const fullPropPath = prefix ? `${prefix}.${prop}` : prop;
-            const isObj = val && typeof val === "object" && !Array.isArray(val);
+            const explicitType = nodeSchema[fullPropPath] || typeof val;
 
-            // Suggest the full path
-            paths.push(`{{${nodeName}.${fullPropPath}}}`);
+            nodeGroup.items.push({
+              label: prop,
+              path: `{{${displayLabel}.${fullPropPath}}}`,
+              displayPath: `{{${displayLabel}.${fullPropPath}}}`,
+              type:
+                explicitType === "object" &&
+                typeof val === "string" &&
+                val.startsWith("<")
+                  ? val.slice(1, -1)
+                  : explicitType,
+            });
 
-            // FLATTENING: If it's inside 'data', also suggest it without 'data.' prefix
-            if (prefix === "data") {
-              paths.push(`{{${nodeName}.${prop}}}`);
+            if (
+              val &&
+              typeof val === "object" &&
+              !Array.isArray(val) &&
+              depth < 1
+            ) {
+              extract(val, fullPropPath, depth + 1);
             }
-
-            if (isObj && depth < 2) extract(val, fullPropPath, depth + 1);
           });
         };
+
         extract(nodeVal);
 
-        // Ensure common status/success are always suggested if they exist in the result
-        if (nodeVal.status && !paths.includes(`{{${nodeName}.status}}`))
-          paths.push(`{{${nodeName}.status}}`);
-        if (nodeVal.success && !paths.includes(`{{${nodeName}.success}}`))
-          paths.push(`{{${nodeName}.success}}`);
-        if (nodeVal.data?.success && !paths.includes(`{{${nodeName}.success}}`))
-          paths.push(`{{${nodeName}.success}}`);
+        // Ensure status/success are always there if available in schema
+        if (
+          nodeSchema.status &&
+          !nodeGroup.items.find((i) => i.label === "status")
+        ) {
+          nodeGroup.items.push({
+            label: "status",
+            path: `{{${displayLabel}.status}}`,
+            displayPath: `{{${displayLabel}.status}}`,
+            type: nodeSchema.status,
+          });
+        }
+        if (
+          nodeSchema.success &&
+          !nodeGroup.items.find((i) => i.label === "success")
+        ) {
+          nodeGroup.items.push({
+            label: "success",
+            path: `{{${displayLabel}.success}}`,
+            displayPath: `{{${displayLabel}.success}}`,
+            type: nodeSchema.success,
+          });
+        }
+
+        if (nodeGroup.items.length > 0) {
+          suggestions.push(nodeGroup);
+        }
       });
 
-      if (variables?.global) {
-        Object.keys(variables.global).forEach((k) =>
-          paths.push(`{{global.${k}}}`),
-        );
-      }
-      return paths;
-    }, [variables]);
+      return suggestions;
+    }, [variables, precedingNodes]);
 
     const updateBranch = React.useCallback(
       (index, field, val) => {
@@ -302,30 +369,48 @@ const ConditionalBranchesEditor = React.memo(
 
         const value = resolveVariableValue(leftRef);
 
-        const suggestions = [];
+        const items = [];
         if (
           value !== undefined &&
           value !== null &&
           typeof value !== "object"
         ) {
-          suggestions.push(String(value));
+          items.push({
+            label: String(value),
+            path: String(value),
+            type: typeof value,
+          });
         }
 
         // Add smart defaults for common fields
         if (propName === "status") {
           ["success", "error", "loading", "pending"].forEach((s) => {
-            if (!suggestions.includes(s)) suggestions.push(s);
+            if (!items.find((i) => i.label === s)) {
+              items.push({ label: s, path: s, type: "string" });
+            }
           });
         }
         if (propName === "success") {
           ["true", "false"].forEach((s) => {
-            if (!suggestions.includes(s)) suggestions.push(s);
+            if (!items.find((i) => i.label === s)) {
+              items.push({ label: s, path: s, type: "boolean" });
+            }
           });
         }
 
-        return suggestions.slice(0, 10);
+        if (items.length === 0) return [];
+
+        return [
+          {
+            nodeLabel: t(
+              "nodes.config.conditional.suggested_values",
+              "Valores Sugeridos",
+            ),
+            items: items.slice(0, 10),
+          },
+        ];
       },
-      [resolveVariableValue],
+      [resolveVariableValue, t],
     );
 
     // Helper to evaluate conditions in real-time
@@ -418,7 +503,7 @@ const ConditionalBranchesEditor = React.memo(
               <div
                 key={`branch-${branch.id}-${index}`}
                 className={cn(
-                  "rounded-2xl transition-all duration-200 overflow-hidden",
+                  "rounded-2xl transition-all duration-200",
                   isElseBranch
                     ? "bg-slate-900/40 border border-slate-800"
                     : "bg-[#0f172a] border border-slate-800 hover:border-sky-500/30 shadow-xl shadow-black/20",
@@ -600,9 +685,10 @@ const ConditionalBranchesEditor = React.memo(
                             value={branch.expression?.right || ""}
                             variables={allVariables || variables}
                             contextualVariables={variables}
-                            suggestions={getValueSuggestions(
-                              branch.expression?.left,
-                            )}
+                            suggestions={[
+                              ...getValueSuggestions(branch.expression?.left),
+                              ...availableVariablePaths,
+                            ]}
                             placeholder={t(
                               "nodes.config.conditional.placeholder_val",
                               "Valor...",
@@ -630,20 +716,24 @@ const ConditionalBranchesEditor = React.memo(
                                 )}
                               </span>
                               <div className="flex gap-1">
-                                {suggestedValues.map((val) => (
+                                {suggestedValues[0].items.map((item) => (
                                   <button
-                                    key={val}
+                                    key={item.path}
                                     onClick={() =>
-                                      updateBranch(index, "expr_right", val)
+                                      updateBranch(
+                                        index,
+                                        "expr_right",
+                                        item.path,
+                                      )
                                     }
                                     className={cn(
                                       "px-2 py-0.5 rounded-full text-[9px] font-black border transition-all uppercase tracking-tight",
-                                      branch.expression?.right === val
+                                      branch.expression?.right === item.path
                                         ? "bg-sky-500/20 border-sky-500/40 text-sky-400 shadow-lg shadow-sky-500/10"
                                         : "bg-slate-800 border-white/5 text-slate-500 hover:text-slate-300 hover:bg-slate-700",
                                     )}
                                   >
-                                    {val}
+                                    {item.label}
                                   </button>
                                 ))}
                               </div>
@@ -1081,7 +1171,18 @@ function NodeConfigurationPanel({
           finalResult = n.data.result;
           dataSource = "persisted";
         } else {
-          finalResult = {};
+          // 🌟 STATIC SCHEMA FALLBACK: Use NODE_OUTPUTS as design-time contract
+          const nodeType = n.data?.type || n.type;
+          const schema = NODE_OUTPUTS[nodeType];
+          if (schema) {
+            const mockResult = {};
+            Object.entries(schema).forEach(([key, type]) => {
+              mockResult[key] = `<${type}>`;
+            });
+            finalResult = mockResult;
+          } else {
+            finalResult = {};
+          }
           dataSource = "static";
         }
 
@@ -1521,6 +1622,12 @@ function NodeConfigurationPanel({
           }
           if (pn.data?.label && !(`${pn.data.label}.result` in map)) {
             map[`${pn.data.label}.result`] = pn.data.result;
+
+            // 🌟 SAFE ALIAS: "Login Steps" -> "LoginSteps"
+            const safeLabel = pn.data.label.replace(/[^a-zA-Z0-9]/g, "");
+            if (safeLabel && safeLabel !== pn.data.label) {
+              map[`${safeLabel}.result`] = pn.data.result;
+            }
           }
         }
         if (
@@ -1545,6 +1652,21 @@ function NodeConfigurationPanel({
       if (pn.data?.result !== undefined) {
         map[nodeLabel] = pn.data.result;
         map[pn.id] = pn.data.result;
+      }
+
+      // 🌟 STATIC SCHEMA INJECTION: If no real data, inject NODE_OUTPUTS schema
+      // so ConditionalBranchesEditor can suggest variables before execution
+      if (pn.data?.isStaticSchema) {
+        const nodeType = pn.data?.type || pn.type;
+        const schema = NODE_OUTPUTS[nodeType];
+        if (schema) {
+          const schemaResult = {};
+          Object.entries(schema).forEach(([key, type]) => {
+            schemaResult[key] = `<${type}>`;
+          });
+          if (!map[nodeLabel]) map[nodeLabel] = schemaResult;
+          if (!map[pn.id]) map[pn.id] = schemaResult;
+        }
       }
     });
 
@@ -1606,6 +1728,7 @@ function NodeConfigurationPanel({
             value={value}
             variables={contextualVariablesMap}
             allVariables={variablesMap}
+            precedingNodes={precedingNodes}
             onChange={(newVal) => handleConfigUpdate(dataKey, newVal)}
           />
         );
@@ -2040,76 +2163,85 @@ function NodeConfigurationPanel({
                   expressions.
                 </div>
               )}
-              {precedingNodes.map((pn) => (
-                <div
-                  key={pn.id}
-                  className="p-2 rounded-lg bg-slate-900/40 border border-white/5 overflow-hidden"
-                >
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-[10px] font-medium text-slate-400 flex items-center gap-1.5">
-                      {pn.type === "component" && (
-                        <Box size={10} className="text-indigo-400" />
-                      )}
-                      {pn.data?.customLabel || pn.data?.label || pn.type}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      {pn.data?.isStaticSchema && (
-                        <span className="text-[8px] px-1 bg-amber-500/10 text-amber-500/70 border border-amber-500/20 rounded uppercase font-bold tracking-tighter">
-                          Schema Only
+              {precedingNodes.map((pn) => {
+                const hasResult =
+                  pn.data?.result && Object.keys(pn.data.result).length > 0;
+                const displayData = hasResult
+                  ? pn.data.result
+                  : pn.data?.configuration || {};
+
+                return (
+                  <div
+                    key={pn.id}
+                    className="p-3 rounded-xl bg-slate-900/40 border border-white/5 space-y-2 mb-3"
+                  >
+                    <div className="flex justify-between items-center px-1">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-slate-300 uppercase tracking-tight flex items-center gap-2">
+                          {pn.data?.customLabel || pn.data?.label || pn.type}
+                          {!hasResult && (
+                            <span className="px-1.5 py-0.5 rounded-full bg-sky-500/10 text-sky-400 text-[8px] border border-sky-500/20">
+                              LIVE CONFIG
+                            </span>
+                          )}
                         </span>
-                      )}
-                      <span className="text-[9px] px-1 py-0.5 rounded bg-slate-800 text-slate-500 font-mono">
-                        {`{{${pn.data?.customLabel || pn.data?.label || pn.id}.result}}`}
-                      </span>
+                        <span className="text-[9px] text-slate-500 font-mono mt-0.5">
+                          {`{{${pn.data?.customLabel || pn.data?.label || pn.id}.${hasResult ? "result" : "config"}}}`}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="bg-black/20 rounded-lg border border-white/5 overflow-hidden">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-white/10">
+                            <th className="px-3 py-1.5 text-[9px] font-bold text-slate-500 uppercase border-b border-white/5">
+                              Property
+                            </th>
+                            <th className="px-3 py-1.5 text-[9px] font-bold text-slate-500 uppercase border-b border-white/5 text-right">
+                              Value
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {Object.entries(displayData)
+                            .filter(
+                              ([k]) =>
+                                !k.startsWith("_") &&
+                                k !== "branches" &&
+                                k !== "cases",
+                            )
+                            .map(([key, val]) => (
+                              <tr
+                                key={key}
+                                className="hover:bg-white/5 transition-colors border-b border-white/5 last:border-0"
+                              >
+                                <td className="px-3 py-1.5 text-[10px] font-mono text-indigo-300/80">
+                                  {key}
+                                </td>
+                                <td className="px-3 py-1.5 text-[10px] font-mono text-slate-400 text-right truncate max-w-[120px]">
+                                  {typeof val === "object"
+                                    ? "{...}"
+                                    : String(val)}
+                                </td>
+                              </tr>
+                            ))}
+                          {Object.keys(displayData).length === 0 && (
+                            <tr>
+                              <td
+                                colSpan={2}
+                                className="px-3 py-4 text-[9px] text-slate-600 italic text-center"
+                              >
+                                No data available yet
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
-                  {pn.data?.result ? (
-                    <div className="relative group/data">
-                      <div className="text-[11px] text-slate-300 font-mono line-clamp-6 bg-black/30 p-2.5 rounded pr-12 max-h-48 overflow-y-auto custom-scrollbar border border-white/5">
-                        {truncateResult(pn.data.result, 2000)}
-                      </div>
-                      <div className="absolute right-1 top-1 flex flex-col gap-1 opacity-0 group-hover/data:opacity-100 transition-opacity">
-                        <button
-                          onClick={() => {
-                            const text =
-                              typeof pn.data.result === "object"
-                                ? JSON.stringify(pn.data.result, null, 2)
-                                : String(pn.data.result);
-                            navigator.clipboard.writeText(text);
-                            toast.success("Copied to clipboard", {
-                              icon: "📋",
-                              id: "copy-toast",
-                            });
-                          }}
-                          className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-400"
-                          title="Copy"
-                        >
-                          <Copy size={10} />
-                        </button>
-                        <button
-                          onClick={() =>
-                            setInspectedData({
-                              title:
-                                pn.data?.customLabel ||
-                                pn.data?.label ||
-                                pn.type,
-                              content: pn.data.result,
-                            })
-                          }
-                          className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-400"
-                          title="View Full"
-                        >
-                          <Maximize2 size={10} />
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-[9px] text-slate-600 italic">
-                      No data emitted yet.
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -2416,6 +2548,38 @@ function NodeConfigurationPanel({
             <div className="flex items-center gap-1">
               <button
                 onClick={() => {
+                  const isDisabled = !activeNode.data?.disabled;
+                  // Forzar actualización inmediata en el objeto de datos del nodo
+                  activeNode.data.disabled = isDisabled;
+                  updateNodeConfiguration(activeNode.id, {
+                    ...activeNode.data,
+                    disabled: isDisabled,
+                  });
+                  // Disparar un evento de cambio local para que el canvas reaccione
+                  window.dispatchEvent(
+                    new CustomEvent("node-data-updated", {
+                      detail: { nodeId: activeNode.id },
+                    }),
+                  );
+                }}
+                className={cn(
+                  "p-1.5 rounded-lg transition-colors",
+                  activeNode.data?.disabled
+                    ? "text-amber-400 bg-amber-500/10 hover:bg-amber-500/20"
+                    : "text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10",
+                )}
+                title={
+                  activeNode.data?.disabled ? "Enable Node" : "Disable Node"
+                }
+              >
+                {activeNode.data?.disabled ? (
+                  <EyeOff size={16} />
+                ) : (
+                  <Eye size={16} />
+                )}
+              </button>
+              <button
+                onClick={() => {
                   if (
                     confirm(t("common.confirm_delete", "Delete this node?"))
                   ) {
@@ -2707,6 +2871,10 @@ function NodeConfigurationPanel({
             {/* Primary Action */}
             <button
               onClick={async () => {
+                console.log(
+                  "[NodeConfig] 🚀 Running Node with variables:",
+                  variablesMap,
+                );
                 await onExecute(
                   {
                     ...activeNode,

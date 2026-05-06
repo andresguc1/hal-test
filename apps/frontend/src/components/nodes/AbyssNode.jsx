@@ -114,15 +114,16 @@ const AbyssNode = ({ id, data, selected, type }) => {
       style={{
         borderColor: statusColor || undefined,
         boxShadow: statusShadow || undefined,
+        minWidth: isConditional || isSwitch ? 200 : 160,
         minHeight:
           (isConditional || isSwitch) && showOutputs
-            ? Math.max(80, branches.length * 40)
+            ? Math.max(100, branches.length * 45)
             : undefined,
         transition:
           "background-color 0.4s, border-color 0.4s, box-shadow 0.4s, transform 0s", // CRITICAL: transform 0s
       }}
       className={cn(
-        "group relative min-w-[160px] max-w-[300px] rounded-lg p-3 transition-[background,border,box-shadow,opacity] duration-400 select-none border-[2px]",
+        "group relative max-w-[320px] rounded-lg p-3 transition-[background,border,box-shadow,opacity] duration-400 select-none border-[2px]",
         themeParams.base,
         invalidStyle, // Add validation glow
 
@@ -327,6 +328,36 @@ const AbyssNode = ({ id, data, selected, type }) => {
         </div>
       )}
 
+      {/* INTEGRATED BRANCH LABELS (Inside node for clarity) */}
+      {showOutputs && (isConditional || isSwitch) && (
+        <div className="absolute inset-y-0 right-0 w-24 pointer-events-none flex flex-col justify-around py-4">
+          {branches.map((branch, idx) => {
+            const topPct = `${((idx + 1) * 100) / (branches.length + 1)}%`;
+            return (
+              <div
+                key={`label-${branch.id || idx}`}
+                className="absolute right-2 flex items-center justify-end"
+                style={{ top: topPct, transform: "translateY(-50%)" }}
+              >
+                <span
+                  className={cn(
+                    "px-1.5 py-0.5 rounded-[4px] text-[10px] font-black uppercase tracking-tighter border shadow-sm transition-all duration-300",
+                    branch.isFallback
+                      ? "bg-slate-800/80 text-slate-400 border-slate-700/50"
+                      : "bg-white/10 text-white border-white/20 group-hover:bg-white/20",
+                    data.state === "success" &&
+                      data.result?.path === branch.id &&
+                      "bg-emerald-500/20 text-emerald-400 border-emerald-500/40 ring-1 ring-emerald-500/30",
+                  )}
+                >
+                  {branch.label || branch.value || branch.id}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* ERROR INDICATOR (Runtime) */}
       {data.error && (
         <div className="absolute -top-2 -right-2 bg-white rounded-full p-0.5 shadow-sm border border-red-500 z-10">
@@ -362,38 +393,24 @@ const AbyssNode = ({ id, data, selected, type }) => {
                   style={{ top: topPct, transform: "translateY(-50%)" }}
                 >
                   <div className="w-3 h-3 bg-sky-400 border-[2px] border-[#0f172a] rounded-full shadow-[0_0_10px_rgba(56,189,248,0.5)]" />
-
-                  {showDetails && (
-                    <div className="absolute left-full ml-4 top-1/2 -translate-y-1/2 pointer-events-none flex items-center justify-start group-hover:opacity-100 transition-all duration-200">
-                      <div
-                        className={cn(
-                          "px-2 py-0.5 rounded text-[9px] font-black tracking-wider border whitespace-nowrap shadow-lg",
-                          branch.isFallback
-                            ? "bg-slate-800/90 text-slate-400 border-slate-700/50"
-                            : "bg-[#0f172a]/95 text-sky-400 border-sky-500/30",
-                        )}
-                      >
-                        {branch.label || branch.value || branch.id}
-                      </div>
-                    </div>
-                  )}
                 </div>
 
-                {/* Functional Handle (Always reachable) */}
+                {/* Functional Handle (Extra large hit area for ergonomics) */}
                 <Handle
                   type="source"
-                  id={branch.id}
                   position={Position.Right}
+                  id={branch.id || branch.label || branch.value}
                   style={{
                     top: topPct,
-                    right: -12, // -3px * 4 approximately to match visual dot center
+                    right: -10, // Offset to cover the visual dot and part of the label
                     width: 24,
                     height: 24,
-                    backgroundColor: "transparent",
+                    background: "transparent",
                     border: "none",
-                    transform: "translate(50%, -50%)",
                     zIndex: 50,
+                    cursor: "crosshair",
                   }}
+                  className="react-flow__handle-custom-conditional"
                 />
               </React.Fragment>
             );
@@ -418,7 +435,8 @@ function arePropsEqual(prevProps, nextProps) {
     prevProps.selected === nextProps.selected &&
     prevProps.data?.state === nextProps.data?.state &&
     prevProps.data?.configuration === nextProps.data?.configuration &&
-    prevProps.data?.error === nextProps.data?.error
+    prevProps.data?.error === nextProps.data?.error &&
+    prevProps.data?.disabled === nextProps.data?.disabled
   );
 }
 

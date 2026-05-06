@@ -45,16 +45,17 @@ export const VariableInput = ({
   placeholder = "",
   className = "",
   variables = {},
-  contextualVariables = null, // New prop to track valid flow context
+  contextualVariables = null,
   type = "text",
   hasError = false,
-  suggestions = [], // New prop for autocomplete suggestions
+  suggestions = [],
   ...props
 }) => {
   const containerRef = useRef(null);
   const bgRef = useRef(null);
   const datalistId = React.useId(); // Unique ID for datalist
   const [isFocused, setIsFocused] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   // Sync scrolling between foreground and background
   const handleScroll = (e) => {
@@ -237,8 +238,15 @@ export const VariableInput = ({
         }
         onChange={onChange}
         onScroll={handleScroll}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
+        onFocus={() => {
+          setIsFocused(true);
+          setShowSuggestions(true);
+        }}
+        onBlur={() => {
+          setIsFocused(false);
+          // Small delay to allow onMouseDown to fire first
+          setTimeout(() => setShowSuggestions(false), 200);
+        }}
         placeholder={""}
         autoComplete="off"
         data-lpignore="true"
@@ -254,13 +262,91 @@ export const VariableInput = ({
         {...props}
       />
 
-      {/* Suggestion list */}
-      {suggestions?.length > 0 && (
-        <datalist id={datalistId}>
-          {suggestions.map((s, idx) => (
-            <option key={idx} value={s} />
-          ))}
-        </datalist>
+      {/* Suggestion list - Custom UI */}
+      {showSuggestions && suggestions?.length > 0 && (
+        <div className="absolute top-full left-0 right-0 mt-2 p-1.5 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl z-[100] max-h-64 overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-top-2 duration-200">
+          {(() => {
+            // Flatten and filter based on current input
+            // 1. Only filter if we are actually inside a variable tag
+            const lastOpen = value.lastIndexOf("{{");
+            const lastClose = value.lastIndexOf("}}");
+            const isInsideVar = lastOpen > lastClose;
+
+            // If not inside {{ }}, show all or nothing based on preference.
+            // Here we show all if empty or nothing if typing normal text.
+            const filterText = isInsideVar ? value.substring(lastOpen + 2) : "";
+
+            const filteredGroups = suggestions
+              .map((group) => {
+                const filteredItems =
+                  group.items?.filter((item) => {
+                    const searchStr = filterText.toLowerCase();
+                    return (
+                      item.label.toLowerCase().includes(searchStr) ||
+                      group.nodeLabel.toLowerCase().includes(searchStr) ||
+                      item.path.toLowerCase().includes(searchStr) ||
+                      item.displayPath?.toLowerCase().includes(searchStr)
+                    );
+                  }) || [];
+                return { ...group, items: filteredItems };
+              })
+              .filter((group) => group.items.length > 0);
+
+            if (filteredGroups.length === 0) {
+              return (
+                <div className="px-4 py-3 text-center text-slate-500 text-xs italic">
+                  No matches found
+                </div>
+              );
+            }
+
+            return filteredGroups.map((group, gIdx) => (
+              <div key={gIdx} className="mb-2 last:mb-0">
+                <div className="px-3 py-1.5 text-[9px] uppercase tracking-widest font-bold text-indigo-400/70 flex items-center gap-2">
+                  <div className="w-1 h-3 bg-indigo-500/30 rounded-full" />
+                  {String(group.nodeLabel || "Unknown")}
+                </div>
+                <div className="space-y-0.5">
+                  {group.items.map((item, iIdx) => (
+                    <button
+                      key={iIdx}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        // Find where the last {{ started
+                        const lastOpen = value.lastIndexOf("{{");
+                        const prefix = value.substring(0, lastOpen);
+                        const suffix =
+                          value.substring(value.indexOf("}}", lastOpen) + 2) ||
+                          "";
+                        const newValue = prefix + (item.path || "") + suffix;
+                        onChange({ target: { value: newValue } });
+                        setShowSuggestions(false);
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors group/item flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={cn(
+                            "w-1.5 h-1.5 rounded-full",
+                            item.type === "boolean"
+                              ? "bg-emerald-400"
+                              : "bg-indigo-400",
+                          )}
+                        />
+                        <span className="text-xs text-slate-200 font-mono">
+                          {String(item.label || "")}
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-slate-500 font-mono opacity-0 group-hover/item:opacity-100 transition-opacity">
+                        {String(item.type || "")}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ));
+          })()}
+        </div>
       )}
 
       {/* Visible background box for the input (since input is transparent bg) */}

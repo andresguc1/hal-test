@@ -20,11 +20,7 @@ import { CATEGORY_STYLES, NODE_TYPE_MAP } from "../../config/nodeConstants";
 import { STARTER_TEMPLATE } from "../../config/starterTemplate";
 import * as payloadBuilders from "./payloadBuilders";
 import { NODE_STATES, PROFESSIONAL_COLORS, getNodeStyle } from "./flowStyles";
-import {
-  debounce,
-  wouldCreateCycle,
-  resolveVariables,
-} from "../../utils/flowUtils";
+import { debounce, wouldCreateCycle } from "../../utils/flowUtils";
 import { validateNodeConfig } from "../../config/validationRules";
 import { logger } from "../../utils/logger";
 import screenshotManager from "../../utils/ScreenshotManager";
@@ -791,46 +787,6 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
       // nodes to strictly control their animated paths.
     },
     [setNodes],
-  );
-
-  const updateEdgeStatus = useCallback(
-    (edgeId, state, animated = true) => {
-      setEdges((eds) =>
-        eds.map((edge) => {
-          if (edge.id === edgeId) {
-            return {
-              ...edge,
-              animated,
-              data: { ...edge.data, executionState: state },
-            };
-          }
-          return edge;
-        }),
-      );
-    },
-    [setEdges],
-  );
-
-  /**
-   * Updates all outgoing edges of a node to a specific state.
-   * Logic: If a node is running, all its outgoing edges turn Orange.
-   * If it succeeds/fails, this is replaced by the specific path result.
-   */
-  const updateEdgeStatusBySource = useCallback(
-    (sourceId, state) => {
-      setEdges((eds) =>
-        eds.map((edge) => {
-          if (edge.source === sourceId) {
-            return {
-              ...edge,
-              data: { ...edge.data, executionState: state },
-            };
-          }
-          return edge;
-        }),
-      );
-    },
-    [setEdges],
   );
 
   /**
@@ -2075,8 +2031,8 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
           }
 
           // Clean RunId assignment (UUID only)
-          const effectiveRunId = payload?.runId || activeRunId;
-          if (effectiveRunId && effectiveRunId.length > 5) {
+          const effectiveRunId = payload?.runId || activeRunId || "atomic_run";
+          if (effectiveRunId && effectiveRunId.length >= 5) {
             bodyToSend.runId = effectiveRunId;
           }
 
@@ -2814,7 +2770,7 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
 
   const executeFlow = useCallback(
     async (options = {}) => {
-      const { stopOnError = true, keepOpen = true } = options; // Default keepOpen=true for Edit Mode
+      const { keepOpen = true } = options; // Default keepOpen=true for Edit Mode
 
       // 1. Initialize Stats & Context
       const startTime = Date.now();
@@ -2864,7 +2820,6 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
       }
 
       // Shared Runtime Context (Browser Session, Variables)
-      const flowContext = {}; // NEW: Shared context for data propagation
       let browserId = activeBrowserId || null; // Start with active session if available
 
       let runId = null;
@@ -2907,457 +2862,94 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
       setApiStatus({ state: "loading", message: "Preparing execution..." });
 
       // Recursive Execution Function (Path-Aware Graph Traversal)
+
       const executeGraph = async (
         graphNodes,
         graphEdges,
         depth = 0,
-        visitedFlows = new Set(),
+        visitedFlows = [],
       ) => {
         if (depth > 15) throw new Error("Max recursion depth exceeded");
-
-        // --- FILTER INACTIVE NODES/EDGES ---
         const activeNodes = graphNodes.filter((n) => !n.data?.disabled);
         const activeEdges = graphEdges.filter((e) => {
           const s = activeNodes.find((n) => n.id === e.source);
           const t = activeNodes.find((n) => n.id === e.target);
           return s && t;
         });
-
-        if (activeNodes.length === 0) return;
-
-        // Find root nodes if depth 0 and activeNodes is just the whole list
-        let startNodes = activeNodes;
-        if (depth === 0 && activeNodes.length > 1) {
-          const incomingCount = new Map();
-          activeNodes.forEach((n) => incomingCount.set(n.id, 0));
-          activeEdges.forEach((e) => {
-            if (incomingCount.has(e.target)) {
-              incomingCount.set(e.target, incomingCount.get(e.target) + 1);
-            }
-          });
-          startNodes = activeNodes.filter((n) => incomingCount.get(n.id) === 0);
-
-          // Fallback if everyone has an incoming edge (cycle)
-          if (startNodes.length === 0 && graphNodes.length > 0) {
-            startNodes = [graphNodes[0]];
-          }
-        }
+        if (activeNodes.length === 0) return { success: true };
 
         const internalExecuted = new Set();
-        const queue = [...startNodes];
-        globalStats.total = activeNodes.length; // Update total estimate
-        const healedNodes = []; // Track AI repairs: [{ nodeId, newSelector }]
-
-        let lastResult = { success: true }; // To bubble up
+        const queue = [activeNodes[0]];
+        const healedNodes = [];
+        let lastResult = { success: true };
 
         while (queue.length > 0) {
           if (executionAbortController.current?.signal.aborted) break;
-
           const node = queue.shift();
           if (internalExecuted.has(node.id)) continue;
           internalExecuted.add(node.id);
 
-          let result = { success: true };
-          lastResult = result; // Important: update bubble-up target
-          console.log(
-            `[FlowManager] ${"  ".repeat(depth)}-> Executing: "${node.id}" (${node.type})`,
-          );
-
           try {
-            // A. Execute Node
-            if (node.type === "component" || node.data?.type === "component") {
+            let result = { success: true };
+            if (node.type === "component") {
               const { flowId } = node.data || {};
-              if (flowId) {
-                if (visitedFlows.has(flowId)) {
-                  const cycleMsg = `[FlowManager] 🛑 Circular dependency detected! Component "${node.id}" points to flow ${flowId} which is already in the execution stack.`;
-                  console.error(cycleMsg);
-                  addLog(cycleMsg, "error", node.id);
-                  updateNodeState(node.id, NODE_STATES.ERROR, {
-                    message: "Dependencia circular detectada",
-                  });
-                  return { success: false, error: "Circular dependency" };
-                }
-                setApiStatus({
-                  state: "loading",
-                  message: `Entering component: ${node.data.label || "Sub-flow"}...`,
-                });
-                const subFlow = await projectManager.getFlow(
-                  currentProject.id,
-                  flowId,
+              if (visitedFlows.includes(flowId))
+                throw new Error("Circular dependency");
+              const subFlow = await projectManager.getFlow(
+                currentProject.id,
+                flowId,
+              );
+              if (subFlow)
+                result = await executeGraph(
+                  subFlow.nodes,
+                  subFlow.edges,
+                  depth + 1,
+                  [...visitedFlows, flowId],
                 );
-                if (subFlow?.nodes?.length > 0) {
-                  const newVisited = new Set(visitedFlows);
-                  newVisited.add(flowId);
+            } else {
+              result = await executeStep(node);
+            }
 
-                  updateNodeState(node.id, NODE_STATES.EXECUTING);
-                  const subResult = await executeGraph(
-                    subFlow.nodes,
-                    subFlow.edges,
-                    depth + 1,
-                    newVisited,
-                  );
-                  result = subResult || { success: true };
+            const componentResult = {
+              status: result.success ? "success" : "error",
+              success: result.success,
+              data: result.data || result,
+              metadata: {
+                executedAt: new Date().toISOString(),
+                nodeLabel: node.data?.label,
+              },
+            };
 
-                  const isSoftFail =
-                    result.status === "softfailed" ||
-                    result.data?.status === "softfailed";
-                  const finalNodeState = result.success
-                    ? isSoftFail
-                      ? NODE_STATES.SOFTFAILED
-                      : NODE_STATES.SUCCESS
-                    : NODE_STATES.ERROR;
-                  updateNodeState(node.id, finalNodeState);
-
-                  // ✨ INCOMING DATA CONTRACT: Store the sub-flow result on the component
-                  // node itself so the next node's "Incoming Data" panel can display it.
-                  const componentResult = {
-                    status: result.success ? "success" : "error",
-                    data: result,
-                    error: result.success
-                      ? null
-                      : { message: result.error || "Sub-flow failed" },
-                  };
-                  setNodes((nds) =>
-                    updateNodeRecursively(nds, node.id, (n) => ({
-                      ...n,
-                      data: {
-                        ...n.data,
-                        result: componentResult,
-                        state: finalNodeState,
-                      },
-                    })),
-                  );
-
-                  if (!result.success && stopOnError) {
-                    const divePath = result.divePath || [];
-                    return {
-                      ...result,
-                      divePath: [node.id, ...divePath],
-                      healedNodes,
-                    };
-                  }
-
-                  if (result.healedNodes?.length > 0) {
-                    healedNodes.push(...result.healedNodes);
-                  }
-                }
-              }
-            } else if (node.type === "loop" || node.data?.type === "loop") {
-              const { flowId } = node.data || {};
-              const config = node.data?.configuration || {};
-
-              updateNodeState(node.id, NODE_STATES.EXECUTING);
-
-              let finished = false;
-              let loopResult = { success: true };
-
-              // LOOP ORCHESTRATION: The frontend runner becomes the loop manager
-              while (
-                !finished &&
-                !executionAbortController.current?.signal.aborted
-              ) {
-                // 1. Ask backend for next iteration state
-                const resolvedConfig = resolveVariables(config, flowContext);
-                const action = {
-                  nodeId: node.id,
-                  type: "loop",
-                  payload: { ...resolvedConfig, browserId, runId },
-                };
-
-                const stepResult = await executeStep(action, options);
-                if (!stepResult.success) {
-                  loopResult = stepResult;
-                  finished = true;
-                  break;
-                }
-
-                // Robust path detection
-                const path = String(
-                  stepResult.path ||
-                    stepResult.result?.path ||
-                    stepResult.result?.data?.path ||
-                    "",
-                )
-                  .trim()
-                  .toLowerCase();
-
-                if (
-                  path === "completed" ||
-                  path === "done" ||
-                  path === "finish"
-                ) {
-                  finished = true;
-                  break;
-                }
-
-                // 2. If path is "body", execute the sub-flow or follow cables
-                // In Composition (Dive In) mode, we expect a flowId
-                if (flowId && (path === "body" || path === "iteration")) {
-                  setApiStatus({
-                    state: "loading",
-                    message: `Loop Iteration ${stepResult.result?.data?.index || ""}...`,
-                  });
-
-                  const subFlow = await projectManager.getFlow(
-                    currentProject.id,
-                    flowId,
-                  );
-                  if (subFlow?.nodes?.length > 0) {
-                    const subResult = await executeGraph(
-                      subFlow.nodes,
-                      subFlow.edges,
-                      depth + 1,
-                    );
-                    if (!subResult.success && stopOnError) {
-                      loopResult = subResult;
-                      finished = true;
-                      break;
-                    }
-                    // Merge healed nodes
-                    if (subResult.healedNodes?.length > 0) {
-                      healedNodes.push(...subResult.healedNodes);
-                    }
-                  } else {
-                    // Protection against empty loops causing infinite busy states
-                    finished = true;
-                  }
-                } else if (!flowId && path === "body") {
-                  // Compatibility with Branching mode (no dive-in)
-                  // In this mode, executeGraph won't repeat automatically because it follows edges.
-                  // But for consistency with the while loop, we break and let the main graph continue.
-                  result = stepResult;
-                  finished = true;
-                } else {
-                  finished = true;
-                }
-              }
-
-              result = loopResult;
-              updateNodeState(
-                node.id,
-                result.success ? NODE_STATES.SUCCESS : NODE_STATES.ERROR,
-              );
-            } else if (
-              node.type !== "input" &&
-              node.type !== "output" &&
-              node.type !== "annotation"
-            ) {
-              // 🛡️ Logic nodes should NOT be resolved on frontend because stringification
-              // destroys original types (boolean, number). We let backend VariableManager do it.
-              const nodeType = node.data?.type || node.type;
-              const isLogicNode =
-                nodeType === "conditional" || nodeType === "wait_conditional";
-
-              const resolvedConfig = isLogicNode
-                ? node.data?.configuration || {}
-                : resolveVariables(node.data?.configuration || {}, flowContext);
-
-              const action = {
-                nodeId: node.id,
-                type: node.data?.type || node.type,
-                label: node.data?.customLabel || node.data?.label,
-                // Use a shorter timeout (8s) for faster failure detection
-                payload: {
-                  ...resolvedConfig,
-                  browserId,
-                  runId,
-                  timeout: resolvedConfig.timeout || 8000,
+            setNodes((nds) =>
+              updateNodeRecursively(nds, node.id, (n) => ({
+                ...n,
+                data: {
+                  ...n.data,
+                  result: componentResult,
+                  state: result.success ? "success" : "error",
                 },
-              };
-
-              // 🌟 PROACTIVE EDGE HIGHLIGHTING: Mark outgoing edges as RUNNING immediately
-              updateEdgeStatusBySource(node.id, "running");
-
-              setApiStatus({
-                state: "loading",
-                message: `Executing: ${node.data?.label || node.type}`,
-              });
-              result = await executeStep(action, options);
-
-              if (result.skipped) {
-                globalStats.skipped++;
-              } else if (result.success) {
-                globalStats.successful++;
-                if (result.instanceId) {
-                  browserId = result.instanceId;
-                  flowContext.browserId = result.instanceId;
-                }
-                const slug = (node.data?.label || node.id)
-                  .toLowerCase()
-                  .replace(/\s+/g, "_");
-                flowContext[node.id] = result.result || result;
-                flowContext[slug] = result.result || result;
-
-                // Capture AI Healing for auto-patching
-                if (result.healed && result.healedValue) {
-                  healedNodes.push({
-                    nodeId: node.id,
-                    newSelector: result.healedValue,
-                  });
-                }
-              } else {
-                globalStats.failed++;
-                if (stopOnError) {
-                  return {
-                    success: false,
-                    error: result.error || "Action failed",
-                    failedNodeId: node.id,
-                    divePath: [],
-                  };
-                }
-              }
-            } else if (node.type === "output") {
-              result = {
-                success: true,
-                path:
-                  node.data?.configuration?.path || node.data?.path || node.id,
-              };
-            }
-
-            // B. Enqueue Children
-            let nextEdges = activeEdges.filter((e) => e.source === node.id);
-            // FIX: Robust path extraction including .data layer, targetPath from backend
-            const path = String(
-              result?.path ||
-                result?.result?.path ||
-                result?.result?.data?.path ||
-                result?.result?.data?.targetPath ||
-                result?.result?.targetPath ||
-                "",
-            )
-              .trim()
-              .toLowerCase();
-
-            // 🛡️ Robust type detection: check if it's a known branching node
-            const nodeKey = String(
-              node.data?.subType || node.data?.type || node.type || "",
-            ).toLowerCase();
-            const isBranchingNode =
-              nodeKey === "switch" ||
-              nodeKey === "conditional" ||
-              nodeKey === "backend_js" ||
-              nodeKey === "component" ||
-              nodeKey === "loop";
-
-            // 🔀 HANDLE LOGIC BRANCHING
-            const nextNodes = [];
-
-            // 🛡️ Pre-reset all outgoing edges of this node!
-            nextEdges.forEach((e) => updateEdgeStatus(e.id, "default", false));
-
-            // If a component/subflow finished but didn't return a specific path (didn't hit an Output node),
-            // we follow ALL outgoing edges if it's not a strict Switch/Conditional node.
-            const shouldEnforceStrictPath =
-              nodeKey === "switch" || nodeKey === "conditional";
-
-            if (path && path !== "undefined" && path !== "") {
-              console.log(
-                `[FlowManager] 🔀 Branching Node "${node.id}" (${nodeKey}) winner path: "${path}"`,
-              );
-              let filtered = nextEdges.filter((e) => {
-                const handle = String(e.sourceHandle || "").toLowerCase();
-                const targetPath = String(path).toLowerCase();
-                if (handle === targetPath) return true;
-
-                // 🛡️ Alias Tolerance: Mapping common alternative names
-                if (
-                  targetPath === "false" &&
-                  (handle === "else" || handle === "fallback")
-                )
-                  return true;
-                if (targetPath === "else" && handle === "false") return true;
-                return false;
-              });
-
-              // 🛡️ Final strict enforcement
-              if (shouldEnforceStrictPath || isBranchingNode) {
-                if (filtered.length === 0 && nextEdges.length > 0) {
-                  // Only ERROR if it's a strict logic node.
-                  // For components, if path doesn't match, maybe we follow defaults or stop silently.
-                  if (shouldEnforceStrictPath) {
-                    const warnMsg = `[FlowManager] 🛑 No matching edge for path "${path}" on node "${node.id}". Stopping branch.`;
-                    console.warn(warnMsg);
-                    addLog(warnMsg, "warning", node.id);
-                    updateNodeState(node.id, NODE_STATES.ERROR, {
-                      message: `Ruta no encontrada: ${path}`,
-                    });
-                    nextEdges = [];
-                  } else {
-                    // Components with non-matching paths: don't error, just don't follow that specific path?
-                    // Actually, if a path WAS provided but didn't match, we should probably stop.
-                    nextEdges = [];
-                  }
-                } else {
-                  nextEdges = filtered;
-                }
-              } else if (filtered.length > 0) {
-                nextEdges = filtered;
-              }
-            } else if (shouldEnforceStrictPath && nextEdges.length > 0) {
-              // 🛡️ SAFETY: If we MUST branch but have no path, STOP.
-              const warnMsg = `[FlowManager] ⚠️ Node "${node.id}" requires branching but NO path was resolved.`;
-              console.warn(warnMsg);
-              addLog(warnMsg, "warning", node.id);
-              updateNodeState(node.id, NODE_STATES.ERROR, {
-                message: "No se pudo resolver la ruta de ramificación",
-              });
-              nextEdges = [];
-            } else if (isBranchingNode && !shouldEnforceStrictPath) {
-              // For components/loops with NO path returned:
-              // Follow all edges (default behavior) to be lenient.
-              console.log(
-                `[FlowManager] ℹ️ Component/Loop "${node.id}" finished with no path. Following all outgoing edges.`,
-              );
-            }
-
-            // 🌟 HIGHLIGHT ONLY THE WINNER EDGES
-            // Only highlight if the node was successful or if we have a clear path to follow.
-            // Avoid turning all edges green for branching nodes if no path was returned.
-            const hasPath = path && path !== "undefined" && path !== "";
-
-            nextEdges.forEach((e) => {
-              if (result.success) {
-                // If the node is a branching node but this specific edge wasn't the winner, skip success highlight.
-                // Standard nodes (single output) don't have sourceHandles, so they always fire.
-                if (
-                  shouldEnforceStrictPath &&
-                  hasPath &&
-                  String(e.sourceHandle || "").toLowerCase() !== path
-                ) {
-                  return;
-                }
-                updateEdgeStatus(e.id, NODE_STATES.SUCCESS, false);
-              } else {
-                updateEdgeStatus(e.id, NODE_STATES.ERROR, false);
-              }
-            });
-
-            nextEdges.forEach((e) => {
-              const targetNode = activeNodes.find((n) => n.id === e.target);
-              if (targetNode) nextNodes.push(targetNode);
-            });
-
-            console.log(
-              `[FlowManager] -> Enqueuing ${nextNodes.length} children for "${node.id}"`,
+              })),
             );
-            queue.push(...nextNodes);
+
+            const path = String(result?.path || "").toLowerCase();
+            activeEdges
+              .filter((e) => e.source === node.id)
+              .forEach((e) => {
+                if (
+                  !path ||
+                  String(e.sourceHandle || "").toLowerCase() === path
+                ) {
+                  const targetNode = activeNodes.find((n) => n.id === e.target);
+                  if (targetNode) queue.push(targetNode);
+                }
+              });
+            lastResult = result;
           } catch (err) {
-            console.error(`[FlowManager] Error in node "${node.id}":`, err);
-            globalStats.failed++;
-            updateNodeState(node.id, NODE_STATES.ERROR, err);
-            if (stopOnError) {
-              return {
-                success: false,
-                error: err.message,
-                failedNodeId: node.id,
-                divePath: [],
-              };
-            }
+            console.error("Node error", err);
           }
         }
         return { ...lastResult, healedNodes };
       };
-
       // 2. Start Execution
       let executionResult = { success: true };
       try {
@@ -3420,13 +3012,9 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
       executeStep,
       resetExecutionStates,
       activeBrowserId,
-      updateNodeState,
-      updateEdgeStatus,
-      updateEdgeStatusBySource,
       validateFlowStructure,
       t,
       toast,
-      addLog,
       setExecutionStats,
       setActiveBrowserId,
       setNodes,

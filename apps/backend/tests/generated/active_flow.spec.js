@@ -30,15 +30,8 @@ test(`Flujo Generado Hal-Test`, async ({ page }) => {
         await page.click(`#login-button`);
     });
 
-    await test.step(`Wait Element (Adv)`, async () => {
-        await page.waitForSelector('[data-test="secondary-header"]', {
-            state: 'attached',
-            timeout: 30000,
-        });
-    });
-
-    await test.step(`conditional`, async () => {
-        console.log(`⚠️ Acción no implementada o pendiente: conditional`);
+    await test.step(`Find Element`, async () => {
+        console.log(`⚠️ Acción no implementada o pendiente: find_element`);
     });
 
     await test.step(`Reload Page`, async () => {
@@ -46,7 +39,7 @@ test(`Flujo Generado Hal-Test`, async ({ page }) => {
     });
 
     await test.step(`Evidence`, async () => {
-        await page.screenshot({ path: 'screenshot_10.png' });
+        await page.screenshot({ path: 'screenshot_9.png' });
     });
 
     await test.step(`Finish Tour`, async () => {

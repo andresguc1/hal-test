@@ -365,6 +365,7 @@ function AppFooter({
   _onResetEnvironment,
   version,
   onRunBatch,
+  apiStatus = { state: "idle" },
 }) {
   const [activeMenu, setActiveMenu] = useState(null); // 'project' | 'flow' | null
   const containerRef = useRef(null);
@@ -519,11 +520,15 @@ function AppFooter({
         />
 
         <FooterButton
-          icon={Play}
-          label="RUN FLOW"
+          icon={apiStatus.state === "running" ? RefreshCw : Play}
+          label={apiStatus.state === "running" ? "RUNNING..." : "RUN FLOW"}
           variant="primary"
-          onClick={onRun}
-          className="pl-4 pr-5 py-2" // Bigger click area
+          onClick={apiStatus.state === "running" ? null : onRun}
+          className={cn(
+            "pl-4 pr-5 py-2",
+            apiStatus.state === "running" &&
+              "opacity-70 cursor-not-allowed grayscale pointer-events-none",
+          )}
         />
 
         <button

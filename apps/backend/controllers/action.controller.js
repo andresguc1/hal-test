@@ -1350,7 +1350,17 @@ export const openUrlAction = async (req, res) => {
         if (opts.takeScreenshot === 'false' || opts.takeScreenshot === '0')
             opts.takeScreenshot = false;
 
-        const { url, waitUntil = 'domcontentloaded', timeout = 30000, takeScreenshot } = opts ?? {};
+        // --- TIMEOUT & NAVIGATION SETTINGS ---
+        let { url, waitUntil = 'domcontentloaded', timeout = 30000, takeScreenshot } = opts ?? {};
+
+        // Safety: Prevent too short timeouts for heavy sites
+        const MIN_TIMEOUT = 15000;
+        if (timeout < MIN_TIMEOUT) {
+            console.log(
+                `[INFO] Boosting timeout from ${timeout}ms to ${MIN_TIMEOUT}ms for reliability.`,
+            );
+            timeout = MIN_TIMEOUT;
+        }
 
         if (!url) {
             return res
@@ -1394,17 +1404,43 @@ export const openUrlAction = async (req, res) => {
         try {
             await page.goto(url, { waitUntil, timeout });
         } catch (error) {
+            const continueOnFailure =
+                req.body.configuration?.continueOnFailure || req.body.continueOnFailure || false;
+
+            if (error.message.includes('Timeout') || error.message.includes('navigation')) {
+                const errorMsg = `Navigation timeout (${timeout}ms) on ${url}. The site is taking too long to load.`;
+
+                if (continueOnFailure) {
+                    smartEmitLog(
+                        `[Warning] ${errorMsg} - Continuing due to 'Soft Fail' setting.`,
+                        'warning',
+                        nodeId,
+                    );
+                    if (nodeId) emitExecutionStatus({ stepId: nodeId, status: 'success' }); // Mark as success to continue flow
+                    return res.json({
+                        success: true,
+                        data: {
+                            url,
+                            status: 'timeout_soft_fail',
+                            message: errorMsg,
+                            result: { url, error: error.message },
+                        },
+                    });
+                }
+
+                smartEmitLog(`[Error] ${errorMsg}`, 'error', nodeId);
+                throw new Error(errorMsg);
+            }
+
             if (error.message.includes('Page crashed') || error.message.includes('Target closed')) {
                 const hint =
                     "Crucial: El sitio es demasiado pesado para el modo 'load'. Cambia el campo 'Wait Until' a 'domcontentloaded' en la configuración del nodo.";
-                console.error(`[CRASH] ${url}: ${error.message}. Hint: ${hint}`);
                 throw new Error(`${error.message}. HINT: ${hint}`);
             }
             throw error;
         }
 
         const duration = Date.now() - start;
-
         traceService.add({
             action: actionName,
             url,
@@ -1522,17 +1558,23 @@ export const closeBrowserAction = async (req, res) => {
     const start = Date.now();
     try {
         let { browserId, nodeId, runId } = req.body ?? {}; // Extract runId
-        if (nodeId) emitExecutionStatus({ stepId: nodeId, status: 'running' });
+        if (nodeId) {
+            emitExecutionStatus({ stepId: nodeId, status: 'running' });
+            smartEmitLog('Closing browser session...', 'info', nodeId);
+        }
+
         if (browserId === '' || browserId === null) browserId = undefined;
 
         const validation = validateBrowser(req, browserId);
         if (validation.error) {
             // Idempotency: If the browser is not found (already closed), consider it a success.
             if (validation.status === 404) {
-                console.log(
-                    `[INFO] close_browser: ID ${browserId} not found. Assuming already closed. Success.`,
-                );
+                const alreadyClosedMsg = `Browser ${browserId ? `ID ${browserId}` : ''} not found. Assuming already closed.`;
+                console.log(`[INFO] close_browser: ${alreadyClosedMsg} Success.`);
+
+                smartEmitLog(alreadyClosedMsg, 'success', nodeId);
                 if (nodeId) emitExecutionStatus({ stepId: nodeId, status: 'success' });
+
                 return res.status(200).json({
                     success: true,
                     message: req.t('actions.close_browser.success_already_closed'),
@@ -1550,10 +1592,11 @@ export const closeBrowserAction = async (req, res) => {
         // --- PERSISTENT BROWSER (Debug Mode) ---
         const { debugMode } = req.body;
         if (debugMode) {
-            console.log(`[INFO] Skipping browser close for ${browserId} (Debug Mode Active)`);
-            if (nodeId) emitExecutionStatus({ stepId: nodeId, status: 'success' });
+            const debugMsg = `Skipping browser close for ${browserId} (Debug Mode Active)`;
+            console.log(`[INFO] ${debugMsg}`);
+            smartEmitLog(debugMsg, 'warning', nodeId);
 
-            // Trace still needed to show it "ran"
+            if (nodeId) emitExecutionStatus({ stepId: nodeId, status: 'success' });
             traceService.add({ action: 'close_browser', browserId, status: 'success' });
 
             return res.status(200).json({
@@ -1566,9 +1609,11 @@ export const closeBrowserAction = async (req, res) => {
         // ---------------------------------------
 
         console.log(`[INFO] Closing browser ${browserId}...`);
-
         await browserService.delete(browserId);
+
         const duration = Date.now() - start;
+        smartEmitLog(`Browser closed successfully (${duration}ms)`, 'success', nodeId);
+        if (nodeId) emitExecutionStatus({ stepId: nodeId, status: 'success' });
 
         traceService.add({ action: 'close_browser', browserId, status: 'success' });
 
@@ -4304,27 +4349,57 @@ export const conditionalAction = async (req, res) => {
     try {
         const {
             conditions,
-            logic = 'AND',
-            branches,
-            fallbackPath = 'false',
-            runId,
+            logic: bodyLogic = 'AND',
+            branches: bodyBranches,
+            runId: bodyRunId,
             variables,
+            configuration,
         } = req.body;
-        console.log(
-            `[DEBUG] conditionalAction - runId: ${runId}, variables: ${Object.keys(variables || {}).length}, branches: ${branches?.length || 0}`,
-        );
-        console.log(
-            `[Conditional] 📥 Config:`,
-            JSON.stringify(req.body.configuration || {}, null, 2),
-        );
 
-        // Debug mode for detailed tracing
-        const debugMode = req.body.debugMode || req.body.configuration?.debugMode || false;
+        // Configuration takes precedence if present
+        const branches = configuration?.branches || bodyBranches || [];
+        const logic = configuration?.logic || bodyLogic;
+        const runId = bodyRunId || 'global';
+        const debugMode = req.body.debugMode || configuration?.debugMode || false;
 
         // Always log basic info to console for developer visibility
         console.log(`[Conditional] Starting evaluation for node: ${req.body.nodeId || 'unknown'}`);
+
+        // 🔍 INCOMING DATA DIAGNOSTIC & SEEDING
+        // Seed the variable manager with incoming variables to ensure isolated runs work
+        if (variables && typeof variables === 'object') {
+            console.log(
+                `[ActionController] 🌱 Seeding ${Object.keys(variables).length} variables into runId: ${runId}`,
+            );
+            Object.entries(variables).forEach(([k, v]) => {
+                variableManager.set(k, v, runId);
+            });
+        }
+
         const allVars = variableManager.getAll(runId);
-        console.log(`[Conditional] Available variables:`, Object.keys(allVars));
+        const varKeys = Object.keys(allVars);
+        console.log(
+            `[Conditional] 📥 Available variables (${varKeys.length}):`,
+            varKeys.slice(0, 10).join(', ') + (varKeys.length > 10 ? '...' : ''),
+        );
+
+        // Log specific values for variables used in branches to satisfy user request
+        if (branches && Array.isArray(branches)) {
+            branches.forEach((branch, idx) => {
+                try {
+                    if (branch.expression && typeof branch.expression === 'object') {
+                        const { left, right } = branch.expression;
+                        const valL = variableManager.resolveValue(left, runId);
+                        const valR = variableManager.resolveValue(right, runId);
+                        console.log(
+                            `[Conditional][Branch ${idx}] 📍 Data Check: "${left}" -> ${JSON.stringify(valL)} | "${right}" -> ${JSON.stringify(valR)}`,
+                        );
+                    }
+                } catch (e) {
+                    console.log(`[Conditional] 📍 Diagnostic skip for branch ${idx}: ${e.message}`);
+                }
+            });
+        }
 
         if (debugMode) {
             smartEmitLog(
@@ -4335,168 +4410,75 @@ export const conditionalAction = async (req, res) => {
         }
 
         if (branches && Array.isArray(branches) && branches.length > 0) {
-            console.log('[DEBUG] Evaluating branches:', JSON.stringify(branches, null, 2));
             let matchedBranch = null;
             const trace = {};
 
             for (const branch of branches) {
+                // Skip fallback branches for evaluation
+                if (branch.isFallback || branch.id === 'false' || branch.id === 'Else') continue;
+
                 let branchMatched = false;
-                let branchError = null;
-                let status = 'pending';
-                let evaluatedExprInfo = '';
-                let resolvedLeft = undefined;
-                let resolvedRight = undefined;
+                try {
+                    branchMatched =
+                        variableManager.evaluateStructured(branch.expression, runId) === true;
 
-                if (matchedBranch) {
-                    status = 'skipped';
-                } else if (
-                    !branch.expression ||
-                    (typeof branch.expression === 'string' && branch.expression.trim() === '')
-                ) {
-                    // Default branch matches if no previous branch matched
-                    branchMatched = true;
-                    status = 'matched';
-                    evaluatedExprInfo = 'Default/Fallback branch';
-                } else {
-                    try {
-                        let branchResult;
-                        if (typeof branch.expression === 'object') {
-                            // Structured Rule
-                            const { left, operator, right } = branch.expression;
-                            resolvedLeft = variableManager.resolveValue(left, runId);
-                            resolvedRight = variableManager.resolveValue(right, runId);
+                    const expr = branch.expression || {};
+                    const rL = variableManager.resolveValue(expr.left, runId);
+                    const rR = variableManager.resolveValue(expr.right, runId);
 
-                            // Strict undefined conversion for uninterpreted variables
-                            const isUnres = (v) =>
-                                typeof v === 'string' && (v.includes('{{') || v.includes('${'));
-                            if (isUnres(resolvedLeft)) {
-                                console.log(
-                                    `[Conditional] ❌ UNRESOLVED LEFT: "${left}" -> Check if node exists!`,
-                                );
-                                console.warn(
-                                    `[Conditional] 🔴 Left operand UNRESOLVED: ${resolvedLeft}`,
-                                );
-                                resolvedLeft = undefined;
-                            }
-                            if (isUnres(resolvedRight)) {
-                                console.log(`[Conditional] ❌ UNRESOLVED RIGHT: "${right}"`);
-                                console.warn(
-                                    `[Conditional] 🔴 Right operand UNRESOLVED: ${resolvedRight}`,
-                                );
-                                resolvedRight = undefined;
-                            }
+                    // User-friendly log format
+                    const logLabel = branch.label || branch.id;
+                    const comparison = `Comparing [${expr.left || '?'}] (${JSON.stringify(rL)}) with [${expr.right || '?'}] (${JSON.stringify(rR)})`;
+                    const statusIcon = branchMatched ? '✅ MATCH' : '❌ NO MATCH';
 
-                            console.log(
-                                `[Conditional] 🔍 VALIDATING: [${resolvedLeft}] ${operator} [${resolvedRight}]`,
-                            );
-
-                            const rightOriginal = right !== undefined ? right : 'undefined';
-
-                            console.log(
-                                `[Conditional] Original: ${left} ${operator} ${rightOriginal}`,
-                            );
-                            console.log(
-                                `[Conditional] Resuelto: ${JSON.stringify(resolvedLeft)} ${operator} ${JSON.stringify(resolvedRight)}`,
-                            );
-
-                            // Warn explicitly if left couldn't be resolved
-                            if (resolvedLeft === undefined) {
-                                console.warn(
-                                    `[Conditional] ⚠️ WARNING: Variable "${left}" could not be resolved in runId ${runId}. ` +
-                                        `Check that the upstream node "${left.replace(/[{}]/g, '').split('.')[0]}" result is stored correctly.`,
-                                );
-                            }
-
-                            branchResult = variableManager.evaluateStructured(
-                                branch.expression,
-                                runId,
-                            );
-                            console.log(`[Conditional] Resultado: ${branchResult}`);
-
-                            evaluatedExprInfo = `Original: ${left} ${operator} ${rightOriginal} | Resuelto: ${JSON.stringify(resolvedLeft)} ${operator} ${JSON.stringify(resolvedRight)} | Resultado: ${branchResult === true}`;
-                            branchMatched = branchResult === true;
-                        } else {
-                            // Raw Expression
-                            branchResult = variableManager.evaluate(
-                                branch.expression,
-                                runId,
-                                {},
-                                true,
-                            );
-                            evaluatedExprInfo = `Original: ${branch.expression} | Resultado: ${branchResult === true}`;
-                            branchMatched = branchResult === true;
-                        }
-
-                        status = branchMatched ? 'matched' : 'not_matched';
-
-                        if (debugMode) {
-                            smartEmitLog(
-                                `[Conditional] Branch "${branch.label || branch.id}": ${evaluatedExprInfo} => ${branchResult}`,
-                                branchMatched ? 'success' : 'info',
-                                req.body.nodeId,
-                            );
-                        }
-
-                        console.log(
-                            `[DEBUG] Branch '${branch.label || branch.id}' evaluation: ${evaluatedExprInfo} => ${branchResult} (matched: ${branchMatched})`,
-                        );
-                    } catch (exprError) {
-                        branchError = exprError.message;
-                        status = 'error';
-                        console.error(
-                            `[ERROR] Failed to evaluate branch '${branch.id}': ${exprError.message}`,
-                        );
-
-                        if (debugMode) {
-                            smartEmitLog(
-                                `[Conditional] Branch "${branch.label || branch.id}" ERROR: ${exprError.message}`,
-                                'error',
-                                req.body.nodeId,
-                            );
-                        }
-                    }
+                    smartEmitLog(
+                        `[Conditional] Branch "${logLabel}": ${comparison} -> ${statusIcon}`,
+                        'info',
+                        req.body.nodeId,
+                    );
+                } catch (e) {
+                    smartEmitLog(
+                        `[Conditional] 💥 Error evaluating branch "${branch.label}": ${e.message}`,
+                        'error',
+                        req.body.nodeId,
+                    );
                 }
 
-                trace[branch.id] = {
-                    status,
-                    matched: branchMatched,
-                    error: branchError,
-                    label: branch.label,
-                    expression: branch.expression,
-                    evaluatedInfo: evaluatedExprInfo,
-                    resolvedLeft,
-                    resolvedRight,
-                };
+                trace[branch.id || branch.label] = { matched: branchMatched };
 
-                if (branchMatched && !matchedBranch) {
+                if (branchMatched) {
                     matchedBranch = branch;
+                    break; // FIRST MATCH WINS
                 }
             }
 
-            const finalPath = matchedBranch ? matchedBranch.id : fallbackPath;
-            const finalResult = !!matchedBranch;
+            // Fallback logic if no branch matched
+            if (!matchedBranch) {
+                matchedBranch = branches.find(
+                    (b) => b.isFallback || b.id === 'false' || b.id === 'Else',
+                );
+                if (matchedBranch) {
+                    smartEmitLog(
+                        `[Conditional] 🛡️ No matches found. Routing to Fallback: "${matchedBranch.label || 'Else'}"`,
+                        'info',
+                        req.body.nodeId,
+                    );
+                }
+            }
 
-            console.log(
-                `[Conditional] ✅ Final Decision: path="${finalPath}", result=${finalResult}`,
+            const finalPath = matchedBranch ? matchedBranch.id || matchedBranch.label : 'Else';
+            smartEmitLog(
+                `[Conditional] ✅ Final Decision: ${matchedBranch?.label || finalPath}`,
+                'success',
+                req.body.nodeId,
             );
 
-            if (debugMode) {
-                smartEmitLog(
-                    `[Conditional] Evaluation finished. Selected Path: ${finalPath}`,
-                    'success',
-                    req.body.nodeId,
-                );
-            }
-
-            return res.status(200).json({
+            return res.json({
                 success: true,
-                status: finalResult ? 'true' : 'false',
-                message: matchedBranch
-                    ? `Condition matched branch: ${matchedBranch.label || matchedBranch.id}`
-                    : `No conditions matched, routing to fallback`,
                 data: {
-                    result: finalResult,
+                    result: !!matchedBranch,
                     path: finalPath,
+                    branchLabel: matchedBranch?.label,
                     trace,
                 },
             });
@@ -4518,6 +4500,25 @@ export const conditionalAction = async (req, res) => {
         });
     } catch (error) {
         console.error('[ERROR] conditionalAction:', error.message);
+
+        const continueOnFailure =
+            req.body.configuration?.continueOnFailure || req.body.continueOnFailure || false;
+        if (continueOnFailure) {
+            smartEmitLog(
+                `[Conditional] 🛡️ Soft Fail: Routing to "Else" due to error: ${error.message}`,
+                'warning',
+                req.body.nodeId,
+            );
+            return res.json({
+                success: true,
+                data: {
+                    result: false,
+                    path: 'Else',
+                    error: error.message,
+                },
+            });
+        }
+
         return res.status(500).json({
             success: false,
             message: req.t('actions.conditional.error'),
@@ -4956,6 +4957,11 @@ export const componentAction = async (req, res) => {
             overrides: {},
             headers: req.headers || {},
             startTime: Date.now(),
+            // 🚀 CONTEXT INHERITANCE:
+            // This allows nodes inside the subflow to know who "called" them
+            // so they can sync results back to the parent component node.
+            callerId: nodeId,
+            callerLabel: nodeLabel,
         };
 
         const subflowResult = await executionService.runSequence(
@@ -4965,7 +4971,15 @@ export const componentAction = async (req, res) => {
             subflowState,
         );
 
-        // 3.b Handle Output Mapping (Child -> Parent)
+        // 🚀 CRITICAL: MEMORY MERGE (Subflow -> Parent)
+        // Ensure all internal variables from the subflow run are visible to the parent scope
+        if (subflowState.variables) {
+            Object.entries(subflowState.variables).forEach(([key, val]) => {
+                vm.set(key, val, runId);
+            });
+        }
+
+        // 3.b Handle Manual Output Mapping (Child -> Parent via config)
         const outputMapping = configuration?.outputMapping || [];
         if (Array.isArray(outputMapping)) {
             for (const mapping of outputMapping) {
@@ -4976,47 +4990,76 @@ export const componentAction = async (req, res) => {
             }
         }
 
-        // 🌟 GUARANTEED STRUCTURED OUTPUT
-        // runSequence returns null on normal completion (no flow control signal).
-        // always build a valid contract object so the next node has data to inspect.
-        const structuredResult = {
-            success: subflowResult?.success !== false,
-            status:
-                subflowResult?.status || (subflowResult?.success === false ? 'error' : 'success'),
-            message:
-                subflowResult?.message ||
-                `Subflow ${nodeLabel} completed: ${subflowState.executedNodeIds.size} nodes executed.`,
-            data: {
-                ...(subflowResult?.data ||
-                    (subflowResult && typeof subflowResult === 'object' ? subflowResult : {})),
-                success: subflowResult?.success !== false,
-                status:
-                    subflowResult?.status ||
-                    (subflowResult?.success === false ? 'error' : 'success'),
-                flowId,
-                executedNodes: subflowState.executedNodeIds.size,
-                label: nodeLabel,
-            },
-        };
+        // 🚀 AUTO-COLLECT RESULTS FROM 'OUTPUT' NODES
+        const subflowOutputs = {};
+        const outputNodes = allNodes.filter((n) => n.type === 'output');
 
-        // Always ensure a `status` field exists on the output
-        if (!structuredResult.status) {
-            structuredResult.status = 'success';
+        outputNodes.forEach((outNode) => {
+            const outLabel = outNode.data?.customLabel || outNode.data?.label || outNode.nodeId;
+            const outVal =
+                vm.get(`${outNode.nodeId}.result`, runId) || vm.get(`${outLabel}.result`, runId);
+
+            if (outVal !== undefined && outVal !== null) {
+                // If it's a structured result, take the .data part or the whole thing
+                subflowOutputs[outLabel] = outVal.data !== undefined ? outVal.data : outVal;
+            } else {
+                console.warn(`[Component] ⚠️ Output node "${outLabel}" produced no data.`);
+            }
+        });
+
+        // 🌟 DATA CONTRACT VALIDATION
+        // Check if there were any manual mappings that failed
+        const missingMappings = outputMapping.filter(
+            (m) => vm.get(m.childVar, runId) === undefined,
+        );
+        if (missingMappings.length > 0) {
+            smartEmitLog(
+                `[Warning] Some output mappings are missing data: ${missingMappings.map((m) => m.childVar).join(', ')}`,
+                'warning',
+                nodeId,
+            );
         }
 
-        // Store result for downstream variable interpolation (e.g. {{Login.result.status}})
-        // We store it both with and without .result suffix to match frontend expectations
+        // 🌟 GUARANTEED STRUCTURED OUTPUT
+        const finalStatus = subflowResult?.success !== false ? 'success' : 'failed';
+        const structuredResult = {
+            success: finalStatus === 'success',
+            status: finalStatus,
+            message: subflowResult?.message || `Subflow "${nodeLabel}" completed.`,
+            data: {
+                ...subflowOutputs,
+                status: finalStatus,
+                success: finalStatus === 'success',
+                label: nodeLabel,
+            },
+            flowId,
+            executedNodes: subflowState.executedNodeIds.size,
+        };
+
+        // Store back to variable manager for parent access
         vm.set(`${nodeId}.result`, structuredResult, runId);
         vm.set(`${nodeLabel}.result`, structuredResult, runId);
         vm.set(nodeId, structuredResult, runId);
         vm.set(nodeLabel, structuredResult, runId);
 
-        // Also store in legacy_flow scope for interactive (non-run) sessions
+        const outputList = Object.keys(subflowOutputs);
+        const outputSummary =
+            outputList.length > 0
+                ? `Validated Outputs: [${outputList.join(', ')}]`
+                : 'No outputs produced';
+        smartEmitLog(`Subflow "${nodeLabel}" finished. ${outputSummary}`, 'success', nodeId);
+
+        const safeLabel = nodeLabel.replace(/[^a-zA-Z0-9]/g, '');
+        if (safeLabel && safeLabel !== nodeLabel) {
+            vm.set(`${safeLabel}.result`, structuredResult, runId);
+        }
+
+        if (nodeId) emitExecutionStatus({ stepId: nodeId, status: 'success' });
+
+        // Also store in legacy_flow scope for UI compatibility
         if (!runId || runId.startsWith('interactive-')) {
             vm.set(`${nodeId}.result`, structuredResult, null);
             vm.set(`${nodeLabel}.result`, structuredResult, null);
-            vm.set(nodeId, structuredResult, null);
-            vm.set(nodeLabel, structuredResult, null);
         }
 
         console.log(

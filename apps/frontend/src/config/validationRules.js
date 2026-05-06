@@ -450,11 +450,16 @@ export const NODE_INPUTS = {
   ],
   conditional: [
     {
-      key: "expression",
-      label: "Condition (JS Expression)",
-      type: "text",
-      placeholder: "results.count \u003e 0",
+      key: "branches",
+      label: "Control Logic",
+      type: "conditional_branches",
       required: true,
+    },
+    {
+      key: "debugMode",
+      label: "Enable detailed trace logs",
+      type: "checkbox",
+      defaultValue: false,
     },
   ],
   loop: [

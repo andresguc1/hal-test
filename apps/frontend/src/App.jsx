@@ -1077,11 +1077,22 @@ function Dashboard() {
   const handleToggleDisabled = useCallback(
     (nodeId) => {
       // If we are in 'selection' mode, toggle everything selected
-      if (menu?.type === "selection" && menu.data?.nodes) {
-        toggleNodesDisabled(menu.data.nodes.map((n) => n.id));
-      } else {
-        toggleNodesDisabled(Array.isArray(nodeId) ? nodeId : [nodeId]);
-      }
+      const ids =
+        menu?.type === "selection" && menu.data?.nodes
+          ? menu.data.nodes.map((n) => n.id)
+          : Array.isArray(nodeId)
+            ? nodeId
+            : [nodeId];
+
+      toggleNodesDisabled(ids);
+
+      // Dispatch event for real-time refresh in canvas
+      ids.forEach((id) => {
+        window.dispatchEvent(
+          new CustomEvent("node-data-updated", { detail: { nodeId: id } }),
+        );
+      });
+
       setMenu(null);
     },
     [toggleNodesDisabled, menu],
@@ -1755,6 +1766,7 @@ function Dashboard() {
           onResetStates={resetExecutionStates}
           hasUnsavedChanges={hasUnsavedChanges}
           onRunBatch={() => setIsExecutionDashboardOpen(true)}
+          apiStatus={apiStatus}
         />
 
         <ExecutionDashboard

@@ -1085,10 +1085,23 @@ export const conditional = (payload) => {
   }
 
   if (!body.branches && !body.conditions) {
-    body.branches = [
-      { id: "true", label: "True", expression: "true" },
-      { id: "false", label: "False", expression: "false" },
-    ];
+    if (payload?.expression) {
+      // Migrate legacy single expression to a standard branch structure
+      body.branches = [
+        {
+          id: "true",
+          label: "True",
+          expression: payload.expression,
+          mode: "advanced",
+        },
+        { id: "false", label: "Else", expression: "", mode: "advanced" },
+      ];
+    } else {
+      body.branches = [
+        { id: "true", label: "True", expression: "true" },
+        { id: "false", label: "False", expression: "false" },
+      ];
+    }
     body.fallbackPath = "false";
   }
 

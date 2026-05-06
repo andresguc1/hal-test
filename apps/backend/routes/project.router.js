@@ -142,21 +142,24 @@ const syncActiveFlowToDisk = async (nodes, edges, projectId) => {
         const sortedNodes = sortNodesTopologically(activeNodes, activeEdges);
         let flattenedNodes = [];
 
-        const flatten = async (currentNodes, visitedFlows = new Set()) => {
+        const flatten = async (currentNodes, executionStack = []) => {
             const IGNORED_TYPES = ['input', 'output', 'annotation', 'note'];
             for (const n of currentNodes) {
-                if (n.data?.disabled) continue; // Skip disabled nodes
+                if (n.data?.disabled) continue;
                 if (n.type === 'component' || n.data?.type === 'component') {
                     const flowId = n.data?.configuration?.flowId || n.data?.flowId;
                     if (flowId && projectId) {
-                        if (visitedFlows.has(flowId)) {
+                        // 🚀 INTELLIGENT CIRCULAR CHECK:
+                        // Only fail if the flow is ALREADY in the current branch's stack (Infinite Recursion)
+                        if (executionStack.includes(flowId)) {
                             console.warn(
-                                `[ProjectRouter] Circular dependency detected for flowId: ${flowId}`,
+                                `[ProjectRouter] Infinite recursion blocked for flowId: ${flowId} (Stack: ${executionStack.join(' -> ')})`,
                             );
                             continue;
                         }
-                        const newVisited = new Set(visitedFlows);
-                        newVisited.add(flowId);
+
+                        // Create a new stack for this specific branch
+                        const newStack = [...executionStack, flowId];
 
                         const { Flow, Node, Edge } = await import('../database/init.js');
                         const flow = await Flow.findOne({
@@ -167,15 +170,13 @@ const syncActiveFlowToDisk = async (nodes, edges, projectId) => {
                             ],
                         });
                         if (flow) {
-                            // Map the flow data first to get consistent ID naming
                             const mappedSubFlow = mapFlowData(flow);
-                            // Recursively sort sub-flow nodes topologically
                             const sortedSubNodes = sortNodesTopologically(
                                 mappedSubFlow.nodes,
                                 mappedSubFlow.edges,
                             );
-                            // Flatten the sorted sub-nodes
-                            await flatten(sortedSubNodes, newVisited);
+                            // Recursively flatten with the updated stack
+                            await flatten(sortedSubNodes, newStack);
                         }
                     }
                 } else if (!IGNORED_TYPES.includes(n.type)) {

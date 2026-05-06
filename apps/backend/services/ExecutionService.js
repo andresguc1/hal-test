@@ -13,7 +13,7 @@ import { browserService } from './browser.service.js';
 import { actionRoutes } from '../routes/api.router.js';
 import * as schemas from '../schemas/index.js';
 
-class ExecutionService {
+export class ExecutionService {
     constructor() {
         this.activeRuns = new Map();
     }
@@ -295,58 +295,98 @@ class ExecutionService {
             // 3. Store result for interpolation — even on error, so downstream nodes can inspect it
             const nodeLabel = node.data?.customLabel || node.data?.label || node.nodeId;
             if (result) {
-                const nodeResult = result.data !== undefined ? result.data : result;
+                let nodeResult = result.data !== undefined ? result.data : result;
+
+                // Inject label into object results to aid VariableManager resolution
+                if (nodeResult && typeof nodeResult === 'object' && !Array.isArray(nodeResult)) {
+                    nodeResult.label = nodeResult.label || nodeLabel;
+                }
+                // 🚀 ULTRA-REDUNDANT STORAGE: Ensure resolution by any possible name
+                const possibleNames = new Set([
+                    node.nodeId,
+                    nodeLabel,
+                    node.data?.label,
+                    nodeLabel.replace(/[^a-zA-Z0-9]/g, ''),
+                    (node.data?.label || '').replace(/[^a-zA-Z0-9]/g, ''),
+                ]);
+
+                possibleNames.forEach((name) => {
+                    if (name && name.trim()) {
+                        variableManager.set(`${name}.result`, nodeResult, state.runId);
+                    }
+                });
+
                 console.log(
-                    `[ExecutionService] 💾 Storing variable: "${nodeLabel}.result" for runId: ${state.runId}`,
+                    `[ExecutionService] 💾 Redundant storage complete for "${nodeLabel}" (${possibleNames.size} aliases)`,
                 );
-                variableManager.set(`${nodeLabel}.result`, nodeResult, state.runId);
-                variableManager.set(`${node.nodeId}.result`, nodeResult, state.runId);
 
                 // 3.b Parent Synchronization (Live Status for Groups/Components)
+                const targetParents = [];
+
+                // Direct Visual Parent (Group)
                 if (node.parentId) {
-                    console.log(
-                        `[ExecutionService] 👨‍👦 Node "${nodeLabel}" has parent: ${node.parentId}`,
-                    );
                     const parentNode = allNodes.find((n) => n.nodeId === node.parentId);
                     if (parentNode) {
-                        const parentLabel =
-                            parentNode.data?.customLabel ||
-                            parentNode.data?.label ||
-                            parentNode.nodeId;
-                        console.log(
-                            `[ExecutionService] 🔗 Syncing result to parent: "${parentLabel}"`,
-                        );
-
-                        const existingParentResult =
-                            variableManager.get(`${parentLabel}.result`, state.runId) || {};
-
-                        const isHardFail = nodeResult.status === 'failed';
-                        const isSoftFail =
-                            nodeResult.status === 'softfailed' ||
-                            existingParentResult.status === 'softfailed';
-
-                        const parentResult = {
-                            success: !isHardFail,
-                            status: isHardFail ? 'failed' : isSoftFail ? 'softfailed' : 'running',
-                            lastNode: nodeLabel,
-                            data: {
-                                ...(typeof nodeResult === 'object' ? nodeResult : {}),
-                                status: isHardFail
-                                    ? 'failed'
-                                    : isSoftFail
-                                      ? 'softfailed'
-                                      : 'running',
-                                success: !isHardFail,
-                                label: parentLabel,
-                            },
-                        };
-                        variableManager.set(`${parentLabel}.result`, parentResult, state.runId);
-                        variableManager.set(`${node.parentId}.result`, parentResult, state.runId);
-                    } else {
-                        console.log(
-                            `[ExecutionService] ⚠️ Parent ${node.parentId} not found in allNodes list.`,
-                        );
+                        targetParents.push({
+                            id: parentNode.nodeId,
+                            label:
+                                parentNode.data?.customLabel ||
+                                parentNode.data?.label ||
+                                parentNode.nodeId,
+                        });
                     }
+                }
+
+                // 🚀 Cross-Flow Parent (The Component node that called this subflow)
+                if (state.callerId) {
+                    targetParents.push({
+                        id: state.callerId,
+                        label: state.callerLabel || state.callerId,
+                    });
+                }
+
+                for (const parent of targetParents) {
+                    // Get current accumulated result
+                    const existingResult = variableManager.get(
+                        `${parent.label}.result`,
+                        state.runId,
+                    ) || { data: {} };
+
+                    const isHardFail = nodeResult.status === 'failed';
+                    const isSoftFail =
+                        nodeResult.status === 'softfailed' ||
+                        existingResult.status === 'softfailed';
+
+                    // Accumulate data
+                    const updatedData = { ...existingResult.data };
+                    if (node.type === 'output') {
+                        updatedData[nodeLabel] =
+                            nodeResult.data !== undefined ? nodeResult.data : nodeResult;
+                    } else if (typeof nodeResult === 'object') {
+                        Object.assign(updatedData, nodeResult);
+                    }
+
+                    const parentResult = {
+                        success: !isHardFail,
+                        status: isHardFail ? 'failed' : isSoftFail ? 'softfailed' : 'running',
+                        lastNode: nodeLabel,
+                        data: {
+                            ...updatedData,
+                            status: isHardFail ? 'failed' : isSoftFail ? 'softfailed' : 'running',
+                            success: !isHardFail,
+                            label: parent.label,
+                        },
+                    };
+
+                    // Store to both ID and Label
+                    variableManager.set(`${parent.label}.result`, parentResult, state.runId);
+                    variableManager.set(`${parent.id}.result`, parentResult, state.runId);
+                    variableManager.set(parent.label, parentResult, state.runId);
+                    variableManager.set(parent.id, parentResult, state.runId);
+
+                    console.log(
+                        `[ExecutionService] 👨‍👦 Synced results to parent/caller: ID=${parent.id}, Label="${parent.label}"`,
+                    );
                 }
             }
 
@@ -374,14 +414,26 @@ class ExecutionService {
                     `[DPE] Node ${node.nodeId}: winnerPath="${winnerPath}", available handles=[${availableHandles}]`,
                 );
 
-                // If the node decided a specific path (If/Else, Switch), separate them
-                activeEdges = allNextEdges.filter((e) => e.sourceHandle === winnerPath);
-                deadEdges = allNextEdges.filter((e) => e.sourceHandle !== winnerPath);
+                // 🌈 FLEXIBLE PATH MATCHING
+                const normalizedPath = String(winnerPath || '').toLowerCase();
+                activeEdges = allNextEdges.filter((e) => {
+                    const handle = String(e.sourceHandle || 'default').toLowerCase();
+                    if (handle === normalizedPath) return true;
+
+                    // Synonym Map: If logic decided "else" but edge is "false" or vice versa
+                    if (normalizedPath === 'else' || normalizedPath === 'false') {
+                        return handle === 'else' || handle === 'false' || handle === 'default';
+                    }
+                    if (normalizedPath === 'true' || normalizedPath === 'success') {
+                        return handle === 'true' || handle === 'success';
+                    }
+                    return false;
+                });
+                deadEdges = allNextEdges.filter((e) => !activeEdges.includes(e));
 
                 if (activeEdges.length === 0 && allNextEdges.length > 0) {
                     console.warn(
-                        `[DPE] ⚠️ No edges matched winnerPath="${winnerPath}" for node ${node.nodeId}. ` +
-                            `Available handles: [${availableHandles}]. All outgoing edges will be treated as dead.`,
+                        `[DPE] ⚠️ No edges matched winnerPath="${winnerPath}" (Available: [${availableHandles}])`,
                     );
                 }
             } else if (allNextEdges.length > 0 && node.type !== 'branch') {
@@ -634,16 +686,45 @@ class ExecutionService {
                 `Node ${node.nodeId} failed`;
 
             // Store the error result so downstream conditionals can read it
-            // (e.g. a Conditional node checking {{component.result.status}} === 'error')
             const nodeLabel = node.data?.customLabel || node.data?.label || node.nodeId;
             const errorResult = resultData.data || {
-                status: resultData.status || 'failed',
+                status: resultData.status || 'error',
                 success: false,
                 recovered: resultData.recovered || false,
                 error: { message: errMsg },
             };
-            variableManager.set(`${nodeLabel}.result`, errorResult, state.runId);
-            variableManager.set(`${node.nodeId}.result`, errorResult, state.runId);
+
+            // ULTRA-REDUNDANT STORAGE FOR ERRORS
+            const possibleNames = [
+                node.nodeId,
+                node.data?.label,
+                node.data?.customLabel,
+                node.data?.technicalName,
+            ].filter(Boolean);
+
+            possibleNames.forEach((name) => {
+                variableManager.set(`${name}.result`, errorResult, state.runId);
+                variableManager.set(name, errorResult, state.runId); // Also direct access
+            });
+
+            // 🛡️ SOFT FAIL PROTECTION: Check if node should continue even on failure
+            const continueOnFailure =
+                node.data?.configuration?.continueOnFailure ||
+                node.data?.continueOnFailure ||
+                false;
+
+            if (continueOnFailure) {
+                console.log(
+                    `[ExecutionService] 🛡️ Soft Fail active for node ${node.nodeId}. Continuing flow despite error.`,
+                );
+                emitLog({
+                    message: `[Soft Fail] Node "${nodeLabel}" failed but continuing: ${errMsg}`,
+                    type: 'warning',
+                    nodeId: node.nodeId,
+                });
+                // We return the error result instead of throwing, allowing downstream nodes to proceed
+                return resultData;
+            }
 
             // Error is already logged by controller/emitLog, we just throw to stop flow
             throw new Error(errMsg);
@@ -655,7 +736,6 @@ class ExecutionService {
         }
 
         // 🌟 UNIFIED SUCCESS EMISSION (Included result for frontend edge highlighting)
-        const nodeLabel = node.data?.customLabel || node.data?.label || node.nodeId;
         const finalResult = resultData?.data !== undefined ? resultData.data : resultData;
 
         // Standardize output: Ensure status and recovered are present for conditional logic
@@ -663,15 +743,35 @@ class ExecutionService {
             if (!finalResult.status) finalResult.status = resultData?.status || 'success';
             if (finalResult.recovered === undefined)
                 finalResult.recovered = resultData?.recovered || false;
+
+            // 🏷️ Metadata Injection for deep search
+            finalResult.technicalName = node.data?.technicalName;
+            finalResult.label = node.data?.customLabel || node.data?.label;
         }
 
-        console.log(
-            `[ExecutionService] 💾 Storing success variable: "${nodeLabel}.result" for runId: ${state.runId}`,
-        );
-        variableManager.set(`${nodeLabel}.result`, finalResult, state.runId);
-        variableManager.set(`${node.nodeId}.result`, finalResult, state.runId);
+        // 🌟 ULTRA-REDUNDANT STORAGE FOR SUCCESS
+        const possibleNames = [
+            node.nodeId,
+            node.data?.label,
+            node.data?.customLabel,
+            node.data?.technicalName,
+        ].filter(Boolean);
 
-        // Also store by Node Type (e.g. "open_url") to support generic UI placeholders like {{Open URL.url}}
+        possibleNames.forEach((name) => {
+            variableManager.set(`${name}.result`, finalResult, state.runId);
+            variableManager.set(name, finalResult, state.runId); // Direct access
+
+            // Technical names often need a "group" or "step" suffix in some contexts
+            if (node.data?.technicalName) {
+                variableManager.set(
+                    `${node.data.technicalName}.status`,
+                    finalResult.status,
+                    state.runId,
+                );
+            }
+        });
+
+        // Store by type for generic access (e.g. {{open_url.result}})
         if (node.type) {
             variableManager.set(`${node.type}.result`, finalResult, state.runId);
         }

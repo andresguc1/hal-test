@@ -118,6 +118,23 @@ class VariableManager {
 
         let rid = runId || this.getActiveRunId();
 
+        // 🛡️ ATOMIC RUN FALLBACK:
+        // If the provided rid has no scope (common when frontend mistakenly sends nodeId as runId),
+        // we fallback to the last known active runId to maintain execution context.
+        if (
+            rid &&
+            rid !== 'atomic_run' &&
+            (!this.scopes.runs[rid] || Object.keys(this.scopes.runs[rid]).length === 0)
+        ) {
+            const fallbackRid = this.getActiveRunId();
+            if (fallbackRid && fallbackRid !== rid && this.scopes.runs[fallbackRid]) {
+                console.log(
+                    `[VariableManager] 🔄 Scope ${rid} is empty. Falling back to active scope: ${fallbackRid}`,
+                );
+                rid = fallbackRid;
+            }
+        }
+
         // Detailed log for debugging resolution failures
         console.log(`[VariableManager][ID=${this.instanceId}] get("${name}", runId="${rid}")`);
 
@@ -126,13 +143,34 @@ class VariableManager {
         const runValue = this._getFromScopeIntelligent(name, currentScope);
         if (runValue !== undefined) return runValue;
 
-        // 2. Search in Legacy Flow Scope
+        // 2. Search in Legacy Flow Scope (Compatibility)
         const legacyValue = this._getFromScopeIntelligent(name, this.scopes.legacy_flow);
         if (legacyValue !== undefined) return legacyValue;
 
         // 3. Search in Global Scope
         const globalValue = this._getFromScopeIntelligent(name, this.scopes.global);
         if (globalValue !== undefined) return globalValue;
+
+        // 4. 🚑 EMERGENCY FALLBACK: Search in ALL known runs
+        // This is a safety net for atomic runs where IDs might have drifted.
+        for (const otherRid of Object.keys(this.scopes.runs)) {
+            if (otherRid === rid) continue;
+            const otherValue = this._getFromScopeIntelligent(name, this.scopes.runs[otherRid]);
+            if (otherValue !== undefined) {
+                console.log(
+                    `[VariableManager] 🩹 Emergency match found for "${name}" in scope ${otherRid}`,
+                );
+                return otherValue;
+            }
+        }
+
+        // 🔍 DEBUG: If still not found, list available keys for this runId
+        const availableKeys = Object.keys(currentScope).filter(
+            (k) => !k.includes('secret') && !k.includes('pass'),
+        );
+        console.log(
+            `[VariableManager] ❌ Could not find "${name}" in runId "${rid}". Available keys: [${availableKeys.join(', ')}]`,
+        );
 
         return undefined;
     }
@@ -148,13 +186,20 @@ class VariableManager {
         if (Object.prototype.hasOwnProperty.call(scope, `${name}.result`))
             return scope[`${name}.result`];
 
-        // Intelligent resolution (Dotted path + Normalization)
-        const normalize = (s) =>
-            s
-                .toLowerCase()
-                .replace(/\s*\(library\)\s*/g, '') // Also handle Library suffix
-                .replace(/[^a-z0-9]/g, '');
+        // 🚀 ID-BASED RESOLUTION (Fastest & most reliable)
+        // If the name starts with node_, it's a direct reference to a nodeId
+        if (name.startsWith('node_')) {
+            const parts = name.split('.');
+            const targetId = parts.shift();
+            const propertyPath = parts;
+            const res = scope[`${targetId}.result`] || scope[targetId];
+            if (res !== undefined) {
+                if (propertyPath.length > 0) return this._drill(res, propertyPath);
+                return res;
+            }
+        }
 
+        // Intelligent resolution (Dotted path + Normalization)
         let targetNode = name;
         let propertyPath = [];
 
@@ -164,33 +209,60 @@ class VariableManager {
             propertyPath = parts;
         }
 
-        const normalizedTarget = normalize(targetNode);
-
-        const keys = Object.keys(scope);
+        const normalizedTarget = this._normalizeName(targetNode);
         let bestMatch = null;
 
+        // 🚀 FIRST PASS: Search by Key (Normalizing spaces/special chars)
         for (const [key, value] of Object.entries(scope)) {
             const isResult = key.endsWith('.result');
             const nodeLabel = isResult ? key.replace('.result', '') : key;
-            const normLabel = normalize(nodeLabel);
 
-            if (normLabel === normalizedTarget) {
-                // Exact match found!
+            const normLabel = this._normalizeName(nodeLabel);
+            const normKey = this._normalizeName(key);
+
+            // Try matching normalized label OR normalized full key
+            if (normLabel === normalizedTarget || normKey === normalizedTarget) {
                 console.log(
-                    `[VariableManager] 🎯 Exact match: "${targetNode}" -> Node "${nodeLabel}"`,
+                    `[VariableManager] ✅ Match found: "${targetNode}" matches key "${key}" (Normalized: ${normalizedTarget})`,
                 );
-                if (propertyPath.length === 0) return value;
-                return this._drill(value, propertyPath);
+                if (propertyPath.length > 0) {
+                    const res = this._drill(value, propertyPath);
+                    if (res !== undefined) return res;
+                } else {
+                    return value;
+                }
             }
 
-            if (normLabel.startsWith(normalizedTarget)) {
-                // Potential namespace/group match (e.g. "Login Steps - Enter Username")
+            if (normLabel.startsWith(normalizedTarget) && normalizedTarget.length > 4) {
                 bestMatch = { key, value, label: nodeLabel };
             }
         }
 
-        // If no exact match but we have a partial match, and the user is asking for status/success,
-        // we can infer the group status from its children.
+        // 🌟 SECOND PASS: Deep Search (Search by internal metadata)
+        // If no exact match by key, look INSIDE the values for technicalName or label
+        for (const [key, value] of Object.entries(scope)) {
+            if (value && typeof value === 'object') {
+                const innerTech = value.technicalName || value.data?.technicalName;
+                const innerLabel = value.label || value.data?.label;
+
+                if (
+                    (innerTech && this._normalizeName(innerTech) === normalizedTarget) ||
+                    (innerLabel && this._normalizeName(innerLabel) === normalizedTarget)
+                ) {
+                    console.log(
+                        `[VariableManager] 🔍 Deep Match Found: "${targetNode}" matches content of node "${key}"`,
+                    );
+                    if (propertyPath.length > 0) {
+                        const res = this._drill(value, propertyPath);
+                        if (res !== undefined) return res;
+                    } else {
+                        return value;
+                    }
+                }
+            }
+        }
+
+        // If no exact match but we have a partial match...
         if (bestMatch && (propertyPath.includes('status') || propertyPath.includes('success'))) {
             console.log(
                 `[VariableManager] 🌓 Namespace fallback: "${targetNode}" inferred from child "${bestMatch.label}"`,
@@ -204,10 +276,29 @@ class VariableManager {
             return this._drill(syntheticGroup, propertyPath);
         }
 
-        if (keys.length > 0) {
-            console.log(
-                `[VariableManager] ❌ No intelligent match for "${targetNode}" among ${keys.length} keys.`,
-            );
+        // 🌟 SECOND PASS: Content-Aware Search (The "Who are you?" check)
+        // If no match by KEY, we look at the VALUES.
+        // Many nodes store their label INSIDE their result object.
+        for (const [key, value] of Object.entries(scope)) {
+            if (value && typeof value === 'object') {
+                // Check common label locations in the result object
+                const innerLabel =
+                    value.label ||
+                    value.customLabel ||
+                    value.data?.label ||
+                    value.data?.customLabel;
+                if (innerLabel && this._normalizeName(innerLabel) === normalizedTarget) {
+                    console.log(
+                        `[VariableManager] 🧠 Content-Aware match: Found "${targetNode}" by searching internal label in key "${key}"`,
+                    );
+                    if (propertyPath.length > 0) {
+                        const res = this._drill(value, propertyPath);
+                        if (res !== undefined) return res;
+                    } else {
+                        return value;
+                    }
+                }
+            }
         }
 
         // Final fallback for legacy dotted paths that might not be result-aware
@@ -232,18 +323,25 @@ class VariableManager {
             }
         }
 
-        const normalize = (s) =>
-            s
-                .replace(/\s*\(Library\)\s*/i, '')
-                .trim()
-                .toLowerCase();
-        const normName = normalize(name);
+        const normName = this._normalizeName(name);
         for (const key of Object.keys(scope)) {
-            if (normalize(key) === normName) return scope[key];
+            if (this._normalizeName(key) === normName) return scope[key];
             const base = key.endsWith('.result') ? key.slice(0, -7) : key;
-            if (normalize(base) === normName) return scope[key];
+            if (this._normalizeName(base) === normName) return scope[key];
         }
         return undefined;
+    }
+
+    _normalizeName(s) {
+        if (typeof s !== 'string') return '';
+        // 🛡️ ULTRA-RIGID NORMALIZATION
+        // Remove parentheses, spaces, dots, dashes, and everything else.
+        // "Login Steps (Library)" -> "loginsteps"
+        // "Wait Element (Adv)" -> "waitelementadv"
+        return s
+            .toLowerCase()
+            .replace(/\s*\([^)]*\)/g, '') // Remove parentheses and their content
+            .replace(/[^a-z0-9]/g, ''); // Remove all non-alphanumeric
     }
 
     _drill(val, parts) {
@@ -251,21 +349,31 @@ class VariableManager {
         for (let i = 0; i < parts.length; i++) {
             if (curr === null || curr === undefined || typeof curr !== 'object') return undefined;
             const p = parts[i];
+            const pLower = p.toLowerCase();
 
+            // 1. Direct match
             if (p in curr) {
                 curr = curr[p];
-            } else if (curr.data && typeof curr.data === 'object' && p in curr.data) {
-                // AUTO-DIVE: If property not at root, check inside .data (common in action results)
-                curr = curr.data[p];
-            } else if (
-                (p === 'data' || p === 'result') &&
-                i + 1 < parts.length &&
-                parts[i + 1] in curr
-            ) {
-                // SKIP-DATA/RESULT: If user specified .data or .result but it's already flattened in current object
-                continue;
-            } else {
-                return undefined;
+            }
+            // 2. Case-insensitive match
+            else {
+                const keys = Object.keys(curr);
+                const match = keys.find((k) => k.toLowerCase() === pLower);
+                if (match) {
+                    curr = curr[match];
+                }
+                // 3. Auto-dive into .data or .result
+                else if (curr.data && typeof curr.data === 'object') {
+                    const dataKeys = Object.keys(curr.data);
+                    const dataMatch = dataKeys.find((k) => k.toLowerCase() === pLower);
+                    if (dataMatch) {
+                        curr = curr.data[dataMatch];
+                    } else {
+                        return undefined;
+                    }
+                } else {
+                    return undefined;
+                }
             }
         }
         return curr;
@@ -322,7 +430,7 @@ class VariableManager {
         return text.replace(/(?:\{\{([^}]+)\}\})|(?:\$\{([^}]+)\})/g, (match, p1, p2) => {
             const varName = (p1 || p2).trim();
             const val = this.get(varName, runId);
-            return val !== undefined ? val : match;
+            return val !== undefined ? val : null;
         });
     }
 
@@ -404,30 +512,12 @@ class VariableManager {
         }
 
         // Type Normalization: Ensure comparing same types if possible
-        const normalizeBoolean = (val) => {
-            if (typeof val === 'boolean') return val;
-            if (typeof val === 'string') {
-                const n = val.trim().toLowerCase();
-                if (n === 'true' || n === 'yes' || n === '1' || n === 'success') return true;
-                if (n === 'false' || n === 'no' || n === '0' || n === 'error' || n === 'fail')
-                    return false;
-            }
-            return val;
-        };
 
-        const nL = normalizeBoolean(rL);
-        const nR = normalizeBoolean(rR);
-
-        // If one is boolean, try to compare as booleans
-        if (typeof nL === 'boolean' || typeof nR === 'boolean') {
-            rL = !!nL;
-            rR = !!nR;
-        } else {
-            // Numeric normalization
-            if (typeof rL === 'number' && typeof rR === 'string' && rR !== '' && !isNaN(rR))
-                rR = Number(rR);
-            else if (typeof rR === 'number' && typeof rL === 'string' && rL !== '' && !isNaN(rL))
-                rL = Number(rL);
+        // Numeric normalization: only if one is a number and the other is a numeric string
+        if (typeof rL === 'number' && typeof rR === 'string' && rR !== '' && !isNaN(rR)) {
+            rR = Number(rR);
+        } else if (typeof rR === 'number' && typeof rL === 'string' && rL !== '' && !isNaN(rL)) {
+            rL = Number(rL);
         }
 
         // Phase 3: Compare resolved values
