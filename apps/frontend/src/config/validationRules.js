@@ -109,9 +109,9 @@ export const NODE_INPUTS = {
   click: [
     {
       key: "selector",
-      label: "Selector",
+      label: "Target Element to Click",
       type: "selector",
-      placeholder: "CSS, XPath, or Pick ✨",
+      placeholder: "e.g. button.submit or //button[text()='Login']",
       required: true,
     },
     {
@@ -148,16 +148,16 @@ export const NODE_INPUTS = {
   type_text: [
     {
       key: "selector",
-      label: "Selector",
+      label: "Target Input Field",
       type: "selector",
-      placeholder: "input[name='q']",
+      placeholder: "e.g. #username or input[name='user']",
       required: true,
     },
     {
       key: "text",
-      label: "Text to Type",
+      label: "Text to Type / Value",
       type: "text",
-      placeholder: "Hello World",
+      placeholder: "e.g. standard_user or {{variables.user}}",
       required: true,
     },
     { key: "delay", label: "Delay (ms)", type: "number", placeholder: "0" },
@@ -183,9 +183,9 @@ export const NODE_INPUTS = {
   select_option: [
     {
       key: "selector",
-      label: "Selector",
+      label: "Target Dropdown / Select",
       type: "selector",
-      placeholder: "select#country",
+      placeholder: "e.g. select.country-picker",
       required: true,
     },
     {
@@ -460,6 +460,21 @@ export const NODE_INPUTS = {
       label: "Enable detailed trace logs",
       type: "checkbox",
       defaultValue: false,
+    },
+  ],
+  switch: [
+    {
+      key: "variableName",
+      label: "Value or Variable to Evaluate",
+      type: "text",
+      placeholder: "e.g. {{status}} or 'success'",
+      required: true,
+    },
+    {
+      key: "cases",
+      label: "Switch Cases",
+      type: "switch_cases",
+      required: true,
     },
   ],
   loop: [

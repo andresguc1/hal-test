@@ -27,8 +27,8 @@
 }
 
 .edge-success {
-  stroke-dasharray: none;
-  animation: none;
+  stroke-dasharray: 5, 5;
+  animation: dashdraw 1s linear infinite;
 }
 
 .edge-error {

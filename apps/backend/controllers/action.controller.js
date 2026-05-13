@@ -218,22 +218,29 @@ async function applyNetworkConditions(page, options) {
 function validateBrowser(req, browserId) {
     const ids = Array.from(browserService.keys());
 
-    if (!browserId && ids.length === 0) {
-        return {
-            error: true,
-            status: 400,
-            message: req.t('errors.no_active_browsers'),
-        };
-    }
+    // Fallback strategy:
+    // 1. If explicit ID exists and is valid, use it.
+    // 2. If ID is missing/invalid but sessions exist, use the latest one.
+    // 3. Otherwise, fail (caller can then choose to auto-launch).
 
-    const id = browserId || ids[ids.length - 1];
-    const entry = browserService.get(id);
+    let id = browserId;
+    let entry = browserId ? browserService.get(browserId) : null;
+
+    if (!entry && ids.length > 0) {
+        id = ids[ids.length - 1];
+        entry = browserService.get(id);
+        if (browserId) {
+            console.log(
+                `[SESSION] Browser ID ${browserId} not found. Falling back to active session ${id}`,
+            );
+        }
+    }
 
     if (!entry) {
         return {
             error: true,
-            status: 404,
-            message: req.t('errors.browser_not_found', { id }),
+            status: 400,
+            message: req.t ? req.t('errors.no_active_browsers') : 'No active browser session found',
         };
     }
 
@@ -1568,7 +1575,7 @@ export const closeBrowserAction = async (req, res) => {
         const validation = validateBrowser(req, browserId);
         if (validation.error) {
             // Idempotency: If the browser is not found (already closed), consider it a success.
-            if (validation.status === 404) {
+            if (validation.status === 400 || validation.status === 404) {
                 const alreadyClosedMsg = `Browser ${browserId ? `ID ${browserId}` : ''} not found. Assuming already closed.`;
                 console.log(`[INFO] close_browser: ${alreadyClosedMsg} Success.`);
 
@@ -4529,58 +4536,137 @@ export const conditionalAction = async (req, res) => {
 
 export const switchAction = async (req, res) => {
     try {
-        const { variableName, cases, runId } = req.body;
+        const {
+            variableName: bodyVariableName,
+            cases: bodyCases,
+            runId: bodyRunId,
+            variables,
+            configuration,
+            nodeId,
+        } = req.body;
 
-        console.log(
-            `[DEBUG] switchAction - runId: ${runId}, variable: ${variableName}, cases count: ${Array.isArray(cases) ? cases.length : Object.keys(cases || {}).length}`,
-        );
+        // Configuration takes precedence
+        const variableName = configuration?.variableName || bodyVariableName;
+        const cases = configuration?.cases || bodyCases || [];
+        const runId = bodyRunId || 'global';
+
+        console.log(`[Switch] Starting evaluation for node: ${nodeId || 'unknown'}`);
+
+        // 🟢 SEED VARIABLE CONTEXT
+        if (variables && typeof variables === 'object') {
+            console.log(
+                `[Switch] 🌱 Seeding ${Object.keys(variables).length} variables into runId: ${runId}`,
+            );
+            Object.entries(variables).forEach(([k, v]) => {
+                variableManager.set(k, v, runId);
+            });
+        }
 
         // 1. Resolve the variable value
-        let resolvedValue = variableManager.get(variableName, runId);
+        let resolvedValue = variableManager.resolveValue(variableName, runId);
 
-        if (resolvedValue === undefined && typeof variableName === 'string') {
-            if (variableName.includes('{{') || variableName.includes('${')) {
-                resolvedValue = variableManager.resolveValue(variableName, runId);
-            } else {
-                // Try resolving as a potential path like "node.result.status"
-                resolvedValue = variableManager.resolveValue(`{{${variableName}}}`, runId);
-            }
+        // If resolution yields a string that looks like a placeholder, it might be unresolved
+        const isUnres = (v) => typeof v === 'string' && (v.includes('{{') || v.includes('${'));
+        if (isUnres(resolvedValue)) {
+            console.warn(`[Switch] ⚠️ Expression "${variableName}" unresolved: ${resolvedValue}`);
+            smartEmitLog(
+                `[Switch] ⚠️ Expression "${variableName}" could not be resolved. Value is undefined.`,
+                'warning',
+                nodeId,
+            );
+            resolvedValue = undefined;
         }
 
-        console.log(`[DEBUG] switchAction - Resolved value for '${variableName}':`, resolvedValue);
+        smartEmitLog(
+            `[Switch] Evaluating "${variableName}" -> [${JSON.stringify(resolvedValue)}] (${typeof resolvedValue})`,
+            'info',
+            nodeId,
+        );
 
         // 2. Find matching case
-        let matchedCaseId = null;
-        const normalizedResolved = String(resolvedValue ?? '').trim();
+        let matchedCase = null;
+        const trace = {};
 
-        if (Array.isArray(cases)) {
-            const matchedCase = cases.find((c) => {
-                const normalizedCaseValue = String(c.value ?? '').trim();
-                return normalizedCaseValue === normalizedResolved;
-            });
-            if (matchedCase) matchedCaseId = matchedCase.id;
-        } else if (cases && typeof cases === 'object') {
-            // Support object-based cases: { "value": "targetPath" }
-            if (normalizedResolved in cases) {
-                matchedCaseId = cases[normalizedResolved];
-            } else if ('default' in cases) {
-                matchedCaseId = cases.default;
+        // Helper to normalize values for comparison ( parity with VariableManager.evaluateCondition )
+        const normalize = (val) => {
+            if (val === null || val === undefined) return val;
+            // Boolean normalization
+            if (typeof val === 'boolean') return val;
+            if (typeof val === 'string') {
+                const s = val.trim().toLowerCase();
+                if (s === 'true' || s === 'yes' || s === '1') return true;
+                if (s === 'false' || s === 'no' || s === '0') return false;
+                // Number normalization
+                if (s !== '' && !isNaN(s)) return Number(s);
+                return val.trim();
+            }
+            return val;
+        };
+
+        const nResolved = normalize(resolvedValue);
+
+        let normalizedCases = cases;
+        if (cases && typeof cases === 'object' && !Array.isArray(cases)) {
+            // Convert legacy object format { "value": "pathId" } to array format
+            normalizedCases = Object.entries(cases).map(([val, pathId]) => ({
+                id: pathId,
+                value: val,
+                label: val,
+            }));
+        }
+
+        if (Array.isArray(normalizedCases)) {
+            for (const c of normalizedCases) {
+                if (c.value === 'default') continue; // Default is handled as fallback
+                // Resolve variables in case value (allows comparing against other variables)
+                const rawCaseValue = variableManager.resolveValue(c.value, runId);
+                const nCaseValue = normalize(rawCaseValue);
+                const isMatch = nCaseValue === nResolved;
+
+                trace[c.id] = { value: c.value, matched: isMatch };
+
+                const logLabel = c.label || c.value || c.id;
+                smartEmitLog(
+                    `[Switch] Case "${logLabel}": Comparing [${JSON.stringify(nCaseValue)}] with [${JSON.stringify(nResolved)}] -> ${isMatch ? '✅ MATCH' : '❌ NO'}`,
+                    'info',
+                    nodeId,
+                );
+
+                if (isMatch) {
+                    matchedCase = c;
+                    break;
+                }
             }
         }
 
-        const finalPath = matchedCaseId || 'default';
+        let finalPath = matchedCase ? matchedCase.id : 'default';
+        // Handle legacy default key in object cases
+        if (
+            !matchedCase &&
+            cases &&
+            typeof cases === 'object' &&
+            !Array.isArray(cases) &&
+            cases.default
+        ) {
+            finalPath = cases.default;
+        }
 
-        return res.status(200).json({
+        smartEmitLog(
+            `[Switch] ✅ Final Decision: ${matchedCase ? matchedCase.label || matchedCase.id : 'Default'}`,
+            'success',
+            nodeId,
+        );
+
+        return res.json({
             success: true,
-            message: matchedCaseId
-                ? `Switch matched case: ${matchedCaseId}`
-                : `No switch cases matched, routing to default`,
-            path: finalPath, // Backward compatibility: path at root
+            path: finalPath, // Root level for DPE
             data: {
                 resolvedValue,
                 path: finalPath,
-                targetPath: finalPath, // Backward compatibility: targetPath in data
-                matchedCaseId: matchedCaseId || null,
+                targetPath: finalPath, // Legacy support
+                matchedCaseId: matchedCase?.id || null,
+                matchedCaseLabel: matchedCase?.label || null,
+                trace,
             },
         });
     } catch (error) {
@@ -5127,13 +5213,13 @@ export const inputAction = async (req, res) => {
 
         // If variable is already set (by componentAction mapping), we keep it.
         // Otherwise, we set it to the default value if provided.
-        if (!variableManager.has(name, req.body.runId) && defaultValue !== undefined) {
+        if (name && !variableManager.has(name, req.body.runId) && defaultValue !== undefined) {
             variableManager.set(name, defaultValue, req.body.runId);
         }
 
         return res.status(200).json({
             success: true,
-            data: { name, value: variableManager.get(name, req.body.runId) },
+            data: name ? { name, value: variableManager.get(name, req.body.runId) } : {},
         });
     } catch (error) {
         return res.status(500).json({
@@ -5153,13 +5239,24 @@ export const outputAction = async (req, res) => {
         const { variableManager } = await import('../services/VariableManager.js');
 
         // Resolve return value
-        const resolvedValue = variableManager.resolveValue(value, req.body.runId);
-        variableManager.set(name, resolvedValue, req.body.runId);
+        let resolvedValue = undefined;
+        if (value !== undefined) {
+            resolvedValue = variableManager.resolveValue(value, req.body.runId);
+        }
+
+        if (name) {
+            variableManager.set(name, resolvedValue, req.body.runId);
+        }
 
         return res.status(200).json({
             success: true,
             action: 'return', // Signal to runSequence to bubble up this data
-            data: resolvedValue || { name, value: resolvedValue },
+            data:
+                resolvedValue !== undefined
+                    ? resolvedValue
+                    : name
+                      ? { name, value: resolvedValue }
+                      : {},
         });
     } catch (error) {
         return res.status(500).json({

@@ -100,15 +100,15 @@ const CustomEdge = ({
         )}
       />
 
-      {/* ANIMATED SIGNAL PARTICLE (Only for Running/Selected) */}
-      {(selected || isRunning) && (
+      {/* ANIMATED SIGNAL PARTICLE (Only for Running/Success/Selected) */}
+      {(selected || isRunning || isSuccess) && (
         <circle
-          r={isRunning ? 4 : 3}
-          fill={isRunning ? "#fcd34d" : "#38bdf8"}
-          className={cn(isRunning && "animate-pulse")}
+          r={isRunning || isSuccess ? 4 : 3}
+          fill={isRunning ? "#fcd34d" : isSuccess ? "#22c55e" : "#38bdf8"}
+          className={cn((isRunning || isSuccess) && "animate-pulse")}
         >
           <animateMotion
-            dur={isRunning ? "0.8s" : "1.5s"}
+            dur={isRunning ? "0.8s" : isSuccess ? "1.2s" : "1.5s"}
             repeatCount="indefinite"
             path={edgePath}
             calcMode="linear"

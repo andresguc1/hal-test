@@ -229,7 +229,7 @@ describe('Logic Engine Nodes Validation', () => {
             variableManager.set('role', 'admin');
             const req = {
                 body: {
-                    variableName: 'role',
+                    variableName: '${role}',
                     cases: { admin: 'admin_view', guest: 'guest_view', default: 'error_view' },
                 },
                 t: (k) => k,
@@ -255,7 +255,7 @@ describe('Logic Engine Nodes Validation', () => {
             variableManager.set('status_code', 200);
             const req = {
                 body: {
-                    variableName: 'status_code',
+                    variableName: '${status_code}',
                     cases: [
                         { value: '200', id: 'success_path' },
                         { value: '404', id: 'not_found_path' },
@@ -284,7 +284,7 @@ describe('Logic Engine Nodes Validation', () => {
             variableManager.set('status_code', 500);
             const req = {
                 body: {
-                    variableName: 'status_code',
+                    variableName: '${status_code}',
                     cases: { 200: 'ok', default: 'fallback_path' },
                 },
                 t: (k) => k,

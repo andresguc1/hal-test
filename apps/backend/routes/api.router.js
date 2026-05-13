@@ -436,7 +436,13 @@ export const actionRoutes = [
         path: 'conditional',
         schema: 'conditionalBodySchema',
         action: 'conditionalAction',
-        category: 'flow_control',
+        category: 'logic',
+    },
+    {
+        path: 'switch',
+        schema: 'switchBodySchema',
+        action: 'switchAction',
+        category: 'logic',
     },
     {
         path: 'loop',

@@ -143,6 +143,104 @@ export const useHaltestSocket = ({
           });
         });
       }
+
+      // 2. UPDATE EDGES FOR THIS NODE
+      if (setEdgesRef.current) {
+        setEdgesRef.current((eds) => {
+          if (!Array.isArray(eds)) return eds;
+
+          const isBranchingStatus =
+            status === "success" || status === "softfailed";
+
+          if (isBranchingStatus) {
+            const winnerPath = String(
+              result?.path ||
+                result?.data?.path ||
+                result?.targetPath ||
+                result?.result?.path ||
+                "",
+            )
+              .trim()
+              .toLowerCase();
+
+            console.log(
+              `[HaltestSocket] 🎨 Painting edges for node "${stepId}". Winner path: "${winnerPath}"`,
+            );
+
+            const nextEdges = eds.filter((e) => e.source === stepId);
+            const isBranchingNode = nextEdges.length > 1;
+
+            return eds.map((edge) => {
+              if (edge.source === stepId) {
+                const handle = String(edge.sourceHandle || "").toLowerCase();
+                let isWinner = false;
+
+                if (
+                  !winnerPath ||
+                  winnerPath === "" ||
+                  winnerPath === "undefined"
+                ) {
+                  // Only mark as winner if NOT a branching node (linear nodes don't have paths)
+                  isWinner = !isBranchingNode;
+                } else {
+                  // Strict path matching
+                  if (handle === winnerPath) isWinner = true;
+                  else if (
+                    (winnerPath === "true" || winnerPath === "success") &&
+                    (handle === "true" || handle === "success")
+                  )
+                    isWinner = true;
+                  else if (
+                    (winnerPath === "false" ||
+                      winnerPath === "else" ||
+                      winnerPath === "default") &&
+                    (handle === "false" ||
+                      handle === "else" ||
+                      handle === "default")
+                  )
+                    isWinner = true;
+                }
+
+                console.log(
+                  `  -> Edge ${edge.id}: sourceHandle="${edge.sourceHandle}", isWinner=${isWinner}`,
+                );
+                return {
+                  ...edge,
+                  animated: isWinner,
+                  data: {
+                    ...edge.data,
+                    executionState: isWinner ? "success" : "skipped",
+                  },
+                };
+              }
+              return edge;
+            });
+          } else if (
+            status === "failed" ||
+            status === "running" ||
+            status === "executing"
+          ) {
+            // Reset edges to skipped if failed, or running state
+            return eds.map((edge) => {
+              if (edge.source === stepId) {
+                return {
+                  ...edge,
+                  animated: status === "running" || status === "executing",
+                  data: {
+                    ...edge.data,
+                    executionState:
+                      status === "running" || status === "executing"
+                        ? "running"
+                        : "skipped",
+                  },
+                };
+              }
+              return edge;
+            });
+          }
+          return eds;
+        });
+      }
     });
 
     socket.on("edge-status", (data) => {

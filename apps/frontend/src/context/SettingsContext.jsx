@@ -69,30 +69,39 @@ export const SettingsProvider = ({ children }) => {
   // Load keys when session changes
   useEffect(() => {
     let subscription = null;
+    let isMounted = true;
 
     const checkAndReload = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (session) {
-        loadVaultKeys();
-      } else {
-        setVaultKeys([]);
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!isMounted) return;
+
+        if (session) {
+          loadVaultKeys();
+        } else {
+          setVaultKeys([]);
+        }
+      } catch (e) {
+        if (isMounted) console.error("Auth session error:", e);
       }
     };
 
     checkAndReload();
 
     // Listen for auth state changes locally within the provider if needed
-    // or just rely on the mount/unmount and parent state.
-    // However, to be extra safe, we listen for keys updated event too.
-    const handleUpdate = () => checkAndReload();
+    const handleUpdate = () => {
+      if (isMounted) checkAndReload();
+    };
     window.addEventListener("hal_keys_updated", handleUpdate);
 
     // Listen for Supabase auth changes
     const {
       data: { subscription: authSubscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!isMounted) return;
       if (session) {
         loadVaultKeys();
       } else {
@@ -102,6 +111,7 @@ export const SettingsProvider = ({ children }) => {
     subscription = authSubscription;
 
     return () => {
+      isMounted = false;
       window.removeEventListener("hal_keys_updated", handleUpdate);
       if (subscription) subscription.unsubscribe();
     };
