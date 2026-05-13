@@ -39,6 +39,7 @@ const ContextMenuItem = ({
 }) => (
   <button
     onMouseEnter={onMouseEnter}
+    role="menuitem"
     className={cn(
       "group relative flex w-full cursor-default select-none items-center rounded-md px-2 py-1.5 text-sm outline-none transition-all",
       disabled
@@ -68,7 +69,7 @@ const ContextMenuItem = ({
         iconClassName, // Apply custom color if provided
       )}
     >
-      {Icon && <Icon size={15} />}
+      {Icon && <Icon size={15} aria-hidden="true" />}
     </div>
 
     <span className="flex-1 text-left text-zinc-300 group-hover:text-zinc-100 font-medium">
@@ -84,6 +85,7 @@ const ContextMenuItem = ({
     {hasSubmenu && (
       <ChevronRight
         size={14}
+        aria-hidden="true"
         className="ml-auto text-zinc-500 group-hover:text-zinc-300"
       />
     )}
@@ -510,6 +512,8 @@ const ContextMenu = ({
   return (
     <div
       ref={menuRef}
+      role="menu"
+      aria-label="Context menu"
       className={cn(
         "fixed z-[10001] min-w-[220px] rounded-lg border border-[var(--border-ui)] bg-[var(--bg-panel)] backdrop-blur-xl p-1.5 shadow-2xl transition-all duration-400",
         "animate-in fade-in zoom-in-95 origin-top-left",
@@ -523,6 +527,7 @@ const ContextMenu = ({
             ref={searchRef}
             type="text"
             placeholder="Search node..."
+            aria-label="Search node type"
             className="w-full bg-[var(--bg-canvas)] border border-[var(--border-ui)] rounded px-2 py-1 text-xs text-[var(--text-main)] focus:outline-none focus:border-indigo-500 placeholder:text-[var(--text-muted)] transition-all duration-300"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}

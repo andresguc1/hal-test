@@ -186,6 +186,8 @@ function Dashboard() {
     apiStatus,
     toggleNodesDisabled,
     toggleDownstreamDisabled,
+    designTimeContext,
+    simulatedResults,
   } = useFlowManager(currentProject, currentFlowId, switchFlow);
 
   // Navigate to a node: select it AND center the canvas on it
@@ -1381,6 +1383,35 @@ function Dashboard() {
   return (
     <>
       <div className="relative h-dvh w-screen flex flex-col overflow-hidden bg-[var(--bg-canvas)] text-[var(--text-primary)] transition-all duration-400 antialiased font-sans selection:bg-cyan-500/30 m-0 p-0 border-none">
+        {/* Skip Navigation Link (WCAG 2.4.1) */}
+        <a
+          href="#main-content"
+          className="visually-hidden focus:not-visually-hidden focus:fixed focus:top-2 focus:left-2 focus:z-[9999] focus:px-4 focus:py-2 focus:bg-indigo-600 focus:text-white focus:rounded-lg focus:text-sm focus:font-bold focus:shadow-lg focus:outline-none"
+          style={{
+            position: "absolute",
+            width: "1px",
+            height: "1px",
+            overflow: "hidden",
+            clip: "rect(0,0,0,0)",
+          }}
+          onFocus={(e) => {
+            e.target.style.position = "fixed";
+            e.target.style.width = "auto";
+            e.target.style.height = "auto";
+            e.target.style.overflow = "visible";
+            e.target.style.clip = "auto";
+          }}
+          onBlur={(e) => {
+            e.target.style.position = "absolute";
+            e.target.style.width = "1px";
+            e.target.style.height = "1px";
+            e.target.style.overflow = "hidden";
+            e.target.style.clip = "rect(0,0,0,0)";
+          }}
+        >
+          Skip to main content
+        </a>
+
         {/* Progress Bar */}
         {executionProgress.total > 0 && (
           <ProgressBar
@@ -1482,7 +1513,11 @@ function Dashboard() {
           )}
 
           {/* LIENZO (CANVAS - Abyss Blue Environment) */}
-          <main className="flex-1 relative kanban-board-bg flex flex-col overflow-hidden">
+          <main
+            id="main-content"
+            aria-label="Flow canvas"
+            className="flex-1 relative kanban-board-bg flex flex-col overflow-hidden"
+          >
             <div ref={reactFlowWrapper} className="flex-1 w-full relative">
               <ReactFlow {...flowConfig} onNodesDelete={onNodesDelete}>
                 {showMinimap && <StyledMiniMap />}
@@ -1658,6 +1693,8 @@ function Dashboard() {
               onUngroup={ungroupNodes}
               onEnterSubFlow={enterComponent}
               updateNodeState={updateNodeState}
+              designTimeContext={designTimeContext}
+              simulatedResults={simulatedResults}
             />
           )}
           {/* Global Settings Modal (Unified Hub) */}

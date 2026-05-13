@@ -24,6 +24,7 @@ const HeaderButton = ({ onClick, children, title, className }) => (
     whileTap={{ scale: 0.95 }}
     onClick={onClick}
     title={title}
+    aria-label={title}
     className={cn(
       "relative flex items-center justify-center p-2 rounded-lg transition-all duration-300",
       "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--border-color)]",
@@ -38,40 +39,59 @@ const Breadcrumbs = ({ viewStack, onExit, currentFlowName }) => {
   if (!viewStack || viewStack.length === 0) return null;
 
   return (
-    <div className="flex items-center gap-1 text-sm select-none">
+    <nav
+      aria-label="Flow breadcrumb"
+      className="flex items-center gap-1 text-sm select-none"
+    >
       {/* Root Link */}
-      <span
+      <button
+        type="button"
         onClick={() => onExit()}
-        className="text-[var(--text-secondary)] hover:text-indigo-400 cursor-pointer transition-colors"
+        className="text-[var(--text-secondary)] hover:text-indigo-400 cursor-pointer transition-colors bg-transparent border-none p-0"
       >
         Main
-      </span>
+      </button>
 
       {viewStack.map((view, index) => (
         <React.Fragment key={`${view.id}-${index}`}>
-          <span className="text-[var(--text-secondary)] opacity-50">/</span>
           <span
+            className="text-[var(--text-secondary)] opacity-50"
+            aria-hidden="true"
+          >
+            /
+          </span>
+          <button
+            type="button"
             onClick={() => (index < viewStack.length - 1 ? onExit() : null)} // Simple logic: clicking breadcrumb pops one level (not robust for deep nested yet)
+            aria-current={
+              index === viewStack.length - 1 ? "location" : undefined
+            }
             className={cn(
-              "transition-colors max-w-[150px] truncate",
+              "transition-colors max-w-[150px] truncate bg-transparent border-none p-0",
               index === viewStack.length - 1
                 ? "text-indigo-500 font-medium"
                 : "text-[var(--text-secondary)] hover:text-indigo-400 cursor-pointer",
             )}
           >
             {view.label}
-          </span>
+          </button>
         </React.Fragment>
       ))}
 
       {/* Current Level */}
-      <span className="text-[var(--text-secondary)] opacity-50">/</span>
-      <span className="text-indigo-500 font-medium truncate max-w-[200px]">
+      <span
+        className="text-[var(--text-secondary)] opacity-50"
+        aria-hidden="true"
+      >
+        /
+      </span>
+      <span
+        className="text-indigo-500 font-medium truncate max-w-[200px]"
+        aria-current="page"
+      >
         {currentFlowName}
       </span>
-
-      {/* Current Level (if needed, but usually viewStack includes current level logic) */}
-    </div>
+    </nav>
   );
 };
 
@@ -200,8 +220,12 @@ function AppHeader({
             config.text,
           )}
           title="Stop Session & Close Browser"
+          aria-label="Stop Session & Close Browser"
         >
-          <div className="w-2.5 h-2.5 bg-current rounded-[1px]" />
+          <div
+            className="w-2.5 h-2.5 bg-current rounded-[1px]"
+            aria-hidden="true"
+          />
         </button>
       </Motion.div>
     );
@@ -226,15 +250,24 @@ function AppHeader({
       {/* LEFT */}
       <div className="flex items-center gap-3 relative z-20 shrink-0">
         <HalLogo className="w-8 h-8" />
-        <h1 className="text-[var(--text-primary)] font-bold tracking-wider text-base md:text-xl uppercase font-mono leading-none cursor-default select-none flex items-center gap-1 group">
+        <div
+          role="img"
+          aria-label="HAL-TEST"
+          className="text-[var(--text-primary)] font-bold tracking-wider text-base md:text-xl uppercase font-mono leading-none cursor-default select-none flex items-center gap-1 group"
+        >
           <span className="text-indigo-500 group-hover:text-indigo-400 transition-colors">
             HAL
           </span>
-          <span className="text-[var(--text-secondary)] opacity-50">-</span>
+          <span
+            className="text-[var(--text-secondary)] opacity-50"
+            aria-hidden="true"
+          >
+            -
+          </span>
           <span className="text-amber-500 group-hover:text-amber-400 transition-colors">
             TEST
           </span>
-        </h1>
+        </div>
 
         {/* MODE INDICATOR */}
         {isGuest && (

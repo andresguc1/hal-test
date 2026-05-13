@@ -64,34 +64,50 @@ export default function Login() {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-5">
             <div className="space-y-2">
-              <label className="text-[10px] uppercase tracking-[0.2em] font-bold text-slate-500 ml-1">
+              <label
+                htmlFor="login-email"
+                className="text-[10px] uppercase tracking-[0.2em] font-bold text-slate-500 ml-1"
+              >
                 Email Address
               </label>
               <div className="relative group">
-                <Mail className="absolute left-3 top-3.5 w-4 h-4 text-slate-500 group-focus-within:text-blue-400 transition-colors" />
+                <Mail
+                  className="absolute left-3 top-3.5 w-4 h-4 text-slate-500 group-focus-within:text-blue-400 transition-colors"
+                  aria-hidden="true"
+                />
                 <Input
+                  id="login-email"
                   type="email"
                   placeholder="name@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  autoComplete="email"
                   className="pl-10 bg-slate-900/40 border-white/5 focus:border-blue-500/50 focus:ring-blue-500/10 h-12 text-sm transition-all duration-300 placeholder:text-slate-600"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] uppercase tracking-[0.2em] font-bold text-slate-500 ml-1">
+              <label
+                htmlFor="login-password"
+                className="text-[10px] uppercase tracking-[0.2em] font-bold text-slate-500 ml-1"
+              >
                 Password
               </label>
               <div className="relative group">
-                <Lock className="absolute left-3 top-3.5 w-4 h-4 text-slate-500 group-focus-within:text-blue-400 transition-colors" />
+                <Lock
+                  className="absolute left-3 top-3.5 w-4 h-4 text-slate-500 group-focus-within:text-blue-400 transition-colors"
+                  aria-hidden="true"
+                />
                 <Input
+                  id="login-password"
                   type="password"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  autoComplete="current-password"
                   className="pl-10 bg-slate-900/40 border-white/5 focus:border-blue-500/50 focus:ring-blue-500/10 h-12 text-sm transition-all duration-300 placeholder:text-slate-600"
                 />
               </div>

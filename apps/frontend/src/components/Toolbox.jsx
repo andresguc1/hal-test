@@ -445,292 +445,305 @@ export default function ToolboxPanel({
   };
 
   return (
-    <Motion.div
-      initial={false}
-      animate={{ width: isCollapsed ? 64 : 280 }}
-      transition={{ type: "spring", stiffness: 400, damping: 30, mass: 0.8 }}
-      className={cn(
-        "relative h-full flex flex-col shrink-0 font-sans glass-panel",
-        "z-[var(--z-hud)]",
-      )}
-    >
-      {/* HEADER */}
-      <div className="h-14 flex items-center justify-center px-4 border-b border-white/5 shrink-0 bg-[#0f172a]/50">
-        {!isCollapsed ? (
-          <div className="w-full flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center border border-white/10">
-              <Box size={16} className="text-indigo-400" />
-            </div>
-            <span className="font-bold text-sm tracking-wide text-slate-100">
-              TOOLBOX
-            </span>
-          </div>
-        ) : (
-          <Box size={20} className="text-indigo-400" />
+    <aside aria-label="Toolbox">
+      <Motion.div
+        initial={false}
+        animate={{ width: isCollapsed ? 64 : 280 }}
+        transition={{ type: "spring", stiffness: 400, damping: 30, mass: 0.8 }}
+        className={cn(
+          "relative h-full flex flex-col shrink-0 font-sans glass-panel",
+          "z-[var(--z-hud)]",
         )}
-      </div>
-
-      {/* CONTENT */}
-      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-        <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 custom-scrollbar flex flex-col">
+      >
+        {/* HEADER */}
+        <div className="h-14 flex items-center justify-center px-4 border-b border-white/5 shrink-0 bg-[#0f172a]/50">
           {!isCollapsed ? (
-            <>
-              {/* Search */}
-              <div className="relative mb-4 group">
-                <Search
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-400 transition-colors"
-                  size={14}
-                />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder={t("common.select_default", "Search tools...")}
-                  className="w-full bg-slate-900/50 border border-white/10 rounded-lg py-2 pl-9 pr-3 text-xs text-slate-300 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition-all shadow-inner"
-                />
-                {searchTerm && (
-                  <button
-                    onClick={() => setSearchTerm("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
-                  >
-                    <X size={12} />
-                  </button>
-                )}
+            <div className="w-full flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center border border-white/10">
+                <Box size={16} className="text-indigo-400" />
               </div>
-
-              {/* List */}
-              <div className="flex-1">
-                {Object.entries(filteredCategories).map(([key, section]) => (
-                  <ToolboxCategory
-                    key={key}
-                    categoryKey={key}
-                    icon={section.icon}
-                    color={section.color}
-                    nodes={section.nodes}
-                    isOpen={!!openCategories[key]}
-                    onToggle={() => toggleCategory(key)}
-                    t={t}
-                    onAdd={addNode}
-                  />
-                ))}
-              </div>
-            </>
+              <span className="font-bold text-sm tracking-wide text-slate-100">
+                TOOLBOX
+              </span>
+            </div>
           ) : (
-            <div className="flex flex-col gap-4 items-center mt-2">
-              {Object.entries(NODE_CATEGORIES).map(([key, section]) => {
-                return (
-                  <button
-                    key={key}
-                    title={t(`nodes.categories.${key}`)}
-                    onClick={() => {
-                      handleToggleCollapse(false);
-                      setOpenCategories({ [key]: true });
-                    }}
-                    className={cn(
-                      "w-9 h-9 flex items-center justify-center rounded-lg transition-all bg-white/5 hover:bg-white/10",
-                      "text-slate-400", // Default color
-                      getSidebarHoverColor(section.color),
+            <Box size={20} className="text-indigo-400" />
+          )}
+        </div>
+
+        {/* CONTENT */}
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 custom-scrollbar flex flex-col">
+            {!isCollapsed ? (
+              <>
+                {/* Search */}
+                <div className="relative mb-4 group">
+                  <label htmlFor="toolbox-search" className="visually-hidden">
+                    Search tools
+                  </label>
+                  <Search
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-400 transition-colors"
+                    size={14}
+                    aria-hidden="true"
+                  />
+                  <input
+                    id="toolbox-search"
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder={t("common.select_default", "Search tools...")}
+                    className="w-full bg-slate-900/50 border border-white/10 rounded-lg py-2 pl-9 pr-3 text-xs text-slate-300 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition-all shadow-inner"
+                  />
+                  {searchTerm && (
+                    <button
+                      onClick={() => setSearchTerm("")}
+                      aria-label="Clear search"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                    >
+                      <X size={12} aria-hidden="true" />
+                    </button>
+                  )}
+                </div>
+
+                {/* List */}
+                <div className="flex-1">
+                  {Object.entries(filteredCategories).map(([key, section]) => (
+                    <ToolboxCategory
+                      key={key}
+                      categoryKey={key}
+                      icon={section.icon}
+                      color={section.color}
+                      nodes={section.nodes}
+                      isOpen={!!openCategories[key]}
+                      onToggle={() => toggleCategory(key)}
+                      t={t}
+                      onAdd={addNode}
+                    />
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="flex flex-col gap-4 items-center mt-2">
+                {Object.entries(NODE_CATEGORIES).map(([key, section]) => {
+                  return (
+                    <button
+                      key={key}
+                      title={t(`nodes.categories.${key}`)}
+                      aria-label={t(`nodes.categories.${key}`)}
+                      onClick={() => {
+                        handleToggleCollapse(false);
+                        setOpenCategories({ [key]: true });
+                      }}
+                      className={cn(
+                        "w-9 h-9 flex items-center justify-center rounded-lg transition-all bg-white/5 hover:bg-white/10",
+                        "text-slate-400", // Default color
+                        getSidebarHoverColor(section.color),
+                      )}
+                    >
+                      <section.icon size={18} aria-hidden="true" />
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* AI COPILOT */}
+          {!isCollapsed && (
+            <div className="mt-auto shrink-0 border-t border-white/5">
+              <div className="bg-slate-950 flex flex-col min-h-0">
+                {/* Internal Header for AI Chat */}
+                <div className="p-3 border-b border-slate-800 bg-slate-900/50 flex items-center justify-between sticky top-0 z-10">
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-2">
+                      <Sparkles size={14} className="text-purple-400" />
+                      <span className="text-xs font-bold text-slate-300 uppercase tracking-widest">
+                        Hal-9001
+                      </span>
+                      {activeBrowserId && (
+                        <span
+                          className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse"
+                          title="Connected to Browser"
+                        />
+                      )}
+                    </div>
+                    {/* Available Keys Selector */}
+                    {availableKeys.length > 0 && (
+                      <div className="mt-1">
+                        <select
+                          className="bg-transparent text-[10px] text-slate-500 border-none outline-none cursor-pointer hover:text-slate-300"
+                          value={selectedKeyId}
+                          onChange={(e) => setSelectedKeyId(e.target.value)}
+                        >
+                          {availableKeys.map((k) => (
+                            <option key={k.id} value={k.id}>
+                              Using: {k.alias}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     )}
-                  >
-                    <section.icon size={18} />
-                  </button>
-                );
-              })}
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    {chatMessages.length > 0 && (
+                      <button
+                        onClick={() => clearMessages()}
+                        className="p-1.5 hover:bg-slate-800 rounded-md text-slate-500 hover:text-slate-300 transition-colors"
+                        title="Clear History"
+                        aria-label="Clear chat history"
+                      >
+                        <Trash2 size={13} aria-hidden="true" />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => openSettings("integrations")}
+                      className="p-1.5 hover:bg-slate-800 rounded-md text-slate-500 hover:text-slate-300 transition-colors"
+                      title={t("toolbox.configureAI")}
+                      aria-label={t("toolbox.configureAI")}
+                    >
+                      <Settings size={14} aria-hidden="true" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex-none h-[25vh] min-h-[180px] bg-gradient-to-b from-slate-900/80 to-slate-900/40 border border-white/10 rounded-xl p-0 relative group overflow-hidden flex flex-col shadow-lg">
+                  <div className="flex-1 p-3 overflow-y-auto custom-scrollbar flex flex-col gap-3">
+                    {chatMessages.length === 0 ? (
+                      <div className="flex gap-3 mb-2">
+                        <div className="w-5 h-5 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0">
+                          <Bot size={12} className="text-indigo-400" />
+                        </div>
+                        <p className="text-[11px] text-slate-300 leading-relaxed mt-0.5">
+                          {isAiReady ? (
+                            <>
+                              Connected to{" "}
+                              <span className="text-indigo-300 font-semibold">
+                                {aiConfig?.activeProvider}
+                              </span>
+                              .
+                              <br />
+                              How can I help you automate today?
+                            </>
+                          ) : (
+                            <>
+                              I can help you build this flow. Try asking:{" "}
+                              <span className="text-indigo-300 italic">
+                                "Go to google.com and search for kittens"
+                              </span>
+                            </>
+                          )}
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        {chatMessages.map((msg, i) => (
+                          <div
+                            key={i}
+                            className={cn(
+                              "flex flex-col gap-1 max-w-[90%]",
+                              msg.role === "user"
+                                ? "self-end items-end"
+                                : "self-start items-start",
+                            )}
+                          >
+                            <div
+                              className={cn(
+                                "p-2 rounded-lg text-[11px] leading-relaxed",
+                                msg.role === "user"
+                                  ? "bg-indigo-600/90 text-white rounded-br-none"
+                                  : "bg-slate-800 text-slate-200 rounded-bl-none border border-slate-700",
+                              )}
+                            >
+                              {msg.content}
+                            </div>
+                          </div>
+                        ))}
+                        {isGenerating && (
+                          <div className="flex items-center gap-2 text-[10px] text-slate-500 ml-1 opacity-70">
+                            <Loader2 size={10} className="animate-spin" />
+                            <span>Thinking...</span>
+                          </div>
+                        )}
+                        {/* Auto-scroll anchor */}
+                        <div ref={messagesEndRef} />
+                      </>
+                    )}
+                  </div>
+                  <div className="h-9 border-t border-white/5 bg-white/[0.02] flex items-center px-3 gap-2">
+                    <input
+                      className="bg-transparent border-none text-[11px] text-slate-200 placeholder:text-slate-600 focus:outline-none w-full h-full disabled:opacity-50"
+                      placeholder={
+                        isAiReady
+                          ? isGenerating
+                            ? "HAL is thinking..."
+                            : "Describe a test case..."
+                          : "Configure AI to chat..."
+                      }
+                      aria-label="AI chat message"
+                      disabled={!isAiReady || isGenerating}
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                    />
+                    {isGenerating ? (
+                      <Loader2
+                        size={12}
+                        className="text-indigo-400 animate-spin"
+                      />
+                    ) : (
+                      <Send
+                        size={12}
+                        className={cn(
+                          "transition-colors",
+                          isAiReady
+                            ? "text-indigo-400 cursor-pointer hover:text-indigo-300"
+                            : "text-slate-700",
+                        )}
+                        onClick={handleSendMessageLocal}
+                      />
+                    )}
+                  </div>
+
+                  {!isAiReady && (
+                    <div
+                      onClick={() => openSettings("integrations")}
+                      className="absolute inset-0 bg-[var(--bg-canvas)]/80 backdrop-blur-[1px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 rounded-lg cursor-pointer"
+                    >
+                      <span className="text-[10px] font-bold text-amber-500 border border-amber-500/30 px-3 py-1 rounded-full bg-amber-500/10 shadow-[0_0_10px_rgba(245,158,11,0.2)] hover:bg-amber-500/20 transition-colors">
+                        SETUP REQUIRED
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </div>
 
-        {/* AI COPILOT */}
-        {!isCollapsed && (
-          <div className="mt-auto shrink-0 border-t border-white/5">
-            <div className="bg-slate-950 flex flex-col min-h-0">
-              {/* Internal Header for AI Chat */}
-              <div className="p-3 border-b border-slate-800 bg-slate-900/50 flex items-center justify-between sticky top-0 z-10">
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-2">
-                    <Sparkles size={14} className="text-purple-400" />
-                    <span className="text-xs font-bold text-slate-300 uppercase tracking-widest">
-                      Hal-9001
-                    </span>
-                    {activeBrowserId && (
-                      <span
-                        className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse"
-                        title="Connected to Browser"
-                      />
-                    )}
-                  </div>
-                  {/* Available Keys Selector */}
-                  {availableKeys.length > 0 && (
-                    <div className="mt-1">
-                      <select
-                        className="bg-transparent text-[10px] text-slate-500 border-none outline-none cursor-pointer hover:text-slate-300"
-                        value={selectedKeyId}
-                        onChange={(e) => setSelectedKeyId(e.target.value)}
-                      >
-                        {availableKeys.map((k) => (
-                          <option key={k.id} value={k.id}>
-                            Using: {k.alias}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-1">
-                  {chatMessages.length > 0 && (
-                    <button
-                      onClick={() => clearMessages()}
-                      className="p-1.5 hover:bg-slate-800 rounded-md text-slate-500 hover:text-slate-300 transition-colors"
-                      title="Clear History"
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  )}
-                  <button
-                    onClick={() => openSettings("integrations")}
-                    className="p-1.5 hover:bg-slate-800 rounded-md text-slate-500 hover:text-slate-300 transition-colors"
-                    title={t("toolbox.configureAI")}
-                  >
-                    <Settings size={14} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex-none h-[25vh] min-h-[180px] bg-gradient-to-b from-slate-900/80 to-slate-900/40 border border-white/10 rounded-xl p-0 relative group overflow-hidden flex flex-col shadow-lg">
-                <div className="flex-1 p-3 overflow-y-auto custom-scrollbar flex flex-col gap-3">
-                  {chatMessages.length === 0 ? (
-                    <div className="flex gap-3 mb-2">
-                      <div className="w-5 h-5 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0">
-                        <Bot size={12} className="text-indigo-400" />
-                      </div>
-                      <p className="text-[11px] text-slate-300 leading-relaxed mt-0.5">
-                        {isAiReady ? (
-                          <>
-                            Connected to{" "}
-                            <span className="text-indigo-300 font-semibold">
-                              {aiConfig?.activeProvider}
-                            </span>
-                            .
-                            <br />
-                            How can I help you automate today?
-                          </>
-                        ) : (
-                          <>
-                            I can help you build this flow. Try asking:{" "}
-                            <span className="text-indigo-300 italic">
-                              "Go to google.com and search for kittens"
-                            </span>
-                          </>
-                        )}
-                      </p>
-                    </div>
-                  ) : (
-                    <>
-                      {chatMessages.map((msg, i) => (
-                        <div
-                          key={i}
-                          className={cn(
-                            "flex flex-col gap-1 max-w-[90%]",
-                            msg.role === "user"
-                              ? "self-end items-end"
-                              : "self-start items-start",
-                          )}
-                        >
-                          <div
-                            className={cn(
-                              "p-2 rounded-lg text-[11px] leading-relaxed",
-                              msg.role === "user"
-                                ? "bg-indigo-600/90 text-white rounded-br-none"
-                                : "bg-slate-800 text-slate-200 rounded-bl-none border border-slate-700",
-                            )}
-                          >
-                            {msg.content}
-                          </div>
-                        </div>
-                      ))}
-                      {isGenerating && (
-                        <div className="flex items-center gap-2 text-[10px] text-slate-500 ml-1 opacity-70">
-                          <Loader2 size={10} className="animate-spin" />
-                          <span>Thinking...</span>
-                        </div>
-                      )}
-                      {/* Auto-scroll anchor */}
-                      <div ref={messagesEndRef} />
-                    </>
-                  )}
-                </div>
-                <div className="h-9 border-t border-white/5 bg-white/[0.02] flex items-center px-3 gap-2">
-                  <input
-                    className="bg-transparent border-none text-[11px] text-slate-200 placeholder:text-slate-600 focus:outline-none w-full h-full disabled:opacity-50"
-                    placeholder={
-                      isAiReady
-                        ? isGenerating
-                          ? "HAL is thinking..."
-                          : "Describe a test case..."
-                        : "Configure AI to chat..."
-                    }
-                    disabled={!isAiReady || isGenerating}
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                  />
-                  {isGenerating ? (
-                    <Loader2
-                      size={12}
-                      className="text-indigo-400 animate-spin"
-                    />
-                  ) : (
-                    <Send
-                      size={12}
-                      className={cn(
-                        "transition-colors",
-                        isAiReady
-                          ? "text-indigo-400 cursor-pointer hover:text-indigo-300"
-                          : "text-slate-700",
-                      )}
-                      onClick={handleSendMessageLocal}
-                    />
-                  )}
-                </div>
-
-                {!isAiReady && (
-                  <div
-                    onClick={() => openSettings("integrations")}
-                    className="absolute inset-0 bg-[var(--bg-canvas)]/80 backdrop-blur-[1px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 rounded-lg cursor-pointer"
-                  >
-                    <span className="text-[10px] font-bold text-amber-500 border border-amber-500/30 px-3 py-1 rounded-full bg-amber-500/10 shadow-[0_0_10px_rgba(245,158,11,0.2)] hover:bg-amber-500/20 transition-colors">
-                      SETUP REQUIRED
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* FOOTER */}
-      <div className="p-3 border-t border-[var(--border-ui)] shrink-0 bg-[var(--bg-panel)]">
-        <button
-          onClick={handleToggleCollapse}
-          className={cn(
-            "w-full flex items-center gap-3 px-2 py-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-canvas)] transition-all group",
-            isCollapsed && "justify-center",
-          )}
-        >
-          {isCollapsed ? (
-            <ChevronRight size={16} className="group-hover:text-indigo-400" />
-          ) : (
-            <>
-              <ChevronLeft size={16} />
-              <span className="text-xs font-medium">
-                {t("common.hide_panel", "Collapse Panel")}
-              </span>
-            </>
-          )}
-        </button>
-      </div>
-    </Motion.div>
+        {/* FOOTER */}
+        <div className="p-3 border-t border-[var(--border-ui)] shrink-0 bg-[var(--bg-panel)]">
+          <button
+            onClick={handleToggleCollapse}
+            className={cn(
+              "w-full flex items-center gap-3 px-2 py-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-canvas)] transition-all group",
+              isCollapsed && "justify-center",
+            )}
+            aria-label={isCollapsed ? "Expand toolbox" : "Collapse toolbox"}
+          >
+            {isCollapsed ? (
+              <ChevronRight size={16} className="group-hover:text-indigo-400" />
+            ) : (
+              <>
+                <ChevronLeft size={16} />
+                <span className="text-xs font-medium">
+                  {t("common.hide_panel", "Collapse Panel")}
+                </span>
+              </>
+            )}
+          </button>
+        </div>
+      </Motion.div>
+    </aside>
   );
 }

@@ -49,6 +49,8 @@ const HalToast = ({ type, message, id }) => {
 
   return (
     <div
+      role="alert"
+      aria-live="assertive"
       className={cn(
         "relative flex items-start gap-4 p-4 pr-10 w-[350px] rounded-lg overflow-hidden transition-all duration-400",
         "bg-[var(--bg-panel)] backdrop-blur-xl border border-[var(--border-ui)]",
@@ -75,9 +77,10 @@ const HalToast = ({ type, message, id }) => {
       {/* CLOSE BUTTON */}
       <button
         onClick={() => sonnerToast.dismiss(id)}
+        aria-label="Dismiss notification"
         className="absolute top-2 right-2 p-1 text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors"
       >
-        <X size={14} />
+        <X size={14} aria-hidden="true" />
       </button>
 
       {/* PROGRESS BAR (Decorative) */}

@@ -199,6 +199,32 @@
     border: 1px solid var(--border-color);
     box-shadow: var(--panel-shadow);
   }
+
+  /* ==========================================
+   * ACCESSIBILITY UTILITIES (WCAG 2.2)
+   * ========================================== */
+
+  /* Screen-reader only text — visible to AT, hidden visually (WCAG 1.1.1) */
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* Minimum interactive target size (WCAG 2.5.8 — 24×24 CSS px) */
+  .touch-target {
+    min-width: 24px;
+    min-height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
 }
 
 /* ==========================================
@@ -279,4 +305,52 @@
 
 .terminal-tag .icon {
   color: #6366f1; /* Indigo 500 */
+}
+
+/* ==========================================
+ * GLOBAL FOCUS INDICATORS (WCAG 2.4.7)
+ * ========================================== */
+
+/* Keyboard-only focus ring — visible, high-contrast */
+:focus-visible {
+  outline: 2px solid #005fcc;
+  outline-offset: 2px;
+}
+
+/* Buttons and interactive elements get a softer ring */
+button:focus-visible,
+[role="button"]:focus-visible,
+a:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Inputs get their own subtle focus (does not override existing ring styles) */
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 0;
+}
+
+/* Ensure focused elements are not obscured by sticky bars (WCAG 2.4.11) */
+:focus {
+  scroll-margin-top: 80px;
+  scroll-margin-bottom: 60px;
+}
+
+/* ==========================================
+ * REDUCED MOTION (WCAG 2.3.3)
+ * ========================================== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -22,6 +22,35 @@ const CreationModal = ({
     }
   }, [isOpen]);
 
+  // Focus trap: keep Tab cycling within the modal (WCAG 2.1.2)
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.key !== "Tab") return;
+      const modal = document.getElementById("creation-modal-dialog");
+      if (!modal) return;
+      const focusable = modal.querySelectorAll(
+        'button, input, textarea, [tabindex]:not([tabindex="-1"])',
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen]);
+
   const handleConfirm = () => {
     if (mode === "standard") {
       if (name.trim()) {
@@ -62,6 +91,10 @@ const CreationModal = ({
       onClick={onClose}
     >
       <div
+        id="creation-modal-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="creation-modal-title"
         style={{
           backgroundColor: "#1e1e1e",
           padding: "24px",
@@ -76,6 +109,7 @@ const CreationModal = ({
         onClick={(e) => e.stopPropagation()}
       >
         <h3
+          id="creation-modal-title"
           style={{
             margin: 0,
             fontSize: "1.2rem",
@@ -128,6 +162,7 @@ const CreationModal = ({
             onChange={(e) => setName(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
+            aria-label="Name"
             style={{
               background: "#111",
               border: "1px solid #333",
@@ -151,6 +186,7 @@ const CreationModal = ({
               if (e.key === "Escape") onClose();
             }}
             placeholder="Describe your flow (e.g., 'Login to Facebook and post a status')..."
+            aria-label="AI prompt description"
             style={{
               background: "#111",
               border: "1px solid #333",

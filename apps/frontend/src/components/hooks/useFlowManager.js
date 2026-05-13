@@ -31,6 +31,7 @@ import { getLayoutedElements } from "../../utils/layoutUtils";
 import { projectManager } from "../../utils/ProjectManager";
 import { useSettings } from "../../context/SettingsContext";
 import { useLogs } from "../../context/LogContext";
+import { calculateDesignTimeContext } from "../../utils/graphPropagation";
 
 // NEW: Orphan Detection Helper
 const detectOrphans = (nodes, edges) => {
@@ -268,6 +269,22 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
     edgesRef.current = uniqueEdges;
     setEdgesState(uniqueEdges);
   }, []);
+
+  // --- DESIGN-TIME PROPAGATION (PREVIEW DATA) ---
+  const [designTimeContext, setDesignTimeContext] = useState({});
+  const [simulatedResults, setSimulatedResults] = useState({});
+
+  useEffect(() => {
+    // We debounce the propagation to avoid stuttering during rapid config changes
+    const timeoutId = setTimeout(() => {
+      console.log("[FlowManager] 🌳 Propagating Design-Time Data...");
+      const { context, nodeResults } = calculateDesignTimeContext(nodes, edges);
+      setDesignTimeContext(context);
+      setSimulatedResults(nodeResults);
+    }, 200);
+
+    return () => clearTimeout(timeoutId);
+  }, [nodes, edges]);
 
   /**
    * Migrate Nodes (Recursive Sub-flow Creation)
@@ -1968,9 +1985,13 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
       // Get node (refresh from store ONLY if we need fallback data, but prefer payload)
       const storeNode = nodesRef.current.find((n) => n.id === nodeId);
 
-      // Robust type detection: check action.type, then node.data.type, then node.type
+      // Robust type detection: prioritize logical type from data, then fallbacks
       const type =
-        action.type || storeNode?.data?.type || storeNode?.type || "unknown";
+        action.data?.type ||
+        action.type ||
+        storeNode?.data?.type ||
+        storeNode?.type ||
+        "unknown";
 
       if (type === "unknown") {
         logger.error(
@@ -2752,7 +2773,8 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
         return;
       }
 
-      const { id, type, data } = nodeWithOverrides;
+      const { id, data } = nodeWithOverrides;
+      const type = data?.type || nodeWithOverrides.type;
       const config = data?.configuration || {};
 
       // 2. Visual Feedback & State Update (Optimistic)
@@ -2766,6 +2788,63 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
       return result;
     },
     [executeStep, updateNodeState, toast],
+  );
+
+  /**
+   * Recursively marks all downstream nodes and edges as SKIPPED
+   */
+  const markDownstreamAsSkipped = useCallback(
+    (startNodeId, activeEdges, _activeNodes) => {
+      const queue = [startNodeId];
+      const visited = new Set();
+
+      while (queue.length > 0) {
+        const currentId = queue.shift();
+        if (visited.has(currentId)) continue;
+        visited.add(currentId);
+
+        // Update node state to SKIPPED
+        setNodes((nds) =>
+          updateNodeRecursively(nds, currentId, (n) => ({
+            ...n,
+            data: {
+              ...n.data,
+              state: NODE_STATES.SKIPPED,
+              result: {
+                status: "skipped",
+                message: "Bypassed by conditional logic",
+              },
+            },
+          })),
+        );
+
+        // Mark outgoing edges as skipped
+        setEdges((eds) =>
+          eds.map((e) => {
+            if (e.source === currentId) {
+              return {
+                ...e,
+                animated: false,
+                data: {
+                  ...e.data,
+                  executionState: "skipped",
+                },
+              };
+            }
+            return e;
+          }),
+        );
+
+        // Queue children for recursion
+        const children = activeEdges.filter((e) => e.source === currentId);
+        children.forEach((e) => {
+          if (!visited.has(e.target)) {
+            queue.push(e.target);
+          }
+        });
+      }
+    },
+    [setNodes, setEdges],
   );
 
   const executeFlow = useCallback(
@@ -2879,7 +2958,28 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
         if (activeNodes.length === 0) return { success: true };
 
         const internalExecuted = new Set();
-        const queue = [activeNodes[0]];
+
+        // 🏁 ROOT DETECTION: Find nodes with no incoming edges or the explicit entry point (launch_browser)
+        const incomingCounts = {};
+        activeNodes.forEach((n) => (incomingCounts[n.id] = 0));
+        activeEdges.forEach((e) => {
+          if (incomingCounts[e.target] !== undefined) {
+            incomingCounts[e.target]++;
+          }
+        });
+
+        // Start with root nodes (no incoming) OR force nodes if passed in options
+        const rootNodes = activeNodes.filter((n) => incomingCounts[n.id] === 0);
+        const queue = options.nodes
+          ? [...options.nodes]
+          : rootNodes.length > 0
+            ? [...rootNodes]
+            : [activeNodes[0]];
+
+        console.log(
+          `[executeGraph] 🚀 Starting with queue:`,
+          queue.map((n) => n.id),
+        );
         const healedNodes = [];
         let lastResult = { success: true };
 
@@ -2890,60 +2990,247 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
           internalExecuted.add(node.id);
 
           try {
-            let result = { success: true };
             if (node.type === "component") {
-              const { flowId } = node.data || {};
+              const { flowId, subFlow: localSubFlow } = node.data || {};
               if (visitedFlows.includes(flowId))
                 throw new Error("Circular dependency");
-              const subFlow = await projectManager.getFlow(
-                currentProject.id,
-                flowId,
-              );
+
+              // 🛡️ CRITICAL: Use local subFlow data if available (contains unsaved UI changes)
+              // otherwise fetch from API.
+              let subFlow = localSubFlow;
+              if (!subFlow || !subFlow.nodes) {
+                console.log(
+                  `[executeGraph] 🔍 Component ${node.id} has no local data. Fetching flow ${flowId} from API...`,
+                );
+                subFlow = await projectManager.getFlow(
+                  currentProject.id,
+                  flowId,
+                );
+              } else {
+                console.log(
+                  `[executeGraph] 🚀 Using LOCAL subFlow data for Component ${node.id}`,
+                );
+              }
+
               if (subFlow)
-                result = await executeGraph(
+                await executeGraph(
                   subFlow.nodes,
                   subFlow.edges,
                   depth + 1,
                   [...visitedFlows, flowId],
                 );
             } else {
-              result = await executeStep(node);
-            }
+              // 🛡️ PRE-FLIGHT VALIDATION: Check mandatory fields before execution
+              const nodeType = node.type || node.data?.type;
+              const validation = validateNodeConfig(
+                nodeType,
+                node.data?.configuration,
+              );
 
-            const componentResult = {
-              status: result.success ? "success" : "error",
-              success: result.success,
-              data: result.data || result,
-              metadata: {
-                executedAt: new Date().toISOString(),
-                nodeLabel: node.data?.label,
-              },
-            };
+              if (!validation.isValid) {
+                const errorMsg = `Falta campo requerido: ${validation.missingField}`;
+                console.error(
+                  `[executeGraph] 🛑 Node ${node.id} invalid: ${errorMsg}`,
+                );
 
-            setNodes((nds) =>
-              updateNodeRecursively(nds, node.id, (n) => ({
-                ...n,
-                data: {
-                  ...n.data,
-                  result: componentResult,
-                  state: result.success ? "success" : "error",
+                setNodes((nds) =>
+                  updateNodeRecursively(nds, node.id, (n) => ({
+                    ...n,
+                    data: {
+                      ...n.data,
+                      state: NODE_STATES.ERROR,
+                      result: {
+                        success: false,
+                        status: "error",
+                        message: errorMsg,
+                      },
+                    },
+                  })),
+                );
+
+                addLog(
+                  `[ConfigError] ${node.id}: ${errorMsg}`,
+                  "error",
+                  node.id,
+                );
+                toast.error(
+                  `Error en ${node.data?.label || node.id}: ${errorMsg}`,
+                );
+
+                // 🛑 STOP BRANCH EXECUTION: Mark all downstream as skipped
+                const nextEdges = activeEdges.filter(
+                  (e) => e.source === node.id,
+                );
+                nextEdges.forEach((e) =>
+                  markDownstreamAsSkipped(e.target, activeEdges, activeNodes),
+                );
+
+                continue;
+              }
+
+              const stepResponse = await executeStep(node);
+
+              // 🌟 CRITICAL: executeStep returns a wrapper { success, result, duration, ... }
+              // where 'result' is the actual backend response.
+              const actionResult = stepResponse.result;
+              const isActionSuccess =
+                stepResponse.success && actionResult?.success;
+
+              const componentResult = {
+                status: isActionSuccess ? "success" : "error",
+                success: isActionSuccess,
+                data: actionResult || stepResponse,
+                metadata: {
+                  executedAt: new Date().toISOString(),
+                  nodeLabel: node.data?.label,
                 },
-              })),
-            );
+              };
 
-            const path = String(result?.path || "").toLowerCase();
-            activeEdges
-              .filter((e) => e.source === node.id)
-              .forEach((e) => {
-                if (
-                  !path ||
-                  String(e.sourceHandle || "").toLowerCase() === path
-                ) {
+              setNodes((nds) =>
+                updateNodeRecursively(nds, node.id, (n) => ({
+                  ...n,
+                  data: {
+                    ...n.data,
+                    result: componentResult,
+                    state: isActionSuccess ? "success" : "error",
+                  },
+                })),
+              );
+
+              if (!isActionSuccess) {
+                console.error(
+                  `[executeGraph] 🛑 Node ${node.id} failed. Stopping branch.`,
+                  actionResult,
+                );
+
+                // 🛑 STOP BRANCH EXECUTION: Mark all downstream as skipped if continueOnError is false
+                if (!node.data?.configuration?.continueOnError) {
+                  const nextEdges = activeEdges.filter(
+                    (e) => e.source === node.id,
+                  );
+                  nextEdges.forEach((e) =>
+                    markDownstreamAsSkipped(e.target, activeEdges, activeNodes),
+                  );
+                  lastResult = actionResult || stepResponse;
+                  continue;
+                }
+              }
+
+              // 🌟 PATH RESOLUTION
+              const path = String(
+                actionResult?.path ||
+                  actionResult?.data?.path ||
+                  stepResponse?.path ||
+                  "",
+              )
+                .trim()
+                .toLowerCase();
+
+              const nodeTypeForBranching = node.type || node.data?.type;
+              const nextEdges = activeEdges.filter((e) => e.source === node.id);
+              const isBranchingType = [
+                "conditional",
+                "switch",
+                "loop",
+                "call_llm",
+              ].includes(nodeTypeForBranching);
+              const isMultiPath = nextEdges.length > 1;
+
+              console.log(
+                `[executeGraph] 🌳 Node ${node.id} (${nodeTypeForBranching}) finished. Path: "${path}", MultiPath: ${isMultiPath}`,
+              );
+
+              setEdges((eds) =>
+                eds.map((e) => {
+                  if (e.source === node.id) {
+                    const handle = String(e.sourceHandle || "").toLowerCase();
+                    let isWinner = false;
+
+                    if (!path || path === "" || path === "undefined") {
+                      // Visual: Highlight all if NOT a branching type, or if it's the only path
+                      isWinner = !isBranchingType || nextEdges.length === 1;
+                    } else {
+                      if (handle === path) isWinner = true;
+                      else if (
+                        (path === "true" || path === "success") &&
+                        (handle === "true" || handle === "success")
+                      )
+                        isWinner = true;
+                      else if (
+                        (path === "false" ||
+                          path === "else" ||
+                          path === "default") &&
+                        (handle === "false" ||
+                          handle === "else" ||
+                          handle === "default")
+                      )
+                        isWinner = true;
+                    }
+
+                    return {
+                      ...e,
+                      animated: isWinner,
+                      data: {
+                        ...e.data,
+                        executionState: isWinner ? "success" : "skipped",
+                      },
+                    };
+                  }
+                  return e;
+                }),
+              );
+
+              // 🌟 QUEUE NEXT NODES
+              nextEdges.forEach((e) => {
+                const handle = String(e.sourceHandle || "").toLowerCase();
+                let shouldFollow = false;
+
+                if (!path || path === "" || path === "undefined") {
+                  // If no path is returned:
+                  // 1. If it's a branching type (Switch/Cond), we only follow if it's the only edge (fallback)
+                  // 2. If it's NOT a branching type, we follow ALL outgoing edges (parallel execution)
+                  shouldFollow = !isBranchingType || nextEdges.length === 1;
+                } else {
+                  if (handle === path) shouldFollow = true;
+                  else if (
+                    (path === "true" || path === "success") &&
+                    (handle === "true" || handle === "success")
+                  )
+                    shouldFollow = true;
+                  else if (
+                    (path === "false" ||
+                      path === "else" ||
+                      path === "default") &&
+                    (handle === "false" ||
+                      handle === "else" ||
+                      handle === "default")
+                  )
+                    shouldFollow = true;
+                }
+
+                if (shouldFollow) {
                   const targetNode = activeNodes.find((n) => n.id === e.target);
-                  if (targetNode) queue.push(targetNode);
+                  if (targetNode) {
+                    console.log(
+                      `[executeGraph]   -> ✅ Following "${handle}" to node ${targetNode.id}`,
+                    );
+                    queue.push(targetNode);
+                  } else {
+                    console.warn(
+                      `[executeGraph]   -> ⚠️ Target node ${e.target} NOT FOUND in activeNodes!`,
+                    );
+                  }
+                } else {
+                  console.log(
+                    `[executeGraph]   -> ⏭️ Skipping branch "${handle}"`,
+                  );
+                  // 🌟 BRANCH ISOLATION: Mark entire downstream as skipped
+                  markDownstreamAsSkipped(e.target, activeEdges, activeNodes);
                 }
               });
-            lastResult = result;
+
+              lastResult = actionResult;
+            }
           } catch (err) {
             console.error("Node error", err);
           }
@@ -3013,6 +3300,9 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
       resetExecutionStates,
       activeBrowserId,
       validateFlowStructure,
+      addLog,
+      markDownstreamAsSkipped,
+      setEdges,
       t,
       toast,
       setExecutionStats,
@@ -3702,6 +3992,8 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
     apiStatus,
     executionStats,
     autoSaveEnabled,
+    designTimeContext,
+    simulatedResults,
 
     setNodes,
     setEdges,

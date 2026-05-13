@@ -49,7 +49,14 @@ import EvidenceCard from "./EvidenceCard"; // New component import
 import VariableInput from "./VariableInput";
 
 const ConditionalBranchesEditor = React.memo(
-  ({ value, onChange, variables, allVariables, precedingNodes }) => {
+  ({
+    value,
+    onChange,
+    variables,
+    allVariables,
+    _precedingNodes,
+    suggestions,
+  }) => {
     const { t } = useTranslation();
     const branches = useMemo(() => {
       let activeValue = value;
@@ -118,114 +125,8 @@ const ConditionalBranchesEditor = React.memo(
     }, [value]);
 
     // Refined variable paths for a cleaner UI
-    const availableVariablePaths = useMemo(() => {
-      const suggestions = [];
-      const noiseKeys = [
-        "healedNodes",
-        "replayData",
-        "trace",
-        "lastError",
-        "error",
-        "config",
-        "configuration",
-        "data",
-      ];
-      const processedNodeIds = new Set();
-
-      Object.entries(variables || {}).forEach(([nodeName, nodeVal]) => {
-        if (nodeName.includes(".result") || nodeName === "global") return;
-        if (!nodeVal || typeof nodeVal !== "object") return;
-
-        // 1. Find the real node to get its type and label
-        const matchingNode = precedingNodes?.find(
-          (pn) => pn.data?.label === nodeName || pn.id === nodeName,
-        );
-        const nodeId = matchingNode?.id || nodeName;
-
-        // 2. Deduplicate groups
-        if (processedNodeIds.has(nodeId)) return;
-        processedNodeIds.add(nodeId);
-
-        const displayLabel = matchingNode?.data?.label || nodeName;
-        const nodeType = matchingNode?.data?.type || matchingNode?.type;
-        const nodeSchema = NODE_OUTPUTS[nodeType] || {};
-
-        const nodeGroup = {
-          nodeLabel: displayLabel,
-          nodeId: nodeId,
-          items: [],
-        };
-
-        const extract = (obj, prefix = "", depth = 0) => {
-          if (depth > 1 || !obj || typeof obj !== "object") return;
-
-          Object.entries(obj).forEach(([prop, val]) => {
-            if (
-              prop === "result" ||
-              prop.substring(0, 1) === "_" ||
-              noiseKeys.includes(prop)
-            )
-              return;
-
-            const fullPropPath = prefix ? `${prefix}.${prop}` : prop;
-            const explicitType = nodeSchema[fullPropPath] || typeof val;
-
-            nodeGroup.items.push({
-              label: prop,
-              path: `{{${displayLabel}.${fullPropPath}}}`,
-              displayPath: `{{${displayLabel}.${fullPropPath}}}`,
-              type:
-                explicitType === "object" &&
-                typeof val === "string" &&
-                val.startsWith("<")
-                  ? val.slice(1, -1)
-                  : explicitType,
-            });
-
-            if (
-              val &&
-              typeof val === "object" &&
-              !Array.isArray(val) &&
-              depth < 1
-            ) {
-              extract(val, fullPropPath, depth + 1);
-            }
-          });
-        };
-
-        extract(nodeVal);
-
-        // Ensure status/success are always there if available in schema
-        if (
-          nodeSchema.status &&
-          !nodeGroup.items.find((i) => i.label === "status")
-        ) {
-          nodeGroup.items.push({
-            label: "status",
-            path: `{{${displayLabel}.status}}`,
-            displayPath: `{{${displayLabel}.status}}`,
-            type: nodeSchema.status,
-          });
-        }
-        if (
-          nodeSchema.success &&
-          !nodeGroup.items.find((i) => i.label === "success")
-        ) {
-          nodeGroup.items.push({
-            label: "success",
-            path: `{{${displayLabel}.success}}`,
-            displayPath: `{{${displayLabel}.success}}`,
-            type: nodeSchema.success,
-          });
-        }
-
-        if (nodeGroup.items.length > 0) {
-          suggestions.push(nodeGroup);
-        }
-      });
-
-      return suggestions;
-    }, [variables, precedingNodes]);
+    // Refined variable paths for a cleaner UI (Suggestions are now passed from parent)
+    const availableVariablePaths = suggestions || [];
 
     const updateBranch = React.useCallback(
       (index, field, val) => {
@@ -564,7 +465,8 @@ const ConditionalBranchesEditor = React.memo(
                       onChange={(e) =>
                         updateBranch(index, "label", e.target.value)
                       }
-                      className="bg-transparent border-none p-0 text-[11px] font-bold text-white/90 focus:outline-none placeholder:text-slate-700 focus:ring-0 min-w-[80px]"
+                      title={String(branch.label || "")}
+                      className="bg-transparent border-none p-0 text-[11px] font-bold text-white/90 focus:outline-none placeholder:text-slate-700 focus:ring-0 truncate min-w-0 flex-1"
                     />
                   </div>
 
@@ -827,133 +729,194 @@ const ConditionalBranchesEditor = React.memo(
   },
 );
 
-const SwitchCasesEditor = React.memo(({ value, onChange, _variables }) => {
-  const { t } = useTranslation();
-  const cases = useMemo(() => (Array.isArray(value) ? value : []), [value]);
+const SwitchCasesEditor = React.memo(
+  ({ value, onChange, data, variables, allVariables, suggestions }) => {
+    const { t } = useTranslation();
+    const cases = useMemo(() => (Array.isArray(value) ? value : []), [value]);
 
-  const updateCase = React.useCallback(
-    (index, field, val) => {
-      const newCases = [...cases];
-      newCases[index] = { ...newCases[index], [field]: val };
-      onChange(newCases);
-    },
-    [cases, onChange],
-  );
+    const matchedCaseId = data?.result?.matchedCaseId;
 
-  const addCase = React.useCallback(() => {
-    const id = `case_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
-    onChange([...cases, { id, value: "", label: "" }]);
-  }, [cases, onChange]);
+    const updateCase = React.useCallback(
+      (index, field, val) => {
+        const newCases = [...cases];
+        newCases[index] = { ...newCases[index], [field]: val };
+        onChange(newCases);
+      },
+      [cases, onChange],
+    );
 
-  const removeCase = React.useCallback(
-    (index) => {
-      const newCases = [...cases];
-      newCases.splice(index, 1);
-      onChange(newCases);
-    },
-    [cases, onChange],
-  );
+    const addCase = React.useCallback(() => {
+      const id = `case_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
+      onChange([...cases, { id, value: "", label: "" }]);
+    }, [cases, onChange]);
 
-  return (
-    <div className="space-y-4 mt-4 mb-2">
-      <div className="flex justify-between items-center mb-1">
-        <label className="text-[11px] uppercase tracking-[0.2em] font-black text-indigo-400 ml-1 flex items-center gap-2">
-          <ArrowLeftRight size={14} />
-          {t("nodes.config.switch_cases", "Casos del Switch")}
-        </label>
-        <div className="group relative">
-          <Info
-            size={14}
-            className="text-slate-500 hover:text-indigo-400 cursor-help transition-colors"
-          />
-          <div className="absolute right-0 bottom-full mb-2 w-48 p-2 bg-slate-900 border border-slate-700 rounded-lg text-[10px] text-slate-300 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">
-            {t(
-              "nodes.hints.switch_logic",
-              "Define los valores exactos que quieres comparar. Cada caso genera una salida.",
-            )}
+    const removeCase = React.useCallback(
+      (index) => {
+        const newCases = [...cases];
+        newCases.splice(index, 1);
+        onChange(newCases);
+      },
+      [cases, onChange],
+    );
+
+    const getValueType = (val) => {
+      if (!val || typeof val !== "string") return "string";
+      if (val.startsWith("{{") || val.startsWith("${")) return "variable";
+      if (val === "true" || val === "false") return "boolean";
+      if (val !== "" && !isNaN(val)) return "number";
+      return "string";
+    };
+
+    return (
+      <div className="space-y-4 mt-4 mb-2">
+        <div className="flex justify-between items-center mb-1">
+          <label className="text-[11px] uppercase tracking-[0.2em] font-black text-indigo-400 ml-1 flex items-center gap-2">
+            <ArrowLeftRight size={14} />
+            {t("nodes.config.switch_cases", "Casos del Switch")}
+          </label>
+          <div className="group relative">
+            <Info
+              size={14}
+              className="text-slate-500 hover:text-indigo-400 cursor-help transition-colors"
+            />
+            <div className="absolute right-0 bottom-full mb-2 w-48 p-2 bg-slate-900 border border-slate-700 rounded-lg text-[10px] text-slate-300 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">
+              {t(
+                "nodes.hints.switch_logic",
+                "Define los valores exactos que quieres comparar. Cada caso genera una salida.",
+              )}
+            </div>
           </div>
         </div>
-      </div>
-      <div className="space-y-3">
-        {cases.map((c, index) => (
-          <div
-            key={c.id}
-            className="px-3 py-3 bg-[#0f172a]/60 border border-indigo-500/20 rounded-xl space-y-2 relative group hover:border-indigo-500/40 transition-all shadow-md"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 flex-1">
-                <div className="w-6 h-6 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0">
-                  <CornerDownRight size={12} className="text-indigo-400" />
-                </div>
-                <input
-                  type="text"
-                  placeholder={t(
-                    "nodes.placeholders.switch_value",
-                    "Valor (ej: admin, true, 200)",
-                  )}
-                  value={c.value}
-                  onChange={(e) => updateCase(index, "value", e.target.value)}
-                  className="w-full bg-transparent border-none p-0 text-xs font-bold text-white focus:outline-none placeholder:text-slate-600 focus:ring-0"
-                />
-              </div>
-              <button
-                onClick={() => removeCase(index)}
-                className="p-1.5 text-slate-600 hover:text-red-400 transition-colors"
-              >
-                <Trash2 size={12} />
-              </button>
-            </div>
-            <div className="flex items-center gap-2 pl-8 border-t border-white/5 pt-2">
-              <input
-                type="text"
-                placeholder={t(
-                  "common.optional_label",
-                  "Etiqueta visible (opcional)",
+        <div className="space-y-3">
+          {cases.map((c, index) => {
+            const isMatched = matchedCaseId === c.id;
+            const type = getValueType(c.value);
+
+            return (
+              <div
+                key={c.id}
+                className={cn(
+                  "px-3 py-3 bg-[#0f172a]/60 border rounded-xl space-y-2 relative group transition-all shadow-md",
+                  isMatched
+                    ? "border-emerald-500/50 bg-emerald-500/5 shadow-[0_0_15px_rgba(16,185,129,0.1)]"
+                    : "border-indigo-500/20 hover:border-indigo-500/40",
                 )}
-                value={c.label}
-                onChange={(e) => updateCase(index, "label", e.target.value)}
-                className="w-full bg-transparent border-none p-0 text-[10px] font-medium text-slate-400 focus:outline-none placeholder:text-slate-700 focus:ring-0"
-              />
-              <div className="bg-black/30 px-1.5 py-0.5 rounded text-[8px] font-mono text-slate-500 shrink-0">
-                ID: {c.id}
-              </div>
-            </div>
-          </div>
-        ))}
-        {cases.length === 0 && (
-          <div className="text-center py-4 border border-dashed border-slate-700 rounded-xl text-slate-500 text-[10px]">
-            {t(
-              "nodes.config.no_cases",
-              "No hay casos definidos. Agrega uno para empezar.",
-            )}
-          </div>
-        )}
-      </div>
-      <button
-        onClick={addCase}
-        className="w-full py-2 bg-indigo-500/5 hover:bg-indigo-500/10 border border-dashed border-indigo-500/30 rounded-xl text-[10px] font-black uppercase tracking-widest text-indigo-400 flex items-center justify-center gap-2 mt-2 transition-all"
-      >
-        <Plus size={12} />
-        {t("nodes.config.add_case", "Agregar Caso")}
-      </button>
+              >
+                {isMatched && (
+                  <div className="absolute -top-2 -right-2 bg-emerald-500 text-white rounded-full p-0.5 shadow-lg border border-white z-10 animate-pulse">
+                    <CheckCircle size={10} strokeWidth={3} />
+                  </div>
+                )}
 
-      <div className="mt-4 p-3 bg-slate-900/50 border border-slate-800 rounded-lg flex items-start gap-3">
-        <Zap size={14} className="text-amber-400 shrink-0 mt-0.5" />
-        <div className="space-y-0.5">
-          <p className="text-[10px] font-bold text-slate-300 uppercase tracking-tighter leading-none">
-            {t("common.default_path", "Ruta por Defecto (Default)")}
-          </p>
-          <p className="text-[10px] text-slate-500 leading-tight">
-            {t(
-              "nodes.hints.default_path_desc",
-              'Siempre se genera una salida "default" para cuando el valor no coincide con ningún caso.',
-            )}
-          </p>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 flex-1">
+                    <div
+                      className={cn(
+                        "w-6 h-6 rounded-lg border flex items-center justify-center shrink-0",
+                        isMatched
+                          ? "bg-emerald-500/10 border-emerald-500/20"
+                          : "bg-indigo-500/10 border-indigo-500/20",
+                      )}
+                    >
+                      <CornerDownRight
+                        size={12}
+                        className={
+                          isMatched ? "text-emerald-400" : "text-indigo-400"
+                        }
+                      />
+                    </div>
+                    <div className="flex-1 flex items-center gap-2">
+                      <VariableInput
+                        value={c.value}
+                        variables={variables}
+                        allVariables={allVariables}
+                        suggestions={suggestions}
+                        placeholder={t(
+                          "nodes.placeholders.switch_value",
+                          "Valor (ej: admin, true, 200)",
+                        )}
+                        onChange={(e) =>
+                          updateCase(index, "value", e.target.value)
+                        }
+                        className="w-full bg-transparent border-none p-0 text-xs font-bold text-white focus:outline-none placeholder:text-slate-600 focus:ring-0"
+                      />
+                      <span
+                        className={cn(
+                          "text-[8px] uppercase tracking-tighter font-black px-1 rounded shrink-0",
+                          type === "boolean"
+                            ? "text-amber-400 bg-amber-400/10"
+                            : type === "number"
+                              ? "text-sky-400 bg-sky-400/10"
+                              : type === "variable"
+                                ? "text-emerald-400 bg-emerald-400/10"
+                                : "text-slate-500 bg-slate-500/10",
+                        )}
+                      >
+                        {type}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => removeCase(index)}
+                    className="p-1.5 text-slate-600 hover:text-red-400 transition-colors"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+                <div className="flex items-center gap-2 pl-8 border-t border-white/5 pt-2 min-w-0">
+                  <input
+                    type="text"
+                    placeholder={t(
+                      "common.optional_label",
+                      "Etiqueta visible (opcional)",
+                    )}
+                    value={c.label}
+                    onChange={(e) => updateCase(index, "label", e.target.value)}
+                    title={c.label}
+                    className="flex-1 bg-transparent border-none p-0 text-[10px] font-medium text-slate-400 focus:outline-none placeholder:text-slate-700 focus:ring-0 truncate min-w-0"
+                  />
+                  <div className="bg-black/30 px-1.5 py-0.5 rounded text-[8px] font-mono text-slate-500 shrink-0">
+                    ID: {c.id}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          {cases.length === 0 && (
+            <div className="text-center py-4 border border-dashed border-slate-700 rounded-xl text-slate-500 text-[10px]">
+              {t(
+                "nodes.config.no_cases",
+                "No hay casos definidos. Agrega uno para empezar.",
+              )}
+            </div>
+          )}
+        </div>
+        <button
+          onClick={addCase}
+          className="w-full py-2 bg-indigo-500/5 hover:bg-indigo-500/10 border border-dashed border-indigo-500/30 rounded-xl text-[10px] font-black uppercase tracking-widest text-indigo-400 flex items-center justify-center gap-2 mt-2 transition-all"
+        >
+          <Plus size={12} />
+          {t("nodes.config.add_case", "Agregar Caso")}
+        </button>
+
+        <div className="mt-4 p-3 bg-slate-900/50 border border-slate-800 rounded-lg flex items-start gap-3">
+          <Zap size={14} className="text-amber-400 shrink-0 mt-0.5" />
+          <div className="space-y-0.5">
+            <p className="text-[10px] font-bold text-slate-300 uppercase tracking-tighter leading-none">
+              {t("common.default_path", "Ruta por Defecto (Default)")}
+            </p>
+            <p className="text-[10px] text-slate-500 leading-tight">
+              {t(
+                "nodes.hints.default_path_desc",
+                'Siempre se genera una salida "default" para cuando el valor no coincide con ningún caso.',
+              )}
+            </p>
+          </div>
         </div>
       </div>
-    </div>
-  );
-});
+    );
+  },
+);
 
 const MappingEditor = ({
   value,
@@ -1070,6 +1033,8 @@ function NodeConfigurationPanel({
   currentProject = null, // NEW: Current project for flow lookup
   onEnterSubFlow = null, // NEW: Navigation handler
   updateNodeState = null, // NEW: For AI fix commitment
+  designTimeContext = {}, // NEW: For design-time preview
+  simulatedResults = {}, // NEW: For design-time preview
 }) {
   const { t } = useTranslation();
   const toast = useToast();
@@ -1170,6 +1135,9 @@ function NodeConfigurationPanel({
         } else if (n.data?.result !== undefined) {
           finalResult = n.data.result;
           dataSource = "persisted";
+        } else if (simulatedResults[n.id] !== undefined) {
+          finalResult = simulatedResults[n.id];
+          dataSource = "simulated";
         } else {
           // 🌟 STATIC SCHEMA FALLBACK: Use NODE_OUTPUTS as design-time contract
           const nodeType = n.data?.type || n.type;
@@ -1251,7 +1219,15 @@ function NodeConfigurationPanel({
       .filter(Boolean);
 
     return { precedingNodes: prev, nextNodes: next };
-  }, [activeNode, edges, nodes, viewStack, currentProject, liveVariables]);
+  }, [
+    activeNode,
+    edges,
+    nodes,
+    viewStack,
+    currentProject,
+    liveVariables,
+    simulatedResults,
+  ]);
 
   const resolvedStats = useMemo(() => {
     if (!activeNode || !currentProject)
@@ -1437,12 +1413,106 @@ function NodeConfigurationPanel({
     });
   };
 
+  const renderDataValue = (val, isRoot = false) => {
+    if (val === null || val === undefined)
+      return <span className="text-slate-600 italic">null</span>;
+    if (typeof val === "boolean")
+      return (
+        <span
+          className={cn(
+            "px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-tighter",
+            val
+              ? "bg-emerald-500/10 text-emerald-400"
+              : "bg-rose-500/10 text-rose-400",
+          )}
+        >
+          {String(val)}
+        </span>
+      );
+    if (typeof val === "number")
+      return <span className="text-amber-400 font-mono">{val}</span>;
+    if (typeof val === "string") {
+      const isUrl = val.startsWith("http");
+      return (
+        <span
+          className={cn(
+            "text-slate-300 break-all",
+            isUrl &&
+              "text-sky-400 underline decoration-sky-500/30 underline-offset-2",
+          )}
+        >
+          {val.length > 100 ? `${val.substring(0, 100)}...` : val}
+        </span>
+      );
+    }
+
+    if (Array.isArray(val)) {
+      return (
+        <div className="space-y-1 mt-1">
+          <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">
+            Array({val.length})
+          </span>
+          {val.length > 0 && (
+            <div className="pl-2 border-l border-white/5 space-y-1">
+              {val.slice(0, 3).map((item, i) => (
+                <div key={i} className="flex gap-2 text-[10px]">
+                  <span className="text-slate-600 font-mono">{i}:</span>
+                  {renderDataValue(item)}
+                </div>
+              ))}
+              {val.length > 3 && (
+                <span className="text-[9px] text-slate-600 italic pl-4">
+                  + {val.length - 3} more items
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (typeof val === "object") {
+      const keys = Object.keys(val).filter((k) => !k.startsWith("_"));
+      if (keys.length === 0) return <span className="text-slate-600">{}</span>;
+
+      return (
+        <div
+          className={cn(
+            "space-y-1.5",
+            !isRoot && "mt-1 pl-2 border-l border-white/5",
+          )}
+        >
+          {keys.slice(0, isRoot ? 20 : 5).map((k) => (
+            <div key={k} className="flex flex-col gap-0.5">
+              <span className="text-[9px] font-mono text-indigo-300/60 uppercase tracking-tighter">
+                {k}
+              </span>
+              <div className="pl-1">{renderDataValue(val[k])}</div>
+            </div>
+          ))}
+          {keys.length > (isRoot ? 20 : 5) && (
+            <span className="text-[9px] text-slate-600 italic">
+              + {keys.length - (isRoot ? 20 : 5)} more properties
+            </span>
+          )}
+        </div>
+      );
+    }
+    return String(val);
+  };
+
   const renderEmittedData = () => {
     const result = activeNode.data?.result;
     if (!result) {
       return (
-        <div className="text-[10px] text-slate-600 italic px-1 bg-white/5 p-3 rounded-lg border border-dashed border-white/5">
-          No data emitted yet. Run the flow to see results.
+        <div className="text-[10px] text-slate-600 italic px-1 bg-white/5 p-4 rounded-xl border border-dashed border-white/5 flex flex-col items-center gap-2">
+          <div className="w-8 h-8 rounded-full bg-slate-800/50 flex items-center justify-center">
+            <Zap size={14} className="text-slate-700" />
+          </div>
+          {t(
+            "nodes.config.no_data_yet",
+            "No data emitted yet. Run the flow to see results.",
+          )}
         </div>
       );
     }
@@ -1451,26 +1521,23 @@ function NodeConfigurationPanel({
 
     return (
       <div className="relative group/emitted">
-        <div className="text-[11px] text-slate-300 font-mono line-clamp-10 bg-black/40 p-3 rounded-xl pr-12 max-h-64 overflow-y-auto custom-scrollbar border border-white/10 shadow-inner">
-          {truncateResult(resultData, 3000)}
+        <div className="bg-[#0b1120] rounded-2xl border border-white/10 p-4 shadow-2xl max-h-80 overflow-y-auto custom-scrollbar ring-1 ring-white/5">
+          {renderDataValue(resultData, true)}
         </div>
-        <div className="absolute right-2 top-2 flex flex-col gap-1.5 opacity-0 group-hover/emitted:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
+        <div className="absolute right-3 top-3 flex flex-col gap-2 opacity-0 group-hover/emitted:opacity-100 transition-all">
           <button
             onClick={() => {
-              const text =
-                typeof result === "object"
-                  ? JSON.stringify(result, null, 2)
-                  : String(result);
+              const text = JSON.stringify(result, null, 2);
               navigator.clipboard.writeText(text);
               toast.success("Copied to clipboard", {
                 icon: "📋",
                 id: "copy-toast",
               });
             }}
-            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 shadow-xl border border-white/10 hover:border-white/20 transition-all"
+            className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-white/10 hover:border-white/20 transition-all backdrop-blur-md shadow-xl"
             title="Copy Result"
           >
-            <Copy size={12} />
+            <Copy size={14} />
           </button>
           <button
             onClick={() =>
@@ -1482,10 +1549,10 @@ function NodeConfigurationPanel({
                 content: result,
               })
             }
-            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 shadow-xl border border-white/10 hover:border-white/20 transition-all"
+            className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-white/10 hover:border-white/20 transition-all backdrop-blur-md shadow-xl"
             title="Fullscreen Inspector"
           >
-            <Maximize2 size={12} />
+            <Maximize2 size={14} />
           </button>
         </div>
       </div>
@@ -1674,8 +1741,133 @@ function NodeConfigurationPanel({
       map["global"] = liveVariables.global;
     }
 
+    // 🌟 DESIGN-TIME CONTEXT MERGE: Bring in all simulated values from the entire flow context
+    if (designTimeContext && typeof designTimeContext === "object") {
+      Object.entries(designTimeContext).forEach(([key, val]) => {
+        if (!(key in map)) {
+          map[key] = val;
+        }
+        // Also support .result suffix if missing
+        if (!key.endsWith(".result") && !(`${key}.result` in map)) {
+          map[`${key}.result`] = val;
+        }
+      });
+    }
+
     return map;
-  }, [precedingNodes, liveVariables]);
+  }, [precedingNodes, liveVariables, designTimeContext]);
+
+  // Shared variable paths for suggestions in all logic editors
+  const availableVariablePaths = React.useMemo(() => {
+    const suggestions = [];
+    const noiseKeys = [
+      "healedNodes",
+      "replayData",
+      "trace",
+      "lastError",
+      "error",
+      "config",
+      "configuration",
+      "data",
+    ];
+    const processedNodeIds = new Set();
+
+    Object.entries(contextualVariablesMap || {}).forEach(
+      ([nodeName, nodeVal]) => {
+        if (nodeName.includes(".result") || nodeName === "global") return;
+        if (!nodeVal || typeof nodeVal !== "object") return;
+
+        // 1. Find the real node to get its type and label
+        const matchingNode = nodes?.find(
+          (n) => n.data?.label === nodeName || n.id === nodeName,
+        );
+        const nodeId = matchingNode?.id || nodeName;
+
+        // 2. Deduplicate groups
+        if (processedNodeIds.has(nodeId)) return;
+        processedNodeIds.add(nodeId);
+
+        const displayLabel = matchingNode?.data?.label || nodeName;
+        const nodeType = matchingNode?.data?.type || matchingNode?.type;
+        const nodeSchema = NODE_OUTPUTS[nodeType] || {};
+
+        const nodeGroup = {
+          nodeLabel: displayLabel,
+          nodeId: nodeId,
+          items: [],
+        };
+
+        const extract = (obj, prefix = "", depth = 0) => {
+          if (depth > 2 || !obj || typeof obj !== "object") return;
+
+          Object.entries(obj).forEach(([prop, val]) => {
+            if (
+              prop === "result" ||
+              prop.substring(0, 1) === "_" ||
+              noiseKeys.includes(prop)
+            )
+              return;
+
+            const fullPropPath = prefix ? `${prefix}.${prop}` : prop;
+            const explicitType = nodeSchema[fullPropPath] || typeof val;
+
+            nodeGroup.items.push({
+              label: prop,
+              path: `{{${displayLabel}.${fullPropPath}}}`,
+              displayPath: `{{${displayLabel}.${fullPropPath}}}`,
+              type:
+                explicitType === "object" &&
+                typeof val === "string" &&
+                val.startsWith("<")
+                  ? val.slice(1, -1)
+                  : explicitType,
+            });
+
+            if (
+              val &&
+              typeof val === "object" &&
+              !Array.isArray(val) &&
+              depth < 2
+            ) {
+              extract(val, fullPropPath, depth + 1);
+            }
+          });
+        };
+
+        extract(nodeVal);
+
+        // Ensure status/success are always there if available in schema
+        if (
+          nodeSchema.status &&
+          !nodeGroup.items.find((i) => i.label === "status")
+        ) {
+          nodeGroup.items.push({
+            label: "status",
+            path: `{{${displayLabel}.status}}`,
+            displayPath: `{{${displayLabel}.status}}`,
+            type: nodeSchema.status,
+          });
+        }
+        if (
+          nodeSchema.success &&
+          !nodeGroup.items.find((i) => i.label === "success")
+        ) {
+          nodeGroup.items.push({
+            label: "success",
+            path: `{{${displayLabel}.success}}`,
+            displayPath: `{{${displayLabel}.success}}`,
+            type: nodeSchema.success,
+          });
+        }
+
+        if (nodeGroup.items.length > 0) {
+          suggestions.push(nodeGroup);
+        }
+      },
+    );
+
+    return suggestions;
+  }, [contextualVariablesMap, nodes]);
 
   if (!isVisible) return null;
 
@@ -1729,6 +1921,7 @@ function NodeConfigurationPanel({
             variables={contextualVariablesMap}
             allVariables={variablesMap}
             precedingNodes={precedingNodes}
+            suggestions={availableVariablePaths}
             onChange={(newVal) => handleConfigUpdate(dataKey, newVal)}
           />
         );
@@ -1737,7 +1930,10 @@ function NodeConfigurationPanel({
           <SwitchCasesEditor
             key={reactKey}
             value={value}
-            variables={variablesMap}
+            data={activeNode.data}
+            variables={contextualVariablesMap}
+            allVariables={variablesMap}
+            suggestions={availableVariablePaths}
             onChange={(newVal) => handleConfigUpdate(dataKey, newVal)}
           />
         );
@@ -2166,78 +2362,93 @@ function NodeConfigurationPanel({
               {precedingNodes.map((pn) => {
                 const hasResult =
                   pn.data?.result && Object.keys(pn.data.result).length > 0;
-                const displayData = hasResult
-                  ? pn.data.result
+                let displayData = hasResult
+                  ? pn.data.result.data !== undefined
+                    ? pn.data.result.data
+                    : pn.data.result
                   : pn.data?.configuration || {};
+
+                // Handle cases where data might be a string (e.g. raw responses)
+                if (typeof displayData === "string") {
+                  try {
+                    displayData = JSON.parse(displayData);
+                  } catch {
+                    displayData = { value: displayData };
+                  }
+                }
+
+                // Filter keys for the summary view
+                const _entries = Object.entries(displayData || {}).filter(
+                  ([k]) =>
+                    !k.startsWith("_") &&
+                    ![
+                      "branches",
+                      "cases",
+                      "data",
+                      "message",
+                      "metadata",
+                    ].includes(k),
+                );
 
                 return (
                   <div
                     key={pn.id}
-                    className="p-3 rounded-xl bg-slate-900/40 border border-white/5 space-y-2 mb-3"
+                    className="group/node-card p-3 rounded-xl bg-slate-900/40 border border-white/5 space-y-3 mb-3 hover:bg-slate-900/60 transition-all shadow-sm"
                   >
                     <div className="flex justify-between items-center px-1">
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-slate-300 uppercase tracking-tight flex items-center gap-2">
-                          {pn.data?.customLabel || pn.data?.label || pn.type}
-                          {!hasResult && (
-                            <span className="px-1.5 py-0.5 rounded-full bg-sky-500/10 text-sky-400 text-[8px] border border-sky-500/20">
-                              LIVE CONFIG
+                      <div className="flex flex-col flex-1 min-w-0">
+                        <span className="text-[10px] font-black text-slate-300 uppercase tracking-tight flex items-center gap-2 truncate">
+                          <div className="w-1 h-3 bg-indigo-500 rounded-full shrink-0" />
+                          <span
+                            className="truncate"
+                            title={
+                              pn.data?.customLabel || pn.data?.label || pn.type
+                            }
+                          >
+                            {pn.data?.customLabel || pn.data?.label || pn.type}
+                          </span>
+                          {pn.data?.result?._dataSource === "simulated" && (
+                            <span className="px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 text-[8px] border border-amber-500/20 font-bold uppercase shrink-0">
+                              PREVIEW
                             </span>
                           )}
                         </span>
-                        <span className="text-[9px] text-slate-500 font-mono mt-0.5">
+                        <span className="text-[9px] text-slate-500 font-mono mt-0.5 opacity-60 truncate">
                           {`{{${pn.data?.customLabel || pn.data?.label || pn.id}.${hasResult ? "result" : "config"}}}`}
                         </span>
                       </div>
+                      <div className="flex items-center gap-1 opacity-0 group-hover/node-card:opacity-100 transition-opacity ml-2 shrink-0">
+                        <button
+                          onClick={() => {
+                            const ref = `{{${pn.data?.customLabel || pn.data?.label || pn.id}.${hasResult ? "result" : "config"}}}`;
+                            navigator.clipboard.writeText(ref);
+                            toast.success("Reference copied", {
+                              id: "ref-copy",
+                            });
+                          }}
+                          className="p-1 rounded bg-white/5 hover:bg-white/10 text-slate-400 hover:text-slate-200 transition-colors"
+                          title="Copy reference"
+                        >
+                          <Copy size={10} />
+                        </button>
+                        <button
+                          onClick={() =>
+                            setInspectedData({
+                              title:
+                                pn.data?.customLabel || pn.data?.label || pn.id,
+                              content: displayData,
+                            })
+                          }
+                          className="p-1 rounded bg-white/5 hover:bg-white/10 text-slate-400 hover:text-slate-200 transition-colors"
+                          title="Inspect JSON"
+                        >
+                          <Maximize2 size={10} />
+                        </button>
+                      </div>
                     </div>
 
-                    <div className="bg-black/20 rounded-lg border border-white/5 overflow-hidden">
-                      <table className="w-full text-left border-collapse">
-                        <thead>
-                          <tr className="bg-white/10">
-                            <th className="px-3 py-1.5 text-[9px] font-bold text-slate-500 uppercase border-b border-white/5">
-                              Property
-                            </th>
-                            <th className="px-3 py-1.5 text-[9px] font-bold text-slate-500 uppercase border-b border-white/5 text-right">
-                              Value
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {Object.entries(displayData)
-                            .filter(
-                              ([k]) =>
-                                !k.startsWith("_") &&
-                                k !== "branches" &&
-                                k !== "cases",
-                            )
-                            .map(([key, val]) => (
-                              <tr
-                                key={key}
-                                className="hover:bg-white/5 transition-colors border-b border-white/5 last:border-0"
-                              >
-                                <td className="px-3 py-1.5 text-[10px] font-mono text-indigo-300/80">
-                                  {key}
-                                </td>
-                                <td className="px-3 py-1.5 text-[10px] font-mono text-slate-400 text-right truncate max-w-[120px]">
-                                  {typeof val === "object"
-                                    ? "{...}"
-                                    : String(val)}
-                                </td>
-                              </tr>
-                            ))}
-                          {Object.keys(displayData).length === 0 && (
-                            <tr>
-                              <td
-                                colSpan={2}
-                                className="px-3 py-4 text-[9px] text-slate-600 italic text-center"
-                              >
-                                No data available yet
-                              </td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
+                    <div className="space-y-3">
+                      {renderDataValue(displayData, false)}
                     </div>
                   </div>
                 );
@@ -2868,13 +3079,59 @@ function NodeConfigurationPanel({
               </div>
             )}
 
-            {/* Primary Action */}
+            {/* CONFIGURATION VALIDATION WARNING */}
+            {hasErrors && (
+              <div className="mb-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 p-1.5 rounded-lg bg-amber-500/20 text-amber-500">
+                    <AlertTriangle size={16} />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider mb-1">
+                      {t(
+                        "common.incomplete_config",
+                        "Incomplete Configuration",
+                      )}
+                    </h4>
+                    <p className="text-[11px] text-amber-500/80 leading-relaxed">
+                      {t(
+                        "common.node_cannot_run",
+                        "This node cannot be executed yet. Missing mandatory field:",
+                      )}{" "}
+                      <span className="text-amber-400 font-bold">
+                        {Object.values(validationErrors)[0]}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Primary Action: RUN NODE */}
             <button
-              onClick={async () => {
+              onClick={async (e) => {
+                e.stopPropagation();
+                if (hasErrors) {
+                  toast.error(
+                    `Incomplete configuration. Missing: ${Object.values(validationErrors)[0]}`,
+                    {
+                      icon: (
+                        <AlertTriangle size={16} className="text-amber-500" />
+                      ),
+                    },
+                  );
+                  return;
+                }
+
+                console.log(
+                  `[NodeConfig] Executing isolated node ${activeNode.id} (${activeNode.type})`,
+                );
+
                 console.log(
                   "[NodeConfig] 🚀 Running Node with variables:",
                   variablesMap,
                 );
+
                 await onExecute(
                   {
                     ...activeNode,
@@ -2890,22 +3147,32 @@ function NodeConfigurationPanel({
                 );
                 await refreshVariables();
               }}
-              disabled={hasErrors} // Block execution if validation/mandatory fields fail
               className={cn(
-                "w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wide transition-all",
+                "w-full flex items-center justify-center gap-3 py-3 rounded-xl text-xs font-black uppercase tracking-[0.1em] transition-all relative overflow-hidden group mt-4",
                 hasErrors
-                  ? "bg-slate-700/50 text-slate-500 cursor-not-allowed opacity-50" // Disabled State
+                  ? "bg-slate-800 text-slate-500 border border-white/5 cursor-not-allowed"
                   : cn(
-                      "text-white shadow-lg active:scale-[0.98] hover:brightness-110 bg-gradient-to-r shadow-lg",
+                      "text-white shadow-xl active:scale-[0.97] hover:-translate-y-0.5",
                       CATEGORY_STYLES[colorKey]?.panel?.buttonGradient,
                     ),
               )}
-              title={
-                hasErrors ? "Please fix configuration errors" : "Run this node"
-              }
             >
-              <Play size={14} fill="currentColor" />
-              {t("common.run_node", "Run Node")}
+              <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+              {hasErrors ? (
+                <AlertTriangle
+                  size={16}
+                  className="text-amber-500 animate-pulse"
+                />
+              ) : (
+                <Play
+                  size={16}
+                  fill="currentColor"
+                  className="group-hover:scale-110 transition-transform"
+                />
+              )}
+              {hasErrors
+                ? t("common.incomplete", "Incomplete")
+                : t("common.run_node", "Run Node")}
             </button>
 
             {/* NAVIGATION FOOTER */}

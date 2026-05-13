@@ -38,9 +38,10 @@ const FooterButton = ({
   return (
     <button
       onClick={onClick}
+      aria-label={label}
       className={cn(baseStyles, variants[variant], className)}
     >
-      {Icon && <Icon size={14} />}
+      {Icon && <Icon size={14} aria-hidden="true" />}
       {label && <span className="hidden md:inline">{label}</span>}
     </button>
   );
@@ -56,6 +57,8 @@ const SelectorButton = ({
 }) => (
   <button
     onClick={onClick}
+    aria-expanded={isActive}
+    aria-label={`${label}: ${subLabel}`}
     className={cn(
       "relative flex items-center gap-3 px-4 py-2 hover:bg-white/5 transition-colors group h-full focus:outline-none",
       isActive && "bg-white/5",
@@ -63,7 +66,11 @@ const SelectorButton = ({
   >
     {/* Unsaved Indicator */}
     {hasUnsavedChanges && (
-      <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)] animate-pulse" />
+      <div
+        className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)] animate-pulse"
+        aria-label="Unsaved changes"
+        role="status"
+      />
     )}
     <div
       className={cn(
@@ -73,7 +80,7 @@ const SelectorButton = ({
           : "bg-indigo-500/10 text-indigo-400 group-hover:bg-indigo-500/20 group-hover:text-indigo-300",
       )}
     >
-      <_Icon size={14} />
+      <_Icon size={14} aria-hidden="true" />
     </div>
     <div className="flex flex-col items-start gap-0.5">
       <span className="text-[10px] text-slate-500 font-mono uppercase tracking-wider leading-none">
@@ -83,6 +90,7 @@ const SelectorButton = ({
         <span className="max-w-[100px] truncate">{subLabel}</span>
         <ChevronDown
           size={10}
+          aria-hidden="true"
           className={cn(
             "opacity-50 transition-transform duration-200",
             isActive && "rotate-180",
@@ -161,6 +169,9 @@ const MenuOption = ({
     <div
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      role="menuitem"
+      tabIndex={0}
+      aria-current={isActive ? "true" : undefined}
       className={cn(
         "w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-colors group cursor-pointer relative",
         isActive
@@ -168,6 +179,12 @@ const MenuOption = ({
           : "text-slate-300 hover:bg-white/5 hover:text-white",
       )}
       onClick={handleDisplayClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleDisplayClick();
+        }
+      }}
     >
       <div className="flex items-center gap-2 truncate">
         {Icon && (
@@ -240,6 +257,8 @@ const GlassMenu = ({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 10, scale: 0.95 }}
       transition={{ type: "spring", stiffness: 300, damping: 25 }}
+      role="menu"
+      aria-label={`${type} menu`}
       className="bg-[#0f172a]/90 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden min-w-[240px] flex flex-col p-1 mb-1"
     >
       <div className="max-h-[300px] overflow-y-auto custom-scrollbar p-1 space-y-0.5">
@@ -475,7 +494,11 @@ function AppFooter({
           />
         </div>
 
-        <div className="h-8 w-px bg-white/10" />
+        <div
+          className="h-8 w-px bg-white/10"
+          role="separator"
+          aria-orientation="vertical"
+        />
 
         {/* SECTION 2: FLOW SELECTOR */}
         <div ref={flowButtonRef}>
@@ -509,7 +532,11 @@ function AppFooter({
           onClick={onShowExport}
         />
 
-        <div className="h-6 w-px bg-white/10 mx-2" />
+        <div
+          className="h-6 w-px bg-white/10 mx-2"
+          role="separator"
+          aria-orientation="vertical"
+        />
 
         <FooterButton
           icon={RefreshCw}
@@ -535,8 +562,9 @@ function AppFooter({
           onClick={onSave}
           className="p-2.5 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition-all active:scale-95 border border-transparent hover:border-white/5"
           title="Save Flow (Ctrl+S)"
+          aria-label="Save Flow (Ctrl+S)"
         >
-          <Save size={18} />
+          <Save size={18} aria-hidden="true" />
         </button>
 
         {/* VERSION DISPLAY */}

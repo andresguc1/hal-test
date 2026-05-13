@@ -114,7 +114,7 @@ const AbyssNode = ({ id, data, selected, type }) => {
       style={{
         borderColor: statusColor || undefined,
         boxShadow: statusShadow || undefined,
-        minWidth: isConditional || isSwitch ? 200 : 160,
+        minWidth: isConditional || isSwitch ? 240 : 160,
         minHeight:
           (isConditional || isSwitch) && showOutputs
             ? Math.max(100, branches.length * 45)
@@ -123,7 +123,7 @@ const AbyssNode = ({ id, data, selected, type }) => {
           "background-color 0.4s, border-color 0.4s, box-shadow 0.4s, transform 0s", // CRITICAL: transform 0s
       }}
       className={cn(
-        "group relative max-w-[320px] rounded-lg p-3 transition-[background,border,box-shadow,opacity] duration-400 select-none border-[2px]",
+        "group relative max-w-[400px] rounded-lg p-3 transition-[background,border,box-shadow,opacity] duration-400 select-none border-[2px]",
         themeParams.base,
         invalidStyle, // Add validation glow
 
@@ -210,13 +210,19 @@ const AbyssNode = ({ id, data, selected, type }) => {
       <div className="absolute -top-2 -right-2 z-20 flex gap-1.5 items-center">
         {/* VALIDATION WARNING (Priority 1) */}
         {!isValid && (
-          <div className="bg-red-500 text-white rounded-full p-0.5 shadow-lg border border-red-400 animate-pulse">
+          <div
+            className="bg-red-500 text-white rounded-full p-0.5 shadow-lg border border-red-400 animate-pulse"
+            role="img"
+            aria-label="Configuration error: required fields missing"
+          >
             <AlertTriangle size={12} fill="currentColor" strokeWidth={3} />
           </div>
         )}
 
         {(data.state === "running" || data.state === "executing") && (
           <div
+            role="status"
+            aria-label="Node executing"
             className={cn(
               "w-4 h-4 rounded-full border-2 border-t-transparent animate-spin border-amber-400",
             )}
@@ -225,14 +231,22 @@ const AbyssNode = ({ id, data, selected, type }) => {
 
         {/* Success: Checkmark */}
         {data.state === "success" && (
-          <div className="bg-emerald-500 text-white rounded-full p-0.5 shadow-lg border border-emerald-400">
+          <div
+            className="bg-emerald-500 text-white rounded-full p-0.5 shadow-lg border border-emerald-400"
+            role="img"
+            aria-label="Node succeeded"
+          >
             <CheckCircle size={14} strokeWidth={3} />
           </div>
         )}
 
         {/* Error: LED (Only show if valid, otherwise the Triangle is enough) */}
         {data.state === "error" && isValid && (
-          <div className="w-3 h-3 bg-red-500 rounded-full border border-white shadow-lg animate-pulse" />
+          <div
+            className="w-3 h-3 bg-red-500 rounded-full border border-white shadow-lg animate-pulse"
+            role="img"
+            aria-label="Node failed"
+          />
         )}
 
         {/* Neutral/Ready LED - Only show if NO active state and valid */}
@@ -246,6 +260,8 @@ const AbyssNode = ({ id, data, selected, type }) => {
               className={cn(
                 "w-2.5 h-2.5 rounded-full border border-white/20 bg-slate-600",
               )}
+              role="img"
+              aria-label="Node ready"
             />
           )}
       </div>
@@ -330,18 +346,20 @@ const AbyssNode = ({ id, data, selected, type }) => {
 
       {/* INTEGRATED BRANCH LABELS (Inside node for clarity) */}
       {showOutputs && (isConditional || isSwitch) && (
-        <div className="absolute inset-y-0 right-0 w-24 pointer-events-none flex flex-col justify-around py-4">
+        <div className="absolute inset-y-0 right-0 w-32 pointer-events-none flex flex-col justify-around py-4">
           {branches.map((branch, idx) => {
             const topPct = `${((idx + 1) * 100) / (branches.length + 1)}%`;
+            const labelText = branch.label || branch.value || branch.id;
             return (
               <div
                 key={`label-${branch.id || idx}`}
-                className="absolute right-2 flex items-center justify-end"
+                className="absolute right-2 flex items-center justify-end max-w-full"
                 style={{ top: topPct, transform: "translateY(-50%)" }}
               >
                 <span
+                  title={labelText}
                   className={cn(
-                    "px-1.5 py-0.5 rounded-[4px] text-[10px] font-black uppercase tracking-tighter border shadow-sm transition-all duration-300",
+                    "px-1.5 py-0.5 rounded-[4px] text-[9px] font-black uppercase tracking-tighter border shadow-sm transition-all duration-300 truncate max-w-[120px] block",
                     branch.isFallback
                       ? "bg-slate-800/80 text-slate-400 border-slate-700/50"
                       : "bg-white/10 text-white border-white/20 group-hover:bg-white/20",
@@ -350,7 +368,7 @@ const AbyssNode = ({ id, data, selected, type }) => {
                       "bg-emerald-500/20 text-emerald-400 border-emerald-500/40 ring-1 ring-emerald-500/30",
                   )}
                 >
-                  {branch.label || branch.value || branch.id}
+                  {labelText}
                 </span>
               </div>
             );
