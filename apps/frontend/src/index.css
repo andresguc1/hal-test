@@ -13,64 +13,94 @@
  * ========================================== */
 @import "tailwindcss";
 
+:root {
+  --background: hsl(210 40% 98%);
+  --foreground: hsl(222 47% 11%);
+
+  /* THEME VARIABLES (LIGHT - Engineering Blueprint) */
+  --bg-canvas: hsl(210 40% 96%);
+  --bg-panel: hsla(0, 0%, 100%, 0.85);
+  --bg-node: hsl(0 0% 100%);
+  --text-main: hsl(222 47% 11%);
+  --text-muted: hsl(215 16% 47%);
+  --border-ui: hsl(210 40% 92%);
+  --grid-color: hsl(210 40% 88%);
+  --connection-line: hsl(215 16% 65%);
+  --panel-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+
+  /* Back-compat aliases */
+  --text-primary: var(--text-main);
+  --text-secondary: var(--text-muted);
+  --border-color: var(--border-ui);
+  --grid-dots: var(--grid-color);
+
+  /* Z-INDEX HIERARCHY */
+  --z-canvas: 1;
+  --z-nodes: 10;
+  --z-hud: 50;
+  --z-popover: 100;
+  --z-modal: 200;
+
+  /* GLOBAL TRANSITION */
+  --theme-transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dark {
+  --background: hsl(222 84% 5%);
+  --foreground: hsl(210 40% 98%);
+
+  /* THEME VARIABLES (DARK - HUD/Console) */
+  --bg-canvas: hsl(222 47% 11%);
+  --bg-panel: hsla(222, 47%, 11%, 0.8);
+  --bg-node: hsl(217 33% 17%);
+  --text-main: hsl(210 40% 96%);
+  --text-muted: hsl(215 20% 65%);
+  --border-ui: hsla(210, 40%, 98%, 0.05);
+  --grid-color: hsl(217 19% 27%);
+  --connection-line: hsl(239 84% 67%);
+  --panel-shadow:
+    0 8px 32px 0 rgba(0, 0, 0, 0.3), inset 0 1px 1px 0 rgba(255, 255, 255, 0.05);
+
+  /* Back-compat aliases */
+  --text-primary: var(--text-main);
+  --text-secondary: var(--text-muted);
+  --border-color: var(--border-ui);
+  --grid-dots: var(--grid-color);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-bg-canvas: var(--bg-canvas);
+  --color-bg-panel: var(--bg-panel);
+  --color-bg-node: var(--bg-node);
+  --color-text-main: var(--text-main);
+  --color-text-muted: var(--text-muted);
+  --color-border-ui: var(--border-ui);
+  --color-grid-color: var(--grid-color);
+  --color-connection-line: var(--connection-line);
+
+  /* Design Tokens Mapping */
+  --color-system-background: var(--system-background);
+  --color-primary: var(--color-primary);
+  --color-success: var(--color-success);
+  --color-warning: var(--color-warning);
+  --color-danger: var(--color-danger);
+  --color-info: var(--color-info);
+
+  --color-hal-success-500: var(--hal-success-500);
+  --color-hal-error-500: var(--hal-error-500);
+  --color-hal-warning-500: var(--hal-warning-500);
+  --color-hal-primary-500: var(--hal-primary-500);
+  --color-hal-neutral-900: var(--hal-neutral-900);
+  --color-hal-neutral-950: var(--hal-neutral-950);
+  --color-hal-neutral-800: var(--hal-neutral-800);
+  --color-hal-neutral-100: var(--hal-neutral-100);
+  --color-hal-neutral-300: var(--hal-neutral-300);
+}
+
 @layer base {
-  :root {
-    --background: 210 40% 98%;
-    --foreground: 222 47% 11%;
-
-    /* THEME VARIABLES (LIGHT - Engineering Blueprint) */
-    --bg-canvas: #f1f5f9;
-    --bg-panel: rgba(255, 255, 255, 0.85);
-    --bg-node: #ffffff;
-    --text-main: #0f172a;
-    --text-muted: #64748b;
-    --border-ui: #e2e8f0;
-    --grid-color: #cbd5e1;
-    --connection-line: #94a3b8;
-    --panel-shadow:
-      0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
-
-    /* Back-compat aliases */
-    --text-primary: var(--text-main);
-    --text-secondary: var(--text-muted);
-    --border-color: var(--border-ui);
-    --grid-dots: var(--grid-color);
-
-    /* Z-INDEX HIERARCHY */
-    --z-canvas: 1;
-    --z-nodes: 10;
-    --z-hud: 50;
-    --z-popover: 100;
-    --z-modal: 200;
-
-    /* GLOBAL TRANSITION */
-    --theme-transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .dark {
-    --background: 222 84% 5%;
-    --foreground: 210 40% 98%;
-
-    /* THEME VARIABLES (DARK - HUD/Console) */
-    --bg-canvas: #0f172a;
-    --bg-panel: rgba(15, 23, 42, 0.8);
-    --bg-node: #1e293b;
-    --text-main: #f1f5f9;
-    --text-muted: #94a3b8;
-    --border-ui: rgba(255, 255, 255, 0.05);
-    --grid-color: #334155;
-    --connection-line: #6366f1;
-    --panel-shadow:
-      0 8px 32px 0 rgba(0, 0, 0, 0.3),
-      inset 0 1px 1px 0 rgba(255, 255, 255, 0.05);
-
-    /* Back-compat aliases */
-    --text-primary: var(--text-main);
-    --text-secondary: var(--text-muted);
-    --border-color: var(--border-ui);
-    --grid-dots: var(--grid-color);
-  }
-
   /* CRITICAL: Force Sans-Serif EVERYWHERE - NO SERIF ALLOWED */
   :root,
   html,
@@ -123,9 +153,8 @@
 
   /* Selection styles */
   ::selection {
-    background-color: rgba(37, 99, 235, 0.2);
-    /* blue-600 */
-    color: #2563eb;
+    background-color: hsla(221, 83%, 53%, 0.2);
+    color: hsl(221 83% 53%);
   }
 
   /* Scrollbars Minimalistas (Theme Aware) */
@@ -139,22 +168,21 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background-color: rgba(148, 163, 184, 0.2);
-    /* slate-400/20 */
+    background-color: hsla(215, 16%, 65%, 0.2);
     border-radius: 9999px;
     transition: background-color 0.2s;
   }
 
   .dark ::-webkit-scrollbar-thumb {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: hsla(0, 0%, 100%, 0.1);
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(148, 163, 184, 0.4);
+    background-color: hsla(215, 16%, 65%, 0.4);
   }
 
   .dark ::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(255, 255, 255, 0.2);
+    background-color: hsla(0, 0%, 100%, 0.2);
   }
 }
 
@@ -183,11 +211,11 @@
     background: transparent;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
+    background: hsla(0, 0%, 100%, 0.1);
     border-radius: 10px;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: hsla(0, 0%, 100%, 0.2);
   }
 
   /* GLOBAL GLASS UI */
@@ -196,7 +224,7 @@
     backdrop-filter: blur(16px);
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     background: var(--bg-panel);
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-ui);
     box-shadow: var(--panel-shadow);
   }
 
@@ -245,8 +273,8 @@
   position: absolute !important;
   bottom: 20px;
   right: 20px;
-  background-color: #1e1e1e !important;
-  border: 1px solid #333 !important;
+  background-color: hsl(0 0% 12%) !important;
+  border: 1px solid hsl(0 0% 20%) !important;
   border-radius: 8px;
 }
 
@@ -276,14 +304,14 @@
 /* TERMINAL TAG (Vignette Style) */
 .terminal-tag {
   position: absolute;
-  bottom: 0; /* Inside main, so 0 is right above footer */
-  right: 32px; /* Positioned to the right as requested */
+  bottom: 0;
+  right: 32px;
   padding: 4px 16px;
-  background: #0f172a; /* Slate 900 */
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: hsl(222 47% 11%);
+  border: 1px solid hsla(0, 0%, 100%, 0.1);
   border-bottom: none;
   border-radius: 8px 8px 0 0;
-  color: #94a3b8; /* Slate 400 */
+  color: hsl(215 16% 65%);
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
@@ -298,13 +326,13 @@
 }
 
 .terminal-tag:hover {
-  background: #1e293b; /* Slate 800 */
-  color: white;
+  background: hsl(217 33% 17%);
+  color: hsl(0 0% 100%);
   padding-bottom: 6px;
 }
 
 .terminal-tag .icon {
-  color: #6366f1; /* Indigo 500 */
+  color: hsl(239 84% 67%);
 }
 
 /* ==========================================
@@ -313,7 +341,7 @@
 
 /* Keyboard-only focus ring — visible, high-contrast */
 :focus-visible {
-  outline: 2px solid #005fcc;
+  outline: 2px solid hsl(212 100% 40%);
   outline-offset: 2px;
 }
 
@@ -323,7 +351,7 @@ button:focus-visible,
 a:focus-visible,
 select:focus-visible,
 [tabindex]:focus-visible {
-  outline: 2px solid #6366f1;
+  outline: 2px solid hsl(239 84% 67%);
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -331,7 +359,7 @@ select:focus-visible,
 /* Inputs get their own subtle focus (does not override existing ring styles) */
 input:focus-visible,
 textarea:focus-visible {
-  outline: 2px solid #6366f1;
+  outline: 2px solid hsl(239 84% 67%);
   outline-offset: 0;
 }
 

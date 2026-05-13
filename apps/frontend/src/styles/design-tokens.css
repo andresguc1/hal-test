@@ -8,434 +8,367 @@
  * - Glassmorphism support
  */
 
-@layer base {
-  :root {
-    /* ==========================================
-     * TYPOGRAPHY - Apple System Fonts
-     * ========================================== */
-    --font-sans:
-      "SF Pro Display", "SF Pro Text", "Inter", -apple-system,
-      BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    --font-mono: "SF Mono", "Menlo", "Monaco", "Courier New", monospace;
-
-    /* ==========================================
-     * IOS ALIASES (User Phase 0)
-     * ========================================== */
-    --ios-bg: rgb(var(--system-background));
-    --ios-card: rgb(var(--system-grouped-content));
-    --ios-text: rgb(var(--label-primary));
-    --ios-subtext: rgb(var(--label-secondary));
-    --ios-border: rgba(var(--separator) / 0.3);
-
-    /* ==========================================
-     * SYSTEM COLORS - BASE (Light Mode Default)
-     * ========================================== */
-    /* Grouped Backgrounds (for lists/cards) */
-    --system-background: 245 245 247;
-    /* #F5F5F7 (macOS Background) */
-    --system-grouped-background: 242 242 247;
-    /* #F2F2F7 */
-    --system-grouped-content: 255 255 255;
-    /* #FFFFFF */
-
-    /* Text */
-    --label-primary: 0 0 0;
-    /* #000000 */
-    --label-secondary: 60 60 67;
-    /* #3C3C43 (60% opacity) */
-    --label-tertiary: 60 60 67;
-    /* #3C3C43 (30% opacity) */
-    --label-quaternary: 60 60 67;
-    /* #3C3C43 (18% opacity) */
-
-    /* Separators */
-    --separator: 0 0 0;
-    /* Alpha 0.05 */
-    --separator-opaque: 0 0 0;
-    /* Alpha 0.1 for structural */
-
-    /* Fills & Overlays */
-    --fill-primary: 120 120 128;
-    /* Alpha 0.2 */
-    --fill-secondary: 120 120 128;
-    /* Alpha 0.16 */
-    --fill-tertiary: 118 118 128;
-    /* Alpha 0.12 */
-
-    /* ==========================================
-     * TINT COLORS (Apple Standard)
-     * ========================================== */
-    --tint-blue: 0 122 255;
-    /* #007AFF */
-    --tint-green: 52 199 89;
-    /* #34C759 */
-    --tint-indigo: 88 86 214;
-    /* #5856D6 */
-    --tint-orange: 255 149 0;
-    /* #FF9500 */
-    --tint-pink: 255 45 85;
-    /* #FF2D55 */
-    --tint-purple: 175 82 222;
-    /* #AF52DE */
-    --tint-red: 255 59 48;
-    /* #FF3B30 */
-    --tint-teal: 90 200 250;
-    /* #5AC8FA */
-    --tint-yellow: 255 204 0;
-    /* #FFCC00 */
-    --tint-gray: 142 142 147;
-    /* #8E8E93 */
-
-    /* Semantic Aliases */
-    --color-primary: var(--tint-blue);
-    --color-success: var(--tint-green);
-    --color-warning: var(--tint-orange);
-    --color-danger: var(--tint-red);
-    --color-info: var(--tint-teal);
-
-    /* ==========================================
-     * GEOMETRY
-     * ========================================== */
-    --radius-sm: 4px;
-    /* 4px */
-    --radius-md: 6px;
-    /* 6px (Standard Input) */
-    --radius-lg: 8px;
-    /* 8px (Cards) */
-    --radius-xl: 12px;
-    /* 12px (Panels) */
-    --radius-full: 9999px;
-
-    /* ==========================================
-     * SHADOWS
-     * Soft, diffused Apple-style shadows
-     * ========================================== */
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-    --shadow-md:
-      0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    --shadow-lg:
-      0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    --shadow-xl:
-      0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    --shadow-depth: 0 8px 40px rgba(0, 0, 0, 0.12);
-    /* Modal/Popover depth */
-  }
+:root {
+  /* ==========================================
+   * TYPOGRAPHY - Apple System Fonts
+   * ========================================== */
+  --font-sans:
+    "SF Pro Display", "SF Pro Text", "Inter", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: "SF Mono", "Menlo", "Monaco", "Courier New", monospace;
 
   /* ==========================================
-   * DARK MODE OVERRIDES
+   * IOS ALIASES (User Phase 0)
    * ========================================== */
-  .dark {
-    /* Backgrounds */
-    --system-background: 0 0 0;
-    /* #000000 */
-    --system-background-secondary: 28 28 30;
-    /* #1C1C1E (System Gray 6) */
-    --system-background-tertiary: 44 44 46;
-    /* #2C2C2E */
+  --ios-bg: var(--system-background);
+  --ios-card: var(--system-grouped-content);
+  --ios-text: var(--label-primary);
+  --ios-subtext: var(--label-secondary);
+  --ios-border: color-mix(in srgb, var(--separator), transparent 70%);
 
-    /* Grouped Backgrounds */
-    --system-grouped-background: 0 0 0;
-    /* #000000 */
-    --system-grouped-content: 28 28 30;
-    /* #1C1C1E */
+  /* ==========================================
+   * SYSTEM COLORS - BASE (Light Mode Default)
+   * ========================================== */
+  /* Grouped Backgrounds (for lists/cards) */
+  --system-background: rgb(245 245 247);
+  /* #F5F5F7 (macOS Background) */
+  --system-grouped-background: rgb(242 242 247);
+  /* #F2F2F7 */
+  --system-grouped-content: rgb(255 255 255);
+  /* #FFFFFF */
 
-    /* Text */
-    --label-primary: 255 255 255;
-    /* #FFFFFF */
-    --label-secondary: 235 235 245;
-    /* #EBEBF5 (60% opacity) */
-    --label-tertiary: 235 235 245;
-    /* #EBEBF5 (30% opacity) */
-    --label-quaternary: 235 235 245;
-    /* #EBEBF5 (18% opacity) */
+  /* Text */
+  --label-primary: rgb(0 0 0);
+  /* #000000 */
+  --label-secondary: rgb(60 60 67 / 60%);
+  /* #3C3C43 (60% opacity) */
+  --label-tertiary: rgb(60 60 67 / 30%);
+  /* #3C3C43 (30% opacity) */
+  --label-quaternary: rgb(60 60 67 / 18%);
+  /* #3C3C43 (18% opacity) */
 
-    /* Separators */
-    --separator: 84 84 88;
-    /* Alpha 0.6 */
-    --separator-opaque: 56 56 58;
-    /* #38383A */
+  /* Separators */
+  --separator: rgb(0 0 0 / 5%);
+  /* Alpha 0.05 */
+  --separator-opaque: rgb(0 0 0 / 10%);
+  /* Alpha 0.1 for structural */
 
-    /* Fills */
-    --fill-primary: 120 120 128;
-    /* Alpha 0.36 */
-    --fill-secondary: 120 120 128;
-    /* Alpha 0.32 */
-    --fill-tertiary: 118 118 128;
-    /* Alpha 0.24 */
+  /* Fills & Overlays */
+  --fill-primary: rgb(120 120 128 / 20%);
+  /* Alpha 0.2 */
+  --fill-secondary: rgb(120 120 128 / 16%);
+  /* Alpha 0.16 */
+  --fill-tertiary: rgb(118 118 128 / 12%);
+  /* Alpha 0.12 */
 
-    /* Tint Colors (Dark Mode Vibrancy) */
-    --tint-blue: 10 132 255;
-    /* #0A84FF */
-    --tint-green: 48 209 88;
-    /* #30D158 */
-    --tint-indigo: 94 92 230;
-    /* #5E5CE6 */
-    --tint-orange: 255 159 10;
-    /* #FF9F0A */
-    --tint-pink: 255 55 95;
-    /* #FF375F */
-    --tint-purple: 191 90 242;
-    /* #BF5AF2 */
-    --tint-red: 255 69 58;
-    /* #FF453A */
-    --tint-teal: 100 210 255;
-    /* #64D2FF */
-    --tint-yellow: 255 214 10;
-    /* #FFD60A */
-    --tint-gray: 142 142 147;
-    /* #8E8E93 */
-  }
+  /* ==========================================
+   * TINT COLORS (Apple Standard)
+   * ========================================== */
+  --tint-blue: rgb(0 122 255);
+  /* #007AFF */
+  --tint-green: rgb(52 199 89);
+  /* #34C759 */
+  --tint-indigo: rgb(88 86 214);
+  /* #5856D6 */
+  --tint-orange: rgb(255 149 0);
+  /* #FF9500 */
+  --tint-pink: rgb(255 45 85);
+  /* #FF2D55 */
+  --tint-purple: rgb(175 82 222);
+  /* #AF52DE */
+  --tint-red: rgb(255 59 48);
+  /* #FF3B30 */
+  --tint-teal: rgb(90 200 250);
+  /* #5AC8FA */
+  --tint-yellow: rgb(255 204 0);
+  /* #FFCC00 */
+  --tint-gray: rgb(142 142 147);
+  /* #8E8E93 */
+
+  /* Semantic Aliases */
+  --color-primary: var(--tint-blue);
+  --color-success: var(--tint-green);
+  --color-warning: var(--tint-orange);
+  --color-danger: var(--tint-red);
+  --color-info: var(--tint-teal);
+
+  /* ==========================================
+   * GEOMETRY
+   * ========================================== */
+  --radius-sm: 4px;
+  /* 4px */
+  --radius-md: 6px;
+  /* 6px (Standard Input) */
+  --radius-lg: 8px;
+  /* 8px (Cards) */
+  --radius-xl: 12px;
+  /* 12px (Panels) */
+  --radius-full: 9999px;
+
+  /* ==========================================
+   * SHADOWS
+   * Soft, diffused Apple-style shadows
+   * ========================================== */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --shadow-depth: 0 8px 40px rgba(0, 0, 0, 0.12);
+  /* Modal/Popover depth */
+
+  /* ==========================================
+   * SEMANTIC COLORS - SUCCESS (Emerald Scale)
+   * Used for: Passed tests, successful operations
+   * ========================================== */
+  --hal-success-50: rgb(236 253 245);
+  --hal-success-100: rgb(209 250 229);
+  --hal-success-200: rgb(167 243 208);
+  --hal-success-300: rgb(110 231 183);
+  --hal-success-400: rgb(52 211 153);
+  --hal-success-500: rgb(16 185 129);
+  --hal-success-600: rgb(5 150 105);
+  --hal-success-700: rgb(4 120 87);
+  --hal-success-800: rgb(6 95 70);
+  --hal-success-900: rgb(6 78 59);
+  --hal-success-950: rgb(2 44 34);
+
+  /* ==========================================
+   * SEMANTIC COLORS - ERROR (Rose Scale)
+   * Used for: Failed tests, errors, destructive actions
+   * ========================================== */
+  --hal-error-50: rgb(255 241 242);
+  --hal-error-100: rgb(255 228 230);
+  --hal-error-200: rgb(254 205 211);
+  --hal-error-300: rgb(253 164 175);
+  --hal-error-400: rgb(251 113 133);
+  --hal-error-500: rgb(244 63 94);
+  --hal-error-600: rgb(225 29 72);
+  --hal-error-700: rgb(190 18 60);
+  --hal-error-800: rgb(159 18 57);
+  --hal-error-900: rgb(136 19 55);
+  --hal-error-950: rgb(76 5 25);
+
+  /* ==========================================
+   * SEMANTIC COLORS - WARNING (Amber Scale)
+   * Used for: Warnings, flaky tests, pending states
+   * ========================================== */
+  --hal-warning-50: rgb(255 251 235);
+  --hal-warning-100: rgb(254 243 199);
+  --hal-warning-200: rgb(253 230 138);
+  --hal-warning-300: rgb(252 211 77);
+  --hal-warning-400: rgb(251 191 36);
+  --hal-warning-500: rgb(245 158 11);
+  --hal-warning-600: rgb(217 119 6);
+  --hal-warning-700: rgb(180 83 9);
+  --hal-warning-800: rgb(146 64 14);
+  --hal-warning-900: rgb(120 53 15);
+  --hal-warning-950: rgb(69 26 3);
+
+  /* ==========================================
+   * SEMANTIC COLORS - PRIMARY (Indigo Scale)
+   * Used for: Primary actions, links, focus states
+   * ========================================== */
+  --hal-primary-50: rgb(238 242 255);
+  --hal-primary-100: rgb(224 231 255);
+  --hal-primary-200: rgb(199 210 254);
+  --hal-primary-300: rgb(165 180 252);
+  --hal-primary-400: rgb(129 140 248);
+  --hal-primary-500: rgb(99 102 241);
+  --hal-primary-600: rgb(79 70 229);
+  --hal-primary-700: rgb(67 56 202);
+  --hal-primary-800: rgb(55 48 163);
+  --hal-primary-900: rgb(49 46 129);
+  --hal-primary-950: rgb(30 27 75);
+
+  /* ==========================================
+   * NEUTRAL COLORS (Zinc Scale)
+   * Used for: Backgrounds, borders, text, technical UI
+   * ========================================== */
+  --hal-neutral-50: rgb(250 250 250);
+  --hal-neutral-100: rgb(244 244 245);
+  --hal-neutral-200: rgb(228 228 231);
+  --hal-neutral-300: rgb(212 212 216);
+  --hal-neutral-400: rgb(161 161 170);
+  --hal-neutral-500: rgb(113 113 122);
+  --hal-neutral-600: rgb(82 82 91);
+  --hal-neutral-700: rgb(63 63 70);
+  --hal-neutral-800: rgb(39 39 42);
+  --hal-neutral-900: rgb(24 24 27);
+  --hal-neutral-950: rgb(9 9 11);
+
+  /* ==========================================
+   * TYPOGRAPHY
+   * Modern sans-serif (Inter) + Technical monospace (JetBrains Mono)
+   * ========================================== */
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", "Consolas", monospace;
+
+  /* Font Sizes - Technical Scale */
+  --text-xs: 0.6875rem;
+  /* 11px - hints, labels */
+  --text-sm: 0.8125rem;
+  /* 13px - secondary text */
+  --text-base: 0.9375rem;
+  /* 15px - body text */
+  --text-lg: 1.0625rem;
+  /* 17px - emphasized text */
+  --text-xl: 1.25rem;
+  /* 20px - titles */
+  --text-2xl: 1.5rem;
+  /* 24px - section headers */
+  --text-3xl: 1.875rem;
+  /* 30px - page headers */
+
+  /* Line Heights */
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.75;
+
+  /* Font Weights */
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+
+  /* ==========================================
+   * SPACING SCALE
+   * Consistent spacing system
+   * ========================================== */
+  --space-1: 0.25rem;
+  /* 4px */
+  --space-2: 0.5rem;
+  /* 8px */
+  --space-3: 0.75rem;
+  /* 12px */
+  --space-4: 1rem;
+  /* 16px */
+  --space-5: 1.25rem;
+  /* 20px */
+  --space-6: 1.5rem;
+  /* 24px */
+  --space-8: 2rem;
+  /* 32px */
+  --space-10: 2.5rem;
+  /* 40px */
+  --space-12: 3rem;
+  /* 48px */
+  --space-16: 4rem;
+  /* 64px */
+  --space-20: 5rem;
+  /* 80px */
+
+  /* ==========================================
+   * BORDER RADIUS
+   * Technical feel - subtle curves
+   * ========================================== */
+  --radius-sm: 0.25rem;
+  /* 4px */
+  --radius-md: 0.5rem;
+  /* 8px */
+  --radius-lg: 0.75rem;
+  /* 12px */
+  --radius-xl: 1rem;
+  /* 16px */
+
+  /* ==========================================
+   * SHADOWS
+   * Subtle depth for technical UI
+   * ========================================== */
+  --shadow-subtle: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-medium:
+    0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-strong:
+    0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+
+  /* ==========================================
+   * TRANSITIONS
+   * Smooth, technical feel
+   * ========================================== */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Easing curves */
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+
+  /* ==========================================
+   * Z-INDEX SCALE
+   * Layering system
+   * ========================================== */
+  --z-base: 0;
+  --z-dropdown: 1000;
+  --z-sticky: 1100;
+  --z-fixed: 1200;
+  --z-modal-backdrop: 1300;
+  --z-modal: 1400;
+  --z-popover: 1500;
+  --z-tooltip: 1600;
 }
 
-@layer base {
-  :root {
-    /* ==========================================
-     * SEMANTIC COLORS - SUCCESS (Emerald Scale)
-     * Used for: Passed tests, successful operations
-     * ========================================== */
-    --hal-success-50: 236 253 245;
-    --hal-success-100: 209 250 229;
-    --hal-success-200: 167 243 208;
-    --hal-success-300: 110 231 183;
-    --hal-success-400: 52 211 153;
-    --hal-success-500: 16 185 129;
-    --hal-success-600: 5 150 105;
-    --hal-success-700: 4 120 87;
-    --hal-success-800: 6 95 70;
-    --hal-success-900: 6 78 59;
-    --hal-success-950: 2 44 34;
+.dark {
+  /* Backgrounds */
+  --system-background: rgb(0 0 0);
+  /* #000000 */
+  --system-background-secondary: rgb(28 28 30);
+  /* #1C1C1E (System Gray 6) */
+  --system-background-tertiary: rgb(44 44 46);
+  /* #2C2C2E */
 
-    /* ==========================================
-     * SEMANTIC COLORS - ERROR (Rose Scale)
-     * Used for: Failed tests, errors, destructive actions
-     * ========================================== */
-    --hal-error-50: 255 241 242;
-    --hal-error-100: 255 228 230;
-    --hal-error-200: 254 205 211;
-    --hal-error-300: 253 164 175;
-    --hal-error-400: 251 113 133;
-    --hal-error-500: 244 63 94;
-    --hal-error-600: 225 29 72;
-    --hal-error-700: 190 18 60;
-    --hal-error-800: 159 18 57;
-    --hal-error-900: 136 19 55;
-    --hal-error-950: 76 5 25;
+  /* Grouped Backgrounds */
+  --system-grouped-background: rgb(0 0 0);
+  /* #000000 */
+  --system-grouped-content: rgb(28 28 30);
+  /* #1C1C1E */
 
-    /* ==========================================
-     * SEMANTIC COLORS - WARNING (Amber Scale)
-     * Used for: Warnings, flaky tests, pending states
-     * ========================================== */
-    --hal-warning-50: 255 251 235;
-    --hal-warning-100: 254 243 199;
-    --hal-warning-200: 253 230 138;
-    --hal-warning-300: 252 211 77;
-    --hal-warning-400: 251 191 36;
-    --hal-warning-500: 245 158 11;
-    --hal-warning-600: 217 119 6;
-    --hal-warning-700: 180 83 9;
-    --hal-warning-800: 146 64 14;
-    --hal-warning-900: 120 53 15;
-    --hal-warning-950: 69 26 3;
+  /* Text */
+  --label-primary: rgb(255 255 255);
+  /* #FFFFFF */
+  --label-secondary: rgb(235 235 245 / 60%);
+  /* #EBEBF5 (60% opacity) */
+  --label-tertiary: rgb(235 235 245 / 30%);
+  /* #EBEBF5 (30% opacity) */
+  --label-quaternary: rgb(235 235 245 / 18%);
+  /* #EBEBF5 (18% opacity) */
 
-    /* ==========================================
-     * SEMANTIC COLORS - PRIMARY (Indigo Scale)
-     * Used for: Primary actions, links, focus states
-     * ========================================== */
-    --hal-primary-50: 238 242 255;
-    --hal-primary-100: 224 231 255;
-    --hal-primary-200: 199 210 254;
-    --hal-primary-300: 165 180 252;
-    --hal-primary-400: 129 140 248;
-    --hal-primary-500: 99 102 241;
-    --hal-primary-600: 79 70 229;
-    --hal-primary-700: 67 56 202;
-    --hal-primary-800: 55 48 163;
-    --hal-primary-900: 49 46 129;
-    --hal-primary-950: 30 27 75;
+  /* Separators */
+  --separator: rgb(84 84 88 / 60%);
+  /* Alpha 0.6 */
+  --separator-opaque: rgb(56 56 58);
+  /* #38383A */
 
-    /* ==========================================
-     * NEUTRAL COLORS (Zinc Scale)
-     * Used for: Backgrounds, borders, text, technical UI
-     * ========================================== */
-    --hal-neutral-50: 250 250 250;
-    --hal-neutral-100: 244 244 245;
-    --hal-neutral-200: 228 228 231;
-    --hal-neutral-300: 212 212 216;
-    --hal-neutral-400: 161 161 170;
-    --hal-neutral-500: 113 113 122;
-    --hal-neutral-600: 82 82 91;
-    --hal-neutral-700: 63 63 70;
-    --hal-neutral-800: 39 39 42;
-    --hal-neutral-900: 24 24 27;
-    --hal-neutral-950: 9 9 11;
+  /* Fills */
+  --fill-primary: rgb(120 120 128 / 36%);
+  /* Alpha 0.36 */
+  --fill-secondary: rgb(120 120 128 / 32%);
+  /* Alpha 0.32 */
+  --fill-tertiary: rgb(118 118 128 / 24%);
+  /* Alpha 0.24 */
 
-    /* ==========================================
-     * TYPOGRAPHY
-     * Modern sans-serif (Inter) + Technical monospace (JetBrains Mono)
-     * ========================================== */
-    --font-sans: "Inter", system-ui, -apple-system, sans-serif;
-    --font-mono: "JetBrains Mono", "Fira Code", "Consolas", monospace;
-
-    /* Font Sizes - Technical Scale */
-    --text-xs: 0.6875rem;
-    /* 11px - hints, labels */
-    --text-sm: 0.8125rem;
-    /* 13px - secondary text */
-    --text-base: 0.9375rem;
-    /* 15px - body text */
-    --text-lg: 1.0625rem;
-    /* 17px - emphasized text */
-    --text-xl: 1.25rem;
-    /* 20px - titles */
-    --text-2xl: 1.5rem;
-    /* 24px - section headers */
-    --text-3xl: 1.875rem;
-    /* 30px - page headers */
-
-    /* Line Heights */
-    --leading-tight: 1.25;
-    --leading-normal: 1.5;
-    --leading-relaxed: 1.75;
-
-    /* Font Weights */
-    --font-normal: 400;
-    --font-medium: 500;
-    --font-semibold: 600;
-    --font-bold: 700;
-
-    /* ==========================================
-     * SPACING SCALE
-     * Consistent spacing system
-     * ========================================== */
-    --space-1: 0.25rem;
-    /* 4px */
-    --space-2: 0.5rem;
-    /* 8px */
-    --space-3: 0.75rem;
-    /* 12px */
-    --space-4: 1rem;
-    /* 16px */
-    --space-5: 1.25rem;
-    /* 20px */
-    --space-6: 1.5rem;
-    /* 24px */
-    --space-8: 2rem;
-    /* 32px */
-    --space-10: 2.5rem;
-    /* 40px */
-    --space-12: 3rem;
-    /* 48px */
-    --space-16: 4rem;
-    /* 64px */
-    --space-20: 5rem;
-    /* 80px */
-
-    /* ==========================================
-     * BORDER RADIUS
-     * Technical feel - subtle curves
-     * ========================================== */
-    --radius-sm: 0.25rem;
-    /* 4px */
-    --radius-md: 0.5rem;
-    /* 8px */
-    --radius-lg: 0.75rem;
-    /* 12px */
-    --radius-xl: 1rem;
-    /* 16px */
-
-    /* ==========================================
-     * SHADOWS
-     * Subtle depth for technical UI
-     * ========================================== */
-    --shadow-subtle: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-    --shadow-medium:
-      0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-    --shadow-strong:
-      0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-    --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
-
-    /* ==========================================
-     * TRANSITIONS
-     * Smooth, technical feel
-     * ========================================== */
-    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
-
-    /* Easing curves */
-    --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
-    --ease-out: cubic-bezier(0, 0, 0.2, 1);
-    --ease-in: cubic-bezier(0.4, 0, 1, 1);
-
-    /* ==========================================
-     * Z-INDEX SCALE
-     * Layering system
-     * ========================================== */
-    --z-base: 0;
-    --z-dropdown: 1000;
-    --z-sticky: 1100;
-    --z-fixed: 1200;
-    --z-modal-backdrop: 1300;
-    --z-modal: 1400;
-    --z-popover: 1500;
-    --z-tooltip: 1600;
-  }
-
-  /* ==========================================
-    * UTILITY CLASSES (Pure CSS due to Tailwind v4 @apply limitations)
-    * ========================================== */
-  @layer utilities {
-    /* Technical input field - Deep sunken appearance */
-    .input-technical {
-      background-color: rgb(var(--hal-neutral-950));
-      border: 1px solid rgb(var(--hal-neutral-800));
-      color: rgb(var(--hal-neutral-100));
-      transition: all var(--transition-normal);
-      box-shadow: var(--shadow-inner);
-    }
-
-    .input-technical:focus {
-      outline: none;
-      box-shadow: 0 0 0 1px rgb(var(--hal-primary-500));
-      border-color: rgb(var(--hal-primary-500));
-    }
-
-    /* Technical card - Subtle glassmorphism */
-    .card-technical {
-      background-color: rgba(var(--hal-neutral-900), 0.4);
-      backdrop-filter: blur(4px);
-      border: 1px solid rgb(var(--hal-neutral-800));
-      border-radius: var(--radius-lg);
-    }
-
-    /* Monospace technical text */
-    .text-technical {
-      font-family: var(--font-mono);
-      color: rgb(var(--hal-neutral-300));
-    }
-
-    /* Success state */
-    .state-success {
-      border-color: rgb(var(--hal-success-500));
-      color: rgb(var(--hal-success-500));
-    }
-
-    /* Error state */
-    .state-error {
-      border-color: rgb(var(--hal-error-500));
-      color: rgb(var(--hal-error-500));
-    }
-
-    /* Warning state */
-    .state-warning {
-      border-color: rgb(var(--hal-warning-500));
-      color: rgb(var(--hal-warning-500));
-    }
-
-    /* Primary state */
-    .state-primary {
-      border-color: rgb(var(--hal-primary-500));
-      color: rgb(var(--hal-primary-500));
-    }
-  }
+  /* Tint Colors (Dark Mode Vibrancy) */
+  --tint-blue: rgb(10 132 255);
+  /* #0A84FF */
+  --tint-green: rgb(48 209 88);
+  /* #30D158 */
+  --tint-indigo: rgb(94 92 230);
+  /* #5E5CE6 */
+  --tint-orange: rgb(255 159 10);
+  /* #FF9F0A */
+  --tint-pink: rgb(255 55 95);
+  /* #FF375F */
+  --tint-purple: rgb(191 90 242);
+  /* #BF5AF2 */
+  --tint-red: rgb(255 69 58);
+  /* #FF453A */
+  --tint-teal: rgb(100 210 255);
+  /* #64D2FF */
+  --tint-yellow: rgb(255 214 10);
+  /* #FFD60A */
+  --tint-gray: rgb(142 142 147);
+  /* #8E8E93 */
 }
