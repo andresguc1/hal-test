@@ -564,7 +564,11 @@ function LogLine({ log }) {
       >
         {log.nodeId && (
           <span className="text-slate-500 mr-2 opacity-50 select-none">
-            [{log.nodeId.split("-")[0]}]
+            [
+            {typeof log.nodeId === "string"
+              ? log.nodeId.split("-")[0]
+              : String(log.nodeId)}
+            ]
           </span>
         )}
         {log.message}

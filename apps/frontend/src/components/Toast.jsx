@@ -99,7 +99,7 @@ const HalToast = ({ type, message, id }) => {
 // 3. CONTEXT & PROVIDER
 export const ToastProvider = ({ children }) => {
   const showToast = (message, type = "info") => {
-    sonnerToast.custom(
+    return sonnerToast.custom(
       (id) => <HalToast id={id} type={type} message={message} />,
       { duration: 4000 },
     );

@@ -442,6 +442,42 @@ export const NODE_INPUTS = {
       required: true,
     },
   ],
+  wait_for_request: [
+    {
+      key: "url",
+      label: "URL Pattern",
+      type: "text",
+      placeholder: "**/api/v1/login",
+      required: true,
+    },
+    {
+      key: "timeout",
+      label: "Timeout (ms)",
+      type: "number",
+      placeholder: "30000",
+    },
+  ],
+  wait_for_response: [
+    {
+      key: "url",
+      label: "URL Pattern",
+      type: "text",
+      placeholder: "**/api/v1/data",
+      required: true,
+    },
+    {
+      key: "status",
+      label: "Status (Optional)",
+      type: "number",
+      placeholder: "200",
+    },
+    {
+      key: "timeout",
+      label: "Timeout (ms)",
+      type: "number",
+      placeholder: "30000",
+    },
+  ],
 
   // --- LOGIC & FLOW ---
   variable: [
@@ -510,6 +546,77 @@ export const NODE_INPUTS = {
       label: "Duration (ms)",
       type: "number",
       placeholder: "2000",
+      required: true,
+    },
+  ],
+  backend_js: [
+    {
+      key: "script",
+      label: "Node.js Script (Backend)",
+      type: "textarea",
+      placeholder: "// Runs on server\nreturn { success: true };",
+      required: true,
+    },
+    {
+      key: "timeout",
+      label: "Timeout (ms)",
+      type: "number",
+      placeholder: "10000",
+    },
+  ],
+  fail_flow: [
+    {
+      key: "message",
+      label: "Error Message",
+      type: "text",
+      placeholder: "Flow stopped intentionally",
+    },
+  ],
+  wait_conditional: [
+    {
+      key: "branches",
+      label: "Wait Condition",
+      type: "conditional_branches",
+      required: true,
+    },
+    {
+      key: "timeout",
+      label: "Max Wait (ms)",
+      type: "number",
+      placeholder: "10000",
+    },
+  ],
+  input: [
+    { key: "name", label: "Parameter Name", type: "text", required: true },
+    { key: "value", label: "Default Value", type: "text" },
+  ],
+  output: [
+    {
+      key: "path",
+      label: "Exit Path Name",
+      type: "text",
+      defaultValue: "success",
+    },
+  ],
+  transform: [
+    {
+      key: "expression",
+      label: "JS Expression",
+      type: "text",
+      placeholder: "data.items.filter(i => i.price > 10)",
+      required: true,
+    },
+  ],
+  flow_control: [
+    {
+      key: "action",
+      label: "Action",
+      type: "select",
+      options: [
+        { label: "Break Loop", value: "break" },
+        { label: "Continue Loop", value: "continue" },
+        { label: "Return from Subflow", value: "return" },
+      ],
       required: true,
     },
   ],

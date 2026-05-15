@@ -204,7 +204,9 @@
       "transform": "Transformar",
       "component": "Componente",
       "input": "Entrada de Módulo",
-      "output": "Salida de Módulo"
+      "output": "Salida de Módulo",
+      "backend_js": "JS de Backend",
+      "fail_flow": "Abortar Flujo"
     },
     "categories": {
       "browser_management": "Navegador",

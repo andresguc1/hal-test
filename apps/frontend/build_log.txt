@@ -1,0 +1,20 @@
+
+> @halt-test/frontend@1.1.0 build /home/andres/Documents/Projects/Hal_Test_v0/apps/frontend
+> vite build
+
+vite v7.3.0 building client environment for production...
+transforming...
+✓ 2890 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                             1.18 kB │ gzip:   0.61 kB
+dist/assets/haltest_logo-CPCHSGNz.jpeg    171.83 kB
+dist/assets/index-BI1Kggm9.css            207.71 kB │ gzip:  28.34 kB
+dist/assets/CDWEKZTF-xDXzg8zC.js          225.60 kB │ gzip:  64.19 kB
+dist/assets/index-CrYSNHES.js           2,066.35 kB │ gzip: 570.36 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 37.61s

@@ -1,4 +1,7 @@
 // flowStyles.js
+import { NODE_LABELS } from "./constants";
+
+export { NODE_LABELS };
 
 /**
  * Estados mejorados para nodos de flujo.

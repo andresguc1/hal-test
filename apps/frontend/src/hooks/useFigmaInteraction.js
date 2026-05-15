@@ -15,7 +15,7 @@ import { useReactFlow, SelectionMode } from "@xyflow/react";
 export function useFigmaInteraction() {
   const { zoomIn, zoomOut, fitView } = useReactFlow();
   const [isSpacePressed, setIsSpacePressed] = useState(false);
-  const [isCtrlPressed, setIsCtrlPressed] = useState(false);
+  const [_isCtrlPressed, _setIsCtrlPressed] = useState(false);
 
   // Handle Key states
   useEffect(() => {
@@ -26,7 +26,7 @@ export function useFigmaInteraction() {
         setIsSpacePressed(true);
       }
       if (e.key === "Control" || e.metaKey) {
-        setIsCtrlPressed(true);
+        _setIsCtrlPressed(true);
       }
     };
 
@@ -35,16 +35,23 @@ export function useFigmaInteraction() {
         setIsSpacePressed(false);
       }
       if (e.key === "Control" || e.key === "Meta") {
-        setIsCtrlPressed(false);
+        _setIsCtrlPressed(false);
       }
+    };
+
+    const handleBlur = () => {
+      setIsSpacePressed(false);
+      _setIsCtrlPressed(false);
     };
 
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("blur", handleBlur);
 
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
+      window.removeEventListener("blur", handleBlur);
     };
   }, []);
 
@@ -66,13 +73,12 @@ export function useFigmaInteraction() {
   const figmaConfig = useMemo(
     () => ({
       // --- Navigation ---
-      // Pan on scroll (trackpad natural behavior) OR when Ctrl is NOT pressed
-      // If Ctrl is pressed, we want Zoom on Scroll
-      panOnScroll: !isCtrlPressed,
-      panOnScrollSpeed: 1.2, // Slightly faster for better feel
+      // Standard behavior: Scroll for Zoom, Space+Drag for Pan
+      panOnScroll: false,
+      panOnScrollSpeed: 1,
 
-      // Zoom requires Ctrl/Cmd + Scroll
-      zoomOnScroll: isCtrlPressed,
+      // Zoom with Scroll (standard)
+      zoomOnScroll: true,
 
       // Pan with Middle (1) or Right (2) mouse buttons
       panOnDrag: [1, 2],
@@ -97,14 +103,14 @@ export function useFigmaInteraction() {
       panActivationKeyCode: "Space",
 
       // --- Limits & UX ---
-      minZoom: 0.05, // Deep zoom out
-      maxZoom: 5, // Deep zoom in
+      minZoom: 0.1, // Zoom out far
+      maxZoom: 3, // Prevent excessive pixelation
       // Prevent nodes from being dragged when using space
       nodesDraggable: !isSpacePressed,
       nodesConnectable: !isSpacePressed,
       elementsSelectable: !isSpacePressed,
     }),
-    [isSpacePressed, isCtrlPressed],
+    [isSpacePressed],
   );
 
   // Cursor style management

@@ -66,7 +66,7 @@ export const NODE_CATEGORIES = {
   },
   diagnostics: {
     icon: Camera,
-    color: "rose", // Diagnostics = Rose (#f43f5e) - REQUESTED CHANGE
+    color: "rose", // Diagnostics = Rose (#f43f5e)
     label: "Diagnostics",
     nodes: ["take_screenshot", "save_dom", "log_errors", "listen_events"],
   },
@@ -93,6 +93,8 @@ export const NODE_CATEGORIES = {
       "set_network_conditions",
       "clear_all_mocks",
       "wait_network",
+      "wait_for_request",
+      "wait_for_response",
     ],
   },
   test_execution: {
@@ -127,6 +129,10 @@ export const NODE_CATEGORIES = {
       "conditional",
       "switch",
       "loop",
+      "backend_js",
+      "fail_flow",
+      "input",
+      "output",
       "branch",
       "flow_control",
       "transform",
@@ -152,11 +158,16 @@ export const NODE_TYPE_MAP = Object.entries(NODE_CATEGORIES).reduce(
       if (nodeType === "extract_dom_context") overrides.icon = Search;
       if (nodeType === "chain_of_thought") overrides.icon = Sparkles;
       if (nodeType === "smart_selector") overrides.icon = Zap;
+      if (nodeType === "backend_js") overrides.icon = Code;
+      if (nodeType === "fail_flow") overrides.icon = Bug;
+      if (nodeType === "input") overrides.icon = RefreshCw;
+      if (nodeType === "output") overrides.icon = CheckSquare;
 
       acc[nodeType] = {
         category: catKey,
         color: catData.color,
         icon: catData.icon,
+        i18nKey: `nodes.labels.${nodeType}`,
         label: nodeType
           .split("_")
           .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
@@ -467,7 +478,7 @@ export const CATEGORY_STYLES = {
       headerBorder: "border-cyan-500/50",
       headerGradient: "from-cyan-600/60 via-cyan-600/20 to-transparent",
       categoryText: "text-cyan-500 dark:text-cyan-400",
-      buttonGradient: "from-cyan-600 to-cyan-500 shadow-cyan-500/20",
+      buttonGradient: "from-cyan-600 to-cyan-500",
     },
   },
   blue: {
@@ -487,7 +498,7 @@ export const CATEGORY_STYLES = {
       headerBorder: "border-blue-500/50",
       headerGradient: "from-blue-600/60 via-blue-600/20 to-transparent",
       categoryText: "text-blue-500 dark:text-blue-400",
-      buttonGradient: "from-blue-600 to-blue-500 shadow-blue-500/20",
+      buttonGradient: "from-blue-600 to-blue-500",
     },
   },
   indigo: {
@@ -507,7 +518,7 @@ export const CATEGORY_STYLES = {
       headerBorder: "border-indigo-500/50",
       headerGradient: "from-indigo-600/60 via-indigo-600/20 to-transparent",
       categoryText: "text-indigo-500 dark:text-indigo-400",
-      buttonGradient: "from-indigo-600 to-indigo-500 shadow-indigo-500/20",
+      buttonGradient: "from-indigo-600 to-indigo-500",
     },
   },
   violet: {
@@ -527,7 +538,7 @@ export const CATEGORY_STYLES = {
       headerBorder: "border-violet-500/50",
       headerGradient: "from-violet-600/60 via-violet-600/20 to-transparent",
       categoryText: "text-violet-500 dark:text-violet-400",
-      buttonGradient: "from-violet-600 to-violet-500 shadow-violet-500/20",
+      buttonGradient: "from-violet-600 to-violet-500",
     },
   },
   purple: {
@@ -547,7 +558,7 @@ export const CATEGORY_STYLES = {
       headerBorder: "border-purple-500/50",
       headerGradient: "from-purple-600/60 via-purple-600/20 to-transparent",
       categoryText: "text-purple-500 dark:text-purple-400",
-      buttonGradient: "from-purple-600 to-purple-500 shadow-purple-500/20",
+      buttonGradient: "from-purple-600 to-purple-500",
     },
   },
   fuchsia: {
@@ -587,7 +598,7 @@ export const CATEGORY_STYLES = {
       headerBorder: "border-pink-500/50",
       headerGradient: "from-pink-600/60 via-pink-600/20 to-transparent",
       categoryText: "text-pink-500 dark:text-pink-400",
-      buttonGradient: "from-pink-600 to-pink-500 shadow-pink-500/20",
+      buttonGradient: "from-pink-600 to-pink-500",
     },
   },
   amber: {
@@ -607,7 +618,7 @@ export const CATEGORY_STYLES = {
       headerBorder: "border-amber-500/50",
       headerGradient: "from-amber-600/60 via-amber-600/20 to-transparent",
       categoryText: "text-amber-500 dark:text-amber-400",
-      buttonGradient: "from-amber-600 to-amber-500 shadow-amber-500/20",
+      buttonGradient: "from-amber-600 to-amber-500",
     },
   },
   emerald: {
@@ -627,7 +638,7 @@ export const CATEGORY_STYLES = {
       headerBorder: "border-emerald-500/50",
       headerGradient: "from-emerald-600/60 via-emerald-600/20 to-transparent",
       categoryText: "text-emerald-500 dark:text-emerald-400",
-      buttonGradient: "from-emerald-600 to-emerald-500 shadow-emerald-500/20",
+      buttonGradient: "from-emerald-600 to-emerald-500",
     },
   },
   rose: {
@@ -647,7 +658,7 @@ export const CATEGORY_STYLES = {
       headerBorder: "border-rose-500/50",
       headerGradient: "from-rose-600/60 via-rose-600/20 to-transparent",
       categoryText: "text-rose-500 dark:text-rose-400",
-      buttonGradient: "from-rose-600 to-rose-500 shadow-rose-500/20",
+      buttonGradient: "from-rose-600 to-rose-500",
     },
   },
   red: {

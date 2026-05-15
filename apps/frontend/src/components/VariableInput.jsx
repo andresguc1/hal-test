@@ -46,6 +46,7 @@ export const VariableInput = ({
   className = "",
   variables = {},
   contextualVariables = null,
+  _allVariables = {},
   type = "text",
   hasError = false,
   suggestions = [],

@@ -205,7 +205,9 @@
       "chain_of_thought": "Chain of Thought",
       "smart_selector": "Smart Selector",
       "input": "Module Input",
-      "output": "Module Output"
+      "output": "Module Output",
+      "backend_js": "Backend JS",
+      "fail_flow": "Fail Flow"
     },
     "categories": {
       "browser_management": "Browser",

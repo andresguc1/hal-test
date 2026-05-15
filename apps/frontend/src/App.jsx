@@ -473,7 +473,7 @@ function Dashboard() {
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [currentFlowId, reactFlowFitView, onLayout, nodes.length]);
+  }, [currentFlowId, reactFlowFitView, nodes.length]);
 
   // Element Picker Hook
   const { handleStartPicking, handleCancelPicking, handleElementPicked } =
@@ -1628,6 +1628,33 @@ function Dashboard() {
                       cleanLayout: () => onLayout("LR"),
                       toggleDisabled: handleToggleDisabled,
                       toggleDownstream: handleToggleDownstream,
+                      runNode: (id) => {
+                        const node = nodes.find((n) => n.id === id);
+                        if (node) {
+                          executeSingleNode(
+                            node.id,
+                            node.type,
+                            node.data?.configuration || {},
+                            {
+                              runId: reportingRunId,
+                              socketId: socket?.id,
+                            },
+                          );
+                        }
+                      },
+                      diveIn: (id) => enterComponent(id),
+                      selectNext: (id) => {
+                        const nextEdge = edges.find((e) => e.source === id);
+                        if (nextEdge) {
+                          handleNavigateToNode(nextEdge.target);
+                        }
+                      },
+                      selectPrev: (id) => {
+                        const prevEdge = edges.find((e) => e.target === id);
+                        if (prevEdge) {
+                          handleNavigateToNode(prevEdge.source);
+                        }
+                      },
                     }}
                   />
                 )}

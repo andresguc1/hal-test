@@ -41,16 +41,16 @@ const ContextMenuItem = ({
     onMouseEnter={onMouseEnter}
     role="menuitem"
     className={cn(
-      "group relative flex w-full cursor-default select-none items-center rounded-md px-2 py-1.5 text-sm outline-none transition-all",
+      "group relative flex w-full cursor-default select-none items-center rounded-lg px-3 py-2 text-sm outline-none transition-all mb-0.5",
       disabled
-        ? "pointer-events-none opacity-40"
+        ? "pointer-events-none opacity-30"
         : cn(
-            "hover:bg-[var(--border-color)] hover:text-[var(--text-main)] cursor-pointer text-[var(--text-main)]",
-            isActive && "bg-[var(--border-color)] text-[var(--text-main)]",
+            "hover:bg-white/10 hover:text-white cursor-pointer text-slate-300",
+            isActive && "bg-white/10 text-white",
           ),
       danger &&
         !disabled &&
-        "text-rose-500 hover:text-rose-400 hover:bg-rose-500/10",
+        "text-rose-400 hover:text-rose-300 hover:bg-rose-500/20",
       className,
     )}
     onClick={(e) => {
@@ -63,21 +63,19 @@ const ContextMenuItem = ({
   >
     <div
       className={cn(
-        "mr-2 flex h-4 w-4 items-center justify-center",
-        danger ? "text-rose-500" : "text-zinc-400 group-hover:text-zinc-300",
-        isActive && "text-zinc-300",
-        iconClassName, // Apply custom color if provided
+        "mr-3 flex h-4 w-4 items-center justify-center transition-transform group-hover:scale-110",
+        danger ? "text-rose-400" : "text-slate-500 group-hover:text-slate-300",
+        isActive && "text-slate-300",
+        iconClassName,
       )}
     >
-      {Icon && <Icon size={15} aria-hidden="true" />}
+      {Icon && <Icon size={16} aria-hidden="true" />}
     </div>
 
-    <span className="flex-1 text-left text-zinc-300 group-hover:text-zinc-100 font-medium">
-      {label}
-    </span>
+    <span className="flex-1 text-left font-medium tracking-tight">{label}</span>
 
     {shortcut && (
-      <span className="ml-4 text-[10px] tracking-wider text-zinc-500 font-mono">
+      <span className="ml-4 text-[9px] tracking-widest text-slate-600 font-mono uppercase group-hover:text-slate-400 transition-colors">
         {shortcut}
       </span>
     )}
@@ -86,7 +84,7 @@ const ContextMenuItem = ({
       <ChevronRight
         size={14}
         aria-hidden="true"
-        className="ml-auto text-zinc-500 group-hover:text-zinc-300"
+        className="ml-auto text-slate-600 group-hover:text-slate-300 transition-transform group-hover:translate-x-0.5"
       />
     )}
   </button>
@@ -515,8 +513,8 @@ const ContextMenu = ({
       role="menu"
       aria-label="Context menu"
       className={cn(
-        "fixed z-[10001] min-w-[220px] rounded-lg border border-[var(--border-ui)] bg-[var(--bg-panel)] backdrop-blur-xl p-1.5 shadow-2xl transition-all duration-400",
-        "animate-in fade-in zoom-in-95 origin-top-left",
+        "fixed z-[10001] min-w-[240px] rounded-xl border border-white/10 bg-[#0f172a]/90 backdrop-blur-2xl p-2 shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-all duration-400",
+        "animate-in fade-in zoom-in-95 origin-top-left border-t-white/20",
       )}
       style={{ left: x, top: y }}
     >
@@ -598,6 +596,12 @@ const ContextMenu = ({
                 data?.data?.type === "loop") && (
                 <>
                   <ContextMenuItem
+                    icon={MousePointer2}
+                    label="Dive In"
+                    onClick={() => actions.diveIn(data.id)}
+                    iconClassName="text-indigo-400"
+                  />
+                  <ContextMenuItem
                     icon={Ungroup}
                     label="Ungroup"
                     shortcut="^⇧G"
@@ -606,6 +610,23 @@ const ContextMenu = ({
                   <Divider />
                 </>
               )}
+              <ContextMenuItem
+                icon={Play}
+                label="Run Node"
+                onClick={() => actions.runNode(data.id)}
+              />
+              <ContextMenuItem
+                icon={ChevronRight}
+                label="Siguiente nodo"
+                onClick={() => actions.selectNext(data.id)}
+              />
+              <ContextMenuItem
+                icon={ChevronRight}
+                label="Nodo previo"
+                className="rotate-180"
+                onClick={() => actions.selectPrev(data.id)}
+              />
+              <Divider />
               <ContextMenuItem
                 icon={Play}
                 label="Execute from here"

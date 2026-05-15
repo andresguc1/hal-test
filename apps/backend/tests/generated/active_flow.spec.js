@@ -10,6 +10,10 @@ test(`Flujo Generado Hal-Test`, async ({ page }) => {
         await page.goto(`https://www.saucedemo.com`);
     });
 
+    await test.step(`conditional`, async () => {
+        console.log(`⚠️ Acción no implementada o pendiente: conditional`);
+    });
+
     await test.step(`Set Password`, async () => {
         console.log(`⚠️ Acción no implementada o pendiente: variable`);
     });
@@ -35,7 +39,7 @@ test(`Flujo Generado Hal-Test`, async ({ page }) => {
     });
 
     await test.step(`Evidence`, async () => {
-        await page.screenshot({ path: 'screenshot_8.png' });
+        await page.screenshot({ path: 'screenshot_9.png' });
     });
 
     await test.step(`Finish Tour`, async () => {
