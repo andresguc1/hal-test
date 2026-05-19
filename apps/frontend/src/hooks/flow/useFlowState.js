@@ -59,7 +59,47 @@ export const updateNodeRecursively = (nodes, nodeId, updater) => {
 };
 
 export function useFlowState() {
-  const [nodes, setNodes] = useState([]);
+  const [rawNodes, _setNodes] = useState([]);
+
+  const sanitizeNodes = useCallback((nds) => {
+    if (!Array.isArray(nds)) return [];
+    return nds.map((node, index) => {
+      if (!node) return null;
+      
+      const id = node.id || `node_${index}_${Date.now()}`;
+      const type = node.type || node.data?.type || "default";
+      const data = node.data || {};
+      
+      let position = node.position;
+      if (!position || typeof position.x !== "number" || typeof position.y !== "number" || isNaN(position.x) || isNaN(position.y)) {
+        logger.warn(`[Sanitizer] Fixed missing/corrupt position for node ${id}. Falling back.`);
+        position = { 
+          x: (position && typeof position.x === "number" && !isNaN(position.x)) ? position.x : index * 250, 
+          y: (position && typeof position.y === "number" && !isNaN(position.y)) ? position.y : 150 
+        };
+      }
+      
+      return {
+        ...node,
+        id,
+        type,
+        data: {
+          ...data,
+          type: data.type || type,
+        },
+        position,
+      };
+    }).filter(Boolean);
+  }, []);
+
+  const setNodes = useCallback((updater) => {
+    _setNodes((prevNodes) => {
+      const next = typeof updater === "function" ? updater(prevNodes) : updater;
+      return sanitizeNodes(next);
+    });
+  }, [sanitizeNodes]);
+
+  const nodes = rawNodes;
   const [edges, setEdges] = useState([]);
   const [history, setHistory] = useState({ past: [], future: [] });
   const [selectedNodeId, setSelectedNodeId] = useState(null);
@@ -87,25 +127,19 @@ export function useFlowState() {
     }));
   }, []);
 
-  const onNodesChange = useCallback(
-    (changes) => {
-      setNodes((nds) => {
-        const nextNodes = applyNodeChanges(changes, nds);
-        // Special logic for selection
-        const selectChange = changes.find((c) => c.type === "select");
-        if (selectChange) {
-          if (selectChange.selected) {
-            setSelectedNodeId(selectChange.id);
-          } else if (selectedNodeId === selectChange.id) {
-            setSelectedNodeId(null);
-          }
-        }
-        return nextNodes;
-      });
-      setHasUnsavedChanges(true);
-    },
-    [selectedNodeId],
-  );
+  const onNodesChange = useCallback((changes) => {
+    setNodes((nds) => {
+      const nextNodes = applyNodeChanges(changes, nds);
+      // Special logic for selection
+      const hasSelectChange = changes.some((c) => c.type === "select");
+      if (hasSelectChange) {
+        const newlySelected = nextNodes.find((n) => n.selected);
+        setSelectedNodeId(newlySelected ? newlySelected.id : null);
+      }
+      return nextNodes;
+    });
+    setHasUnsavedChanges(true);
+  }, []);
 
   const onEdgesChange = useCallback((changes) => {
     setEdges((eds) => applyEdgeChanges(changes, eds));

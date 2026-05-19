@@ -34,6 +34,7 @@ import ExportDialog from "./components/ExportDialog";
 import ContextMenu from "./components/ContextMenu";
 import CreationModal from "./components/CreationModal";
 import StarterOverlay from "./components/StarterOverlay";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 // import { colors } from "./components/styles/colors"; // Unused
 import { useFlowManager } from "./components/hooks/useFlowManager.js";
@@ -1140,6 +1141,18 @@ function Dashboard() {
   // ========================================
   const { screenToFlowPosition } = useReactFlow();
 
+  const handleResetCanvas = useCallback(async () => {
+    setNodes([]);
+    setEdges([]);
+    if (currentProject?.id && loadStarterTemplate) {
+      try {
+        await loadStarterTemplate(currentProject.id);
+      } catch (err) {
+        console.error("Failed to restore starter template on reset:", err);
+      }
+    }
+  }, [setNodes, setEdges, currentProject, loadStarterTemplate]);
+
   const onDragOver = useCallback((event) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
@@ -1519,7 +1532,8 @@ function Dashboard() {
             className="flex-1 relative kanban-board-bg flex flex-col overflow-hidden"
           >
             <div ref={reactFlowWrapper} className="flex-1 w-full relative">
-              <ReactFlow {...flowConfig} onNodesDelete={onNodesDelete}>
+              <ErrorBoundary onReset={handleResetCanvas}>
+                <ReactFlow {...flowConfig} onNodesDelete={onNodesDelete}>
                 {showMinimap && <StyledMiniMap />}
                 <Controls>
                   <ControlButton
@@ -1659,6 +1673,7 @@ function Dashboard() {
                   />
                 )}
               </ReactFlow>
+             </ErrorBoundary>
             </div>
 
             {/* Real-time Execution Terminal - Now inside Main Layout */}

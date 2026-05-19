@@ -10,6 +10,9 @@ import {
   Globe,
   ChevronLeft,
   ChevronRight,
+  Eye,
+  EyeOff,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -158,7 +161,7 @@ const NodeConfigurationPanel = ({
           ...watchedValues,
         });
         lastSyncedConfigRef.current.config = watchedValues;
-      }, 500);
+      }, 200);
     }
   }, [watchedValues, activeNode, updateNodeConfiguration]);
 
@@ -434,7 +437,10 @@ const NodeConfigurationPanel = ({
             render={({ field: { value, onChange } }) => (
               <div className="space-y-1.5">
                 <label className="text-[10px] uppercase tracking-wider font-semibold text-slate-500">
-                  {field.label}
+                  {field.label}{" "}
+                  {field.required && (
+                    <span className="text-rose-500 ml-1">*</span>
+                  )}
                 </label>
                 <ConditionalBranchesEditor
                   value={value}
@@ -457,7 +463,10 @@ const NodeConfigurationPanel = ({
             render={({ field: { value, onChange } }) => (
               <div className="space-y-1.5">
                 <label className="text-[10px] uppercase tracking-wider font-semibold text-slate-500">
-                  {field.label}
+                  {field.label}{" "}
+                  {field.required && (
+                    <span className="text-rose-500 ml-1">*</span>
+                  )}
                 </label>
                 <SwitchCasesEditor
                   value={value}
@@ -471,6 +480,7 @@ const NodeConfigurationPanel = ({
           />
         );
       case "boolean":
+      case "checkbox":
         return (
           <Controller
             key={reactKey}
@@ -479,20 +489,23 @@ const NodeConfigurationPanel = ({
             render={({ field: { value, onChange } }) => (
               <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5">
                 <label className="text-[10px] uppercase tracking-widest font-black text-slate-400">
-                  {field.label}
+                  {field.label}{" "}
+                  {field.required && (
+                    <span className="text-rose-500 ml-1">*</span>
+                  )}
                 </label>
                 <button
                   type="button"
                   onClick={() => onChange(!value)}
                   className={cn(
-                    "relative inline-flex h-5 w-10 rounded-full transition-colors",
+                    "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors border-2 border-transparent cursor-pointer outline-none",
                     value ? "bg-indigo-600" : "bg-slate-800",
                   )}
                 >
                   <span
                     className={cn(
-                      "inline-block h-4 w-4 transform rounded-full bg-white transition",
-                      value ? "translate-x-5" : "translate-x-0",
+                      "pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ease-in-out shadow-sm",
+                      value ? "translate-x-4" : "translate-x-0",
                     )}
                   />
                 </button>
@@ -500,12 +513,90 @@ const NodeConfigurationPanel = ({
             )}
           />
         );
+      case "select":
+        return (
+          <div key={reactKey} className="space-y-1.5">
+            <label className="text-[10px] uppercase tracking-wider font-semibold text-slate-500">
+              {field.label}{" "}
+              {field.required && <span className="text-rose-500 ml-1">*</span>}
+            </label>
+            <Controller
+              name={dataKey}
+              control={control}
+              render={({ field: { value, onChange } }) => (
+                <div className="relative">
+                  <select
+                    value={value || ""}
+                    onChange={onChange}
+                    className="w-full px-3 py-2 text-xs font-mono bg-[var(--bg-canvas)]/50 border border-[var(--border-ui)] rounded-lg text-slate-200 focus:outline-none focus:border-indigo-500/50 focus:bg-slate-900/40 transition-colors appearance-none cursor-pointer"
+                  >
+                    <option value="" disabled>
+                      Select {field.label}...
+                    </option>
+                    {field.options?.map((opt) => (
+                      <option
+                        key={opt.value}
+                        value={opt.value}
+                        className="bg-slate-800 text-slate-200"
+                      >
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                  </div>
+                </div>
+              )}
+            />
+          </div>
+        );
+      case "number":
+        return (
+          <div key={reactKey} className="space-y-1.5">
+            <label className="text-[10px] uppercase tracking-wider font-semibold text-slate-500">
+              {field.label}{" "}
+              {field.required && <span className="text-rose-500 ml-1">*</span>}
+            </label>
+            <Controller
+              name={dataKey}
+              control={control}
+              render={({ field: { value, onChange } }) => (
+                <input
+                  type="number"
+                  value={value ?? ""}
+                  onChange={(e) =>
+                    onChange(
+                      e.target.value === "" ? "" : Number(e.target.value),
+                    )
+                  }
+                  placeholder={field.placeholder || ""}
+                  className="w-full px-3 py-2 text-xs font-mono bg-[var(--bg-canvas)]/50 border border-[var(--border-ui)] rounded-lg text-slate-200 focus:outline-none focus:border-indigo-500/50 focus:bg-slate-900/40 transition-colors"
+                />
+              )}
+            />
+          </div>
+        );
       case "selector":
         return (
           <div key={reactKey} className="space-y-1.5">
             <div className="flex justify-between items-center">
               <label className="text-[10px] uppercase tracking-wider font-semibold text-slate-500">
-                {field.label}
+                {field.label}{" "}
+                {field.required && (
+                  <span className="text-rose-500 ml-1">*</span>
+                )}
               </label>
               <button
                 type="button"
@@ -537,7 +628,8 @@ const NodeConfigurationPanel = ({
         return (
           <div key={reactKey} className="space-y-1.5">
             <label className="text-[10px] uppercase tracking-wider font-semibold text-slate-500">
-              {field.label}
+              {field.label}{" "}
+              {field.required && <span className="text-rose-500 ml-1">*</span>}
             </label>
             <Controller
               name={dataKey}
@@ -592,18 +684,37 @@ const NodeConfigurationPanel = ({
         />
       </div>
       <div className="flex items-center gap-1">
+        <button
+          onClick={() => {
+            const isDisabled = !activeNode.data?.disabled;
+            activeNode.data.disabled = isDisabled; // optimistically update local object
+            updateNodeConfiguration(activeNode.id, {
+              ...activeNode.data,
+              disabled: isDisabled,
+            });
+            window.dispatchEvent(
+              new CustomEvent("node-data-updated", {
+                detail: { nodeId: activeNode.id },
+              }),
+            );
+          }}
+          className={cn(
+            "p-1.5 rounded-lg transition-colors mr-1",
+            activeNode.data?.disabled
+              ? "text-amber-400 bg-amber-500/10 hover:bg-amber-500/20"
+              : "text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10",
+          )}
+          title={activeNode.data?.disabled ? "Enable Node" : "Disable Node"}
+        >
+          {activeNode.data?.disabled ? <EyeOff size={16} /> : <Eye size={16} />}
+        </button>
         {(activeNode.type === "component" || activeNode.type === "loop") && (
           <button
             onClick={() => onEnterSubFlow?.(activeNode.id)}
-            className={cn(
-              "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all",
-              CATEGORY_STYLES[colorKey]?.panel?.categoryText,
-              "bg-white/5 hover:bg-white/10 hover:text-white border border-transparent hover:border-white/10",
-            )}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10 transition-all"
             title="Dive In"
           >
-            <Maximize2 size={14} />
-            Dive In
+            <Maximize2 size={16} />
           </button>
         )}
         <button
@@ -616,7 +727,7 @@ const NodeConfigurationPanel = ({
           className="p-2 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all"
           title="Delete Node"
         >
-          <X size={16} className="rotate-45" />
+          <Trash2 size={16} />
         </button>
         <div className="w-px h-4 bg-white/10 mx-1" />
         <button
