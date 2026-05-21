@@ -1157,3 +1157,14 @@ export const transform = (payload) => {
     outputVar: asString(payload?.outputVar),
   };
 };
+
+export const backend_js = (payload) => {
+  return {
+    browserId: asString(payload?.browserId),
+    script: asString(payload?.script ?? payload?.expression ?? payload?.code),
+    expression: asString(
+      payload?.expression ?? payload?.script ?? payload?.code,
+    ),
+    timeout: asNumber(payload?.timeout, 10000, 0),
+  };
+};

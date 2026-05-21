@@ -63,41 +63,61 @@ export function useFlowState() {
 
   const sanitizeNodes = useCallback((nds) => {
     if (!Array.isArray(nds)) return [];
-    return nds.map((node, index) => {
-      if (!node) return null;
-      
-      const id = node.id || `node_${index}_${Date.now()}`;
-      const type = node.type || node.data?.type || "default";
-      const data = node.data || {};
-      
-      let position = node.position;
-      if (!position || typeof position.x !== "number" || typeof position.y !== "number" || isNaN(position.x) || isNaN(position.y)) {
-        logger.warn(`[Sanitizer] Fixed missing/corrupt position for node ${id}. Falling back.`);
-        position = { 
-          x: (position && typeof position.x === "number" && !isNaN(position.x)) ? position.x : index * 250, 
-          y: (position && typeof position.y === "number" && !isNaN(position.y)) ? position.y : 150 
+    return nds
+      .map((node, index) => {
+        if (!node) return null;
+
+        const id = node.id || `node_${index}_${Date.now()}`;
+        const type = node.type || node.data?.type || "default";
+        const data = node.data || {};
+
+        let position = node.position;
+        if (
+          !position ||
+          typeof position.x !== "number" ||
+          typeof position.y !== "number" ||
+          isNaN(position.x) ||
+          isNaN(position.y)
+        ) {
+          logger.warn(
+            `[Sanitizer] Fixed missing/corrupt position for node ${id}. Falling back.`,
+          );
+          position = {
+            x:
+              position && typeof position.x === "number" && !isNaN(position.x)
+                ? position.x
+                : index * 250,
+            y:
+              position && typeof position.y === "number" && !isNaN(position.y)
+                ? position.y
+                : 150,
+          };
+        }
+
+        return {
+          ...node,
+          id,
+          type,
+          data: {
+            ...data,
+            type: data.type || type,
+          },
+          position,
         };
-      }
-      
-      return {
-        ...node,
-        id,
-        type,
-        data: {
-          ...data,
-          type: data.type || type,
-        },
-        position,
-      };
-    }).filter(Boolean);
+      })
+      .filter(Boolean);
   }, []);
 
-  const setNodes = useCallback((updater) => {
-    _setNodes((prevNodes) => {
-      const next = typeof updater === "function" ? updater(prevNodes) : updater;
-      return sanitizeNodes(next);
-    });
-  }, [sanitizeNodes]);
+  const setNodes = useCallback(
+    (updater) => {
+      _setNodes((prevNodes) => {
+        const next =
+          typeof updater === "function" ? updater(prevNodes) : updater;
+        return sanitizeNodes(next);
+      });
+    },
+    [sanitizeNodes],
+  );
 
   const nodes = rawNodes;
   const [edges, setEdges] = useState([]);
@@ -127,19 +147,22 @@ export function useFlowState() {
     }));
   }, []);
 
-  const onNodesChange = useCallback((changes) => {
-    setNodes((nds) => {
-      const nextNodes = applyNodeChanges(changes, nds);
-      // Special logic for selection
-      const hasSelectChange = changes.some((c) => c.type === "select");
-      if (hasSelectChange) {
-        const newlySelected = nextNodes.find((n) => n.selected);
-        setSelectedNodeId(newlySelected ? newlySelected.id : null);
-      }
-      return nextNodes;
-    });
-    setHasUnsavedChanges(true);
-  }, []);
+  const onNodesChange = useCallback(
+    (changes) => {
+      setNodes((nds) => {
+        const nextNodes = applyNodeChanges(changes, nds);
+        // Special logic for selection
+        const hasSelectChange = changes.some((c) => c.type === "select");
+        if (hasSelectChange) {
+          const newlySelected = nextNodes.find((n) => n.selected);
+          setSelectedNodeId(newlySelected ? newlySelected.id : null);
+        }
+        return nextNodes;
+      });
+      setHasUnsavedChanges(true);
+    },
+    [setNodes],
+  );
 
   const onEdgesChange = useCallback((changes) => {
     setEdges((eds) => applyEdgeChanges(changes, eds));
@@ -158,22 +181,25 @@ export function useFlowState() {
     setSelectedNodeId(node.id);
   }, []);
 
-  const addNode = useCallback((type, position, data = {}) => {
-    const newNode = {
-      id: generateNodeId(),
-      type,
-      position,
-      data: {
-        ...data,
-        label: NODE_LABELS[type] || type,
+  const addNode = useCallback(
+    (type, position, data = {}) => {
+      const newNode = {
+        id: generateNodeId(),
         type,
-        state: NODE_STATES.DEFAULT,
-      },
-    };
-    setNodes((nds) => [...nds, newNode]);
-    setHasUnsavedChanges(true);
-    return newNode;
-  }, []);
+        position,
+        data: {
+          ...data,
+          label: NODE_LABELS[type] || type,
+          type,
+          state: NODE_STATES.DEFAULT,
+        },
+      };
+      setNodes((nds) => [...nds, newNode]);
+      setHasUnsavedChanges(true);
+      return newNode;
+    },
+    [setNodes],
+  );
 
   const deleteNode = useCallback(
     (nodeId) => {
@@ -185,28 +211,31 @@ export function useFlowState() {
       setHasUnsavedChanges(true);
       if (selectedNodeId === nodeId) setSelectedNodeId(null);
     },
-    [saveToHistory, selectedNodeId],
+    [saveToHistory, selectedNodeId, setNodes, setEdges],
   );
 
-  const updateNodeState = useCallback((nodeId, state, options = {}) => {
-    setNodes((nds) =>
-      nds.map((node) => {
-        if (node.id === nodeId) {
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              state,
-              statusMessage: options.message,
-              lastUpdate: new Date().toISOString(),
-            },
-            style: getNodeStyle(state, node.style),
-          };
-        }
-        return node;
-      }),
-    );
-  }, []);
+  const updateNodeState = useCallback(
+    (nodeId, state, options = {}) => {
+      setNodes((nds) =>
+        nds.map((node) => {
+          if (node.id === nodeId) {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                state,
+                statusMessage: options.message,
+                lastUpdate: new Date().toISOString(),
+              },
+              style: getNodeStyle(state, node.style),
+            };
+          }
+          return node;
+        }),
+      );
+    },
+    [setNodes],
+  );
 
   const clearFlow = useCallback(
     (setApiStatus) => {
@@ -217,7 +246,7 @@ export function useFlowState() {
       if (setApiStatus)
         setApiStatus({ state: "idle", message: "Canvas cleared" });
     },
-    [saveToHistory],
+    [saveToHistory, setNodes, setEdges],
   );
 
   const undo = useCallback(() => {
@@ -237,7 +266,7 @@ export function useFlowState() {
         ],
       };
     });
-  }, []);
+  }, [setNodes, setEdges]);
 
   const redo = useCallback(() => {
     setHistory((prev) => {
@@ -256,7 +285,7 @@ export function useFlowState() {
         future: newFuture,
       };
     });
-  }, []);
+  }, [setNodes, setEdges]);
 
   const groupNodes = useCallback(
     async (currentProject, currentFlowId, queryClient, toast, t) => {
@@ -352,6 +381,10 @@ export function useFlowState() {
             data: {
               ...node.data,
               flowId: newFlowId,
+              configuration: {
+                ...node.data?.configuration,
+                flowId: newFlowId,
+              },
               subFlow: undefined,
             },
           };
@@ -381,7 +414,7 @@ export function useFlowState() {
         }, 50);
       }
     },
-    [saveToHistory],
+    [saveToHistory, setNodes, setEdges],
   );
 
   const toggleNodesDisabled = useCallback(
@@ -422,7 +455,7 @@ export function useFlowState() {
         return nextNodes;
       });
     },
-    [saveToHistory],
+    [saveToHistory, setNodes, setEdges],
   );
 
   const toggleDownstreamDisabled = useCallback(
@@ -452,35 +485,38 @@ export function useFlowState() {
     [toggleNodesDisabled],
   );
 
-  const addGhostNode = useCallback((type, selector, value) => {
-    const id = generateNodeId();
-    const label = NODE_LABELS[type] || type;
+  const addGhostNode = useCallback(
+    (type, selector, value) => {
+      const id = generateNodeId();
+      const label = NODE_LABELS[type] || type;
 
-    const rightmostXP = nodesRef.current.reduce(
-      (max, n) => Math.max(max, n.position.x),
-      100,
-    );
-    const lastNodeAtY = nodesRef.current
-      .filter((n) => n.position.x === rightmostXP)
-      .reduce((max, n) => Math.max(max, n.position.y), 100);
+      const rightmostXP = nodesRef.current.reduce(
+        (max, n) => Math.max(max, n.position.x),
+        100,
+      );
+      const lastNodeAtY = nodesRef.current
+        .filter((n) => n.position.x === rightmostXP)
+        .reduce((max, n) => Math.max(max, n.position.y), 100);
 
-    const newNode = {
-      id,
-      type,
-      position: { x: rightmostXP + 300, y: lastNodeAtY },
-      data: {
-        label,
+      const newNode = {
+        id,
         type,
-        configuration: { selector, text: value },
-        isGhost: true,
-        state: NODE_STATES.DEFAULT,
-      },
-      sourcePosition: "right",
-      targetPosition: "left",
-    };
+        position: { x: rightmostXP + 300, y: lastNodeAtY },
+        data: {
+          label,
+          type,
+          configuration: { selector, text: value },
+          isGhost: true,
+          state: NODE_STATES.DEFAULT,
+        },
+        sourcePosition: "right",
+        targetPosition: "left",
+      };
 
-    setNodes((nds) => [...nds, newNode]);
-  }, []);
+      setNodes((nds) => [...nds, newNode]);
+    },
+    [setNodes],
+  );
 
   const replayRun = useCallback(
     (runData, toast) => {
@@ -508,7 +544,7 @@ export function useFlowState() {
         );
       }
     },
-    [updateNodeState],
+    [updateNodeState, setNodes, setEdges],
   );
 
   const ungroupNodes = useCallback(
@@ -544,7 +580,7 @@ export function useFlowState() {
         ...restoredNodes,
       ]);
     },
-    [saveToHistory],
+    [saveToHistory, setNodes],
   );
 
   const updateNodeConfiguration = useCallback(
@@ -580,7 +616,7 @@ export function useFlowState() {
         }),
       );
     },
-    [saveToHistory],
+    [saveToHistory, setNodes],
   );
 
   const copyElements = useCallback(() => {
@@ -624,7 +660,7 @@ export function useFlowState() {
 
     setHasUnsavedChanges(true);
     return selectedNodes.length + selectedEdges.length;
-  }, [saveToHistory]);
+  }, [saveToHistory, setNodes, setEdges]);
 
   const pasteElements = useCallback(() => {
     if (clipboard.nodes.length === 0 && clipboard.edges.length === 0) return 0;
@@ -673,7 +709,7 @@ export function useFlowState() {
 
     setHasUnsavedChanges(true);
     return newNodes.length + newEdges.length;
-  }, [clipboard, saveToHistory]);
+  }, [clipboard, saveToHistory, setNodes, setEdges]);
 
   const duplicateElements = useCallback(() => {
     const selectedNodes = nodesRef.current.filter((n) => n.selected);
@@ -729,7 +765,7 @@ export function useFlowState() {
 
     setHasUnsavedChanges(true);
     return newNodes.length + newEdges.length;
-  }, [saveToHistory]);
+  }, [saveToHistory, setNodes, setEdges]);
 
   const designTimeContext = useMemo(() => {
     return calculateDesignTimeContext(nodes, edges);

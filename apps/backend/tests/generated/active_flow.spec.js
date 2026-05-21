@@ -2,48 +2,16 @@ import { test } from '@playwright/test';
 
 test(`Flujo Generado Hal-Test`, async ({ page }) => {
     console.log(`🚀 Iniciando ejecución del flujo en javascript...`);
-    await test.step(`Launch Browser`, async () => {
-        // Browser managed by runner
-    });
-
-    await test.step(`Navigate to SauceDemo`, async () => {
-        await page.goto(`https://www.saucedemo.com`);
-    });
-
-    await test.step(`conditional`, async () => {
-        console.log(`⚠️ Acción no implementada o pendiente: conditional`);
-    });
-
-    await test.step(`Set Password`, async () => {
-        console.log(`⚠️ Acción no implementada o pendiente: variable`);
-    });
-
-    await test.step(`Set Username`, async () => {
-        console.log(`⚠️ Acción no implementada o pendiente: variable`);
-    });
-
     await test.step(`Enter Username`, async () => {
-        await page.fill(`#user-name`, `{{test_user}}`);
+        await page.fill(`#user-name`, `{{user_role}}`);
     });
 
     await test.step(`Enter Password`, async () => {
-        await page.fill(`#password`, `{{test_password}}`);
+        await page.fill(`#password`, `secret_sauce`);
     });
 
-    await test.step(`Submit Login`, async () => {
+    await test.step(`Click Login`, async () => {
         await page.click(`#login-button`);
-    });
-
-    await test.step(`Reload Page`, async () => {
-        await page.reload();
-    });
-
-    await test.step(`Evidence`, async () => {
-        await page.screenshot({ path: 'screenshot_9.png' });
-    });
-
-    await test.step(`Finish Tour`, async () => {
-        // Browser managed by runner
     });
     console.log(`✅ Flujo completado con éxito.`);
 });

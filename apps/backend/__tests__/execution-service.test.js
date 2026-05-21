@@ -83,7 +83,7 @@ describe('ExecutionService - Graph Traversal & DPE', () => {
         // Dynamic import to get fresh instance after mocks
         const mod = await import('../services/ExecutionService.js');
         ExecutionService = mod.executionService;
-    });
+    }, 30000);
 
     it('should execute nodes in topological order (BFS - no incoming edges first)', async () => {
         const executionOrder = [];

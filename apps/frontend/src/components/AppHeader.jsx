@@ -389,11 +389,6 @@ function AppHeader({
           )}
         >
           <Cloud size={18} />
-          {isGuest && (
-            <span className="ml-2 text-[10px] font-bold uppercase tracking-tight hidden md:inline">
-              Sync
-            </span>
-          )}
         </HeaderButton>
 
         <HeaderButton

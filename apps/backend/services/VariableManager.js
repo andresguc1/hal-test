@@ -226,8 +226,14 @@ class VariableManager {
                     `[VariableManager] ✅ Match found: "${targetNode}" matches key "${key}" (Normalized: ${normalizedTarget})`,
                 );
                 if (propertyPath.length > 0) {
-                    const res = this._drill(value, propertyPath);
+                    let res = this._drill(value, propertyPath);
                     if (res !== undefined) return res;
+
+                    if (isResult && (propertyPath[0] === 'result' || propertyPath[0] === 'data')) {
+                        const adjustedPath = propertyPath.slice(1);
+                        res = this._drill(value, adjustedPath);
+                        if (res !== undefined) return res;
+                    }
                 } else {
                     return value;
                 }
@@ -253,8 +259,14 @@ class VariableManager {
                         `[VariableManager] 🔍 Deep Match Found: "${targetNode}" matches content of node "${key}"`,
                     );
                     if (propertyPath.length > 0) {
-                        const res = this._drill(value, propertyPath);
+                        let res = this._drill(value, propertyPath);
                         if (res !== undefined) return res;
+
+                        if (propertyPath[0] === 'result' || propertyPath[0] === 'data') {
+                            const adjustedPath = propertyPath.slice(1);
+                            res = this._drill(value, adjustedPath);
+                            if (res !== undefined) return res;
+                        }
                     } else {
                         return value;
                     }
@@ -430,7 +442,7 @@ class VariableManager {
         return text.replace(/(?:\{\{([^}]+)\}\})|(?:\$\{([^}]+)\})/g, (match, p1, p2) => {
             const varName = (p1 || p2).trim();
             const val = this.get(varName, runId);
-            return val !== undefined ? val : null;
+            return val !== undefined ? val : match;
         });
     }
 
@@ -473,8 +485,10 @@ class VariableManager {
         }
     }
 
-    evaluateStructured(rule, runId = null) {
-        return rule && typeof rule === 'object' ? this.evaluateCondition(rule, runId) : false;
+    evaluateStructured(rule, runId = null, strict = false) {
+        return rule && typeof rule === 'object'
+            ? this.evaluateCondition(rule, runId, strict)
+            : false;
     }
 
     evaluateCondition(cond, runId = null) {
@@ -518,6 +532,20 @@ class VariableManager {
             rR = Number(rR);
         } else if (typeof rR === 'number' && typeof rL === 'string' && rL !== '' && !isNaN(rL)) {
             rL = Number(rL);
+        }
+
+        // Boolean normalization
+        const isTrueStr = (val) =>
+            typeof val === 'string' && ['true', 'success'].includes(val.toLowerCase());
+        const isFalseStr = (val) =>
+            typeof val === 'string' && ['false', 'error', 'fail'].includes(val.toLowerCase());
+
+        if (typeof rL === 'boolean') {
+            if (isTrueStr(rR)) rR = true;
+            else if (isFalseStr(rR)) rR = false;
+        } else if (typeof rR === 'boolean') {
+            if (isTrueStr(rL)) rL = true;
+            else if (isFalseStr(rL)) rL = false;
         }
 
         // Phase 3: Compare resolved values

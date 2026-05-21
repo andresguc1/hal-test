@@ -1534,146 +1534,146 @@ function Dashboard() {
             <div ref={reactFlowWrapper} className="flex-1 w-full relative">
               <ErrorBoundary onReset={handleResetCanvas}>
                 <ReactFlow {...flowConfig} onNodesDelete={onNodesDelete}>
-                {showMinimap && <StyledMiniMap />}
-                <Controls>
-                  <ControlButton
-                    onClick={() => onLayout("LR")}
-                    title={t("common.magic_organize", "Magic Organize")}
-                  >
-                    <Wand2 className="w-4 h-4" />
-                  </ControlButton>
-                </Controls>
+                  {showMinimap && <StyledMiniMap />}
+                  <Controls>
+                    <ControlButton
+                      onClick={() => onLayout("LR")}
+                      title={t("common.magic_organize", "Magic Organize")}
+                    >
+                      <Wand2 className="w-4 h-4" />
+                    </ControlButton>
+                  </Controls>
 
-                {showGrid && (
-                  <Background
-                    className="react-flow-background"
-                    variant="dots"
-                    gap={24}
-                    size={1}
-                    color="var(--grid-dots)"
-                  />
-                )}
+                  {showGrid && (
+                    <Background
+                      className="react-flow-background"
+                      variant="dots"
+                      gap={24}
+                      size={1}
+                      color="var(--grid-dots)"
+                    />
+                  )}
 
-                {/* VIGNETTE OVERLAY (For depth) - Theme Aware */}
-                <div
-                  className="absolute inset-0 pointer-events-none z-[1] mix-blend-multiply transition-opacity duration-400"
-                  style={{
-                    background:
-                      "radial-gradient(circle at center, transparent 30%, rgba(0, 0, 0, 0.2) 100%)",
-                    opacity: theme === "dark" ? 0.4 : 0.1,
-                  }}
-                />
-
-                {/* EXECUTION PULSE OVERLAY */}
-                {isReadOnly && (
-                  <div className="absolute inset-0 z-[10] pointer-events-none animate-pulse-overlay border-[4px] border-indigo-500/10 rounded-xl" />
-                )}
-
-                {/* Context Menu Overlay */}
-                {menu && (
-                  <ContextMenu
-                    x={menu.x}
-                    y={menu.y}
-                    type={menu.type}
-                    data={menu.data}
-                    recentNodes={frequentNodes} // Pass smart favorites
-                    onClose={() => setMenu(null)}
-                    actions={{
-                      copy: handleCopy,
-                      paste: handlePaste,
-                      cut: handleCut,
-                      delete: () => {
-                        if (menu.type === "node") deleteNode(menu.id);
-                        if (menu.type === "edge") {
-                          setEdges((eds) =>
-                            eds.filter((e) => e.id !== menu.id),
-                          );
-                        }
-                        if (menu.type === "selection") {
-                          handleDeleteSelected();
-                        }
-                      },
-                      group: () => {
-                        groupNodes();
-                        setMenu(null);
-                      },
-                      loopSelection: () => {
-                        loopNodes();
-                        setMenu(null);
-                      },
-                      ungroup: () => {
-                        // Handle ungrouping via context menu
-                        // Check if the right-clicked node is a component, or if selection contains one
-                        if (
-                          menu.data &&
-                          (menu.data.type === "component" ||
-                            menu.data.data?.type === "component" ||
-                            menu.data.type === "loop" ||
-                            menu.data.data?.type === "loop")
-                        ) {
-                          ungroupNodes(menu.data.id);
-                        } else {
-                          handleUngroup(); // Fallback to selection based
-                        }
-                        setMenu(null);
-                      },
-                      duplicate: handleDuplicateNodes,
-                      addNode: () => setIsCreationPanelVisible(true), // Legacy: Open Panel
-                      createNode: (type) => {
-                        const position = screenToFlowPosition({
-                          x: menu.x,
-                          y: menu.y,
-                        });
-                        addNode(type, position);
-                        // Track usage
-                        setNodeUsage((prev) => ({
-                          ...prev,
-                          [type]: (prev[type] || 0) + 1,
-                        }));
-                      },
-                      selectAll: handleSelectAll,
-                      undo: undo,
-                      redo: redo,
-                      canUndo: canUndo,
-                      canRedo: canRedo,
-                      canPaste:
-                        clipboard.nodes.length > 0 ||
-                        clipboard.edges.length > 0,
-                      cleanLayout: () => onLayout("LR"),
-                      toggleDisabled: handleToggleDisabled,
-                      toggleDownstream: handleToggleDownstream,
-                      runNode: (id) => {
-                        const node = nodes.find((n) => n.id === id);
-                        if (node) {
-                          executeSingleNode(
-                            node.id,
-                            node.type,
-                            node.data?.configuration || {},
-                            {
-                              runId: reportingRunId,
-                              socketId: socket?.id,
-                            },
-                          );
-                        }
-                      },
-                      diveIn: (id) => enterComponent(id),
-                      selectNext: (id) => {
-                        const nextEdge = edges.find((e) => e.source === id);
-                        if (nextEdge) {
-                          handleNavigateToNode(nextEdge.target);
-                        }
-                      },
-                      selectPrev: (id) => {
-                        const prevEdge = edges.find((e) => e.target === id);
-                        if (prevEdge) {
-                          handleNavigateToNode(prevEdge.source);
-                        }
-                      },
+                  {/* VIGNETTE OVERLAY (For depth) - Theme Aware */}
+                  <div
+                    className="absolute inset-0 pointer-events-none z-[1] mix-blend-multiply transition-opacity duration-400"
+                    style={{
+                      background:
+                        "radial-gradient(circle at center, transparent 30%, rgba(0, 0, 0, 0.2) 100%)",
+                      opacity: theme === "dark" ? 0.4 : 0.1,
                     }}
                   />
-                )}
-              </ReactFlow>
-             </ErrorBoundary>
+
+                  {/* EXECUTION PULSE OVERLAY */}
+                  {isReadOnly && (
+                    <div className="absolute inset-0 z-[10] pointer-events-none animate-pulse-overlay border-[4px] border-indigo-500/10 rounded-xl" />
+                  )}
+
+                  {/* Context Menu Overlay */}
+                  {menu && (
+                    <ContextMenu
+                      x={menu.x}
+                      y={menu.y}
+                      type={menu.type}
+                      data={menu.data}
+                      recentNodes={frequentNodes} // Pass smart favorites
+                      onClose={() => setMenu(null)}
+                      actions={{
+                        copy: handleCopy,
+                        paste: handlePaste,
+                        cut: handleCut,
+                        delete: () => {
+                          if (menu.type === "node") deleteNode(menu.id);
+                          if (menu.type === "edge") {
+                            setEdges((eds) =>
+                              eds.filter((e) => e.id !== menu.id),
+                            );
+                          }
+                          if (menu.type === "selection") {
+                            handleDeleteSelected();
+                          }
+                        },
+                        group: () => {
+                          groupNodes();
+                          setMenu(null);
+                        },
+                        loopSelection: () => {
+                          loopNodes();
+                          setMenu(null);
+                        },
+                        ungroup: () => {
+                          // Handle ungrouping via context menu
+                          // Check if the right-clicked node is a component, or if selection contains one
+                          if (
+                            menu.data &&
+                            (menu.data.type === "component" ||
+                              menu.data.data?.type === "component" ||
+                              menu.data.type === "loop" ||
+                              menu.data.data?.type === "loop")
+                          ) {
+                            ungroupNodes(menu.data.id);
+                          } else {
+                            handleUngroup(); // Fallback to selection based
+                          }
+                          setMenu(null);
+                        },
+                        duplicate: handleDuplicateNodes,
+                        addNode: () => setIsCreationPanelVisible(true), // Legacy: Open Panel
+                        createNode: (type) => {
+                          const position = screenToFlowPosition({
+                            x: menu.x,
+                            y: menu.y,
+                          });
+                          addNode(type, position);
+                          // Track usage
+                          setNodeUsage((prev) => ({
+                            ...prev,
+                            [type]: (prev[type] || 0) + 1,
+                          }));
+                        },
+                        selectAll: handleSelectAll,
+                        undo: undo,
+                        redo: redo,
+                        canUndo: canUndo,
+                        canRedo: canRedo,
+                        canPaste:
+                          clipboard.nodes.length > 0 ||
+                          clipboard.edges.length > 0,
+                        cleanLayout: () => onLayout("LR"),
+                        toggleDisabled: handleToggleDisabled,
+                        toggleDownstream: handleToggleDownstream,
+                        runNode: (id) => {
+                          const node = nodes.find((n) => n.id === id);
+                          if (node) {
+                            executeSingleNode(
+                              node.id,
+                              node.type,
+                              node.data?.configuration || {},
+                              {
+                                runId: reportingRunId,
+                                socketId: socket?.id,
+                              },
+                            );
+                          }
+                        },
+                        diveIn: (id) => enterComponent(id),
+                        selectNext: (id) => {
+                          const nextEdge = edges.find((e) => e.source === id);
+                          if (nextEdge) {
+                            handleNavigateToNode(nextEdge.target);
+                          }
+                        },
+                        selectPrev: (id) => {
+                          const prevEdge = edges.find((e) => e.target === id);
+                          if (prevEdge) {
+                            handleNavigateToNode(prevEdge.source);
+                          }
+                        },
+                      }}
+                    />
+                  )}
+                </ReactFlow>
+              </ErrorBoundary>
             </div>
 
             {/* Real-time Execution Terminal - Now inside Main Layout */}

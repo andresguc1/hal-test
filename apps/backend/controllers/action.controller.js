@@ -4425,17 +4425,34 @@ export const conditionalAction = async (req, res) => {
                 if (branch.isFallback || branch.id === 'false' || branch.id === 'Else') continue;
 
                 let branchMatched = false;
+                let rL = undefined;
+                let rR = undefined;
                 try {
-                    branchMatched =
-                        variableManager.evaluateStructured(branch.expression, runId) === true;
-
                     const expr = branch.expression || {};
-                    const rL = variableManager.resolveValue(expr.left, runId);
-                    const rR = variableManager.resolveValue(expr.right, runId);
+                    rL = variableManager.resolveValue(expr.left, runId);
+                    rR = variableManager.resolveValue(expr.right, runId);
+
+                    let exprResult = false;
+                    if (typeof branch.expression === 'string') {
+                        exprResult = variableManager.evaluate(branch.expression, runId, {}, true);
+                    } else {
+                        exprResult = variableManager.evaluateStructured(
+                            branch.expression,
+                            runId,
+                            true,
+                        );
+                    }
+
+                    branchMatched =
+                        !branch.expression ||
+                        Object.keys(branch.expression).length === 0 ||
+                        exprResult === true;
 
                     // User-friendly log format
                     const logLabel = branch.label || branch.id;
-                    const comparison = `Comparing [${expr.left || '?'}] (${JSON.stringify(rL)}) with [${expr.right || '?'}] (${JSON.stringify(rR)})`;
+                    const comparison = branch.expression
+                        ? `Comparing [${expr.left || '?'}] (${JSON.stringify(rL)}) with [${expr.right || '?'}] (${JSON.stringify(rR)})`
+                        : 'Default Catch-all (No expression)';
                     const statusIcon = branchMatched ? '✅ MATCH' : '❌ NO MATCH';
 
                     smartEmitLog(
@@ -4449,9 +4466,23 @@ export const conditionalAction = async (req, res) => {
                         'error',
                         req.body.nodeId,
                     );
+                    trace[branch.id || branch.label] = {
+                        matched: false,
+                        status: 'error',
+                        error: e.message,
+                        resolvedLeft: rL,
+                        resolvedRight: rR,
+                    };
                 }
 
-                trace[branch.id || branch.label] = { matched: branchMatched };
+                if (!trace[branch.id || branch.label]) {
+                    trace[branch.id || branch.label] = {
+                        matched: branchMatched,
+                        status: branchMatched ? 'matched' : 'not_matched',
+                        resolvedLeft: rL,
+                        resolvedRight: rR,
+                    };
+                }
 
                 if (branchMatched) {
                     matchedBranch = branch;
@@ -4459,21 +4490,42 @@ export const conditionalAction = async (req, res) => {
                 }
             }
 
-            // Fallback logic if no branch matched
-            if (!matchedBranch) {
-                matchedBranch = branches.find(
-                    (b) => b.isFallback || b.id === 'false' || b.id === 'Else',
-                );
-                if (matchedBranch) {
-                    smartEmitLog(
-                        `[Conditional] 🛡️ No matches found. Routing to Fallback: "${matchedBranch.label || 'Else'}"`,
-                        'info',
-                        req.body.nodeId,
-                    );
+            // Mark skipped branches
+            for (const branch of branches) {
+                const bId = branch.id || branch.label;
+                if (!trace[bId]) {
+                    trace[bId] = { matched: false, status: 'skipped' };
                 }
             }
 
-            const finalPath = matchedBranch ? matchedBranch.id || matchedBranch.label : 'Else';
+            const requestedFallback =
+                configuration?.fallbackPath || req.body.fallbackPath || 'false';
+
+            // Fallback logic if no branch matched
+            if (!matchedBranch) {
+                matchedBranch = branches.find(
+                    (b) =>
+                        b.isFallback ||
+                        b.id === 'false' ||
+                        b.id === 'Else' ||
+                        (!b.expression && b.id !== requestedFallback),
+                );
+                if (matchedBranch) {
+                    smartEmitLog(
+                        `[Conditional] 🛡️ No matches found. Routing to Fallback: "${matchedBranch.label || requestedFallback}"`,
+                        'info',
+                        req.body.nodeId,
+                    );
+                    const bId = matchedBranch.id || matchedBranch.label;
+                    trace[bId] = { matched: true, status: 'matched' };
+                }
+            }
+
+            const finalPath = matchedBranch
+                ? matchedBranch.id || matchedBranch.label
+                : requestedFallback;
+            const finalResult = !!matchedBranch;
+
             smartEmitLog(
                 `[Conditional] ✅ Final Decision: ${matchedBranch?.label || finalPath}`,
                 'success',
@@ -4483,7 +4535,7 @@ export const conditionalAction = async (req, res) => {
             return res.json({
                 success: true,
                 data: {
-                    result: !!matchedBranch,
+                    result: finalResult,
                     path: finalPath,
                     branchLabel: matchedBranch?.label,
                     trace,
@@ -4895,15 +4947,16 @@ export const transformAction = async (req, res) => {
 
 export const backendJsAction = async (req, res) => {
     try {
-        const { expression, outputVar = 'backendResult' } = req.body;
-        if (!expression) {
+        const { expression, script, code, outputVar = 'backendResult' } = req.body;
+        const activeScript = expression || script || code;
+        if (!activeScript) {
             return res.status(400).json({
                 success: false,
-                message: 'Expression is required',
+                message: 'Expression/Script is required',
             });
         }
 
-        const result = variableManager.evaluate(expression, req.body.runId);
+        const result = variableManager.evaluate(activeScript, req.body.runId);
         const resolvedOutput = outputVar.replace('${', '').replace('}', '');
         variableManager.set(resolvedOutput, result, req.body.runId);
 

@@ -42,10 +42,12 @@ export default class ErrorBoundary extends Component {
             </div>
 
             <div className="space-y-2">
-              <h3 className="text-lg font-bold text-white tracking-tight">Canvas Engine Crash</h3>
+              <h3 className="text-lg font-bold text-white tracking-tight">
+                Canvas Engine Crash
+              </h3>
               <p className="text-xs text-slate-400 leading-relaxed">
-                We detected an unstable state or corrupted node position in the canvas. 
-                Don't worry, your progress has been safely locked.
+                We detected an unstable state or corrupted node position in the
+                canvas. Don't worry, your progress has been safely locked.
               </p>
             </div>
 

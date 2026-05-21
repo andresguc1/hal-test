@@ -25,7 +25,7 @@ beforeEach(async () => {
 
     const actionMod = await import('../controllers/action.controller.js');
     conditionalAction = actionMod.conditionalAction;
-});
+}, 30000);
 
 /**
  * Helper to create mock req/res objects for controller testing

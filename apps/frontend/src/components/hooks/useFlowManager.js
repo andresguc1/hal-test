@@ -55,6 +55,7 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
     switchFlow,
     setSelectedNodeId: state.setSelectedNodeId,
     fitView,
+    migrateNodes: state.migrateNodes,
   });
 
   // Backward compatibility mappings
