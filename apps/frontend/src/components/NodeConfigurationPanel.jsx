@@ -27,6 +27,7 @@ import { NODE_INPUTS } from "@/config/validationRules";
 import ConditionalBranchesEditor from "./editors/ConditionalBranchesEditor";
 import SwitchCasesEditor from "./editors/SwitchCasesEditor";
 import { useForm, Controller } from "react-hook-form";
+import { createPortal } from "react-dom";
 
 const NodeConfigurationPanel = ({
   isVisible,
@@ -122,6 +123,17 @@ const NodeConfigurationPanel = ({
   const [localLabel, setLocalLabel] = useState(
     activeNode?.data?.customLabel || activeNode?.data?.label || "",
   );
+
+  const [lightboxUrl, setLightboxUrl] = useState(null);
+
+  React.useEffect(() => {
+    if (!lightboxUrl) return;
+    const onKey = (e) => {
+      if (e.key === "Escape") setLightboxUrl(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [lightboxUrl]);
 
   const watchedValues = watch();
   const localConfig = watchedValues;
@@ -359,22 +371,41 @@ const NodeConfigurationPanel = ({
 
     const stringValue = value.toString();
     const isBase64 = stringValue.length > 100 && !stringValue.includes(" ");
+    const isFilePath =
+      stringValue.startsWith("storage/") ||
+      stringValue.endsWith(".png") ||
+      stringValue.endsWith(".jpg") ||
+      stringValue.endsWith(".jpeg");
 
-    // Attempt to display base64 images if the key strongly suggests it
-    if (keyName && keyName.toLowerCase().includes("screenshot") && isBase64) {
-      return (
-        <div className="mt-1 bg-slate-900/50 p-2 rounded-lg border border-white/5 inline-block">
-          <img
-            src={
-              stringValue.startsWith("data:image")
-                ? stringValue
-                : `data:image/png;base64,${stringValue}`
-            }
-            alt="Screenshot Evidence"
-            className="max-w-full max-h-48 object-contain rounded shadow-lg"
-          />
-        </div>
-      );
+    // Display screenshots (either base64 or file path) if the key suggests it
+    if (keyName && keyName.toLowerCase().includes("screenshot")) {
+      if (isBase64 || isFilePath) {
+        const imageUrl = isBase64
+          ? (stringValue.startsWith("data:image")
+              ? stringValue
+              : `data:image/png;base64,${stringValue}`)
+          : api.getFileUrl(stringValue);
+
+        return (
+          <div className="mt-1 bg-slate-900/50 p-2 rounded-lg border border-white/5 inline-block group relative">
+            <div
+              onClick={() => setLightboxUrl(imageUrl)}
+              className="relative cursor-zoom-in overflow-hidden rounded-lg shadow-lg border border-white/10 aspect-video group/img max-w-full max-h-48 flex items-center justify-center bg-black/30"
+            >
+              <img
+                src={imageUrl}
+                alt="Screenshot Evidence"
+                className="max-w-full max-h-48 object-contain rounded transition-transform duration-300 group-hover/img:scale-[1.02] pointer-events-none"
+              />
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity duration-200 flex items-center justify-center pointer-events-none">
+                <span className="text-[10px] text-white font-bold bg-slate-900/80 px-2.5 py-1 rounded-full border border-white/20">
+                  Click to Expand
+                </span>
+              </div>
+            </div>
+          </div>
+        );
+      }
     }
 
     if (stringValue.length > 300) {
@@ -829,19 +860,55 @@ const NodeConfigurationPanel = ({
   if (!isVisible || !activeNode) return null;
 
   return (
-    <AnimatePresence>
-      <Motion.div
-        initial={{ x: "100%", opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        exit={{ x: "100%", opacity: 0 }}
-        transition={{ type: "spring", damping: 30, stiffness: 400 }}
-        className="w-full sm:w-80 md:w-[400px] h-full glass-panel z-[var(--z-popover)] flex flex-col relative shadow-2xl overflow-hidden"
-      >
-        <Header />
-        <Body />
-        <Footer />
-      </Motion.div>
-    </AnimatePresence>
+    <>
+      <AnimatePresence>
+        <Motion.div
+          initial={{ x: "100%", opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          exit={{ x: "100%", opacity: 0 }}
+          transition={{ type: "spring", damping: 30, stiffness: 400 }}
+          className="w-full sm:w-80 md:w-[400px] h-full glass-panel z-[var(--z-popover)] flex flex-col relative shadow-2xl overflow-hidden"
+        >
+          {Header()}
+          {Body()}
+          {Footer()}
+        </Motion.div>
+      </AnimatePresence>
+
+      {/* Lightbox Portal */}
+      {lightboxUrl &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[99999] bg-black/95 flex items-center justify-center p-4 backdrop-blur-md animate-in fade-in duration-200"
+            onClick={() => setLightboxUrl(null)}
+            role="dialog"
+            aria-modal="true"
+          >
+            <button
+              className="absolute top-6 right-6 p-2 rounded-full bg-white/10 text-white/70 hover:text-white hover:bg-white/20 transition-all z-50 cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightboxUrl(null);
+              }}
+              title="Close"
+            >
+              <X size={24} />
+            </button>
+
+            <div
+              className="relative max-w-[95vw] max-h-[95vh] rounded-xl overflow-hidden shadow-2xl border border-white/10 bg-black animate-in zoom-in-95 duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img
+                src={lightboxUrl}
+                alt="Fullscreen Evidence"
+                className="max-h-[90vh] w-auto max-w-full object-contain bg-black"
+              />
+            </div>
+          </div>,
+          document.body,
+        )}
+    </>
   );
 };
 
