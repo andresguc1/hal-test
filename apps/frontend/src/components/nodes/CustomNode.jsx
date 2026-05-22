@@ -154,7 +154,6 @@ function CustomNode({ data, selected }) {
                 : categoryKey.replace(/_/g, " ")}
           </span>
 
-          {/* Node Title */}
           <h3
             className={cn(
               "text-sm font-bold text-[var(--text-main)] leading-tight truncate pr-2",
@@ -164,7 +163,7 @@ function CustomNode({ data, selected }) {
               isHealed && "text-violet-400",
             )}
           >
-            {t(`nodes.labels.${data?.type}`) || data?.label || "Node"}
+            {data?.customLabel || t(`nodes.labels.${data?.type}`) || data?.label || "Node"}
           </h3>
 
           {/* Dynamic Summary / Subtitle (The "Smart" part) */}

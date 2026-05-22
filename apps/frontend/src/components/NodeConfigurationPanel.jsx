@@ -177,6 +177,35 @@ const NodeConfigurationPanel = ({
     }
   }, [watchedValues, activeNode, updateNodeConfiguration]);
 
+  const lastActiveNodeIdRef = React.useRef(activeNode?.id);
+  const labelTimeoutRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (!activeNode) return;
+
+    // Avoid syncing when active node switches
+    if (activeNode.id !== lastActiveNodeIdRef.current) {
+      lastActiveNodeIdRef.current = activeNode.id;
+      return;
+    }
+
+    const currentLabel =
+      activeNode.data?.customLabel || activeNode.data?.label || "";
+    if (localLabel !== currentLabel) {
+      if (labelTimeoutRef.current) clearTimeout(labelTimeoutRef.current);
+      labelTimeoutRef.current = setTimeout(() => {
+        updateNodeConfiguration(activeNode.id, {
+          customLabel: localLabel,
+          label: localLabel,
+        });
+      }, 200);
+    }
+    return () => {
+      if (labelTimeoutRef.current) clearTimeout(labelTimeoutRef.current);
+    };
+  }, [localLabel, activeNode, updateNodeConfiguration]);
+
+
   const { precedingNodes } = useMemo(() => {
     if (!activeNode || !edges || !nodes) return { precedingNodes: [] };
 
