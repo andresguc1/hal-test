@@ -138,15 +138,49 @@ const NodeConfigurationPanel = ({
   const watchedValues = watch();
   const localConfig = watchedValues;
 
+  const isResettingRef = React.useRef(false);
+
   const lastSyncedConfigRef = React.useRef({
     config: activeNode?.data?.configuration || {},
     nodeId: activeNode?.id,
   });
 
+  const cleanConfiguration = useCallback((config, nodeType) => {
+    if (!config) return {};
+    const allowedKeys = new Set([
+      "customLabel",
+      "label",
+      "description",
+      "technicalName",
+      "headless",
+      "continueOnFailure",
+      "continueOnError",
+      "takeScreenshot",
+      "url",
+      "flowId",
+    ]);
+
+    // Add inputs defined in NODE_INPUTS schema for this node type
+    const inputs = NODE_INPUTS[nodeType] || NODE_INPUTS.default || [];
+    inputs.forEach((input) => allowedKeys.add(input.key));
+
+    // Also add definedInputs which contains dynamic keys (like loop / component parameters)
+    definedInputs.forEach((input) => allowedKeys.add(input.key));
+
+    const cleaned = {};
+    for (const [key, val] of Object.entries(config)) {
+      if (allowedKeys.has(key)) {
+        cleaned[key] = val;
+      }
+    }
+    return cleaned;
+  }, [definedInputs]);
+
   React.useEffect(() => {
     if (!activeNode) return;
     const globalConfig = activeNode.data?.configuration || {};
     if (activeNode.id !== lastSyncedConfigRef.current.nodeId) {
+      isResettingRef.current = true;
       reset(globalConfig);
       setLocalLabel(
         activeNode.data?.customLabel || activeNode.data?.label || "",
@@ -165,17 +199,26 @@ const NodeConfigurationPanel = ({
     const currentConfigStr = JSON.stringify(watchedValues);
     const lastSyncedStr = JSON.stringify(lastSyncedConfigRef.current.config);
 
+    if (isResettingRef.current) {
+      // If we are in the middle of a reset, check if the watchedValues have successfully caught up
+      if (currentConfigStr === lastSyncedStr) {
+        isResettingRef.current = false;
+      }
+      return;
+    }
+
     if (currentConfigStr !== lastSyncedStr) {
       if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
       updateTimeoutRef.current = setTimeout(() => {
-        updateNodeConfiguration(activeNode.id, {
-          ...(activeNode.data?.configuration || {}),
-          ...watchedValues,
-        });
+        if (activeNode.id !== lastSyncedConfigRef.current.nodeId) return;
+
+        const cleanedConfig = cleanConfiguration(watchedValues, activeNode.data?.type || activeNode.type);
+
+        updateNodeConfiguration(activeNode.id, cleanedConfig);
         lastSyncedConfigRef.current.config = watchedValues;
       }, 200);
     }
-  }, [watchedValues, activeNode, updateNodeConfiguration]);
+  }, [watchedValues, activeNode, updateNodeConfiguration, cleanConfiguration]);
 
   const lastActiveNodeIdRef = React.useRef(activeNode?.id);
   const labelTimeoutRef = React.useRef(null);
@@ -531,9 +574,13 @@ const NodeConfigurationPanel = ({
                 <SwitchCasesEditor
                   value={value}
                   onChange={onChange}
+                  data={activeNode?.data}
                   variables={contextualVariablesMap}
                   allVariables={variablesMap}
                   suggestions={availableVariablePaths}
+                  comparisonType={watch("comparisonType") || "equals"}
+                  edges={edges}
+                  nodeId={activeNode?.id}
                 />
               </div>
             )}
@@ -677,6 +724,7 @@ const NodeConfigurationPanel = ({
                 <VariableInput
                   value={value}
                   variables={variablesMap}
+                  suggestions={availableVariablePaths}
                   onChange={onChange}
                   className="w-full px-3 py-2 text-xs font-mono"
                 />
@@ -698,6 +746,7 @@ const NodeConfigurationPanel = ({
                 <VariableInput
                   value={value}
                   variables={variablesMap}
+                  suggestions={availableVariablePaths}
                   onChange={onChange}
                   className="w-full text-xs font-mono px-3 py-2"
                 />

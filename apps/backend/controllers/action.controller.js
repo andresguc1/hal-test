@@ -4600,9 +4600,12 @@ export const switchAction = async (req, res) => {
         // Configuration takes precedence
         const variableName = configuration?.variableName || bodyVariableName;
         const cases = configuration?.cases || bodyCases || [];
+        const comparisonType = configuration?.comparisonType || 'equals';
         const runId = bodyRunId || 'global';
 
-        console.log(`[Switch] Starting evaluation for node: ${nodeId || 'unknown'}`);
+        console.log(
+            `[Switch] Starting evaluation for node: ${nodeId || 'unknown'} (comparison: ${comparisonType})`,
+        );
 
         // 🟢 SEED VARIABLE CONTEXT
         if (variables && typeof variables === 'object') {
@@ -4630,32 +4633,60 @@ export const switchAction = async (req, res) => {
         }
 
         smartEmitLog(
-            `[Switch] Evaluating "${variableName}" -> [${JSON.stringify(resolvedValue)}] (${typeof resolvedValue})`,
+            `[Switch] Evaluating "${variableName}" -> [${JSON.stringify(resolvedValue)}] (${typeof resolvedValue}) using ${comparisonType}`,
             'info',
             nodeId,
         );
 
-        // 2. Find matching case
-        let matchedCase = null;
-        const trace = {};
-
-        // Helper to normalize values for comparison ( parity with VariableManager.evaluateCondition )
+        // 2. Normalize helper — conservative: only trims strings and converts numeric strings.
+        //    Does NOT convert "0"->false, "1"->true, "yes"->true, "no"->false to avoid invisible bugs.
         const normalize = (val) => {
             if (val === null || val === undefined) return val;
-            // Boolean normalization
             if (typeof val === 'boolean') return val;
             if (typeof val === 'string') {
-                const s = val.trim().toLowerCase();
-                if (s === 'true' || s === 'yes' || s === '1') return true;
-                if (s === 'false' || s === 'no' || s === '0') return false;
-                // Number normalization
-                if (s !== '' && !isNaN(s)) return Number(s);
-                return val.trim();
+                const s = val.trim();
+                // Only convert unambiguous numeric strings
+                if (s !== '' && !isNaN(s) && !isNaN(parseFloat(s))) return Number(s);
+                return s;
             }
             return val;
         };
 
-        const nResolved = normalize(resolvedValue);
+        // 3. Comparison function based on comparisonType
+        const compare = (resolved, caseVal) => {
+            switch (comparisonType) {
+                case 'contains':
+                    return String(resolved ?? '')
+                        .toLowerCase()
+                        .includes(String(caseVal ?? '').toLowerCase());
+                case 'startsWith':
+                    return String(resolved ?? '')
+                        .toLowerCase()
+                        .startsWith(String(caseVal ?? '').toLowerCase());
+                case 'endsWith':
+                    return String(resolved ?? '')
+                        .toLowerCase()
+                        .endsWith(String(caseVal ?? '').toLowerCase());
+                case 'regex': {
+                    try {
+                        const regex = new RegExp(String(caseVal ?? ''), 'i');
+                        return regex.test(String(resolved ?? ''));
+                    } catch (regexErr) {
+                        console.warn(
+                            `[Switch] ⚠️ Invalid regex pattern "${caseVal}": ${regexErr.message}`,
+                        );
+                        return false;
+                    }
+                }
+                case 'equals':
+                default:
+                    return normalize(resolved) === normalize(caseVal);
+            }
+        };
+
+        // 4. Find matching case
+        let matchedCase = null;
+        const trace = {};
 
         let normalizedCases = cases;
         if (cases && typeof cases === 'object' && !Array.isArray(cases)) {
@@ -4672,14 +4703,20 @@ export const switchAction = async (req, res) => {
                 if (c.value === 'default') continue; // Default is handled as fallback
                 // Resolve variables in case value (allows comparing against other variables)
                 const rawCaseValue = variableManager.resolveValue(c.value, runId);
-                const nCaseValue = normalize(rawCaseValue);
-                const isMatch = nCaseValue === nResolved;
+                const isMatch = compare(resolvedValue, rawCaseValue);
 
-                trace[c.id] = { value: c.value, matched: isMatch };
+                trace[c.id] = {
+                    value: c.value,
+                    resolvedCaseValue: rawCaseValue,
+                    normalizedResolved: normalize(resolvedValue),
+                    normalizedCase: normalize(rawCaseValue),
+                    comparisonType,
+                    matched: isMatch,
+                };
 
                 const logLabel = c.label || c.value || c.id;
                 smartEmitLog(
-                    `[Switch] Case "${logLabel}": Comparing [${JSON.stringify(nCaseValue)}] with [${JSON.stringify(nResolved)}] -> ${isMatch ? '✅ MATCH' : '❌ NO'}`,
+                    `[Switch] Case "${logLabel}": ${comparisonType}([${JSON.stringify(resolvedValue)}], [${JSON.stringify(rawCaseValue)}]) -> ${isMatch ? '✅ MATCH' : '❌ NO'}`,
                     'info',
                     nodeId,
                 );
@@ -4704,7 +4741,7 @@ export const switchAction = async (req, res) => {
         }
 
         smartEmitLog(
-            `[Switch] ✅ Final Decision: ${matchedCase ? matchedCase.label || matchedCase.id : 'Default'}`,
+            `[Switch] ✅ Final Decision: ${matchedCase ? matchedCase.label || matchedCase.id : 'Default'} (path: ${finalPath})`,
             'success',
             nodeId,
         );
@@ -4718,6 +4755,7 @@ export const switchAction = async (req, res) => {
                 targetPath: finalPath, // Legacy support
                 matchedCaseId: matchedCase?.id || null,
                 matchedCaseLabel: matchedCase?.label || null,
+                comparisonType,
                 trace,
             },
         });

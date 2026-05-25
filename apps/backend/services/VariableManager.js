@@ -178,6 +178,35 @@ class VariableManager {
     /**
      * Internal helper to find a variable in a specific scope using intelligent matching
      */
+    _fuzzyMatch(normLabel, normTarget) {
+        if (!normLabel || !normTarget) return false;
+
+        // Strip common prefix action verbs
+        const prefixes = ['set', 'enter', 'get', 'type', 'click', 'select', 'write', 'read'];
+        let cleanLabel = normLabel;
+        let cleanTarget = normTarget;
+
+        for (const p of prefixes) {
+            if (cleanLabel.startsWith(p)) {
+                cleanLabel = cleanLabel.slice(p.length);
+            }
+            if (cleanTarget.startsWith(p)) {
+                cleanTarget = cleanTarget.slice(p.length);
+            }
+        }
+
+        if (cleanLabel === cleanTarget) return true;
+
+        // Suffix/substring match for deep robustness (length > 3 to avoid false positives on small words)
+        if (cleanLabel.length > 3 && cleanTarget.length > 3) {
+            if (cleanLabel.endsWith(cleanTarget) || cleanTarget.endsWith(cleanLabel)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     _getFromScopeIntelligent(name, scope) {
         if (!scope || typeof scope !== 'object') return undefined;
 
@@ -220,8 +249,13 @@ class VariableManager {
             const normLabel = this._normalizeName(nodeLabel);
             const normKey = this._normalizeName(key);
 
-            // Try matching normalized label OR normalized full key
-            if (normLabel === normalizedTarget || normKey === normalizedTarget) {
+            // Try matching normalized label OR normalized full key OR fuzzy prefix matching
+            if (
+                normLabel === normalizedTarget ||
+                normKey === normalizedTarget ||
+                this._fuzzyMatch(normLabel, normalizedTarget) ||
+                this._fuzzyMatch(normKey, normalizedTarget)
+            ) {
                 console.log(
                     `[VariableManager] ✅ Match found: "${targetNode}" matches key "${key}" (Normalized: ${normalizedTarget})`,
                 );
@@ -252,8 +286,12 @@ class VariableManager {
                 const innerLabel = value.label || value.data?.label;
 
                 if (
-                    (innerTech && this._normalizeName(innerTech) === normalizedTarget) ||
-                    (innerLabel && this._normalizeName(innerLabel) === normalizedTarget)
+                    (innerTech &&
+                        (this._normalizeName(innerTech) === normalizedTarget ||
+                            this._fuzzyMatch(this._normalizeName(innerTech), normalizedTarget))) ||
+                    (innerLabel &&
+                        (this._normalizeName(innerLabel) === normalizedTarget ||
+                            this._fuzzyMatch(this._normalizeName(innerLabel), normalizedTarget)))
                 ) {
                     console.log(
                         `[VariableManager] 🔍 Deep Match Found: "${targetNode}" matches content of node "${key}"`,
@@ -299,7 +337,11 @@ class VariableManager {
                     value.customLabel ||
                     value.data?.label ||
                     value.data?.customLabel;
-                if (innerLabel && this._normalizeName(innerLabel) === normalizedTarget) {
+                if (
+                    innerLabel &&
+                    (this._normalizeName(innerLabel) === normalizedTarget ||
+                        this._fuzzyMatch(this._normalizeName(innerLabel), normalizedTarget))
+                ) {
                     console.log(
                         `[VariableManager] 🧠 Content-Aware match: Found "${targetNode}" by searching internal label in key "${key}"`,
                     );

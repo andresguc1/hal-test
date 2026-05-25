@@ -588,35 +588,102 @@ export function useFlowState() {
       setHasUnsavedChanges(true);
       saveToHistory();
 
-      setNodes((nds) =>
-        updateNodeRecursively(nds, nodeId, (n) => {
-          return {
-            ...n,
-            data: {
-              ...n.data,
-              configuration: {
-                ...n.data.configuration,
-                ...newConfig,
+      // Phase 5: Edge Reconciliation / Orphan Cleanup
+      if (newConfig.cases || newConfig.branches) {
+        setNodes((nds) => {
+          const oldNode = nds.find((n) => n.id === nodeId);
+          const oldCases = oldNode?.data?.configuration?.cases || [];
+          const oldBranches = oldNode?.data?.configuration?.branches || [];
+
+          if (newConfig.cases && Array.isArray(newConfig.cases)) {
+            const newCaseIds = new Set(newConfig.cases.map((c) => c.id));
+            const removedCaseIds = oldCases
+              .map((c) => c.id)
+              .filter((id) => !newCaseIds.has(id));
+
+            if (removedCaseIds.length > 0) {
+              setEdges((eds) =>
+                eds.filter(
+                  (e) =>
+                    !(e.source === nodeId && removedCaseIds.includes(e.sourceHandle))
+                )
+              );
+            }
+          }
+
+          if (newConfig.branches && Array.isArray(newConfig.branches)) {
+            const newBranchIds = new Set(newConfig.branches.map((b) => b.id));
+            const removedBranchIds = oldBranches
+              .map((b) => b.id)
+              .filter((id) => !newBranchIds.has(id));
+
+            if (removedBranchIds.length > 0) {
+              setEdges((eds) =>
+                eds.filter(
+                  (e) =>
+                    !(e.source === nodeId && removedBranchIds.includes(e.sourceHandle))
+                )
+              );
+            }
+          }
+
+          return updateNodeRecursively(nds, nodeId, (n) => {
+            return {
+              ...n,
+              data: {
+                ...n.data,
+                configuration: {
+                  ...n.data.configuration,
+                  ...newConfig,
+                },
+                customLabel:
+                  newConfig.customLabel !== undefined
+                    ? newConfig.customLabel
+                    : n.data.customLabel,
+                label:
+                  newConfig.label ||
+                  n.data.label ||
+                  NODE_LABELS[n.data.type] ||
+                  n.data.type,
+                description:
+                  newConfig.description !== undefined
+                    ? newConfig.description
+                    : n.data.description,
               },
-              customLabel:
-                newConfig.customLabel !== undefined
-                  ? newConfig.customLabel
-                  : n.data.customLabel,
-              label:
-                newConfig.label ||
-                n.data.label ||
-                NODE_LABELS[n.data.type] ||
-                n.data.type,
-              description:
-                newConfig.description !== undefined
-                  ? newConfig.description
-                  : n.data.description,
-            },
-          };
-        }),
-      );
+            };
+          });
+        });
+      } else {
+        setNodes((nds) =>
+          updateNodeRecursively(nds, nodeId, (n) => {
+            return {
+              ...n,
+              data: {
+                ...n.data,
+                configuration: {
+                  ...n.data.configuration,
+                  ...newConfig,
+                },
+                customLabel:
+                  newConfig.customLabel !== undefined
+                    ? newConfig.customLabel
+                    : n.data.customLabel,
+                label:
+                  newConfig.label ||
+                  n.data.label ||
+                  NODE_LABELS[n.data.type] ||
+                  n.data.type,
+                description:
+                  newConfig.description !== undefined
+                    ? newConfig.description
+                    : n.data.description,
+              },
+            };
+          }),
+        );
+      }
     },
-    [saveToHistory, setNodes],
+    [saveToHistory, setNodes, setEdges],
   );
 
   const copyElements = useCallback(() => {

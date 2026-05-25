@@ -25,6 +25,25 @@ describe('Logic Engine Nodes Validation', () => {
             expect(variableManager.evaluate('Date.now()')).toBeTypeOf('number');
             expect(variableManager.evaluate('JSON.stringify({a:1})')).toBe('{"a":1}');
         });
+
+        it('debe resolver de forma flexible variables con prefijos de accion como "Set Username" usando "Username"', () => {
+            // Caso 1: Guardado como "Set Username.result" con objeto data.value
+            variableManager.set('Set Username.result', {
+                success: true,
+                status: 'success',
+                data: { name: 'Username', value: 'standard_user' },
+            });
+
+            // Debe resolver "Username.value" a "standard_user"
+            expect(variableManager.get('Username.value')).toBe('standard_user');
+            expect(variableManager.resolveValue('{{Username.value}}')).toBe('standard_user');
+            expect(variableManager.resolveValue('${Username.value}')).toBe('standard_user');
+
+            // Caso 2: Guardado como "Enter Password" con valor directo string
+            variableManager.set('Enter Password', 'secret_sauce');
+            expect(variableManager.get('Password')).toBe('secret_sauce');
+            expect(variableManager.resolveValue('{{Password}}')).toBe('secret_sauce');
+        });
     });
 
     // 1. Variable Node
@@ -302,6 +321,127 @@ describe('Logic Engine Nodes Validation', () => {
 
             expect(result.success).toBe(true);
             expect(result.data.targetPath).toBe('fallback_path');
+        });
+
+        it('debe admitir comparacion "contains"', async () => {
+            variableManager.set('username', 'standard_user_active');
+            const req = {
+                body: {
+                    configuration: {
+                        variableName: '${username}',
+                        comparisonType: 'contains',
+                        cases: [
+                            { value: 'active', id: 'active_path' },
+                            { value: 'inactive', id: 'inactive_path' },
+                        ],
+                    },
+                },
+                t: (k) => k,
+            };
+            let result = null;
+            const res = {
+                status: () => res,
+                json: (d) => {
+                    result = d;
+                    return res;
+                },
+            };
+
+            await actions.switchAction(req, res);
+
+            expect(result.success).toBe(true);
+            expect(result.path).toBe('active_path');
+        });
+
+        it('debe admitir comparacion "startsWith" y "endsWith"', async () => {
+            variableManager.set('log_msg', 'ERROR: database timeout');
+            const req = {
+                body: {
+                    configuration: {
+                        variableName: '${log_msg}',
+                        comparisonType: 'startsWith',
+                        cases: [
+                            { value: 'ERROR', id: 'err_path' },
+                            { value: 'INFO', id: 'info_path' },
+                        ],
+                    },
+                },
+                t: (k) => k,
+            };
+            let result = null;
+            const res = {
+                status: () => res,
+                json: (d) => {
+                    result = d;
+                    return res;
+                },
+            };
+
+            await actions.switchAction(req, res);
+
+            expect(result.success).toBe(true);
+            expect(result.path).toBe('err_path');
+        });
+
+        it('debe admitir comparacion "regex"', async () => {
+            variableManager.set('email', 'test@google.com');
+            const req = {
+                body: {
+                    configuration: {
+                        variableName: '${email}',
+                        comparisonType: 'regex',
+                        cases: [
+                            { value: '@google\\.com$', id: 'google_path' },
+                            { value: '@yahoo\\.com$', id: 'yahoo_path' },
+                        ],
+                    },
+                },
+                t: (k) => k,
+            };
+            let result = null;
+            const res = {
+                status: () => res,
+                json: (d) => {
+                    result = d;
+                    return res;
+                },
+            };
+
+            await actions.switchAction(req, res);
+
+            expect(result.success).toBe(true);
+            expect(result.path).toBe('google_path');
+        });
+
+        it('debe mantener tipos exactos y no realizar coercion agresiva de "0"->false o "1"->true', async () => {
+            // String "0" shouldn't match Boolean false when comparisonType is equals
+            variableManager.set('val', '0');
+            const req = {
+                body: {
+                    configuration: {
+                        variableName: '${val}',
+                        comparisonType: 'equals',
+                        cases: [
+                            { value: 'false', id: 'bool_false' },
+                            { value: '0', id: 'str_zero' },
+                        ],
+                    },
+                },
+                t: (k) => k,
+            };
+            let result = null;
+            const res = {
+                status: () => res,
+                json: (d) => {
+                    result = d;
+                    return res;
+                },
+            };
+
+            await actions.switchAction(req, res);
+
+            expect(result.success).toBe(true);
+            expect(result.path).toBe('str_zero'); // Should match exact string "0" (normalized to number 0) rather than boolean false
         });
     });
 

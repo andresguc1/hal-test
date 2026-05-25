@@ -341,40 +341,56 @@ const AbyssNode = ({ id, data, selected, type }) => {
               </span>
             </div>
           )}
+
+          {/* Switch Resolved Value Badge */}
+          {isSwitch && data.state === "success" && (data.result?.resolvedValue ?? data.result?.data?.resolvedValue) !== undefined && (
+            <div className="flex items-center gap-1.5 mt-1">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+              <span className="text-[9px] font-mono text-emerald-300/90 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 truncate max-w-[180px]">
+                {truncate(String(data.result?.resolvedValue ?? data.result?.data?.resolvedValue ?? ""), 24)}
+              </span>
+            </div>
+          )}
         </div>
       )}
 
       {/* INTEGRATED BRANCH LABELS (Inside node for clarity) */}
-      {showOutputs && (isConditional || isSwitch) && (
-        <div className="absolute inset-y-0 right-0 w-32 pointer-events-none flex flex-col justify-around py-4">
-          {branches.map((branch, idx) => {
-            const topPct = `${((idx + 1) * 100) / (branches.length + 1)}%`;
-            const labelText = branch.label || branch.value || branch.id;
-            return (
-              <div
-                key={`label-${branch.id || idx}`}
-                className="absolute right-2 flex items-center justify-end max-w-full"
-                style={{ top: topPct, transform: "translateY(-50%)" }}
-              >
-                <span
-                  title={labelText}
-                  className={cn(
-                    "px-1.5 py-0.5 rounded-[4px] text-[9px] font-black uppercase tracking-tighter border shadow-sm transition-all duration-300 truncate max-w-[120px] block",
-                    branch.isFallback
-                      ? "bg-slate-800/80 text-slate-400 border-slate-700/50"
-                      : "bg-white/10 text-white border-white/20 group-hover:bg-white/20",
-                    data.state === "success" &&
-                      data.result?.path === branch.id &&
-                      "bg-emerald-500/20 text-emerald-400 border-emerald-500/40 ring-1 ring-emerald-500/30",
-                  )}
+      {showOutputs && (isConditional || isSwitch) && (() => {
+        const matchedPath = data.result?.path || data.result?.data?.path;
+        const hasMatch = data.state === "success" && matchedPath;
+        return (
+          <div className="absolute inset-y-0 right-0 w-32 pointer-events-none flex flex-col justify-around py-4">
+            {branches.map((branch, idx) => {
+              const topPct = `${((idx + 1) * 100) / (branches.length + 1)}%`;
+              const labelText = branch.label || branch.value || branch.id;
+              const isBranchMatched = hasMatch && matchedPath === branch.id;
+              const isDimmed = hasMatch && !isBranchMatched;
+              return (
+                <div
+                  key={`label-${branch.id || idx}`}
+                  className="absolute right-2 flex items-center justify-end max-w-full"
+                  style={{ top: topPct, transform: "translateY(-50%)" }}
                 >
-                  {labelText}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      )}
+                  <span
+                    title={labelText}
+                    className={cn(
+                      "px-1.5 py-0.5 rounded-[4px] text-[9px] font-black uppercase tracking-tighter border shadow-sm transition-all duration-300 truncate max-w-[120px] block",
+                      branch.isFallback
+                        ? "bg-slate-800/80 text-slate-400 border-slate-700/50"
+                        : "bg-white/10 text-white border-white/20 group-hover:bg-white/20",
+                      isBranchMatched &&
+                        "bg-emerald-500/20 text-emerald-400 border-emerald-500/40 ring-1 ring-emerald-500/30",
+                      isDimmed && "opacity-40",
+                    )}
+                  >
+                    {labelText}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {/* ERROR INDICATOR (Runtime) */}
       {data.error && (
@@ -452,9 +468,10 @@ function arePropsEqual(prevProps, nextProps) {
     prevProps.id === nextProps.id &&
     prevProps.selected === nextProps.selected &&
     prevProps.data?.state === nextProps.data?.state &&
-    prevProps.data?.configuration === nextProps.data?.configuration &&
+    JSON.stringify(prevProps.data?.configuration) === JSON.stringify(nextProps.data?.configuration) &&
     prevProps.data?.error === nextProps.data?.error &&
-    prevProps.data?.disabled === nextProps.data?.disabled
+    prevProps.data?.disabled === nextProps.data?.disabled &&
+    prevProps.data?.result === nextProps.data?.result
   );
 }
 

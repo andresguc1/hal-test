@@ -503,8 +503,21 @@ export const NODE_INPUTS = {
       key: "variableName",
       label: "Value or Variable to Evaluate",
       type: "text",
-      placeholder: "e.g. {{status}} or 'success'",
+      placeholder: "e.g. {{Username.value}} or 'success'",
       required: true,
+    },
+    {
+      key: "comparisonType",
+      label: "Comparison Type",
+      type: "select",
+      options: [
+        { label: "Equals (exact match)", value: "equals" },
+        { label: "Contains (substring)", value: "contains" },
+        { label: "Starts With", value: "startsWith" },
+        { label: "Ends With", value: "endsWith" },
+        { label: "Regex (pattern)", value: "regex" },
+      ],
+      defaultValue: "equals",
     },
     {
       key: "cases",
