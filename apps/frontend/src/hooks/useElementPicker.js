@@ -93,7 +93,9 @@ export const useElementPicker = ({
             if (!data.success) {
               if (
                 data.code === "BROWSER_DISCONNECTED" ||
-                data.message?.includes("dead")
+                data.message?.includes("dead") ||
+                data.message?.includes("not found") ||
+                data.message?.includes("No active browser")
               ) {
                 inspectorBrowserId = null;
                 needsLaunch = true;
@@ -102,9 +104,17 @@ export const useElementPicker = ({
               }
             }
           } catch (err) {
+            const errCode = err?.response?.data?.code;
+            const errMsg = err?.response?.data?.message || err.message || "";
+            const errStatus = err?.response?.status;
+
             if (
-              err?.response?.data?.code === "BROWSER_DISCONNECTED" ||
-              err.message?.includes("dead")
+              errCode === "BROWSER_DISCONNECTED" ||
+              errStatus === 404 ||
+              errMsg.includes("dead") ||
+              errMsg.includes("not found") ||
+              errMsg.includes("No active browser") ||
+              errMsg.includes("404")
             ) {
               inspectorBrowserId = null;
               needsLaunch = true;

@@ -7,15 +7,15 @@ test(`Flujo Generado Hal-Test`, async ({ page }) => {
     });
 
     await test.step(`Open URL`, async () => {
-        await page.goto(`https://www.saucedemo.com`);
+        await page.goto(`https://www.github.com`);
     });
 
-    await test.step(`Username`, async () => {
-        console.log(`⚠️ Acción no implementada o pendiente: variable`);
-    });
-
-    await test.step(`User Control`, async () => {
+    await test.step(`switch`, async () => {
         console.log(`⚠️ Acción no implementada o pendiente: switch`);
+    });
+
+    await test.step(`Take Screenshot`, async () => {
+        await page.screenshot({ path: 'screenshot_3.png' });
     });
 
     await test.step(`Close Browser`, async () => {

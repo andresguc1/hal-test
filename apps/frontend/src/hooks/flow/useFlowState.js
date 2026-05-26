@@ -851,10 +851,10 @@ export function useFlowState() {
     setSelectedNodeId,
     selectedAction: useMemo(() => {
       if (!selectedNodeId) return null;
-      const node = nodesRef.current.find((n) => n.id === selectedNodeId);
+      const node = nodes.find((n) => n.id === selectedNodeId);
       if (!node) return null;
       return { ...node, nodeId: node.id };
-    }, [selectedNodeId]),
+    }, [selectedNodeId, nodes]),
     history,
     saveToHistory,
     undo,

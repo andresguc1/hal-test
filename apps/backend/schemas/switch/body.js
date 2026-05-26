@@ -23,11 +23,12 @@ const switchBodySchema = z
             ),
         cases: z
             .union([
-                z.array(caseSchema),
-                z.record(z.unknown()), // Legacy object support
-                z.string(), // Legacy string support
+                z.array(caseSchema).min(1),
+                z.record(z.unknown()).refine((obj) => Object.keys(obj).length > 0, {
+                    message: 'At least one case must be defined',
+                }),
+                z.string().min(1),
             ])
-            .optional()
             .describe('Array of case definitions or legacy object/string format'),
         configuration: z
             .record(z.unknown())

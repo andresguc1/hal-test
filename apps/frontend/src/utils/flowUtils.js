@@ -298,21 +298,36 @@ export function resolveVariables(config, context) {
     return value.replace(/\{\{(.+?)\}\}/g, (match, path) => {
       const parts = path.trim().split(".");
       const key = parts[0];
-      const specifiedProp = parts[1];
-
-      // Properties to try if none specified
-      const propertiesToTry = specifiedProp
-        ? [specifiedProp]
-        : ["result", "value", "output", "data", "text"];
 
       const extractValue = (obj) => {
         if (!obj || typeof obj !== "object") return undefined;
+        
+        // Support nested dotted properties of arbitrary depth (e.g. node.data.value)
+        if (parts.length > 1) {
+          let curr = obj;
+          for (let i = 1; i < parts.length; i++) {
+            if (curr === null || curr === undefined || typeof curr !== "object") return undefined;
+            curr = curr[parts[i]];
+          }
+          if (curr !== undefined) return curr;
+
+          // If nested lookup fails, try auto-diving into .data or .result
+          if (obj.data && typeof obj.data === "object") {
+            let currData = obj.data;
+            for (let i = 1; i < parts.length; i++) {
+              if (currData === null || currData === undefined || typeof currData !== "object") break;
+              currData = currData[parts[i]];
+            }
+            if (currData !== undefined) return currData;
+          }
+        }
+
+        // Default properties to try if nested lookup didn't yield a result
+        const propertiesToTry = ["result", "value", "output", "data", "text"];
         for (const prop of propertiesToTry) {
           if (obj[prop] !== undefined) return obj[prop];
         }
-        // If no property was specified and no common fields matched, return the whole object
-        if (!specifiedProp) return obj;
-        return undefined;
+        return obj;
       };
 
       // 1. Try resolving by Node ID

@@ -4640,13 +4640,15 @@ export const switchAction = async (req, res) => {
 
         // 2. Normalize helper — conservative: only trims strings and converts numeric strings.
         //    Does NOT convert "0"->false, "1"->true, "yes"->true, "no"->false to avoid invisible bugs.
+        //    Guards against exotic formats: hex (0x1A), scientific (1e5), Infinity are treated as strings.
         const normalize = (val) => {
             if (val === null || val === undefined) return val;
             if (typeof val === 'boolean') return val;
             if (typeof val === 'string') {
                 const s = val.trim();
-                // Only convert unambiguous numeric strings
-                if (s !== '' && !isNaN(s) && !isNaN(parseFloat(s))) return Number(s);
+                // Only convert unambiguous decimal numeric strings (integers and floats)
+                // Reject: hex (0x...), octal (0o...), binary (0b...), scientific (1e5), Infinity, NaN
+                if (s !== '' && /^-?(\d+\.?\d*|\.\d+)$/.test(s)) return Number(s);
                 return s;
             }
             return val;

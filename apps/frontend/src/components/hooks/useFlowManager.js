@@ -67,13 +67,15 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
     saveFlow: sync.saveFlow,
     executeFlow: execution.executeFlow,
     executeStep: execution.executeStep,
-    executeSingleNode: (nodeId, type, config, options) =>
-      execution.executeStep(
-        { id: nodeId, type, data: { configuration: config } },
+    executeSingleNode: (nodeId, type, config, options) => {
+      const node = state.nodes.find((n) => n.id === nodeId);
+      return execution.executeStep(
+        node || { id: nodeId, type, data: { configuration: config } },
         type,
         config,
         options,
-      ),
+      );
+    },
     onNodesChange: state.onNodesChange,
     onEdgesChange: state.onEdgesChange,
     onConnect: state.onConnect,

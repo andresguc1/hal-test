@@ -657,15 +657,25 @@ const withSocketStatus = (handler) => async (req, res) => {
                 import('../services/VariableManager.js')
                     .then(({ variableManager }) => {
                         const label =
+                            req.body.customLabel ||
+                            req.body.label ||
                             req.body.configuration?.customLabel ||
-                            req.body.configuration?.label ||
-                            req.body.label;
+                            req.body.configuration?.label;
                         const type =
                             req.body.type || req.url.split('/').pop().replace('_action', ''); // Fallback type extraction
 
-                        if (nodeId) variableManager.set(`${nodeId}.result`, standardBody, rID);
-                        if (label) variableManager.set(`${label}.result`, standardBody, rID);
-                        if (type) variableManager.set(`${type}.result`, standardBody, rID);
+                        if (nodeId) {
+                            variableManager.set(`${nodeId}.result`, standardBody, rID);
+                            variableManager.set(nodeId, standardBody, rID);
+                        }
+                        if (label) {
+                            variableManager.set(`${label}.result`, standardBody, rID);
+                            variableManager.set(label, standardBody, rID);
+                        }
+                        if (type) {
+                            variableManager.set(`${type}.result`, standardBody, rID);
+                            variableManager.set(type, standardBody, rID);
+                        }
 
                         console.log(
                             `[API Router] 💾 Auto-Saved Atomic Result for: ${type || label || nodeId} in runId: ${rID}`,

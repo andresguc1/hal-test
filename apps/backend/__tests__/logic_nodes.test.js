@@ -443,6 +443,160 @@ describe('Logic Engine Nodes Validation', () => {
             expect(result.success).toBe(true);
             expect(result.path).toBe('str_zero'); // Should match exact string "0" (normalized to number 0) rather than boolean false
         });
+
+        it('debe retornar default cuando el valor es undefined (variable no existe)', async () => {
+            // Variable not set — resolveValue returns the placeholder string, which gets treated as undefined
+            const req = {
+                body: {
+                    configuration: {
+                        variableName: '${nonExistentVar}',
+                        comparisonType: 'equals',
+                        cases: [
+                            { value: 'admin', id: 'admin_path' },
+                            { value: 'user', id: 'user_path' },
+                        ],
+                    },
+                },
+                t: (k) => k,
+            };
+            let result = null;
+            const res = {
+                status: () => res,
+                json: (d) => {
+                    result = d;
+                    return res;
+                },
+            };
+
+            await actions.switchAction(req, res);
+
+            expect(result.success).toBe(true);
+            expect(result.data.path).toBe('default');
+            expect(result.data.matchedCaseId).toBeNull();
+        });
+
+        it('debe retornar default cuando el valor es null', async () => {
+            variableManager.set('nullVal', null);
+            const req = {
+                body: {
+                    configuration: {
+                        variableName: '${nullVal}',
+                        comparisonType: 'equals',
+                        cases: [{ value: 'something', id: 'some_path' }],
+                    },
+                },
+                t: (k) => k,
+            };
+            let result = null;
+            const res = {
+                status: () => res,
+                json: (d) => {
+                    result = d;
+                    return res;
+                },
+            };
+
+            await actions.switchAction(req, res);
+
+            expect(result.success).toBe(true);
+            expect(result.data.path).toBe('default');
+        });
+
+        it('debe NO convertir strings hex o notacion cientifica a numeros', async () => {
+            // "0x1A" should NOT normalize to 26, it should stay as the string "0x1A"
+            variableManager.set('hexVal', '0x1A');
+            const req = {
+                body: {
+                    configuration: {
+                        variableName: '${hexVal}',
+                        comparisonType: 'equals',
+                        cases: [
+                            { value: '26', id: 'numeric_path' },
+                            { value: '0x1A', id: 'hex_path' },
+                        ],
+                    },
+                },
+                t: (k) => k,
+            };
+            let result = null;
+            const res = {
+                status: () => res,
+                json: (d) => {
+                    result = d;
+                    return res;
+                },
+            };
+
+            await actions.switchAction(req, res);
+
+            expect(result.success).toBe(true);
+            expect(result.path).toBe('hex_path'); // Should match the literal string, not the numeric conversion
+        });
+
+        it('debe comparar case values que contienen referencias a variables', async () => {
+            variableManager.set('threshold', 100);
+            variableManager.set('currentValue', 100);
+            const req = {
+                body: {
+                    configuration: {
+                        variableName: '${currentValue}',
+                        comparisonType: 'equals',
+                        cases: [
+                            { value: '${threshold}', id: 'threshold_match' },
+                            { value: '999', id: 'other_path' },
+                        ],
+                    },
+                },
+                t: (k) => k,
+            };
+            let result = null;
+            const res = {
+                status: () => res,
+                json: (d) => {
+                    result = d;
+                    return res;
+                },
+            };
+
+            await actions.switchAction(req, res);
+
+            expect(result.success).toBe(true);
+            expect(result.path).toBe('threshold_match');
+        });
+
+        it('debe manejar correctamente un array de cases donde ninguno coincide (solo default)', async () => {
+            variableManager.set('color', 'purple');
+            const req = {
+                body: {
+                    configuration: {
+                        variableName: '${color}',
+                        comparisonType: 'equals',
+                        cases: [
+                            { value: 'red', id: 'red_path' },
+                            { value: 'blue', id: 'blue_path' },
+                            { value: 'green', id: 'green_path' },
+                        ],
+                    },
+                },
+                t: (k) => k,
+            };
+            let result = null;
+            const res = {
+                status: () => res,
+                json: (d) => {
+                    result = d;
+                    return res;
+                },
+            };
+
+            await actions.switchAction(req, res);
+
+            expect(result.success).toBe(true);
+            expect(result.data.path).toBe('default');
+            expect(result.data.matchedCaseId).toBeNull();
+            // Verify all cases were traced
+            expect(Object.keys(result.data.trace)).toHaveLength(3);
+        });
     });
 
     // 4. Transform Node

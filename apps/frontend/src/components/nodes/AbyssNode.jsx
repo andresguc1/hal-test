@@ -114,7 +114,7 @@ const AbyssNode = ({ id, data, selected, type }) => {
       style={{
         borderColor: statusColor || undefined,
         boxShadow: statusShadow || undefined,
-        minWidth: isConditional || isSwitch ? 240 : 160,
+        minWidth: isConditional || isSwitch ? 300 : 160,
         minHeight:
           (isConditional || isSwitch) && showOutputs
             ? Math.max(100, branches.length * 45)
@@ -283,83 +283,85 @@ const AbyssNode = ({ id, data, selected, type }) => {
         <div className="absolute inset-0 bg-red-500/10 rounded-lg pointer-events-none border border-red-500/30" />
       )}
 
-      <div className="relative flex items-center gap-3 mb-1 pt-1 px-1">
-        <Icon size={20} className="shrink-0 text-white drop-shadow-sm" />
+      <div className={cn((isConditional || isSwitch) && showOutputs && "pr-[135px]")}>
+        <div className="relative flex items-center gap-3 mb-1 pt-1 px-1">
+          <Icon size={20} className="shrink-0 text-white drop-shadow-sm" />
 
-        <div className="flex flex-col min-w-0">
-          <span className="text-sm font-bold truncate leading-tight text-white drop-shadow-sm">
-            {displayLabel}
-          </span>
-          {showDetails && (
-            <span className="text-[10px] font-bold uppercase tracking-wider text-white drop-shadow-sm">
-              {safeConfig.category === "network_control"
-                ? "NETWORK"
-                : safeConfig.category.replace("_", " ")}
+          <div className="flex flex-col min-w-0">
+            <span className="text-sm font-bold truncate leading-tight text-white drop-shadow-sm">
+              {displayLabel}
             </span>
-          )}
+            {showDetails && (
+              <span className="text-[10px] font-bold uppercase tracking-wider text-white drop-shadow-sm">
+                {safeConfig.category === "network_control"
+                  ? "NETWORK"
+                  : safeConfig.category.replace("_", " ")}
+              </span>
+            )}
+          </div>
         </div>
+
+        {/* BODY (Details) */}
+        {showDetails && (
+          <div className="mt-2 pt-2 border-t border-white/20 space-y-1">
+            {/* URL (Browser) */}
+            {data.configuration?.url && (
+              <div className="flex items-center gap-1.5 text-white/90 text-[11px]">
+                <Globe size={12} className="opacity-70 shrink-0" />
+                <span
+                  className="font-mono opacity-90"
+                  title={data.configuration.url}
+                >
+                  {truncate(
+                    data.configuration.url.replace(/^https?:\/\//, ""),
+                    28,
+                  )}
+                </span>
+              </div>
+            )}
+
+            {/* Selector (Interaction) */}
+            {(data.configuration?.selector || data.selector) && (
+              <div className="flex items-center gap-1.5 text-white/90 text-[11px]">
+                <MousePointer size={12} className="opacity-70 shrink-0" />
+                <span
+                  className="font-mono opacity-90"
+                  title={data.configuration?.selector || data.selector}
+                >
+                  {truncate(data.configuration?.selector || data.selector, 25)}
+                </span>
+              </div>
+            )}
+
+            {/* Text Value (Typing) */}
+            {(data.configuration?.text || data.value) && (
+              <div className="flex items-center gap-1.5 text-white/90 text-[11px]">
+                <Terminal size={12} className="opacity-70 shrink-0" />
+                <span className="font-mono opacity-90">
+                  "{truncate(data.configuration?.text || data.value, 20)}"
+                </span>
+              </div>
+            )}
+
+            {/* Switch Resolved Value Badge */}
+            {isSwitch && data.state === "success" && (data.result?.resolvedValue ?? data.result?.data?.resolvedValue) !== undefined && (
+              <div className="flex items-center gap-1.5 mt-1">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                <span className="text-[9px] font-mono text-emerald-300/90 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 truncate max-w-[180px]">
+                  {truncate(String(data.result?.resolvedValue ?? data.result?.data?.resolvedValue ?? ""), 24)}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
-
-      {/* BODY (Details) */}
-      {showDetails && (
-        <div className="mt-2 pt-2 border-t border-white/20 space-y-1">
-          {/* URL (Browser) */}
-          {data.configuration?.url && (
-            <div className="flex items-center gap-1.5 text-white/90 text-[11px]">
-              <Globe size={12} className="opacity-70 shrink-0" />
-              <span
-                className="font-mono opacity-90"
-                title={data.configuration.url}
-              >
-                {truncate(
-                  data.configuration.url.replace(/^https?:\/\//, ""),
-                  28,
-                )}
-              </span>
-            </div>
-          )}
-
-          {/* Selector (Interaction) */}
-          {(data.configuration?.selector || data.selector) && (
-            <div className="flex items-center gap-1.5 text-white/90 text-[11px]">
-              <MousePointer size={12} className="opacity-70 shrink-0" />
-              <span
-                className="font-mono opacity-90"
-                title={data.configuration?.selector || data.selector}
-              >
-                {truncate(data.configuration?.selector || data.selector, 25)}
-              </span>
-            </div>
-          )}
-
-          {/* Text Value (Typing) */}
-          {(data.configuration?.text || data.value) && (
-            <div className="flex items-center gap-1.5 text-white/90 text-[11px]">
-              <Terminal size={12} className="opacity-70 shrink-0" />
-              <span className="font-mono opacity-90">
-                "{truncate(data.configuration?.text || data.value, 20)}"
-              </span>
-            </div>
-          )}
-
-          {/* Switch Resolved Value Badge */}
-          {isSwitch && data.state === "success" && (data.result?.resolvedValue ?? data.result?.data?.resolvedValue) !== undefined && (
-            <div className="flex items-center gap-1.5 mt-1">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
-              <span className="text-[9px] font-mono text-emerald-300/90 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 truncate max-w-[180px]">
-                {truncate(String(data.result?.resolvedValue ?? data.result?.data?.resolvedValue ?? ""), 24)}
-              </span>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* INTEGRATED BRANCH LABELS (Inside node for clarity) */}
       {showOutputs && (isConditional || isSwitch) && (() => {
         const matchedPath = data.result?.path || data.result?.data?.path;
         const hasMatch = data.state === "success" && matchedPath;
         return (
-          <div className="absolute inset-y-0 right-0 w-32 pointer-events-none flex flex-col justify-around py-4">
+          <div className="absolute inset-y-0 right-0 w-[124px] pointer-events-none flex flex-col justify-around py-4 border-l border-white/10 bg-slate-950/20 rounded-r-lg">
             {branches.map((branch, idx) => {
               const topPct = `${((idx + 1) * 100) / (branches.length + 1)}%`;
               const labelText = branch.label || branch.value || branch.id;
@@ -374,13 +376,13 @@ const AbyssNode = ({ id, data, selected, type }) => {
                   <span
                     title={labelText}
                     className={cn(
-                      "px-1.5 py-0.5 rounded-[4px] text-[9px] font-black uppercase tracking-tighter border shadow-sm transition-all duration-300 truncate max-w-[120px] block",
+                      "px-2 py-0.5 rounded-[4px] text-[9px] font-extrabold uppercase tracking-tight border shadow-md transition-all duration-300 truncate max-w-[105px] block text-center",
                       branch.isFallback
-                        ? "bg-slate-800/80 text-slate-400 border-slate-700/50"
-                        : "bg-white/10 text-white border-white/20 group-hover:bg-white/20",
+                        ? "bg-slate-800/90 text-slate-400 border-slate-700/60"
+                        : "bg-slate-900/60 text-white/90 border-white/10 group-hover:bg-slate-800/80",
                       isBranchMatched &&
-                        "bg-emerald-500/20 text-emerald-400 border-emerald-500/40 ring-1 ring-emerald-500/30",
-                      isDimmed && "opacity-40",
+                        "bg-emerald-500/25 text-emerald-300 border-emerald-400/50 shadow-[0_0_10px_rgba(16,185,129,0.3)] ring-1 ring-emerald-500/40 font-black",
+                      isDimmed && "opacity-30",
                     )}
                   >
                     {labelText}
@@ -419,14 +421,21 @@ const AbyssNode = ({ id, data, selected, type }) => {
       {showOutputs && (isConditional || isSwitch)
         ? branches.map((branch, idx) => {
             const topPct = `${((idx + 1) * 100) / (branches.length + 1)}%`;
+            const matchedPath = data.result?.path || data.result?.data?.path;
+            const isBranchMatched = data.state === "success" && matchedPath === branch.id;
             return (
               <React.Fragment key={branch.id || idx}>
                 {/* Visual port dot (Behind the handle) */}
                 <div
-                  className="absolute -right-3 w-3 h-3 z-10 pointer-events-none"
+                  className="absolute -right-1.5 w-3 h-3 z-20 pointer-events-none"
                   style={{ top: topPct, transform: "translateY(-50%)" }}
                 >
-                  <div className="w-3 h-3 bg-sky-400 border-[2px] border-[#0f172a] rounded-full shadow-[0_0_10px_rgba(56,189,248,0.5)]" />
+                  <div className={cn(
+                    "w-3 h-3 border-[2px] border-[#0f172a] rounded-full transition-all duration-300",
+                    isBranchMatched
+                      ? "bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)] scale-110"
+                      : "bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.5)]"
+                  )} />
                 </div>
 
                 {/* Functional Handle (Extra large hit area for ergonomics) */}

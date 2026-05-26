@@ -41,7 +41,10 @@ export class ExecutionService {
         }
 
         const nodes = flow.nodes.map((n) => n.toJSON());
-        const edges = flow.edges.map((e) => e.toJSON());
+        const nodeIds = new Set(nodes.map((n) => n.nodeId));
+        const edges = flow.edges
+            .map((e) => e.toJSON())
+            .filter((e) => nodeIds.has(e.source) && nodeIds.has(e.target));
 
         console.log(`[ExecutionService] 📊 Loaded ${nodes.length} nodes for execution:`);
         nodes.forEach((n) => {
@@ -435,6 +438,24 @@ export class ExecutionService {
                     console.warn(
                         `[DPE] ⚠️ No edges matched winnerPath="${winnerPath}" (Available: [${availableHandles}])`,
                     );
+
+                    // 🛡️ SWITCH/CONDITIONAL SAFETY NET: Activate 'default' edge when no handle matched
+                    // This prevents silent flow stoppage when a case ID drifts after edges are connected
+                    if (node.type === 'switch' || node.type === 'conditional') {
+                        const defaultEdge = allNextEdges.find(
+                            (e) =>
+                                (e.sourceHandle || 'default').toLowerCase() === 'default' ||
+                                (e.sourceHandle || '').toLowerCase() === 'false' ||
+                                (e.sourceHandle || '').toLowerCase() === 'else',
+                        );
+                        if (defaultEdge) {
+                            console.warn(
+                                `[DPE] 🛡️ Switch fallback: activating 'default' edge for unmatchable path "${winnerPath}"`,
+                            );
+                            activeEdges = [defaultEdge];
+                            deadEdges = allNextEdges.filter((e) => e !== defaultEdge);
+                        }
+                    }
                 }
             } else if (allNextEdges.length > 0 && node.type !== 'branch') {
                 // For linear nodes with multiple outgoing edges (broadcast), all are active

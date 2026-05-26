@@ -261,7 +261,11 @@ export function useFlowExecution({
         action = {
           nodeId: nodeOrAction.id,
           type: nodeOrAction.type,
-          payload: nodeOrAction.data?.configuration,
+          payload: {
+            ...(nodeOrAction.data?.configuration || {}),
+            customLabel: nodeOrAction.data?.customLabel,
+            label: nodeOrAction.data?.label || nodeOrAction.label,
+          },
           ...nodeOrAction,
         };
       }
@@ -292,6 +296,8 @@ export function useFlowExecution({
           const builder = payloadBuilders[type];
           const bodyToSend = builder ? builder(payload || {}) : payload || {};
           bodyToSend.nodeId = nodeId;
+          if (payload?.customLabel) bodyToSend.customLabel = payload.customLabel;
+          if (payload?.label) bodyToSend.label = payload.label;
           if (activeBrowserId && !bodyToSend.browserId)
             bodyToSend.browserId = activeBrowserId;
           if (type !== "close_browser") bodyToSend.debugMode = true;
@@ -425,6 +431,12 @@ export function useFlowExecution({
 
       if (executionNodes.length === 0) return ["Flow is empty"];
 
+      // Filter out edges that reference non-existent or disabled nodes
+      const activeNodeIds = new Set(executionNodes.map((n) => n.id));
+      const filteredEdges = (edgesToValidate || []).filter(
+        (e) => activeNodeIds.has(e.source) && activeNodeIds.has(e.target),
+      );
+
       for (const n of executionNodes) {
         const type = n.data?.subType || n.data?.type || n.type;
         const validation = validateNodeConfig(
@@ -437,7 +449,7 @@ export function useFlowExecution({
           );
       }
 
-      const targets = new Set(edgesToValidate.map((e) => e.target));
+      const targets = new Set(filteredEdges.map((e) => e.target));
       const roots = executionNodes.filter((n) => !targets.has(n.id));
 
       if (roots.length === 0) errors.push("No starting point found");
@@ -449,7 +461,7 @@ export function useFlowExecution({
       try {
         const result = GraphValidator.validate({
           nodes: executionNodes,
-          edges: edgesToValidate,
+          edges: filteredEdges,
         });
         if (!result.valid) errors.push(...result.errors);
       } catch (err) {
@@ -702,7 +714,9 @@ export function useFlowExecution({
             ) {
               const nodeType = node.data?.type || node.type;
               const isLogicNode =
-                nodeType === "conditional" || nodeType === "wait_conditional";
+                nodeType === "conditional" ||
+                nodeType === "wait_conditional" ||
+                nodeType === "switch";
               const resolvedConfig = isLogicNode
                 ? node.data?.configuration || {}
                 : resolveVariables(node.data?.configuration || {}, flowContext);
@@ -714,6 +728,8 @@ export function useFlowExecution({
                   ...resolvedConfig,
                   browserId,
                   runId,
+                  customLabel: node.data?.customLabel,
+                  label: node.data?.label,
                 },
               };
 

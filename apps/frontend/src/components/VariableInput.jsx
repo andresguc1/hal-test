@@ -264,7 +264,12 @@ export const VariableInput = ({
       />
 
       {/* Suggestion list - Custom UI */}
-      {showSuggestions && suggestions?.length > 0 && (
+      {(() => {
+        const lastOpen = value.lastIndexOf("{{");
+        const lastClose = value.lastIndexOf("}}");
+        const isInsideVar = lastOpen > lastClose;
+        return showSuggestions && isInsideVar && suggestions?.length > 0;
+      })() && (
         <div className="absolute top-full left-0 right-0 mt-2 p-1.5 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl z-[100] max-h-64 overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-top-2 duration-200">
           {(() => {
             // Flatten and filter based on current input

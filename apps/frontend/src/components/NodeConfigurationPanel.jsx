@@ -179,12 +179,17 @@ const NodeConfigurationPanel = ({
   React.useEffect(() => {
     if (!activeNode) return;
     const globalConfig = activeNode.data?.configuration || {};
-    if (activeNode.id !== lastSyncedConfigRef.current.nodeId) {
+    const hasIdChanged = activeNode.id !== lastSyncedConfigRef.current.nodeId;
+    const hasConfigChanged = JSON.stringify(globalConfig) !== JSON.stringify(lastSyncedConfigRef.current.config);
+
+    if (hasIdChanged || hasConfigChanged) {
       isResettingRef.current = true;
       reset(globalConfig);
-      setLocalLabel(
-        activeNode.data?.customLabel || activeNode.data?.label || "",
-      );
+      if (hasIdChanged) {
+        setLocalLabel(
+          activeNode.data?.customLabel || activeNode.data?.label || "",
+        );
+      }
       lastSyncedConfigRef.current = {
         config: globalConfig,
         nodeId: activeNode.id,
