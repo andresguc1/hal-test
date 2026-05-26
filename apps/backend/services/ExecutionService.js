@@ -304,23 +304,20 @@ export class ExecutionService {
                 if (nodeResult && typeof nodeResult === 'object' && !Array.isArray(nodeResult)) {
                     nodeResult.label = nodeResult.label || nodeLabel;
                 }
-                // 🚀 ULTRA-REDUNDANT STORAGE: Ensure resolution by any possible name
-                const possibleNames = new Set([
+                // 🌟 Use storeNodeResult instead of manual redundant storage
+                variableManager.storeNodeResult(
                     node.nodeId,
-                    nodeLabel,
-                    node.data?.label,
-                    nodeLabel.replace(/[^a-zA-Z0-9]/g, ''),
-                    (node.data?.label || '').replace(/[^a-zA-Z0-9]/g, ''),
-                ]);
-
-                possibleNames.forEach((name) => {
-                    if (name && name.trim()) {
-                        variableManager.set(`${name}.result`, nodeResult, state.runId);
-                    }
-                });
+                    {
+                        label: node.data?.label,
+                        customLabel: node.data?.customLabel,
+                        technicalName: node.data?.technicalName || node.type,
+                    },
+                    nodeResult,
+                    state.runId,
+                );
 
                 console.log(
-                    `[ExecutionService] 💾 Redundant storage complete for "${nodeLabel}" (${possibleNames.size} aliases)`,
+                    `[ExecutionService] 💾 Normalized storage complete for "${nodeLabel}" via alias registry`,
                 );
 
                 // 3.b Parent Synchronization (Live Status for Groups/Components)
@@ -715,18 +712,17 @@ export class ExecutionService {
                 error: { message: errMsg },
             };
 
-            // ULTRA-REDUNDANT STORAGE FOR ERRORS
-            const possibleNames = [
+            // 🌟 Use storeNodeResult instead of manual redundant storage
+            variableManager.storeNodeResult(
                 node.nodeId,
-                node.data?.label,
-                node.data?.customLabel,
-                node.data?.technicalName,
-            ].filter(Boolean);
-
-            possibleNames.forEach((name) => {
-                variableManager.set(`${name}.result`, errorResult, state.runId);
-                variableManager.set(name, errorResult, state.runId); // Also direct access
-            });
+                {
+                    label: node.data?.label,
+                    customLabel: node.data?.customLabel,
+                    technicalName: node.data?.technicalName || node.type,
+                },
+                errorResult,
+                state.runId,
+            );
 
             // 🛡️ SOFT FAIL PROTECTION: Check if node should continue even on failure
             const continueOnFailure =
@@ -770,31 +766,35 @@ export class ExecutionService {
             finalResult.label = node.data?.customLabel || node.data?.label;
         }
 
-        // 🌟 ULTRA-REDUNDANT STORAGE FOR SUCCESS
-        const possibleNames = [
+        // 🌟 Use storeNodeResult instead of manual redundant storage
+        variableManager.storeNodeResult(
             node.nodeId,
-            node.data?.label,
-            node.data?.customLabel,
-            node.data?.technicalName,
-        ].filter(Boolean);
+            {
+                label: node.data?.label,
+                customLabel: node.data?.customLabel,
+                technicalName: node.data?.technicalName || node.type,
+            },
+            finalResult,
+            state.runId,
+        );
 
-        possibleNames.forEach((name) => {
-            variableManager.set(`${name}.result`, finalResult, state.runId);
-            variableManager.set(name, finalResult, state.runId); // Direct access
-
-            // Technical names often need a "group" or "step" suffix in some contexts
-            if (node.data?.technicalName) {
-                variableManager.set(
-                    `${node.data.technicalName}.status`,
-                    finalResult.status,
-                    state.runId,
-                );
-            }
-        });
-
-        // Store by type for generic access (e.g. {{open_url.result}})
+        // Also register node.type as alias for generic access (e.g. open_url)
         if (node.type) {
-            variableManager.set(`${node.type}.result`, finalResult, state.runId);
+            variableManager.registerAlias(node.type, node.nodeId, state.runId);
+            variableManager.registerAlias(
+                `${node.type}.result`,
+                `${node.nodeId}.result`,
+                state.runId,
+            );
+        }
+
+        // Technical names often need a ".status" suffix in some contexts
+        if (node.data?.technicalName) {
+            variableManager.set(
+                `${node.data.technicalName}.status`,
+                finalResult?.status || 'success',
+                state.runId,
+            );
         }
 
         emitExecutionStatus({

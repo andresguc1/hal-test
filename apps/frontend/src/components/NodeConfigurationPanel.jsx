@@ -22,6 +22,7 @@ import {
 } from "@/config/nodeConstants";
 import { api } from "../utils/api";
 import VariableInput from "./VariableInput";
+import { useAvailableVariables } from "../hooks/useAvailableVariables";
 import { NODE_INPUTS } from "@/config/validationRules";
 
 import ConditionalBranchesEditor from "./editors/ConditionalBranchesEditor";
@@ -254,118 +255,50 @@ const NodeConfigurationPanel = ({
   }, [localLabel, activeNode, updateNodeConfiguration]);
 
 
-  const { precedingNodes } = useMemo(() => {
-    if (!activeNode || !edges || !nodes) return { precedingNodes: [] };
-
-    const incomingEdges = edges.filter((e) => e.target === activeNode.id);
-    const prevIds = Array.from(new Set(incomingEdges.map((e) => e.source)));
-
-    const prev = prevIds
-      .map((id) => nodes.find((n) => n.id === id))
-      .filter(Boolean)
-      .map((n) => {
-        const nodeLabel = n.data?.customLabel || n.data?.label || n.id;
-        const liveResult =
-          liveVariables[`${nodeLabel}.result`] ||
-          liveVariables[`${n.id}.result`];
-
-        let finalResult = {};
-        let dataSource = "static";
-
-        if (liveResult !== undefined) {
-          finalResult = liveResult;
-          dataSource = "live";
-        } else if (n.data?.result !== undefined) {
-          finalResult = n.data.result;
-          dataSource = "persisted";
-        } else if (simulatedResults[n.id] !== undefined) {
-          finalResult = simulatedResults[n.id];
-          dataSource = "simulated";
-        } else {
-          const nodeType = n.data?.type || n.type;
-          const schema = NODE_OUTPUTS[nodeType];
-          if (schema) {
-            const mockResult = {};
-            Object.entries(schema).forEach(([key, type]) => {
-              mockResult[key] = `<${type}>`;
-            });
-            finalResult = mockResult;
-          }
-        }
-
-        return {
-          ...n,
-          data: {
-            ...n.data,
-            result:
-              typeof finalResult === "object"
-                ? { ...finalResult, _dataSource: dataSource }
-                : finalResult,
-            isStaticSchema: dataSource === "static",
-          },
-        };
-      });
-
-    return { precedingNodes: prev };
-  }, [activeNode, edges, nodes, liveVariables, simulatedResults]);
+  const {
+    availableVariables,
+    groupedVariables,
+  } = useAvailableVariables({
+    activeNodeId: activeNode?.id,
+    nodes,
+    edges,
+    liveVariables,
+    simulatedResults,
+  });
 
   const variablesMap = useMemo(() => {
     const map = {};
-    if (liveVariables) {
-      Object.entries(liveVariables).forEach(([key, val]) => {
-        map[key] = val;
-        if (key.endsWith(".result")) {
-          map[key.replace(".result", "")] = val;
-        }
-      });
-    }
-    precedingNodes.forEach((pn) => {
-      if (pn.data?.result !== undefined) {
-        map[`${pn.id}.result`] = pn.data.result;
-        if (pn.data?.label) map[`${pn.data.label}.result`] = pn.data.result;
-      }
+    availableVariables.forEach((v) => {
+      map[v.name] = v.value;
     });
     return map;
-  }, [precedingNodes, liveVariables]);
+  }, [availableVariables]);
 
-  const contextualVariablesMap = useMemo(() => {
-    const map = { ...variablesMap };
-    precedingNodes.forEach((pn) => {
-      const nodeLabel = pn.data?.customLabel || pn.data?.label || pn.id;
-      if (pn.data?.result !== undefined) map[nodeLabel] = pn.data.result;
-    });
-    return map;
-  }, [precedingNodes, variablesMap]);
+  const contextualVariablesMap = variablesMap;
 
   const availableVariablePaths = useMemo(() => {
-    const suggestions = [];
-    Object.entries(contextualVariablesMap).forEach(([nodeName, nodeVal]) => {
-      if (nodeName.includes(".result") || typeof nodeVal !== "object") return;
-      const matchingNode = nodes?.find(
-        (n) => n.data?.label === nodeName || n.id === nodeName,
-      );
-      const displayLabel = matchingNode?.data?.label || nodeName;
-      const nodeGroup = { nodeLabel: displayLabel, items: [] };
+    return Object.entries(groupedVariables).map(([nodeLabel, items]) => {
+      const suggestionItems = items
+        .filter((item) => {
+          // Filter out legacy redundant ".result.key" paths when a direct alias is available.
+          // Also hide general ".result" references unless it is a root result item.
+          if (item.name.includes(".result.")) return false;
+          return !item.name.endsWith(".result") || item.name === `${nodeLabel}.result`;
+        })
+        .map((item) => ({
+          label: item.name.split(".").pop() || item.name,
+          path: item.path,
+          type: item.type,
+          scope: item.scope,
+          description: item.description,
+        }));
 
-      const extract = (obj, prefix = "") => {
-        if (!obj || typeof obj !== "object") return;
-        Object.entries(obj).forEach(([prop, val]) => {
-          if (prop.startsWith("_")) return;
-          const fullPath = prefix ? `${prefix}.${prop}` : prop;
-          nodeGroup.items.push({
-            label: prop,
-            path: `{{${displayLabel}.${fullPath}}}`,
-            type: typeof val,
-          });
-          if (val && typeof val === "object" && !Array.isArray(val))
-            extract(val, fullPath);
-        });
+      return {
+        nodeLabel,
+        items: suggestionItems,
       };
-      extract(nodeVal);
-      if (nodeGroup.items.length > 0) suggestions.push(nodeGroup);
     });
-    return suggestions;
-  }, [contextualVariablesMap, nodes]);
+  }, [groupedVariables]);
 
   const renderDataValue = (value, depth = 0, keyName = "") => {
     if (value === null)

@@ -281,72 +281,86 @@ export function getConnectedComponents(nodes, edges) {
 
   return components;
 }
-/**
- * Resolves variables in a configuration object using the provided context.
- * Supports {{nodeId.property}} and {{Node Label.property}} syntax.
- *
- * @param {Object} config - The configuration object to resolve.
- * @param {Object} context - The context containing variable values.
- * @returns {Object} A new configuration object with resolved variables.
- */
 export function resolveVariables(config, context) {
   if (!config || !context) return config;
 
   const resolveValue = (value) => {
     if (typeof value !== "string") return value;
 
-    return value.replace(/\{\{(.+?)\}\}/g, (match, path) => {
-      const parts = path.trim().split(".");
-      const key = parts[0];
+    // Check if the template contains exactly one variable and nothing else
+    const singleVarRegex = /^(?:\{\{|(?:\$\{))([^}]+)(?:\}\}|})$/;
+    const singleMatch = value.trim().match(singleVarRegex);
 
-      const extractValue = (obj) => {
-        if (!obj || typeof obj !== "object") return undefined;
+    const getNestedValue = (obj, path) => {
+      if (!obj || typeof obj !== "object") return undefined;
+      const parts = path.split(".");
+      let curr = obj;
+      for (const part of parts) {
+        if (curr === null || curr === undefined || typeof curr !== "object") return undefined;
         
-        // Support nested dotted properties of arbitrary depth (e.g. node.data.value)
-        if (parts.length > 1) {
-          let curr = obj;
-          for (let i = 1; i < parts.length; i++) {
-            if (curr === null || curr === undefined || typeof curr !== "object") return undefined;
-            curr = curr[parts[i]];
-          }
-          if (curr !== undefined) return curr;
+        // 1. Try direct property lookup
+        if (curr[part] !== undefined) {
+          curr = curr[part];
+        } else if (curr.data && curr.data[part] !== undefined) {
+          // 2. Fallback to .data sub-property
+          curr = curr.data[part];
+        } else if (curr.result && curr.result[part] !== undefined) {
+          // 3. Fallback to .result sub-property
+          curr = curr.result[part];
+        } else {
+          return undefined;
+        }
+      }
+      return curr;
+    };
 
-          // If nested lookup fails, try auto-diving into .data or .result
-          if (obj.data && typeof obj.data === "object") {
-            let currData = obj.data;
-            for (let i = 1; i < parts.length; i++) {
-              if (currData === null || currData === undefined || typeof currData !== "object") break;
-              currData = currData[parts[i]];
+    const resolvePath = (pathStr) => {
+      const trimmedPath = pathStr.trim();
+      const parts = trimmedPath.split(".");
+      const rootKey = parts[0];
+      const restPath = parts.slice(1).join(".");
+
+      // Try different lookup variations for the rootKey in our context mapping
+      const keysToTry = [
+        rootKey,
+        rootKey.toLowerCase(),
+        rootKey.toLowerCase().replace(/\s+/g, "_"),
+      ];
+
+      for (const key of keysToTry) {
+        if (context[key] !== undefined) {
+          const rootVal = context[key];
+          if (!restPath) {
+            // If it's a simple root variable, try returning a default property or the root value itself
+            if (rootVal && typeof rootVal === "object") {
+              const defaultProps = ["result", "value", "output", "data"];
+              for (const prop of defaultProps) {
+                if (rootVal[prop] !== undefined) return rootVal[prop];
+              }
             }
-            if (currData !== undefined) return currData;
+            return rootVal;
           }
-        }
-
-        // Default properties to try if nested lookup didn't yield a result
-        const propertiesToTry = ["result", "value", "output", "data", "text"];
-        for (const prop of propertiesToTry) {
-          if (obj[prop] !== undefined) return obj[prop];
-        }
-        return obj;
-      };
-
-      // 1. Try resolving by Node ID
-      let nodeData = context[key];
-
-      // 2. Try resolving by Slugified Label if ID not found
-      if (!nodeData) {
-        const slug = key.toLowerCase().replace(/\s+/g, "_");
-        nodeData = context[slug];
-      }
-
-      if (nodeData) {
-        const val = extractValue(nodeData);
-        if (val !== undefined) {
-          return typeof val === "object" ? JSON.stringify(val) : String(val);
+          const nested = getNestedValue(rootVal, restPath);
+          if (nested !== undefined) return nested;
         }
       }
+      return undefined;
+    };
 
-      return match; // Return original if not found
+    // Case 1: Exactly one template variable -> return raw unresolved/resolved type
+    if (singleMatch) {
+      const resolved = resolvePath(singleMatch[1]);
+      return resolved !== undefined ? resolved : value;
+    }
+
+    // Case 2: Mixed string templates -> replace in place as string
+    const mixRegex = /(?:\{\{|(?:\$\{))(.+?)(?:\}\}|})/g;
+    return value.replace(mixRegex, (match, path) => {
+      const resolved = resolvePath(path);
+      if (resolved !== undefined) {
+        return typeof resolved === "object" ? JSON.stringify(resolved) : String(resolved);
+      }
+      return match;
     });
   };
 
@@ -355,8 +369,8 @@ export function resolveVariables(config, context) {
       return obj.map(traverse);
     } else if (obj !== null && typeof obj === "object") {
       const newObj = {};
-      for (const [key, value] of Object.entries(obj)) {
-        newObj[key] = traverse(value);
+      for (const [key, val] of Object.entries(obj)) {
+        newObj[key] = traverse(val);
       }
       return newObj;
     }

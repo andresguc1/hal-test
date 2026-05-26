@@ -663,7 +663,7 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
         }
 
         // --- VARIABLE PERSISTENCE ---
-        // Save result to variableManager for downstream reuse
+        // Save result to variableManager for downstream reuse using normalized storage
         const nodeLabel = label; // Use the robustly resolved label from the beginning
         if (result && result.success !== false) {
             // Standardize output: Ensure status is present for conditional logic
@@ -673,12 +673,18 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
                 if (nodeResult.recovered === undefined) nodeResult.recovered = false;
             }
 
-            variableManager.set(`${nodeLabel}.result`, nodeResult, runId);
             if (nodeId) {
-                variableManager.set(`${nodeId}.result`, nodeResult, runId);
+                variableManager.storeNodeResult(
+                    nodeId,
+                    { label: nodeLabel, customLabel: nodeLabel },
+                    nodeResult,
+                    runId,
+                );
+            } else {
+                variableManager.set(`${nodeLabel}.result`, nodeResult, runId);
             }
             console.log(
-                `[ActionController] Saved result for "${nodeLabel}" to variableManager (Run: ${runId})`,
+                `[ActionController] Saved normalized result for "${nodeLabel}" to variableManager (Run: ${runId})`,
             );
         }
         // ----------------------------
@@ -1143,9 +1149,15 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
                 durationMs: duration,
                 screenshot: errorScreenshotPath,
             };
-            variableManager.set(`${nodeLabel}.result`, errorResult, runId);
             if (nodeId) {
-                variableManager.set(`${nodeId}.result`, errorResult, runId);
+                variableManager.storeNodeResult(
+                    nodeId,
+                    { label: nodeLabel, customLabel: nodeLabel },
+                    errorResult,
+                    runId,
+                );
+            } else {
+                variableManager.set(`${nodeLabel}.result`, errorResult, runId);
             }
 
             // RETURN SUCCESS TO MOTOR (Trick Motor into continuing)

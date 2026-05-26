@@ -649,8 +649,7 @@ const withSocketStatus = (handler) => async (req, res) => {
             }
 
             // 💾 ATOMIC RUN MEMORY PERSISTENCE:
-            // If we have a successful result and a runId, save it to the singleton VariableManager
-            // This mimics ExecutionService behavior, making strictly-typed atomic runs work seamlessly!
+            // Use storeNodeResult for clean, deterministic atomic run storage
             if (standardBody.success !== false) {
                 const rID = req.body.runId || 'atomic_run';
                 // Use a non-blocking background promise to avoid slowing down API response
@@ -665,20 +664,18 @@ const withSocketStatus = (handler) => async (req, res) => {
                             req.body.type || req.url.split('/').pop().replace('_action', ''); // Fallback type extraction
 
                         if (nodeId) {
-                            variableManager.set(`${nodeId}.result`, standardBody, rID);
-                            variableManager.set(nodeId, standardBody, rID);
-                        }
-                        if (label) {
+                            variableManager.storeNodeResult(
+                                nodeId,
+                                { label, customLabel: label, technicalName: type },
+                                standardBody,
+                                rID,
+                            );
+                        } else if (label) {
                             variableManager.set(`${label}.result`, standardBody, rID);
-                            variableManager.set(label, standardBody, rID);
-                        }
-                        if (type) {
-                            variableManager.set(`${type}.result`, standardBody, rID);
-                            variableManager.set(type, standardBody, rID);
                         }
 
                         console.log(
-                            `[API Router] 💾 Auto-Saved Atomic Result for: ${type || label || nodeId} in runId: ${rID}`,
+                            `[API Router] 💾 Auto-Saved Normalized Atomic Result for: ${type || label || nodeId} in runId: ${rID}`,
                         );
                     })
                     .catch((err) =>

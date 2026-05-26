@@ -321,31 +321,54 @@ export const VariableInput = ({
                         // Find where the last {{ started
                         const lastOpen = value.lastIndexOf("{{");
                         const prefix = value.substring(0, lastOpen);
-                        const suffix =
-                          value.substring(value.indexOf("}}", lastOpen) + 2) ||
-                          "";
+                        const closeIdx = value.indexOf("}}", lastOpen);
+                        const suffix = closeIdx !== -1 ? value.substring(closeIdx + 2) : "";
                         const newValue = prefix + (item.path || "") + suffix;
                         onChange({ target: { value: newValue } });
                         setShowSuggestions(false);
                       }}
-                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors group/item flex items-center justify-between"
+                      className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors group/item flex items-center justify-between gap-4"
+                      title={item.description || ""}
                     >
-                      <div className="flex items-center gap-2">
-                        <div
+                      <div className="flex flex-col min-w-0">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className={cn(
+                              "w-1.5 h-1.5 rounded-full shrink-0",
+                              item.type === "boolean"
+                                ? "bg-emerald-400"
+                                : item.type === "number"
+                                  ? "bg-amber-400"
+                                  : "bg-indigo-400",
+                            )}
+                          />
+                          <span className="text-xs text-slate-200 font-mono truncate">
+                            {String(item.label || "")}
+                          </span>
+                        </div>
+                        {item.description && (
+                          <span className="text-[10px] text-slate-400 font-sans truncate ml-3.5 mt-0.5 max-w-[280px]">
+                            {item.description}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0 font-mono">
+                        <span
                           className={cn(
-                            "w-1.5 h-1.5 rounded-full",
-                            item.type === "boolean"
-                              ? "bg-emerald-400"
-                              : "bg-indigo-400",
+                            "px-1 py-0.5 rounded text-[8px] uppercase tracking-wider font-bold",
+                            item.scope === "global"
+                              ? "bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/30"
+                              : item.scope === "system"
+                                ? "bg-slate-500/20 text-slate-400 ring-1 ring-slate-500/30"
+                                : "bg-indigo-500/20 text-indigo-300 ring-1 ring-indigo-500/30",
                           )}
-                        />
-                        <span className="text-xs text-slate-200 font-mono">
-                          {String(item.label || "")}
+                        >
+                          {item.scope || "local"}
+                        </span>
+                        <span className="text-[10px] text-slate-500 min-w-[45px] text-right">
+                          {String(item.type || "")}
                         </span>
                       </div>
-                      <span className="text-[10px] text-slate-500 font-mono opacity-0 group-hover/item:opacity-100 transition-opacity">
-                        {String(item.type || "")}
-                      </span>
                     </button>
                   ))}
                 </div>
