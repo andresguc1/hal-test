@@ -13,6 +13,7 @@ import {
   X,
   Box,
   RefreshCw,
+  Repeat,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion as Motion, AnimatePresence } from "framer-motion";
@@ -250,6 +251,9 @@ const GlassMenu = ({
   const componentItems = isFlowMenu
     ? items.filter((i) => i.type === "component")
     : [];
+  const loopItems = isFlowMenu
+    ? items.filter((i) => i.type === "loop")
+    : [];
 
   return (
     <Motion.div
@@ -306,6 +310,30 @@ const GlassMenu = ({
                             onRename={onRename}
                             onDelete={onDelete}
                             icon={Box}
+                          />
+                        );
+                      })}
+                    </>
+                  )}
+
+                  {loopItems.length > 0 && (
+                    <>
+                      <div className="my-1 border-t border-white/5" />
+                      <div className="px-3 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                        Loops
+                      </div>
+                      {loopItems.map((item) => {
+                        if (renderedIds.has(item.id)) return null;
+                        renderedIds.add(item.id);
+                        return (
+                          <MenuOption
+                            key={item.id}
+                            item={item}
+                            isActive={item.id === activeId}
+                            onClick={onItemClick}
+                            onRename={onRename}
+                            onDelete={onDelete}
+                            icon={Repeat}
                           />
                         );
                       })}
@@ -421,6 +449,18 @@ function AppFooter({
   const activeProjectId = projects?.find((p) => p.name === projectName)?.id;
   const activeFlowId = flows?.find((f) => f.name === flowName)?.id;
 
+  const activeFlow = flows?.find((f) => f.id === activeFlowId || f.name === flowName);
+  const activeFlowIcon = activeFlow?.type === "loop"
+    ? Repeat
+    : activeFlow?.type === "component"
+      ? Box
+      : GitBranch;
+  const activeFlowLabel = activeFlow?.type === "loop"
+    ? "Loop"
+    : activeFlow?.type === "component"
+      ? "Component"
+      : "Flow";
+
   const projectButtonRef = useRef(null);
   const flowButtonRef = useRef(null);
 
@@ -503,8 +543,8 @@ function AppFooter({
         {/* SECTION 2: FLOW SELECTOR */}
         <div ref={flowButtonRef}>
           <SelectorButton
-            icon={GitBranch}
-            label="Flow"
+            icon={activeFlowIcon}
+            label={activeFlowLabel}
             subLabel={flowName}
             isActive={activeMenu === "flow"}
             onClick={() => toggleMenu("flow")}

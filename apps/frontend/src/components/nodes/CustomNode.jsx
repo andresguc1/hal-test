@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { NODE_STATES, CATEGORY_COLORS } from "../hooks/flowStyles";
 import { NODE_TYPE_TO_CATEGORY } from "../hooks/constants";
 import { getNodeIcon } from "./nodeIcons";
+import { NODE_CATEGORIES } from "@/config/nodeConstants";
 import "./CustomNode.css"; // Ensure shake animation is available
 
 /**
@@ -151,7 +152,7 @@ function CustomNode({ data, selected }) {
               ? "BINDING MODE"
               : isHealed
                 ? "SELF-HEALED"
-                : categoryKey.replace(/_/g, " ")}
+                : (NODE_CATEGORIES[categoryKey]?.label || categoryKey.replace(/_/g, " "))}
           </span>
 
           <h3

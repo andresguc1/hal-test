@@ -19,6 +19,7 @@ import {
   CATEGORY_STYLES,
   NODE_TYPE_MAP,
   NODE_OUTPUTS,
+  NODE_CATEGORIES,
 } from "@/config/nodeConstants";
 import { api } from "../utils/api";
 import VariableInput from "./VariableInput";
@@ -721,7 +722,7 @@ const NodeConfigurationPanel = ({
             CATEGORY_STYLES[colorKey]?.panel?.categoryText,
           )}
         >
-          {safeConfig.category.replace("_", " ")}
+          {NODE_CATEGORIES[safeConfig.category]?.label || safeConfig.category.replace("_", " ")}
         </span>
         <input
           type="text"

@@ -528,21 +528,75 @@ export const NODE_INPUTS = {
   ],
   loop: [
     {
-      key: "type",
+      key: "loopType",
       label: "Loop Type",
       type: "select",
       options: [
-        { label: "Fixed Count", value: "fixed" },
+        { label: "For (Count / Expression)", value: "for" },
         { label: "While (Condition)", value: "while" },
-        { label: "Each (Array)", value: "each" },
       ],
       required: true,
+      defaultValue: "for",
+    },
+    {
+      key: "iterations",
+      label: "Iterations / Expression",
+      type: "text",
+      placeholder: "e.g. 10 or {{variables.maxRetries}}",
+      required: true,
+      isVisible: (config) => !config.loopType || config.loopType === "for" || config.mode === "count" || config.type === "fixed",
+    },
+    {
+      key: "condition",
+      label: "While Condition (JS Expression)",
+      type: "text",
+      placeholder: "e.g. {{loop.index}} < {{variables.max}}",
+      required: true,
+      isVisible: (config) => config.loopType === "while" || config.mode === "while" || config.type === "while",
+    },
+    {
+      key: "executionMode",
+      label: "Execution Mode",
+      type: "select",
+      options: [
+        { label: "Sequential", value: "sequential" },
+        { label: "Parallel (Concurrent)", value: "parallel" },
+      ],
+      required: true,
+      defaultValue: "sequential",
+    },
+    {
+      key: "concurrencyLimit",
+      label: "Concurrency Limit",
+      type: "number",
+      placeholder: "5",
+      defaultValue: 5,
+      isVisible: (config) => config.executionMode === "parallel",
+    },
+    {
+      key: "breakOnError",
+      label: "Break on Error",
+      type: "boolean",
+      defaultValue: true,
+    },
+    {
+      key: "collectResults",
+      label: "Collect Results",
+      type: "boolean",
+      defaultValue: true,
+    },
+    {
+      key: "maxIterations",
+      label: "Safety Limit (Max Iterations)",
+      type: "number",
+      placeholder: "1000",
+      defaultValue: 1000,
     },
     {
       key: "flowId",
-      label: "Sub-flow ID",
+      label: "Linked Sub-flow ID",
       type: "text",
-      required: true,
+      placeholder: "Select or enter sub-flow ID...",
     },
   ],
   component: [
@@ -654,8 +708,14 @@ export const validateNodeConfig = (nodeType, config = {}) => {
 
   for (const rule of rules) {
     if (rule.required) {
+      if (typeof rule.isVisible === "function" && !rule.isVisible(config)) {
+        continue;
+      }
       const value = config[rule.key];
       if (value === null || value === undefined || value === "") {
+        if (rule.defaultValue !== undefined) {
+          continue;
+        }
         return { isValid: false, missingField: rule.label, fieldKey: rule.key };
       }
     }

@@ -7,6 +7,7 @@ vi.mock('../socket.js', () => ({
     emitFlowFinished: vi.fn(),
     emitExecutionStatus: vi.fn(),
     emitEdgeStatus: vi.fn(),
+    emitVariableChange: vi.fn(),
 }));
 
 describe('ExecutionService - Flow Control Orchestration', () => {

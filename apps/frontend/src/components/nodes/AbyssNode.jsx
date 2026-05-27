@@ -13,7 +13,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { NODE_TYPE_MAP, CATEGORY_STYLES } from "@/config/nodeConstants";
+import { NODE_TYPE_MAP, CATEGORY_STYLES, NODE_CATEGORIES } from "@/config/nodeConstants";
 import {
   validateNodeConfig,
   getSmartLabel,
@@ -295,7 +295,7 @@ const AbyssNode = ({ id, data, selected, type }) => {
               <span className="text-[10px] font-bold uppercase tracking-wider text-white drop-shadow-sm">
                 {safeConfig.category === "network_control"
                   ? "NETWORK"
-                  : safeConfig.category.replace("_", " ")}
+                  : (NODE_CATEGORIES[safeConfig.category]?.label || safeConfig.category.replace("_", " "))}
               </span>
             )}
           </div>

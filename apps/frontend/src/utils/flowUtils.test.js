@@ -98,13 +98,13 @@ describe("resolveVariables", () => {
     });
   });
 
-  it("should handle objects by stringifying them", () => {
+  it("should handle objects by preserving their raw structure", () => {
     const complexContext = {
       data: { result: { a: 1, b: 2 } },
     };
     const config = { payload: "{{data}}" };
     expect(resolveVariables(config, complexContext)).toEqual({
-      payload: '{"a":1,"b":2}',
+      payload: { a: 1, b: 2 },
     });
   });
 

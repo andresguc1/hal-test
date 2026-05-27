@@ -1109,14 +1109,31 @@ export const conditional = (payload) => {
 };
 
 export const loop = (payload) => {
+  // Normalize loopType, supporting mode/type for legacy compatibility
+  let loopType = payload?.loopType;
+  if (!loopType) {
+    const legacyMode = payload?.mode || payload?.type;
+    loopType = legacyMode === "while" ? "while" : "for";
+  }
+
+  const rawIterations = payload?.iterations;
+  const iterations = typeof rawIterations === "string" && (rawIterations.includes("{{") || rawIterations.includes("$") || isNaN(Number(rawIterations)))
+    ? rawIterations.trim()
+    : asNumber(rawIterations, 10, 1);
+
   return {
     browserId: asString(payload?.browserId),
-    mode: asString(payload?.mode, "count"),
-    iterations: asNumber(payload?.iterations, 10, 1),
+    loopType,
+    iterations,
     condition: asString(payload?.condition),
-    array: asString(payload?.array),
-    itemVar: asString(payload?.itemVar),
-    maxIterations: asNumber(payload?.maxIterations, 1000, 1),
+    executionMode: asString(payload?.executionMode, "sequential"),
+    concurrencyLimit: asNumber(payload?.concurrencyLimit, 5, 1, 100),
+    breakOnError: asBoolean(payload?.breakOnError, true),
+    collectResults: asBoolean(payload?.collectResults, true),
+    maxIterations: asNumber(payload?.maxIterations, 1000, 1, 10000),
+    flowId: asString(payload?.flowId),
+    array: payload?.array !== undefined ? asString(payload?.array) : undefined,
+    itemVar: payload?.itemVar !== undefined ? asString(payload?.itemVar) : undefined,
   };
 };
 

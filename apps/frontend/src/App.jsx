@@ -1345,7 +1345,12 @@ function Dashboard() {
       onPaneContextMenu,
       onSelectionContextMenu,
       onNodeDoubleClick: (event, node) => {
-        if (node.type === "component" || node.type === "loop") {
+        if (
+          node.type === "component" ||
+          node.type === "loop" ||
+          node.data?.type === "component" ||
+          node.data?.type === "loop"
+        ) {
           enterComponent(node.id);
         } else {
           // Open Step Details Modal on double-click

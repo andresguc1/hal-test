@@ -812,22 +812,39 @@ export class ExecutionService {
     async executeLoopContainer(node, allNodes, allEdges, state) {
         const config = node.data?.configuration || {};
         const {
+            loopType,
             mode,
             iterations,
             condition,
+            maxIterations = 1000,
+            executionMode = 'sequential',
+            concurrencyLimit = 5,
+            breakOnError = true,
+            collectResults = true,
+            executionTimeout = 0,
+            flowId,
+            // legacy fallbacks
             array: arrayInput,
             itemVar = 'item',
             indexVar = 'i',
-            maxIterations = 1000,
-            flowId, // NEW: Support for dive-in sub-flows
         } = config;
 
+        let normalizedLoopType = loopType;
+        if (!normalizedLoopType) {
+            const legacyMode = mode || node.type;
+            if (legacyMode === 'while') {
+                normalizedLoopType = 'while';
+            } else {
+                normalizedLoopType = 'for';
+            }
+        }
+
         console.log(
-            `[Loop] Starting encapsulated execution for node ${node.nodeId} (Mode: ${mode}, FlowId: ${flowId})`,
+            `[Loop] Starting redesigned composition execution for node ${node.nodeId} (Type: ${normalizedLoopType}, Scheduling: ${executionMode}, FlowId: ${flowId})`,
         );
         const nodeLabel = node.data?.customLabel || node.data?.label || 'Loop';
         emitLog({
-            message: `Executing loop container: "${nodeLabel}"...`,
+            message: `Executing loop composition: "${nodeLabel}"...`,
             nodeId: node.nodeId,
             type: 'info',
         });
@@ -837,7 +854,6 @@ export class ExecutionService {
 
         // 1. Identify children (Support both models for backward compatibility during transition)
         if (flowId) {
-            // Dive-in model: Load nodes from the linked flow
             const subFlow = await Flow.findOne({
                 where: { id: flowId },
                 include: [
@@ -851,9 +867,8 @@ export class ExecutionService {
             subNodes = subFlow.nodes.map((n) => n.toJSON());
             subEdges = subFlow.edges.map((e) => e.toJSON());
         } else {
-            // In-place model (Deprecated): Filter by parentId
             subNodes = allNodes.filter((n) => n.parentId === node.nodeId);
-            subEdges = allEdges; // We filter edges by node IDs later if needed
+            subEdges = allEdges;
         }
 
         if (subNodes.length === 0) {
@@ -868,7 +883,6 @@ export class ExecutionService {
 
         // Find entry points within the loop
         const childNodeIds = new Set(subNodes.map((c) => c.nodeId));
-        // Only consider edges where both source and target are inside the sub-flow
         const internalEdges = subEdges.filter(
             (e) => childNodeIds.has(e.target) && childNodeIds.has(e.source),
         );
@@ -881,82 +895,80 @@ export class ExecutionService {
 
         const entryNodes = subNodes.filter((c) => incomingCount.get(c.nodeId) === 0);
         const loopStartNodes = entryNodes.length > 0 ? entryNodes : [subNodes[0]];
+
+        // 2. Resolve total iterations for count-based loops
+        let resolvedTotal = null;
+        let isLegacyArray = false;
+        let listData = [];
+
+        if (normalizedLoopType === 'for') {
+            if (mode === 'array' || mode === 'each' || mode === 'forEach') {
+                isLegacyArray = true;
+                if (typeof arrayInput === 'string') {
+                    listData =
+                        variableManager.get(arrayInput, state.runId) ||
+                        variableManager.resolveValue(arrayInput, state.runId);
+                } else if (Array.isArray(arrayInput)) {
+                    listData = arrayInput;
+                }
+                if (!Array.isArray(listData)) listData = [];
+                resolvedTotal = listData.length;
+            } else {
+                resolvedTotal = Number(variableManager.resolveValue(iterations, state.runId));
+                if (isNaN(resolvedTotal)) resolvedTotal = 0;
+            }
+        }
+
+        const results = [];
+        let finalSuccess = true;
         let currentIndex = 0;
         let finished = false;
-        let hasSoftFail = false;
 
-        const totalIterations =
-            mode === 'count'
-                ? Number(variableManager.resolveValue(iterations, state.runId))
-                : 'unknown';
+        // 3. Isolated Iteration Scope Runner Helper
+        const runIteration = async (index) => {
+            const iterationRunId = `${state.runId}_loop_${node.nodeId}_${index}`;
 
-        while (!finished && currentIndex < maxIterations) {
-            let shouldContinue = false;
-            let currentItem = null;
+            // Initialize isolated child run scope from a shallow copy of parent variables
+            const parentVars = variableManager.getAll(state.runId) || {};
+            variableManager.initRun(iterationRunId, { ...parentVars });
 
-            // Evaluating condition...
-            switch (mode) {
-                case 'count': {
-                    shouldContinue = currentIndex < Number(totalIterations);
-                    break;
-                }
-                case 'array': {
-                    let list = [];
-                    if (typeof arrayInput === 'string') {
-                        // Try getting as variable first (direct name), then resolve as template
-                        list =
-                            variableManager.get(arrayInput, state.runId) ||
-                            variableManager.resolveValue(arrayInput, state.runId);
-                    } else if (Array.isArray(arrayInput)) {
-                        list = arrayInput;
-                    }
-                    if (!Array.isArray(list)) list = [];
-                    shouldContinue = currentIndex < list.length;
-                    if (shouldContinue) currentItem = list[currentIndex];
-                    break;
-                }
+            // Seed isolated loop context variables
+            variableManager.set('loop.index', index, iterationRunId);
+            variableManager.set('loop.iteration', index + 1, iterationRunId);
+            variableManager.set('loop.isFirst', index === 0, iterationRunId);
+            variableManager.set(
+                'loop.isLast',
+                resolvedTotal !== null ? index === resolvedTotal - 1 : false,
+                iterationRunId,
+            );
+            variableManager.set('loop.total', resolvedTotal, iterationRunId);
 
-                case 'while': {
-                    try {
-                        shouldContinue = variableManager.evaluate(condition, state.runId) === true;
-                    } catch (e) {
-                        shouldContinue = false;
-                    }
-                    break;
-                }
-                default:
-                    shouldContinue = false;
-            }
-
-            if (!shouldContinue) {
-                finished = true;
-                break;
-            }
-
-            // 2. Set Iteration Variables
-            variableManager.set(indexVar, currentIndex, state.runId);
-            if (mode === 'array') {
+            const currentItem = isLegacyArray ? listData[index] : null;
+            if (isLegacyArray) {
+                variableManager.set('loop.currentItem', currentItem, iterationRunId);
+                variableManager.set(itemVar, currentItem, iterationRunId);
                 variableManager.set(itemVar, currentItem, state.runId);
             }
+            variableManager.set(indexVar, index, iterationRunId);
+            variableManager.set(indexVar, index, state.runId);
 
-            const iterLog =
-                mode === 'count'
-                    ? `Loop: Iteration ${currentIndex + 1} of ${totalIterations}`
-                    : `Loop: Iteration ${currentIndex + 1}`;
-
+            const iterLog = `[Loop Container] Starting iteration ${index + 1}${
+                resolvedTotal !== null ? ` of ${resolvedTotal}` : ''
+            }`;
             emitLog({ message: iterLog, nodeId: node.nodeId, type: 'info' });
-            console.log(`[Loop] ${iterLog} for ${node.nodeId}`);
+            console.log(`[Loop] ${iterLog} (Isolated RunId: ${iterationRunId})`);
 
-            // 3. Execution sub-graph
-            // Create a local state for the iteration to track executed nodes within this iteration
+            // Setup isolated sequence state for this iteration
             const iterationState = {
                 ...state,
-                executedNodeIds: new Set(), // Fresh set for this iteration
+                runId: iterationRunId,
+                executedNodeIds: new Set(),
+                activatedNodeIds: new Set(loopStartNodes.map((sn) => sn.nodeId)),
+                edgeStates: {},
             };
 
             const sequenceParentId = flowId ? null : node.nodeId;
-
-            const signal = await this.runSequence(
+            const seqResult = await this.runSequence(
                 loopStartNodes,
                 subNodes,
                 subEdges,
@@ -967,41 +979,214 @@ export class ExecutionService {
                 },
             );
 
-            // HANDLE FLOW CONTROL SIGNALS
-            if (signal) {
-                if (signal.action === 'break') {
-                    finished = true;
-                    break;
-                }
-                if (signal.action === 'continue') {
-                    currentIndex++;
-                    continue; // Skip to next iteration check
-                }
-                if (signal.action === 'return') {
-                    return signal; // Bubbling up return signal
-                }
-            }
+            // Extract results:
+            // Find explicit output nodes inside the subflow graph
+            const outputs = {};
+            const outputNodes = subNodes.filter((sn) => sn.type === 'output');
+            outputNodes.forEach((outNode) => {
+                const outLabel = outNode.data?.customLabel || outNode.data?.label || outNode.nodeId;
+                const outVal =
+                    variableManager.get(`${outNode.nodeId}.result`, iterationRunId) ||
+                    variableManager.get(`${outLabel}.result`, iterationRunId);
+                outputs[outLabel] =
+                    outVal !== undefined && outVal !== null && outVal.data !== undefined
+                        ? outVal.data
+                        : outVal;
+            });
 
-            currentIndex++;
-
-            // AGGREGATE SOFT FAILS FROM THIS ITERATION
+            // Scan executed nodes inside the child iterationState to track hard and soft fails
+            let hasHardFail = false;
+            let hasSoftFail = false;
             for (const executedNodeId of iterationState.executedNodeIds) {
-                const nodeResult = variableManager.get(`${executedNodeId}.result`, state.runId);
-                if (nodeResult && nodeResult.status === 'softfailed') {
-                    hasSoftFail = true;
+                const nodeResult = variableManager.get(`${executedNodeId}.result`, iterationRunId);
+                if (nodeResult) {
+                    if (nodeResult.success === false || nodeResult.status === 'failed') {
+                        hasHardFail = true;
+                    }
+                    if (nodeResult.status === 'softfailed') {
+                        hasSoftFail = true;
+                    }
                 }
             }
+
+            // Retrieve final iteration variables
+            const iterationVars = variableManager.getAll(iterationRunId) || {};
+
+            return {
+                success: !hasHardFail,
+                hasSoftFail,
+                signal: seqResult,
+                outputs,
+                variables: iterationVars,
+                iterationRunId,
+            };
+        };
+
+        // Safety Timeout Wrap
+        let timeoutHandle = null;
+        let timeoutPromise = null;
+
+        if (executionTimeout > 0) {
+            timeoutPromise = new Promise((_, reject) => {
+                timeoutHandle = setTimeout(() => {
+                    reject(
+                        new Error(
+                            `[Loop] Loop execution exceeded timeout of ${executionTimeout}ms`,
+                        ),
+                    );
+                }, executionTimeout);
+            });
         }
 
-        return {
-            success: true, // MUST remain true to trick the Engine into continuing the main flow
-            message: `Loop completed after ${currentIndex} iterations`,
+        const runScheduler = async () => {
+            if (executionMode === 'sequential') {
+                while (!finished && currentIndex < maxIterations) {
+                    let shouldContinue = false;
+                    if (normalizedLoopType === 'for') {
+                        shouldContinue = currentIndex < resolvedTotal;
+                    } else if (normalizedLoopType === 'while') {
+                        try {
+                            shouldContinue =
+                                variableManager.evaluate(condition, state.runId) === true;
+                        } catch (e) {
+                            shouldContinue = false;
+                        }
+                    }
+
+                    if (!shouldContinue) {
+                        finished = true;
+                        break;
+                    }
+
+                    const iterationOutput = await runIteration(currentIndex);
+
+                    // Propagate modified child variables back to parent scope (except loop-local ones)
+                    const finalVars = iterationOutput.variables || {};
+                    for (const [key, val] of Object.entries(finalVars)) {
+                        if (!key.startsWith('loop.') && key !== indexVar && key !== itemVar) {
+                            variableManager.set(key, val, state.runId);
+                        }
+                    }
+
+                    results.push(
+                        collectResults ? iterationOutput.outputs : iterationOutput.variables,
+                    );
+
+                    if (!iterationOutput.success) {
+                        finalSuccess = false;
+                        if (breakOnError) {
+                            finished = true;
+                            break;
+                        }
+                    }
+
+                    // Check for flow control signals (break / continue / return)
+                    const signal =
+                        iterationOutput.signal || iterationOutput.variables['_signal_action'];
+                    if (signal) {
+                        const signalAction = typeof signal === 'string' ? signal : signal.action;
+                        if (signalAction === 'break') {
+                            console.log(`[Loop] Intercepted break signal. Terminating loop.`);
+                            finished = true;
+                            break;
+                        }
+                        if (signalAction === 'continue') {
+                            console.log(
+                                `[Loop] Intercepted continue signal. Jumping to next iteration.`,
+                            );
+                        }
+                        if (signalAction === 'return') {
+                            console.log(`[Loop] Intercepted return signal. Bubbling return up.`);
+                            variableManager.set('_signal_action', 'return', state.runId);
+                            finished = true;
+                            // Propagate returning signal up
+                            if (typeof signal === 'object') return signal;
+                            return { action: 'return' };
+                        }
+                    }
+
+                    currentIndex++;
+                }
+            } else if (executionMode === 'parallel') {
+                const totalIterationsToRun = Math.min(resolvedTotal || 0, maxIterations);
+                const iterationIndexes = Array.from({ length: totalIterationsToRun }, (_, i) => i);
+
+                for (let i = 0; i < iterationIndexes.length; i += concurrencyLimit) {
+                    const chunk = iterationIndexes.slice(i, i + concurrencyLimit);
+                    const chunkPromises = chunk.map((index) =>
+                        runIteration(index)
+                            .then((res) => {
+                                if (!res.success) {
+                                    finalSuccess = false;
+                                }
+                                return res;
+                            })
+                            .catch((err) => {
+                                finalSuccess = false;
+                                if (breakOnError) throw err;
+                                return { success: false, outputs: {}, variables: {} };
+                            }),
+                    );
+
+                    const chunkResults = await Promise.all(chunkPromises);
+                    chunkResults.forEach((res) => {
+                        results.push(collectResults ? res.outputs : res.variables);
+
+                        // Propagate modified child variables back to parent scope
+                        const finalVars = res.variables || {};
+                        for (const [key, val] of Object.entries(finalVars)) {
+                            if (!key.startsWith('loop.') && key !== indexVar && key !== itemVar) {
+                                variableManager.set(key, val, state.runId);
+                            }
+                        }
+                    });
+
+                    if (!finalSuccess && breakOnError) {
+                        break;
+                    }
+                }
+                currentIndex = totalIterationsToRun;
+            }
+        };
+
+        let schedulerResult = null;
+        try {
+            if (timeoutPromise) {
+                schedulerResult = await Promise.race([runScheduler(), timeoutPromise]);
+            } else {
+                schedulerResult = await runScheduler();
+            }
+        } finally {
+            if (timeoutHandle) clearTimeout(timeoutHandle);
+        }
+
+        if (
+            schedulerResult &&
+            (schedulerResult.action === 'return' ||
+                schedulerResult.action === 'break' ||
+                schedulerResult.action === 'continue')
+        ) {
+            return schedulerResult;
+        }
+
+        const finalResultPayload = {
+            success: finalSuccess,
+            status: finalSuccess ? 'completed' : 'failed',
+            message: `Loop completed with ${currentIndex} iterations`,
             data: {
+                success: finalSuccess,
                 totalIterations: currentIndex,
-                success: !hasSoftFail, // Expose internal failure via 'data' so conditional nodes can branch correctly!
-                status: hasSoftFail ? 'softfailed' : 'success',
+                results: collectResults ? results : results[results.length - 1],
             },
         };
+
+        variableManager.set(`${node.nodeId}.result`, finalResultPayload, state.runId);
+        variableManager.set(`${nodeLabel}.result`, finalResultPayload, state.runId);
+        variableManager.set(node.nodeId, finalResultPayload, state.runId);
+        variableManager.set(nodeLabel, finalResultPayload, state.runId);
+
+        console.log(`[Loop] Loop node ${node.nodeId} execution completed.`);
+        return finalResultPayload;
     }
 
     async printExecutionSummary(runId, flowName) {

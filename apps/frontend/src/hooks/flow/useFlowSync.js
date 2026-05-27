@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { v4 as uuidv4 } from "uuid";
 import { logger } from "../../utils/logger";
 import { projectManager } from "../../utils/ProjectManager";
 import { debounce } from "../../utils/flowUtils";
@@ -114,7 +115,97 @@ export function useFlowSync({
   const enterComponent = useCallback(
     async (componentId) => {
       const componentNode = nodesRef.current.find((n) => n.id === componentId);
-      if (!componentNode?.data?.flowId) return;
+      if (!componentNode) return;
+
+      const isContainer = ["component", "loop"].includes(
+        componentNode.type || componentNode.data?.type
+      );
+      if (!isContainer) return;
+
+      let flowId = componentNode.data?.flowId;
+
+      if (!flowId) {
+        if (!currentProject) {
+          logger.error("No active project to create a subflow");
+          return;
+        }
+        try {
+          const flowName =
+            componentNode.data?.customLabel ||
+            componentNode.data?.label ||
+            (componentNode.type === "loop" || componentNode.data?.type === "loop"
+              ? "Loop Sub-flow"
+              : "Sub Flow");
+
+          const flowType =
+            componentNode.type === "loop" || componentNode.data?.type === "loop"
+              ? "loop"
+              : "component";
+
+          const response = await projectManager.createFlow(
+            currentProject.id,
+            flowName,
+            { type: flowType }
+          );
+          flowId = response.flow?.id || response.id;
+
+          if (!flowId) {
+            throw new Error("Failed to retrieve new flow ID");
+          }
+
+          const defaultNodes = [];
+          const isContainer = ["component", "loop"].includes(
+            componentNode.type || componentNode.data?.type
+          );
+          if (isContainer) {
+            defaultNodes.push(
+              {
+                id: `node_${uuidv4()}`,
+                type: "input",
+                position: { x: 100, y: 150 },
+                data: {
+                  type: "input",
+                  label: "Input Parameters",
+                  state: "default",
+                },
+              },
+              {
+                id: `node_${uuidv4()}`,
+                type: "output",
+                position: { x: 600, y: 150 },
+                data: {
+                  type: "output",
+                  label: "Output Return",
+                  state: "default",
+                },
+              }
+            );
+          }
+
+          await projectManager.updateFlow(currentProject.id, flowId, {
+            nodes: defaultNodes,
+            edges: [],
+            viewport: { x: 0, y: 0, zoom: 1 },
+          });
+
+          // Update parent node data
+          componentNode.data = {
+            ...componentNode.data,
+            flowId,
+            configuration: {
+              ...componentNode.data?.configuration,
+              flowId,
+            },
+          };
+
+          // Save the parent flow
+          await saveFlow(true);
+        } catch (err) {
+          logger.error("Failed to automatically create subflow for container", err);
+          if (toast) toast.error("Failed to initialize sub-flow");
+          return;
+        }
+      }
 
       await saveFlow(true);
       const flowName =
@@ -125,9 +216,9 @@ export function useFlowSync({
         ...prev,
         { id: currentFlowId, label: flowName, nodeId: componentId },
       ]);
-      switchFlow(componentNode.data.flowId);
+      switchFlow(flowId);
     },
-    [currentFlowId, currentProject, saveFlow, switchFlow, nodesRef],
+    [currentFlowId, currentProject, saveFlow, switchFlow, nodesRef, toast],
   );
 
   const exitComponent = useCallback(async () => {

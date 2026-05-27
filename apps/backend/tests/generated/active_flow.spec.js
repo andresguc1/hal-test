@@ -30,6 +30,10 @@ test(`Flujo Generado Hal-Test`, async ({ page }) => {
         await page.click(`#login-button`);
     });
 
+    await test.step(`loop`, async () => {
+        console.log(`⚠️ Acción no implementada o pendiente: loop`);
+    });
+
     await test.step(`Verify User Role`, async () => {
         console.log(`⚠️ Acción no implementada o pendiente: conditional`);
     });
@@ -39,7 +43,7 @@ test(`Flujo Generado Hal-Test`, async ({ page }) => {
     });
 
     await test.step(`Take Evidence`, async () => {
-        await page.screenshot({ path: 'screenshot_9.png' });
+        await page.screenshot({ path: 'screenshot_10.png' });
     });
 
     await test.step(`Complete Tour`, async () => {

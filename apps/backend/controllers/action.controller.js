@@ -4788,6 +4788,7 @@ export const loopAction = async (req, res) => {
         const {
             nodeId,
             mode,
+            loopType: inputLoopType,
             iterations,
             condition,
             array: arrayInput,
@@ -4795,6 +4796,16 @@ export const loopAction = async (req, res) => {
             indexVar = 'i',
             maxIterations = 1000,
         } = req.body;
+
+        let loopType = inputLoopType;
+        if (!loopType) {
+            const normalizedMode = mode;
+            if (normalizedMode === 'while') {
+                loopType = 'while';
+            } else {
+                loopType = 'for';
+            }
+        }
 
         const stateKey = `_loop_state_${nodeId}`;
         let state = variableManager.get(stateKey, req.body.runId);
@@ -4806,16 +4817,12 @@ export const loopAction = async (req, res) => {
         let shouldContinue = false;
         let currentItem = null;
 
-        switch (mode) {
-            case 'count': {
-                const total = Number(variableManager.resolveValue(iterations, req.body.runId));
-                shouldContinue = state.index < total;
-                break;
-            }
-            case 'array': {
+        if (loopType === 'for') {
+            let total = 0;
+            // Legacy array compatibility
+            if (mode === 'array' || mode === 'each' || mode === 'forEach') {
                 let list = [];
                 if (typeof arrayInput === 'string') {
-                    // Try getting as variable first, then resolve as template
                     list =
                         variableManager.get(arrayInput, req.body.runId) ||
                         variableManager.resolveValue(arrayInput, req.body.runId);
@@ -4823,20 +4830,21 @@ export const loopAction = async (req, res) => {
                     list = arrayInput;
                 }
                 if (!Array.isArray(list)) list = [];
-                shouldContinue = state.index < list.length;
-                if (shouldContinue) currentItem = list[state.index];
-                break;
-            }
-            case 'while': {
-                try {
-                    shouldContinue = variableManager.evaluate(condition, req.body.runId) === true;
-                } catch (e) {
-                    shouldContinue = false;
+                total = list.length;
+                if (state.index < total) {
+                    currentItem = list[state.index];
                 }
-                break;
+            } else {
+                total = Number(variableManager.resolveValue(iterations, req.body.runId));
+                if (isNaN(total)) total = 0;
             }
-            default:
+            shouldContinue = state.index < total;
+        } else if (loopType === 'while') {
+            try {
+                shouldContinue = variableManager.evaluate(condition, req.body.runId) === true;
+            } catch (e) {
                 shouldContinue = false;
+            }
         }
 
         // Safety check
@@ -4858,9 +4866,14 @@ export const loopAction = async (req, res) => {
         }
 
         // Update variables for this iteration
+        variableManager.set('loop.index', state.index, req.body.runId);
+        variableManager.set('loop.iteration', state.index + 1, req.body.runId);
+        variableManager.set('loop.isFirst', state.index === 0, req.body.runId);
         variableManager.set(indexVar, state.index, req.body.runId);
-        if (mode === 'array') {
+
+        if (mode === 'array' || mode === 'each' || mode === 'forEach') {
             variableManager.set(itemVar, currentItem, req.body.runId);
+            variableManager.set('loop.currentItem', currentItem, req.body.runId);
         }
 
         // Increment state

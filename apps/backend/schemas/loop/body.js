@@ -2,42 +2,45 @@
 import Joi from 'joi';
 
 export default Joi.object({
+    loopType: Joi.string()
+        .valid('for', 'while')
+        .default('for')
+        .description('Loop type: for (expression/count), while (condition)'),
+
+    // For backward-compatibility with older tests
     mode: Joi.string()
-        .valid('count', 'while', 'forEach')
-        .required()
-        .description('Loop mode: count (N iterations), while (condition), forEach (array)'),
+        .valid('count', 'while', 'array', 'forEach', 'each')
+        .optional()
+        .description('Legacy loop mode'),
 
-    // For count mode
-    iterations: Joi.when('mode', {
-        is: 'count',
-        then: Joi.number().integer().min(1).max(1000).required(),
-        otherwise: Joi.any().strip(),
-    }),
+    iterations: Joi.alternatives()
+        .try(Joi.number().integer().min(0).max(10000), Joi.string().allow('', null))
+        .optional()
+        .description('Number of iterations or template/expression'),
 
-    // For while mode
-    condition: Joi.when('mode', {
-        is: 'while',
-        then: Joi.string().required(),
-        otherwise: Joi.any().strip(),
-    }),
+    condition: Joi.string().allow('', null).optional().description('While loop expression'),
 
-    // For forEach mode
-    array: Joi.when('mode', {
-        is: 'forEach',
-        then: Joi.string().required(),
-        otherwise: Joi.any().strip(),
-    }),
+    executionMode: Joi.string()
+        .valid('sequential', 'parallel')
+        .default('sequential')
+        .description('Iteration execution strategy'),
 
-    itemVar: Joi.when('mode', {
-        is: 'forEach',
-        then: Joi.string().required(),
-        otherwise: Joi.any().strip(),
-    }),
+    concurrencyLimit: Joi.number().integer().min(1).max(100).default(5),
+
+    breakOnError: Joi.boolean().default(true),
+    collectResults: Joi.boolean().default(true),
 
     maxIterations: Joi.number()
         .integer()
         .min(1)
         .max(10000)
         .default(1000)
-        .description('Safety limit for while loops'),
+        .description('Safety limit for execution loops'),
+
+    flowId: Joi.string().optional().allow('', null).description('Encapsulated sub-flow ID'),
+
+    // Keep optional legacy keys to ensure zero backward compatibility break
+    array: Joi.any().optional(),
+    itemVar: Joi.string().optional(),
+    indexVar: Joi.string().optional(),
 });
