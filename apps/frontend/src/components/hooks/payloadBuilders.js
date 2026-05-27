@@ -1117,9 +1117,13 @@ export const loop = (payload) => {
   }
 
   const rawIterations = payload?.iterations;
-  const iterations = typeof rawIterations === "string" && (rawIterations.includes("{{") || rawIterations.includes("$") || isNaN(Number(rawIterations)))
-    ? rawIterations.trim()
-    : asNumber(rawIterations, 10, 1);
+  const iterations =
+    typeof rawIterations === "string" &&
+    (rawIterations.includes("{{") ||
+      rawIterations.includes("$") ||
+      isNaN(Number(rawIterations)))
+      ? rawIterations.trim()
+      : asNumber(rawIterations, 10, 1);
 
   return {
     browserId: asString(payload?.browserId),
@@ -1133,7 +1137,8 @@ export const loop = (payload) => {
     maxIterations: asNumber(payload?.maxIterations, 1000, 1, 10000),
     flowId: asString(payload?.flowId),
     array: payload?.array !== undefined ? asString(payload?.array) : undefined,
-    itemVar: payload?.itemVar !== undefined ? asString(payload?.itemVar) : undefined,
+    itemVar:
+      payload?.itemVar !== undefined ? asString(payload?.itemVar) : undefined,
   };
 };
 

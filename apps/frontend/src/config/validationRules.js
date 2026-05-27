@@ -544,7 +544,11 @@ export const NODE_INPUTS = {
       type: "text",
       placeholder: "e.g. 10 or {{variables.maxRetries}}",
       required: true,
-      isVisible: (config) => !config.loopType || config.loopType === "for" || config.mode === "count" || config.type === "fixed",
+      isVisible: (config) =>
+        !config.loopType ||
+        config.loopType === "for" ||
+        config.mode === "count" ||
+        config.type === "fixed",
     },
     {
       key: "condition",
@@ -552,7 +556,10 @@ export const NODE_INPUTS = {
       type: "text",
       placeholder: "e.g. {{loop.index}} < {{variables.max}}",
       required: true,
-      isVisible: (config) => config.loopType === "while" || config.mode === "while" || config.type === "while",
+      isVisible: (config) =>
+        config.loopType === "while" ||
+        config.mode === "while" ||
+        config.type === "while",
     },
     {
       key: "executionMode",

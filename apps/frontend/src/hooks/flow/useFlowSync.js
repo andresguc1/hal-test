@@ -118,7 +118,7 @@ export function useFlowSync({
       if (!componentNode) return;
 
       const isContainer = ["component", "loop"].includes(
-        componentNode.type || componentNode.data?.type
+        componentNode.type || componentNode.data?.type,
       );
       if (!isContainer) return;
 
@@ -133,7 +133,8 @@ export function useFlowSync({
           const flowName =
             componentNode.data?.customLabel ||
             componentNode.data?.label ||
-            (componentNode.type === "loop" || componentNode.data?.type === "loop"
+            (componentNode.type === "loop" ||
+            componentNode.data?.type === "loop"
               ? "Loop Sub-flow"
               : "Sub Flow");
 
@@ -145,7 +146,7 @@ export function useFlowSync({
           const response = await projectManager.createFlow(
             currentProject.id,
             flowName,
-            { type: flowType }
+            { type: flowType },
           );
           flowId = response.flow?.id || response.id;
 
@@ -155,7 +156,7 @@ export function useFlowSync({
 
           const defaultNodes = [];
           const isContainer = ["component", "loop"].includes(
-            componentNode.type || componentNode.data?.type
+            componentNode.type || componentNode.data?.type,
           );
           if (isContainer) {
             defaultNodes.push(
@@ -178,7 +179,7 @@ export function useFlowSync({
                   label: "Output Return",
                   state: "default",
                 },
-              }
+              },
             );
           }
 
@@ -201,7 +202,10 @@ export function useFlowSync({
           // Save the parent flow
           await saveFlow(true);
         } catch (err) {
-          logger.error("Failed to automatically create subflow for container", err);
+          logger.error(
+            "Failed to automatically create subflow for container",
+            err,
+          );
           if (toast) toast.error("Failed to initialize sub-flow");
           return;
         }

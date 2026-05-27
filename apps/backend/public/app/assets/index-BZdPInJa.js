@@ -70278,7 +70278,7 @@ const XPe = (e) => {
                                                                                                                       {
                                                                                                                           fileName:
                                                                                                                               '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/VariableInput.jsx',
-                                                                                                                          lineNumber: 335,
+                                                                                                                          lineNumber: 336,
                                                                                                                           columnNumber: 27,
                                                                                                                       },
                                                                                                                       void 0,
@@ -70299,7 +70299,7 @@ const XPe = (e) => {
                                                                                                                       {
                                                                                                                           fileName:
                                                                                                                               '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/VariableInput.jsx',
-                                                                                                                          lineNumber: 345,
+                                                                                                                          lineNumber: 346,
                                                                                                                           columnNumber: 27,
                                                                                                                       },
                                                                                                                       void 0,
@@ -70311,7 +70311,7 @@ const XPe = (e) => {
                                                                                                       {
                                                                                                           fileName:
                                                                                                               '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/VariableInput.jsx',
-                                                                                                          lineNumber: 334,
+                                                                                                          lineNumber: 335,
                                                                                                           columnNumber: 25,
                                                                                                       },
                                                                                                       void 0,
@@ -70330,7 +70330,7 @@ const XPe = (e) => {
                                                                                                           {
                                                                                                               fileName:
                                                                                                                   '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/VariableInput.jsx',
-                                                                                                              lineNumber: 350,
+                                                                                                              lineNumber: 351,
                                                                                                               columnNumber: 27,
                                                                                                           },
                                                                                                           void 0,
@@ -70342,7 +70342,7 @@ const XPe = (e) => {
                                                                                       {
                                                                                           fileName:
                                                                                               '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/VariableInput.jsx',
-                                                                                          lineNumber: 333,
+                                                                                          lineNumber: 334,
                                                                                           columnNumber: 23,
                                                                                       },
                                                                                       void 0,
@@ -70377,7 +70377,7 @@ const XPe = (e) => {
                                                                                                       {
                                                                                                           fileName:
                                                                                                               '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/VariableInput.jsx',
-                                                                                                          lineNumber: 356,
+                                                                                                          lineNumber: 357,
                                                                                                           columnNumber: 25,
                                                                                                       },
                                                                                                       void 0,
@@ -70398,7 +70398,7 @@ const XPe = (e) => {
                                                                                                       {
                                                                                                           fileName:
                                                                                                               '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/VariableInput.jsx',
-                                                                                                          lineNumber: 368,
+                                                                                                          lineNumber: 369,
                                                                                                           columnNumber: 25,
                                                                                                       },
                                                                                                       void 0,
@@ -70410,7 +70410,7 @@ const XPe = (e) => {
                                                                                       {
                                                                                           fileName:
                                                                                               '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/VariableInput.jsx',
-                                                                                          lineNumber: 355,
+                                                                                          lineNumber: 356,
                                                                                           columnNumber: 23,
                                                                                       },
                                                                                       void 0,
@@ -70484,7 +70484,7 @@ const XPe = (e) => {
                         {
                             fileName:
                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/VariableInput.jsx',
-                            lineNumber: 382,
+                            lineNumber: 383,
                             columnNumber: 7,
                         },
                         void 0,
@@ -70506,7 +70506,7 @@ const XPe = (e) => {
                             {
                                 fileName:
                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/VariableInput.jsx',
-                                lineNumber: 398,
+                                lineNumber: 399,
                                 columnNumber: 9,
                             },
                             void 0,
@@ -72513,7 +72513,7 @@ const mZ = Ee.memo(
                                                     {
                                                         fileName:
                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                        lineNumber: 142,
+                                                        lineNumber: 146,
                                                         columnNumber: 15,
                                                     },
                                                     void 0,
@@ -72533,7 +72533,7 @@ const mZ = Ee.memo(
                                                     {
                                                         fileName:
                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                        lineNumber: 143,
+                                                        lineNumber: 147,
                                                         columnNumber: 15,
                                                     },
                                                     void 0,
@@ -72553,7 +72553,7 @@ const mZ = Ee.memo(
                                                     {
                                                         fileName:
                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                        lineNumber: 146,
+                                                        lineNumber: 150,
                                                         columnNumber: 15,
                                                     },
                                                     void 0,
@@ -72565,7 +72565,7 @@ const mZ = Ee.memo(
                                         {
                                             fileName:
                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                            lineNumber: 141,
+                                            lineNumber: 145,
                                             columnNumber: 13,
                                         },
                                         void 0,
@@ -72583,7 +72583,7 @@ const mZ = Ee.memo(
                                                 {
                                                     fileName:
                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                    lineNumber: 156,
+                                                    lineNumber: 160,
                                                     columnNumber: 13,
                                                 },
                                                 void 0,
@@ -72606,7 +72606,7 @@ const mZ = Ee.memo(
                                                             {
                                                                 fileName:
                                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                                lineNumber: 158,
+                                                                lineNumber: 162,
                                                                 columnNumber: 15,
                                                             },
                                                             void 0,
@@ -72623,7 +72623,7 @@ const mZ = Ee.memo(
                                                             {
                                                                 fileName:
                                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                                lineNumber: 161,
+                                                                lineNumber: 165,
                                                                 columnNumber: 15,
                                                             },
                                                             void 0,
@@ -72635,7 +72635,7 @@ const mZ = Ee.memo(
                                                 {
                                                     fileName:
                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                    lineNumber: 157,
+                                                    lineNumber: 161,
                                                     columnNumber: 13,
                                                 },
                                                 void 0,
@@ -72648,7 +72648,7 @@ const mZ = Ee.memo(
                                                 {
                                                     fileName:
                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                    lineNumber: 165,
+                                                    lineNumber: 169,
                                                     columnNumber: 13,
                                                 },
                                                 void 0,
@@ -72660,7 +72660,7 @@ const mZ = Ee.memo(
                                     {
                                         fileName:
                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                        lineNumber: 155,
+                                        lineNumber: 159,
                                         columnNumber: 11,
                                     },
                                     void 0,
@@ -72672,7 +72672,7 @@ const mZ = Ee.memo(
                         {
                             fileName:
                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                            lineNumber: 138,
+                            lineNumber: 142,
                             columnNumber: 9,
                         },
                         void 0,
@@ -72696,7 +72696,7 @@ const mZ = Ee.memo(
                                                 {
                                                     fileName:
                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                    lineNumber: 172,
+                                                    lineNumber: 176,
                                                     columnNumber: 13,
                                                 },
                                                 void 0,
@@ -72715,7 +72715,7 @@ const mZ = Ee.memo(
                                                     {
                                                         fileName:
                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                        lineNumber: 175,
+                                                        lineNumber: 179,
                                                         columnNumber: 15,
                                                     },
                                                     void 0,
@@ -72727,7 +72727,7 @@ const mZ = Ee.memo(
                                     {
                                         fileName:
                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                        lineNumber: 171,
+                                        lineNumber: 175,
                                         columnNumber: 11,
                                     },
                                     void 0,
@@ -72749,7 +72749,7 @@ const mZ = Ee.memo(
                                                 {
                                                     fileName:
                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                    lineNumber: 181,
+                                                    lineNumber: 185,
                                                     columnNumber: 13,
                                                 },
                                                 void 0,
@@ -72775,7 +72775,7 @@ const mZ = Ee.memo(
                                                             {
                                                                 fileName:
                                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                                lineNumber: 186,
+                                                                lineNumber: 190,
                                                                 columnNumber: 15,
                                                             },
                                                             void 0,
@@ -72793,7 +72793,7 @@ const mZ = Ee.memo(
                                                             {
                                                                 fileName:
                                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                                lineNumber: 189,
+                                                                lineNumber: 193,
                                                                 columnNumber: 15,
                                                             },
                                                             void 0,
@@ -72805,7 +72805,7 @@ const mZ = Ee.memo(
                                                 {
                                                     fileName:
                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                    lineNumber: 185,
+                                                    lineNumber: 189,
                                                     columnNumber: 13,
                                                 },
                                                 void 0,
@@ -72817,7 +72817,7 @@ const mZ = Ee.memo(
                                     {
                                         fileName:
                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                        lineNumber: 180,
+                                        lineNumber: 184,
                                         columnNumber: 11,
                                     },
                                     void 0,
@@ -72829,7 +72829,7 @@ const mZ = Ee.memo(
                         {
                             fileName:
                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                            lineNumber: 170,
+                            lineNumber: 174,
                             columnNumber: 9,
                         },
                         void 0,
@@ -72873,7 +72873,7 @@ const mZ = Ee.memo(
                                                                 {
                                                                     fileName:
                                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                                    lineNumber: 227,
+                                                                    lineNumber: 231,
                                                                     columnNumber: 21,
                                                                 },
                                                                 void 0,
@@ -72884,7 +72884,7 @@ const mZ = Ee.memo(
                                                         {
                                                             fileName:
                                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                            lineNumber: 226,
+                                                            lineNumber: 230,
                                                             columnNumber: 19,
                                                         },
                                                         void 0,
@@ -72918,7 +72918,7 @@ const mZ = Ee.memo(
                                                                                     {
                                                                                         fileName:
                                                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                                                        lineNumber: 242,
+                                                                                        lineNumber: 246,
                                                                                         columnNumber: 23,
                                                                                     },
                                                                                     void 0,
@@ -72929,7 +72929,7 @@ const mZ = Ee.memo(
                                                                             {
                                                                                 fileName:
                                                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                                                lineNumber: 235,
+                                                                                lineNumber: 239,
                                                                                 columnNumber: 21,
                                                                             },
                                                                             void 0,
@@ -72946,7 +72946,7 @@ const mZ = Ee.memo(
                                                                             {
                                                                                 fileName:
                                                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                                                lineNumber: 244,
+                                                                                lineNumber: 248,
                                                                                 columnNumber: 21,
                                                                             },
                                                                             void 0,
@@ -72958,7 +72958,7 @@ const mZ = Ee.memo(
                                                                 {
                                                                     fileName:
                                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                                    lineNumber: 234,
+                                                                    lineNumber: 238,
                                                                     columnNumber: 19,
                                                                 },
                                                                 void 0,
@@ -72985,7 +72985,7 @@ const mZ = Ee.memo(
                                                                         {
                                                                             fileName:
                                                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                                            lineNumber: 258,
+                                                                            lineNumber: 262,
                                                                             columnNumber: 21,
                                                                         },
                                                                         void 0,
@@ -72996,7 +72996,7 @@ const mZ = Ee.memo(
                                                                 {
                                                                     fileName:
                                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                                    lineNumber: 250,
+                                                                    lineNumber: 254,
                                                                     columnNumber: 19,
                                                                 },
                                                                 void 0,
@@ -73032,7 +73032,7 @@ const mZ = Ee.memo(
                                                                         {
                                                                             fileName:
                                                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                                            lineNumber: 268,
+                                                                            lineNumber: 272,
                                                                             columnNumber: 21,
                                                                         },
                                                                         void 0,
@@ -73043,7 +73043,7 @@ const mZ = Ee.memo(
                                                                 {
                                                                     fileName:
                                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                                    lineNumber: 267,
+                                                                    lineNumber: 271,
                                                                     columnNumber: 19,
                                                                 },
                                                                 void 0,
@@ -73068,7 +73068,7 @@ const mZ = Ee.memo(
                                                                 {
                                                                     fileName:
                                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                                    lineNumber: 286,
+                                                                    lineNumber: 290,
                                                                     columnNumber: 19,
                                                                 },
                                                                 void 0,
@@ -73091,7 +73091,7 @@ const mZ = Ee.memo(
                                                                 {
                                                                     fileName:
                                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                                    lineNumber: 302,
+                                                                    lineNumber: 306,
                                                                     columnNumber: 19,
                                                                 },
                                                                 void 0,
@@ -73111,7 +73111,7 @@ const mZ = Ee.memo(
                                                                         {
                                                                             fileName:
                                                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                                            lineNumber: 316,
+                                                                            lineNumber: 320,
                                                                             columnNumber: 21,
                                                                         },
                                                                         void 0,
@@ -73122,7 +73122,7 @@ const mZ = Ee.memo(
                                                                 {
                                                                     fileName:
                                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                                    lineNumber: 311,
+                                                                    lineNumber: 315,
                                                                     columnNumber: 19,
                                                                 },
                                                                 void 0,
@@ -73134,7 +73134,7 @@ const mZ = Ee.memo(
                                                     {
                                                         fileName:
                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                        lineNumber: 232,
+                                                        lineNumber: 236,
                                                         columnNumber: 17,
                                                     },
                                                     void 0,
@@ -73159,7 +73159,7 @@ const mZ = Ee.memo(
                                                                     {
                                                                         fileName:
                                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                                        lineNumber: 323,
+                                                                        lineNumber: 327,
                                                                         columnNumber: 21,
                                                                     },
                                                                     void 0,
@@ -73188,7 +73188,7 @@ const mZ = Ee.memo(
                                                                     {
                                                                         fileName:
                                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                                        lineNumber: 329,
+                                                                        lineNumber: 333,
                                                                         columnNumber: 21,
                                                                     },
                                                                     void 0,
@@ -73200,7 +73200,7 @@ const mZ = Ee.memo(
                                                         {
                                                             fileName:
                                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                            lineNumber: 322,
+                                                            lineNumber: 326,
                                                             columnNumber: 19,
                                                         },
                                                         void 0,
@@ -73235,7 +73235,7 @@ const mZ = Ee.memo(
                                                                 {
                                                                     fileName:
                                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                                    lineNumber: 350,
+                                                                    lineNumber: 354,
                                                                     columnNumber: 19,
                                                                 },
                                                                 void 0,
@@ -73255,7 +73255,7 @@ const mZ = Ee.memo(
                                                                 {
                                                                     fileName:
                                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                                    lineNumber: 363,
+                                                                    lineNumber: 362,
                                                                     columnNumber: 19,
                                                                 },
                                                                 void 0,
@@ -73267,7 +73267,7 @@ const mZ = Ee.memo(
                                                     {
                                                         fileName:
                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                        lineNumber: 349,
+                                                        lineNumber: 353,
                                                         columnNumber: 17,
                                                     },
                                                     void 0,
@@ -73279,7 +73279,7 @@ const mZ = Ee.memo(
                                         {
                                             fileName:
                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                            lineNumber: 211,
+                                            lineNumber: 215,
                                             columnNumber: 15,
                                         },
                                         void 0,
@@ -73303,7 +73303,7 @@ const mZ = Ee.memo(
                                                     {
                                                         fileName:
                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                        lineNumber: 374,
+                                                        lineNumber: 373,
                                                         columnNumber: 15,
                                                     },
                                                     void 0,
@@ -73322,7 +73322,7 @@ const mZ = Ee.memo(
                                                     {
                                                         fileName:
                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                        lineNumber: 378,
+                                                        lineNumber: 377,
                                                         columnNumber: 15,
                                                     },
                                                     void 0,
@@ -73341,7 +73341,7 @@ const mZ = Ee.memo(
                                                     {
                                                         fileName:
                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                        lineNumber: 381,
+                                                        lineNumber: 380,
                                                         columnNumber: 15,
                                                     },
                                                     void 0,
@@ -73353,7 +73353,7 @@ const mZ = Ee.memo(
                                         {
                                             fileName:
                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                            lineNumber: 373,
+                                            lineNumber: 372,
                                             columnNumber: 13,
                                         },
                                         void 0,
@@ -73365,7 +73365,7 @@ const mZ = Ee.memo(
                         {
                             fileName:
                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                            lineNumber: 200,
+                            lineNumber: 204,
                             columnNumber: 9,
                         },
                         void 0,
@@ -73386,7 +73386,7 @@ const mZ = Ee.memo(
                                     {
                                         fileName:
                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                        lineNumber: 397,
+                                        lineNumber: 396,
                                         columnNumber: 11,
                                     },
                                     void 0,
@@ -73399,7 +73399,7 @@ const mZ = Ee.memo(
                         {
                             fileName:
                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                            lineNumber: 392,
+                            lineNumber: 391,
                             columnNumber: 9,
                         },
                         void 0,
@@ -73428,7 +73428,7 @@ const mZ = Ee.memo(
                                                         {
                                                             fileName:
                                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                            lineNumber: 405,
+                                                            lineNumber: 404,
                                                             columnNumber: 15,
                                                         },
                                                         void 0,
@@ -73439,7 +73439,7 @@ const mZ = Ee.memo(
                                                 {
                                                     fileName:
                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                    lineNumber: 404,
+                                                    lineNumber: 403,
                                                     columnNumber: 13,
                                                 },
                                                 void 0,
@@ -73464,7 +73464,7 @@ const mZ = Ee.memo(
                                                             {
                                                                 fileName:
                                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                                lineNumber: 408,
+                                                                lineNumber: 407,
                                                                 columnNumber: 15,
                                                             },
                                                             void 0,
@@ -73484,7 +73484,7 @@ const mZ = Ee.memo(
                                                             {
                                                                 fileName:
                                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                                lineNumber: 411,
+                                                                lineNumber: 410,
                                                                 columnNumber: 15,
                                                             },
                                                             void 0,
@@ -73496,7 +73496,7 @@ const mZ = Ee.memo(
                                                 {
                                                     fileName:
                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                    lineNumber: 407,
+                                                    lineNumber: 406,
                                                     columnNumber: 13,
                                                 },
                                                 void 0,
@@ -73519,7 +73519,7 @@ const mZ = Ee.memo(
                                                 {
                                                     fileName:
                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                    lineNumber: 418,
+                                                    lineNumber: 417,
                                                     columnNumber: 13,
                                                 },
                                                 void 0,
@@ -73531,7 +73531,7 @@ const mZ = Ee.memo(
                                     {
                                         fileName:
                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                        lineNumber: 403,
+                                        lineNumber: 402,
                                         columnNumber: 11,
                                     },
                                     void 0,
@@ -73551,7 +73551,7 @@ const mZ = Ee.memo(
                                                     {
                                                         fileName:
                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                        lineNumber: 434,
+                                                        lineNumber: 433,
                                                         columnNumber: 15,
                                                     },
                                                     void 0,
@@ -73570,7 +73570,7 @@ const mZ = Ee.memo(
                                                     {
                                                         fileName:
                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                                        lineNumber: 435,
+                                                        lineNumber: 434,
                                                         columnNumber: 15,
                                                     },
                                                     void 0,
@@ -73582,7 +73582,7 @@ const mZ = Ee.memo(
                                         {
                                             fileName:
                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                                            lineNumber: 433,
+                                            lineNumber: 432,
                                             columnNumber: 13,
                                         },
                                         void 0,
@@ -73594,7 +73594,7 @@ const mZ = Ee.memo(
                         {
                             fileName:
                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                            lineNumber: 402,
+                            lineNumber: 401,
                             columnNumber: 9,
                         },
                         void 0,
@@ -73606,7 +73606,7 @@ const mZ = Ee.memo(
             {
                 fileName:
                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/editors/SwitchCasesEditor.jsx',
-                lineNumber: 136,
+                lineNumber: 140,
                 columnNumber: 7,
             },
             void 0,
@@ -73819,7 +73819,7 @@ const ZPe = ({
                         {
                             fileName:
                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                            lineNumber: 306,
+                            lineNumber: 313,
                             columnNumber: 14,
                         },
                         void 0,
@@ -73833,7 +73833,7 @@ const ZPe = ({
                         {
                             fileName:
                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                            lineNumber: 308,
+                            lineNumber: 315,
                             columnNumber: 14,
                         },
                         void 0,
@@ -73850,7 +73850,7 @@ const ZPe = ({
                               {
                                   fileName:
                                       '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                  lineNumber: 316,
+                                  lineNumber: 323,
                                   columnNumber: 11,
                               },
                               void 0,
@@ -73892,7 +73892,7 @@ const ZPe = ({
                                                                   {
                                                                       fileName:
                                                                           '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                                      lineNumber: 329,
+                                                                      lineNumber: 336,
                                                                       columnNumber: 17,
                                                                   },
                                                                   void 0,
@@ -73908,7 +73908,7 @@ const ZPe = ({
                                                                   {
                                                                       fileName:
                                                                           '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                                      lineNumber: 337,
+                                                                      lineNumber: 344,
                                                                       columnNumber: 17,
                                                                   },
                                                                   void 0,
@@ -73920,7 +73920,7 @@ const ZPe = ({
                                                       {
                                                           fileName:
                                                               '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                          lineNumber: 328,
+                                                          lineNumber: 335,
                                                           columnNumber: 15,
                                                       },
                                                       void 0,
@@ -73937,7 +73937,7 @@ const ZPe = ({
                                                       {
                                                           fileName:
                                                               '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                          lineNumber: 339,
+                                                          lineNumber: 346,
                                                           columnNumber: 15,
                                                       },
                                                       void 0,
@@ -73949,7 +73949,7 @@ const ZPe = ({
                                           {
                                               fileName:
                                                   '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                              lineNumber: 327,
+                                              lineNumber: 334,
                                               columnNumber: 13,
                                           },
                                           void 0,
@@ -73961,7 +73961,7 @@ const ZPe = ({
                               {
                                   fileName:
                                       '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                  lineNumber: 320,
+                                  lineNumber: 327,
                                   columnNumber: 9,
                               },
                               void 0,
@@ -73984,7 +73984,7 @@ const ZPe = ({
                         {
                             fileName:
                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                            lineNumber: 350,
+                            lineNumber: 357,
                             columnNumber: 9,
                         },
                         void 0,
@@ -74014,7 +74014,7 @@ const ZPe = ({
                                     {
                                         fileName:
                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                        lineNumber: 374,
+                                        lineNumber: 381,
                                         columnNumber: 11,
                                     },
                                     void 0,
@@ -74027,7 +74027,7 @@ const ZPe = ({
                                     {
                                         fileName:
                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                        lineNumber: 378,
+                                        lineNumber: 385,
                                         columnNumber: 11,
                                     },
                                     void 0,
@@ -74039,7 +74039,7 @@ const ZPe = ({
                         {
                             fileName:
                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                            lineNumber: 368,
+                            lineNumber: 375,
                             columnNumber: 9,
                         },
                         void 0,
@@ -74082,7 +74082,7 @@ const ZPe = ({
                                             {
                                                 fileName:
                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                lineNumber: 406,
+                                                lineNumber: 413,
                                                 columnNumber: 15,
                                             },
                                             void 0,
@@ -74104,7 +74104,7 @@ const ZPe = ({
                                                     {
                                                         fileName:
                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                        lineNumber: 412,
+                                                        lineNumber: 419,
                                                         columnNumber: 17,
                                                     },
                                                     void 0,
@@ -74115,7 +74115,7 @@ const ZPe = ({
                                             {
                                                 fileName:
                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                lineNumber: 411,
+                                                lineNumber: 418,
                                                 columnNumber: 15,
                                             },
                                             void 0,
@@ -74127,7 +74127,7 @@ const ZPe = ({
                                 {
                                     fileName:
                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                    lineNumber: 402,
+                                    lineNumber: 409,
                                     columnNumber: 13,
                                 },
                                 void 0,
@@ -74138,7 +74138,7 @@ const ZPe = ({
                         {
                             fileName:
                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                            lineNumber: 401,
+                            lineNumber: 408,
                             columnNumber: 11,
                         },
                         void 0,
@@ -74162,7 +74162,7 @@ const ZPe = ({
                                   {
                                       fileName:
                                           '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                      lineNumber: 425,
+                                      lineNumber: 432,
                                       columnNumber: 11,
                                   },
                                   void 0,
@@ -74173,7 +74173,7 @@ const ZPe = ({
                           {
                               fileName:
                                   '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                              lineNumber: 424,
+                              lineNumber: 431,
                               columnNumber: 9,
                           },
                           void 0,
@@ -74189,7 +74189,7 @@ const ZPe = ({
                           {
                               fileName:
                                   '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                              lineNumber: 433,
+                              lineNumber: 440,
                               columnNumber: 7,
                           },
                           void 0,
@@ -74214,7 +74214,7 @@ const ZPe = ({
                                       {
                                           fileName:
                                               '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                          lineNumber: 448,
+                                          lineNumber: 455,
                                           columnNumber: 9,
                                       },
                                       void 0,
@@ -74248,7 +74248,7 @@ const ZPe = ({
                                                                   {
                                                                       fileName:
                                                                           '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                                      lineNumber: 458,
+                                                                      lineNumber: 465,
                                                                       columnNumber: 15,
                                                                   },
                                                                   void 0,
@@ -74259,7 +74259,7 @@ const ZPe = ({
                                                           {
                                                               fileName:
                                                                   '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                              lineNumber: 451,
+                                                              lineNumber: 458,
                                                               columnNumber: 13,
                                                           },
                                                           void 0,
@@ -74270,7 +74270,7 @@ const ZPe = ({
                                                   {
                                                       fileName:
                                                           '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                      lineNumber: 450,
+                                                      lineNumber: 457,
                                                       columnNumber: 11,
                                                   },
                                                   void 0,
@@ -74283,7 +74283,7 @@ const ZPe = ({
                                       {
                                           fileName:
                                               '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                          lineNumber: 449,
+                                          lineNumber: 456,
                                           columnNumber: 9,
                                       },
                                       void 0,
@@ -74295,7 +74295,7 @@ const ZPe = ({
                           {
                               fileName:
                                   '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                              lineNumber: 447,
+                              lineNumber: 454,
                               columnNumber: 7,
                           },
                           void 0,
@@ -74311,7 +74311,7 @@ const ZPe = ({
                           {
                               fileName:
                                   '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                              lineNumber: 443,
+                              lineNumber: 450,
                               columnNumber: 9,
                           },
                           void 0,
@@ -74355,7 +74355,7 @@ const ZPe = ({
                                                                     {
                                                                         fileName:
                                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                                        lineNumber: 484,
+                                                                        lineNumber: 491,
                                                                         columnNumber: 21,
                                                                     },
                                                                     void 0,
@@ -74367,7 +74367,7 @@ const ZPe = ({
                                                     {
                                                         fileName:
                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                        lineNumber: 481,
+                                                        lineNumber: 488,
                                                         columnNumber: 17,
                                                     },
                                                     void 0,
@@ -74386,7 +74386,7 @@ const ZPe = ({
                                                     {
                                                         fileName:
                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                        lineNumber: 487,
+                                                        lineNumber: 494,
                                                         columnNumber: 17,
                                                     },
                                                     void 0,
@@ -74398,7 +74398,7 @@ const ZPe = ({
                                         {
                                             fileName:
                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                            lineNumber: 480,
+                                            lineNumber: 487,
                                             columnNumber: 15,
                                         },
                                         void 0,
@@ -74409,7 +74409,7 @@ const ZPe = ({
                             {
                                 fileName:
                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                lineNumber: 475,
+                                lineNumber: 482,
                                 columnNumber: 11,
                             },
                             void 0,
@@ -74448,7 +74448,7 @@ const ZPe = ({
                                                                     {
                                                                         fileName:
                                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                                        lineNumber: 510,
+                                                                        lineNumber: 517,
                                                                         columnNumber: 21,
                                                                     },
                                                                     void 0,
@@ -74460,7 +74460,7 @@ const ZPe = ({
                                                     {
                                                         fileName:
                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                        lineNumber: 507,
+                                                        lineNumber: 514,
                                                         columnNumber: 17,
                                                     },
                                                     void 0,
@@ -74484,7 +74484,7 @@ const ZPe = ({
                                                     {
                                                         fileName:
                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                        lineNumber: 513,
+                                                        lineNumber: 520,
                                                         columnNumber: 17,
                                                     },
                                                     void 0,
@@ -74496,7 +74496,7 @@ const ZPe = ({
                                         {
                                             fileName:
                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                            lineNumber: 506,
+                                            lineNumber: 513,
                                             columnNumber: 15,
                                         },
                                         void 0,
@@ -74507,7 +74507,7 @@ const ZPe = ({
                             {
                                 fileName:
                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                lineNumber: 501,
+                                lineNumber: 508,
                                 columnNumber: 11,
                             },
                             void 0,
@@ -74547,7 +74547,7 @@ const ZPe = ({
                                                                     {
                                                                         fileName:
                                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                                        lineNumber: 540,
+                                                                        lineNumber: 547,
                                                                         columnNumber: 21,
                                                                     },
                                                                     void 0,
@@ -74559,7 +74559,7 @@ const ZPe = ({
                                                     {
                                                         fileName:
                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                        lineNumber: 537,
+                                                        lineNumber: 544,
                                                         columnNumber: 17,
                                                     },
                                                     void 0,
@@ -74588,7 +74588,7 @@ const ZPe = ({
                                                             {
                                                                 fileName:
                                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                                lineNumber: 551,
+                                                                lineNumber: 558,
                                                                 columnNumber: 19,
                                                             },
                                                             void 0,
@@ -74599,7 +74599,7 @@ const ZPe = ({
                                                     {
                                                         fileName:
                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                        lineNumber: 543,
+                                                        lineNumber: 550,
                                                         columnNumber: 17,
                                                     },
                                                     void 0,
@@ -74611,7 +74611,7 @@ const ZPe = ({
                                         {
                                             fileName:
                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                            lineNumber: 536,
+                                            lineNumber: 543,
                                             columnNumber: 15,
                                         },
                                         void 0,
@@ -74622,7 +74622,7 @@ const ZPe = ({
                             {
                                 fileName:
                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                lineNumber: 531,
+                                lineNumber: 538,
                                 columnNumber: 11,
                             },
                             void 0,
@@ -74653,7 +74653,7 @@ const ZPe = ({
                                                         {
                                                             fileName:
                                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                            lineNumber: 567,
+                                                            lineNumber: 574,
                                                             columnNumber: 34,
                                                         },
                                                         void 0,
@@ -74665,7 +74665,7 @@ const ZPe = ({
                                         {
                                             fileName:
                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                            lineNumber: 565,
+                                            lineNumber: 572,
                                             columnNumber: 13,
                                         },
                                         void 0,
@@ -74705,7 +74705,7 @@ const ZPe = ({
                                                                             {
                                                                                 fileName:
                                                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                                                lineNumber: 579,
+                                                                                lineNumber: 586,
                                                                                 columnNumber: 21,
                                                                             },
                                                                             void 0,
@@ -74725,7 +74725,7 @@ const ZPe = ({
                                                                                 {
                                                                                     fileName:
                                                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                                                    lineNumber: 583,
+                                                                                    lineNumber: 590,
                                                                                     columnNumber: 23,
                                                                                 },
                                                                                 void 0,
@@ -74738,7 +74738,7 @@ const ZPe = ({
                                                                 {
                                                                     fileName:
                                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                                    lineNumber: 574,
+                                                                    lineNumber: 581,
                                                                     columnNumber: 19,
                                                                 },
                                                                 void 0,
@@ -74769,7 +74769,7 @@ const ZPe = ({
                                                                                 {
                                                                                     fileName:
                                                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                                                    lineNumber: 603,
+                                                                                    lineNumber: 610,
                                                                                     columnNumber: 23,
                                                                                 },
                                                                                 void 0,
@@ -74780,7 +74780,7 @@ const ZPe = ({
                                                                         {
                                                                             fileName:
                                                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                                            lineNumber: 593,
+                                                                            lineNumber: 600,
                                                                             columnNumber: 21,
                                                                         },
                                                                         void 0,
@@ -74791,7 +74791,7 @@ const ZPe = ({
                                                                 {
                                                                     fileName:
                                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                                    lineNumber: 592,
+                                                                    lineNumber: 599,
                                                                     columnNumber: 19,
                                                                 },
                                                                 void 0,
@@ -74803,7 +74803,7 @@ const ZPe = ({
                                                     {
                                                         fileName:
                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                        lineNumber: 573,
+                                                        lineNumber: 580,
                                                         columnNumber: 17,
                                                     },
                                                     void 0,
@@ -74814,7 +74814,7 @@ const ZPe = ({
                                         {
                                             fileName:
                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                            lineNumber: 569,
+                                            lineNumber: 576,
                                             columnNumber: 13,
                                         },
                                         void 0,
@@ -74826,7 +74826,7 @@ const ZPe = ({
                             {
                                 fileName:
                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                lineNumber: 564,
+                                lineNumber: 571,
                                 columnNumber: 11,
                             },
                             void 0,
@@ -74857,7 +74857,7 @@ const ZPe = ({
                                                         {
                                                             fileName:
                                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                            lineNumber: 616,
+                                                            lineNumber: 623,
                                                             columnNumber: 34,
                                                         },
                                                         void 0,
@@ -74869,7 +74869,7 @@ const ZPe = ({
                                         {
                                             fileName:
                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                            lineNumber: 614,
+                                            lineNumber: 621,
                                             columnNumber: 13,
                                         },
                                         void 0,
@@ -74900,7 +74900,7 @@ const ZPe = ({
                                                     {
                                                         fileName:
                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                        lineNumber: 622,
+                                                        lineNumber: 629,
                                                         columnNumber: 17,
                                                     },
                                                     void 0,
@@ -74911,7 +74911,7 @@ const ZPe = ({
                                         {
                                             fileName:
                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                            lineNumber: 618,
+                                            lineNumber: 625,
                                             columnNumber: 13,
                                         },
                                         void 0,
@@ -74923,7 +74923,7 @@ const ZPe = ({
                             {
                                 fileName:
                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                lineNumber: 613,
+                                lineNumber: 620,
                                 columnNumber: 11,
                             },
                             void 0,
@@ -74960,7 +74960,7 @@ const ZPe = ({
                                                                     {
                                                                         fileName:
                                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                                        lineNumber: 644,
+                                                                        lineNumber: 651,
                                                                         columnNumber: 19,
                                                                     },
                                                                     void 0,
@@ -74972,7 +74972,7 @@ const ZPe = ({
                                                     {
                                                         fileName:
                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                        lineNumber: 641,
+                                                        lineNumber: 648,
                                                         columnNumber: 15,
                                                     },
                                                     void 0,
@@ -74997,7 +74997,7 @@ const ZPe = ({
                                                     {
                                                         fileName:
                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                        lineNumber: 647,
+                                                        lineNumber: 654,
                                                         columnNumber: 15,
                                                     },
                                                     void 0,
@@ -75009,7 +75009,7 @@ const ZPe = ({
                                         {
                                             fileName:
                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                            lineNumber: 640,
+                                            lineNumber: 647,
                                             columnNumber: 13,
                                         },
                                         void 0,
@@ -75035,7 +75035,7 @@ const ZPe = ({
                                                     {
                                                         fileName:
                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                        lineNumber: 663,
+                                                        lineNumber: 670,
                                                         columnNumber: 17,
                                                     },
                                                     void 0,
@@ -75046,7 +75046,7 @@ const ZPe = ({
                                         {
                                             fileName:
                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                            lineNumber: 659,
+                                            lineNumber: 666,
                                             columnNumber: 13,
                                         },
                                         void 0,
@@ -75058,7 +75058,7 @@ const ZPe = ({
                             {
                                 fileName:
                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                lineNumber: 639,
+                                lineNumber: 646,
                                 columnNumber: 11,
                             },
                             void 0,
@@ -75089,7 +75089,7 @@ const ZPe = ({
                                                         {
                                                             fileName:
                                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                            lineNumber: 679,
+                                                            lineNumber: 686,
                                                             columnNumber: 34,
                                                         },
                                                         void 0,
@@ -75101,7 +75101,7 @@ const ZPe = ({
                                         {
                                             fileName:
                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                            lineNumber: 677,
+                                            lineNumber: 684,
                                             columnNumber: 13,
                                         },
                                         void 0,
@@ -75127,7 +75127,7 @@ const ZPe = ({
                                                     {
                                                         fileName:
                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                        lineNumber: 685,
+                                                        lineNumber: 692,
                                                         columnNumber: 17,
                                                     },
                                                     void 0,
@@ -75138,7 +75138,7 @@ const ZPe = ({
                                         {
                                             fileName:
                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                            lineNumber: 681,
+                                            lineNumber: 688,
                                             columnNumber: 13,
                                         },
                                         void 0,
@@ -75150,7 +75150,7 @@ const ZPe = ({
                             {
                                 fileName:
                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                lineNumber: 676,
+                                lineNumber: 683,
                                 columnNumber: 11,
                             },
                             void 0,
@@ -75170,7 +75170,7 @@ const ZPe = ({
                     {
                         fileName:
                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                        lineNumber: 702,
+                        lineNumber: 709,
                         columnNumber: 7,
                     },
                     void 0,
@@ -75207,7 +75207,7 @@ const ZPe = ({
                                             {
                                                 fileName:
                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                lineNumber: 719,
+                                                lineNumber: 726,
                                                 columnNumber: 9,
                                             },
                                             void 0,
@@ -75226,7 +75226,7 @@ const ZPe = ({
                                             {
                                                 fileName:
                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                lineNumber: 727,
+                                                lineNumber: 735,
                                                 columnNumber: 9,
                                             },
                                             void 0,
@@ -75238,7 +75238,7 @@ const ZPe = ({
                                 {
                                     fileName:
                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                    lineNumber: 718,
+                                    lineNumber: 725,
                                     columnNumber: 7,
                                 },
                                 void 0,
@@ -75279,7 +75279,7 @@ const ZPe = ({
                                                           {
                                                               fileName:
                                                                   '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                              lineNumber: 757,
+                                                              lineNumber: 765,
                                                               columnNumber: 40,
                                                           },
                                                           void 0,
@@ -75292,7 +75292,7 @@ const ZPe = ({
                                                           {
                                                               fileName:
                                                                   '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                              lineNumber: 757,
+                                                              lineNumber: 765,
                                                               columnNumber: 63,
                                                           },
                                                           void 0,
@@ -75303,7 +75303,7 @@ const ZPe = ({
                                             {
                                                 fileName:
                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                lineNumber: 735,
+                                                lineNumber: 743,
                                                 columnNumber: 9,
                                             },
                                             void 0,
@@ -75324,7 +75324,7 @@ const ZPe = ({
                                                         {
                                                             fileName:
                                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                            lineNumber: 765,
+                                                            lineNumber: 773,
                                                             columnNumber: 13,
                                                         },
                                                         void 0,
@@ -75335,7 +75335,7 @@ const ZPe = ({
                                                 {
                                                     fileName:
                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                    lineNumber: 760,
+                                                    lineNumber: 768,
                                                     columnNumber: 11,
                                                 },
                                                 void 0,
@@ -75359,7 +75359,7 @@ const ZPe = ({
                                                     {
                                                         fileName:
                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                        lineNumber: 778,
+                                                        lineNumber: 786,
                                                         columnNumber: 11,
                                                     },
                                                     void 0,
@@ -75370,7 +75370,7 @@ const ZPe = ({
                                             {
                                                 fileName:
                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                lineNumber: 768,
+                                                lineNumber: 776,
                                                 columnNumber: 9,
                                             },
                                             void 0,
@@ -75383,7 +75383,7 @@ const ZPe = ({
                                             {
                                                 fileName:
                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                lineNumber: 780,
+                                                lineNumber: 788,
                                                 columnNumber: 9,
                                             },
                                             void 0,
@@ -75402,7 +75402,7 @@ const ZPe = ({
                                                     {
                                                         fileName:
                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                        lineNumber: 785,
+                                                        lineNumber: 793,
                                                         columnNumber: 11,
                                                     },
                                                     void 0,
@@ -75413,7 +75413,7 @@ const ZPe = ({
                                             {
                                                 fileName:
                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                lineNumber: 781,
+                                                lineNumber: 789,
                                                 columnNumber: 9,
                                             },
                                             void 0,
@@ -75425,7 +75425,7 @@ const ZPe = ({
                                 {
                                     fileName:
                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                    lineNumber: 734,
+                                    lineNumber: 742,
                                     columnNumber: 7,
                                 },
                                 void 0,
@@ -75437,7 +75437,7 @@ const ZPe = ({
                     {
                         fileName:
                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                        lineNumber: 711,
+                        lineNumber: 718,
                         columnNumber: 5,
                     },
                     void 0,
@@ -75460,7 +75460,7 @@ const ZPe = ({
                                 {
                                     fileName:
                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                    lineNumber: 793,
+                                    lineNumber: 801,
                                     columnNumber: 7,
                                 },
                                 void 0,
@@ -75487,7 +75487,7 @@ const ZPe = ({
                                                             {
                                                                 fileName:
                                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                                lineNumber: 804,
+                                                                lineNumber: 812,
                                                                 columnNumber: 13,
                                                             },
                                                             void 0,
@@ -75504,7 +75504,7 @@ const ZPe = ({
                                                             {
                                                                 fileName:
                                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                                lineNumber: 805,
+                                                                lineNumber: 813,
                                                                 columnNumber: 13,
                                                             },
                                                             void 0,
@@ -75516,7 +75516,7 @@ const ZPe = ({
                                                 {
                                                     fileName:
                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                    lineNumber: 803,
+                                                    lineNumber: 811,
                                                     columnNumber: 11,
                                                 },
                                                 void 0,
@@ -75529,7 +75529,7 @@ const ZPe = ({
                                     {
                                         fileName:
                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                        lineNumber: 802,
+                                        lineNumber: 810,
                                         columnNumber: 9,
                                     },
                                     void 0,
@@ -75541,7 +75541,7 @@ const ZPe = ({
                     {
                         fileName:
                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                        lineNumber: 792,
+                        lineNumber: 800,
                         columnNumber: 5,
                     },
                     void 0,
@@ -75577,7 +75577,7 @@ const ZPe = ({
                                                         {
                                                             fileName:
                                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                            lineNumber: 832,
+                                                            lineNumber: 840,
                                                             columnNumber: 15,
                                                         },
                                                         void 0,
@@ -75590,7 +75590,7 @@ const ZPe = ({
                                             {
                                                 fileName:
                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                lineNumber: 824,
+                                                lineNumber: 832,
                                                 columnNumber: 13,
                                             },
                                             void 0,
@@ -75621,7 +75621,7 @@ const ZPe = ({
                                                     {
                                                         fileName:
                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                        lineNumber: 854,
+                                                        lineNumber: 862,
                                                         columnNumber: 13,
                                                     },
                                                     void 0,
@@ -75638,7 +75638,7 @@ const ZPe = ({
                                                     {
                                                         fileName:
                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                        lineNumber: 855,
+                                                        lineNumber: 863,
                                                         columnNumber: 13,
                                                     },
                                                     void 0,
@@ -75654,7 +75654,7 @@ const ZPe = ({
                                                     {
                                                         fileName:
                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                        lineNumber: 856,
+                                                        lineNumber: 864,
                                                         columnNumber: 13,
                                                     },
                                                     void 0,
@@ -75666,7 +75666,7 @@ const ZPe = ({
                                         {
                                             fileName:
                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                            lineNumber: 837,
+                                            lineNumber: 845,
                                             columnNumber: 11,
                                         },
                                         void 0,
@@ -75691,7 +75691,7 @@ const ZPe = ({
                                                         {
                                                             fileName:
                                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                            lineNumber: 869,
+                                                            lineNumber: 877,
                                                             columnNumber: 15,
                                                         },
                                                         void 0,
@@ -75703,7 +75703,7 @@ const ZPe = ({
                                             {
                                                 fileName:
                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                lineNumber: 860,
+                                                lineNumber: 868,
                                                 columnNumber: 13,
                                             },
                                             void 0,
@@ -75715,7 +75715,7 @@ const ZPe = ({
                             {
                                 fileName:
                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                lineNumber: 822,
+                                lineNumber: 830,
                                 columnNumber: 9,
                             },
                             void 0,
@@ -75726,7 +75726,7 @@ const ZPe = ({
                     {
                         fileName:
                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                        lineNumber: 821,
+                        lineNumber: 829,
                         columnNumber: 7,
                     },
                     void 0,
@@ -75761,7 +75761,7 @@ const ZPe = ({
                                       {
                                           fileName:
                                               '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                          lineNumber: 882,
+                                          lineNumber: 890,
                                           columnNumber: 9,
                                       },
                                       void 0,
@@ -75772,7 +75772,7 @@ const ZPe = ({
                               {
                                   fileName:
                                       '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                  lineNumber: 881,
+                                  lineNumber: 889,
                                   columnNumber: 7,
                               },
                               void 0,
@@ -75805,7 +75805,7 @@ const ZPe = ({
                                                           {
                                                               fileName:
                                                                   '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                              lineNumber: 912,
+                                                              lineNumber: 920,
                                                               columnNumber: 15,
                                                           },
                                                           void 0,
@@ -75816,7 +75816,7 @@ const ZPe = ({
                                                   {
                                                       fileName:
                                                           '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                      lineNumber: 904,
+                                                      lineNumber: 912,
                                                       columnNumber: 13,
                                                   },
                                                   void 0,
@@ -75840,7 +75840,7 @@ const ZPe = ({
                                                           {
                                                               fileName:
                                                                   '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                              lineNumber: 919,
+                                                              lineNumber: 927,
                                                               columnNumber: 15,
                                                           },
                                                           void 0,
@@ -75851,7 +75851,7 @@ const ZPe = ({
                                                   {
                                                       fileName:
                                                           '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                                      lineNumber: 915,
+                                                      lineNumber: 923,
                                                       columnNumber: 13,
                                                   },
                                                   void 0,
@@ -75863,7 +75863,7 @@ const ZPe = ({
                                       {
                                           fileName:
                                               '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                                          lineNumber: 898,
+                                          lineNumber: 906,
                                           columnNumber: 11,
                                       },
                                       void 0,
@@ -75877,7 +75877,7 @@ const ZPe = ({
                   {
                       fileName:
                           '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/NodeConfigurationPanel.jsx',
-                      lineNumber: 880,
+                      lineNumber: 888,
                       columnNumber: 5,
                   },
                   void 0,
@@ -76473,7 +76473,7 @@ const ZPe = ({
                                                           {
                                                               fileName:
                                                                   '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                                                              lineNumber: 275,
+                                                              lineNumber: 273,
                                                               columnNumber: 21,
                                                           },
                                                           void 0,
@@ -76497,7 +76497,7 @@ const ZPe = ({
                                                                 {
                                                                     fileName:
                                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                                                                    lineNumber: 283,
+                                                                    lineNumber: 281,
                                                                     columnNumber: 23,
                                                                 },
                                                                 void 0,
@@ -76519,7 +76519,7 @@ const ZPe = ({
                                                                       {
                                                                           fileName:
                                                                               '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                                                                          lineNumber: 297,
+                                                                          lineNumber: 295,
                                                                           columnNumber: 23,
                                                                       },
                                                                       void 0,
@@ -76536,7 +76536,7 @@ const ZPe = ({
                                                                       {
                                                                           fileName:
                                                                               '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                                                                          lineNumber: 298,
+                                                                          lineNumber: 296,
                                                                           columnNumber: 23,
                                                                       },
                                                                       void 0,
@@ -76561,7 +76561,7 @@ const ZPe = ({
                                                                                 {
                                                                                     fileName:
                                                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                                                                                    lineNumber: 305,
+                                                                                    lineNumber: 303,
                                                                                     columnNumber: 27,
                                                                                 },
                                                                                 void 0,
@@ -76574,7 +76574,7 @@ const ZPe = ({
                                                           {
                                                               fileName:
                                                                   '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                                                              lineNumber: 296,
+                                                              lineNumber: 294,
                                                               columnNumber: 21,
                                                           },
                                                           void 0,
@@ -76595,7 +76595,7 @@ const ZPe = ({
                                                                       {
                                                                           fileName:
                                                                               '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                                                                          lineNumber: 321,
+                                                                          lineNumber: 319,
                                                                           columnNumber: 23,
                                                                       },
                                                                       void 0,
@@ -76612,7 +76612,7 @@ const ZPe = ({
                                                                       {
                                                                           fileName:
                                                                               '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                                                                          lineNumber: 322,
+                                                                          lineNumber: 320,
                                                                           columnNumber: 23,
                                                                       },
                                                                       void 0,
@@ -76637,7 +76637,7 @@ const ZPe = ({
                                                                                 {
                                                                                     fileName:
                                                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                                                                                    lineNumber: 329,
+                                                                                    lineNumber: 327,
                                                                                     columnNumber: 27,
                                                                                 },
                                                                                 void 0,
@@ -76650,7 +76650,7 @@ const ZPe = ({
                                                           {
                                                               fileName:
                                                                   '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                                                              lineNumber: 320,
+                                                              lineNumber: 318,
                                                               columnNumber: 21,
                                                           },
                                                           void 0,
@@ -76668,7 +76668,7 @@ const ZPe = ({
                                                           {
                                                               fileName:
                                                                   '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                                                              lineNumber: 344,
+                                                              lineNumber: 342,
                                                               columnNumber: 21,
                                                           },
                                                           void 0,
@@ -76680,7 +76680,7 @@ const ZPe = ({
                                           {
                                               fileName:
                                                   '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                                              lineNumber: 273,
+                                              lineNumber: 271,
                                               columnNumber: 17,
                                           },
                                           void 0,
@@ -76708,7 +76708,7 @@ const ZPe = ({
                                                           {
                                                               fileName:
                                                                   '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                                                              lineNumber: 359,
+                                                              lineNumber: 357,
                                                               columnNumber: 21,
                                                           },
                                                           void 0,
@@ -76726,7 +76726,7 @@ const ZPe = ({
                                                 {
                                                     fileName:
                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                                                    lineNumber: 371,
+                                                    lineNumber: 369,
                                                     columnNumber: 17,
                                                 },
                                                 void 0,
@@ -76738,7 +76738,7 @@ const ZPe = ({
                         {
                             fileName:
                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                            lineNumber: 268,
+                            lineNumber: 266,
                             columnNumber: 7,
                         },
                         void 0,
@@ -76767,7 +76767,7 @@ const ZPe = ({
                                                     {
                                                         fileName:
                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                                                        lineNumber: 385,
+                                                        lineNumber: 383,
                                                         columnNumber: 13,
                                                     },
                                                     void 0,
@@ -76778,7 +76778,7 @@ const ZPe = ({
                                             {
                                                 fileName:
                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                                                lineNumber: 384,
+                                                lineNumber: 382,
                                                 columnNumber: 11,
                                             },
                                             void 0,
@@ -76791,7 +76791,7 @@ const ZPe = ({
                                             {
                                                 fileName:
                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                                                lineNumber: 387,
+                                                lineNumber: 385,
                                                 columnNumber: 11,
                                             },
                                             void 0,
@@ -76803,7 +76803,7 @@ const ZPe = ({
                                 {
                                     fileName:
                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                                    lineNumber: 380,
+                                    lineNumber: 378,
                                     columnNumber: 9,
                                 },
                                 void 0,
@@ -76814,7 +76814,7 @@ const ZPe = ({
                         {
                             fileName:
                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                            lineNumber: 379,
+                            lineNumber: 377,
                             columnNumber: 7,
                         },
                         void 0,
@@ -76826,7 +76826,7 @@ const ZPe = ({
             {
                 fileName:
                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                lineNumber: 259,
+                lineNumber: 257,
                 columnNumber: 5,
             },
             void 0,
@@ -76922,7 +76922,7 @@ function eke({
                                             {
                                                 fileName:
                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                                                lineNumber: 489,
+                                                lineNumber: 491,
                                                 columnNumber: 13,
                                             },
                                             this,
@@ -76933,7 +76933,7 @@ function eke({
                                     {
                                         fileName:
                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                                        lineNumber: 485,
+                                        lineNumber: 487,
                                         columnNumber: 11,
                                     },
                                     this,
@@ -76962,7 +76962,7 @@ function eke({
                                             {
                                                 fileName:
                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                                                lineNumber: 508,
+                                                lineNumber: 510,
                                                 columnNumber: 13,
                                             },
                                             this,
@@ -76973,7 +76973,7 @@ function eke({
                                     {
                                         fileName:
                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                                        lineNumber: 504,
+                                        lineNumber: 506,
                                         columnNumber: 11,
                                     },
                                     this,
@@ -76985,7 +76985,7 @@ function eke({
                     {
                         fileName:
                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                        lineNumber: 483,
+                        lineNumber: 485,
                         columnNumber: 7,
                     },
                     this,
@@ -77013,7 +77013,7 @@ function eke({
                                         {
                                             fileName:
                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                                            lineNumber: 528,
+                                            lineNumber: 530,
                                             columnNumber: 11,
                                         },
                                         this,
@@ -77024,7 +77024,7 @@ function eke({
                                 {
                                     fileName:
                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                                    lineNumber: 527,
+                                    lineNumber: 529,
                                     columnNumber: 9,
                                 },
                                 this,
@@ -77041,7 +77041,7 @@ function eke({
                                 {
                                     fileName:
                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                                    lineNumber: 537,
+                                    lineNumber: 539,
                                     columnNumber: 9,
                                 },
                                 this,
@@ -77065,7 +77065,7 @@ function eke({
                                         {
                                             fileName:
                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                                            lineNumber: 545,
+                                            lineNumber: 547,
                                             columnNumber: 11,
                                         },
                                         this,
@@ -77076,7 +77076,7 @@ function eke({
                                 {
                                     fileName:
                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                                    lineNumber: 544,
+                                    lineNumber: 546,
                                     columnNumber: 9,
                                 },
                                 this,
@@ -77088,7 +77088,7 @@ function eke({
                     {
                         fileName:
                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                        lineNumber: 525,
+                        lineNumber: 527,
                         columnNumber: 7,
                     },
                     this,
@@ -77101,7 +77101,7 @@ function eke({
                     {
                         fileName:
                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                        lineNumber: 557,
+                        lineNumber: 559,
                         columnNumber: 7,
                     },
                     this,
@@ -77119,7 +77119,7 @@ function eke({
                                 {
                                     fileName:
                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                                    lineNumber: 562,
+                                    lineNumber: 564,
                                     columnNumber: 9,
                                 },
                                 this,
@@ -77132,7 +77132,7 @@ function eke({
                                 {
                                     fileName:
                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                                    lineNumber: 568,
+                                    lineNumber: 570,
                                     columnNumber: 9,
                                 },
                                 this,
@@ -77149,7 +77149,7 @@ function eke({
                                 {
                                     fileName:
                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                                    lineNumber: 575,
+                                    lineNumber: 577,
                                     columnNumber: 9,
                                 },
                                 this,
@@ -77169,7 +77169,7 @@ function eke({
                                 {
                                     fileName:
                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                                    lineNumber: 581,
+                                    lineNumber: 583,
                                     columnNumber: 9,
                                 },
                                 this,
@@ -77192,7 +77192,7 @@ function eke({
                                 {
                                     fileName:
                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                                    lineNumber: 589,
+                                    lineNumber: 591,
                                     columnNumber: 9,
                                 },
                                 this,
@@ -77213,7 +77213,7 @@ function eke({
                                         {
                                             fileName:
                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                                            lineNumber: 607,
+                                            lineNumber: 609,
                                             columnNumber: 11,
                                         },
                                         this,
@@ -77224,7 +77224,7 @@ function eke({
                                 {
                                     fileName:
                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                                    lineNumber: 601,
+                                    lineNumber: 603,
                                     columnNumber: 9,
                                 },
                                 this,
@@ -77247,7 +77247,7 @@ function eke({
                                             {
                                                 fileName:
                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                                                lineNumber: 613,
+                                                lineNumber: 615,
                                                 columnNumber: 13,
                                             },
                                             this,
@@ -77258,7 +77258,7 @@ function eke({
                                     {
                                         fileName:
                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                                        lineNumber: 612,
+                                        lineNumber: 614,
                                         columnNumber: 11,
                                     },
                                     this,
@@ -77270,7 +77270,7 @@ function eke({
                     {
                         fileName:
                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-                        lineNumber: 560,
+                        lineNumber: 562,
                         columnNumber: 7,
                     },
                     this,
@@ -77282,7 +77282,7 @@ function eke({
         {
             fileName:
                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppFooter.jsx',
-            lineNumber: 481,
+            lineNumber: 483,
             columnNumber: 5,
         },
         this,
@@ -77459,7 +77459,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                         {
                             fileName:
                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                            lineNumber: 160,
+                            lineNumber: 164,
                             columnNumber: 9,
                         },
                         void 0,
@@ -77475,7 +77475,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                     {
                         fileName:
                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                        lineNumber: 168,
+                        lineNumber: 172,
                         columnNumber: 7,
                     },
                     void 0,
@@ -77514,7 +77514,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                                                 {
                                                                     fileName:
                                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                                                    lineNumber: 176,
+                                                                    lineNumber: 180,
                                                                     columnNumber: 17,
                                                                 },
                                                                 void 0,
@@ -77525,7 +77525,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                                         {
                                                             fileName:
                                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                                            lineNumber: 175,
+                                                            lineNumber: 179,
                                                             columnNumber: 15,
                                                         },
                                                         void 0,
@@ -77547,7 +77547,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                                                     {
                                                                         fileName:
                                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                                                        lineNumber: 179,
+                                                                        lineNumber: 183,
                                                                         columnNumber: 17,
                                                                     },
                                                                     void 0,
@@ -77564,7 +77564,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                                                     {
                                                                         fileName:
                                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                                                        lineNumber: 182,
+                                                                        lineNumber: 186,
                                                                         columnNumber: 17,
                                                                     },
                                                                     void 0,
@@ -77576,7 +77576,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                                         {
                                                             fileName:
                                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                                            lineNumber: 178,
+                                                            lineNumber: 182,
                                                             columnNumber: 15,
                                                         },
                                                         void 0,
@@ -77588,7 +77588,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                             {
                                                 fileName:
                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                                lineNumber: 174,
+                                                lineNumber: 178,
                                                 columnNumber: 13,
                                             },
                                             void 0,
@@ -77604,7 +77604,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                             {
                                                 fileName:
                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                                lineNumber: 188,
+                                                lineNumber: 192,
                                                 columnNumber: 13,
                                             },
                                             void 0,
@@ -77616,7 +77616,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                 {
                                     fileName:
                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                    lineNumber: 173,
+                                    lineNumber: 177,
                                     columnNumber: 11,
                                 },
                                 void 0,
@@ -77627,7 +77627,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                         {
                             fileName:
                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                            lineNumber: 172,
+                            lineNumber: 176,
                             columnNumber: 9,
                         },
                         void 0,
@@ -77647,7 +77647,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                     {
                                         fileName:
                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                        lineNumber: 196,
+                                        lineNumber: 200,
                                         columnNumber: 11,
                                     },
                                     void 0,
@@ -77660,7 +77660,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                         {
                             fileName:
                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                            lineNumber: 195,
+                            lineNumber: 199,
                             columnNumber: 9,
                         },
                         void 0,
@@ -77680,7 +77680,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                     {
                                         fileName:
                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                        lineNumber: 204,
+                                        lineNumber: 208,
                                         columnNumber: 11,
                                     },
                                     void 0,
@@ -77693,7 +77693,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                         {
                             fileName:
                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                            lineNumber: 203,
+                            lineNumber: 207,
                             columnNumber: 9,
                         },
                         void 0,
@@ -77720,7 +77720,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                             {
                                                 fileName:
                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                                lineNumber: 218,
+                                                lineNumber: 222,
                                                 columnNumber: 13,
                                             },
                                             void 0,
@@ -77731,7 +77731,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                     {
                                         fileName:
                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                        lineNumber: 213,
+                                        lineNumber: 217,
                                         columnNumber: 11,
                                     },
                                     void 0,
@@ -77751,7 +77751,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                     {
                                         fileName:
                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                        lineNumber: 223,
+                                        lineNumber: 227,
                                         columnNumber: 11,
                                     },
                                     void 0,
@@ -77772,7 +77772,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                             {
                                                 fileName:
                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                                lineNumber: 239,
+                                                lineNumber: 243,
                                                 columnNumber: 13,
                                             },
                                             void 0,
@@ -77783,7 +77783,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                     {
                                         fileName:
                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                        lineNumber: 234,
+                                        lineNumber: 238,
                                         columnNumber: 11,
                                     },
                                     void 0,
@@ -77803,7 +77803,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                     {
                                         fileName:
                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                        lineNumber: 245,
+                                        lineNumber: 249,
                                         columnNumber: 11,
                                     },
                                     void 0,
@@ -77828,7 +77828,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                     {
                                         fileName:
                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                        lineNumber: 259,
+                                        lineNumber: 263,
                                         columnNumber: 13,
                                     },
                                     void 0,
@@ -77840,7 +77840,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                     {
                         fileName:
                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                        lineNumber: 210,
+                        lineNumber: 214,
                         columnNumber: 7,
                     },
                     void 0,
@@ -77864,7 +77864,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                 {
                                     fileName:
                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                    lineNumber: 272,
+                                    lineNumber: 276,
                                     columnNumber: 11,
                                 },
                                 void 0,
@@ -77875,7 +77875,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                         {
                             fileName:
                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                            lineNumber: 271,
+                            lineNumber: 275,
                             columnNumber: 9,
                         },
                         void 0,
@@ -77892,7 +77892,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                         {
                             fileName:
                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                            lineNumber: 283,
+                            lineNumber: 287,
                             columnNumber: 9,
                         },
                         void 0,
@@ -77918,7 +77918,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                             {
                                                 fileName:
                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                                lineNumber: 288,
+                                                lineNumber: 296,
                                                 columnNumber: 11,
                                             },
                                             void 0,
@@ -77940,7 +77940,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                                         {
                                                             fileName:
                                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                                            lineNumber: 291,
+                                                            lineNumber: 299,
                                                             columnNumber: 13,
                                                         },
                                                         void 0,
@@ -77965,7 +77965,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                                             {
                                                                 fileName:
                                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                                                lineNumber: 295,
+                                                                lineNumber: 303,
                                                                 columnNumber: 15,
                                                             },
                                                             void 0,
@@ -77977,7 +77977,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                             {
                                                 fileName:
                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                                lineNumber: 290,
+                                                lineNumber: 298,
                                                 columnNumber: 11,
                                             },
                                             void 0,
@@ -77989,7 +77989,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                 {
                                     fileName:
                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                    lineNumber: 287,
+                                    lineNumber: 295,
                                     columnNumber: 9,
                                 },
                                 void 0,
@@ -78019,7 +78019,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                                                 {
                                                                     fileName:
                                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                                                    lineNumber: 310,
+                                                                    lineNumber: 319,
                                                                     columnNumber: 17,
                                                                 },
                                                                 void 0,
@@ -78043,7 +78043,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                                                 {
                                                                     fileName:
                                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                                                    lineNumber: 311,
+                                                                    lineNumber: 320,
                                                                     columnNumber: 17,
                                                                 },
                                                                 void 0,
@@ -78055,7 +78055,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                                     {
                                                         fileName:
                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                                        lineNumber: 309,
+                                                        lineNumber: 318,
                                                         columnNumber: 15,
                                                     },
                                                     void 0,
@@ -78079,7 +78079,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                                                 {
                                                                     fileName:
                                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                                                    lineNumber: 326,
+                                                                    lineNumber: 335,
                                                                     columnNumber: 17,
                                                                 },
                                                                 void 0,
@@ -78103,7 +78103,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                                                 {
                                                                     fileName:
                                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                                                    lineNumber: 327,
+                                                                    lineNumber: 336,
                                                                     columnNumber: 17,
                                                                 },
                                                                 void 0,
@@ -78115,7 +78115,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                                     {
                                                         fileName:
                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                                        lineNumber: 325,
+                                                        lineNumber: 334,
                                                         columnNumber: 15,
                                                     },
                                                     void 0,
@@ -78139,7 +78139,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                                                 {
                                                                     fileName:
                                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                                                    lineNumber: 339,
+                                                                    lineNumber: 348,
                                                                     columnNumber: 17,
                                                                 },
                                                                 void 0,
@@ -78164,7 +78164,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                                                 {
                                                                     fileName:
                                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                                                    lineNumber: 340,
+                                                                    lineNumber: 349,
                                                                     columnNumber: 17,
                                                                 },
                                                                 void 0,
@@ -78176,7 +78176,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                                     {
                                                         fileName:
                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                                        lineNumber: 338,
+                                                        lineNumber: 347,
                                                         columnNumber: 15,
                                                     },
                                                     void 0,
@@ -78201,8 +78201,8 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                                                 {
                                                                     fileName:
                                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                                                    lineNumber: 349,
-                                                                    columnNumber: 17,
+                                                                    lineNumber: 361,
+                                                                    columnNumber: 19,
                                                                 },
                                                                 void 0,
                                                             ),
@@ -78227,8 +78227,8 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                                                 {
                                                                     fileName:
                                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                                                    lineNumber: 350,
-                                                                    columnNumber: 17,
+                                                                    lineNumber: 362,
+                                                                    columnNumber: 19,
                                                                 },
                                                                 void 0,
                                                             ),
@@ -78239,8 +78239,8 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                                     {
                                                         fileName:
                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                                        lineNumber: 348,
-                                                        columnNumber: 15,
+                                                        lineNumber: 360,
+                                                        columnNumber: 17,
                                                     },
                                                     void 0,
                                                 ),
@@ -78251,7 +78251,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                     {
                                         fileName:
                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                        lineNumber: 306,
+                                        lineNumber: 315,
                                         columnNumber: 11,
                                     },
                                     void 0,
@@ -78263,7 +78263,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                     {
                         fileName:
                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                        lineNumber: 286,
+                        lineNumber: 290,
                         columnNumber: 7,
                     },
                     void 0,
@@ -78309,8 +78309,8 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                                 {
                                                     fileName:
                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                                    lineNumber: 376,
-                                                    columnNumber: 19,
+                                                    lineNumber: 397,
+                                                    columnNumber: 21,
                                                 },
                                                 void 0,
                                             ),
@@ -78320,8 +78320,8 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                         {
                                             fileName:
                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                            lineNumber: 371,
-                                            columnNumber: 17,
+                                            lineNumber: 392,
+                                            columnNumber: 19,
                                         },
                                         void 0,
                                     );
@@ -78332,8 +78332,8 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                             {
                                 fileName:
                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                lineNumber: 364,
-                                columnNumber: 11,
+                                lineNumber: 385,
+                                columnNumber: 13,
                             },
                             void 0,
                         );
@@ -78352,7 +78352,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                 {
                                     fileName:
                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                    lineNumber: 400,
+                                    lineNumber: 421,
                                     columnNumber: 11,
                                 },
                                 void 0,
@@ -78363,7 +78363,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                         {
                             fileName:
                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                            lineNumber: 399,
+                            lineNumber: 420,
                             columnNumber: 9,
                         },
                         void 0,
@@ -78391,7 +78391,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                             {
                                                 fileName:
                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                                lineNumber: 414,
+                                                lineNumber: 435,
                                                 columnNumber: 13,
                                             },
                                             void 0,
@@ -78404,7 +78404,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                 {
                                     fileName:
                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                    lineNumber: 407,
+                                    lineNumber: 428,
                                     columnNumber: 11,
                                 },
                                 void 0,
@@ -78415,7 +78415,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                         {
                             fileName:
                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                            lineNumber: 406,
+                            lineNumber: 427,
                             columnNumber: 9,
                         },
                         void 0,
@@ -78450,7 +78450,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                                   {
                                                       fileName:
                                                           '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                                      lineNumber: 433,
+                                                      lineNumber: 455,
                                                       columnNumber: 19,
                                                   },
                                                   void 0,
@@ -78461,7 +78461,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                           {
                                               fileName:
                                                   '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                              lineNumber: 429,
+                                              lineNumber: 451,
                                               columnNumber: 17,
                                           },
                                           void 0,
@@ -78489,7 +78489,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                                           {
                                               fileName:
                                                   '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                              lineNumber: 442,
+                                              lineNumber: 466,
                                               columnNumber: 17,
                                           },
                                           void 0,
@@ -78501,7 +78501,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                               {
                                   fileName:
                                       '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                                  lineNumber: 427,
+                                  lineNumber: 449,
                                   columnNumber: 15,
                               },
                               void 0,
@@ -78521,7 +78521,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
                           {
                               fileName:
                                   '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-                              lineNumber: 462,
+                              lineNumber: 486,
                               columnNumber: 13,
                           },
                           void 0,
@@ -78533,7 +78533,7 @@ const rke = ({ id: e, data: t, selected: n, type: r }) => {
         {
             fileName:
                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/nodes/AbyssNode.jsx',
-            lineNumber: 113,
+            lineNumber: 117,
             columnNumber: 5,
         },
         void 0,
@@ -113049,7 +113049,7 @@ function $He({
                                                                 {
                                                                     fileName:
                                                                         '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/VariablePanel.jsx',
-                                                                    lineNumber: 687,
+                                                                    lineNumber: 689,
                                                                     columnNumber: 15,
                                                                 },
                                                                 this,
@@ -113120,7 +113120,7 @@ function $He({
                                                     {
                                                         fileName:
                                                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/VariablePanel.jsx',
-                                                        lineNumber: 701,
+                                                        lineNumber: 703,
                                                         columnNumber: 15,
                                                     },
                                                     this,
@@ -113132,7 +113132,7 @@ function $He({
                                         {
                                             fileName:
                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/VariablePanel.jsx',
-                                            lineNumber: 699,
+                                            lineNumber: 701,
                                             columnNumber: 11,
                                         },
                                         this,
@@ -113171,7 +113171,7 @@ function $He({
                                         {
                                             fileName:
                                                 '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/VariablePanel.jsx',
-                                            lineNumber: 745,
+                                            lineNumber: 747,
                                             columnNumber: 11,
                                         },
                                         this,
@@ -113191,7 +113191,7 @@ function $He({
                                             {
                                                 fileName:
                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/VariablePanel.jsx',
-                                                lineNumber: 750,
+                                                lineNumber: 752,
                                                 columnNumber: 13,
                                             },
                                             this,
@@ -113209,7 +113209,7 @@ function $He({
                                             {
                                                 fileName:
                                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/VariablePanel.jsx',
-                                                lineNumber: 755,
+                                                lineNumber: 757,
                                                 columnNumber: 13,
                                             },
                                             this,
@@ -113221,7 +113221,7 @@ function $He({
                             {
                                 fileName:
                                     '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/VariablePanel.jsx',
-                                lineNumber: 743,
+                                lineNumber: 745,
                                 columnNumber: 9,
                             },
                             this,
@@ -113232,7 +113232,7 @@ function $He({
                     {
                         fileName:
                             '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/VariablePanel.jsx',
-                        lineNumber: 742,
+                        lineNumber: 744,
                         columnNumber: 7,
                     },
                     this,
@@ -118661,7 +118661,7 @@ var e4e = (e, t = !1) => {
                 return (
                     this.#c
                         ? (h = this.#c)
-                        : ((h = h3e(() => YHe(() => import('./CDWEKZTF-x-qp9wEK.js'), []))),
+                        : ((h = h3e(() => YHe(() => import('./CDWEKZTF-BKkOX5Hq.js'), []))),
                           (this.#c = h)),
                     _Ie(this.#i, this.#a),
                     u3e(

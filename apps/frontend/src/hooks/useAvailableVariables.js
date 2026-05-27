@@ -109,10 +109,15 @@ export function useAvailableVariables({
 
         Object.entries(obj).forEach(([key, val]) => {
           if (key.startsWith("_")) return; // Skip internal properties
-          
+
           const relativePath = prefix ? `${prefix}.${key}` : key;
           let valueType = typeof val;
-          if (source === "static" && typeof val === "string" && val.startsWith("<") && val.endsWith(">")) {
+          if (
+            source === "static" &&
+            typeof val === "string" &&
+            val.startsWith("<") &&
+            val.endsWith(">")
+          ) {
             valueType = val.slice(1, -1);
           }
 
@@ -195,8 +200,10 @@ export function useAvailableVariables({
     // --- C. Built-in Environment / Runtime Variables ---
     const envVars = {
       HAL_RUN_ID: "Unique identifier for the current run",
-      HAL_BROWSER_CONNECTED: "Boolean status of active Playwright browser connection",
-      HAL_LAST_ERROR: "Details of the most recently encountered execution error",
+      HAL_BROWSER_CONNECTED:
+        "Boolean status of active Playwright browser connection",
+      HAL_LAST_ERROR:
+        "Details of the most recently encountered execution error",
     };
 
     Object.entries(envVars).forEach(([name, desc]) => {

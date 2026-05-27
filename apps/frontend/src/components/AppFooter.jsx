@@ -251,9 +251,7 @@ const GlassMenu = ({
   const componentItems = isFlowMenu
     ? items.filter((i) => i.type === "component")
     : [];
-  const loopItems = isFlowMenu
-    ? items.filter((i) => i.type === "loop")
-    : [];
+  const loopItems = isFlowMenu ? items.filter((i) => i.type === "loop") : [];
 
   return (
     <Motion.div
@@ -449,17 +447,21 @@ function AppFooter({
   const activeProjectId = projects?.find((p) => p.name === projectName)?.id;
   const activeFlowId = flows?.find((f) => f.name === flowName)?.id;
 
-  const activeFlow = flows?.find((f) => f.id === activeFlowId || f.name === flowName);
-  const activeFlowIcon = activeFlow?.type === "loop"
-    ? Repeat
-    : activeFlow?.type === "component"
-      ? Box
-      : GitBranch;
-  const activeFlowLabel = activeFlow?.type === "loop"
-    ? "Loop"
-    : activeFlow?.type === "component"
-      ? "Component"
-      : "Flow";
+  const activeFlow = flows?.find(
+    (f) => f.id === activeFlowId || f.name === flowName,
+  );
+  const activeFlowIcon =
+    activeFlow?.type === "loop"
+      ? Repeat
+      : activeFlow?.type === "component"
+        ? Box
+        : GitBranch;
+  const activeFlowLabel =
+    activeFlow?.type === "loop"
+      ? "Loop"
+      : activeFlow?.type === "component"
+        ? "Component"
+        : "Flow";
 
   const projectButtonRef = useRef(null);
   const flowButtonRef = useRef(null);

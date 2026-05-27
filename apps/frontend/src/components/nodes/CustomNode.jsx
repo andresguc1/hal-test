@@ -152,7 +152,8 @@ function CustomNode({ data, selected }) {
               ? "BINDING MODE"
               : isHealed
                 ? "SELF-HEALED"
-                : (NODE_CATEGORIES[categoryKey]?.label || categoryKey.replace(/_/g, " "))}
+                : NODE_CATEGORIES[categoryKey]?.label ||
+                  categoryKey.replace(/_/g, " ")}
           </span>
 
           <h3
@@ -164,7 +165,10 @@ function CustomNode({ data, selected }) {
               isHealed && "text-violet-400",
             )}
           >
-            {data?.customLabel || t(`nodes.labels.${data?.type}`) || data?.label || "Node"}
+            {data?.customLabel ||
+              t(`nodes.labels.${data?.type}`) ||
+              data?.label ||
+              "Node"}
           </h3>
 
           {/* Dynamic Summary / Subtitle (The "Smart" part) */}

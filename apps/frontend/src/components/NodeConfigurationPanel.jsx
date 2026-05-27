@@ -147,42 +147,47 @@ const NodeConfigurationPanel = ({
     nodeId: activeNode?.id,
   });
 
-  const cleanConfiguration = useCallback((config, nodeType) => {
-    if (!config) return {};
-    const allowedKeys = new Set([
-      "customLabel",
-      "label",
-      "description",
-      "technicalName",
-      "headless",
-      "continueOnFailure",
-      "continueOnError",
-      "takeScreenshot",
-      "url",
-      "flowId",
-    ]);
+  const cleanConfiguration = useCallback(
+    (config, nodeType) => {
+      if (!config) return {};
+      const allowedKeys = new Set([
+        "customLabel",
+        "label",
+        "description",
+        "technicalName",
+        "headless",
+        "continueOnFailure",
+        "continueOnError",
+        "takeScreenshot",
+        "url",
+        "flowId",
+      ]);
 
-    // Add inputs defined in NODE_INPUTS schema for this node type
-    const inputs = NODE_INPUTS[nodeType] || NODE_INPUTS.default || [];
-    inputs.forEach((input) => allowedKeys.add(input.key));
+      // Add inputs defined in NODE_INPUTS schema for this node type
+      const inputs = NODE_INPUTS[nodeType] || NODE_INPUTS.default || [];
+      inputs.forEach((input) => allowedKeys.add(input.key));
 
-    // Also add definedInputs which contains dynamic keys (like loop / component parameters)
-    definedInputs.forEach((input) => allowedKeys.add(input.key));
+      // Also add definedInputs which contains dynamic keys (like loop / component parameters)
+      definedInputs.forEach((input) => allowedKeys.add(input.key));
 
-    const cleaned = {};
-    for (const [key, val] of Object.entries(config)) {
-      if (allowedKeys.has(key)) {
-        cleaned[key] = val;
+      const cleaned = {};
+      for (const [key, val] of Object.entries(config)) {
+        if (allowedKeys.has(key)) {
+          cleaned[key] = val;
+        }
       }
-    }
-    return cleaned;
-  }, [definedInputs]);
+      return cleaned;
+    },
+    [definedInputs],
+  );
 
   React.useEffect(() => {
     if (!activeNode) return;
     const globalConfig = activeNode.data?.configuration || {};
     const hasIdChanged = activeNode.id !== lastSyncedConfigRef.current.nodeId;
-    const hasConfigChanged = JSON.stringify(globalConfig) !== JSON.stringify(lastSyncedConfigRef.current.config);
+    const hasConfigChanged =
+      JSON.stringify(globalConfig) !==
+      JSON.stringify(lastSyncedConfigRef.current.config);
 
     if (hasIdChanged || hasConfigChanged) {
       isResettingRef.current = true;
@@ -219,7 +224,10 @@ const NodeConfigurationPanel = ({
       updateTimeoutRef.current = setTimeout(() => {
         if (activeNode.id !== lastSyncedConfigRef.current.nodeId) return;
 
-        const cleanedConfig = cleanConfiguration(watchedValues, activeNode.data?.type || activeNode.type);
+        const cleanedConfig = cleanConfiguration(
+          watchedValues,
+          activeNode.data?.type || activeNode.type,
+        );
 
         updateNodeConfiguration(activeNode.id, cleanedConfig);
         lastSyncedConfigRef.current.config = watchedValues;
@@ -255,11 +263,7 @@ const NodeConfigurationPanel = ({
     };
   }, [localLabel, activeNode, updateNodeConfiguration]);
 
-
-  const {
-    availableVariables,
-    groupedVariables,
-  } = useAvailableVariables({
+  const { availableVariables, groupedVariables } = useAvailableVariables({
     activeNodeId: activeNode?.id,
     nodes,
     edges,
@@ -284,7 +288,10 @@ const NodeConfigurationPanel = ({
           // Filter out legacy redundant ".result.key" paths when a direct alias is available.
           // Also hide general ".result" references unless it is a root result item.
           if (item.name.includes(".result.")) return false;
-          return !item.name.endsWith(".result") || item.name === `${nodeLabel}.result`;
+          return (
+            !item.name.endsWith(".result") ||
+            item.name === `${nodeLabel}.result`
+          );
         })
         .map((item) => ({
           label: item.name.split(".").pop() || item.name,
@@ -392,9 +399,9 @@ const NodeConfigurationPanel = ({
     if (keyName && keyName.toLowerCase().includes("screenshot")) {
       if (isBase64 || isFilePath) {
         const imageUrl = isBase64
-          ? (stringValue.startsWith("data:image")
-              ? stringValue
-              : `data:image/png;base64,${stringValue}`)
+          ? stringValue.startsWith("data:image")
+            ? stringValue
+            : `data:image/png;base64,${stringValue}`
           : api.getFileUrl(stringValue);
 
         return (
@@ -722,7 +729,8 @@ const NodeConfigurationPanel = ({
             CATEGORY_STYLES[colorKey]?.panel?.categoryText,
           )}
         >
-          {NODE_CATEGORIES[safeConfig.category]?.label || safeConfig.category.replace("_", " ")}
+          {NODE_CATEGORIES[safeConfig.category]?.label ||
+            safeConfig.category.replace("_", " ")}
         </span>
         <input
           type="text"

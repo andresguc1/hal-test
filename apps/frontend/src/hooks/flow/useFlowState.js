@@ -605,8 +605,11 @@ export function useFlowState() {
               setEdges((eds) =>
                 eds.filter(
                   (e) =>
-                    !(e.source === nodeId && removedCaseIds.includes(e.sourceHandle))
-                )
+                    !(
+                      e.source === nodeId &&
+                      removedCaseIds.includes(e.sourceHandle)
+                    ),
+                ),
               );
             }
           }
@@ -621,8 +624,11 @@ export function useFlowState() {
               setEdges((eds) =>
                 eds.filter(
                   (e) =>
-                    !(e.source === nodeId && removedBranchIds.includes(e.sourceHandle))
-                )
+                    !(
+                      e.source === nodeId &&
+                      removedBranchIds.includes(e.sourceHandle)
+                    ),
+                ),
               );
             }
           }

@@ -323,7 +323,7 @@ export default function VariablePanel({
 
     socket.on("variable-change", handler);
     socket.on("node-execution-finished", handler);
-    
+
     return () => {
       socket.off("variable-change", handler);
       socket.off("node-execution-finished", handler);
@@ -683,7 +683,9 @@ export default function VariablePanel({
           <div className="flex flex-col items-center justify-center p-8 text-slate-500 text-xs gap-3 text-center h-48">
             <Database size={32} className="opacity-20" />
             <div className="flex flex-col gap-1">
-              <span className="font-bold text-slate-400">No Variables Found</span>
+              <span className="font-bold text-slate-400">
+                No Variables Found
+              </span>
               <span className="text-[10px] text-slate-600 leading-relaxed max-w-[200px] mx-auto">
                 {searchQuery
                   ? "No variables in this scope match your filter."

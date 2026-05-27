@@ -296,7 +296,8 @@ export function useFlowExecution({
           const builder = payloadBuilders[type];
           const bodyToSend = builder ? builder(payload || {}) : payload || {};
           bodyToSend.nodeId = nodeId;
-          if (payload?.customLabel) bodyToSend.customLabel = payload.customLabel;
+          if (payload?.customLabel)
+            bodyToSend.customLabel = payload.customLabel;
           if (payload?.label) bodyToSend.label = payload.label;
           if (activeBrowserId && !bodyToSend.browserId)
             bodyToSend.browserId = activeBrowserId;

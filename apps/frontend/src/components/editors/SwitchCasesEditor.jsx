@@ -46,8 +46,10 @@ const SwitchCasesEditor = React.memo(
     const cases = useMemo(() => (Array.isArray(value) ? value : []), [value]);
 
     // Execution result data
-    const matchedCaseId = data?.result?.matchedCaseId || data?.result?.data?.matchedCaseId;
-    const resolvedValue = data?.result?.resolvedValue ?? data?.result?.data?.resolvedValue;
+    const matchedCaseId =
+      data?.result?.matchedCaseId || data?.result?.data?.matchedCaseId;
+    const resolvedValue =
+      data?.result?.resolvedValue ?? data?.result?.data?.resolvedValue;
     const hasExecuted = resolvedValue !== undefined && resolvedValue !== null;
 
     // Duplicate detection: find case values that appear more than once
@@ -116,21 +118,23 @@ const SwitchCasesEditor = React.memo(
       return "string";
     };
 
-    const comparisonLabel = {
-      equals: "=",
-      contains: "∋",
-      startsWith: "⊳",
-      endsWith: "⊲",
-      regex: "/.*/",
-    }[comparisonType] || "=";
+    const comparisonLabel =
+      {
+        equals: "=",
+        contains: "∋",
+        startsWith: "⊳",
+        endsWith: "⊲",
+        regex: "/.*/",
+      }[comparisonType] || "=";
 
-    const comparisonDescription = {
-      equals: t("nodes.hints.comparison_equals", "Exact match"),
-      contains: t("nodes.hints.comparison_contains", "Contains substring"),
-      startsWith: t("nodes.hints.comparison_starts", "Starts with"),
-      endsWith: t("nodes.hints.comparison_ends", "Ends with"),
-      regex: t("nodes.hints.comparison_regex", "Regex pattern"),
-    }[comparisonType] || "Exact match";
+    const comparisonDescription =
+      {
+        equals: t("nodes.hints.comparison_equals", "Exact match"),
+        contains: t("nodes.hints.comparison_contains", "Contains substring"),
+        startsWith: t("nodes.hints.comparison_starts", "Starts with"),
+        endsWith: t("nodes.hints.comparison_ends", "Ends with"),
+        regex: t("nodes.hints.comparison_regex", "Regex pattern"),
+      }[comparisonType] || "Exact match";
 
     return (
       <div className="space-y-3 mt-2 mb-2">
@@ -349,14 +353,9 @@ const SwitchCasesEditor = React.memo(
                 <div className="flex items-center gap-2 pl-7 border-t border-white/5 pt-1.5 min-w-0">
                   <input
                     type="text"
-                    placeholder={t(
-                      "common.optional_label",
-                      "Label (optional)",
-                    )}
+                    placeholder={t("common.optional_label", "Label (optional)")}
                     value={c.label || ""}
-                    onChange={(e) =>
-                      updateCase(index, "label", e.target.value)
-                    }
+                    onChange={(e) => updateCase(index, "label", e.target.value)}
                     title={c.label}
                     className="flex-1 bg-transparent border-none p-0 text-[10px] font-medium text-slate-400 focus:outline-none placeholder:text-slate-700 focus:ring-0 truncate min-w-0"
                   />

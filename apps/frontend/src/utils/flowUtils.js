@@ -296,8 +296,9 @@ export function resolveVariables(config, context) {
       const parts = path.split(".");
       let curr = obj;
       for (const part of parts) {
-        if (curr === null || curr === undefined || typeof curr !== "object") return undefined;
-        
+        if (curr === null || curr === undefined || typeof curr !== "object")
+          return undefined;
+
         // 1. Try direct property lookup
         if (curr[part] !== undefined) {
           curr = curr[part];
@@ -358,7 +359,9 @@ export function resolveVariables(config, context) {
     return value.replace(mixRegex, (match, path) => {
       const resolved = resolvePath(path);
       if (resolved !== undefined) {
-        return typeof resolved === "object" ? JSON.stringify(resolved) : String(resolved);
+        return typeof resolved === "object"
+          ? JSON.stringify(resolved)
+          : String(resolved);
       }
       return match;
     });

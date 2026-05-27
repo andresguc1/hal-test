@@ -13,7 +13,11 @@ import {
   Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { NODE_TYPE_MAP, CATEGORY_STYLES, NODE_CATEGORIES } from "@/config/nodeConstants";
+import {
+  NODE_TYPE_MAP,
+  CATEGORY_STYLES,
+  NODE_CATEGORIES,
+} from "@/config/nodeConstants";
 import {
   validateNodeConfig,
   getSmartLabel,
@@ -283,7 +287,11 @@ const AbyssNode = ({ id, data, selected, type }) => {
         <div className="absolute inset-0 bg-red-500/10 rounded-lg pointer-events-none border border-red-500/30" />
       )}
 
-      <div className={cn((isConditional || isSwitch) && showOutputs && "pr-[135px]")}>
+      <div
+        className={cn(
+          (isConditional || isSwitch) && showOutputs && "pr-[135px]",
+        )}
+      >
         <div className="relative flex items-center gap-3 mb-1 pt-1 px-1">
           <Icon size={20} className="shrink-0 text-white drop-shadow-sm" />
 
@@ -295,7 +303,8 @@ const AbyssNode = ({ id, data, selected, type }) => {
               <span className="text-[10px] font-bold uppercase tracking-wider text-white drop-shadow-sm">
                 {safeConfig.category === "network_control"
                   ? "NETWORK"
-                  : (NODE_CATEGORIES[safeConfig.category]?.label || safeConfig.category.replace("_", " "))}
+                  : NODE_CATEGORIES[safeConfig.category]?.label ||
+                    safeConfig.category.replace("_", " ")}
               </span>
             )}
           </div>
@@ -344,55 +353,67 @@ const AbyssNode = ({ id, data, selected, type }) => {
             )}
 
             {/* Switch Resolved Value Badge */}
-            {isSwitch && data.state === "success" && (data.result?.resolvedValue ?? data.result?.data?.resolvedValue) !== undefined && (
-              <div className="flex items-center gap-1.5 mt-1">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
-                <span className="text-[9px] font-mono text-emerald-300/90 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 truncate max-w-[180px]">
-                  {truncate(String(data.result?.resolvedValue ?? data.result?.data?.resolvedValue ?? ""), 24)}
-                </span>
-              </div>
-            )}
+            {isSwitch &&
+              data.state === "success" &&
+              (data.result?.resolvedValue ??
+                data.result?.data?.resolvedValue) !== undefined && (
+                <div className="flex items-center gap-1.5 mt-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                  <span className="text-[9px] font-mono text-emerald-300/90 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 truncate max-w-[180px]">
+                    {truncate(
+                      String(
+                        data.result?.resolvedValue ??
+                          data.result?.data?.resolvedValue ??
+                          "",
+                      ),
+                      24,
+                    )}
+                  </span>
+                </div>
+              )}
           </div>
         )}
       </div>
 
       {/* INTEGRATED BRANCH LABELS (Inside node for clarity) */}
-      {showOutputs && (isConditional || isSwitch) && (() => {
-        const matchedPath = data.result?.path || data.result?.data?.path;
-        const hasMatch = data.state === "success" && matchedPath;
-        return (
-          <div className="absolute inset-y-0 right-0 w-[124px] pointer-events-none flex flex-col justify-around py-4 border-l border-white/10 bg-slate-950/20 rounded-r-lg">
-            {branches.map((branch, idx) => {
-              const topPct = `${((idx + 1) * 100) / (branches.length + 1)}%`;
-              const labelText = branch.label || branch.value || branch.id;
-              const isBranchMatched = hasMatch && matchedPath === branch.id;
-              const isDimmed = hasMatch && !isBranchMatched;
-              return (
-                <div
-                  key={`label-${branch.id || idx}`}
-                  className="absolute right-2 flex items-center justify-end max-w-full"
-                  style={{ top: topPct, transform: "translateY(-50%)" }}
-                >
-                  <span
-                    title={labelText}
-                    className={cn(
-                      "px-2 py-0.5 rounded-[4px] text-[9px] font-extrabold uppercase tracking-tight border shadow-md transition-all duration-300 truncate max-w-[105px] block text-center",
-                      branch.isFallback
-                        ? "bg-slate-800/90 text-slate-400 border-slate-700/60"
-                        : "bg-slate-900/60 text-white/90 border-white/10 group-hover:bg-slate-800/80",
-                      isBranchMatched &&
-                        "bg-emerald-500/25 text-emerald-300 border-emerald-400/50 shadow-[0_0_10px_rgba(16,185,129,0.3)] ring-1 ring-emerald-500/40 font-black",
-                      isDimmed && "opacity-30",
-                    )}
+      {showOutputs &&
+        (isConditional || isSwitch) &&
+        (() => {
+          const matchedPath = data.result?.path || data.result?.data?.path;
+          const hasMatch = data.state === "success" && matchedPath;
+          return (
+            <div className="absolute inset-y-0 right-0 w-[124px] pointer-events-none flex flex-col justify-around py-4 border-l border-white/10 bg-slate-950/20 rounded-r-lg">
+              {branches.map((branch, idx) => {
+                const topPct = `${((idx + 1) * 100) / (branches.length + 1)}%`;
+                const labelText = branch.label || branch.value || branch.id;
+                const isBranchMatched = hasMatch && matchedPath === branch.id;
+                const isDimmed = hasMatch && !isBranchMatched;
+                return (
+                  <div
+                    key={`label-${branch.id || idx}`}
+                    className="absolute right-2 flex items-center justify-end max-w-full"
+                    style={{ top: topPct, transform: "translateY(-50%)" }}
                   >
-                    {labelText}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        );
-      })()}
+                    <span
+                      title={labelText}
+                      className={cn(
+                        "px-2 py-0.5 rounded-[4px] text-[9px] font-extrabold uppercase tracking-tight border shadow-md transition-all duration-300 truncate max-w-[105px] block text-center",
+                        branch.isFallback
+                          ? "bg-slate-800/90 text-slate-400 border-slate-700/60"
+                          : "bg-slate-900/60 text-white/90 border-white/10 group-hover:bg-slate-800/80",
+                        isBranchMatched &&
+                          "bg-emerald-500/25 text-emerald-300 border-emerald-400/50 shadow-[0_0_10px_rgba(16,185,129,0.3)] ring-1 ring-emerald-500/40 font-black",
+                        isDimmed && "opacity-30",
+                      )}
+                    >
+                      {labelText}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
 
       {/* ERROR INDICATOR (Runtime) */}
       {data.error && (
@@ -422,7 +443,8 @@ const AbyssNode = ({ id, data, selected, type }) => {
         ? branches.map((branch, idx) => {
             const topPct = `${((idx + 1) * 100) / (branches.length + 1)}%`;
             const matchedPath = data.result?.path || data.result?.data?.path;
-            const isBranchMatched = data.state === "success" && matchedPath === branch.id;
+            const isBranchMatched =
+              data.state === "success" && matchedPath === branch.id;
             return (
               <React.Fragment key={branch.id || idx}>
                 {/* Visual port dot (Behind the handle) */}
@@ -430,12 +452,14 @@ const AbyssNode = ({ id, data, selected, type }) => {
                   className="absolute -right-1.5 w-3 h-3 z-20 pointer-events-none"
                   style={{ top: topPct, transform: "translateY(-50%)" }}
                 >
-                  <div className={cn(
-                    "w-3 h-3 border-[2px] border-[#0f172a] rounded-full transition-all duration-300",
-                    isBranchMatched
-                      ? "bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)] scale-110"
-                      : "bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.5)]"
-                  )} />
+                  <div
+                    className={cn(
+                      "w-3 h-3 border-[2px] border-[#0f172a] rounded-full transition-all duration-300",
+                      isBranchMatched
+                        ? "bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)] scale-110"
+                        : "bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.5)]",
+                    )}
+                  />
                 </div>
 
                 {/* Functional Handle (Extra large hit area for ergonomics) */}
@@ -477,7 +501,8 @@ function arePropsEqual(prevProps, nextProps) {
     prevProps.id === nextProps.id &&
     prevProps.selected === nextProps.selected &&
     prevProps.data?.state === nextProps.data?.state &&
-    JSON.stringify(prevProps.data?.configuration) === JSON.stringify(nextProps.data?.configuration) &&
+    JSON.stringify(prevProps.data?.configuration) ===
+      JSON.stringify(nextProps.data?.configuration) &&
     prevProps.data?.error === nextProps.data?.error &&
     prevProps.data?.disabled === nextProps.data?.disabled &&
     prevProps.data?.result === nextProps.data?.result

@@ -322,7 +322,8 @@ export const VariableInput = ({
                         const lastOpen = value.lastIndexOf("{{");
                         const prefix = value.substring(0, lastOpen);
                         const closeIdx = value.indexOf("}}", lastOpen);
-                        const suffix = closeIdx !== -1 ? value.substring(closeIdx + 2) : "";
+                        const suffix =
+                          closeIdx !== -1 ? value.substring(closeIdx + 2) : "";
                         const newValue = prefix + (item.path || "") + suffix;
                         onChange({ target: { value: newValue } });
                         setShowSuggestions(false);

@@ -5,7 +5,9 @@ describe("validateNodeConfig", () => {
   it("should validate standard required fields", () => {
     // open_url requires 'url'
     expect(validateNodeConfig("open_url", { url: "" }).isValid).toBe(false);
-    expect(validateNodeConfig("open_url", { url: "https://example.com" }).isValid).toBe(true);
+    expect(
+      validateNodeConfig("open_url", { url: "https://example.com" }).isValid,
+    ).toBe(true);
   });
 
   it("should skip validation for required fields that are not visible", () => {
