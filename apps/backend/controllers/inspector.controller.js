@@ -145,6 +145,55 @@ export const launchRemoteAction = async (req, res) => {
     try {
         const { url = 'https://www.google.com' } = req.body;
 
+        // Check if there is an existing active browser session first to reuse it!
+        const existingEntry = browserService.getLatest();
+        if (existingEntry) {
+            const browser = existingEntry.browser || existingEntry;
+            if (browser && (typeof browser.isConnected !== 'function' || browser.isConnected())) {
+                const browserId = Array.from(browserService.keys()).pop();
+                console.log(`[Inspector] Reusing existing active browser session: ${browserId}`);
+
+                // Try to find or create a page
+                const contexts = browser.contexts();
+                let page = null;
+                if (contexts.length > 0) {
+                    for (const ctx of contexts) {
+                        const pages = ctx.pages();
+                        if (pages.length > 0) {
+                            page = pages[pages.length - 1];
+                            break;
+                        }
+                    }
+                }
+
+                if (!page) {
+                    const context = contexts.length > 0 ? contexts[0] : await browser.newContext();
+                    page = await context.newPage();
+                }
+
+                // If URL was provided and the page is currently empty, navigate it
+                if (url && (page.url() === 'about:blank' || page.url() === '')) {
+                    console.log(`[Inspector] Navigating reused session page to: ${url}`);
+                    await page
+                        .goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 })
+                        .catch((e) => {
+                            console.warn(
+                                '[Inspector] Navigation error during session reuse:',
+                                e.message,
+                            );
+                        });
+                }
+
+                await startInspector(page);
+
+                return res.status(200).json({
+                    success: true,
+                    browserId,
+                    message: 'Reused active browser session and started inspector',
+                });
+            }
+        }
+
         console.log(`[Inspector] Launching remote browser for URL: ${url}`);
 
         // 1. Launch Browser (Headful chromium for visibility on the desktop/vnc)

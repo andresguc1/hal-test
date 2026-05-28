@@ -267,13 +267,13 @@ export async function startInspector(page) {
     if (!page.__halInspectorListenerAdded) {
         page.__halInspectorListenerAdded = true;
 
-        page.on('domcontentloaded', async (navigatedPage) => {
+        page.on('domcontentloaded', async () => {
             if (page.__halIsPicking) {
                 console.log('[Inspector] Navigation detected. Re-injecting inspector UI...');
                 try {
                     // Because `exposeFunction` persists across navigations in Playwright,
                     // `window.onElementSelected` will still exist! We just need the UI again.
-                    await navigatedPage.evaluate(injectInspectorUI);
+                    await page.evaluate(injectInspectorUI);
                     console.log('[Inspector] Re-injection successful.');
                 } catch (err) {
                     console.warn('[Inspector] Re-injection failed:', err.message);

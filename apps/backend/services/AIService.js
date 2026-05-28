@@ -123,7 +123,15 @@ class AIService {
             }
 
             const activeProvider = provider || selected.provider;
-            const activeModel = model || selected.model;
+            let activeModel = model || selected.model;
+
+            // --- SMART RESOLUTION FOR OLLAMA ---
+            if (activeProvider === 'ollama' && activeModel) {
+                activeModel = await this.resolveOllamaModel({
+                    baseUrl: _baseUrl || process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434',
+                    requestedModel: activeModel,
+                });
+            }
 
             const providerInstance = llmFactory.getProviderInstance(
                 apiKey || activeProvider,
@@ -368,10 +376,16 @@ IMPORTANT DIRECTIONS:
                 return true;
             }
 
-            // For Ollama, use healthCheck first for better error messages
-            const validationModel = model || process.env.OLLAMA_MODEL || 'gemma3:latest';
+            // For Ollama, resolve the model name using our smart resolver first!
+            const validationModelInput = model || process.env.OLLAMA_MODEL || 'gemma3:latest';
+            const activeBaseUrl = baseUrl || 'http://127.0.0.1:11434';
+            const validationModel = await this.resolveOllamaModel({
+                baseUrl: activeBaseUrl,
+                requestedModel: validationModelInput,
+            });
+
             const health = await this.healthCheck({
-                baseUrl: baseUrl || 'http://127.0.0.1:11434',
+                baseUrl: activeBaseUrl,
                 model: validationModel,
             });
             if (!health.ollamaRunning) {
@@ -446,7 +460,11 @@ IMPORTANT DIRECTIONS:
                 return gemma || availableModels[0];
             }
 
-            return requestedModel;
+            // 5. Ultimate transparent fallback: if requested model is not found, auto-fallback to first available!
+            console.log(
+                `[AIService] Requested Ollama model '${requestedModel}' not found in local tags. Auto-falling back to first available model: '${availableModels[0]}'`,
+            );
+            return availableModels[0];
         } catch (e) {
             console.warn(`[AIService] Failed to resolve Ollama model: ${e.message}`);
             return requestedModel;
@@ -528,7 +546,15 @@ IMPORTANT DIRECTIONS:
             }
 
             const activeProvider = provider || selected.provider;
-            const activeModel = forcedModel || selected.model;
+            let activeModel = forcedModel || selected.model;
+
+            // --- SMART RESOLUTION FOR OLLAMA ---
+            if (activeProvider === 'ollama' && activeModel) {
+                activeModel = await this.resolveOllamaModel({
+                    baseUrl: baseUrl || process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434',
+                    requestedModel: activeModel,
+                });
+            }
 
             console.log(
                 `[AIService] Healing selector. Using: ${activeProvider}/${activeModel} (Timeout: ${customTimeout || 'default'}ms)`,

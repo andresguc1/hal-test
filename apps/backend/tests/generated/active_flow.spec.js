@@ -30,16 +30,16 @@ test(`Flujo Generado Hal-Test`, async ({ page }) => {
         await page.click(`#login-button`);
     });
 
-    await test.step(`loop`, async () => {
-        console.log(`⚠️ Acción no implementada o pendiente: loop`);
-    });
-
     await test.step(`Verify User Role`, async () => {
         console.log(`⚠️ Acción no implementada o pendiente: conditional`);
     });
 
-    await test.step(`Unexpected Role`, async () => {
-        console.log(`⚠️ Acción no implementada o pendiente: fail_flow`);
+    await test.step(`locked_out_user`, async () => {
+        console.log(`⚠️ Acción no implementada o pendiente: find_element`);
+    });
+
+    await test.step(`standard_user`, async () => {
+        console.log(`⚠️ Acción no implementada o pendiente: find_element`);
     });
 
     await test.step(`Take Evidence`, async () => {

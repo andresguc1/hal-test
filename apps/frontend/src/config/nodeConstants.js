@@ -130,8 +130,6 @@ export const NODE_CATEGORIES = {
       "switch",
       "loop",
       "backend_js",
-      "input",
-      "output",
       "wait_conditional",
       "pause",
     ],

@@ -438,7 +438,62 @@ export function useFlowExecution({
         (e) => activeNodeIds.has(e.source) && activeNodeIds.has(e.target),
       );
 
+      // Find root/starting nodes (nodes with 0 incoming active edges)
+      const targets = new Set(filteredEdges.map((e) => e.target));
+      const roots = executionNodes.filter((n) => !targets.has(n.id));
+
+      let activeRoot = null;
+      if (roots.length === 0) {
+        errors.push("No starting point found");
+      } else if (roots.length > 1) {
+        // Robust progressive flow support:
+        // If there are multiple starting points (because of unconnected drafts),
+        // but only ONE is the 'launch_browser' root, we treat that one as the active starting point.
+        const launchRoots = roots.filter(
+          (r) => r.type === "launch_browser" || r.data?.type === "launch_browser",
+        );
+        if (launchRoots.length === 1) {
+          activeRoot = launchRoots[0];
+        } else if (launchRoots.length > 1) {
+          errors.push("Multiple starting points detected");
+        } else {
+          errors.push("No starting point found");
+        }
+      } else {
+        const rootNode = roots[0];
+        const type = rootNode.type || rootNode.data?.type;
+        if (type !== "launch_browser") {
+          errors.push("First node must be 'Launch Browser'");
+        } else {
+          activeRoot = rootNode;
+        }
+      }
+
+      // ─── ACTIVE PATH BFS EXTRACTION ───
+      const reachableNodeIds = new Set();
+      if (activeRoot) {
+        const queue = [activeRoot.id];
+        while (queue.length > 0) {
+          const currId = queue.shift();
+          if (!reachableNodeIds.has(currId)) {
+            reachableNodeIds.add(currId);
+            const outgoing = filteredEdges.filter((e) => e.source === currId);
+            for (const edge of outgoing) {
+              if (!reachableNodeIds.has(edge.target)) {
+                queue.push(edge.target);
+              }
+            }
+          }
+        }
+      }
+
+      // Validate configurations ONLY for nodes that are part of the active execution path
       for (const n of executionNodes) {
+        if (!reachableNodeIds.has(n.id)) {
+          // Skip validation for unreachable/draft/orphan nodes!
+          continue;
+        }
+
         const type = n.data?.subType || n.data?.type || n.type;
         const validation = validateNodeConfig(
           type,
@@ -450,19 +505,16 @@ export function useFlowExecution({
           );
       }
 
-      const targets = new Set(filteredEdges.map((e) => e.target));
-      const roots = executionNodes.filter((n) => !targets.has(n.id));
-
-      if (roots.length === 0) errors.push("No starting point found");
-      else if (roots.length > 1)
-        errors.push("Multiple starting points detected");
-      else if (roots[0].type !== "launch_browser")
-        errors.push("First node must be 'Launch Browser'");
-
+      // Validate structure only using reachable nodes and edges
       try {
+        const reachableNodes = executionNodes.filter((n) => reachableNodeIds.has(n.id));
+        const reachableEdges = filteredEdges.filter(
+          (e) => reachableNodeIds.has(e.source) && reachableNodeIds.has(e.target)
+        );
+
         const result = GraphValidator.validate({
-          nodes: executionNodes,
-          edges: filteredEdges,
+          nodes: reachableNodes,
+          edges: reachableEdges,
         });
         if (!result.valid) errors.push(...result.errors);
       } catch (err) {
@@ -904,6 +956,7 @@ export function useFlowExecution({
     setApiStatus,
     executionStats,
     activeBrowserId,
+    setActiveBrowserId,
     activeRunId,
     isReadOnly,
     stopSession,

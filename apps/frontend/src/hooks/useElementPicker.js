@@ -12,6 +12,7 @@ export const useElementPicker = ({
   updateNodeState,
   updateNodeConfiguration,
   activeBrowserId,
+  setActiveBrowserId,
   nodes,
   edges,
   executeFlow,
@@ -66,7 +67,28 @@ export const useElementPicker = ({
       );
 
       const isRemote = window.location.hostname !== "localhost";
-      let needsLaunch = isRemote || !activeBrowserId;
+
+      // Dynamic Session Lookup: check if there's already an active session in the backend!
+      let inspectorBrowserId = activeBrowserId;
+      if (!inspectorBrowserId) {
+        try {
+          const sessionRes = await api.get("/inspector/sessions");
+          if (sessionRes.success && sessionRes.sessions?.length > 0) {
+            inspectorBrowserId = sessionRes.sessions[0];
+            console.log(
+              "[useElementPicker] 🔍 Auto-detected active backend browser session:",
+              inspectorBrowserId,
+            );
+            if (setActiveBrowserId) {
+              setActiveBrowserId(inspectorBrowserId);
+            }
+          }
+        } catch (sessionErr) {
+          console.warn("[useElementPicker] Failed to fetch active sessions from backend:", sessionErr);
+        }
+      }
+
+      let needsLaunch = isRemote || !inspectorBrowserId;
 
       const getStartingUrl = () => {
         const openUrlNode = nodes.find(
@@ -78,7 +100,6 @@ export const useElementPicker = ({
       };
 
       try {
-        let inspectorBrowserId = activeBrowserId;
 
         if (!needsLaunch) {
           console.log(
@@ -208,6 +229,7 @@ export const useElementPicker = ({
       toast,
       t,
       activeBrowserId,
+      setActiveBrowserId,
       nodes,
       edges,
       executeFlow,

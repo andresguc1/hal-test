@@ -44,6 +44,7 @@ export const useHaltestSocket = ({
   const onRemoveNodeRef = useRef(onRemoveNode);
   const onUpdateNodeRef = useRef(onUpdateNode);
   const onLogReceivedRef = useRef(onLogReceived);
+  const toastRef = useRef(toast);
 
   // Update refs when props change (always keep latest)
   useEffect(() => {
@@ -59,6 +60,7 @@ export const useHaltestSocket = ({
     onRemoveNodeRef.current = onRemoveNode;
     onUpdateNodeRef.current = onUpdateNode;
     onLogReceivedRef.current = onLogReceived;
+    toastRef.current = toast;
   }, [
     onElementPicked,
     setNodes,
@@ -72,6 +74,7 @@ export const useHaltestSocket = ({
     onRemoveNode,
     onUpdateNode,
     onLogReceived,
+    toast,
   ]);
 
   // Handle socket connection and listeners
@@ -276,16 +279,16 @@ export const useHaltestSocket = ({
       const { status, error, failedNodeId, divePath } = data;
 
       if (status === "failed" && error) {
-        if (toast) {
-          toast.error(`Execution Failed: ${error}`, {
+        if (toastRef.current) {
+          toastRef.current.error(`Execution Failed: ${error}`, {
             duration: 8000,
             style: { border: "1px solid #ef4444", color: "#ef4444" },
           });
         }
 
         // If the backend provided a specific node that failed (e.g. validation error)
-        if (failedNodeId && onLogReceived) {
-          onLogReceived(`[BackendError] ${error}`, "error", failedNodeId);
+        if (failedNodeId && onLogReceivedRef.current) {
+          onLogReceivedRef.current(`[BackendError] ${error}`, "error", failedNodeId);
           // Trigger navigation/focus if possible via a global event or another callback
           window.dispatchEvent(
             new CustomEvent("hal:focus-node", {
@@ -336,8 +339,8 @@ export const useHaltestSocket = ({
 
     socket.on("execution-log", (data) => {
       const { message, type, nodeId } = data;
-      if (onLogReceived) {
-        onLogReceived(message, type, nodeId);
+      if (onLogReceivedRef.current) {
+        onLogReceivedRef.current(message, type, nodeId);
       }
     });
 
@@ -390,8 +393,8 @@ export const useHaltestSocket = ({
       }
 
       // 2. TRIGGER NOTIFICATION
-      if (toast) {
-        toast.success(`Node repaired via ${source.toUpperCase()}`, {
+      if (toastRef.current) {
+        toastRef.current.success(`Node repaired via ${source.toUpperCase()}`, {
           description: `New selector: ${newSelector}`,
           duration: 5000,
           icon: "🩹",
@@ -519,7 +522,7 @@ export const useHaltestSocket = ({
         socket.disconnect();
       }
     };
-  }, [onLogReceived, toast]);
+  }, []);
 
   return socketRef.current;
 };
