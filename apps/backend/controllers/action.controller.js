@@ -5434,6 +5434,7 @@ export const callLlmAction = async (req, res) => {
             baseUrl: headerBaseUrl,
             maxTokens,
             temperature,
+            parentSignal: req.signal,
         });
 
         // Extract text from object
@@ -5520,6 +5521,7 @@ ${fields ? `Fields: ${JSON.stringify(fields)}` : ''}`;
             model: activeModel === 'ollama' ? undefined : activeModel,
             keys,
             maxTokens,
+            parentSignal: req.signal,
         });
 
         variableManager.set(targetVariable, data, req.body.runId);
@@ -5605,6 +5607,7 @@ export const validateSemanticAction = async (req, res) => {
             model: activeModel,
             keys,
             maxTokens: Number(maxTokens),
+            parentSignal: req.signal,
         });
 
         // Map result to a success/fail based on expectedAnswer
@@ -5715,6 +5718,7 @@ export const extractDomContextAction = async (req, res) => {
                 provider: activeProvider,
                 model: activeModel,
                 maxTokens: Number(maxTokens),
+                parentSignal: req.signal,
             });
 
             finalContent = response.text || rawContent;
@@ -5784,6 +5788,7 @@ export const chainOfThoughtAction = async (req, res) => {
             temperature: Number(temperature),
             maxTokens: Number(maxTokens),
             taskType: 'reasoning',
+            parentSignal: req.signal,
         });
 
         const text = response.text || '';
@@ -5865,6 +5870,7 @@ export const smartSelectorAction = async (req, res) => {
             provider: activeProvider,
             model: activeModel,
             timeout: 60000, // 1 minute timeout for healer
+            parentSignal: req.signal,
         });
 
         const newSelector = result.correctedSelector || originalSelector;

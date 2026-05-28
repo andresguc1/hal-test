@@ -5,6 +5,7 @@ import { emitLog, emitFlowFinished, emitEdgeStatus, emitExecutionStatus } from '
 import i18n from '../config/i18n.js';
 import { variableManager } from './VariableManager.js';
 import { executionManager } from './ExecutionManager.js';
+import { activeRunManager } from './ActiveRunManager.js';
 import chalk from 'chalk';
 
 console.log(`[ExecutionService] 🔥 Service File Loaded at ${new Date().toISOString()}`);
@@ -71,6 +72,9 @@ export class ExecutionService {
             }
         }
 
+        // Register run in active run manager for cancellation support
+        const abortSignal = activeRunManager.register(runId);
+
         // 2.5 PRE-EXECUTION VALIDATION (Double-Check)
         try {
             console.log(
@@ -127,6 +131,7 @@ export class ExecutionService {
             overrides: options.overrides || {},
             headers: options.headers || {},
             startTime: Date.now(),
+            signal: abortSignal,
         };
 
         // Initialize all edges to 'idle' visually
@@ -178,6 +183,7 @@ export class ExecutionService {
             emitFlowFinished({ runId, status: 'failed', flowId, error: error.message });
             throw error;
         } finally {
+            activeRunManager.cleanup(runId);
             // --- AUTOMATIC RESOURCE CLEANUP ---
             // Ensure the browser launched for this specific run is closed
             if (runState.browserId) {
@@ -277,6 +283,14 @@ export class ExecutionService {
             : currentNodes.filter((n) => (n.parentId || null) === (parentId || null));
 
         for (const node of peerNodes) {
+            // Check if cancelled
+            if (state.signal?.aborted) {
+                console.log(
+                    `[ExecutionService] 🛑 Execution aborted via AbortSignal for run ${state.runId}`,
+                );
+                throw new Error('Cancelled');
+            }
+
             // Check if node is explicitly disabled or already executed
             if (node.data?.disabled) continue;
             if (state.executedNodeIds && state.executedNodeIds.has(node.nodeId)) continue;
@@ -669,6 +683,7 @@ export class ExecutionService {
                 headers: state.headers || {},
                 // Needed for some controllers
                 params: {},
+                signal: state.signal,
             };
 
             const res = {

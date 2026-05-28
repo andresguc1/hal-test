@@ -38,12 +38,20 @@ test(`Flujo Generado Hal-Test`, async ({ page }) => {
         console.log(`⚠️ Acción no implementada o pendiente: find_element`);
     });
 
+    await test.step(`performance_glitch_user`, async () => {
+        console.log(`⚠️ Acción no implementada o pendiente: find_element`);
+    });
+
+    await test.step(`error_user`, async () => {
+        console.log(`⚠️ Acción no implementada o pendiente: find_element`);
+    });
+
     await test.step(`standard_user`, async () => {
         console.log(`⚠️ Acción no implementada o pendiente: find_element`);
     });
 
     await test.step(`Take Evidence`, async () => {
-        await page.screenshot({ path: 'screenshot_10.png' });
+        await page.screenshot({ path: 'screenshot_12.png' });
     });
 
     await test.step(`Complete Tour`, async () => {

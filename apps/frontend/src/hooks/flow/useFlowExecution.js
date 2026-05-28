@@ -98,19 +98,39 @@ export function useFlowExecution({
   }, []);
 
   const stopSession = useCallback(async () => {
-    if (!activeBrowserId) return;
+    if (activeRunId) {
+      console.log(`[useFlowExecution] Stopping active execution run: ${activeRunId}`);
+      try {
+        await api.post(`/runs/${activeRunId}/cancel`);
+        if (toast) toast.success("Execution cancelled successfully");
+      } catch (err) {
+        console.error("Failed to cancel run:", err);
+      }
+    }
+
+    if (executionAbortController.current) {
+      executionAbortController.current.abort();
+      executionAbortController.current = new AbortController();
+    }
+
+    if (!activeBrowserId) {
+      setActiveRunId(null);
+      setApiStatus({ state: "idle", message: "Execution stopped" });
+      return;
+    }
 
     try {
       setApiStatus({ state: "loading", message: "Stopping session..." });
       await api.post("/actions/close_browser", { browserId: activeBrowserId });
       setActiveBrowserId(null);
+      setActiveRunId(null);
       setApiStatus({ state: "idle", message: "Session stopped" });
       if (toast) toast.success("Browser session closed");
     } catch (error) {
       console.error("Failed to stop session:", error);
       if (toast) toast.error("Failed to close browser session");
     }
-  }, [activeBrowserId, setApiStatus, toast]);
+  }, [activeBrowserId, activeRunId, setApiStatus, toast]);
 
   const resetExecutionStates = useCallback(() => {
     setNodes((nds) => resetExecutionStatesRecursively(nds));

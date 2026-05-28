@@ -54,6 +54,7 @@ class AIService {
         apiKey,
         baseUrl,
         taskType = 'reasoning',
+        parentSignal,
     }) {
         try {
             // Apply Matrix Logic if no specific model/provider forced
@@ -80,6 +81,13 @@ class AIService {
             );
             const modelRef = providerInstance(activeModel);
 
+            const timeoutSignal = AbortSignal.timeout(300000);
+            const combinedSignal = parentSignal
+                ? AbortSignal.any
+                    ? AbortSignal.any([parentSignal, timeoutSignal])
+                    : parentSignal
+                : timeoutSignal;
+
             const { text, usage, finishReason } = await generateText({
                 model: modelRef,
                 prompt,
@@ -91,7 +99,7 @@ class AIService {
                         max_tokens: maxTokens ? Number(maxTokens) : undefined,
                     },
                 },
-                abortSignal: AbortSignal.timeout(300000), // 5 minute timeout for local models/slow requests
+                abortSignal: combinedSignal, // 5 minute timeout for local models/slow requests
             });
 
             return { text, usage, finishReason };
@@ -114,6 +122,7 @@ class AIService {
         _baseUrl,
         maxSteps = 5,
         taskType = 'reasoning',
+        parentSignal,
     }) {
         try {
             // Apply Matrix
@@ -210,6 +219,13 @@ IMPORTANT DIRECTIONS:
             while (retryCount <= maxRetries) {
                 console.log(`[AIService] Step Attempt ${retryCount + 1} for ${activeProvider}`);
 
+                const timeoutSignal = AbortSignal.timeout(300000);
+                const combinedSignal = parentSignal
+                    ? AbortSignal.any
+                        ? AbortSignal.any([parentSignal, timeoutSignal])
+                        : parentSignal
+                    : timeoutSignal;
+
                 response = await generateText({
                     model: modelRef,
                     prompt: activePrompt,
@@ -217,7 +233,7 @@ IMPORTANT DIRECTIONS:
                     ...(activeProvider !== 'ollama' ? { tools, maxSteps } : {}),
                     apiKey: 'ollama',
                     baseUrl: _baseUrl,
-                    abortSignal: AbortSignal.timeout(300000), // 5 minute timeout for local models/multi-steps
+                    abortSignal: combinedSignal, // 5 minute timeout for local models/multi-steps
                 });
 
                 text = response.text;
@@ -537,6 +553,7 @@ IMPORTANT DIRECTIONS:
         model: forcedModel,
         timeout: customTimeout,
         baseUrl,
+        parentSignal,
     }) {
         try {
             // Apply Matrix Logic if no specific model/provider forced
@@ -609,11 +626,18 @@ If no element is found, return {"correctedSelector": null, "confidence": 0, "rea
                     `[AIService] Using generateText (Ollama mode) — avoids generateObject hang.`,
                 );
 
+                const timeoutSignal = AbortSignal.timeout(customTimeout || 25000);
+                const combinedSignal = parentSignal
+                    ? AbortSignal.any
+                        ? AbortSignal.any([parentSignal, timeoutSignal])
+                        : parentSignal
+                    : timeoutSignal;
+
                 const { text } = await generateText({
                     model: modelRef,
                     prompt,
                     temperature: 0.1, // Low temperature for stability
-                    abortSignal: AbortSignal.timeout(customTimeout || 25000),
+                    abortSignal: combinedSignal,
                 });
 
                 console.log(`[AIService] Ollama raw response: ${text.substring(0, 300)}...`);
@@ -675,6 +699,13 @@ If no element is found, return {"correctedSelector": null, "confidence": 0, "rea
                 content.push({ type: 'image', image: screenshotBase64 });
             }
 
+            const timeoutSignal = AbortSignal.timeout(customTimeout || 60000);
+            const combinedSignal = parentSignal
+                ? AbortSignal.any
+                    ? AbortSignal.any([parentSignal, timeoutSignal])
+                    : parentSignal
+                : timeoutSignal;
+
             const { object } = await generateObject({
                 model: modelRef,
                 schema: z.object({
@@ -685,7 +716,7 @@ If no element is found, return {"correctedSelector": null, "confidence": 0, "rea
                     is_breaking_change: z.boolean(),
                 }),
                 messages: [{ role: 'user', content }],
-                abortSignal: AbortSignal.timeout(customTimeout || 60000),
+                abortSignal: combinedSignal,
             });
 
             return object;
@@ -851,7 +882,16 @@ If no element is found, return {"correctedSelector": null, "confidence": 0, "rea
     /**
      * Genera datos estructurados basados en una descripción.
      */
-    async generateStructured({ description, schema, provider, model, apiKey, keys, maxTokens }) {
+    async generateStructured({
+        description,
+        schema,
+        provider,
+        model,
+        apiKey,
+        keys,
+        maxTokens,
+        parentSignal,
+    }) {
         try {
             const taskType = 'reasoning';
             let selected = { provider, model };
@@ -886,6 +926,13 @@ If no element is found, return {"correctedSelector": null, "confidence": 0, "rea
             );
             const modelRef = providerInstance(activeModel);
 
+            const timeoutSignal = AbortSignal.timeout(300000);
+            const combinedSignal = parentSignal
+                ? AbortSignal.any
+                    ? AbortSignal.any([parentSignal, timeoutSignal])
+                    : parentSignal
+                : timeoutSignal;
+
             // Ollama: structured output via prompt Engineering (generateObject might fail)
             if (activeProvider === 'ollama') {
                 const prompt = `Produce a JSON object matching this description: ${description}. 
@@ -901,6 +948,7 @@ If no element is found, return {"correctedSelector": null, "confidence": 0, "rea
                             max_tokens: maxTokens ? Number(maxTokens) : undefined,
                         },
                     },
+                    abortSignal: combinedSignal,
                 });
 
                 const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -913,6 +961,7 @@ If no element is found, return {"correctedSelector": null, "confidence": 0, "rea
                 schema,
                 prompt: description,
                 maxTokens: maxTokens ? Number(maxTokens) : undefined,
+                abortSignal: combinedSignal,
             });
 
             return object;
@@ -925,7 +974,7 @@ If no element is found, return {"correctedSelector": null, "confidence": 0, "rea
     /**
      * Valida contenido basado en criterios semánticos.
      */
-    async validate({ content, criteria, provider, model, apiKey, keys, maxTokens }) {
+    async validate({ content, criteria, provider, model, apiKey, keys, maxTokens, parentSignal }) {
         try {
             const taskType = 'reasoning';
             let selected = { provider, model };
@@ -965,6 +1014,13 @@ If no element is found, return {"correctedSelector": null, "confidence": 0, "rea
             - reason: string
             - confidence: number (0-1)`;
 
+            const timeoutSignal = AbortSignal.timeout(300000);
+            const combinedSignal = parentSignal
+                ? AbortSignal.any
+                    ? AbortSignal.any([parentSignal, timeoutSignal])
+                    : parentSignal
+                : timeoutSignal;
+
             if (activeProvider === 'ollama') {
                 const { text } = await generateText({
                     model: modelRef,
@@ -976,6 +1032,7 @@ If no element is found, return {"correctedSelector": null, "confidence": 0, "rea
                             max_tokens: maxTokens ? Number(maxTokens) : undefined,
                         },
                     },
+                    abortSignal: combinedSignal,
                 });
                 const jsonMatch = text.match(/\{[\s\S]*\}/);
                 if (jsonMatch) return JSON.parse(jsonMatch[0]);
@@ -995,6 +1052,7 @@ If no element is found, return {"correctedSelector": null, "confidence": 0, "rea
                 }),
                 prompt,
                 maxTokens: maxTokens ? Number(maxTokens) : undefined,
+                abortSignal: combinedSignal,
             });
 
             return object;

@@ -10,6 +10,7 @@ import {
     startBatchRunAction,
     getBatchSummaryAction,
     getFlowHistoryAction,
+    cancelRunAction,
 } from '../controllers/run.controller.js';
 
 const router = Router();
@@ -20,6 +21,7 @@ router.post('/start', startRunAction);
 router.post('/batch', startBatchRunAction);
 router.get('/batch/:batchId/summary', getBatchSummaryAction);
 router.post('/:id/end', endRunAction);
+router.post('/:id/cancel', cancelRunAction);
 router.get('/analytics', getReportAnalyticsAction);
 router.get('/flow/:flowId/history', getFlowHistoryAction);
 router.get('/', getRunsAction);

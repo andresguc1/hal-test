@@ -3,6 +3,7 @@ import { executionLogger } from '../services/ExecutionLogger.js';
 import { Run, StepResult, Flow } from '../database/init.js';
 import { reportExporter } from '../services/exporter/ReportExporter.js';
 import { testRunnerService } from '../services/TestRunnerService.js';
+import { activeRunManager } from '../services/ActiveRunManager.js';
 
 export const startBatchRunAction = async (req, res) => {
     try {
@@ -308,6 +309,29 @@ export const getFlowHistoryAction = async (req, res) => {
 
         return res.status(200).json({ success: true, data: runs });
     } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+export const cancelRunAction = async (req, res) => {
+    try {
+        const { id } = req.params;
+        console.log(`[RunController] Request to cancel run ID: ${id}`);
+
+        const aborted = activeRunManager.abort(id);
+        if (aborted) {
+            return res.status(200).json({
+                success: true,
+                message: `Run ${id} cancelled successfully.`,
+            });
+        }
+
+        return res.status(404).json({
+            success: false,
+            message: `Active run ID ${id} not found or already finished.`,
+        });
+    } catch (error) {
+        console.error('[RunController] cancelRunAction Error:', error);
         return res.status(500).json({ success: false, error: error.message });
     }
 };
