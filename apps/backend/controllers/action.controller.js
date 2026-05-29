@@ -5401,14 +5401,25 @@ export const callLlmAction = async (req, res) => {
             injectBrowserContext = false,
         } = req.body;
 
-        // Resolve context: Force Ollama
-        const activeProvider = 'ollama';
+        // Debug headers
+        console.log('[AI Debug] Received Headers:', {
+            'x-ai-provider': req.headers['x-ai-provider'],
+            'x-ai-model': req.headers['x-ai-model'],
+            'x-ai-api-key': req.headers['x-ai-api-key']
+                ? 'PRESENT (len: ' + req.headers['x-ai-api-key'].length + ')'
+                : 'MISSING',
+            'x-ai-base-url': req.headers['x-ai-base-url'],
+        });
+
+        // Resolve context: Read from headers
+        const activeProvider = req.headers['x-ai-provider'] || 'ollama';
 
         // Strictly use global config, ignore any node-level overrides
         const activeModel =
             req.headers['x-ai-model'] || process.env.OLLAMA_MODEL || 'gemma3:latest';
         const headerBaseUrl = req.headers['x-ai-base-url'];
-        const apiKey = 'ollama';
+        const apiKey =
+            req.headers['x-ai-api-key'] || (activeProvider === 'ollama' ? 'ollama' : undefined);
 
         // --- AUTO CONTEXT INJECTION ---
         const autoContext = injectBrowserContext ? await fetchContext(req, browserId) : null;
@@ -5429,7 +5440,7 @@ export const callLlmAction = async (req, res) => {
         const response = await aiService.generateText({
             prompt: resolvedPrompt,
             system: system ? variableManager.resolve(system) : undefined,
-            model: activeModel === 'ollama' ? undefined : activeModel,
+            model: activeModel,
             provider: activeProvider,
             apiKey,
             baseUrl: headerBaseUrl,
@@ -5454,6 +5465,7 @@ export const callLlmAction = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: req.t('actions.call_llm.success'),
+            result: resultText,
             data: { response: resultText, usage: response.usage, variable: variableName },
         });
     } catch (error) {
@@ -5498,15 +5510,20 @@ export const generateDataAction = async (req, res) => {
         }
         // ------------------------------
 
-        // Force Ollama, ignore node-level overrides (Zero-Config)
-        const activeProvider = 'ollama';
+        // Read from headers
+        const activeProvider = req.headers['x-ai-provider'] || 'ollama';
         const activeModel =
             req.headers['x-ai-model'] || process.env.OLLAMA_MODEL || 'gemma3:latest';
+        const headerBaseUrl = req.headers['x-ai-base-url'];
+        const apiKey =
+            req.headers['x-ai-api-key'] || (activeProvider === 'ollama' ? 'ollama' : undefined);
 
         const keys = {
             openai: req.headers['x-openai-key'] || process.env.OPENAI_API_KEY,
             anthropic: req.headers['x-anthropic-key'] || process.env.ANTHROPIC_API_KEY,
             ollama: 'ollama',
+            openrouter: apiKey,
+            baseUrl: headerBaseUrl,
         };
 
         // If 'fields' are provided, we can pass them, otherwise aiService handles description
@@ -5520,9 +5537,11 @@ ${fields ? `Fields: ${JSON.stringify(fields)}` : ''}`;
             description: finalPrompt,
             schema,
             provider: activeProvider,
-            model: activeModel === 'ollama' ? undefined : activeModel,
+            model: activeModel,
+            apiKey,
             keys,
             maxTokens,
+            expectedFormat,
             parentSignal: req.signal,
         });
 
@@ -5538,7 +5557,9 @@ ${fields ? `Fields: ${JSON.stringify(fields)}` : ''}`;
         return res.status(200).json({
             success: true,
             message: req.t('actions.generate_data.success'),
-            data: { result: data, variable: targetVariable },
+            data: data,
+            result: data,
+            variable: targetVariable,
         });
     } catch (error) {
         console.error('[ERROR] generateDataAction:', error.message);
@@ -5572,10 +5593,13 @@ export const validateSemanticAction = async (req, res) => {
         }
         // ------------------------------
 
-        // --- ZERO-CONFIG LOGIC: Ignore node-set provider/model ---
-        const activeProvider = 'ollama';
+        // --- ZERO-CONFIG LOGIC: Read from headers ---
+        const activeProvider = req.headers['x-ai-provider'] || 'ollama';
         const activeModel =
             req.headers['x-ai-model'] || process.env.OLLAMA_MODEL || 'gemma3:latest';
+        const headerBaseUrl = req.headers['x-ai-base-url'];
+        const apiKey =
+            req.headers['x-ai-api-key'] || (activeProvider === 'ollama' ? 'ollama' : undefined);
 
         emitLog({
             message: `Ejecutando validación semántica con modelo ${activeModel} (maxTokens: ${maxTokens})`,
@@ -5587,6 +5611,8 @@ export const validateSemanticAction = async (req, res) => {
             openai: req.headers['x-openai-key'] || process.env.OPENAI_API_KEY,
             anthropic: req.headers['x-anthropic-key'] || process.env.ANTHROPIC_API_KEY,
             ollama: 'ollama',
+            openrouter: apiKey,
+            baseUrl: headerBaseUrl,
         };
 
         // Resolve inputs (may contain variables like ${text})
@@ -5607,6 +5633,7 @@ export const validateSemanticAction = async (req, res) => {
             criteria,
             provider: activeProvider,
             model: activeModel,
+            apiKey,
             keys,
             maxTokens: Number(maxTokens),
             parentSignal: req.signal,
@@ -5700,9 +5727,12 @@ export const extractDomContextAction = async (req, res) => {
 
         // --- AI SMART EXTRACTION (Zero-Config) ---
         if (extractionType === 'text' || extractionType === 'markdown') {
-            const activeProvider = 'ollama';
+            const activeProvider = req.headers['x-ai-provider'] || 'ollama';
             const activeModel =
                 req.headers['x-ai-model'] || process.env.OLLAMA_MODEL || 'gemma3:latest';
+            const headerBaseUrl = req.headers['x-ai-base-url'];
+            const apiKey =
+                req.headers['x-ai-api-key'] || (activeProvider === 'ollama' ? 'ollama' : undefined);
 
             emitLog({
                 message: `Cleaning up content with AI (${activeModel})...`,
@@ -5719,6 +5749,8 @@ export const extractDomContextAction = async (req, res) => {
                 prompt,
                 provider: activeProvider,
                 model: activeModel,
+                apiKey,
+                baseUrl: headerBaseUrl,
                 maxTokens: Number(maxTokens),
                 parentSignal: req.signal,
             });
@@ -5770,9 +5802,12 @@ export const chainOfThoughtAction = async (req, res) => {
         } = req.body;
 
         // --- ZERO-CONFIG LOGIC ---
-        const activeProvider = 'ollama';
+        const activeProvider = req.headers['x-ai-provider'] || 'ollama';
         const activeModel =
             req.headers['x-ai-model'] || process.env.OLLAMA_MODEL || 'gemma3:latest';
+        const headerBaseUrl = req.headers['x-ai-base-url'];
+        const apiKey =
+            req.headers['x-ai-api-key'] || (activeProvider === 'ollama' ? 'ollama' : undefined);
 
         emitLog({
             message: `Iniciando razonamiento (CoT) con modelo ${activeModel}...`,
@@ -5787,6 +5822,8 @@ export const chainOfThoughtAction = async (req, res) => {
             prompt,
             provider: activeProvider,
             model: activeModel,
+            apiKey,
+            baseUrl: headerBaseUrl,
             temperature: Number(temperature),
             maxTokens: Number(maxTokens),
             taskType: 'reasoning',
@@ -5849,9 +5886,12 @@ export const smartSelectorAction = async (req, res) => {
         const page = pages.length > 0 ? pages[0] : await context.newPage();
 
         // --- ZERO-CONFIG LOGIC ---
-        const activeProvider = 'ollama';
+        const activeProvider = req.headers['x-ai-provider'] || 'ollama';
         const activeModel =
             req.headers['x-ai-model'] || process.env.OLLAMA_MODEL || 'gemma3:latest';
+        const headerBaseUrl = req.headers['x-ai-base-url'];
+        const apiKey =
+            req.headers['x-ai-api-key'] || (activeProvider === 'ollama' ? 'ollama' : undefined);
 
         emitLog({
             message: `Healing selector with AI (${activeModel})...`,
@@ -5871,6 +5911,8 @@ export const smartSelectorAction = async (req, res) => {
             error: 'Element not found with original selector',
             provider: activeProvider,
             model: activeModel,
+            apiKey,
+            baseUrl: headerBaseUrl,
             timeout: 60000, // 1 minute timeout for healer
             parentSignal: req.signal,
         });

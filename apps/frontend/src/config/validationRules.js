@@ -886,6 +886,177 @@ export const NODE_INPUTS = {
     },
   ],
 
+  // --- AI / INTELLIGENCE ---
+  call_llm: [
+    {
+      key: "prompt",
+      label: "Prompt / Instruction",
+      type: "textarea",
+      placeholder: "Ask AI anything (e.g., 'Extract the total price of the items')",
+      required: true,
+    },
+    {
+      key: "injectBrowserContext",
+      label: "📸 Inject Live DOM Context (HTML)",
+      type: "checkbox",
+      defaultValue: false,
+    },
+    {
+      key: "variableName",
+      label: "Save Response to Variable",
+      type: "text",
+      placeholder: "llmResult",
+      defaultValue: "llmResult",
+      required: true,
+    },
+    {
+      key: "temperature",
+      label: "Temperature (Creativity)",
+      type: "number",
+      placeholder: "0.7",
+      defaultValue: 0.7,
+    },
+    {
+      key: "maxTokens",
+      label: "Max Tokens Limit",
+      type: "number",
+      placeholder: "1000",
+      defaultValue: 1000,
+    },
+  ],
+  generate_data: [
+    {
+      key: "description",
+      label: "Data / Structure Description",
+      type: "textarea",
+      placeholder: "e.g. Generate a list of 5 random valid email addresses",
+      required: true,
+    },
+    {
+      key: "expectedFormat",
+      label: "Expected Output Format",
+      type: "select",
+      options: [
+        { label: "JSON Object/Array", value: "json" },
+        { label: "CSV Format", value: "csv" },
+        { label: "Plain Text", value: "text" },
+      ],
+      defaultValue: "json",
+      required: true,
+    },
+    {
+      key: "count",
+      label: "Element Count",
+      type: "number",
+      placeholder: "1",
+      defaultValue: 1,
+    },
+    {
+      key: "injectBrowserContext",
+      label: "📸 Inject Live DOM Context (HTML)",
+      type: "checkbox",
+      defaultValue: false,
+    },
+    {
+      key: "variableName",
+      label: "Save Data to Variable",
+      type: "text",
+      placeholder: "generatedData",
+      defaultValue: "generatedData",
+      required: true,
+    },
+    {
+      key: "maxTokens",
+      label: "Max Tokens Limit",
+      type: "number",
+      placeholder: "2048",
+      defaultValue: 2048,
+    },
+  ],
+  validate_semantic: [
+    {
+      key: "sourceTextVariable",
+      label: "Source Text (Variable Path)",
+      type: "text",
+      placeholder: "e.g. {{llmResult}} or a raw string",
+      required: true,
+    },
+    {
+      key: "validationPrompt",
+      label: "Validation Criteria / Rules",
+      type: "textarea",
+      placeholder: "Describe what to validate (e.g., 'Is the text written in Spanish and polite?')",
+      required: true,
+    },
+    {
+      key: "expectedAnswer",
+      label: "Expected Success Answer (e.g. 'Yes' / 'Approved')",
+      type: "text",
+      placeholder: "APPROVED",
+      required: true,
+    },
+  ],
+  extract_dom_context: [
+    {
+      key: "selector",
+      label: "DOM Selector Focus (Optional)",
+      type: "selector",
+      placeholder: "e.g. #inventory_container (Leave blank for full page)",
+    },
+    {
+      key: "extractionType",
+      label: "Extraction Format Type",
+      type: "select",
+      options: [
+        { label: "Clean Plain Text", value: "text" },
+        { label: "Full RAW HTML", value: "html" },
+        { label: "Markdown Structured Text", value: "markdown" },
+      ],
+      defaultValue: "text",
+      required: true,
+    },
+    {
+      key: "variableName",
+      label: "Save Context to Variable",
+      type: "text",
+      placeholder: "domContext",
+      defaultValue: "domContext",
+      required: true,
+    },
+  ],
+  chain_of_thought: [
+    {
+      key: "instruction",
+      label: "Reasoning Instruction / Question",
+      type: "textarea",
+      placeholder: "Describe the complex reasoning puzzle or multi-step logic task...",
+      required: true,
+    },
+    {
+      key: "thoughtVariable",
+      label: "Save Thought Process to Variable",
+      type: "text",
+      placeholder: "aiThought",
+      defaultValue: "aiThought",
+      required: true,
+    },
+    {
+      key: "answerVariable",
+      label: "Save Final Answer to Variable",
+      type: "text",
+      placeholder: "aiAnswer",
+      defaultValue: "aiAnswer",
+      required: true,
+    },
+    {
+      key: "temperature",
+      label: "Temperature (Creativity)",
+      type: "number",
+      placeholder: "0.7",
+      defaultValue: 0.7,
+    },
+  ],
+
   // --- DEFAULT FALLBACK ---
   default: [
     {

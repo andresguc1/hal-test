@@ -933,6 +933,7 @@ export const generate_data = (payload) => {
     expectedFormat: asString(payload?.expectedFormat, "json").toLowerCase(),
     count: asNumber(payload?.count, 1),
     maxTokens: asNumber(payload?.maxTokens, 2048, 1),
+    injectBrowserContext: asBoolean(payload?.injectBrowserContext, false),
   };
 };
 
@@ -942,6 +943,7 @@ export const call_llm = (payload) => {
     prompt: asString(payload?.prompt),
     variableName: asString(payload?.variableName, "llmResult"),
     maxTokens: asNumber(payload?.maxTokens, 2048, 1),
+    injectBrowserContext: asBoolean(payload?.injectBrowserContext, false),
   };
 };
 

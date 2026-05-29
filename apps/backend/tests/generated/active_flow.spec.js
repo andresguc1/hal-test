@@ -61,5 +61,9 @@ test(`Flujo Generado Hal-Test`, async ({ page }) => {
     await test.step(`Complete Tour`, async () => {
         // Browser managed by runner
     });
+
+    await test.step(`Generate Data (AI)`, async () => {
+        console.log(`⚠️ Acción no implementada o pendiente: generate_data`);
+    });
     console.log(`✅ Flujo completado con éxito.`);
 });
