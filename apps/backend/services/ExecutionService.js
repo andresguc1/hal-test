@@ -245,7 +245,7 @@ export class ExecutionService {
 
             // RECURSIVE VALIDATION: Dive into Components or Loops pointing to sub-flows
             const flowId = node.data?.configuration?.flowId || node.data?.flowId;
-            if ((type === 'component' || type === 'loop') && flowId) {
+            if ((type === 'component' || type === 'loop' || type === 'for_each') && flowId) {
                 const subFlow = await Flow.findOne({
                     where: { id: flowId },
                     include: [
@@ -603,9 +603,11 @@ export class ExecutionService {
 
         let resultData = null;
 
-        // SPECIAL CASE: Loop (Composition Container)
+        // SPECIAL CASE: Composition Containers (Loop, ForEach)
         if (actionType === 'loop') {
             resultData = await this.executeLoopContainer(node, allNodes, allEdges, state);
+        } else if (actionType === 'for_each') {
+            resultData = await this.executeForEachContainer(node, allNodes, allEdges, state);
         } else {
             const handlerName = this.getHandlerName(actionType);
             const handler = actions[handlerName];
@@ -826,6 +828,13 @@ export class ExecutionService {
      */
     async executeLoopContainer(node, allNodes, allEdges, state) {
         const config = node.data?.configuration || {};
+        if (
+            config.loopType === 'for_each' ||
+            config.mode === 'forEach' ||
+            config.mode === 'array'
+        ) {
+            return await this.executeForEachContainer(node, allNodes, allEdges, state);
+        }
         const {
             loopType,
             mode,
@@ -1201,6 +1210,489 @@ export class ExecutionService {
         variableManager.set(nodeLabel, finalResultPayload, state.runId);
 
         console.log(`[Loop] Loop node ${node.nodeId} execution completed.`);
+        return finalResultPayload;
+    }
+
+    /**
+     * Orchestrates the execution of a ForEach node as an encapsulated sub-flow.
+     * Iterates over a resolved collection and executes internal nodes per item.
+     *
+     * Supports execution modes: sequential, parallel, random, single.
+     * Each iteration gets an isolated variable scope.
+     */
+    async executeForEachContainer(node, allNodes, allEdges, state) {
+        const config = node.data?.configuration || {};
+        const {
+            source,
+            executionMode = 'sequential',
+            maxConcurrency = 3,
+            itemAlias = 'item',
+            indexAlias = 'index',
+            stopOnError = true,
+            collectResults = true,
+            maxItems = 1000,
+            delayBetweenIterations = 0,
+            executionTimeout = 0,
+            randomMode = 'shuffle',
+            singleIndex,
+            singleMatch,
+            flowId,
+        } = config;
+
+        const nodeLabel = node.data?.customLabel || node.data?.label || 'ForEach';
+        console.log(
+            `[ForEach] Starting execution for node ${node.nodeId} (Mode: ${executionMode}, Source: ${typeof source === 'string' ? source : 'static array'}, FlowId: ${flowId || 'inline'})`,
+        );
+        emitLog({
+            message: `Executing ForEach: "${nodeLabel}" (${executionMode})...`,
+            nodeId: node.nodeId,
+            type: 'info',
+        });
+
+        // 1. Resolve the source collection
+        let resolvedList = [];
+        const sourceVal = source || config.array || '';
+        if (typeof sourceVal === 'string' && sourceVal.trim()) {
+            const resolved = variableManager.resolveValue(sourceVal, state.runId);
+            if (Array.isArray(resolved)) {
+                resolvedList = resolved;
+            } else if (typeof resolved === 'string') {
+                // Attempt JSON parse
+                try {
+                    const parsed = JSON.parse(resolved);
+                    if (Array.isArray(parsed)) resolvedList = parsed;
+                } catch {
+                    console.warn(`[ForEach] Source resolved to non-array string: "${resolved}"`);
+                }
+            }
+        } else if (Array.isArray(sourceVal)) {
+            resolvedList = sourceVal;
+        }
+
+        // Safety cap
+        if (resolvedList.length > maxItems) {
+            console.warn(
+                `[ForEach] Collection size ${resolvedList.length} exceeds maxItems ${maxItems}. Truncating.`,
+            );
+            resolvedList = resolvedList.slice(0, maxItems);
+        }
+
+        if (resolvedList.length === 0) {
+            console.warn(`[ForEach] Node ${node.nodeId} has empty source. Skipping.`);
+            emitLog({
+                message: `ForEach "${nodeLabel}" skipped: empty collection.`,
+                nodeId: node.nodeId,
+                type: 'warning',
+            });
+            return {
+                success: true,
+                status: 'completed',
+                message: 'ForEach skipped (empty collection)',
+                data: { success: true, totalIterations: 0, results: [] },
+            };
+        }
+
+        // 2. Identify children (sub-flow or parentId children)
+        let subNodes = [];
+        let subEdges = [];
+
+        if (flowId) {
+            const subFlow = await Flow.findOne({
+                where: { id: flowId },
+                include: [
+                    { model: Node, as: 'nodes' },
+                    { model: Edge, as: 'edges' },
+                ],
+            });
+            if (!subFlow) {
+                throw new Error(
+                    `[ForEach] Backing flow ${flowId} not found for node ${node.nodeId}`,
+                );
+            }
+            subNodes = subFlow.nodes.map((n) => n.toJSON());
+            subEdges = subFlow.edges.map((e) => e.toJSON());
+        } else {
+            subNodes = allNodes.filter((n) => n.parentId === node.nodeId);
+            subEdges = allEdges;
+        }
+
+        if (subNodes.length === 0) {
+            console.warn(`[ForEach] Node ${node.nodeId} has no children. Skipping.`);
+            emitLog({
+                message: `ForEach "${nodeLabel}" skipped: no internal nodes found.`,
+                nodeId: node.nodeId,
+                type: 'warning',
+            });
+            return {
+                success: true,
+                status: 'completed',
+                message: 'ForEach skipped (no children)',
+                data: { success: true, totalIterations: 0, results: [] },
+            };
+        }
+
+        // Find entry points within the ForEach sub-flow
+        const childNodeIds = new Set(subNodes.map((c) => c.nodeId));
+        const internalEdges = subEdges.filter(
+            (e) => childNodeIds.has(e.target) && childNodeIds.has(e.source),
+        );
+
+        const incomingCount = new Map();
+        subNodes.forEach((c) => incomingCount.set(c.nodeId, 0));
+        internalEdges.forEach((e) => {
+            incomingCount.set(e.target, incomingCount.get(e.target) + 1);
+        });
+
+        const entryNodes = subNodes.filter((c) => incomingCount.get(c.nodeId) === 0);
+        const startNodes = entryNodes.length > 0 ? entryNodes : [subNodes[0]];
+
+        // 3. Prepare the list based on execution mode
+        let itemsToProcess = [...resolvedList];
+
+        if (executionMode === 'random') {
+            if (randomMode === 'single') {
+                // Pick one random item
+                const randomIdx = Math.floor(Math.random() * itemsToProcess.length);
+                itemsToProcess = [itemsToProcess[randomIdx]];
+                console.log(`[ForEach] Random single: picked index ${randomIdx}`);
+            } else {
+                // Shuffle (Fisher-Yates)
+                for (let i = itemsToProcess.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [itemsToProcess[i], itemsToProcess[j]] = [itemsToProcess[j], itemsToProcess[i]];
+                }
+                console.log(`[ForEach] Random shuffle: ${itemsToProcess.length} items shuffled`);
+            }
+        } else if (executionMode === 'single') {
+            if (singleIndex !== undefined && singleIndex !== null && singleIndex >= 0) {
+                if (singleIndex < itemsToProcess.length) {
+                    itemsToProcess = [itemsToProcess[singleIndex]];
+                    console.log(`[ForEach] Single mode: executing index ${singleIndex}`);
+                } else {
+                    console.warn(
+                        `[ForEach] Single index ${singleIndex} out of bounds (${itemsToProcess.length} items). Skipping.`,
+                    );
+                    itemsToProcess = [];
+                }
+            } else if (singleMatch) {
+                // Match by expression
+                try {
+                    const matchFn = new Function('item', 'index', `return ${singleMatch}`);
+                    const matchIdx = itemsToProcess.findIndex((item, idx) => matchFn(item, idx));
+                    if (matchIdx >= 0) {
+                        itemsToProcess = [itemsToProcess[matchIdx]];
+                        console.log(`[ForEach] Single match: found at index ${matchIdx}`);
+                    } else {
+                        console.warn(`[ForEach] Single match: no item matched expression.`);
+                        itemsToProcess = [];
+                    }
+                } catch (err) {
+                    console.error(`[ForEach] Single match expression error: ${err.message}`);
+                    itemsToProcess = [];
+                }
+            }
+        }
+
+        const totalItems = itemsToProcess.length;
+
+        if (totalItems === 0) {
+            return {
+                success: true,
+                status: 'completed',
+                message: 'ForEach completed (no items to process after filtering)',
+                data: { success: true, totalIterations: 0, results: [] },
+            };
+        }
+
+        // 4. Iteration runner (isolated scope per item)
+        const results = [];
+        let finalSuccess = true;
+
+        const runIteration = async (item, originalIndex, iterationIndex) => {
+            const iterationRunId = `${state.runId}_foreach_${node.nodeId}_${iterationIndex}`;
+
+            // Initialize isolated child run scope from parent variables
+            const parentVars = variableManager.getAll(state.runId) || {};
+            variableManager.initRun(iterationRunId, { ...parentVars });
+
+            // Seed ForEach context variables
+            variableManager.set('forEach.item', item, iterationRunId);
+            variableManager.set('forEach.index', iterationIndex, iterationRunId);
+            variableManager.set('forEach.originalIndex', originalIndex, iterationRunId);
+            variableManager.set('forEach.iteration', iterationIndex + 1, iterationRunId);
+            variableManager.set('forEach.isFirst', iterationIndex === 0, iterationRunId);
+            variableManager.set(
+                'forEach.isLast',
+                iterationIndex === totalItems - 1,
+                iterationRunId,
+            );
+            variableManager.set('forEach.total', totalItems, iterationRunId);
+
+            // Expose via user-configured aliases
+            variableManager.set(itemAlias, item, iterationRunId);
+            variableManager.set(indexAlias, iterationIndex, iterationRunId);
+
+            // Also propagate aliases to parent scope for downstream access
+            variableManager.set(itemAlias, item, state.runId);
+            variableManager.set(indexAlias, iterationIndex, state.runId);
+
+            const iterLog = `[ForEach] Iteration ${iterationIndex + 1} of ${totalItems} — item: ${typeof item === 'object' ? JSON.stringify(item).substring(0, 50) : String(item).substring(0, 50)}`;
+            emitLog({ message: iterLog, nodeId: node.nodeId, type: 'info' });
+            console.log(`[ForEach] ${iterLog} (Isolated RunId: ${iterationRunId})`);
+
+            // Setup isolated sequence state
+            const iterationState = {
+                ...state,
+                runId: iterationRunId,
+                executedNodeIds: new Set(),
+                activatedNodeIds: new Set(startNodes.map((sn) => sn.nodeId)),
+                edgeStates: {},
+            };
+
+            const sequenceParentId = flowId ? null : node.nodeId;
+            const seqResult = await this.runSequence(
+                startNodes,
+                subNodes,
+                subEdges,
+                iterationState,
+                sequenceParentId,
+                {
+                    skipParentFilter: !!flowId,
+                },
+            );
+
+            // Extract output node results
+            const outputs = {};
+            const outputNodes = subNodes.filter((sn) => sn.type === 'output');
+            outputNodes.forEach((outNode) => {
+                const outLabel = outNode.data?.customLabel || outNode.data?.label || outNode.nodeId;
+                const outVal =
+                    variableManager.get(`${outNode.nodeId}.result`, iterationRunId) ||
+                    variableManager.get(`${outLabel}.result`, iterationRunId);
+                outputs[outLabel] =
+                    outVal !== undefined && outVal !== null && outVal.data !== undefined
+                        ? outVal.data
+                        : outVal;
+            });
+
+            // Scan for failures
+            let hasHardFail = false;
+            let hasSoftFail = false;
+            for (const executedNodeId of iterationState.executedNodeIds) {
+                const nodeResult = variableManager.get(`${executedNodeId}.result`, iterationRunId);
+                if (nodeResult) {
+                    if (nodeResult.success === false || nodeResult.status === 'failed') {
+                        hasHardFail = true;
+                    }
+                    if (nodeResult.status === 'softfailed') {
+                        hasSoftFail = true;
+                    }
+                }
+            }
+
+            // Retrieve final iteration variables
+            const iterationVars = variableManager.getAll(iterationRunId) || {};
+
+            return {
+                success: !hasHardFail,
+                hasSoftFail,
+                signal: seqResult,
+                outputs,
+                variables: iterationVars,
+                iterationRunId,
+                item,
+                originalIndex,
+            };
+        };
+
+        // 5. Timeout wrapper
+        let timeoutHandle = null;
+        let timeoutPromise = null;
+
+        if (executionTimeout > 0) {
+            timeoutPromise = new Promise((_, reject) => {
+                timeoutHandle = setTimeout(() => {
+                    reject(
+                        new Error(`[ForEach] Execution exceeded timeout of ${executionTimeout}ms`),
+                    );
+                }, executionTimeout);
+            });
+        }
+
+        // 6. Scheduler (mode-dependent)
+        const runScheduler = async () => {
+            if (
+                executionMode === 'sequential' ||
+                executionMode === 'random' ||
+                executionMode === 'single'
+            ) {
+                // All three use sequential iteration (random/single just pre-filtered the list)
+                for (let i = 0; i < itemsToProcess.length; i++) {
+                    // Check cancellation
+                    if (state.signal?.aborted) {
+                        console.log(`[ForEach] Execution cancelled via AbortSignal.`);
+                        break;
+                    }
+
+                    const item = itemsToProcess[i];
+                    const originalIndex = resolvedList.indexOf(item);
+                    const iterationOutput = await runIteration(
+                        item,
+                        originalIndex >= 0 ? originalIndex : i,
+                        i,
+                    );
+
+                    // Propagate modified child variables back to parent scope
+                    const finalVars = iterationOutput.variables || {};
+                    for (const [key, val] of Object.entries(finalVars)) {
+                        if (
+                            !key.startsWith('forEach.') &&
+                            key !== itemAlias &&
+                            key !== indexAlias
+                        ) {
+                            variableManager.set(key, val, state.runId);
+                        }
+                    }
+
+                    results.push(
+                        collectResults ? iterationOutput.outputs : iterationOutput.variables,
+                    );
+
+                    if (!iterationOutput.success) {
+                        finalSuccess = false;
+                        if (stopOnError) {
+                            console.log(`[ForEach] Stopping on error at iteration ${i + 1}.`);
+                            break;
+                        }
+                    }
+
+                    // Check for flow control signals
+                    const signal =
+                        iterationOutput.signal || iterationOutput.variables['_signal_action'];
+                    if (signal) {
+                        const signalAction = typeof signal === 'string' ? signal : signal.action;
+                        if (signalAction === 'break') {
+                            console.log(`[ForEach] Intercepted break signal. Terminating.`);
+                            break;
+                        }
+                        if (signalAction === 'continue') {
+                            console.log(`[ForEach] Intercepted continue signal. Next item.`);
+                        }
+                        if (signalAction === 'return') {
+                            console.log(`[ForEach] Intercepted return signal. Bubbling up.`);
+                            variableManager.set('_signal_action', 'return', state.runId);
+                            if (typeof signal === 'object') return signal;
+                            return { action: 'return' };
+                        }
+                    }
+
+                    // Optional delay between iterations (rate-limiting, anti-detection)
+                    if (delayBetweenIterations > 0 && i < itemsToProcess.length - 1) {
+                        await new Promise((resolve) => setTimeout(resolve, delayBetweenIterations));
+                    }
+                }
+            } else if (executionMode === 'parallel') {
+                // Chunked parallel execution with concurrency control
+                for (let i = 0; i < itemsToProcess.length; i += maxConcurrency) {
+                    if (state.signal?.aborted) {
+                        console.log(`[ForEach] Parallel execution cancelled via AbortSignal.`);
+                        break;
+                    }
+
+                    const chunk = itemsToProcess.slice(i, i + maxConcurrency);
+                    const chunkPromises = chunk.map((item, chunkIdx) => {
+                        const globalIdx = i + chunkIdx;
+                        const originalIndex = resolvedList.indexOf(item);
+                        return runIteration(
+                            item,
+                            originalIndex >= 0 ? originalIndex : globalIdx,
+                            globalIdx,
+                        )
+                            .then((res) => {
+                                if (!res.success) {
+                                    finalSuccess = false;
+                                }
+                                return res;
+                            })
+                            .catch((err) => {
+                                finalSuccess = false;
+                                if (stopOnError) throw err;
+                                return {
+                                    success: false,
+                                    outputs: {},
+                                    variables: {},
+                                    item,
+                                    originalIndex: globalIdx,
+                                };
+                            });
+                    });
+
+                    const chunkResults = await Promise.all(chunkPromises);
+                    chunkResults.forEach((res) => {
+                        results.push(collectResults ? res.outputs : res.variables);
+
+                        // Propagate modified child variables back to parent scope
+                        const finalVars = res.variables || {};
+                        for (const [key, val] of Object.entries(finalVars)) {
+                            if (
+                                !key.startsWith('forEach.') &&
+                                key !== itemAlias &&
+                                key !== indexAlias
+                            ) {
+                                variableManager.set(key, val, state.runId);
+                            }
+                        }
+                    });
+
+                    if (!finalSuccess && stopOnError) {
+                        break;
+                    }
+                }
+            }
+        };
+
+        let schedulerResult = null;
+        try {
+            if (timeoutPromise) {
+                schedulerResult = await Promise.race([runScheduler(), timeoutPromise]);
+            } else {
+                schedulerResult = await runScheduler();
+            }
+        } finally {
+            if (timeoutHandle) clearTimeout(timeoutHandle);
+        }
+
+        // Handle flow control signals
+        if (
+            schedulerResult &&
+            (schedulerResult.action === 'return' ||
+                schedulerResult.action === 'break' ||
+                schedulerResult.action === 'continue')
+        ) {
+            return schedulerResult;
+        }
+
+        // 7. Build final result
+        const processedCount = results.length;
+        const finalResultPayload = {
+            success: finalSuccess,
+            status: finalSuccess ? 'completed' : 'failed',
+            message: `ForEach completed: ${processedCount} of ${totalItems} items processed (${executionMode})`,
+            data: {
+                success: finalSuccess,
+                totalIterations: processedCount,
+                totalItems,
+                executionMode,
+                results: collectResults ? results : results[results.length - 1],
+            },
+        };
+
+        variableManager.set(`${node.nodeId}.result`, finalResultPayload, state.runId);
+        variableManager.set(`${nodeLabel}.result`, finalResultPayload, state.runId);
+        variableManager.set(node.nodeId, finalResultPayload, state.runId);
+        variableManager.set(nodeLabel, finalResultPayload, state.runId);
+
+        console.log(`[ForEach] Node ${node.nodeId} execution completed (${processedCount} items).`);
         return finalResultPayload;
     }
 

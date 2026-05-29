@@ -195,6 +195,7 @@
       "conditional": "Conditional",
       "switch": "Switch",
       "loop": "Loop",
+      "for_each": "ForEach",
       "branch": "Branch",
       "flow_control": "Flow Control",
       "transform": "Transform",

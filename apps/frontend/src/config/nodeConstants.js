@@ -17,6 +17,7 @@ import {
   Search,
   Sparkles,
   Zap,
+  Repeat2,
 } from "lucide-react";
 
 // --- GLOBAL ALL-IN-ONE CONFIGURATION ---
@@ -129,6 +130,7 @@ export const NODE_CATEGORIES = {
       "conditional",
       "switch",
       "loop",
+      "for_each",
       "backend_js",
       "wait_conditional",
       "pause",
@@ -153,6 +155,7 @@ export const NODE_TYPE_MAP = Object.entries(NODE_CATEGORIES).reduce(
       if (nodeType === "chain_of_thought") overrides.icon = Sparkles;
       if (nodeType === "smart_selector") overrides.icon = Zap;
       if (nodeType === "backend_js") overrides.icon = Code;
+      if (nodeType === "for_each") overrides.icon = Repeat2;
       if (nodeType === "fail_flow") overrides.icon = Bug;
       if (nodeType === "input") overrides.icon = RefreshCw;
       if (nodeType === "output") overrides.icon = CheckSquare;
@@ -405,6 +408,13 @@ export const NODE_OUTPUTS = {
     success: "boolean",
     iterations: "number",
     lastResult: "any",
+  },
+  for_each: {
+    success: "boolean",
+    totalIterations: "number",
+    totalItems: "number",
+    executionMode: "string",
+    results: "array",
   },
   branch: {
     success: "boolean",

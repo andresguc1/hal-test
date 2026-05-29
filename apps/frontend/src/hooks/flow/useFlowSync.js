@@ -117,7 +117,7 @@ export function useFlowSync({
       const componentNode = nodesRef.current.find((n) => n.id === componentId);
       if (!componentNode) return;
 
-      const isContainer = ["component", "loop"].includes(
+      const isContainer = ["component", "loop", "for_each"].includes(
         componentNode.type || componentNode.data?.type,
       );
       if (!isContainer) return;
@@ -134,12 +134,15 @@ export function useFlowSync({
             componentNode.data?.customLabel ||
             componentNode.data?.label ||
             (componentNode.type === "loop" ||
-            componentNode.data?.type === "loop"
+            componentNode.type === "for_each" ||
+            componentNode.data?.type === "loop" ||
+            componentNode.data?.type === "for_each"
               ? "Loop Sub-flow"
               : "Sub Flow");
 
           const flowType =
-            componentNode.type === "loop" || componentNode.data?.type === "loop"
+            componentNode.type === "loop" || componentNode.data?.type === "loop" ||
+            componentNode.type === "for_each" || componentNode.data?.type === "for_each"
               ? "loop"
               : "component";
 

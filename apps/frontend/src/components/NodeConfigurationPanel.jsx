@@ -586,7 +586,10 @@ const NodeConfigurationPanel = ({
                     <option value="" disabled>
                       Select {field.label}...
                     </option>
-                    {field.options?.map((opt) => (
+                    {(typeof field.options === "function"
+                      ? field.options(localConfig)
+                      : field.options
+                    )?.map((opt) => (
                       <option
                         key={opt.value}
                         value={opt.value}

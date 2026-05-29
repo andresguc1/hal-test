@@ -92,6 +92,12 @@ export const NODE_LABELS = {
 
   // Flow Control
   variable: "Variable",
+  conditional: "Conditional",
+  switch: "Switch",
+  loop: "Loop",
+  for_each: "ForEach",
+  backend_js: "Backend JS",
+  fail_flow: "Fail Flow",
 };
 
 /**

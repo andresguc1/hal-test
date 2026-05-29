@@ -50,8 +50,12 @@ test(`Flujo Generado Hal-Test`, async ({ page }) => {
         console.log(`⚠️ Acción no implementada o pendiente: find_element`);
     });
 
+    await test.step(`Ask AI (Text)`, async () => {
+        console.log(`⚠️ Acción no implementada o pendiente: call_llm`);
+    });
+
     await test.step(`Take Evidence`, async () => {
-        await page.screenshot({ path: 'screenshot_12.png' });
+        await page.screenshot({ path: 'screenshot_13.png' });
     });
 
     await test.step(`Complete Tour`, async () => {

@@ -5398,6 +5398,7 @@ export const callLlmAction = async (req, res) => {
             maxTokens,
             temperature,
             browserId,
+            injectBrowserContext = false,
         } = req.body;
 
         // Resolve context: Force Ollama
@@ -5410,7 +5411,7 @@ export const callLlmAction = async (req, res) => {
         const apiKey = 'ollama';
 
         // --- AUTO CONTEXT INJECTION ---
-        const autoContext = await fetchContext(req, browserId);
+        const autoContext = injectBrowserContext ? await fetchContext(req, browserId) : null;
         let resolvedPrompt = variableManager.resolve(prompt) || '';
 
         // Zero-Config Fallback: If prompt is empty but we have context
@@ -5476,12 +5477,13 @@ export const generateDataAction = async (req, res) => {
             maxTokens = 2048,
             count = 1,
             fields,
+            injectBrowserContext = false,
         } = req.body;
 
         const targetVariable = variable || variableName;
 
         // --- AUTO CONTEXT INJECTION ---
-        const autoContext = await fetchContext(req, browserId);
+        const autoContext = injectBrowserContext ? await fetchContext(req, browserId) : null;
         let activeDescription = variableManager.resolve(description) || '';
 
         // Zero-Config Fallback

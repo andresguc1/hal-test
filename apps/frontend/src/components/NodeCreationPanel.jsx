@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ChevronLeft,
   Globe,
@@ -19,6 +19,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import SettingsPage from "./SettingsPage";
+import { api } from "../utils/api";
 
 /**
  * MAREA DESIGN SYSTEM - LEFT SIDEBAR (TOOLBOX)
@@ -144,6 +145,8 @@ const NODE_CATEGORIES = {
       { id: "call_llm" },
       { id: "generate_data" },
       { id: "validate_semantic" },
+      { id: "extract_dom_context" },
+      { id: "chain_of_thought" },
     ],
   },
 };
@@ -155,6 +158,58 @@ export default function NodeCreationPanel({
   const { t } = useTranslation();
   const [view, setView] = useState("nodes");
   const [openCategories, setOpenCategories] = useState(["browser_management"]);
+
+  const [isAIConfigured, setIsAIConfigured] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+
+    const checkAIConfigValidity = async () => {
+      try {
+        const configStr = localStorage.getItem("hal_ai_config");
+        if (!configStr) {
+          if (active) setIsAIConfigured(false);
+          return;
+        }
+        const config = JSON.parse(configStr);
+        const provider = config.activeProvider || "ollama";
+        const baseUrl = config.baseUrl;
+        const apiKey = config.keys?.[provider] || config.apiKey || "";
+        const model = config.selectedModel;
+
+        if (provider === "ollama" && !baseUrl) {
+          if (active) setIsAIConfigured(false);
+          return;
+        }
+        if (provider !== "ollama" && !apiKey) {
+          if (active) setIsAIConfigured(false);
+          return;
+        }
+
+        const res = await api.post("/ai/validate", {
+          provider,
+          apiKey,
+          baseUrl,
+          model,
+        });
+
+        if (active) {
+          setIsAIConfigured(!!res && res.success);
+        }
+      } catch (err) {
+        console.warn("[NodeCreationPanel] AI validation check failed:", err.message);
+        if (active) setIsAIConfigured(false);
+      }
+    };
+
+    checkAIConfigValidity();
+
+    window.addEventListener("hal_ai_config_updated", checkAIConfigValidity);
+    return () => {
+      active = false;
+      window.removeEventListener("hal_ai_config_updated", checkAIConfigValidity);
+    };
+  }, []);
 
   const toggleCategory = (category) => {
     setOpenCategories((prev) =>
@@ -191,74 +246,96 @@ export default function NodeCreationPanel({
           {/* Categories and Nodes - Scrollable */}
           <div className="flex-1 overflow-y-auto scrollbar-hide py-2">
             <div className="px-2 space-y-1">
-              {Object.entries(NODE_CATEGORIES).map(([key, category]) => (
-                <div key={key} className="mb-1">
-                  {/* Category Header */}
-                  <button
-                    onClick={() => toggleCategory(key)}
-                    className={cn(
-                      "w-full flex items-center justify-between px-3 py-2",
-                      "text-[11px] font-bold uppercase tracking-wider",
-                      "text-slate-500 hover:text-slate-200", // Light hover text
-                      "hover:bg-white/5 rounded-md transition-all duration-200",
-                      openCategories.includes(key) && "text-slate-200",
-                    )}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={cn(
-                          "opacity-70",
-                          openCategories.includes(key) ? "text-blue-400" : "",
-                        )}
-                      >
-                        {category.icon}
-                      </span>
-                      <span>{t(`nodes.categories.${key}`)}</span>
-                    </div>
-                    <ChevronLeft
-                      size={12}
-                      className={cn(
-                        "transition-transform duration-200 opacity-50",
-                        openCategories.includes(key) && "-rotate-90",
-                      )}
-                    />
-                  </button>
+              {Object.entries(NODE_CATEGORIES).map(([key, category]) => {
+                const isAiCat = key === "llm_ai";
+                const isLocked = isAiCat && !isAIConfigured;
 
-                  {/* Node Items (Draggable) */}
-                  {openCategories.includes(key) && (
-                    <div className="mt-1 ml-2 pl-2 border-l border-white/5 space-y-0.5">
-                      {category.nodes.map((node) => (
-                        <div
-                          key={node.id}
-                          draggable
-                          onDragStart={(e) => {
-                            e.dataTransfer.setData(
-                              "application/reactflow",
-                              node.id,
-                            );
-                            e.dataTransfer.effectAllowed = "move";
-                          }}
-                          onClick={() => addNode(node.id)}
+                return (
+                  <div key={key} className="mb-1">
+                    {/* Category Header */}
+                    <button
+                      onClick={() => {
+                        if (isLocked) {
+                          setView("settings"); // Redirect to settings on click!
+                          return;
+                        }
+                        toggleCategory(key);
+                      }}
+                      title={isLocked ? t("nodes.categories.llm_ai_locked_tooltip", "Configure AI & Integrations in settings to unlock this category") : undefined}
+                      className={cn(
+                        "w-full flex items-center justify-between px-3 py-2",
+                        "text-[11px] font-bold uppercase tracking-wider",
+                        "hover:bg-white/5 rounded-md transition-all duration-200",
+                        isLocked 
+                          ? "text-slate-600 cursor-pointer opacity-60 hover:opacity-100 border border-indigo-500/10 bg-indigo-950/10" 
+                          : "text-slate-500 hover:text-slate-200",
+                        openCategories.includes(key) && !isLocked && "text-slate-200",
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span
                           className={cn(
-                            "flex items-center gap-2 px-3 py-1.5 rounded-md group cursor-grab active:cursor-grabbing",
-                            "text-[13px] font-medium text-slate-400",
-                            "hover:bg-white/5 hover:text-white hover:translate-x-1",
-                            "transition-all duration-200",
+                            "opacity-70",
+                            openCategories.includes(key) && !isLocked ? "text-blue-400" : "",
+                            isLocked && "text-indigo-500/50"
                           )}
                         >
-                          <span className="flex-1 truncate">
-                            {t(`nodes.labels.${node.id}`)}
+                          {category.icon}
+                        </span>
+                        <span>{t(`nodes.categories.${key}`)}</span>
+                        {isLocked && (
+                          <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 uppercase tracking-widest ml-auto animate-pulse">
+                            Locked
                           </span>
-                          <GripVertical
-                            size={12}
-                            className="text-slate-600 group-hover:text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
+                        )}
+                      </div>
+                      {!isLocked && (
+                        <ChevronLeft
+                          size={12}
+                          className={cn(
+                            "transition-transform duration-200 opacity-50",
+                            openCategories.includes(key) && "-rotate-90",
+                          )}
+                        />
+                      )}
+                    </button>
+
+                    {/* Node Items (Draggable) */}
+                    {openCategories.includes(key) && !isLocked && (
+                      <div className="mt-1 ml-2 pl-2 border-l border-white/5 space-y-0.5">
+                        {category.nodes.map((node) => (
+                          <div
+                            key={node.id}
+                            draggable
+                            onDragStart={(e) => {
+                              e.dataTransfer.setData(
+                                "application/reactflow",
+                                node.id,
+                              );
+                              e.dataTransfer.effectAllowed = "move";
+                            }}
+                            onClick={() => addNode(node.id)}
+                            className={cn(
+                              "flex items-center gap-2 px-3 py-1.5 rounded-md group cursor-grab active:cursor-grabbing",
+                              "text-[13px] font-medium text-slate-400",
+                              "hover:bg-white/5 hover:text-white hover:translate-x-1",
+                              "transition-all duration-200",
+                            )}
+                          >
+                            <span className="flex-1 truncate">
+                              {t(`nodes.labels.${node.id}`)}
+                            </span>
+                            <GripVertical
+                              size={12}
+                              className="text-slate-600 group-hover:text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 

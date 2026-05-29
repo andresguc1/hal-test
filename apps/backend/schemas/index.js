@@ -85,6 +85,7 @@ export { default as runTestsBodySchema } from './run_tests/body.js';
 
 // 🔀 Flow Control
 export { default as variableBodySchema } from './variable/body.js';
+export { default as forEachBodySchema } from './for_each/body.js';
 export { default as conditionalBodySchema } from './conditional/body.js';
 export { default as loopBodySchema } from './loop/body.js';
 export { default as branchBodySchema } from './branch/body.js';

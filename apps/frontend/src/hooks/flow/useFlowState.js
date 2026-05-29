@@ -555,7 +555,8 @@ export function useFlowState() {
       if (
         !componentNode ||
         (componentNode.data?.type !== "component" &&
-          componentNode.data?.type !== "loop")
+          componentNode.data?.type !== "loop" &&
+          componentNode.data?.type !== "for_each")
       ) {
         return;
       }

@@ -35,4 +35,5 @@ export default Joi.object({
     maxTokens: Joi.number().integer().min(1).default(2048),
     nodeId: Joi.string().optional(),
     browserId: Joi.string().optional(),
+    injectBrowserContext: Joi.boolean().optional(),
 }).unknown();

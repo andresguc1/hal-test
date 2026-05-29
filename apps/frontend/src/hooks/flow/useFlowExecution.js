@@ -780,6 +780,35 @@ export function useFlowExecution({
                 node.id,
                 result.success ? NODE_STATES.SUCCESS : NODE_STATES.ERROR,
               );
+            } else if (node.type === "for_each" || node.data?.type === "for_each") {
+              // ForEach is handled entirely by the backend ExecutionService.
+              // In frontend debug mode, we treat it as a composition container.
+              const config = node.data?.configuration || {};
+              updateNodeState(node.id, NODE_STATES.EXECUTING);
+              updateEdgeStatusBySource(node.id, NODE_STATES.EXECUTING);
+
+              const resolvedConfig = resolveVariables(config, flowContext);
+              const action = {
+                nodeId: node.id,
+                type: "for_each",
+                payload: { ...resolvedConfig, browserId, runId },
+              };
+
+              const stepResult = await executeStep(action);
+              result = stepResult || { success: true };
+
+              const forEachFinalState = result.success
+                ? NODE_STATES.SUCCESS
+                : NODE_STATES.ERROR;
+              updateNodeState(node.id, forEachFinalState);
+
+              if (!result.success && stopOnError) {
+                return {
+                  ...result,
+                  divePath: [node.id],
+                  healedNodes,
+                };
+              }
             } else if (
               node.type !== "input" &&
               node.type !== "output" &&

@@ -199,6 +199,7 @@
       "conditional": "Condicional",
       "switch": "Switch",
       "loop": "Bucle",
+      "for_each": "ForEach",
       "branch": "Bifurcación",
       "flow_control": "Control de Flujo",
       "transform": "Transformar",

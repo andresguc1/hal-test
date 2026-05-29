@@ -534,9 +534,18 @@ export const NODE_INPUTS = {
       options: [
         { label: "For (Count / Expression)", value: "for" },
         { label: "While (Condition)", value: "while" },
+        { label: "ForEach (Collection)", value: "for_each" },
       ],
       required: true,
       defaultValue: "for",
+    },
+    {
+      key: "source",
+      label: "Source Collection",
+      type: "text",
+      placeholder: "e.g. {{myArray}} or [1, 2, 3]",
+      required: true,
+      isVisible: (config) => config.loopType === "for_each",
     },
     {
       key: "iterations",
@@ -545,10 +554,11 @@ export const NODE_INPUTS = {
       placeholder: "e.g. 10 or {{variables.maxRetries}}",
       required: true,
       isVisible: (config) =>
-        !config.loopType ||
-        config.loopType === "for" ||
-        config.mode === "count" ||
-        config.type === "fixed",
+        (!config.loopType ||
+          config.loopType === "for" ||
+          config.mode === "count" ||
+          config.type === "fixed") &&
+        config.loopType !== "for_each",
     },
     {
       key: "condition",
@@ -557,18 +567,27 @@ export const NODE_INPUTS = {
       placeholder: "e.g. {{loop.index}} < {{variables.max}}",
       required: true,
       isVisible: (config) =>
-        config.loopType === "while" ||
-        config.mode === "while" ||
-        config.type === "while",
+        (config.loopType === "while" ||
+          config.mode === "while" ||
+          config.type === "while") &&
+        config.loopType !== "for_each",
     },
     {
       key: "executionMode",
       label: "Execution Mode",
       type: "select",
-      options: [
-        { label: "Sequential", value: "sequential" },
-        { label: "Parallel (Concurrent)", value: "parallel" },
-      ],
+      options: (config) =>
+        config.loopType === "for_each"
+          ? [
+              { label: "🔄 Sequential (Safe)", value: "sequential" },
+              { label: "⚡ Parallel", value: "parallel" },
+              { label: "🎲 Random", value: "random" },
+              { label: "🎯 Single Item", value: "single" },
+            ]
+          : [
+              { label: "Sequential", value: "sequential" },
+              { label: "Parallel (Concurrent)", value: "parallel" },
+            ],
       required: true,
       defaultValue: "sequential",
     },
@@ -578,7 +597,77 @@ export const NODE_INPUTS = {
       type: "number",
       placeholder: "5",
       defaultValue: 5,
-      isVisible: (config) => config.executionMode === "parallel",
+      isVisible: (config) =>
+        config.loopType !== "for_each" && config.executionMode === "parallel",
+    },
+    {
+      key: "maxConcurrency",
+      label: "Max Concurrency",
+      type: "number",
+      placeholder: "3",
+      defaultValue: 3,
+      isVisible: (config) =>
+        config.loopType === "for_each" && config.executionMode === "parallel",
+    },
+    {
+      key: "itemAlias",
+      label: "Item Variable Name",
+      type: "text",
+      placeholder: "item",
+      defaultValue: "item",
+      isVisible: (config) => config.loopType === "for_each",
+    },
+    {
+      key: "indexAlias",
+      label: "Index Variable Name",
+      type: "text",
+      placeholder: "index",
+      defaultValue: "index",
+      isVisible: (config) => config.loopType === "for_each",
+    },
+    {
+      key: "delayBetweenIterations",
+      label: "Delay Between Iterations (ms)",
+      type: "number",
+      placeholder: "0",
+      defaultValue: 0,
+      isVisible: (config) => config.loopType === "for_each",
+    },
+    {
+      key: "randomMode",
+      label: "Random Mode",
+      type: "select",
+      options: [
+        { label: "Shuffle Array", value: "shuffle" },
+        { label: "Pick One Random Item", value: "pick_one" },
+      ],
+      defaultValue: "shuffle",
+      isVisible: (config) =>
+        config.loopType === "for_each" && config.executionMode === "random",
+    },
+    {
+      key: "singleIndex",
+      label: "Single Item Index / JS Expression",
+      type: "text",
+      placeholder: "e.g. 0 or {{myIndex}}",
+      isVisible: (config) =>
+        config.loopType === "for_each" && config.executionMode === "single",
+    },
+    {
+      key: "singleMatch",
+      label: "Single Match Condition (JS code)",
+      type: "textarea",
+      placeholder: "e.g. return item.status === 'active';",
+      isVisible: (config) =>
+        config.loopType === "for_each" && config.executionMode === "single",
+    },
+    {
+      key: "executionTimeout",
+      label: "Execution Timeout per Item (ms)",
+      type: "number",
+      placeholder: "e.g. 30000",
+      defaultValue: 0,
+      isVisible: (config) => config.loopType === "for_each",
     },
     {
       key: "breakOnError",
@@ -595,6 +684,108 @@ export const NODE_INPUTS = {
     {
       key: "maxIterations",
       label: "Safety Limit (Max Iterations)",
+      type: "number",
+      placeholder: "1000",
+      defaultValue: 1000,
+    },
+    {
+      key: "flowId",
+      label: "Linked Sub-flow ID",
+      type: "text",
+      placeholder: "Select or enter sub-flow ID...",
+    },
+  ],
+  for_each: [
+    {
+      key: "source",
+      label: "Source Collection",
+      type: "text",
+      placeholder: "e.g. {{myArray}} or [1, 2, 3]",
+      required: true,
+    },
+    {
+      key: "executionMode",
+      label: "Execution Mode",
+      type: "select",
+      options: [
+        { label: "\ud83d\udd04 Sequential (Safe)", value: "sequential" },
+        { label: "\u26a1 Parallel", value: "parallel" },
+        { label: "\ud83c\udfb2 Random", value: "random" },
+        { label: "\ud83c\udfaf Single Item", value: "single" },
+      ],
+      required: true,
+      defaultValue: "sequential",
+    },
+    {
+      key: "maxConcurrency",
+      label: "Max Concurrency",
+      type: "number",
+      placeholder: "3",
+      defaultValue: 3,
+      isVisible: (config) => config.executionMode === "parallel",
+    },
+    {
+      key: "itemAlias",
+      label: "Item Variable Name",
+      type: "text",
+      placeholder: "item",
+      defaultValue: "item",
+    },
+    {
+      key: "indexAlias",
+      label: "Index Variable Name",
+      type: "text",
+      placeholder: "index",
+      defaultValue: "index",
+    },
+    {
+      key: "randomMode",
+      label: "Random Strategy",
+      type: "select",
+      options: [
+        { label: "Pick One Random", value: "single" },
+        { label: "Shuffle All", value: "shuffle" },
+      ],
+      defaultValue: "shuffle",
+      isVisible: (config) => config.executionMode === "random",
+    },
+    {
+      key: "singleIndex",
+      label: "Item Index",
+      type: "number",
+      placeholder: "0",
+      isVisible: (config) => config.executionMode === "single",
+    },
+    {
+      key: "singleMatch",
+      label: "Match Expression (JS)",
+      type: "text",
+      placeholder: "item.id === 'target'",
+      isVisible: (config) => config.executionMode === "single" && !config.singleIndex && config.singleIndex !== 0,
+    },
+    {
+      key: "stopOnError",
+      label: "Stop on Error",
+      type: "checkbox",
+      defaultValue: true,
+    },
+    {
+      key: "collectResults",
+      label: "Collect Results",
+      type: "checkbox",
+      defaultValue: true,
+    },
+    {
+      key: "delayBetweenIterations",
+      label: "Delay Between Items (ms)",
+      type: "number",
+      placeholder: "0",
+      defaultValue: 0,
+      isVisible: (config) => config.executionMode === "sequential",
+    },
+    {
+      key: "maxItems",
+      label: "Safety Limit (Max Items)",
       type: "number",
       placeholder: "1000",
       defaultValue: 1000,
@@ -772,6 +963,10 @@ export const getSmartLabel = (nodeType, config = {}) => {
       return config.label || "Sub-flow";
     case "loop":
       return "Loop";
+    case "for_each":
+      return config.source
+        ? `ForEach: ${truncate(String(config.source), 20)}`
+        : "ForEach";
     default:
       return null;
   }
