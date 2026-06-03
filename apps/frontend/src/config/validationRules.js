@@ -761,7 +761,10 @@ export const NODE_INPUTS = {
       label: "Match Expression (JS)",
       type: "text",
       placeholder: "item.id === 'target'",
-      isVisible: (config) => config.executionMode === "single" && !config.singleIndex && config.singleIndex !== 0,
+      isVisible: (config) =>
+        config.executionMode === "single" &&
+        !config.singleIndex &&
+        config.singleIndex !== 0,
     },
     {
       key: "stopOnError",
@@ -892,7 +895,8 @@ export const NODE_INPUTS = {
       key: "prompt",
       label: "Prompt / Instruction",
       type: "textarea",
-      placeholder: "Ask AI anything (e.g., 'Extract the total price of the items')",
+      placeholder:
+        "Ask AI anything (e.g., 'Extract the total price of the items')",
       required: true,
     },
     {
@@ -972,6 +976,13 @@ export const NODE_INPUTS = {
       placeholder: "2048",
       defaultValue: 2048,
     },
+    {
+      key: "temperature",
+      label: "Temperature (Creativity / Randomness)",
+      type: "number",
+      placeholder: "0.7",
+      defaultValue: 0.7,
+    },
   ],
   validate_semantic: [
     {
@@ -985,7 +996,8 @@ export const NODE_INPUTS = {
       key: "validationPrompt",
       label: "Validation Criteria / Rules",
       type: "textarea",
-      placeholder: "Describe what to validate (e.g., 'Is the text written in Spanish and polite?')",
+      placeholder:
+        "Describe what to validate (e.g., 'Is the text written in Spanish and polite?')",
       required: true,
     },
     {
@@ -993,6 +1005,14 @@ export const NODE_INPUTS = {
       label: "Expected Success Answer (e.g. 'Yes' / 'Approved')",
       type: "text",
       placeholder: "APPROVED",
+      required: true,
+    },
+    {
+      key: "variableName",
+      label: "Save Result to Variable",
+      type: "text",
+      placeholder: "semanticValid",
+      defaultValue: "semanticValid",
       required: true,
     },
   ],
@@ -1029,7 +1049,8 @@ export const NODE_INPUTS = {
       key: "instruction",
       label: "Reasoning Instruction / Question",
       type: "textarea",
-      placeholder: "Describe the complex reasoning puzzle or multi-step logic task...",
+      placeholder:
+        "Describe the complex reasoning puzzle or multi-step logic task...",
       required: true,
     },
     {
@@ -1138,6 +1159,20 @@ export const getSmartLabel = (nodeType, config = {}) => {
       return config.source
         ? `ForEach: ${truncate(String(config.source), 20)}`
         : "ForEach";
+    case "call_llm":
+      return config.prompt
+        ? `Ask AI: ${truncate(config.prompt, 15)}`
+        : "Ask AI";
+    case "generate_data":
+      return config.description
+        ? `Gen: ${truncate(config.description, 15)}`
+        : "Generate Data";
+    case "validate_semantic":
+      return "Semantic Validation";
+    case "extract_dom_context":
+      return "Extract Context";
+    case "chain_of_thought":
+      return "Reasoning (CoT)";
     default:
       return null;
   }

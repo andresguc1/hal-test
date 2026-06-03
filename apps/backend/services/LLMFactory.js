@@ -29,15 +29,26 @@ class LLMFactory {
             return this.createInstance(fallbackProvider || 'ollama', keyAliasOrId, baseUrl);
         }
 
-        // 3. Force requested provider or Ollama as ultimate fallback
+        // 3. Environment Fallback
+        if (fallbackProvider === 'openrouter' && process.env.OPENROUTER_API_KEY) {
+            return this.createInstance('openrouter', process.env.OPENROUTER_API_KEY, baseUrl);
+        }
+
+        // 4. Force requested provider or Ollama as ultimate fallback
         return this.createInstance(fallbackProvider || 'ollama', null, baseUrl);
     }
 
     createInstance(provider, key, baseUrl) {
         if (provider === 'openrouter') {
+            const finalKey = key || process.env.OPENROUTER_API_KEY;
+            if (!finalKey) {
+                throw new Error(
+                    'API Key for OpenRouter is missing. Please configure your OpenRouter API Key in the AI Settings panel or set OPENROUTER_API_KEY in your .env file.',
+                );
+            }
             return createOpenAI({
                 baseURL: baseUrl || 'https://openrouter.ai/api/v1',
-                apiKey: key,
+                apiKey: finalKey,
                 compatibility: 'compatible',
                 fetch: async (url, options) => {
                     const controller = new AbortController();
@@ -114,7 +125,9 @@ class LLMFactory {
             msg.includes('unauthorized') ||
             msg.includes('invalid api key')
         ) {
-            return new Error('Authentication Failed: Invalid API Key. Please check your Wallet.');
+            return new Error(
+                'Authentication Failed: Invalid API Key. Please check your AI settings.',
+            );
         }
 
         if (msg.includes('429') || msg.includes('quota')) {
@@ -126,6 +139,12 @@ class LLMFactory {
         if (msg.includes('500') || msg.includes('internal server error')) {
             return new Error(
                 'Provider Error: The AI Service is having a bad day (500). Try again later.',
+            );
+        }
+
+        if (msg.includes('no endpoints found')) {
+            return new Error(
+                'OpenRouter Routing Error: No endpoints found for the requested model. This typically happens when your API Key is missing or invalid, your OpenRouter account balance is $0, or strict data privacy policies (like ZDR) are blocking the model. Please check your AI Settings and OpenRouter account.',
             );
         }
 

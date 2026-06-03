@@ -5419,7 +5419,9 @@ export const callLlmAction = async (req, res) => {
             req.headers['x-ai-model'] || process.env.OLLAMA_MODEL || 'gemma3:latest';
         const headerBaseUrl = req.headers['x-ai-base-url'];
         const apiKey =
-            req.headers['x-ai-api-key'] || (activeProvider === 'ollama' ? 'ollama' : undefined);
+            req.headers['x-ai-api-key'] ||
+            (activeProvider === 'openrouter' ? process.env.OPENROUTER_API_KEY : undefined) ||
+            (activeProvider === 'ollama' ? 'ollama' : undefined);
 
         // --- AUTO CONTEXT INJECTION ---
         const autoContext = injectBrowserContext ? await fetchContext(req, browserId) : null;
@@ -5450,7 +5452,7 @@ export const callLlmAction = async (req, res) => {
         });
 
         // Extract text from object
-        const resultText = response.text || '';
+        const resultText = response.text ? response.text.trim() : '';
 
         // Set variable
         variableManager.set(variableName, resultText, req.body.runId);
@@ -5487,6 +5489,7 @@ export const generateDataAction = async (req, res) => {
             variableName = 'generatedData',
             variable, // Alias support
             maxTokens = 2048,
+            temperature = 0.7,
             count = 1,
             fields,
             injectBrowserContext = false,
@@ -5516,7 +5519,9 @@ export const generateDataAction = async (req, res) => {
             req.headers['x-ai-model'] || process.env.OLLAMA_MODEL || 'gemma3:latest';
         const headerBaseUrl = req.headers['x-ai-base-url'];
         const apiKey =
-            req.headers['x-ai-api-key'] || (activeProvider === 'ollama' ? 'ollama' : undefined);
+            req.headers['x-ai-api-key'] ||
+            (activeProvider === 'openrouter' ? process.env.OPENROUTER_API_KEY : undefined) ||
+            (activeProvider === 'ollama' ? 'ollama' : undefined);
 
         const keys = {
             openai: req.headers['x-openai-key'] || process.env.OPENAI_API_KEY,
@@ -5526,8 +5531,41 @@ export const generateDataAction = async (req, res) => {
             baseUrl: headerBaseUrl,
         };
 
-        // If 'fields' are provided, we can pass them, otherwise aiService handles description
-        const schema = fields ? z.any() : z.any(); // Simple for now, AIService maps it
+        // Build a robust, valid Zod schema for structured output to satisfy Vercel AI SDK requirements
+        let schema;
+        if (expectedFormat === 'json') {
+            if (fields && Array.isArray(fields) && fields.length > 0) {
+                const schemaFields = {};
+                for (const field of fields) {
+                    if (field && typeof field === 'object' && field.name) {
+                        let fieldSchema = z.string();
+                        if (field.type === 'number') fieldSchema = z.number();
+                        else if (field.type === 'boolean') fieldSchema = z.boolean();
+                        else if (field.type === 'array') fieldSchema = z.array(z.any());
+                        else if (field.type === 'object') fieldSchema = z.record(z.any());
+
+                        if (field.description) {
+                            fieldSchema = fieldSchema.describe(field.description);
+                        }
+                        schemaFields[field.name] = fieldSchema;
+                    }
+                }
+                schema = z.object(schemaFields);
+            } else {
+                // If no fields are explicitly defined, use a generic result schema
+                // to guide generateObject and avoid AI SDK compilation failures
+                schema = z.object({
+                    result: z
+                        .any()
+                        .describe(
+                            'The generated structured data matching the requested description',
+                        ),
+                });
+            }
+        } else {
+            // Non-JSON format: schema is not used by generateText, so we pass a placeholder z.any()
+            schema = z.any();
+        }
 
         const finalPrompt = `Generate ${count} item(s) in ${expectedFormat} format. 
 Description: ${activeDescription}
@@ -5541,15 +5579,38 @@ ${fields ? `Fields: ${JSON.stringify(fields)}` : ''}`;
             apiKey,
             keys,
             maxTokens,
+            temperature,
             expectedFormat,
             parentSignal: req.signal,
         });
 
-        variableManager.set(targetVariable, data, req.body.runId);
+        let resolvedData = data;
+        // Extract generic result key for seamless backward compatibility if fields wasn't used
+        if (expectedFormat === 'json' && (!fields || fields.length === 0)) {
+            if (
+                data &&
+                typeof data === 'object' &&
+                'result' in data &&
+                Object.keys(data).length === 1
+            ) {
+                resolvedData = data.result;
+            }
+        }
+
+        variableManager.set(targetVariable, resolvedData, req.body.runId);
+
+        const displayData =
+            typeof resolvedData === 'object' ? JSON.stringify(resolvedData) : String(resolvedData);
+        const truncatedData =
+            displayData.length > 80 ? displayData.substring(0, 80) + '...' : displayData;
+
+        console.log(
+            `[Generate Data] Generated value: "${displayData}" saved to variable "${targetVariable}"`,
+        );
 
         // Emit log for UI visualization
         emitLog({
-            message: `Generated Data (${expectedFormat}) saved to ${targetVariable}`,
+            message: `Generated Data (${expectedFormat}): "${truncatedData}" saved to ${targetVariable}`,
             type: 'success',
             nodeId: req.body.nodeId || 'generate_data',
         });
@@ -5557,8 +5618,8 @@ ${fields ? `Fields: ${JSON.stringify(fields)}` : ''}`;
         return res.status(200).json({
             success: true,
             message: req.t('actions.generate_data.success'),
-            data: data,
-            result: data,
+            data: resolvedData,
+            result: resolvedData,
             variable: targetVariable,
         });
     } catch (error) {
@@ -5599,7 +5660,9 @@ export const validateSemanticAction = async (req, res) => {
             req.headers['x-ai-model'] || process.env.OLLAMA_MODEL || 'gemma3:latest';
         const headerBaseUrl = req.headers['x-ai-base-url'];
         const apiKey =
-            req.headers['x-ai-api-key'] || (activeProvider === 'ollama' ? 'ollama' : undefined);
+            req.headers['x-ai-api-key'] ||
+            (activeProvider === 'openrouter' ? process.env.OPENROUTER_API_KEY : undefined) ||
+            (activeProvider === 'ollama' ? 'ollama' : undefined);
 
         emitLog({
             message: `Ejecutando validación semántica con modelo ${activeModel} (maxTokens: ${maxTokens})`,
@@ -5732,7 +5795,9 @@ export const extractDomContextAction = async (req, res) => {
                 req.headers['x-ai-model'] || process.env.OLLAMA_MODEL || 'gemma3:latest';
             const headerBaseUrl = req.headers['x-ai-base-url'];
             const apiKey =
-                req.headers['x-ai-api-key'] || (activeProvider === 'ollama' ? 'ollama' : undefined);
+                req.headers['x-ai-api-key'] ||
+                (activeProvider === 'openrouter' ? process.env.OPENROUTER_API_KEY : undefined) ||
+                (activeProvider === 'ollama' ? 'ollama' : undefined);
 
             emitLog({
                 message: `Cleaning up content with AI (${activeModel})...`,
@@ -5807,7 +5872,9 @@ export const chainOfThoughtAction = async (req, res) => {
             req.headers['x-ai-model'] || process.env.OLLAMA_MODEL || 'gemma3:latest';
         const headerBaseUrl = req.headers['x-ai-base-url'];
         const apiKey =
-            req.headers['x-ai-api-key'] || (activeProvider === 'ollama' ? 'ollama' : undefined);
+            req.headers['x-ai-api-key'] ||
+            (activeProvider === 'openrouter' ? process.env.OPENROUTER_API_KEY : undefined) ||
+            (activeProvider === 'ollama' ? 'ollama' : undefined);
 
         emitLog({
             message: `Iniciando razonamiento (CoT) con modelo ${activeModel}...`,
@@ -5891,7 +5958,9 @@ export const smartSelectorAction = async (req, res) => {
             req.headers['x-ai-model'] || process.env.OLLAMA_MODEL || 'gemma3:latest';
         const headerBaseUrl = req.headers['x-ai-base-url'];
         const apiKey =
-            req.headers['x-ai-api-key'] || (activeProvider === 'ollama' ? 'ollama' : undefined);
+            req.headers['x-ai-api-key'] ||
+            (activeProvider === 'openrouter' ? process.env.OPENROUTER_API_KEY : undefined) ||
+            (activeProvider === 'ollama' ? 'ollama' : undefined);
 
         emitLog({
             message: `Healing selector with AI (${activeModel})...`,

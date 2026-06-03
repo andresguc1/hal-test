@@ -933,6 +933,7 @@ export const generate_data = (payload) => {
     expectedFormat: asString(payload?.expectedFormat, "json").toLowerCase(),
     count: asNumber(payload?.count, 1),
     maxTokens: asNumber(payload?.maxTokens, 2048, 1),
+    temperature: asNumber(payload?.temperature, 0.7),
     injectBrowserContext: asBoolean(payload?.injectBrowserContext, false),
   };
 };

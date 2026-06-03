@@ -105,11 +105,7 @@ class AIService {
             return { text, usage, finishReason };
         } catch (error) {
             console.error('[AIService] Error generating text:', error);
-            const activeProvider = provider || 'unknown';
-            const activeModel = model || 'unknown';
-            throw new Error(
-                `AI Generation failed (${activeProvider}/${activeModel}): ${error.message}`,
-            );
+            throw llmFactory.mapError(error);
         }
     }
 
@@ -385,9 +381,7 @@ IMPORTANT DIRECTIONS:
                 try {
                     await Promise.race([validationPromise, timeoutPromise]);
                 } catch (valErr) {
-                    // We only rethrow if it's NOT a timeout or a known benign error
-                    if (valErr.message.includes('Timeout')) throw valErr;
-                    console.warn('[AIService] Benign validation warning:', valErr.message);
+                    throw llmFactory.mapError(valErr);
                 }
                 return true;
             }
@@ -890,6 +884,8 @@ If no element is found, return {"correctedSelector": null, "confidence": 0, "rea
         apiKey,
         keys,
         maxTokens,
+        temperature = 0.7,
+        expectedFormat = 'json',
         parentSignal,
     }) {
         try {
@@ -916,7 +912,7 @@ If no element is found, return {"correctedSelector": null, "confidence": 0, "rea
             const effectiveKey = apiKey || (keys && keys[activeProvider]);
 
             console.log(
-                `[AIService] Generating structured data. Using: ${activeProvider}/${activeModel}`,
+                `[AIService] Generating structured data. Using: ${activeProvider}/${activeModel} (format: ${expectedFormat}, temp: ${temperature})`,
             );
 
             const providerInstance = llmFactory.getProviderInstance(
@@ -933,6 +929,18 @@ If no element is found, return {"correctedSelector": null, "confidence": 0, "rea
                     : parentSignal
                 : timeoutSignal;
 
+            // If a non-JSON format (like csv or text) is requested, we must use generateText
+            if (expectedFormat && expectedFormat.toLowerCase() !== 'json') {
+                const { text } = await generateText({
+                    model: modelRef,
+                    prompt: description,
+                    temperature: Number(temperature),
+                    maxTokens: maxTokens ? Number(maxTokens) : undefined,
+                    abortSignal: combinedSignal,
+                });
+                return text ? text.trim() : '';
+            }
+
             // Ollama: structured output via prompt Engineering (generateObject might fail)
             if (activeProvider === 'ollama') {
                 const prompt = `Produce a JSON object matching this description: ${description}. 
@@ -941,7 +949,7 @@ If no element is found, return {"correctedSelector": null, "confidence": 0, "rea
                 const { text } = await generateText({
                     model: modelRef,
                     prompt,
-                    temperature: 0.2,
+                    temperature: Number(temperature),
                     maxTokens: maxTokens ? Number(maxTokens) : undefined,
                     providerOptions: {
                         openai: {
@@ -960,6 +968,7 @@ If no element is found, return {"correctedSelector": null, "confidence": 0, "rea
                 model: modelRef,
                 schema,
                 prompt: description,
+                temperature: Number(temperature),
                 maxTokens: maxTokens ? Number(maxTokens) : undefined,
                 abortSignal: combinedSignal,
             });
@@ -967,7 +976,7 @@ If no element is found, return {"correctedSelector": null, "confidence": 0, "rea
             return object;
         } catch (error) {
             console.error('[AIService] Error in generateStructured:', error);
-            throw error;
+            throw llmFactory.mapError(error);
         }
     }
 
@@ -1058,7 +1067,7 @@ If no element is found, return {"correctedSelector": null, "confidence": 0, "rea
             return object;
         } catch (error) {
             console.error('[AIService] Error in semantic validation:', error);
-            throw error;
+            throw llmFactory.mapError(error);
         }
     }
 }

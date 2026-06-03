@@ -141,8 +141,10 @@ export function useFlowSync({
               : "Sub Flow");
 
           const flowType =
-            componentNode.type === "loop" || componentNode.data?.type === "loop" ||
-            componentNode.type === "for_each" || componentNode.data?.type === "for_each"
+            componentNode.type === "loop" ||
+            componentNode.data?.type === "loop" ||
+            componentNode.type === "for_each" ||
+            componentNode.data?.type === "for_each"
               ? "loop"
               : "component";
 

@@ -288,7 +288,11 @@ export const useHaltestSocket = ({
 
         // If the backend provided a specific node that failed (e.g. validation error)
         if (failedNodeId && onLogReceivedRef.current) {
-          onLogReceivedRef.current(`[BackendError] ${error}`, "error", failedNodeId);
+          onLogReceivedRef.current(
+            `[BackendError] ${error}`,
+            "error",
+            failedNodeId,
+          );
           // Trigger navigation/focus if possible via a global event or another callback
           window.dispatchEvent(
             new CustomEvent("hal:focus-node", {

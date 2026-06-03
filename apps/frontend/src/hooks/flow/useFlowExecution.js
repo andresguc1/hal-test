@@ -99,7 +99,9 @@ export function useFlowExecution({
 
   const stopSession = useCallback(async () => {
     if (activeRunId) {
-      console.log(`[useFlowExecution] Stopping active execution run: ${activeRunId}`);
+      console.log(
+        `[useFlowExecution] Stopping active execution run: ${activeRunId}`,
+      );
       try {
         await api.post(`/runs/${activeRunId}/cancel`);
         if (toast) toast.success("Execution cancelled successfully");
@@ -470,7 +472,8 @@ export function useFlowExecution({
         // If there are multiple starting points (because of unconnected drafts),
         // but only ONE is the 'launch_browser' root, we treat that one as the active starting point.
         const launchRoots = roots.filter(
-          (r) => r.type === "launch_browser" || r.data?.type === "launch_browser",
+          (r) =>
+            r.type === "launch_browser" || r.data?.type === "launch_browser",
         );
         if (launchRoots.length === 1) {
           activeRoot = launchRoots[0];
@@ -527,9 +530,12 @@ export function useFlowExecution({
 
       // Validate structure only using reachable nodes and edges
       try {
-        const reachableNodes = executionNodes.filter((n) => reachableNodeIds.has(n.id));
+        const reachableNodes = executionNodes.filter((n) =>
+          reachableNodeIds.has(n.id),
+        );
         const reachableEdges = filteredEdges.filter(
-          (e) => reachableNodeIds.has(e.source) && reachableNodeIds.has(e.target)
+          (e) =>
+            reachableNodeIds.has(e.source) && reachableNodeIds.has(e.target),
         );
 
         const result = GraphValidator.validate({
@@ -780,7 +786,10 @@ export function useFlowExecution({
                 node.id,
                 result.success ? NODE_STATES.SUCCESS : NODE_STATES.ERROR,
               );
-            } else if (node.type === "for_each" || node.data?.type === "for_each") {
+            } else if (
+              node.type === "for_each" ||
+              node.data?.type === "for_each"
+            ) {
               // ForEach is handled entirely by the backend ExecutionService.
               // In frontend debug mode, we treat it as a composition container.
               const config = node.data?.configuration || {};

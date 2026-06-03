@@ -84,7 +84,10 @@ export const useElementPicker = ({
             }
           }
         } catch (sessionErr) {
-          console.warn("[useElementPicker] Failed to fetch active sessions from backend:", sessionErr);
+          console.warn(
+            "[useElementPicker] Failed to fetch active sessions from backend:",
+            sessionErr,
+          );
         }
       }
 
@@ -100,7 +103,6 @@ export const useElementPicker = ({
       };
 
       try {
-
         if (!needsLaunch) {
           console.log(
             "[useElementPicker] 🚀 Starting local inspector on browserId:",

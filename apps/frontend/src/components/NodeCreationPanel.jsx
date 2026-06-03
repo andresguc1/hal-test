@@ -197,7 +197,10 @@ export default function NodeCreationPanel({
           setIsAIConfigured(!!res && res.success);
         }
       } catch (err) {
-        console.warn("[NodeCreationPanel] AI validation check failed:", err.message);
+        console.warn(
+          "[NodeCreationPanel] AI validation check failed:",
+          err.message,
+        );
         if (active) setIsAIConfigured(false);
       }
     };
@@ -207,7 +210,10 @@ export default function NodeCreationPanel({
     window.addEventListener("hal_ai_config_updated", checkAIConfigValidity);
     return () => {
       active = false;
-      window.removeEventListener("hal_ai_config_updated", checkAIConfigValidity);
+      window.removeEventListener(
+        "hal_ai_config_updated",
+        checkAIConfigValidity,
+      );
     };
   }, []);
 
@@ -261,23 +267,34 @@ export default function NodeCreationPanel({
                         }
                         toggleCategory(key);
                       }}
-                      title={isLocked ? t("nodes.categories.llm_ai_locked_tooltip", "Configure AI & Integrations in settings to unlock this category") : undefined}
+                      title={
+                        isLocked
+                          ? t(
+                              "nodes.categories.llm_ai_locked_tooltip",
+                              "Configure AI & Integrations in settings to unlock this category",
+                            )
+                          : undefined
+                      }
                       className={cn(
                         "w-full flex items-center justify-between px-3 py-2",
                         "text-[11px] font-bold uppercase tracking-wider",
                         "hover:bg-white/5 rounded-md transition-all duration-200",
-                        isLocked 
-                          ? "text-slate-600 cursor-pointer opacity-60 hover:opacity-100 border border-indigo-500/10 bg-indigo-950/10" 
+                        isLocked
+                          ? "text-slate-600 cursor-pointer opacity-60 hover:opacity-100 border border-indigo-500/10 bg-indigo-950/10"
                           : "text-slate-500 hover:text-slate-200",
-                        openCategories.includes(key) && !isLocked && "text-slate-200",
+                        openCategories.includes(key) &&
+                          !isLocked &&
+                          "text-slate-200",
                       )}
                     >
                       <div className="flex items-center gap-2">
                         <span
                           className={cn(
                             "opacity-70",
-                            openCategories.includes(key) && !isLocked ? "text-blue-400" : "",
-                            isLocked && "text-indigo-500/50"
+                            openCategories.includes(key) && !isLocked
+                              ? "text-blue-400"
+                              : "",
+                            isLocked && "text-indigo-500/50",
                           )}
                         >
                           {category.icon}

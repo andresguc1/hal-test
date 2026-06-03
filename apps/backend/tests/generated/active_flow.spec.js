@@ -10,7 +10,7 @@ test(`Flujo Generado Hal-Test`, async ({ page }) => {
         await page.goto(`https://www.saucedemo.com`);
     });
 
-    await test.step(`Set User Role`, async () => {
+    await test.step(`Variable`, async () => {
         console.log(`⚠️ Acción no implementada o pendiente: variable`);
     });
 
@@ -60,10 +60,6 @@ test(`Flujo Generado Hal-Test`, async ({ page }) => {
 
     await test.step(`Complete Tour`, async () => {
         // Browser managed by runner
-    });
-
-    await test.step(`Generate Data (AI)`, async () => {
-        console.log(`⚠️ Acción no implementada o pendiente: generate_data`);
     });
     console.log(`✅ Flujo completado con éxito.`);
 });

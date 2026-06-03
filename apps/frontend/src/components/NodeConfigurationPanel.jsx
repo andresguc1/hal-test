@@ -672,6 +672,7 @@ const NodeConfigurationPanel = ({
               render={({ field: { value, onChange } }) => (
                 <VariableInput
                   value={value}
+                  type={field.type}
                   variables={variablesMap}
                   suggestions={availableVariablePaths}
                   onChange={onChange}
@@ -694,6 +695,7 @@ const NodeConfigurationPanel = ({
               render={({ field: { value, onChange } }) => (
                 <VariableInput
                   value={value}
+                  type={field.type}
                   variables={variablesMap}
                   suggestions={availableVariablePaths}
                   onChange={onChange}
