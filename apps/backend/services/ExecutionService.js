@@ -1222,12 +1222,12 @@ export class ExecutionService {
      */
     async executeForEachContainer(node, allNodes, allEdges, state) {
         const config = node.data?.configuration || {};
+        const itemAlias = config.itemAlias || config.itemVar || 'item';
+        const indexAlias = config.indexAlias || config.indexVar || 'index';
         const {
             source,
             executionMode = 'sequential',
             maxConcurrency = 3,
-            itemAlias = 'item',
-            indexAlias = 'index',
             stopOnError = true,
             collectResults = true,
             maxItems = 1000,
@@ -1253,7 +1253,9 @@ export class ExecutionService {
         let resolvedList = [];
         const sourceVal = source || config.array || '';
         if (typeof sourceVal === 'string' && sourceVal.trim()) {
-            const resolved = variableManager.resolveValue(sourceVal, state.runId);
+            const resolved =
+                variableManager.get(sourceVal, state.runId) ||
+                variableManager.resolveValue(sourceVal, state.runId);
             if (Array.isArray(resolved)) {
                 resolvedList = resolved;
             } else if (typeof resolved === 'string') {
