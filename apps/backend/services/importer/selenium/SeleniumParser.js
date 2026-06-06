@@ -16,7 +16,8 @@ export class SeleniumParser extends AbstractParser {
         const tests = [];
         const self = this;
 
-        traverse.default(ast, {
+        const traverseFn = typeof traverse === 'function' ? traverse : traverse.default || traverse;
+        traverseFn(ast, {
             // 1. Detectar bloques de test (Mocha/Jest/Jasmine)
             CallExpression(path) {
                 const { node } = path;

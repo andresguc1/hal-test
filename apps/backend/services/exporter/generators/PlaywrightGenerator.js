@@ -42,18 +42,18 @@ export class PlaywrightGenerator extends BaseGenerator {
 
     generateNodeCode(step, index, depth) {
         const type = step.type || step.action;
-        const config = step.data?.configuration || step.data || {};
+        const config = step.data?.configuration || step.data || step || {};
         const mapper = NodeMapperRegistry.getMapper(type);
         const indent = '    '.repeat(depth + 1);
-        const label = step.data?.label || step.data?.customLabel || type;
+        const label = step.data?.label || step.data?.customLabel || step.label || type;
         const lang = this.language.toLowerCase();
         const commentChar = lang === 'python' ? '#' : '//';
 
         let nodeCode = '';
 
         // Handle recursive components/sub-flows
-        if (type === 'component' || (step.data?.subNodes && step.data.subNodes.length > 0)) {
-            const subNodes = step.data.subNodes || [];
+        const subNodes = step.data?.subNodes || step.subNodes || [];
+        if (type === 'component' || subNodes.length > 0) {
             nodeCode = this.generateSteps(subNodes, depth + 1);
 
             if (lang === 'javascript' || lang === 'typescript') {

@@ -94,6 +94,7 @@ export class ImportService {
             // 1. Parse the file to AST/Intermediate structure
             const tests = parser.parse(fileContent);
             console.log(`[DEBUG] Found ${tests.length} tests.`);
+            console.log('[DEBUG] tests content:', tests);
 
             // 2. Map each test to a Hal_Test flow
             const flows = tests.map((test) => {

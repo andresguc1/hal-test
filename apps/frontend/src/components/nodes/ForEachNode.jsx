@@ -47,10 +47,13 @@ const ForEachNode = ({ id, data, selected }) => {
   const itemAlias = config.itemAlias || "item";
 
   const ModeIcon = MODE_ICONS[executionMode] || Repeat2;
-  const modeLabel = MODE_LABELS[executionMode] || "Sequential";
+  const modeLabel = t(
+    `nodes.options.executionMode.${executionMode}`,
+    MODE_LABELS[executionMode],
+  );
 
   const getSourceLabel = () => {
-    if (!source) return "No source";
+    if (!source) return t("nodes.placeholders.no_source", "No source");
     const str = typeof source === "string" ? source : JSON.stringify(source);
     return str.length > 25 ? str.substring(0, 22) + "..." : str;
   };
@@ -128,7 +131,11 @@ const ForEachNode = ({ id, data, selected }) => {
               </div>
               {/* Item alias */}
               <span className="text-[9px] font-black uppercase tracking-wider text-white/60 drop-shadow-sm">
-                {`{{${itemAlias}}}`} · {data.nodeCount || 0} NODES INSIDE
+                {`{{${itemAlias}}}`} ·{" "}
+                {t("nodes.labels.nodes_inside", {
+                  count: data.nodeCount || 0,
+                  defaultValue: "{{count}} NODES INSIDE",
+                })}
               </span>
             </div>
           )}
@@ -140,7 +147,9 @@ const ForEachNode = ({ id, data, selected }) => {
         <div className="flex items-center justify-between text-white/50 text-[10px] gap-3">
           <span className="italic flex items-center gap-1 truncate min-w-0">
             <MoreHorizontal size={12} className="shrink-0" />
-            <span className="truncate">Double-click to edit</span>
+            <span className="truncate">
+              {t("nodes.prompts.double_click_edit", "Double-click to edit")}
+            </span>
           </span>
           <button
             onClick={() => data?.onEnterSubFlow?.(id)}

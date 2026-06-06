@@ -208,7 +208,14 @@
       "input": "Module Input",
       "output": "Module Output",
       "backend_js": "Backend JS",
-      "fail_flow": "Fail Flow"
+      "fail_flow": "Fail Flow",
+      "iterations": "iterations",
+      "iterations_plural": "iterations",
+      "nodes_inside": "{{count}} NODES INSIDE",
+      "nodes_inside_plural": "{{count}} NODES INSIDE",
+      "array": "Array",
+      "while": "While",
+      "sub_flow_loop": "Sub-flow Loop"
     },
     "categories": {
       "browser_management": "Browser",
@@ -582,6 +589,12 @@
         "sequential": "Sequential",
         "race": "Race"
       },
+      "executionMode": {
+        "sequential": "Sequential",
+        "parallel": "Parallel",
+        "random": "Random",
+        "single": "Single Item"
+      },
       "action": {
         "break": "Break",
         "continue": "Continue",
@@ -593,6 +606,15 @@
         "reduce": "Reduce (Accumulate)",
         "merge": "Merge (Combine)"
       }
+    },
+    "buttons": {
+      "dive_in": "Dive In",
+      "open": "Open"
+    },
+    "prompts": {
+      "double_click_edit": "Double-click to edit",
+      "contains_logic": "Contains Logic",
+      "guide": "GUIDE"
     }
   },
   "settings": {
@@ -665,5 +687,36 @@
       "test_success": "Connection Successful!",
       "test_failed": "Connection Failed"
     }
+  },
+  "context_menu": {
+    "quick_access": "Quick Access",
+    "node_categories": "Node Categories",
+    "add_node": "Add Node",
+    "clean_layout": "Clean Layout",
+    "select_all": "Select All",
+    "paste": "Paste",
+    "undo": "Undo",
+    "redo": "Redo",
+    "dive_in": "Dive In",
+    "ungroup": "Ungroup",
+    "run_node": "Run Node",
+    "next_node": "Next Node",
+    "prev_node": "Previous Node",
+    "execute_from_here": "Execute from here",
+    "enable_node": "Enable Node",
+    "disable_node": "Disable Node",
+    "enable_downstream": "Enable Downstream Segment",
+    "disable_downstream": "Disable Downstream Segment",
+    "copy": "Copy",
+    "duplicate": "Duplicate",
+    "delete": "Delete",
+    "group_selection": "Group Selection",
+    "iterate_selection": "Iterate Selection",
+    "toggle_selection": "Disable / Enable Selection",
+    "delete_connection": "Delete Connection",
+    "items_selected": "{{count}} items selected",
+    "selected_node": "Selected Node",
+    "no_nodes_found": "No nodes found",
+    "search_node_placeholder": "Search node..."
   }
 }

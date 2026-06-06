@@ -1,6 +1,9 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { applyNodeChanges, applyEdgeChanges, addEdge } from "@xyflow/react";
 import { v4 as uuidv4 } from "uuid";
+import { useToast } from "../useToast";
+import { useTranslation } from "react-i18next";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   NODE_LABELS,
   NODE_STATES,
@@ -58,7 +61,16 @@ export const updateNodeRecursively = (nodes, nodeId, updater) => {
   });
 };
 
-export function useFlowState() {
+export function useFlowState({ currentProject, currentFlowId } = {}) {
+  const toastHook = useToast();
+  const { t: tHook } = useTranslation();
+  const queryClient = useQueryClient();
+  const saveFlowRef = useRef(null);
+
+  const setSaveFlow = useCallback((fn) => {
+    saveFlowRef.current = fn;
+  }, []);
+
   const [rawNodes, _setNodes] = useState([]);
 
   const sanitizeNodes = useCallback((nds) => {
@@ -288,33 +300,524 @@ export function useFlowState() {
   }, [setNodes, setEdges]);
 
   const groupNodes = useCallback(
-    async (currentProject, currentFlowId, queryClient, toast, t) => {
+    async (projectParam, flowIdParam, queryClientParam) => {
+      const activeProject = projectParam || currentProject;
+      const activeFlowId = flowIdParam || currentFlowId;
+      const activeQueryClient = queryClientParam || queryClient;
+
+      if (!activeProject || !activeFlowId) {
+        toastHook.error("Missing project or flow context for grouping");
+        return;
+      }
+
+      // 1. Identify selected nodes
       const selectedNodes = nodesRef.current.filter((n) => n.selected);
       if (selectedNodes.length < 2) {
-        toast.error(
-          t("groups.min_selection", "Select at least 2 nodes to group"),
+        toastHook.error(
+          tHook("groups.min_selection", "Select at least 2 nodes to group"),
         );
         return;
       }
+
+      // ⛔ NESTING RULE (V1): Prevent nesting components
+      const hasComponent = selectedNodes.some(
+        (n) => n.type === "component" || n.data?.type === "component",
+      );
+      if (hasComponent) {
+        toastHook.error(
+          tHook(
+            "groups.no_nesting",
+            "Grouping components is not supported yet",
+          ),
+        );
+        return;
+      }
+
       saveToHistory();
-      // Simplified logic for brevity
-      toast.success("Nodes grouped (Logic migrated)");
+
+      // 2. Calculate Bounding Box
+      let minX = Infinity,
+        minY = Infinity,
+        maxX = -Infinity,
+        maxY = -Infinity;
+
+      selectedNodes.forEach((n) => {
+        minX = Math.min(minX, n.position.x);
+        minY = Math.min(minY, n.position.y);
+        maxX = Math.max(maxX, n.position.x + (n.width || 200));
+        maxY = Math.max(maxY, n.position.y + (n.height || 100));
+      });
+
+      const groupWidth = maxX - minX;
+      const groupHeight = maxY - minY;
+
+      // 4. Extract Sub-Flow Logic
+      const selectedNodeIds = new Set(selectedNodes.map((n) => n.id));
+
+      // Internal Edges: Both Source and Target inside group (Keep them)
+      const internalEdges = edgesRef.current.filter(
+        (e) => selectedNodeIds.has(e.source) && selectedNodeIds.has(e.target),
+      );
+
+      // External Incoming: Source OUTSIDE, Target INSIDE (Needs Input Node)
+      const externalIncoming = edgesRef.current.filter(
+        (e) => !selectedNodeIds.has(e.source) && selectedNodeIds.has(e.target),
+      );
+
+      // External Outgoing: Source INSIDE, Target OUTSIDE (Needs Output Node)
+      const externalOutgoing = edgesRef.current.filter(
+        (e) => selectedNodeIds.has(e.source) && !selectedNodeIds.has(e.target),
+      );
+
+      // ---------------------------------------------------------
+      // GENERATE SUB-FLOW NODES (Normalized + Boundaries)
+      // ---------------------------------------------------------
+      const subNodes = selectedNodes.map((n) => ({
+        ...n,
+        position: {
+          x: n.position.x - minX,
+          y: n.position.y - minY,
+        },
+        selected: false,
+        parentNode: null,
+        extent: undefined, // Clear extent if parent related
+      }));
+
+      const finalSubEdges = [...(internalEdges || [])]; // Start with internal edges
+
+      // -> HANDLE INPUT BOUNDARY
+      if (externalIncoming.length > 0) {
+        const inputId = `input_${uuidv4()}`;
+        const inputNode = {
+          id: inputId,
+          type: "input",
+          position: { x: -250, y: groupHeight / 2 - 25 }, // Left of content
+          data: { label: "Input" },
+        };
+        subNodes.push(inputNode);
+
+        // Connect Input Node -> Original Targets of incoming edges
+        externalIncoming.forEach((edge) => {
+          const newInternalEdge = {
+            id: `e_${inputId}-${edge.target}`,
+            source: inputId,
+            target: edge.target,
+            type: "default",
+            animated: true,
+          };
+          finalSubEdges.push(newInternalEdge);
+        });
+      }
+
+      // -> HANDLE OUTPUT BOUNDARY
+      if (externalOutgoing.length > 0) {
+        const outputId = `output_${uuidv4()}`;
+        const outputNode = {
+          id: outputId,
+          type: "output",
+          position: { x: groupWidth + 200, y: groupHeight / 2 - 25 }, // Right of content
+          data: { label: "Output" },
+        };
+        subNodes.push(outputNode);
+
+        // Connect Original Sources -> Output Node
+        externalOutgoing.forEach((edge) => {
+          const newInternalEdge = {
+            id: `e_${edge.source}-${outputId}`,
+            source: edge.source,
+            target: outputId,
+            type: "default",
+            animated: true,
+          };
+          finalSubEdges.push(newInternalEdge);
+        });
+      }
+
+      try {
+        // 5. Create Component Flow via API
+        const componentName = `Component ${new Date().toLocaleTimeString()}`;
+        const response = await projectManager.createFlow(
+          activeProject.id,
+          componentName,
+          {
+            type: "component",
+            parentId: activeFlowId,
+            nodes: subNodes,
+            edges: finalSubEdges,
+          },
+        );
+
+        const newFlow = response?.flow || response;
+        if (!newFlow || !newFlow.id)
+          throw new Error("Failed to create component flow");
+
+        // REFRESH PROJECT DATA (Optimistic Update for Instant UI)
+        if (activeQueryClient) {
+          if (response?.project) {
+            activeQueryClient.setQueryData(
+              ["project", activeProject.id],
+              response.project,
+            );
+          } else {
+            activeQueryClient.setQueryData(
+              ["project", activeProject.id],
+              (old) => {
+                if (!old) return old;
+                const flows = old.flows || [];
+                if (flows.some((f) => f.id === newFlow.id)) return old;
+                return {
+                  ...old,
+                  flows: [...flows, newFlow],
+                };
+              },
+            );
+          }
+          activeQueryClient.invalidateQueries({
+            queryKey: ["project", activeProject.id],
+          });
+        }
+
+        // 6. Create The Component Node in Main Flow
+        const componentId = generateNodeId();
+        const componentNode = {
+          id: componentId,
+          type: "component",
+          position: { x: minX, y: minY }, // Use top-left of group
+          width: groupWidth, // Optional: preserve dimensions?
+          height: groupHeight,
+          data: {
+            label: componentName,
+            type: "component",
+            flowId: newFlow.id,
+            configuration: {},
+            nodeCount: subNodes.length,
+            hasInput: subNodes.some((n) => n.type === "input"),
+            hasOutput: subNodes.some((n) => n.type === "output"),
+            subFlow: { nodes: subNodes, edges: finalSubEdges }, // Include edges for stats and restoration
+          },
+          style: getNodeStyle ? getNodeStyle(NODE_STATES.DEFAULT) : {},
+        };
+
+        // 7. Update Main Flow State
+        const remainingNodes = nodesRef.current.filter(
+          (n) => !selectedNodeIds.has(n.id),
+        );
+
+        const remainingEdges = edgesRef.current.filter(
+          (e) =>
+            !selectedNodeIds.has(e.source) &&
+            !selectedNodeIds.has(e.target) &&
+            !externalIncoming.includes(e) &&
+            !externalOutgoing.includes(e),
+        );
+
+        // Rewire Main Flow Edges to Component Node
+        // Incoming: Original Source -> Component Node
+        const newIncomingEdges = externalIncoming.map((e) => ({
+          ...e,
+          id: `e_${e.source}-${componentId}`,
+          target: componentId,
+        }));
+
+        // Outgoing: Component Node -> Original Target
+        const newOutgoingEdges = externalOutgoing.map((e) => ({
+          ...e,
+          id: `e_${componentId}-${e.target}`,
+          source: componentId,
+        }));
+
+        const nextNodes = [...remainingNodes, componentNode];
+        const nextEdges = [
+          ...remainingEdges,
+          ...newIncomingEdges,
+          ...newOutgoingEdges,
+        ];
+
+        // Synchronously update refs to prevent race condition during save
+        nodesRef.current = nextNodes;
+        edgesRef.current = nextEdges;
+
+        setNodes(nextNodes);
+        setEdges(nextEdges);
+
+        // Persist changes immediately
+        if (saveFlowRef.current) {
+          await saveFlowRef.current();
+        }
+
+        // AUTO-FOCUS: Select Node and Open Inspector
+        setTimeout(() => {
+          setSelectedNodeId(componentId);
+        }, 50);
+
+        toastHook.success(tHook("groups.success", "Grouped into Component"));
+      } catch (error) {
+        console.error("Failed to group nodes:", error);
+        toastHook.error(tHook("groups.error", "Failed to create component"));
+      }
     },
-    [saveToHistory],
+    [
+      currentProject,
+      currentFlowId,
+      queryClient,
+      saveToHistory,
+      setNodes,
+      setEdges,
+      setSelectedNodeId,
+      toastHook,
+      tHook,
+    ],
   );
 
   const loopNodes = useCallback(
-    async (currentProject, currentFlowId, queryClient, toast, t) => {
-      const selectedNodes = nodesRef.current.filter((n) => n.selected);
-      if (selectedNodes.length === 0) {
-        toast.error(t("loop.no_selection", "Select nodes to wrap in a loop"));
+    async (projectParam, flowIdParam, queryClientParam) => {
+      const activeProject = projectParam || currentProject;
+      const activeFlowId = flowIdParam || currentFlowId;
+      const activeQueryClient = queryClientParam || queryClient;
+
+      if (!activeProject || !activeFlowId) {
+        toastHook.error("Missing project or flow context for looping");
         return;
       }
+
+      // 1. Identify selected nodes
+      const selectedNodes = nodesRef.current.filter((n) => n.selected);
+      if (selectedNodes.length < 2) {
+        toastHook.error(
+          tHook("groups.min_selection", "Select at least 2 nodes to loop"),
+        );
+        return;
+      }
+
       saveToHistory();
-      // Wrap selection in a loop node
-      toast.success("Nodes wrapped in loop (Logic migrated)");
+
+      // 2. Calculate Bounding Box
+      let minX = Infinity,
+        minY = Infinity,
+        maxX = -Infinity,
+        maxY = -Infinity;
+
+      selectedNodes.forEach((n) => {
+        minX = Math.min(minX, n.position.x);
+        minY = Math.min(minY, n.position.y);
+        maxX = Math.max(maxX, n.position.x + (n.width || 200));
+        maxY = Math.max(maxY, n.position.y + (n.height || 100));
+      });
+
+      const groupWidth = maxX - minX;
+      const groupHeight = maxY - minY;
+
+      // 4. Extract Sub-Flow Logic
+      const selectedNodeIds = new Set(selectedNodes.map((n) => n.id));
+
+      // Internal Edges: Both Source and Target inside group (Keep them)
+      const internalEdges = edgesRef.current.filter(
+        (e) => selectedNodeIds.has(e.source) && selectedNodeIds.has(e.target),
+      );
+
+      // External Incoming: Source OUTSIDE, Target INSIDE (Needs Input Node)
+      const externalIncoming = edgesRef.current.filter(
+        (e) => !selectedNodeIds.has(e.source) && selectedNodeIds.has(e.target),
+      );
+
+      // External Outgoing: Source INSIDE, Target OUTSIDE (Needs Output Node)
+      const externalOutgoing = edgesRef.current.filter(
+        (e) => selectedNodeIds.has(e.source) && !selectedNodeIds.has(e.target),
+      );
+
+      // ---------------------------------------------------------
+      // GENERATE SUB-FLOW NODES (Normalized + Boundaries)
+      // ---------------------------------------------------------
+      const subNodes = selectedNodes.map((n) => ({
+        ...n,
+        position: {
+          x: n.position.x - minX,
+          y: n.position.y - minY,
+        },
+        selected: false,
+        parentNode: null,
+        extent: undefined,
+      }));
+
+      const finalSubEdges = [...(internalEdges || [])];
+
+      // -> HANDLE INPUT BOUNDARY
+      if (externalIncoming.length > 0) {
+        const inputId = `input_${uuidv4()}`;
+        const inputNode = {
+          id: inputId,
+          type: "input",
+          position: { x: -250, y: groupHeight / 2 - 25 },
+          data: { label: "Input", type: "input" },
+        };
+        subNodes.push(inputNode);
+
+        externalIncoming.forEach((edge) => {
+          finalSubEdges.push({
+            id: `e_${inputId}-${edge.target}`,
+            source: inputId,
+            target: edge.target,
+            type: "default",
+            animated: true,
+          });
+        });
+      }
+
+      // -> HANDLE OUTPUT BOUNDARY
+      if (externalOutgoing.length > 0) {
+        const outputId = `output_${uuidv4()}`;
+        const outputNode = {
+          id: outputId,
+          type: "output",
+          position: { x: groupWidth + 200, y: groupHeight / 2 - 25 },
+          data: { label: "Output", type: "output" },
+        };
+        subNodes.push(outputNode);
+
+        externalOutgoing.forEach((edge) => {
+          finalSubEdges.push({
+            id: `e_${edge.source}-${outputId}`,
+            source: edge.source,
+            target: outputId,
+            type: "default",
+            animated: true,
+          });
+        });
+      }
+
+      try {
+        // 5. Create Loop Flow via API
+        const loopName = `Loop ${new Date().toLocaleTimeString()}`;
+        const response = await projectManager.createFlow(
+          activeProject.id,
+          loopName,
+          {
+            type: "loop",
+            parentId: activeFlowId,
+            nodes: subNodes,
+            edges: finalSubEdges,
+          },
+        );
+
+        const newFlow = response?.flow || response;
+        if (!newFlow || !newFlow.id)
+          throw new Error("Failed to create loop flow");
+
+        // REFRESH PROJECT DATA
+        if (activeQueryClient) {
+          if (response?.project) {
+            activeQueryClient.setQueryData(
+              ["project", activeProject.id],
+              response.project,
+            );
+          } else {
+            activeQueryClient.setQueryData(
+              ["project", activeProject.id],
+              (old) => {
+                if (!old) return old;
+                const flows = old.flows || [];
+                if (flows.some((f) => f.id === newFlow.id)) return old;
+                return {
+                  ...old,
+                  flows: [...flows, newFlow],
+                };
+              },
+            );
+          }
+          activeQueryClient.invalidateQueries({
+            queryKey: ["project", activeProject.id],
+          });
+        }
+
+        // 6. Create The Loop Node in Main Flow
+        const loopId = generateNodeId();
+        const loopNode = {
+          id: loopId,
+          type: "loop",
+          position: { x: minX, y: minY },
+          width: groupWidth,
+          height: groupHeight,
+          data: {
+            label: loopName,
+            type: "loop",
+            flowId: newFlow.id,
+            configuration: { mode: "count", iterations: 1 },
+            nodeCount: subNodes.length,
+            hasInput: subNodes.some((n) => n.type === "input"),
+            hasOutput: subNodes.some((n) => n.type === "output"),
+            subFlow: { nodes: subNodes, edges: finalSubEdges },
+          },
+          style: getNodeStyle ? getNodeStyle(NODE_STATES.DEFAULT) : {},
+        };
+
+        // 7. Update Main Flow State
+        const remainingNodes = nodesRef.current.filter(
+          (n) => !selectedNodeIds.has(n.id),
+        );
+
+        const remainingEdges = edgesRef.current.filter(
+          (e) =>
+            !selectedNodeIds.has(e.source) &&
+            !selectedNodeIds.has(e.target) &&
+            !externalIncoming.includes(e) &&
+            !externalOutgoing.includes(e),
+        );
+
+        const newIncomingEdges = externalIncoming.map((e) => ({
+          ...e,
+          id: `e_${e.source}-${loopId}`,
+          target: loopId,
+        }));
+
+        const newOutgoingEdges = externalOutgoing.map((e) => ({
+          ...e,
+          id: `e_${loopId}-${e.target}`,
+          source: loopId,
+        }));
+
+        const nextNodes = [...remainingNodes, loopNode];
+        const nextEdges = [
+          ...remainingEdges,
+          ...newIncomingEdges,
+          ...newOutgoingEdges,
+        ];
+
+        // Synchronously update refs to prevent race condition during save
+        nodesRef.current = nextNodes;
+        edgesRef.current = nextEdges;
+
+        setNodes(nextNodes);
+        setEdges(nextEdges);
+
+        if (saveFlowRef.current) {
+          await saveFlowRef.current();
+        }
+
+        setTimeout(() => {
+          setSelectedNodeId(loopId);
+        }, 50);
+
+        toastHook.success(
+          tHook("groups.loop_success", "Iterated Selection Created"),
+        );
+      } catch (error) {
+        console.error("Failed to loop nodes:", error);
+        toastHook.error(
+          tHook("groups.loop_error", "Failed to create iterate selection"),
+        );
+      }
     },
-    [saveToHistory],
+    [
+      currentProject,
+      currentFlowId,
+      queryClient,
+      saveToHistory,
+      setNodes,
+      setEdges,
+      setSelectedNodeId,
+      toastHook,
+      tHook,
+    ],
   );
 
   const detectOrphans = useCallback((nodesToTest, edgesToTest) => {
@@ -896,5 +1399,6 @@ export function useFlowState() {
     detectOrphans,
     designTimeContext,
     simulatedResults,
+    setSaveFlow,
   };
 }

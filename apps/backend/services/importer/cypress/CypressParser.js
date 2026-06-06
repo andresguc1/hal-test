@@ -14,7 +14,8 @@ export class CypressParser extends AbstractParser {
 
         const tests = [];
 
-        traverse.default(ast, {
+        const traverseFn = typeof traverse === 'function' ? traverse : traverse.default || traverse;
+        traverseFn(ast, {
             CallExpression(path) {
                 const { node } = path;
 

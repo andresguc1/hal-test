@@ -16,7 +16,8 @@ export class NightwatchParser extends AbstractParser {
 
         const tests = [];
 
-        traverse.default(ast, {
+        const traverseFn = typeof traverse === 'function' ? traverse : traverse.default || traverse;
+        traverseFn(ast, {
             // Detectar module.exports = { ... }
             AssignmentExpression(path) {
                 const { left, right } = path.node;

@@ -192,7 +192,7 @@ router.post('/directory', upload.any(), async (req, res) => {
                 failed: results.failed,
             });
 
-            return res.json({ success: true, ...results });
+            return res.json({ ...results, success: true });
         }
         // Si tenemos un directorio, escanearlo
         else if (directoryPath) {
@@ -203,7 +203,7 @@ router.post('/directory', upload.any(), async (req, res) => {
                 failed: result.failed,
             });
 
-            return res.json({ success: true, ...result });
+            return res.json({ ...result, success: true });
         }
         // No hay datos válidos
         else {
@@ -262,6 +262,10 @@ router.post('/directory-pom', upload.any(), async (req, res) => {
             // Move each file to the temporary directory
             for (const file of req.files) {
                 const destPath = path.join(tempDirPath, file.originalname);
+                const destDir = path.dirname(destPath);
+                if (!fs.existsSync(destDir)) {
+                    fs.mkdirSync(destDir, { recursive: true });
+                }
                 fs.renameSync(file.path, destPath);
                 console.log('[DEBUG] Moved uploaded file to:', destPath);
             }
@@ -302,7 +306,7 @@ router.post('/directory-pom', upload.any(), async (req, res) => {
         // Cleanup temporary directory if we created one
         if (tempDirCreated) {
             try {
-                fs.rmdirSync(tempDirPath, { recursive: true });
+                fs.rmSync(tempDirPath, { recursive: true });
                 console.log('[DEBUG] Cleaned up temporary POM directory:', tempDirPath);
             } catch (cleanupErr) {
                 console.warn(
@@ -326,14 +330,14 @@ router.post('/directory-pom', upload.any(), async (req, res) => {
             });
         }
 
-        res.json({ success: true, ...result });
+        res.json({ ...result, success: true });
     } catch (error) {
         console.error('[ERROR] Import directory with POM failed:', error);
 
         // Cleanup any temporary directory on error
         if (tempDirCreated) {
             try {
-                fs.rmdirSync(tempDirPath, { recursive: true });
+                fs.rmSync(tempDirPath, { recursive: true });
                 console.log('[DEBUG] Cleaned up temporary POM directory after error:', tempDirPath);
             } catch (e) {
                 console.warn(

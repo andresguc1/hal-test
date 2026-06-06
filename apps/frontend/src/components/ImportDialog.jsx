@@ -147,7 +147,7 @@ const ImportDialog = ({ isOpen, onClose, onImport }) => {
 
       setProgress({
         stage: "converting",
-        message: `Convirtiendo ${result.stats?.totalFiles || 0} archivos...`,
+        message: `Convirtiendo ${result.total || 0} archivos...`,
       });
 
       await onImport({
@@ -157,7 +157,7 @@ const ImportDialog = ({ isOpen, onClose, onImport }) => {
 
       setProgress({
         stage: "complete",
-        message: `✓ ${result.stats?.successfulConversions || 0} flujos importados exitosamente`,
+        message: `✓ ${result.success || 0} flujos importados exitosamente`,
       });
 
       setTimeout(() => {

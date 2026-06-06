@@ -207,7 +207,14 @@
       "input": "Entrada de Módulo",
       "output": "Salida de Módulo",
       "backend_js": "JS de Backend",
-      "fail_flow": "Abortar Flujo"
+      "fail_flow": "Abortar Flujo",
+      "iterations": "iteraciones",
+      "iterations_plural": "iteraciones",
+      "nodes_inside": "{{count}} NODOS DENTRO",
+      "nodes_inside_plural": "{{count}} NODOS DENTRO",
+      "array": "Array",
+      "while": "While",
+      "sub_flow_loop": "Bucle de Subflujo"
     },
     "categories": {
       "browser_management": "Navegador",
@@ -570,6 +577,12 @@
         "sequential": "Secuencial",
         "race": "Carrera"
       },
+      "executionMode": {
+        "sequential": "Secuencial",
+        "parallel": "Paralelo",
+        "random": "Aleatorio",
+        "single": "Elemento Único"
+      },
       "action": {
         "break": "Romper (Break)",
         "continue": "Continuar (Continue)",
@@ -581,6 +594,15 @@
         "reduce": "Reducir (Acumular)",
         "merge": "Combinar (Merge)"
       }
+    },
+    "buttons": {
+      "dive_in": "Entrar (Dive In)",
+      "open": "Abrir"
+    },
+    "prompts": {
+      "double_click_edit": "Doble clic para editar",
+      "contains_logic": "Contiene Lógica",
+      "guide": "GUÍA"
     }
   },
   "settings": {
@@ -653,5 +675,36 @@
       "test_success": "¡Conexión Exitosa!",
       "test_failed": "Conexión Fallida"
     }
+  },
+  "context_menu": {
+    "quick_access": "Acceso Rápido",
+    "node_categories": "Categorías de Nodos",
+    "add_node": "Añadir Nodo",
+    "clean_layout": "Limpiar Diseño",
+    "select_all": "Seleccionar Todo",
+    "paste": "Pegar",
+    "undo": "Deshacer",
+    "redo": "Rehacer",
+    "dive_in": "Entrar (Dive In)",
+    "ungroup": "Desagrupar",
+    "run_node": "Ejecutar Nodo",
+    "next_node": "Siguiente Nodo",
+    "prev_node": "Nodo Previo",
+    "execute_from_here": "Ejecutar desde aquí",
+    "enable_node": "Habilitar Nodo",
+    "disable_node": "Deshabilitar Nodo",
+    "enable_downstream": "Habilitar Segmento Aguas Abajo",
+    "disable_downstream": "Deshabilitar Segmento Aguas Abajo",
+    "copy": "Copiar",
+    "duplicate": "Duplicar",
+    "delete": "Eliminar",
+    "group_selection": "Agrupar Selección",
+    "iterate_selection": "Iterar Selección",
+    "toggle_selection": "Habilitar / Deshabilitar Selección",
+    "delete_connection": "Eliminar Conexión",
+    "items_selected": "{{count}} elementos seleccionados",
+    "selected_node": "Nodo Seleccionado",
+    "no_nodes_found": "No se encontraron nodos",
+    "search_node_placeholder": "Buscar nodo..."
   }
 }

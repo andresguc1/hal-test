@@ -97,7 +97,7 @@ const ComponentNode = ({ id, data, selected }) => {
               </div>
               <div className="flex flex-col gap-0.5">
                 <span className="text-[10px] uppercase tracking-[0.2em] font-black text-sky-400/80 leading-none">
-                  GUIDE
+                  {t("nodes.prompts.guide", "GUIDE")}
                 </span>
                 <p className="text-[11px] font-medium leading-tight text-white/90">
                   {data.starterHint}
@@ -129,7 +129,10 @@ const ComponentNode = ({ id, data, selected }) => {
           </span>
           {showDetails && (
             <span className="text-[10px] font-bold uppercase tracking-wider text-white/70 drop-shadow-sm">
-              {subNodeCount} NODES INSIDE
+              {t("nodes.labels.nodes_inside", {
+                count: subNodeCount,
+                defaultValue: "{{count}} NODES INSIDE",
+              })}
             </span>
           )}
         </div>

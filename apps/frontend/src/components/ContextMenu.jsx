@@ -19,6 +19,7 @@ import {
   EyeOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 import { NODE_CATEGORIES } from "../config/nodeConstants";
 
 // ==========================================
@@ -183,12 +184,14 @@ const SmartMenuPanel = ({
 
 // Simplified Category Item handling overflow internally
 const CategoryItem = ({
+  catKey,
   category,
   actions,
   parentMouseEnter,
   parentMouseLeave,
   onClose,
 }) => {
+  const { t } = useTranslation();
   const [isHovered, setIsHovered] = useState(false);
   const [isLocked, setIsLocked] = useState(false); // CLICK-TO-LOCK State
   const [triggerRect, setTriggerRect] = useState(null);
@@ -262,7 +265,7 @@ const CategoryItem = ({
     >
       <ContextMenuItem
         icon={category.icon}
-        label={category.label}
+        label={t("nodes.categories." + catKey, category.label)}
         hasSubmenu
         isActive={isOpen}
       />
@@ -277,9 +280,12 @@ const CategoryItem = ({
             category.nodes.map((nodeType) => (
               <ContextMenuItem
                 key={nodeType}
-                label={nodeType
-                  .replace(/_/g, " ")
-                  .replace(/\b\w/g, (c) => c.toUpperCase())}
+                label={t(
+                  "nodes.labels." + nodeType,
+                  nodeType
+                    .replace(/_/g, " ")
+                    .replace(/\b\w/g, (c) => c.toUpperCase()),
+                )}
                 icon={category.icon} // REUSE CATEGORY ICON FOR NODES
                 onClick={() => {
                   actions.createNode(nodeType);
@@ -289,7 +295,7 @@ const CategoryItem = ({
             ))
           ) : (
             <div className="px-3 py-2 text-xs text-zinc-500 italic">
-              No nodes available
+              {t("context_menu.no_nodes_found", "No nodes found")}
             </div>
           )}
         </SmartMenuPanel>
@@ -306,6 +312,7 @@ const SubMenu = ({
   onMouseLeave,
   onClose,
 }) => {
+  const { t } = useTranslation();
   const RELEVANT_CATEGORIES = [
     "browser_management",
     "user_simulation",
@@ -326,7 +333,7 @@ const SubMenu = ({
       onMouseLeave={onMouseLeave}
     >
       <div className="px-2 py-1 text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">
-        Node Categories
+        {t("context_menu.node_categories", "Node Categories")}
       </div>
 
       {RELEVANT_CATEGORIES.map((catKey) => {
@@ -335,6 +342,7 @@ const SubMenu = ({
         return (
           <CategoryItem
             key={catKey}
+            catKey={catKey}
             category={category}
             actions={actions}
             parentMouseEnter={onMouseEnter} // Pass down keep-alive
@@ -349,6 +357,7 @@ const SubMenu = ({
 
 // Helper Component for the Add Node Trigger to manage its own hover state and refs
 const AddNodeTrigger = ({ actions, onClose }) => {
+  const { t } = useTranslation();
   const [isHovered, setIsHovered] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [triggerRect, setTriggerRect] = useState(null); // Store rect in state for stability
@@ -394,7 +403,7 @@ const AddNodeTrigger = ({ actions, onClose }) => {
     >
       <ContextMenuItem
         icon={PlusCircle}
-        label="Add Node"
+        label={t("context_menu.add_node", "Add Node")}
         hasSubmenu
         isActive={isOpen}
         iconClassName="text-blue-400"
@@ -429,6 +438,7 @@ const ContextMenu = ({
   const menuRef = useRef(null);
   const searchRef = useRef(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const { t } = useTranslation();
 
   // Focus search on mount if canvas type
   useEffect(() => {
@@ -507,7 +517,7 @@ const ContextMenu = ({
     return map[colorName] || "text-zinc-400";
   };
 
-  return (
+  return createPortal(
     <div
       ref={menuRef}
       role="menu"
@@ -524,7 +534,10 @@ const ContextMenu = ({
           <input
             ref={searchRef}
             type="text"
-            placeholder="Search node..."
+            placeholder={t(
+              "context_menu.search_node_placeholder",
+              "Search node...",
+            )}
             aria-label="Search node type"
             className="w-full bg-[var(--bg-canvas)] border border-[var(--border-ui)] rounded px-2 py-1 text-xs text-[var(--text-main)] focus:outline-none focus:border-indigo-500 placeholder:text-[var(--text-muted)] transition-all duration-300"
             value={searchTerm}
@@ -541,7 +554,7 @@ const ContextMenu = ({
             filteredNodes.map((item) => (
               <ContextMenuItem
                 key={item.type}
-                label={item.label}
+                label={t("nodes.labels." + item.type, item.label)}
                 icon={item.category.icon}
                 // Apply Category Color Logic
                 className={cn("!py-2")} // slightly taller
@@ -552,7 +565,7 @@ const ContextMenu = ({
             ))
           ) : (
             <div className="px-2 py-2 text-xs text-[var(--text-muted)] text-center italic">
-              No nodes found
+              {t("context_menu.no_nodes_found", "No nodes found")}
             </div>
           )}
         </div>
@@ -563,14 +576,14 @@ const ContextMenu = ({
           {type === "canvas" && recentNodes.length > 0 && (
             <>
               <div className="px-2 py-1 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest opacity-70">
-                Quick Access
+                {t("context_menu.quick_access", "Quick Access")}
               </div>
               {recentNodes.map((nodeType) => {
                 const config = getNodeConfig(nodeType);
                 return (
                   <ContextMenuItem
                     key={nodeType}
-                    label={config.label}
+                    label={t("nodes.labels." + nodeType, config.label)}
                     icon={config.icon}
                     onClick={() => actions.createNode(nodeType)}
                     iconClassName={getColorClass(config.color)}
@@ -586,7 +599,8 @@ const ContextMenu = ({
             <>
               <div className="px-2 py-1.5 text-xs font-medium text-[var(--text-muted)] truncate flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                {data?.data?.label || "Selected Node"}
+                {data?.data?.label ||
+                  t("context_menu.selected_node", "Selected Node")}
               </div>
               <Divider />
               {/* UNGROUP OPTION FOR COMPONENTS */}
@@ -597,13 +611,13 @@ const ContextMenu = ({
                 <>
                   <ContextMenuItem
                     icon={MousePointer2}
-                    label="Dive In"
+                    label={t("context_menu.dive_in", "Dive In")}
                     onClick={() => actions.diveIn(data.id)}
                     iconClassName="text-indigo-400"
                   />
                   <ContextMenuItem
                     icon={Ungroup}
-                    label="Ungroup"
+                    label={t("context_menu.ungroup", "Ungroup")}
                     shortcut="^⇧G"
                     onClick={() => actions.ungroup?.()}
                   />
@@ -612,59 +626,69 @@ const ContextMenu = ({
               )}
               <ContextMenuItem
                 icon={Play}
-                label="Run Node"
+                label={t("context_menu.run_node", "Run Node")}
                 onClick={() => actions.runNode(data.id)}
               />
               <ContextMenuItem
                 icon={ChevronRight}
-                label="Siguiente nodo"
+                label={t("context_menu.next_node", "Next Node")}
                 onClick={() => actions.selectNext(data.id)}
               />
               <ContextMenuItem
                 icon={ChevronRight}
-                label="Nodo previo"
+                label={t("context_menu.prev_node", "Previous Node")}
                 className="rotate-180"
                 onClick={() => actions.selectPrev(data.id)}
               />
               <Divider />
               <ContextMenuItem
                 icon={Play}
-                label="Execute from here"
+                label={t("context_menu.execute_from_here", "Execute from here")}
                 onClick={() => {}}
                 disabled
               />
               <ContextMenuItem
                 icon={EyeOff}
-                label={data?.data?.disabled ? "Enable Node" : "Disable Node"}
+                label={
+                  data?.data?.disabled
+                    ? t("context_menu.enable_node", "Enable Node")
+                    : t("context_menu.disable_node", "Disable Node")
+                }
                 onClick={() => actions.toggleDisabled(data.id)}
               />
               <ContextMenuItem
                 icon={EyeOff}
-                label="Enable Downstream Segment"
+                label={t(
+                  "context_menu.enable_downstream",
+                  "Enable Downstream Segment",
+                )}
                 onClick={() => actions.setSegmentDisabled(data.id, false)}
               />
               <ContextMenuItem
                 icon={EyeOff}
-                label="Disable Downstream Segment"
+                label={t(
+                  "context_menu.disable_downstream",
+                  "Disable Downstream Segment",
+                )}
                 onClick={() => actions.setSegmentDisabled(data.id, true)}
               />
               <Divider />
               <ContextMenuItem
                 icon={Copy}
-                label="Copy"
+                label={t("context_menu.copy", "Copy")}
                 shortcut="⌘C"
                 onClick={actions.copy}
               />
               <ContextMenuItem
                 icon={CopyPlus}
-                label="Duplicate"
+                label={t("context_menu.duplicate", "Duplicate")}
                 shortcut="⌘D"
                 onClick={actions.duplicate}
               />
               <Divider />
               <ContextMenuItem
                 icon={Trash2}
-                label="Delete"
+                label={t("context_menu.delete", "Delete")}
                 shortcut="Del"
                 danger
                 onClick={actions.delete}
@@ -680,19 +704,19 @@ const ContextMenu = ({
 
               <ContextMenuItem
                 icon={LayoutGrid}
-                label="Clean Layout"
+                label={t("context_menu.clean_layout", "Clean Layout")}
                 onClick={actions.cleanLayout}
               />
               <Divider />
               <ContextMenuItem
                 icon={MousePointer2}
-                label="Select All"
+                label={t("context_menu.select_all", "Select All")}
                 shortcut="⌘A"
                 onClick={actions.selectAll}
               />
               <ContextMenuItem
                 icon={Copy}
-                label="Paste"
+                label={t("context_menu.paste", "Paste")}
                 shortcut="⌘V"
                 onClick={actions.paste}
                 disabled={!actions.canPaste}
@@ -700,14 +724,14 @@ const ContextMenu = ({
               <Divider />
               <ContextMenuItem
                 icon={Undo2}
-                label="Undo"
+                label={t("context_menu.undo", "Undo")}
                 shortcut="⌘Z"
                 onClick={actions.undo}
                 disabled={!actions.canUndo}
               />
               <ContextMenuItem
                 icon={Redo2}
-                label="Redo"
+                label={t("context_menu.redo", "Redo")}
                 shortcut="⌘Y"
                 onClick={actions.redo}
                 disabled={!actions.canRedo}
@@ -719,41 +743,47 @@ const ContextMenu = ({
           {type === "selection" && (
             <>
               <div className="px-2 py-1 text-xs text-zinc-500">
-                {data?.nodes?.length} items selected
+                {t("context_menu.items_selected", {
+                  count: data?.nodes?.length,
+                  defaultValue: "{{count}} items selected",
+                })}
               </div>
               <Divider />
               {/* Ungroup if selection has components (simplified: just show if action available) */}
               <ContextMenuItem
                 icon={Box}
-                label="Group Selection"
+                label={t("context_menu.group_selection", "Group Selection")}
                 shortcut="^G"
                 onClick={actions.group}
               />
               <ContextMenuItem
                 icon={Repeat}
-                label="Iterate Selection"
+                label={t("context_menu.iterate_selection", "Iterate Selection")}
                 onClick={actions.loopSelection}
               />
               <ContextMenuItem
                 icon={EyeOff}
-                label="Disable / Enable Selection"
+                label={t(
+                  "context_menu.toggle_selection",
+                  "Disable / Enable Selection",
+                )}
                 onClick={() => actions.toggleDisabled()}
               />
               <ContextMenuItem
                 icon={Ungroup}
-                label="Ungroup"
+                label={t("context_menu.ungroup", "Ungroup")}
                 shortcut="^⇧G"
                 onClick={() => actions.ungroup?.()}
               />
               <ContextMenuItem
                 icon={Copy}
-                label="Copy"
+                label={t("context_menu.copy", "Copy")}
                 shortcut="⌘C"
                 onClick={actions.copy}
               />
               <ContextMenuItem
                 icon={Trash2}
-                label="Delete"
+                label={t("context_menu.delete", "Delete")}
                 shortcut="Del"
                 danger
                 onClick={actions.delete}
@@ -765,7 +795,7 @@ const ContextMenu = ({
           {type === "edge" && (
             <ContextMenuItem
               icon={Trash2}
-              label="Delete Connection"
+              label={t("context_menu.delete_connection", "Delete Connection")}
               shortcut="Del"
               danger
               onClick={actions.delete}
@@ -773,7 +803,8 @@ const ContextMenu = ({
           )}
         </>
       )}
-    </div>
+    </div>,
+    document.body,
   );
 };
 

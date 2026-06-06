@@ -28,11 +28,12 @@ export function useFlowSync({
   const [isStarterTemplate, setIsStarterTemplate] = useState(false);
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
   const [viewStack, setViewStack] = useState([]);
+  const currentProjectId = currentProject?.id;
   const lastLoadedFlowId = useRef(null);
 
   const saveFlow = useCallback(
     async (silent = false) => {
-      if (!currentProject || !currentFlowId) return;
+      if (!currentProjectId || !currentFlowId) return;
       const flowData = {
         nodes: nodesRef.current,
         edges: edgesRef.current,
@@ -42,7 +43,7 @@ export function useFlowSync({
 
       try {
         await projectManager.updateFlow(
-          currentProject.id,
+          currentProjectId,
           currentFlowId,
           flowData,
         );
@@ -55,7 +56,7 @@ export function useFlowSync({
       }
     },
     [
-      currentProject,
+      currentProjectId,
       currentFlowId,
       getViewport,
       setApiStatus,
@@ -85,11 +86,11 @@ export function useFlowSync({
   ]);
 
   const loadFlowData = useCallback(async () => {
-    if (!currentProject || !currentFlowId) return;
+    if (!currentProjectId || !currentFlowId) return;
     try {
       lastLoadedFlowId.current = currentFlowId;
       const flow = await projectManager.getFlow(
-        currentProject.id,
+        currentProjectId,
         currentFlowId,
       );
       if (flow) {
@@ -106,7 +107,13 @@ export function useFlowSync({
     } catch (err) {
       logger.error("Load failed", err);
     }
-  }, [currentProject, currentFlowId, setNodes, setEdges, setHasUnsavedChanges]);
+  }, [
+    currentProjectId,
+    currentFlowId,
+    setNodes,
+    setEdges,
+    setHasUnsavedChanges,
+  ]);
 
   useEffect(() => {
     loadFlowData();

@@ -9,15 +9,77 @@ import { llmFactory } from './LLMFactory.js';
  */
 const repairJson = (str) => {
     if (!str) return str;
+    let fixed = str.trim();
+
+    // Remove markdown code blocks if present (e.g. ```json ... ```)
+    const markdownMatch = fixed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
+    if (markdownMatch) {
+        fixed = markdownMatch[1].trim();
+    }
+
     try {
         // 1. Eliminar comas flotantes antes de cierres de llaves o corchetes
-        let fixed = str.replace(/,\s*([\]}])/g, '$1');
+        fixed = fixed.replace(/,\s*([\]}])/g, '$1');
         // 2. Eliminar comentarios de una sola línea
         fixed = fixed.replace(/\/\/.*$/gm, '');
         return fixed;
     } catch (e) {
-        return str;
+        return fixed;
     }
+};
+
+/**
+ * Robustly parses tool calls inside XML-like tags <tool_call name="...">JSON</tool_call>,
+ * even if the closing tag is missing or the content is malformed.
+ */
+const parseToolCalls = (text) => {
+    if (!text) return [];
+    const toolCalls = [];
+    const regex = /<tool_call([^>]*)>/g;
+    let match;
+    const matches = [];
+    while ((match = regex.exec(text)) !== null) {
+        matches.push({
+            index: match.index,
+            attributes: match[1],
+            contentStart: regex.lastIndex,
+        });
+    }
+
+    for (let i = 0; i < matches.length; i++) {
+        const current = matches[i];
+        const next = matches[i + 1];
+
+        let contentEnd = text.length;
+        if (next) {
+            contentEnd = next.index;
+        }
+
+        let chunk = text.slice(current.contentStart, contentEnd);
+
+        // If there is a closing tag, cut the chunk there
+        const closeTagIndex = chunk.indexOf('</tool_call>');
+        if (closeTagIndex !== -1) {
+            chunk = chunk.slice(0, closeTagIndex);
+        }
+
+        // Try to extract name from attributes
+        let toolName = null;
+        const nameMatch = current.attributes.match(/name=["']([^"']+)["']/);
+        if (nameMatch) {
+            toolName = nameMatch[1];
+        }
+
+        toolCalls.push({
+            name: toolName,
+            content: chunk.trim(),
+            raw: text.slice(
+                current.index,
+                current.contentStart + chunk.length + (closeTagIndex !== -1 ? 12 : 0),
+            ),
+        });
+    }
+    return toolCalls;
 };
 
 /**
@@ -241,20 +303,16 @@ IMPORTANT DIRECTIONS:
                     break; // No fallback needed for cloud providers
                 }
 
-                const toolCallRegex = /<tool_call([^>]*)>([\s\S]*?)<\/tool_call>/g;
-                let match;
+                const parsedCalls = parseToolCalls(text);
                 let hasParseError = false;
                 let errorDetails = '';
 
-                while ((match = toolCallRegex.exec(text)) !== null) {
-                    let toolName = null;
-                    let argsString = match[2].trim();
+                for (const call of parsedCalls) {
+                    let toolName = call.name;
+                    let argsString = call.content;
 
                     // Try to extract name from attributes
-                    const nameMatch = match[1].match(/name=["']([^"']+)["']/);
-                    if (nameMatch) {
-                        toolName = nameMatch[1];
-                    } else {
+                    if (!toolName) {
                         // Fallback: Check if content starts with name="tool_name"
                         const contentNameMatch = argsString.match(
                             /^name=["']([^"']+)["']\s*(\{[\s\S]*\})/,
@@ -267,7 +325,7 @@ IMPORTANT DIRECTIONS:
 
                     if (!toolName) {
                         console.warn(
-                            `[AIService] Failed to extract tool name from match: ${match[0]}`,
+                            `[AIService] Failed to extract tool name from match: ${call.raw}`,
                         );
                         continue;
                     }
@@ -282,6 +340,15 @@ IMPORTANT DIRECTIONS:
                             );
                             const repaired = repairJson(argsString);
                             parsedArgs = JSON.parse(repaired); // Will throw to outer catch if fails
+                        }
+
+                        // Unwrap array if LLM wrapped the tool argument in a list: [{...}]
+                        if (
+                            Array.isArray(parsedArgs) &&
+                            parsedArgs.length === 1 &&
+                            typeof parsedArgs[0] === 'object'
+                        ) {
+                            parsedArgs = parsedArgs[0];
                         }
 
                         if (toolName === 'inject_nodes' && parsedArgs && parsedArgs.nodes) {
@@ -345,8 +412,11 @@ IMPORTANT DIRECTIONS:
 
             // Strip tags from text before returning to keep frontend output clean
             if (activeProvider === 'ollama') {
-                const stripRegex = /<tool_call([^>]*)>([\s\S]*?)<\/tool_call>/g;
-                text = text.replace(stripRegex, '').trim();
+                const parsedCalls = parseToolCalls(text);
+                for (const call of parsedCalls) {
+                    text = text.replace(call.raw, '');
+                }
+                text = text.trim();
             }
 
             return { text, toolCalls, toolResults, finishReason };
@@ -1073,3 +1143,4 @@ If no element is found, return {"correctedSelector": null, "confidence": 0, "rea
 }
 
 export default new AIService();
+export { repairJson, parseToolCalls };

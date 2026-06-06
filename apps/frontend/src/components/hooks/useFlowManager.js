@@ -20,7 +20,7 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
   const { getViewport, fitView } = useReactFlow();
 
   // 1. STATE MANAGEMENT (Nodes, Edges, Selection, History)
-  const state = useFlowState();
+  const state = useFlowState({ currentProject, currentFlowId });
 
   // 2. EXECUTION ENGINE (Execute Step, Flow, Session)
   const execution = useFlowExecution({
@@ -58,6 +58,9 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
     migrateNodes: state.migrateNodes,
   });
 
+  // Connect saveFlow persistence callback to state hook
+  state.setSaveFlow(sync.saveFlow);
+
   // Backward compatibility mappings
   return {
     ...state,
@@ -81,8 +84,22 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
     onConnect: state.onConnect,
     onNodeClick: state.onNodeClick,
     migrateNodes: state.migrateNodes,
-    loopNodes: state.loopNodes,
-    groupNodes: state.groupNodes,
+    loopNodes: (project, flowId, qc, toastInstance, tInstance) =>
+      state.loopNodes(
+        project || currentProject,
+        flowId || currentFlowId,
+        qc,
+        toastInstance,
+        tInstance,
+      ),
+    groupNodes: (project, flowId, qc, toastInstance, tInstance) =>
+      state.groupNodes(
+        project || currentProject,
+        flowId || currentFlowId,
+        qc,
+        toastInstance,
+        tInstance,
+      ),
     ungroupNodes: state.ungroupNodes,
     updateNodeConfiguration: state.updateNodeConfiguration,
     loadStarterTemplate: sync.loadStarterTemplate,

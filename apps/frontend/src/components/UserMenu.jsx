@@ -131,6 +131,7 @@ export default function UserMenu({
           languages={[
             { label: "English", value: "en" },
             { label: "Español", value: "es" },
+            { label: "Français", value: "fr" },
           ]}
         />
       </DropdownMenuContent>

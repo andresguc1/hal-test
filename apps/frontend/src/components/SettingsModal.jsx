@@ -201,10 +201,11 @@ export default function SettingsModal({
                   <Label className="text-base text-slate-300">
                     {t("settings.general.language")}
                   </Label>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-3 gap-4">
                     {[
                       { id: "en", label: "English", flag: "🇺🇸" },
                       { id: "es", label: "Español", flag: "🇪🇸" },
+                      { id: "fr", label: "Français", flag: "🇫🇷" },
                     ].map((lang) => {
                       const isSelected = i18n.language.startsWith(lang.id);
                       return (

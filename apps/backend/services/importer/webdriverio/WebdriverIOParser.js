@@ -15,7 +15,8 @@ export class WebdriverIOParser extends AbstractParser {
 
         const tests = [];
 
-        traverse.default(ast, {
+        const traverseFn = typeof traverse === 'function' ? traverse : traverse.default || traverse;
+        traverseFn(ast, {
             // Detectar bloques describe/it (Mocha/Jasmine)
             CallExpression(path) {
                 const { node } = path;

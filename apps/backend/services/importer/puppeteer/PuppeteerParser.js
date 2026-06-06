@@ -21,7 +21,8 @@ export class PuppeteerParser extends AbstractParser {
 
         const self = this;
 
-        traverse.default(ast, {
+        const traverseFn = typeof traverse === 'function' ? traverse : traverse.default || traverse;
+        traverseFn(ast, {
             // 1. Detectar IIFE (Arrow o Function Expression)
             ArrowFunctionExpression(path) {
                 if (path.parent.type === 'CallExpression' && path.parent.callee === path.node) {

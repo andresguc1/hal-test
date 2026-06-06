@@ -853,69 +853,202 @@ function Dashboard() {
     setIsImportDialogOpen(false);
   }, []);
 
+  const convertActionsToFlowData = useCallback((actions) => {
+    const nodes = [];
+    const edges = [];
+
+    actions.forEach((actionObj, index) => {
+      const nodeId = `imported_${actionObj.action}_${index}_${uuidv4().slice(0, 8)}`;
+      const { action, ...config } = actionObj;
+
+      nodes.push({
+        id: nodeId,
+        type: action,
+        position: { x: 100 + index * 250, y: 150 },
+        data: {
+          type: action,
+          label: action
+            .replace(/_/g, " ")
+            .replace(/\b\w/g, (c) => c.toUpperCase()),
+          configuration: config,
+          state: NODE_STATES.DEFAULT,
+        },
+      });
+
+      if (index > 0) {
+        edges.push({
+          id: `edge_${nodes[index - 1].id}_to_${nodeId}`,
+          source: nodes[index - 1].id,
+          target: nodeId,
+          animated: true,
+          type: "custom",
+        });
+      }
+    });
+
+    return { nodes, edges };
+  }, []);
+
   const handleImport = useCallback(
     async (importData) => {
       try {
         if (!importData) return;
 
-        // Handle File Import (Client-Side)
+        // Handle File Import (Client-Side Backup or Single Code File)
         if (importData.mode === "file" && importData.content) {
-          const flowData = JSON.parse(importData.content);
+          let flowData = null;
+          try {
+            flowData = JSON.parse(importData.content);
+          } catch {
+            console.log(
+              "[DEBUG] File content is not JSON, parsing as test code script...",
+            );
+          }
 
-          // VERSION CHECK
-          if (flowData.meta && flowData.meta.version) {
-            const version = flowData.meta.version;
-            if (version.startsWith("1.")) {
-              toast("Importing legacy flow (v1.x)", { icon: "ℹ️" });
+          if (flowData && (flowData.nodes || flowData.edges)) {
+            // VERSION CHECK
+            if (flowData.meta && flowData.meta.version) {
+              const version = flowData.meta.version;
+              if (version.startsWith("1.")) {
+                toast("Importing legacy flow (v1.x)", { icon: "ℹ️" });
+              }
+            }
+
+            // ORPHAN DETECTION (Pre-checks)
+            const orphans = detectOrphans(
+              flowData.nodes || [],
+              flowData.edges || [],
+            );
+
+            // 1. MIGRATE PORTABLE COMPONENTS
+            const processedNodes = await migrateNodes(
+              flowData.nodes || [],
+              currentProject?.id,
+            );
+
+            // 2. Restore state
+            setNodes(processedNodes);
+            setEdges(flowData.edges || []);
+
+            if (flowData.viewport) {
+              setViewport(flowData.viewport);
+            } else {
+              setTimeout(() => fitView({ duration: 800 }), 100);
+            }
+
+            if (orphans.length > 0) {
+              toast.warning(
+                `Imported with warnings: ${orphans.length} orphan nodes detected.`,
+              );
+            } else {
+              toast.success(`✓ ${t("common.flow_import_success")}`);
+            }
+
+            setIsImportDialogOpen(false);
+          } else {
+            // Code script conversion path
+            const convertResult = await api.post("/import/convert", {
+              content: importData.content,
+              framework: importData.framework || "playwright",
+              filename: importData.filename,
+            });
+
+            if (
+              convertResult.success &&
+              convertResult.flows &&
+              convertResult.flows.length > 0
+            ) {
+              const importedFlow = convertResult.flows[0];
+              const { nodes: flowNodes, edges: flowEdges } =
+                convertActionsToFlowData(importedFlow.flow || []);
+
+              const flowName =
+                importedFlow.meta?.name ||
+                importData.filename?.replace(/\.[^/.]+$/, "") ||
+                `Imported ${Date.now()}`;
+              const projectId = currentProject?.id;
+
+              if (!projectId) {
+                toast.error(
+                  t("common.no_active_project", "No active project."),
+                );
+                return;
+              }
+
+              const newFlow = await createFlow(flowName, projectId, {
+                nodes: flowNodes,
+                edges: flowEdges,
+              });
+
+              const newFlowId = newFlow.id || newFlow.flow?.id;
+              if (newFlowId) {
+                switchFlow(newFlowId);
+              }
+              toast.success(
+                t("common.flow_import_success", "Flow imported successfully!"),
+              );
+              setIsImportDialogOpen(false);
+            } else {
+              throw new Error(
+                convertResult.error ||
+                  "No valid flows could be converted from the file.",
+              );
             }
           }
-
-          // ORPHAN DETECTION (Pre-checks)
-          const orphans = detectOrphans(
-            flowData.nodes || [],
-            flowData.edges || [],
-          );
-
-          // 1. MIGRATE PORTABLE COMPONENTS
-          // If the flow contains components with embedded subFlow data, migrate them now
-          const processedNodes = await migrateNodes(
-            flowData.nodes || [],
-            currentProject?.id,
-          );
-
-          // 2. Restore state
-          setNodes(processedNodes);
-          setEdges(flowData.edges || []);
-
-          if (flowData.viewport) {
-            setViewport(flowData.viewport);
-          } else {
-            setTimeout(() => fitView({ duration: 800 }), 100);
-          }
-
-          if (orphans.length > 0) {
-            toast.warning(
-              `Imported with warnings: ${orphans.length} orphan nodes detected.`,
-            );
-          } else {
-            toast.success(`✓ ${t("common.flow_import_success")}`);
-          }
-
-          setIsImportDialogOpen(false);
-          // Reset unsaved changes since we just loaded a fresh flow?
-          // Actually, loading a flow IS a change unless we consider it "saved" immediately.
-          // Usually, opening a file means it is saved content.
-          // useFlowManager handles this in setNodes? No, setNodes sets it to true.
-          // We might want to force reset it only if it's a full replace.
-          // But sticking to default behavior (dirty) is safer unless we sync with backend immediately.
-          // For now, let it be dirty until user hits Save (which persists to backend).
         }
         // Handle Directory Import (Server-Side Result)
         else if (importData.result) {
-          // Logic for directory import result if needed
+          const result = importData.result;
+          const projectId = currentProject?.id;
+          if (!projectId) {
+            toast.error(t("common.no_active_project", "No active project."));
+            return;
+          }
+
+          if (!result.flows || result.flows.length === 0) {
+            toast.warning(
+              t(
+                "dialogs.import.no_flows_converted",
+                "No flows could be imported from the directory.",
+              ),
+            );
+            setIsImportDialogOpen(false);
+            return;
+          }
+
+          let successCount = 0;
+          let firstFlowId = null;
+
+          for (const importedFlow of result.flows) {
+            try {
+              const flowName =
+                importedFlow.meta?.name || `Imported Flow ${Date.now()}`;
+              const { nodes: flowNodes, edges: flowEdges } =
+                convertActionsToFlowData(importedFlow.flow || []);
+
+              const newFlow = await createFlow(flowName, projectId, {
+                nodes: flowNodes,
+                edges: flowEdges,
+              });
+
+              const newFlowId = newFlow.id || newFlow.flow?.id;
+              if (newFlowId && !firstFlowId) {
+                firstFlowId = newFlowId;
+              }
+              successCount++;
+            } catch (err) {
+              console.error("Failed to save imported flow:", err);
+            }
+          }
+
           toast.success(
-            `✓ ${importData.result.stats?.successfulConversions || 0} flows imported.`,
+            `✓ Successfully imported and persisted ${successCount} flows.`,
           );
+
+          if (firstFlowId) {
+            switchFlow(firstFlowId);
+          }
+
           setIsImportDialogOpen(false);
         }
       } catch (error) {
@@ -933,6 +1066,9 @@ function Dashboard() {
       t,
       detectOrphans,
       migrateNodes,
+      createFlow,
+      switchFlow,
+      convertActionsToFlowData,
     ],
   );
 
@@ -1766,6 +1902,7 @@ function Dashboard() {
           onClose={handleExportDialogClose}
           nodes={nodes}
           edges={edges}
+          projectId={currentProject?.id}
         />
 
         {/* FLOATING COMMAND CENTER (Footer) - Positioned Absolutely */}

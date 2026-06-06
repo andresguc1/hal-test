@@ -18,7 +18,8 @@ export class TestCafeParser extends AbstractParser {
 
         console.log(currentFixtureName);
 
-        traverse.default(ast, {
+        const traverseFn = typeof traverse === 'function' ? traverse : traverse.default || traverse;
+        traverseFn(ast, {
             // Detectar fixture `Name` .page `url`
             TaggedTemplateExpression(path) {
                 const { node } = path;

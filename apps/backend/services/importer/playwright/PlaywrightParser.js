@@ -15,8 +15,8 @@ export class PlaywrightParser extends AbstractParser {
 
         const tests = [];
 
-        // Traverse el AST para encontrar bloques 'test(...)'
-        traverse.default(ast, {
+        const traverseFn = typeof traverse === 'function' ? traverse : traverse.default || traverse;
+        traverseFn(ast, {
             CallExpression(path) {
                 const { node } = path;
 

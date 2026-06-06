@@ -34,10 +34,16 @@ const LoopNode = ({ id, data, selected }) => {
   const array = config.array || "";
 
   const getSubLabel = () => {
-    if (mode === "count") return `${iterations} iterations`;
-    if (mode === "array" || mode === "forEach") return `Array: ${array}`;
-    if (mode === "while") return `While: ${condition}`;
-    return "Sub-flow Loop";
+    if (mode === "count") {
+      return `${iterations} ${t("nodes.labels.iterations", { count: iterations, defaultValue: "iterations" })}`;
+    }
+    if (mode === "array" || mode === "forEach") {
+      return `${t("nodes.labels.array", "Array")}: ${array}`;
+    }
+    if (mode === "while") {
+      return `${t("nodes.labels.while", "While")}: ${condition}`;
+    }
+    return t("nodes.labels.sub_flow_loop", "Sub-flow Loop");
   };
 
   const Icon =
@@ -107,7 +113,10 @@ const LoopNode = ({ id, data, selected }) => {
                 </span>
               </div>
               <span className="text-[9px] font-black uppercase tracking-wider text-white/60 drop-shadow-sm">
-                {data.nodeCount || 0} NODES INSIDE
+                {t("nodes.labels.nodes_inside", {
+                  count: data.nodeCount || 0,
+                  defaultValue: "{{count}} NODES INSIDE",
+                })}
               </span>
             </div>
           )}
@@ -119,7 +128,9 @@ const LoopNode = ({ id, data, selected }) => {
         <div className="flex items-center justify-between text-white/50 text-[10px] gap-3">
           <span className="italic flex items-center gap-1 truncate min-w-0">
             <MoreHorizontal size={12} className="shrink-0" />
-            <span className="truncate">Double-click to edit</span>
+            <span className="truncate">
+              {t("nodes.prompts.double_click_edit", "Double-click to edit")}
+            </span>
           </span>
           <button
             onClick={() => data?.onEnterSubFlow?.(id)}
