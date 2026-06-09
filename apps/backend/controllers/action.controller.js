@@ -26,6 +26,7 @@ import { Flow, Node, Edge, HealingLog, Run } from '../database/init.js';
 import { executionLogger } from '../services/ExecutionLogger.js';
 import { STORAGE_RUNS_DIR, STORAGE_DIR } from '../config/paths.js';
 import { isSafePath } from '../utils/security.js';
+import { auditService } from '../services/AuditService.js';
 
 // Create Variable Manager instance
 // Use shared Variable Manager instance
@@ -473,6 +474,8 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
     const runId = req.body.runId; // Extract runId if present
     const nodeId = req.body.nodeId; // Extract nodeId if present
     const useExperienceVault = req.headers?.['x-hal-experience-vault'] !== 'false';
+    const enableFineTuning = req.headers?.['x-hal-fine-tuning'] === 'true';
+    let simplifiedDOMBefore = null;
 
     // --- VARIABLE RESOLUTION ---
     // Deeply interpolate variables in the request body before any logic
@@ -579,6 +582,22 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
                 context,
             } = await getActivePage(req, opts.browserId));
             // browser = context.browser(); // Unused
+
+            if (page && !page.isClosed() && enableFineTuning) {
+                try {
+                    const { default: selectorHealer } =
+                        await import('../services/SelectorHealer.js');
+                    simplifiedDOMBefore = await page.evaluate(
+                        selectorHealer.getCompressionScript(),
+                        opts.selector,
+                    );
+                } catch (domErr) {
+                    console.warn(
+                        '[AuditService] Failed to capture DOM before action:',
+                        domErr.message,
+                    );
+                }
+            }
         } else if (opts.browserId) {
             const validation = validateBrowser(req, opts.browserId);
             if (!validation.error) {
@@ -657,6 +676,28 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
             );
         }
         // ------------------------------------
+
+        // --- JSONL AUDIT LOGGING ---
+        if (enableFineTuning) {
+            try {
+                await auditService.logStep({
+                    input: opts,
+                    domBefore: simplifiedDOMBefore,
+                    action: actionName,
+                    selector: opts.selector || null,
+                    assertionResult: {
+                        success: true,
+                        status: 'success',
+                        message: finalMessage,
+                        data: result.data || result.traceDetails || null,
+                    },
+                    runId,
+                    nodeId,
+                });
+            } catch (auditErr) {
+                console.error('[AuditService] Failed to write audit log:', auditErr.message);
+            }
+        }
 
         // 4. Respond
         if (nodeId) {
@@ -1008,6 +1049,33 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
                                     aiDiagnosis: diagnosis.reasoning,
                                 },
                             );
+                        }
+
+                        // --- JSONL AUDIT LOGGING (HEALED SUCCESS) ---
+                        if (enableFineTuning) {
+                            try {
+                                await auditService.logStep({
+                                    input: opts,
+                                    domBefore: simplifiedDOMBefore,
+                                    action: actionName,
+                                    selector: diagnosis.correctedSelector,
+                                    assertionResult: {
+                                        success: true,
+                                        status: 'healed',
+                                        message: `Healed: ${retryResult.message}`,
+                                        source: diagnosis.source,
+                                        reasoning: diagnosis.reasoning,
+                                        data: retryResult.data || retryResult,
+                                    },
+                                    runId,
+                                    nodeId: opts.nodeId,
+                                });
+                            } catch (auditErr) {
+                                console.error(
+                                    '[AuditService] Failed to write healed audit log:',
+                                    auditErr.message,
+                                );
+                            }
                         }
 
                         if (opts.nodeId) {
@@ -5724,6 +5792,33 @@ export const validateSemanticAction = async (req, res) => {
             type: 'success',
             nodeId,
         });
+
+        // --- JSONL AUDIT LOGGING ---
+        const enableFineTuningVal = req.headers?.['x-hal-fine-tuning'] === 'true';
+        if (enableFineTuningVal) {
+            try {
+                await auditService.logStep({
+                    input: req.body,
+                    domBefore: autoContext || null,
+                    action: 'validate_semantic',
+                    selector: null,
+                    assertionResult: {
+                        success: true,
+                        status: 'success',
+                        isValid: result.isValid,
+                        isMatch,
+                        reasoning: result.reasoning,
+                    },
+                    runId: req.body.runId,
+                    nodeId,
+                });
+            } catch (auditErr) {
+                console.error(
+                    '[AuditService] Failed to write semantic audit log:',
+                    auditErr.message,
+                );
+            }
+        }
 
         return res.status(200).json({
             success: true,

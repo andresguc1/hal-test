@@ -93,6 +93,9 @@ const getHeaders = async () => {
         headers["x-hal-experience-vault"] =
           aiConfig.useExperienceVault.toString();
       }
+      if (aiConfig.enableFineTuning !== undefined) {
+        headers["x-hal-fine-tuning"] = aiConfig.enableFineTuning.toString();
+      }
     } catch (e) {
       console.error("Error parsing hal_ai_config", e);
     }

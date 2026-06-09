@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Globe,
   Thermometer,
@@ -9,6 +9,8 @@ import {
   Server,
   AlertTriangle,
   Key,
+  Database,
+  Play,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +25,7 @@ import {
 import { useToast } from "@/hooks/useToast";
 import { useTranslation } from "react-i18next";
 import { api } from "../../utils/api";
+import { FineTuningDashboardModal } from "./FineTuningDashboardModal";
 
 /**
  * AISettingsPanel
@@ -34,6 +37,26 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
   const toast = useToast();
   const [isTesting, setIsTesting] = useState(false);
   const [healthResult, setHealthResult] = useState(null);
+  const [showDashboard, setShowDashboard] = useState(false);
+  const [datasetSize, setDatasetSize] = useState(0);
+  const [startWithTraining, setStartWithTraining] = useState(false);
+
+  const fetchDatasetSize = async () => {
+    try {
+      const res = await api.get("/audit/logs");
+      if (res.success) {
+        setDatasetSize(res.logs?.length || 0);
+      }
+    } catch (err) {
+      console.error("Failed to fetch dataset size:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (aiConfig.enableFineTuning) {
+      fetchDatasetSize();
+    }
+  }, [aiConfig.enableFineTuning]);
 
   const activeProvider = aiConfig.activeProvider || "ollama";
   const isOllama = activeProvider === "ollama";
@@ -368,7 +391,122 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
             </label>
           </div>
         </div>
+
+        {/* HalTest Fine-Tuning & Active Learning */}
+        <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/50 hover:bg-slate-900 transition-colors space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-slate-800 text-indigo-400">
+                <Cpu size={18} />
+              </div>
+              <div>
+                <Label className="text-sm font-semibold text-white">
+                  {t("settings.ai.fine_tuning")}
+                </Label>
+                <p className="text-[10px] text-slate-400 max-w-[240px] leading-relaxed mt-1">
+                  {t("settings.ai.fine_tuning_desc")}
+                </p>
+              </div>
+            </div>
+
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                className="sr-only peer"
+                checked={aiConfig.enableFineTuning ?? false}
+                onChange={(e) =>
+                  updateConfig({ enableFineTuning: e.target.checked })
+                }
+              />
+              <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+            </label>
+          </div>
+
+          {aiConfig.enableFineTuning && (
+            <div className="pt-2 border-t border-slate-800/80 space-y-4">
+              <div className="flex items-start gap-2 p-2.5 rounded-lg border border-amber-500/20 bg-amber-500/5 text-[10px] text-amber-300 leading-relaxed">
+                <AlertTriangle
+                  size={14}
+                  className="text-amber-400 shrink-0 mt-0.5"
+                />
+                <span>{t("settings.ai.fine_tuning_warning")}</span>
+              </div>
+
+              {/* Dataset Status section */}
+              <div className="p-3 bg-slate-950 border border-slate-800 rounded-lg space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-300">
+                    <Database size={14} className="text-indigo-400" />
+                    <span>{t("settings.ai.dataset_status")}</span>
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-medium bg-slate-900 px-1.5 py-0.5 rounded-md border border-slate-800">
+                    {t("settings.ai.dataset_recommended")}
+                  </span>
+                </div>
+
+                {/* Metric count */}
+                <div className="text-sm font-bold text-white flex items-baseline gap-1">
+                  <span>{datasetSize}</span>
+                  <span className="text-[10px] font-normal text-slate-400">
+                    {t("settings.ai.dataset_examples", { count: datasetSize })}
+                  </span>
+                </div>
+
+                {/* Progress bar */}
+                <div className="space-y-1">
+                  <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden">
+                    <div
+                      className="bg-indigo-500 h-full transition-all duration-500 ease-out"
+                      style={{
+                        width: `${Math.min(100, (datasetSize / 100) * 100)}%`,
+                      }}
+                    ></div>
+                  </div>
+                </div>
+
+                {/* Quick actions inside dataset box */}
+                <div className="pt-1 flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={datasetSize === 0}
+                    onClick={() => {
+                      setStartWithTraining(true);
+                      setShowDashboard(true);
+                    }}
+                    className="flex-1 h-7 text-[10px] bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 hover:text-indigo-300 border border-indigo-500/20"
+                  >
+                    <Play size={10} className="mr-1" />
+                    {t("settings.ai.trigger_local_train")}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Open full dashboard */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDashboard(true)}
+                className="w-full text-xs border-indigo-500/30 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-950/30"
+              >
+                {t("settings.ai.open_training_dashboard")}
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
+
+      {showDashboard && (
+        <FineTuningDashboardModal
+          isOpen={showDashboard}
+          onClose={() => {
+            setShowDashboard(false);
+            setStartWithTraining(false);
+          }}
+          activeModel={model}
+          startWithTraining={startWithTraining}
+        />
+      )}
     </div>
   );
 }

@@ -762,6 +762,12 @@ router.use('/export', exportRouter);
 // Register AI router (Conflict removed: handled in app.js)
 // router.use('/ai', aiRouter);
 
-// (Removed placeholder ai/validate route)
+// ==========================================================
+// AUDIT & FINE-TUNING ROUTES
+// ==========================================================
+import { getAuditLogs, clearAuditLogs, startFineTuning } from '../controllers/audit.controller.js';
+router.get('/audit/logs', getAuditLogs);
+router.delete('/audit/logs', clearAuditLogs);
+router.post('/audit/train', startFineTuning);
 
 export default router;

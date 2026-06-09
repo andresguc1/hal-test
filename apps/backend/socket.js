@@ -157,3 +157,16 @@ export const emitAutoHealingUpdate = (data) => {
         io.emit('auto_healing_update', { ...data, timestamp: Date.now() });
     }
 };
+
+/**
+ * Emits progress logs and step index for fine-tuning/training simulation.
+ * @param {{ step: string, progress: number, log: string, done?: boolean, modelName?: string }} data
+ */
+export const emitFineTuningProgress = (data) => {
+    if (io) {
+        console.log(
+            `📡 [Socket.io] Emitting fine_tuning_progress: ${data.step} (${data.progress}%)`,
+        );
+        io.emit('fine_tuning_progress', { ...data, timestamp: Date.now() });
+    }
+};
