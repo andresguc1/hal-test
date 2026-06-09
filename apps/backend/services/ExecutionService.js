@@ -302,6 +302,12 @@ export class ExecutionService {
                 continue;
             }
 
+            // --- Live-State Interceptor ---
+            const ignoredTypes = ['guide', 'note', 'comment', 'annotation', 'label', 'sticky'];
+            if (node.type && !ignoredTypes.includes(node.type)) {
+                await this.captureLiveState(node, state);
+            }
+
             // 2. Execute Node
             const result = await this.executeNode(node, allNodes, allEdges, state);
             console.log(
@@ -1770,6 +1776,83 @@ export class ExecutionService {
         // e.g. custom_eval -> customEvalAction
         const camelled = nodeType.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
         return `${camelled}Action`;
+    }
+
+    async captureLiveState(node, state) {
+        // 1. Capture active runtime variables
+        const runtimeVariables = variableManager.getAll(state.runId);
+
+        // 2. Capture current URL state
+        let currentUrl = null;
+        try {
+            if (state.browserId) {
+                const browserEntry = browserService.get(state.browserId);
+                const browserInstance = browserEntry?.browser || browserEntry;
+                if (browserInstance && typeof browserInstance.contexts === 'function') {
+                    const contexts = browserInstance.contexts();
+                    if (contexts.length > 0) {
+                        const pages = contexts[0].pages();
+                        if (pages.length > 0) {
+                            const activePage = pages[pages.length - 1];
+                            if (activePage && !activePage.isClosed()) {
+                                currentUrl = activePage.url();
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn(`[Live-State] Failed to capture URL for node ${node.nodeId}:`, e.message);
+        }
+
+        // 3. Capture recent screenshots/captures from database
+        let recentScreenshots = [];
+        try {
+            if (StepResult && typeof StepResult.findAll === 'function') {
+                const steps = await StepResult.findAll({
+                    where: state.runId ? { run_id: state.runId } : { run_id: null },
+                    attributes: ['node_id', 'screenshot_path', 'status', 'created_at'],
+                    order: [['created_at', 'DESC']],
+                    limit: 5, // get the last 5 captures
+                });
+                recentScreenshots = steps
+                    .filter((s) => s.screenshot_path)
+                    .map((s) => ({
+                        nodeId: s.node_id,
+                        screenshotPath: s.screenshot_path,
+                        status: s.status,
+                        createdAt: s.created_at,
+                    }));
+            }
+        } catch (e) {
+            console.warn(
+                `[Live-State] Failed to query recent screenshots for node ${node.nodeId}:`,
+                e.message,
+            );
+        }
+
+        // 4. Encapsulate into a live-state package
+        const liveStatePackage = {
+            nodeId: node.nodeId,
+            nodeType: node.type,
+            variables: runtimeVariables,
+            url: currentUrl,
+            recentScreenshots,
+            timestamp: new Date().toISOString(),
+        };
+
+        console.log(
+            `[DPE] Live-State Package captured for node ${node.nodeId}: URL="${currentUrl}", VariablesCount=${Object.keys(runtimeVariables).length}, ScreenshotsCount=${recentScreenshots.length}`,
+        );
+
+        // Store in variableManager so it can be interpolated/referenced in action config templates
+        variableManager.set('liveState', liveStatePackage, state.runId);
+        variableManager.set('live_state', liveStatePackage, state.runId);
+
+        // Store in execution state
+        state.liveState = liveStatePackage;
+
+        return liveStatePackage;
     }
 }
 

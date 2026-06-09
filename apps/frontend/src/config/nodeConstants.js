@@ -49,6 +49,7 @@ export const NODE_CATEGORIES = {
       "get_set_content",
       "execute_js",
       "wait_for_element",
+      "wait_visible",
     ],
   },
   user_simulation: {
@@ -96,6 +97,11 @@ export const NODE_CATEGORIES = {
       "wait_network",
       "wait_for_request",
       "wait_for_response",
+      "intercept_request",
+      "mock_response",
+      "block_resource",
+      "modify_headers",
+      "manage_cookies",
     ],
   },
   test_execution: {
@@ -107,6 +113,7 @@ export const NODE_CATEGORIES = {
       "persist_session",
       "create_context",
       "cleanup_state",
+      "close_context",
     ],
   },
   file_data: {
@@ -134,6 +141,10 @@ export const NODE_CATEGORIES = {
       "backend_js",
       "wait_conditional",
       "pause",
+      "fail_flow",
+      "branch",
+      "flow_control",
+      "transform",
     ],
   },
   composition: {

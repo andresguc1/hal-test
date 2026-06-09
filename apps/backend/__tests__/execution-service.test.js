@@ -46,6 +46,7 @@ vi.mock('../services/browser.service.js', () => ({
 
 import { variableManager } from '../services/VariableManager.js';
 import { emitEdgeStatus } from '../socket.js';
+import { browserService } from '../services/browser.service.js';
 
 // =============================================================================
 // HELPERS
@@ -287,6 +288,65 @@ describe('ExecutionService - Graph Traversal & DPE', () => {
         expect(state.executedNodeIds.has('n1')).toBe(true);
         expect(state.executedNodeIds.has('n2')).toBe(true);
 
+        ExecutionService.executeNode = originalExecuteNode;
+    });
+
+    it('should capture live-state package during runSequence execution and register it in variableManager', async () => {
+        // Mock browserService.get to return a mock browser page
+        const mockPage = {
+            url: () => 'https://live-state.test',
+            isClosed: () => false,
+        };
+        const mockBrowser = {
+            contexts: () => [
+                {
+                    pages: () => [mockPage],
+                },
+            ],
+        };
+        const originalBrowserGet = browserService.get;
+        browserService.get = vi.fn().mockReturnValue({ browser: mockBrowser });
+
+        const originalExecuteNode = ExecutionService.executeNode;
+        ExecutionService.executeNode = vi.fn().mockImplementation(async (_node) => {
+            return { success: true };
+        });
+
+        const nodes = [makeNode('n1', 'open_url')];
+        const edges = [];
+
+        const state = {
+            runId: 'live-state-run',
+            browserId: 'mock-browser-id',
+            variables: {},
+            executedNodeIds: new Set(),
+            activatedNodeIds: new Set(['n1']),
+            nodeStates: {},
+            edgeStates: {},
+            overrides: {},
+            headers: {},
+            startTime: Date.now(),
+        };
+
+        variableManager.initRun('live-state-run');
+        variableManager.set('testVar', 'testValue', 'live-state-run');
+
+        await ExecutionService.runSequence(nodes, nodes, edges, state);
+
+        // Verify state has liveState package
+        expect(state.liveState).toBeDefined();
+        expect(state.liveState.nodeId).toBe('n1');
+        expect(state.liveState.url).toBe('https://live-state.test');
+        expect(state.liveState.variables.testVar).toBe('testValue');
+
+        // Verify variableManager got the variables stored under liveState / live_state
+        const liveStateFromVM = variableManager.get('liveState', 'live-state-run');
+        expect(liveStateFromVM).toBeDefined();
+        expect(liveStateFromVM.url).toBe('https://live-state.test');
+        expect(liveStateFromVM.variables.testVar).toBe('testValue');
+
+        // Restore mocks
+        browserService.get = originalBrowserGet;
         ExecutionService.executeNode = originalExecuteNode;
     });
 });
