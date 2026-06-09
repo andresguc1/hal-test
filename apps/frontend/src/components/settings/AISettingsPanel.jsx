@@ -37,12 +37,35 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
 
   const activeProvider = aiConfig.activeProvider || "ollama";
   const isOllama = activeProvider === "ollama";
-  const baseUrl =
-    aiConfig.baseUrl ||
-    (isOllama ? "http://127.0.0.1:11434" : "https://openrouter.ai/api/v1");
-  const model =
-    aiConfig.selectedModel ||
-    (isOllama ? "gemma3" : "google/gemini-2.0-flash-001");
+
+  // Resolve default base URL depending on provider
+  const getDefaultBaseUrl = (provider) => {
+    switch (provider) {
+      case "openai": return "https://api.openai.com/v1";
+      case "anthropic": return "https://api.anthropic.com/v1";
+      case "google": return "https://generativelanguage.googleapis.com/v1beta";
+      case "openrouter": return "https://openrouter.ai/api/v1";
+      case "ollama":
+      default:
+        return "http://127.0.0.1:11434";
+    }
+  };
+
+  // Resolve default model depending on provider
+  const getDefaultModel = (provider) => {
+    switch (provider) {
+      case "openai": return "gpt-4o-mini";
+      case "anthropic": return "claude-3-5-sonnet-latest";
+      case "google": return "gemini-2.0-flash";
+      case "openrouter": return "google/gemini-2.0-flash-001";
+      case "ollama":
+      default:
+        return "gemma3";
+    }
+  };
+
+  const baseUrl = aiConfig.baseUrl || getDefaultBaseUrl(activeProvider);
+  const model = aiConfig.selectedModel || getDefaultModel(activeProvider);
   const temperature = aiConfig.temperature ?? 0.7;
   const apiKey = aiConfig.keys?.[activeProvider] || "";
 
@@ -90,9 +113,9 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
       });
 
       if (res.success) {
-        toast.success(t("settings.ai.connection_success", { model }));
+        toast.success(t("settings.ai.connection_success", { provider: activeProvider, model }));
       } else {
-        toast.error(res.error || t("settings.ai.connect_error"));
+        toast.error(res.error || t("settings.ai.connect_error", { provider: activeProvider }));
       }
     } catch (error) {
       setHealthResult({ success: false, error: error.message });
@@ -119,17 +142,11 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
         <Select
           value={activeProvider}
           onValueChange={(val) => {
-            const updates = { activeProvider: val };
-
-            // Logic to switch defaults if they hasn't been significantly changed
-            // or to just help the user by providing the right base URL
-            if (val === "openrouter") {
-              updates.baseUrl = "https://openrouter.ai/api/v1";
-              updates.selectedModel = "google/gemini-2.0-flash-001";
-            } else if (val === "ollama") {
-              updates.baseUrl = "http://127.0.0.1:11434";
-              updates.selectedModel = "gemma3";
-            }
+            const updates = { 
+              activeProvider: val,
+              baseUrl: getDefaultBaseUrl(val),
+              selectedModel: getDefaultModel(val),
+            };
 
             updateConfig(updates);
           }}
@@ -139,6 +156,9 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="ollama">Ollama (Local)</SelectItem>
+            <SelectItem value="openai">OpenAI (Cloud)</SelectItem>
+            <SelectItem value="anthropic">Claude / Anthropic (Cloud)</SelectItem>
+            <SelectItem value="google">Gemini / Google (Cloud)</SelectItem>
             <SelectItem value="openrouter">OpenRouter (Cloud)</SelectItem>
           </SelectContent>
         </Select>
@@ -182,11 +202,7 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
             value={baseUrl}
             onChange={(e) => updateConfig({ baseUrl: e.target.value })}
             className="bg-slate-950 border-slate-800 pl-9 font-mono text-sm"
-            placeholder={
-              isOllama
-                ? "http://127.0.0.1:11434"
-                : "https://openrouter.ai/api/v1"
-            }
+            placeholder={getDefaultBaseUrl(activeProvider)}
           />
         </div>
       </div>
@@ -202,7 +218,7 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
             value={model}
             onChange={(e) => updateConfig({ selectedModel: e.target.value })}
             className={`bg-slate-950 border-slate-800 pl-9 font-mono text-sm ${model ? "border-indigo-500/50 ring-1 ring-indigo-500/20" : ""}`}
-            placeholder={isOllama ? "gemma3" : "google/gemini-2.0-flash-001"}
+            placeholder={getDefaultModel(activeProvider)}
           />
         </div>
         <p className="text-[10px] text-slate-500 leading-tight">

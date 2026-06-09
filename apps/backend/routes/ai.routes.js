@@ -17,8 +17,16 @@ const router = express.Router();
 router.post('/validate', async (req, res) => {
     const { provider, apiKey, baseUrl, model } = req.body;
 
-    // API KEY is strictly required for validation unless it's Ollama
-    if (!apiKey && provider !== 'ollama') {
+    const providerLower = provider?.toLowerCase();
+    const hasEnvKey =
+        (providerLower === 'openai' && process.env.OPENAI_API_KEY) ||
+        (providerLower === 'openrouter' && process.env.OPENROUTER_API_KEY) ||
+        ((providerLower === 'anthropic' || providerLower === 'claude') &&
+            process.env.ANTHROPIC_API_KEY) ||
+        ((providerLower === 'google' || providerLower === 'gemini') &&
+            (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY));
+
+    if (!apiKey && provider !== 'ollama' && !hasEnvKey) {
         return res.status(400).json({ success: false, message: 'API Key is required' });
     }
 

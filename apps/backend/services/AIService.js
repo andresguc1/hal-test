@@ -89,16 +89,33 @@ const parseToolCalls = (text) => {
 class AIService {
     // getProvider removed in favor of LLMFactory.getProviderInstance
 
-    /**
-     * Matrix de Selección de Modelos (2026 Standard)
-     * @param {string} taskType - 'coding' | 'massive_context' | 'reasoning' | 'local'
-     * @param {string} [preferredProvider] - Optional override
-     */
     selectBestModel(taskType, preferredProvider) {
-        // If user already specified a valid provider (like openrouter), respect it.
-        // We only provide defaults if not specified.
-        if (preferredProvider === 'openrouter') {
+        const providerLower = preferredProvider?.toLowerCase();
+
+        if (providerLower === 'openrouter') {
             return { provider: 'openrouter', model: 'google/gemini-2.0-flash-001' };
+        }
+
+        if (providerLower === 'openai') {
+            const model =
+                taskType === 'reasoning' || taskType === 'coding' ? 'gpt-4o' : 'gpt-4o-mini';
+            return { provider: 'openai', model };
+        }
+
+        if (providerLower === 'anthropic' || providerLower === 'claude') {
+            const model =
+                taskType === 'reasoning' || taskType === 'coding'
+                    ? 'claude-3-7-sonnet-latest'
+                    : 'claude-3-5-sonnet-latest';
+            return { provider: 'anthropic', model };
+        }
+
+        if (providerLower === 'google' || providerLower === 'gemini') {
+            const model =
+                taskType === 'reasoning' || taskType === 'coding'
+                    ? 'gemini-2.5-pro'
+                    : 'gemini-2.0-flash';
+            return { provider: 'google', model };
         }
 
         // Default to Ollama for everything else locally
@@ -432,10 +449,53 @@ IMPORTANT DIRECTIONS:
                 `[AIService] Validating key for provider: ${provider}, apiKey provided: ${!!apiKey}`,
             );
 
-            if (provider === 'openrouter') {
-                if (!apiKey) throw new Error('API Key is required for OpenRouter');
-                const providerInstance = llmFactory.getProviderInstance(apiKey, provider, baseUrl);
-                const modelRef = providerInstance(model || 'google/gemini-2.0-flash-001');
+            const providerLower = provider?.toLowerCase();
+            const isCloud = [
+                'openrouter',
+                'openai',
+                'anthropic',
+                'claude',
+                'google',
+                'gemini',
+            ].includes(providerLower);
+
+            if (isCloud) {
+                // If apiKey is NOT a key/alias and we don't have it, throw error unless we have an env key fallback
+                const finalKey =
+                    apiKey ||
+                    (providerLower === 'openrouter'
+                        ? process.env.OPENROUTER_API_KEY
+                        : providerLower === 'openai'
+                          ? process.env.OPENAI_API_KEY
+                          : providerLower === 'anthropic' || providerLower === 'claude'
+                            ? process.env.ANTHROPIC_API_KEY
+                            : providerLower === 'google' || providerLower === 'gemini'
+                              ? process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY
+                              : null);
+
+                if (!finalKey) {
+                    throw new Error(`API Key is required for ${provider}`);
+                }
+
+                const providerInstance = llmFactory.getProviderInstance(
+                    apiKey || provider,
+                    provider,
+                    baseUrl,
+                );
+
+                // Select default validation model per provider
+                let validationModel = model;
+                if (!validationModel) {
+                    if (providerLower === 'openrouter')
+                        validationModel = 'google/gemini-2.0-flash-001';
+                    else if (providerLower === 'openai') validationModel = 'gpt-4o-mini';
+                    else if (providerLower === 'anthropic' || providerLower === 'claude')
+                        validationModel = 'claude-3-5-haiku-latest';
+                    else if (providerLower === 'google' || providerLower === 'gemini')
+                        validationModel = 'gemini-1.5-flash';
+                }
+
+                const modelRef = providerInstance(validationModel);
 
                 // Ultra-robust timeout using Promise.race to avoid "Delay aborted" crash
                 const validationPromise = generateText({

@@ -1,4 +1,6 @@
 import { createOpenAI } from '@ai-sdk/openai';
+import { createAnthropic } from '@ai-sdk/anthropic';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { keyVaultService } from './KeyVaultService.js';
 
 /**
@@ -30,8 +32,28 @@ class LLMFactory {
         }
 
         // 3. Environment Fallback
-        if (fallbackProvider === 'openrouter' && process.env.OPENROUTER_API_KEY) {
+        const providerLower = fallbackProvider?.toLowerCase();
+        if (providerLower === 'openrouter' && process.env.OPENROUTER_API_KEY) {
             return this.createInstance('openrouter', process.env.OPENROUTER_API_KEY, baseUrl);
+        }
+        if (providerLower === 'openai' && process.env.OPENAI_API_KEY) {
+            return this.createInstance('openai', process.env.OPENAI_API_KEY, baseUrl);
+        }
+        if (
+            (providerLower === 'anthropic' || providerLower === 'claude') &&
+            process.env.ANTHROPIC_API_KEY
+        ) {
+            return this.createInstance('anthropic', process.env.ANTHROPIC_API_KEY, baseUrl);
+        }
+        if (
+            (providerLower === 'google' || providerLower === 'gemini') &&
+            (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY)
+        ) {
+            return this.createInstance(
+                'google',
+                process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY,
+                baseUrl,
+            );
         }
 
         // 4. Force requested provider or Ollama as ultimate fallback
@@ -39,7 +61,9 @@ class LLMFactory {
     }
 
     createInstance(provider, key, baseUrl) {
-        if (provider === 'openrouter') {
+        const providerLower = provider?.toLowerCase();
+
+        if (providerLower === 'openrouter') {
             const finalKey = key || process.env.OPENROUTER_API_KEY;
             if (!finalKey) {
                 throw new Error(
@@ -72,6 +96,45 @@ class LLMFactory {
                         throw error;
                     }
                 },
+            });
+        }
+
+        if (providerLower === 'openai') {
+            const finalKey = key || process.env.OPENAI_API_KEY;
+            if (!finalKey) {
+                throw new Error(
+                    'API Key for OpenAI is missing. Please configure your OpenAI API Key in the AI Settings panel or set OPENAI_API_KEY in your .env file.',
+                );
+            }
+            return createOpenAI({
+                baseURL: baseUrl || undefined,
+                apiKey: finalKey,
+            });
+        }
+
+        if (providerLower === 'anthropic' || providerLower === 'claude') {
+            const finalKey = key || process.env.ANTHROPIC_API_KEY;
+            if (!finalKey) {
+                throw new Error(
+                    'API Key for Anthropic (Claude) is missing. Please configure your Anthropic API Key in the AI Settings panel or set ANTHROPIC_API_KEY in your .env file.',
+                );
+            }
+            return createAnthropic({
+                baseURL: baseUrl || undefined,
+                apiKey: finalKey,
+            });
+        }
+
+        if (providerLower === 'google' || providerLower === 'gemini') {
+            const finalKey = key || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+            if (!finalKey) {
+                throw new Error(
+                    'API Key for Google (Gemini) is missing. Please configure your Google API Key in the AI Settings panel or set GEMINI_API_KEY or GOOGLE_API_KEY in your .env file.',
+                );
+            }
+            return createGoogleGenerativeAI({
+                baseURL: baseUrl || undefined,
+                apiKey: finalKey,
             });
         }
 
