@@ -33,10 +33,19 @@ export const resetExecutionStatesRecursively = (list) => {
       },
       style: getNodeStyle(NODE_STATES.DEFAULT, node.style),
     };
-    if (
-      (newNode.type === "component" || newNode.data?.type === "component") &&
-      newNode.data?.subFlow?.nodes
-    ) {
+
+    if (newNode.data?.subFlow?.edges) {
+      newNode.data.subFlow.edges = newNode.data.subFlow.edges.map((e) => ({
+        ...e,
+        animated: false,
+        data: { ...e.data, executionState: "default" },
+      }));
+    }
+
+    const isContainer = ["component", "loop", "for_each"].includes(
+      newNode.type || newNode.data?.type,
+    );
+    if (isContainer && newNode.data?.subFlow?.nodes) {
       newNode.data.subFlow.nodes = resetExecutionStatesRecursively(
         newNode.data.subFlow.nodes,
       );
@@ -600,6 +609,16 @@ export function useFlowExecution({
 
       setApiStatus({ state: "loading", message: "Preparing execution..." });
 
+      // Cache for subflows fetched during this execution run
+      const subFlowCache = new Map();
+      const getSubFlowCached = async (projectId, flowId) => {
+        if (!subFlowCache.has(flowId)) {
+          const flow = await projectManager.getFlow(projectId, flowId);
+          subFlowCache.set(flowId, flow);
+        }
+        return subFlowCache.get(flowId);
+      };
+
       const executeGraph = async (
         graphNodes,
         graphEdges,
@@ -664,7 +683,7 @@ export function useFlowExecution({
                   state: "loading",
                   message: `Entering component: ${node.data.label || "Sub-flow"}...`,
                 });
-                const subFlow = await projectManager.getFlow(
+                const subFlow = await getSubFlowCached(
                   currentProject.id,
                   flowId,
                 );
@@ -756,7 +775,7 @@ export function useFlowExecution({
                     state: "loading",
                     message: `Loop Iteration ${stepResult.result?.data?.index || ""}...`,
                   });
-                  const subFlow = await projectManager.getFlow(
+                  const subFlow = await getSubFlowCached(
                     currentProject.id,
                     flowId,
                   );

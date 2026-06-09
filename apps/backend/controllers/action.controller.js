@@ -1207,6 +1207,8 @@ export const launchBrowserAction = async (req, res) => {
         smartEmitLog('Launching browser...', 'info', nodeId);
     }
 
+    let launchedBrowserId = null;
+
     try {
         // --- PERSISTENT BROWSER (Debug Mode) ---
         const { debugMode } = req.body;
@@ -1263,6 +1265,7 @@ export const launchBrowserAction = async (req, res) => {
             JSON.stringify(req.body, null, 2),
         );
         const { browserId, version } = await browserService.launchBrowser(req.body);
+        launchedBrowserId = browserId;
 
         // Update Run record with browser version if we are in a run
         if (runId) {
@@ -1311,6 +1314,12 @@ export const launchBrowserAction = async (req, res) => {
             headless: req.body.headless || false,
         });
     } catch (error) {
+        if (launchedBrowserId) {
+            console.log(`[ACTION] Cleaning up launched browser ${launchedBrowserId} after error`);
+            await browserService.delete(launchedBrowserId).catch((err) => {
+                console.error(`[ACTION] Failed to cleanup browser session: ${err.message}`);
+            });
+        }
         const duration = Date.now() - start;
         console.error('[ERROR] Failed to launch browser:', error.message);
         smartEmitLog(`Browser launch failed: ${error.message}`, 'error', nodeId);

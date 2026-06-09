@@ -30,29 +30,81 @@ export function useFlowSync({
   const [viewStack, setViewStack] = useState([]);
   const currentProjectId = currentProject?.id;
   const lastLoadedFlowId = useRef(null);
+  const isSavingRef = useRef(false);
+  const saveQueueRef = useRef([]);
 
   const saveFlow = useCallback(
     async (silent = false) => {
-      if (!currentProjectId || !currentFlowId) return;
-      const flowData = {
-        nodes: nodesRef.current,
-        edges: edgesRef.current,
-        viewport: getViewport(),
-        updatedAt: new Date().toISOString(),
-      };
+      const targetFlowId = currentFlowId;
+      const targetProjectId = currentProjectId;
+      if (!targetProjectId || !targetFlowId) return;
 
+      // Prevent saving if the flow ID does not match what was loaded
+      if (lastLoadedFlowId.current !== targetFlowId) {
+        console.warn(
+          `[useFlowSync] Blocked save: lastLoadedFlowId (${lastLoadedFlowId.current}) does not match currentFlowId (${targetFlowId})`,
+        );
+        return;
+      }
+
+      if (isSavingRef.current) {
+        return new Promise((resolve, reject) => {
+          saveQueueRef.current.push({
+            targetProjectId,
+            targetFlowId,
+            silent,
+            resolve,
+            reject,
+          });
+        });
+      }
+
+      isSavingRef.current = true;
       try {
+        const flowData = {
+          nodes: nodesRef.current,
+          edges: edgesRef.current,
+          viewport: getViewport(),
+          updatedAt: new Date().toISOString(),
+        };
+
         await projectManager.updateFlow(
-          currentProjectId,
-          currentFlowId,
+          targetProjectId,
+          targetFlowId,
           flowData,
         );
         if (!silent) setApiStatus({ message: "✓ Flow saved" });
         setHasUnsavedChanges(false);
+
+        isSavingRef.current = false;
+        if (saveQueueRef.current.length > 0) {
+          const next = saveQueueRef.current.shift();
+          if (
+            next.targetFlowId === currentFlowId &&
+            next.targetProjectId === currentProjectId
+          ) {
+            saveFlow(next.silent).then(next.resolve).catch(next.reject);
+          } else {
+            next.resolve();
+          }
+        }
         return flowData;
       } catch (err) {
         logger.error("Save failed", err);
         setApiStatus({ state: "error", message: `✗ Error: ${err.message}` });
+        isSavingRef.current = false;
+        if (saveQueueRef.current.length > 0) {
+          const next = saveQueueRef.current.shift();
+          if (
+            next.targetFlowId === currentFlowId &&
+            next.targetProjectId === currentProjectId
+          ) {
+            saveFlow(next.silent).then(next.resolve).catch(next.reject);
+          } else {
+            next.resolve();
+          }
+        }
+        throw err;
       }
     },
     [
@@ -88,7 +140,6 @@ export function useFlowSync({
   const loadFlowData = useCallback(async () => {
     if (!currentProjectId || !currentFlowId) return;
     try {
-      lastLoadedFlowId.current = currentFlowId;
       const flow = await projectManager.getFlow(
         currentProjectId,
         currentFlowId,
@@ -102,6 +153,8 @@ export function useFlowSync({
             animated: true,
           })),
         );
+        // Only set loaded ID after state is successfully populated to prevent auto-saving old state
+        lastLoadedFlowId.current = currentFlowId;
         setHasUnsavedChanges(false);
       }
     } catch (err) {
@@ -116,6 +169,9 @@ export function useFlowSync({
   ]);
 
   useEffect(() => {
+    // Clear save queue and reset state when switching flows
+    saveQueueRef.current = [];
+    isSavingRef.current = false;
     loadFlowData();
   }, [currentFlowId, loadFlowData]);
 

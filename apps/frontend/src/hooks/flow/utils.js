@@ -56,10 +56,18 @@ export const resetExecutionStatesRecursively = (list) => {
       style: getNodeStyle(NODE_STATES.DEFAULT, node.style),
     };
 
-    if (
-      (newNode.type === "component" || newNode.data?.type === "component") &&
-      newNode.data?.subFlow?.nodes
-    ) {
+    if (newNode.data?.subFlow?.edges) {
+      newNode.data.subFlow.edges = newNode.data.subFlow.edges.map((e) => ({
+        ...e,
+        animated: false,
+        data: { ...e.data, executionState: "default" },
+      }));
+    }
+
+    const isContainer = ["component", "loop", "for_each"].includes(
+      newNode.type || newNode.data?.type,
+    );
+    if (isContainer && newNode.data?.subFlow?.nodes) {
       newNode.data.subFlow.nodes = resetExecutionStatesRecursively(
         newNode.data.subFlow.nodes,
       );
