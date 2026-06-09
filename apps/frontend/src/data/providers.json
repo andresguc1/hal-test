@@ -7,6 +7,14 @@
     "defaultBaseUrl": "http://127.0.0.1:11434",
     "models": [
       {
+        "id": "gemma3:2b",
+        "name": "Gemma 3 2B (Recommended)"
+      },
+      {
+        "id": "phi4:mini",
+        "name": "Phi 4 Mini (Recommended)"
+      },
+      {
         "id": "gemma3",
         "name": "Gemma 3 (Default)"
       }

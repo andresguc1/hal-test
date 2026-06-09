@@ -72,7 +72,7 @@ export default function SettingsPage({ onBack }) {
   );
 
   const defaultValues = {
-    selectedModel: localStorage.getItem("hal_selected_model") || "gemma3",
+    selectedModel: localStorage.getItem("hal_selected_model") || "gemma3:2b",
     ollamaBaseUrl:
       localStorage.getItem("hal_ollama_base_url") || "http://127.0.0.1:11434",
   };

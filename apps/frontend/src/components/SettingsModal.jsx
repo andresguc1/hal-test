@@ -57,7 +57,7 @@ export default function SettingsModal({
   // --- AI Configuration State ---
   const [aiConfig, setAiConfig] = useState({
     activeProvider: "ollama",
-    selectedModel: "gemma3",
+    selectedModel: "gemma3:2b",
     baseUrl: "http://127.0.0.1:11434",
     keys: {},
     temperature: 0.7,

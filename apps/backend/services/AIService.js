@@ -2,7 +2,7 @@
 import { generateText, generateObject } from 'ai';
 import { z } from 'zod';
 import { playwrightMcpServer } from './PlaywrightMCPServer.js';
-import { llmFactory } from './LLMFactory.js';
+import { llmFactory, RECOMMENDED_LOCAL_MODELS, DEFAULT_LOCAL_MODEL } from './LLMFactory.js';
 
 /**
  * Intenta reparar estructuras JSON comunes mal formadas por LLMs locales.
@@ -119,7 +119,7 @@ class AIService {
         }
 
         // Default to Ollama for everything else locally
-        const ollamaModel = process.env.OLLAMA_MODEL || 'gemma3:latest';
+        const ollamaModel = process.env.OLLAMA_MODEL || DEFAULT_LOCAL_MODEL;
         return { provider: 'ollama', model: ollamaModel };
     }
 
@@ -517,7 +517,7 @@ IMPORTANT DIRECTIONS:
             }
 
             // For Ollama, resolve the model name using our smart resolver first!
-            const validationModelInput = model || process.env.OLLAMA_MODEL || 'gemma3:latest';
+            const validationModelInput = model || process.env.OLLAMA_MODEL || DEFAULT_LOCAL_MODEL;
             const activeBaseUrl = baseUrl || 'http://127.0.0.1:11434';
             const validationModel = await this.resolveOllamaModel({
                 baseUrl: activeBaseUrl,
@@ -536,7 +536,7 @@ IMPORTANT DIRECTIONS:
                     `Model '${validationModel}' is not available. Pull it with: ollama pull ${validationModel}`,
                 );
             }
-            return true;
+            return health;
         } catch (e) {
             // Enhanced Ollama-specific error mapping
             const msg = e.message?.toLowerCase() || '';
@@ -594,8 +594,12 @@ IMPORTANT DIRECTIONS:
                 return prefixMatch;
             }
 
-            // 4. Default to gemma3 if available, otherwise first available
+            // 4. Default to client-optimized models first, then gemma3, then first available
             if (requestedModel === 'ollama' || requestedModel === 'local') {
+                for (const recommended of RECOMMENDED_LOCAL_MODELS) {
+                    const found = availableModels.find((m) => m.includes(recommended));
+                    if (found) return found;
+                }
                 const gemma = availableModels.find((m) => m.includes('gemma3'));
                 return gemma || availableModels[0];
             }
@@ -619,7 +623,7 @@ IMPORTANT DIRECTIONS:
      */
     async healthCheck({
         baseUrl = 'http://127.0.0.1:11434',
-        model = process.env.OLLAMA_MODEL || 'gemma3:latest',
+        model = process.env.OLLAMA_MODEL || DEFAULT_LOCAL_MODEL,
     }) {
         const result = {
             ollamaRunning: false,
@@ -650,6 +654,30 @@ IMPORTANT DIRECTIONS:
             result.modelLoaded = result.models.some(
                 (m) => m === model || m.startsWith(`${model}:`),
             );
+
+            // 1. Check if the currently selected/requested model is recommended/client-optimized
+            const isModelRecommended = RECOMMENDED_LOCAL_MODELS.some(
+                (optModel) =>
+                    model === optModel ||
+                    model.startsWith(`${optModel}:`) ||
+                    model.startsWith(`${optModel}-`),
+            );
+
+            // 2. Check if any recommended client-optimized models are installed
+            const installedOptimized = RECOMMENDED_LOCAL_MODELS.filter((optModel) =>
+                result.models.some(
+                    (m) =>
+                        m === optModel ||
+                        m.startsWith(`${optModel}:`) ||
+                        m.startsWith(`${optModel}-`),
+                ),
+            );
+
+            if (!isModelRecommended) {
+                result.warning = `The selected model '${model}' is not a recommended client-optimized model (e.g., ${RECOMMENDED_LOCAL_MODELS.join(', ')}). Running larger models locally may cause high latency or freeze your screen.`;
+            } else if (installedOptimized.length === 0) {
+                result.warning = `You do not have any recommended client-optimized models installed (e.g., ${RECOMMENDED_LOCAL_MODELS.join(', ')}). Running larger models locally may cause high latency or freeze your screen. We strongly suggest pulling one with 'ollama pull ${DEFAULT_LOCAL_MODEL}'`;
+            }
 
             return result;
         } catch (e) {

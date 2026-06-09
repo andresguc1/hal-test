@@ -10,6 +10,7 @@ import { networkHistoryService } from '../services/NetworkHistoryService.js';
 import { variableManager } from '../services/VariableManager.js';
 import aiService from '../services/AIService.js';
 import experienceVaultService from '../services/ExperienceVaultService.js';
+import { DEFAULT_LOCAL_MODEL } from '../services/LLMFactory.js';
 import {
     emitExecutionStatus,
     emitScreenshotReady,
@@ -5425,7 +5426,7 @@ export const callLlmAction = async (req, res) => {
 
         // Strictly use global config, ignore any node-level overrides
         const activeModel =
-            req.headers['x-ai-model'] || process.env.OLLAMA_MODEL || 'gemma3:latest';
+            req.headers['x-ai-model'] || process.env.OLLAMA_MODEL || DEFAULT_LOCAL_MODEL;
         const headerBaseUrl = req.headers['x-ai-base-url'];
         const apiKey =
             req.headers['x-ai-api-key'] ||
@@ -5525,7 +5526,7 @@ export const generateDataAction = async (req, res) => {
         // Read from headers
         const activeProvider = req.headers['x-ai-provider'] || 'ollama';
         const activeModel =
-            req.headers['x-ai-model'] || process.env.OLLAMA_MODEL || 'gemma3:latest';
+            req.headers['x-ai-model'] || process.env.OLLAMA_MODEL || DEFAULT_LOCAL_MODEL;
         const headerBaseUrl = req.headers['x-ai-base-url'];
         const apiKey =
             req.headers['x-ai-api-key'] ||
@@ -5666,7 +5667,7 @@ export const validateSemanticAction = async (req, res) => {
         // --- ZERO-CONFIG LOGIC: Read from headers ---
         const activeProvider = req.headers['x-ai-provider'] || 'ollama';
         const activeModel =
-            req.headers['x-ai-model'] || process.env.OLLAMA_MODEL || 'gemma3:latest';
+            req.headers['x-ai-model'] || process.env.OLLAMA_MODEL || DEFAULT_LOCAL_MODEL;
         const headerBaseUrl = req.headers['x-ai-base-url'];
         const apiKey =
             req.headers['x-ai-api-key'] ||
@@ -5801,7 +5802,7 @@ export const extractDomContextAction = async (req, res) => {
         if (extractionType === 'text' || extractionType === 'markdown') {
             const activeProvider = req.headers['x-ai-provider'] || 'ollama';
             const activeModel =
-                req.headers['x-ai-model'] || process.env.OLLAMA_MODEL || 'gemma3:latest';
+                req.headers['x-ai-model'] || process.env.OLLAMA_MODEL || DEFAULT_LOCAL_MODEL;
             const headerBaseUrl = req.headers['x-ai-base-url'];
             const apiKey =
                 req.headers['x-ai-api-key'] ||
@@ -5878,7 +5879,7 @@ export const chainOfThoughtAction = async (req, res) => {
         // --- ZERO-CONFIG LOGIC ---
         const activeProvider = req.headers['x-ai-provider'] || 'ollama';
         const activeModel =
-            req.headers['x-ai-model'] || process.env.OLLAMA_MODEL || 'gemma3:latest';
+            req.headers['x-ai-model'] || process.env.OLLAMA_MODEL || DEFAULT_LOCAL_MODEL;
         const headerBaseUrl = req.headers['x-ai-base-url'];
         const apiKey =
             req.headers['x-ai-api-key'] ||
@@ -5964,7 +5965,7 @@ export const smartSelectorAction = async (req, res) => {
         // --- ZERO-CONFIG LOGIC ---
         const activeProvider = req.headers['x-ai-provider'] || 'ollama';
         const activeModel =
-            req.headers['x-ai-model'] || process.env.OLLAMA_MODEL || 'gemma3:latest';
+            req.headers['x-ai-model'] || process.env.OLLAMA_MODEL || DEFAULT_LOCAL_MODEL;
         const headerBaseUrl = req.headers['x-ai-base-url'];
         const apiKey =
             req.headers['x-ai-api-key'] ||

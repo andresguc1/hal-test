@@ -1,4 +1,5 @@
 import aiService from '../services/AIService.js';
+import { DEFAULT_LOCAL_MODEL } from '../services/LLMFactory.js';
 
 export const chatWithTools = async (req, res) => {
     try {
@@ -7,7 +8,7 @@ export const chatWithTools = async (req, res) => {
         const rawKey = req.headers['x-ai-api-key'] || process.env.OPENAI_API_KEY;
         const baseUrl = req.headers['x-ai-base-url'];
         const apiKey = rawKey?.trim();
-        const model = req.headers['x-ai-model'] || 'gemma3:latest';
+        const model = req.headers['x-ai-model'] || DEFAULT_LOCAL_MODEL;
         const provider = req.headers['x-ai-provider'] || 'ollama';
 
         console.log(

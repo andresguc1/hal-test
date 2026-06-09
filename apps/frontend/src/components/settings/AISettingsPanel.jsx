@@ -60,7 +60,7 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
       case "openrouter": return "google/gemini-2.0-flash-001";
       case "ollama":
       default:
-        return "gemma3";
+        return "gemma3:2b";
     }
   };
 
@@ -110,6 +110,7 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
         ollamaRunning: res.ollamaRunning,
         modelLoaded: res.modelLoaded,
         models: res.models || [],
+        warning: res.warning,
       });
 
       if (res.success) {
@@ -275,6 +276,15 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
                 {healthResult.error || t("settings.ai.connect_error")}
               </span>
             )}
+          </div>
+        </div>
+      )}
+
+      {healthResult && healthResult.warning && (
+        <div className="flex items-start gap-2 p-3 rounded-lg border border-amber-500/20 bg-amber-500/5 text-amber-300 text-xs">
+          <AlertTriangle size={14} className="text-amber-400 shrink-0 mt-0.5" />
+          <div className="flex-1 leading-relaxed">
+            {healthResult.warning}
           </div>
         </div>
       )}

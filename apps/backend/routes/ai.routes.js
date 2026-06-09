@@ -3,6 +3,7 @@ import { chatWithTools } from '../controllers/chat.controller.js';
 import aiService from '../services/AIService.js';
 import { browserService } from '../services/browser.service.js';
 import selectorHealer from '../services/SelectorHealer.js';
+import { DEFAULT_LOCAL_MODEL } from '../services/LLMFactory.js';
 
 const router = express.Router();
 
@@ -31,10 +32,11 @@ router.post('/validate', async (req, res) => {
     }
 
     try {
-        await aiService.validateKey({ provider, apiKey, baseUrl, model });
+        const validationResult = await aiService.validateKey({ provider, apiKey, baseUrl, model });
         res.json({
             success: true,
             message: `Connected to ${provider} successfully!`,
+            ...(typeof validationResult === 'object' ? validationResult : {}),
         });
     } catch (error) {
         console.error('Validation Exception:', error);
@@ -104,7 +106,7 @@ router.post('/heal-selector', async (req, res) => {
     const rawKey = req.headers['x-ai-api-key'] || process.env.OPENAI_API_KEY;
     const apiKey = rawKey?.trim();
     const provider = req.headers['x-ai-provider'] || 'ollama';
-    const model = req.headers['x-ai-model'] || 'gemma3';
+    const model = req.headers['x-ai-model'] || DEFAULT_LOCAL_MODEL;
     const browserId = req.headers['x-browser-id'] || req.body.browserId;
 
     if (!apiKey && provider !== 'ollama') {
@@ -201,7 +203,7 @@ If no element is found, return {"correctedSelector": null, "confidence": 0, "rea
 router.get('/health', async (req, res) => {
     let baseUrl = req.query.baseUrl || 'http://127.0.0.1:11434';
     if (baseUrl.includes('localhost')) baseUrl = baseUrl.replace('localhost', '127.0.0.1');
-    const model = req.query.model || 'gemma3';
+    const model = req.query.model || DEFAULT_LOCAL_MODEL;
 
     try {
         const result = await aiService.healthCheck({ baseUrl, model });
@@ -249,7 +251,7 @@ router.post('/ask', async (req, res) => {
 
     // Resolve provider/model from headers or body
     const provider = req.headers['x-ai-provider'] || 'ollama';
-    const activeModel = model || req.headers['x-ai-model'] || 'gemma3';
+    const activeModel = model || req.headers['x-ai-model'] || DEFAULT_LOCAL_MODEL;
     let activeBaseUrl = baseUrl || req.headers['x-ai-base-url'] || 'http://127.0.0.1:11434';
     if (activeBaseUrl.includes('localhost'))
         activeBaseUrl = activeBaseUrl.replace('localhost', '127.0.0.1');

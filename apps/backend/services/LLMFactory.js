@@ -8,6 +8,9 @@ import { keyVaultService } from './KeyVaultService.js';
  * Responsible for creating provider instances on-demand using secured keys.
  */
 class LLMFactory {
+    static RECOMMENDED_LOCAL_MODELS = ['gemma3:2b', 'phi4:mini'];
+    static DEFAULT_LOCAL_MODEL = 'gemma3:2b';
+
     /**
      * Creates a provider instance for a specific Key Alias/ID
      * @param {string} keyAliasOrId - The alias, ID, OR raw API Key (Legacy)
@@ -216,3 +219,5 @@ class LLMFactory {
 }
 
 export const llmFactory = new LLMFactory();
+export const RECOMMENDED_LOCAL_MODELS = LLMFactory.RECOMMENDED_LOCAL_MODELS;
+export const DEFAULT_LOCAL_MODEL = LLMFactory.DEFAULT_LOCAL_MODEL;
