@@ -92105,13 +92105,11 @@ var IAe = class extends ih {
             const n = this.options;
             ((this.options = this.#e.defaultMutationOptions(t)),
                 b_(this.options, n) ||
-                    this.#e
-                        .getMutationCache()
-                        .notify({
-                            type: 'observerOptionsUpdated',
-                            mutation: this.#n,
-                            observer: this,
-                        }),
+                    this.#e.getMutationCache().notify({
+                        type: 'observerOptionsUpdated',
+                        mutation: this.#n,
+                        observer: this,
+                    }),
                 n?.mutationKey &&
                 this.options.mutationKey &&
                 _d(n.mutationKey) !== _d(this.options.mutationKey)

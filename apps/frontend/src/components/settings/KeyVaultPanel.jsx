@@ -174,11 +174,16 @@ export function KeyVaultPanel() {
                 value={newKey.provider}
                 onValueChange={(val) => {
                   let defaultUrl = "http://127.0.0.1:11434";
-                  if (val === "openai") defaultUrl = "https://api.openai.com/v1";
-                  else if (val === "anthropic") defaultUrl = "https://api.anthropic.com/v1";
-                  else if (val === "google") defaultUrl = "https://generativelanguage.googleapis.com/v1beta";
-                  else if (val === "openrouter") defaultUrl = "https://openrouter.ai/api/v1";
-                  
+                  if (val === "openai")
+                    defaultUrl = "https://api.openai.com/v1";
+                  else if (val === "anthropic")
+                    defaultUrl = "https://api.anthropic.com/v1";
+                  else if (val === "google")
+                    defaultUrl =
+                      "https://generativelanguage.googleapis.com/v1beta";
+                  else if (val === "openrouter")
+                    defaultUrl = "https://openrouter.ai/api/v1";
+
                   setNewKey({ ...newKey, provider: val, baseUrl: defaultUrl });
                 }}
               >
@@ -229,10 +234,10 @@ export function KeyVaultPanel() {
           </div>
 
           {/* Optional BaseURL for Ollama/Custom */}
-          {(newKey.provider === "ollama" || 
-            newKey.provider === "openai" || 
-            newKey.provider === "anthropic" || 
-            newKey.provider === "google" || 
+          {(newKey.provider === "ollama" ||
+            newKey.provider === "openai" ||
+            newKey.provider === "anthropic" ||
+            newKey.provider === "google" ||
             newKey.provider === "openrouter") && (
             <div className="space-y-2">
               <Label className="text-xs text-slate-400">

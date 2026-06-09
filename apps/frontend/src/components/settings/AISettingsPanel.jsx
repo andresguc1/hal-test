@@ -41,10 +41,14 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
   // Resolve default base URL depending on provider
   const getDefaultBaseUrl = (provider) => {
     switch (provider) {
-      case "openai": return "https://api.openai.com/v1";
-      case "anthropic": return "https://api.anthropic.com/v1";
-      case "google": return "https://generativelanguage.googleapis.com/v1beta";
-      case "openrouter": return "https://openrouter.ai/api/v1";
+      case "openai":
+        return "https://api.openai.com/v1";
+      case "anthropic":
+        return "https://api.anthropic.com/v1";
+      case "google":
+        return "https://generativelanguage.googleapis.com/v1beta";
+      case "openrouter":
+        return "https://openrouter.ai/api/v1";
       case "ollama":
       default:
         return "http://127.0.0.1:11434";
@@ -54,10 +58,14 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
   // Resolve default model depending on provider
   const getDefaultModel = (provider) => {
     switch (provider) {
-      case "openai": return "gpt-4o-mini";
-      case "anthropic": return "claude-3-5-sonnet-latest";
-      case "google": return "gemini-2.0-flash";
-      case "openrouter": return "google/gemini-2.0-flash-001";
+      case "openai":
+        return "gpt-4o-mini";
+      case "anthropic":
+        return "claude-3-5-sonnet-latest";
+      case "google":
+        return "gemini-2.0-flash";
+      case "openrouter":
+        return "google/gemini-2.0-flash-001";
       case "ollama":
       default:
         return "gemma3:2b";
@@ -114,9 +122,17 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
       });
 
       if (res.success) {
-        toast.success(t("settings.ai.connection_success", { provider: activeProvider, model }));
+        toast.success(
+          t("settings.ai.connection_success", {
+            provider: activeProvider,
+            model,
+          }),
+        );
       } else {
-        toast.error(res.error || t("settings.ai.connect_error", { provider: activeProvider }));
+        toast.error(
+          res.error ||
+            t("settings.ai.connect_error", { provider: activeProvider }),
+        );
       }
     } catch (error) {
       setHealthResult({ success: false, error: error.message });
@@ -143,7 +159,7 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
         <Select
           value={activeProvider}
           onValueChange={(val) => {
-            const updates = { 
+            const updates = {
               activeProvider: val,
               baseUrl: getDefaultBaseUrl(val),
               selectedModel: getDefaultModel(val),
@@ -158,7 +174,9 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
           <SelectContent>
             <SelectItem value="ollama">Ollama (Local)</SelectItem>
             <SelectItem value="openai">OpenAI (Cloud)</SelectItem>
-            <SelectItem value="anthropic">Claude / Anthropic (Cloud)</SelectItem>
+            <SelectItem value="anthropic">
+              Claude / Anthropic (Cloud)
+            </SelectItem>
             <SelectItem value="google">Gemini / Google (Cloud)</SelectItem>
             <SelectItem value="openrouter">OpenRouter (Cloud)</SelectItem>
           </SelectContent>
@@ -283,9 +301,7 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
       {healthResult && healthResult.warning && (
         <div className="flex items-start gap-2 p-3 rounded-lg border border-amber-500/20 bg-amber-500/5 text-amber-300 text-xs">
           <AlertTriangle size={14} className="text-amber-400 shrink-0 mt-0.5" />
-          <div className="flex-1 leading-relaxed">
-            {healthResult.warning}
-          </div>
+          <div className="flex-1 leading-relaxed">{healthResult.warning}</div>
         </div>
       )}
 

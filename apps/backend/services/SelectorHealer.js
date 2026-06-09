@@ -26,88 +26,117 @@ class SelectorHealer {
      * Delegated aggressively to the browser for performance on heavy pages.
      * Includes proximity-based prioritization if an original selector is provided.
      */
-    getCompressionScript(originalSelector) {
-        // Sanitize originalSelector for use in template string
-        const sanitizedSelector = (originalSelector || '')
-            .replace(/\\/g, '\\\\')
-            .replace(/"/g, '\\"');
+    /**
+     * In-browser DOM compression function.
+     * Evaluated in browser context via page.evaluate.
+     * Safely handles SVGs, normalizes text spaces, avoids layout thrashing, and uses native parameter passing.
+     */
+    getCompressionScript() {
+        return (origSelector) => {
+            const interactiveSelectors =
+                'button, a, input, select, textarea, label, [role="button"], [role="link"], [role="searchbox"], [onclick], [data-testid], [aria-label]';
 
-        return `
-            (() => {
-                const interactiveSelectors = 'button, a, input, select, textarea, label, [role="button"], [role="link"], [role="searchbox"], [onclick], [data-testid], [aria-label]';
-                
-                // 1. Get potential candidates
-                let elements = Array.from(document.querySelectorAll(interactiveSelectors));
-                
-                // 2. Efficient visibility filtering (Avoid getComputedStyle when possible)
-                elements = elements.filter(el => {
-                    if (el.offsetWidth <= 0 || el.offsetHeight <= 0) return false;
-                    // Only call getComputedStyle if it passes layout check
-                    const style = window.getComputedStyle(el);
-                    return style.visibility !== 'hidden' && style.display !== 'none' && style.opacity !== '0';
-                });
+            // 1. Get potential candidates
+            let elements = Array.from(document.querySelectorAll(interactiveSelectors));
 
-                // 3. Proximity-based Prioritization
-                let targetLocation = null;
-                const origSelector = "${sanitizedSelector}";
-                if (origSelector) {
-                    try {
-                        let targetEl = document.querySelector(origSelector);
-                        if (!targetEl) {
-                            // Fallback: try to find the nearest parent if selector is partially valid
-                            const parts = origSelector.split(/[> ]+/);
-                            for (let i = parts.length - 1; i >= 1; i--) {
-                                try {
-                                    const sub = parts.slice(0, i).join(' ');
-                                    targetEl = document.querySelector(sub);
-                                    if (targetEl) break;
-                                } catch(e) {}
+            // 2. Efficient visibility filtering (Avoid getComputedStyle when possible)
+            elements = elements.filter((el) => {
+                if (el.offsetWidth <= 0 || el.offsetHeight <= 0) return false;
+                const style = window.getComputedStyle(el);
+                return (
+                    style.visibility !== 'hidden' &&
+                    style.display !== 'none' &&
+                    style.opacity !== '0'
+                );
+            });
+
+            // 3. Proximity-based Prioritization (Pre-calculating coordinates to avoid layout thrashing)
+            let targetLocation = null;
+            if (origSelector) {
+                try {
+                    let targetEl = document.querySelector(origSelector);
+                    if (!targetEl) {
+                        // Fallback: try to find the nearest parent if selector is partially valid
+                        const parts = origSelector.split(/[> ]+/);
+                        for (let i = parts.length - 1; i >= 1; i--) {
+                            try {
+                                const sub = parts.slice(0, i).join(' ');
+                                targetEl = document.querySelector(sub);
+                                if (targetEl) break;
+                            } catch (e) {
+                                // ignore query error for invalid sub-selectors
                             }
                         }
-                        if (targetEl) {
-                            const r = targetEl.getBoundingClientRect();
-                            targetLocation = { x: r.left + r.width/2, y: r.top + r.height/2 };
-                        }
-                    } catch(e) {}
+                    }
+                    if (targetEl) {
+                        const r = targetEl.getBoundingClientRect();
+                        targetLocation = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+                    }
+                } catch (e) {
+                    // ignore query error for invalid original selector
                 }
+            }
 
-                if (targetLocation) {
-                    elements.sort((a, b) => {
-                        const ra = a.getBoundingClientRect();
-                        const rb = b.getBoundingClientRect();
-                        const distA = Math.sqrt(Math.pow(ra.left + ra.width/2 - targetLocation.x, 2) + Math.pow(ra.top + ra.height/2 - targetLocation.y, 2));
-                        const distB = Math.sqrt(Math.pow(rb.left + rb.width/2 - targetLocation.x, 2) + Math.pow(rb.top + rb.height/2 - targetLocation.y, 2));
-                        return distA - distB;
-                    });
-                }
+            if (targetLocation) {
+                elements = elements
+                    .map((el) => {
+                        const r = el.getBoundingClientRect();
+                        const x = r.left + r.width / 2;
+                        const y = r.top + r.height / 2;
+                        const dist = Math.sqrt(
+                            Math.pow(x - targetLocation.x, 2) + Math.pow(y - targetLocation.y, 2),
+                        );
+                        return { el, dist };
+                    })
+                    .sort((a, b) => a.dist - b.dist)
+                    .map((item) => item.el);
+            }
 
-                // 4. Compact Representation (Max 500 elements)
-                return elements.slice(0, 500).map((el, index) => {
+            // 4. Compact Representation (Max 500 elements)
+            return elements
+                .slice(0, 500)
+                .map((el, index) => {
                     const breadcrumbs = [];
                     let curr = el.parentElement;
                     for (let i = 0; i < 3 && curr; i++) {
-                        breadcrumbs.unshift(curr.tagName.toLowerCase() + (curr.id ? '#' + curr.id : ''));
+                        breadcrumbs.unshift(
+                            curr.tagName.toLowerCase() + (curr.id ? '#' + curr.id : ''),
+                        );
                         curr = curr.parentElement;
                     }
+
+                    // Resolve class safely (handling SVGAnimatedString)
+                    const rawClass =
+                        typeof el.className === 'string'
+                            ? el.className
+                            : el.getAttribute('class') || '';
+                    const className = rawClass.trim()
+                        ? rawClass.split(/\s+/).slice(0, 3).join('.')
+                        : undefined;
+
+                    // Clean whitespace and newlines from text
+                    const textContent = el.textContent
+                        ? el.textContent.trim().replace(/\s+/g, ' ')
+                        : '';
 
                     const obj = {
                         ref: index,
                         tag: el.tagName.toLowerCase(),
                         id: el.id || undefined,
-                        class: el.className ? el.className.split(' ').slice(0, 3).join('.') : undefined,
-                        text: el.textContent.trim().substring(0, 60) || undefined,
+                        class: className || undefined,
+                        text: textContent.substring(0, 60) || undefined,
                         'aria-label': el.getAttribute('aria-label') || undefined,
                         'data-testid': el.getAttribute('data-testid') || undefined,
-                        path: breadcrumbs.join(' > ')
+                        path: breadcrumbs.join(' > '),
                     };
-                    
+
                     return Object.entries(obj)
                         .filter(([_, v]) => v !== undefined && v !== '')
-                        .map(([k, v]) => \`\${k}="\${v}"\`)
+                        .map(([k, v]) => `${k}="${v}"`)
                         .join(' ');
-                }).join('\\n');
-            })()
-        `;
+                })
+                .join('\n');
+        };
     }
 
     /**
@@ -167,7 +196,7 @@ class SelectorHealer {
             let compressedDOM = '';
             if (page && !page.isClosed()) {
                 compressedDOM = await Promise.race([
-                    page.evaluate(this.getCompressionScript(originalSelector)),
+                    page.evaluate(this.getCompressionScript(), originalSelector),
                     new Promise((_, reject) =>
                         setTimeout(() => reject(new Error('DOM extraction timed out')), 10000),
                     ),
