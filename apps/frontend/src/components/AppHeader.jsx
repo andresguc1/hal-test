@@ -1,5 +1,6 @@
 import React, { memo } from "react";
 import { motion as Motion } from "framer-motion"; // Renamed to Motion to avoid lint unused warning
+import { useNavigate } from "react-router-dom";
 import {
   Sun,
   Moon,
@@ -9,7 +10,7 @@ import {
   Database,
   Sparkles,
   Cloud,
-  LogOut,
+  LayoutDashboard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
@@ -118,6 +119,7 @@ function AppHeader({
   const { theme, setTheme } = useTheme();
   const { t } = useTranslation();
   const { user, authMode } = useAuth();
+  const navigate = useNavigate();
   const isGuest = user?.isGuest || authMode === "local";
 
   // Local state to manage temporary visibility of success/error messages
@@ -357,6 +359,15 @@ function AppHeader({
 
       {/* RIGHT */}
       <div className="flex items-center gap-1 md:gap-2 lg:gap-3 relative z-20 shrink-0">
+        <HeaderButton
+          onClick={() => navigate("/dashboard")}
+          title="Dashboard"
+          id="header-dashboard-btn"
+          className="hidden md:flex"
+        >
+          <LayoutDashboard size={18} />
+        </HeaderButton>
+
         <HeaderButton
           onClick={onToggleToolbox}
           title={isToolboxVisible ? "Hide Toolbox" : "Show Toolbox"}

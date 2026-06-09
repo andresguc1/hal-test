@@ -54,6 +54,7 @@ import ReportDashboard from "./components/reporting/ReportDashboard";
 import { ExportModal } from "./components/modals/ExportModal";
 import { ImportModal } from "./components/modals/ImportModal";
 import ExecutionDashboard from "./components/reporting/ExecutionDashboard";
+import HalDashboard from "./components/dashboard/HalDashboard";
 import { api } from "./utils/api";
 import { useElementPicker } from "./hooks/useElementPicker";
 import { AnimatePresence } from "framer-motion";
@@ -2096,6 +2097,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <HalDashboard />
             </ProtectedRoute>
           }
         />
