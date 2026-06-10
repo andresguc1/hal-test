@@ -1,75 +1,75 @@
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useMemo,
-  useEffect,
-} from "react";
-import { useSettings } from "./SettingsContext";
+import { create } from "zustand";
 import { api } from "../utils/api";
-import { useToast } from "../hooks/useToast";
 
-const AIContext = createContext({});
+// We keep the logic inside the store but it might need access to outside dependencies like toast and settings.
+// Since Zustand stores are outside React, we can inject them when calling the actions or pass them as parameters.
 
-export const AIProvider = ({ children }) => {
-  const { aiConfig, vaultKeys } = useSettings();
-  const toast = useToast();
+// eslint-disable-next-line react-refresh/only-export-components
+export const useAIStore = create((set, get) => ({
+  chatMessages: [],
+  isGenerating: false,
+  selectedKeyId: "default",
+  isAiReady: false,
+  availableKeys: [],
+  aiConfig: null,
+  
+  setInitialContext: (settings, available) => {
+    const isReady = () => {
+      if (!settings) return false;
+      const provider = settings.activeProvider;
+      if (provider === "ollama") return true;
+      const key = settings.keys?.[provider];
+      return !!(provider && key);
+    };
 
-  const [chatMessages, setChatMessages] = useState([]);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [selectedKeyId, setSelectedKeyId] = useState("default");
-
-  const availableKeys = useMemo(() => {
-    if (!aiConfig?.activeProvider) return [];
-    return (
-      vaultKeys?.filter((k) => k.provider === aiConfig.activeProvider) || []
-    );
-  }, [vaultKeys, aiConfig?.activeProvider]);
-
-  useEffect(() => {
-    if (availableKeys.length > 0) {
-      if (!availableKeys.find((k) => k.id === selectedKeyId)) {
-        setSelectedKeyId(availableKeys[0].id);
+    set((state) => {
+      let nextKeyId = state.selectedKeyId;
+      if (available && available.length > 0) {
+        if (!available.find((k) => k.id === state.selectedKeyId)) {
+          nextKeyId = available[0].id;
+        }
+      } else {
+        nextKeyId = "default";
       }
-    } else {
-      setSelectedKeyId("default");
-    }
-  }, [availableKeys, selectedKeyId]);
 
-  const isAiReady = useMemo(() => {
-    if (!aiConfig) return false;
-    const provider = aiConfig.activeProvider;
-    if (provider === "ollama") return true;
-    const key = aiConfig.keys?.[provider];
-    return !!(provider && key);
-  }, [aiConfig]);
+      return {
+        aiConfig: settings,
+        availableKeys: available || [],
+        selectedKeyId: nextKeyId,
+        isAiReady: isReady(),
+      };
+    });
+  },
 
-  const clearMessages = () => setChatMessages([]);
+  setSelectedKeyId: (id) => set({ selectedKeyId: id }),
 
-  const sendMessage = async (text, browserId = null) => {
-    if (!text.trim() || !isAiReady) return;
+  clearMessages: () => set({ chatMessages: [] }),
 
-    setIsGenerating(true);
-    const newUserMsg = { role: "user", content: text };
-    setChatMessages((prev) => [...prev, newUserMsg]);
+  sendMessage: async (text, browserId = null, toast) => {
+    const state = get();
+    if (!text.trim() || !state.isAiReady) return;
+
+    set((s) => ({
+      isGenerating: true,
+      chatMessages: [...s.chatMessages, { role: "user", content: text }],
+    }));
 
     try {
-      const provider = aiConfig.activeProvider;
-      const model = aiConfig.selectedModel;
+      const provider = state.aiConfig.activeProvider;
+      const model = state.aiConfig.selectedModel;
 
       let apiKeyToSend;
-      if (selectedKeyId !== "default") {
-        apiKeyToSend = selectedKeyId;
+      if (state.selectedKeyId !== "default") {
+        apiKeyToSend = state.selectedKeyId;
       } else {
-        apiKeyToSend = aiConfig.keys?.[provider];
+        apiKeyToSend = state.aiConfig.keys?.[provider];
       }
 
-      const historyToSend = [...chatMessages, newUserMsg].map((m) => ({
+      const historyToSend = get().chatMessages.map((m) => ({
         role: m.role,
         content: m.content,
       }));
 
-      // Fetch canvas state if available globally
       let canvasState = null;
       if (typeof window !== "undefined" && window.__HAL_GET_CANVAS_STATE__) {
         canvasState = window.__HAL_GET_CANVAS_STATE__();
@@ -80,8 +80,8 @@ export const AIProvider = ({ children }) => {
         {
           messages: historyToSend,
           browserId: browserId,
-          aiConfig,
-          canvasState, // Injected manual context for models with no tool support
+          aiConfig: state.aiConfig,
+          canvasState,
         },
         {
           headers: {
@@ -92,27 +92,24 @@ export const AIProvider = ({ children }) => {
         },
       );
 
-      // Handle the different payload responses from `/ai/chat` vs `/ai/ask` endpoints if needed
       let finalContent = result.message || result.text || "";
-      if (
-        !finalContent.trim() &&
-        result.toolCalls &&
-        result.toolCalls.length > 0
-      ) {
+      if (!finalContent.trim() && result.toolCalls && result.toolCalls.length > 0) {
         finalContent = "He ejecutado las acciones solicitadas en el lienzo.";
       }
 
       if (finalContent || (result.toolCalls && result.toolCalls.length > 0)) {
-        setChatMessages((prev) => [
-          ...prev,
-          {
-            role: "assistant",
-            content: finalContent,
-            provider: result.provider || provider,
-            model: result.model || model,
-            usage: result.usage,
-          },
-        ]);
+        set((s) => ({
+          chatMessages: [
+            ...s.chatMessages,
+            {
+              role: "assistant",
+              content: finalContent,
+              provider: result.provider || provider,
+              model: result.model || model,
+              usage: result.usage,
+            },
+          ],
+        }));
       }
 
       if (result.toolCalls && result.toolCalls.length > 0) {
@@ -127,36 +124,39 @@ export const AIProvider = ({ children }) => {
       }
     } catch (error) {
       toast.error(`HAL Failed: ${error.message}`);
-      setChatMessages((prev) => [
-        ...prev,
-        {
-          role: "error",
-          content: error.message || "Failed to connect to AI service",
-        },
-      ]);
+      set((s) => ({
+        chatMessages: [
+          ...s.chatMessages,
+          {
+            role: "error",
+            content: error.message || "Failed to connect to AI service",
+          },
+        ],
+      }));
     } finally {
-      setIsGenerating(false);
+      set({ isGenerating: false });
     }
-  };
-
-  return (
-    <AIContext.Provider
-      value={{
-        chatMessages,
-        isGenerating,
-        isAiReady,
-        selectedKeyId,
-        setSelectedKeyId,
-        availableKeys,
-        sendMessage,
-        clearMessages,
-        aiConfig,
-      }}
-    >
-      {children}
-    </AIContext.Provider>
-  );
-};
+  },
+}));
 
 // eslint-disable-next-line react-refresh/only-export-components
-export const useAIContext = () => useContext(AIContext);
+export const useAIContext = () => useAIStore();
+
+import React, { useEffect, useMemo } from "react";
+import { useSettings } from "./SettingsContext";
+
+export const AIProvider = ({ children }) => {
+  const { aiConfig, vaultKeys } = useSettings();
+  const setInitialContext = useAIStore((state) => state.setInitialContext);
+
+  const availableKeys = useMemo(() => {
+    if (!aiConfig?.activeProvider) return [];
+    return vaultKeys?.filter((k) => k.provider === aiConfig.activeProvider) || [];
+  }, [vaultKeys, aiConfig?.activeProvider]);
+
+  useEffect(() => {
+    setInitialContext(aiConfig, availableKeys);
+  }, [aiConfig, availableKeys, setInitialContext]);
+
+  return <>{children}</>;
+};

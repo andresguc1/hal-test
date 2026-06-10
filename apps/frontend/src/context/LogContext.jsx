@@ -1,12 +1,11 @@
-import React, { createContext, useContext, useState, useCallback } from "react";
+import { create } from "zustand";
 
-const LogContext = createContext();
+// eslint-disable-next-line react-refresh/only-export-components
+export const useLogStore = create((set) => ({
+  logs: [],
+  isPanelVisible: false,
 
-export const LogProvider = ({ children }) => {
-  const [logs, setLogs] = useState([]);
-  const [isPanelVisible, setIsPanelVisible] = useState(false);
-
-  const addLog = useCallback((message, type = "info", nodeId = null) => {
+  addLog: (message, type = "info", nodeId = null) => {
     const newLog = {
       id: Date.now() + Math.random().toString(36).substr(2, 9),
       timestamp: new Date().toLocaleTimeString(),
@@ -15,52 +14,32 @@ export const LogProvider = ({ children }) => {
       nodeId,
     };
 
-    setLogs((prev) => {
-      // Keep only last 100 logs
-      const updated = [...prev, newLog];
-      if (updated.length > 100) return updated.slice(-100);
-      return updated;
+    set((state) => {
+      const updated = [...state.logs, newLog];
+      const nextLogs = updated.length > 100 ? updated.slice(-100) : updated;
+      
+      const shouldShowPanel = type === "error" || type === "warning";
+      
+      return {
+        logs: nextLogs,
+        ...(shouldShowPanel ? { isPanelVisible: true } : {})
+      };
     });
+  },
 
-    if (type === "error" || type === "warning") {
-      setIsPanelVisible(true);
-      // Note: We don't trigger toast here because App already has a socket listener
-      // or we can use a simpler event emitter if needed.
-      // But actually, the most direct way is to have the socket listener in App or
-      // useHaltestSocket trigger a toast directly.
-    }
-  }, []);
+  clearLogs: () => set({ logs: [] }),
 
-  const clearLogs = useCallback(() => {
-    setLogs([]);
-  }, []);
+  setIsPanelVisible: (isVisible) => set({ isPanelVisible: isVisible }),
 
-  const togglePanel = useCallback(() => {
-    setIsPanelVisible((v) => !v);
-  }, []);
+  togglePanel: () => set((state) => ({ isPanelVisible: !state.isPanelVisible })),
+}));
 
-  return (
-    <LogContext.Provider
-      value={{
-        logs,
-        addLog,
-        clearLogs,
-        isPanelVisible,
-        setIsPanelVisible,
-        togglePanel,
-      }}
-    >
-      {children}
-    </LogContext.Provider>
-  );
-};
-
-// Hook must be in a separate export to comply with react-refresh/only-export-components
+// Backward compatibility for components still using useLogs() without selectors.
+// NOTE: This will still trigger re-renders if logs change. Components should migrate to useLogStore(selector).
 // eslint-disable-next-line react-refresh/only-export-components
-export const useLogs = () => {
-  const context = useContext(LogContext);
-  if (!context) {
-    throw new Error("useLogs must be used within a LogProvider");
-  }
-  return context;
+export const useLogs = () => useLogStore();
+
+export const LogProvider = ({ children }) => {
+  // No-op provider to avoid breaking existing trees.
+  return children;
 };

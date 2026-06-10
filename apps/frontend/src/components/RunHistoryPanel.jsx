@@ -1,8 +1,10 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useState } from "react";
 import { api } from "../utils/api";
 import { cn } from "../lib/utils";
 import { History, X, RefreshCw, Trash2, Play, Activity } from "lucide-react";
 import { AnimatePresence, motion as Motion } from "framer-motion";
+import { useQueryClient } from "@tanstack/react-query";
+import { useRuns, dashboardKeys } from "./dashboard/hooks/useDashboardData";
 
 export default function RunHistoryPanel({
   isOpen,
@@ -10,35 +12,17 @@ export default function RunHistoryPanel({
   onSelectRun,
   currentFlowId,
 }) {
-  const [runs, setRuns] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
   const [selectedRunId, setSelectedRunId] = useState(null);
   const [statusFilter, setStatusFilter] = useState("all"); // 'all' | 'failed' | 'completed'
   const [playingVideo, setPlayingVideo] = useState(null); // URL of the video being played
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const loadRuns = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (currentFlowId) params.append("flowId", currentFlowId);
-      if (statusFilter !== "all") params.append("status", statusFilter);
-
-      const res = await api.get(`/runs?${params.toString()}`);
-      if (res.success) {
-        setRuns(res.data);
-      }
-    } catch (error) {
-      console.error("Failed to load runs:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [currentFlowId, statusFilter]);
-
-  useEffect(() => {
-    if (isOpen) {
-      loadRuns();
-    }
-  }, [isOpen, loadRuns]);
+  // Fetch runs using the shared React Query hook
+  const { data: runs = [], isLoading, refetch, isFetching } = useRuns({
+    flowId: currentFlowId,
+    status: statusFilter !== "all" ? statusFilter : undefined,
+  });
 
   const handleRunClick = (run) => {
     setSelectedRunId(run.id);
@@ -50,19 +34,20 @@ export default function RunHistoryPanel({
     if (!window.confirm("Delete this run record?")) return;
 
     try {
-      setLoading(true);
+      setIsDeleting(true);
       const res = await api.delete(`/runs/${runId}`);
       if (res.success) {
-        setRuns((prev) => prev.filter((r) => r.id !== runId));
         if (selectedRunId === runId) {
           setSelectedRunId(null);
           onSelectRun(null); // Clear selection in parent
         }
+        // Invalidate all dashboard keys to sync with HistoryPage
+        queryClient.invalidateQueries({ queryKey: dashboardKeys.all });
       }
     } catch (error) {
       console.error("Failed to delete run:", error);
     } finally {
-      setLoading(false);
+      setIsDeleting(false);
     }
   };
 
@@ -70,17 +55,17 @@ export default function RunHistoryPanel({
     if (!window.confirm("Clear ALL history history for all flows?")) return;
 
     try {
-      setLoading(true);
+      setIsDeleting(true);
       const res = await api.delete("/runs");
       if (res.success) {
-        setRuns([]);
         setSelectedRunId(null);
         onSelectRun(null);
+        queryClient.invalidateQueries({ queryKey: dashboardKeys.all });
       }
     } catch (error) {
       console.error("Failed to clear history:", error);
     } finally {
-      setLoading(false);
+      setIsDeleting(false);
     }
   };
 
@@ -102,18 +87,20 @@ export default function RunHistoryPanel({
           {runs.length > 0 && (
             <button
               onClick={handleClearHistory}
-              className="p-1.5 hover:bg-red-500/20 rounded-md text-slate-400 hover:text-red-400 transition-colors"
+              disabled={isDeleting}
+              className="p-1.5 hover:bg-red-500/20 rounded-md text-slate-400 hover:text-red-400 transition-colors disabled:opacity-50"
               title="Clear Global History"
             >
               <Trash2 size={14} />
             </button>
           )}
           <button
-            onClick={loadRuns}
-            className="p-1.5 hover:bg-white/10 rounded-md text-slate-400 hover:text-slate-200 transition-colors"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="p-1.5 hover:bg-white/10 rounded-md text-slate-400 hover:text-slate-200 transition-colors disabled:opacity-50"
             title="Refresh"
           >
-            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+            <RefreshCw size={14} className={isFetching ? "animate-spin" : ""} />
           </button>
           <button
             onClick={onClose}
@@ -139,7 +126,7 @@ export default function RunHistoryPanel({
 
       {/* CONTENT */}
       <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2">
-        {loading && runs.length === 0 ? (
+        {(isLoading || isDeleting) && runs.length === 0 ? (
           <div className="flex items-center justify-center p-8 text-slate-500 text-xs">
             <RefreshCw size={16} className="animate-spin mr-2" />
             Loading...
@@ -245,7 +232,7 @@ export default function RunHistoryPanel({
               </div>
 
               <div className="mt-2 text-[9px] text-slate-600 font-mono border-t border-white/5 pt-1.5 flex justify-between">
-                <span>{run.trigger.toUpperCase()}</span>
+                <span>{run.trigger?.toUpperCase() || "MANUAL"}</span>
                 <span>ID: {run.id.slice(0, 6)}</span>
               </div>
             </div>

@@ -35,30 +35,37 @@ const DEFAULT_EDGE_OPTIONS = {
 export const generateNodeId = () => `node_${uuidv4()}`;
 
 export const updateNodeRecursively = (nodes, nodeId, updater) => {
-  return nodes.map((node) => {
+  let hasChanges = false;
+  const nextNodes = nodes.map((node) => {
     const targetId =
       typeof nodeId === "object" ? nodeId.id || nodeId.nodeId : nodeId;
     if (node.id === targetId) {
+      hasChanges = true;
       return updater(node);
     }
     if (node.data?.subFlow?.nodes) {
-      return {
-        ...node,
-        data: {
-          ...node.data,
-          subFlow: {
-            ...node.data.subFlow,
-            nodes: updateNodeRecursively(
-              node.data.subFlow.nodes,
-              nodeId,
-              updater,
-            ),
+      const nextSubNodes = updateNodeRecursively(
+        node.data.subFlow.nodes,
+        nodeId,
+        updater,
+      );
+      if (nextSubNodes !== node.data.subFlow.nodes) {
+        hasChanges = true;
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            subFlow: {
+              ...node.data.subFlow,
+              nodes: nextSubNodes,
+            },
           },
-        },
-      };
+        };
+      }
     }
     return node;
   });
+  return hasChanges ? nextNodes : nodes;
 };
 
 export function useFlowState({ currentProject, currentFlowId } = {}) {

@@ -30,13 +30,11 @@ export default function AskAIPanel({
   onConfirmProposal,
   onRejectProposal,
 }) {
-  const {
-    chatMessages: conversation,
-    isGenerating: isLoading,
-    sendMessage,
-    clearMessages: handleClear,
-    aiConfig,
-  } = useAIContext();
+  const conversation = useAIContext((state) => state.chatMessages);
+  const isLoading = useAIContext((state) => state.isGenerating);
+  const sendMessage = useAIContext((state) => state.sendMessage);
+  const handleClear = useAIContext((state) => state.clearMessages);
+  const aiConfig = useAIContext((state) => state.aiConfig);
 
   const [prompt, setPrompt] = useState("");
   const [isExpanded, setIsExpanded] = useState(true);

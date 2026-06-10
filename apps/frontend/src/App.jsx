@@ -77,7 +77,7 @@ import {
   ChevronDown,
   Wand2,
 } from "lucide-react";
-import { useLogs } from "./context/LogContext";
+import { useLogStore } from "./context/LogContext";
 import TerminalPanel from "./components/TerminalPanel";
 import VariablePanel from "./components/VariablePanel";
 import AskAIPanel from "./components/AskAIPanel";
@@ -95,7 +95,10 @@ function Dashboard() {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const toast = useToast();
-  const { logs, addLog, isPanelVisible, togglePanel } = useLogs();
+  const hasLogs = useLogStore((state) => state.logs.length > 0);
+  const addLog = useLogStore((state) => state.addLog);
+  const isPanelVisible = useLogStore((state) => state.isPanelVisible);
+  const togglePanel = useLogStore((state) => state.togglePanel);
   const reactFlowWrapper = React.useRef(null);
 
   // 2. Navigation & Context Hooks
@@ -1838,7 +1841,7 @@ function Dashboard() {
               <button className="terminal-tag" onClick={togglePanel}>
                 <Terminal size={14} className="icon" />
                 <span>Terminal</span>
-                {logs.length > 0 && (
+                {hasLogs && (
                   <span className="flex h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse ml-0.5" />
                 )}
               </button>

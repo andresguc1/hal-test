@@ -286,16 +286,14 @@ export default function ToolboxPanel({
   const { t } = useTranslation();
   const { aiConfig, openSettings } = useSettings();
 
-  const {
-    chatMessages,
-    isGenerating,
-    isAiReady,
-    selectedKeyId,
-    setSelectedKeyId,
-    availableKeys,
-    sendMessage,
-    clearMessages,
-  } = useAIContext();
+  const chatMessages = useAIContext((state) => state.chatMessages);
+  const isGenerating = useAIContext((state) => state.isGenerating);
+  const isAiReady = useAIContext((state) => state.isAiReady);
+  const selectedKeyId = useAIContext((state) => state.selectedKeyId);
+  const setSelectedKeyId = useAIContext((state) => state.setSelectedKeyId);
+  const availableKeys = useAIContext((state) => state.availableKeys);
+  const sendMessage = useAIContext((state) => state.sendMessage);
+  const clearMessages = useAIContext((state) => state.clearMessages);
 
   const [localIsCollapsed, setLocalIsCollapsed] = useState(false);
   const isCollapsed =
