@@ -106,6 +106,43 @@ describe('HalTest Import / Export API Endpoints', () => {
             expect(actions[actions.length - 1].action).toBe('close_browser');
         });
 
+        it('should recursively convert a Playwright script with test.step blocks', async () => {
+            const playwrightCode = `
+                import { test } from '@playwright/test';
+                test('group test', async ({ page }) => {
+                    await test.step('📦 Login Steps', async () => {
+                        await page.goto('https://example.com/login');
+                        await page.fill('#username', 'user1');
+                    });
+                });
+            `;
+            const response = await request(app)
+                .post(`${API_PREFIX}/import/convert`)
+                .send({ content: playwrightCode, framework: 'playwright' });
+
+            expect(response.statusCode).toBe(200);
+            expect(response.body.success).toBe(true);
+            const flow = response.body.flows[0].flow;
+
+            expect(flow[0].action).toBe('launch_browser');
+
+            const stepAction = flow[1];
+            expect(stepAction.action).toBe('component');
+            expect(stepAction.label).toBe('📦 Login Steps');
+            expect(stepAction.subNodes.length).toBe(2);
+            expect(stepAction.subNodes[0]).toEqual({
+                action: 'open_url',
+                url: 'https://example.com/login',
+            });
+            expect(stepAction.subNodes[1]).toEqual({
+                action: 'type_text',
+                selector: '#username',
+                text: 'user1',
+            });
+
+            expect(flow[flow.length - 1].action).toBe('close_browser');
+        });
+
         it('should return 400 if content is missing', async () => {
             const response = await request(app)
                 .post(`${API_PREFIX}/import/convert`)

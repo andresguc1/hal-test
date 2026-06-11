@@ -81,6 +81,27 @@ export class PlaywrightMapper extends AbstractMapper {
             }
         }
 
+        // Mapeo de test.step
+        if (objectName === 'test' && methodName === 'step') {
+            const stepLabel = args[0]?.value || 'Step';
+            const callback = args[1];
+            let subActions = [];
+
+            if (
+                callback &&
+                (callback.type === 'ArrowFunctionExpression' ||
+                    callback.type === 'FunctionExpression')
+            ) {
+                subActions = this.map(callback.body);
+            }
+
+            return {
+                action: 'component',
+                label: stepLabel,
+                subNodes: subActions,
+            };
+        }
+
         // Mapeo de Expects (Aserciones)
         if (objectName === 'expect') {
             // Simplificación: Ignorar expects por ahora o mapear a validate_semantic

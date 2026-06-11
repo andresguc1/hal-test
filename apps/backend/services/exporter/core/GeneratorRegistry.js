@@ -3,6 +3,15 @@ import { BrowserActionMapper } from '../nodes/BrowserActionMapper.js';
 import { InteractionMapper } from '../nodes/InteractionMapper.js';
 import { WaitMapper } from '../nodes/WaitMapper.js';
 import { UtilityMapper } from '../nodes/UtilityMapper.js';
+import { NavigationMapper } from '../nodes/NavigationMapper.js';
+import { FormMapper } from '../nodes/FormMapper.js';
+import { AssertionMapper } from '../nodes/AssertionMapper.js';
+import { NetworkMapper } from '../nodes/NetworkMapper.js';
+import { DOMMapper } from '../nodes/DOMMapper.js';
+import { FileMapper } from '../nodes/FileMapper.js';
+import { SessionMapper } from '../nodes/SessionMapper.js';
+import { FlowControlMapper } from '../nodes/FlowControlMapper.js';
+import { CompositionMapper } from '../nodes/CompositionMapper.js';
 
 /**
  * Registry of node mappers.
@@ -27,11 +36,29 @@ export class NodeMapperRegistry {
     static getMapper(type) {
         return this.mappers.get(type);
     }
+
+    /**
+     * Returns all registered node types.
+     */
+    static getRegisteredTypes() {
+        return Array.from(this.mappers.keys());
+    }
 }
 
-// Initial registration
+// ── Core Mappers ──
 NodeMapperRegistry.register(OpenUrlMapper);
 NodeMapperRegistry.register(BrowserActionMapper);
 NodeMapperRegistry.register(InteractionMapper);
 NodeMapperRegistry.register(WaitMapper);
 NodeMapperRegistry.register(UtilityMapper);
+
+// ── Extended Mappers ──
+NodeMapperRegistry.register(NavigationMapper);
+NodeMapperRegistry.register(FormMapper);
+NodeMapperRegistry.register(AssertionMapper);
+NodeMapperRegistry.register(NetworkMapper);
+NodeMapperRegistry.register(DOMMapper);
+NodeMapperRegistry.register(FileMapper);
+NodeMapperRegistry.register(SessionMapper);
+NodeMapperRegistry.register(FlowControlMapper);
+NodeMapperRegistry.register(CompositionMapper);

@@ -53,6 +53,8 @@ export class PlaywrightGenerator extends BaseGenerator {
         const label = step.data?.label || step.data?.customLabel || step.label || type;
         const lang = this.language.toLowerCase();
         const commentChar = lang === 'python' ? '#' : '//';
+        const nodeId = step.id || step.nodeId || '';
+        const nodeIdComment = nodeId ? `${commentChar} [node_id: ${nodeId}]` : '';
 
         let nodeCode = '';
 
@@ -62,9 +64,9 @@ export class PlaywrightGenerator extends BaseGenerator {
             nodeCode = this.generateSteps(subNodes, depth + 1);
 
             if (lang === 'javascript' || lang === 'typescript') {
-                return `${indent}await test.step(\`📦 ${label}\`, async () => {\n${nodeCode}\n${indent}});`;
+                return `${indent}${nodeIdComment ? nodeIdComment + '\n' : ''}${indent}await test.step(\`📦 ${label}\`, async () => {\n${nodeCode}\n${indent}});`;
             }
-            return `${indent}${commentChar} [GROUP]: ${label}\n${nodeCode}\n${indent}${commentChar} [END GROUP]`;
+            return `${indent}${nodeIdComment ? nodeIdComment + '\n' : ''}${indent}${commentChar} [GROUP]: ${label}\n${nodeCode}\n${indent}${commentChar} [END GROUP]`;
         }
 
         if (mapper) {
@@ -72,6 +74,9 @@ export class PlaywrightGenerator extends BaseGenerator {
             const mapperParams = { ...config, type, actionType: type };
             nodeCode = mapper.getCode(mapperParams, this.language, index);
         } else {
+            // Track warning for unmapped node
+            this.addWarning(type, label, index);
+
             if (lang === 'javascript' || lang === 'typescript') {
                 nodeCode = `console.log(\`${this.msg.not_implemented} ${type}\`);`;
             } else if (lang === 'python') {
@@ -83,10 +88,10 @@ export class PlaywrightGenerator extends BaseGenerator {
 
         // Wrap in a test step for JS/TS
         if (lang === 'javascript' || lang === 'typescript') {
-            return `${indent}await test.step(\`${label}\`, async () => {\n${indent}    ${nodeCode}\n${indent}});`;
+            return `${indent}${nodeIdComment ? nodeIdComment + '\n' : ''}${indent}await test.step(\`${label}\`, async () => {\n${indent}    ${nodeCode}\n${indent}});`;
         }
 
-        return `${indent}${nodeCode}`;
+        return `${indent}${nodeIdComment ? nodeIdComment + '\n' : ''}${indent}${nodeCode}`;
     }
 
     generateFooter() {

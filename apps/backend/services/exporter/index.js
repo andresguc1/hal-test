@@ -59,6 +59,7 @@ export const exportService = {
     generateCode: (flowData, framework = 'playwright', language = 'javascript', locale = 'es') => {
         try {
             let code = '';
+            let warnings = [];
             const extensionMap = {
                 javascript: 'js',
                 typescript: 'ts',
@@ -71,7 +72,9 @@ export const exportService = {
             switch (framework.toLowerCase()) {
                 case 'playwright': {
                     const generator = new PlaywrightGenerator(language, locale);
-                    code = generator.generate(flowData);
+                    const result = generator.generate(flowData);
+                    code = result.code;
+                    warnings = result.warnings || [];
                     break;
                 }
                 default:
@@ -81,6 +84,7 @@ export const exportService = {
             return {
                 success: true,
                 code,
+                warnings,
                 framework,
                 language,
                 extension,

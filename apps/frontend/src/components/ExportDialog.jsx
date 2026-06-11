@@ -24,6 +24,7 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges, projectId }) => {
   const { t } = useTranslation();
   const [exportMode, setExportMode] = useState("json"); // 'json', 'code'
   const [framework, setFramework] = useState("playwright");
+  const [language, setLanguage] = useState("javascript");
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(null);
   const [error, setError] = useState(null);
@@ -34,30 +35,49 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges, projectId }) => {
     setProgress(null);
     setError(null);
     setGeneratedCode(null);
-    setExportMode("json");
+    setLanguage("javascript");
   }, []);
 
   const handleClose = useCallback(() => {
     resetState();
+    setExportMode("json");
     onClose();
   }, [resetState, onClose]);
 
   // Convert nodes to flow actions for backend
   const convertNodesToFlow = useCallback(() => {
-    // Basic serialization for now - same as logic in execution
-    // Basic serialization for now - same as logic in execution
-    const result = [];
+    if (!nodes || !Array.isArray(nodes)) return [];
 
-    // Naive topological sort for demo - assuming linear or simple tree for now
-    // In a real app, use true topological sort from react-flow structure
+    const nodeMap = new Map();
+
     nodes.forEach((node) => {
-      result.push({
-        action: node.data.type,
-        ...node.data.configuration,
+      nodeMap.set(node.id, {
+        id: node.id,
+        type: node.data?.type || node.type,
+        action: node.data?.type || node.type,
+        data: {
+          configuration: node.data?.configuration || {},
+          label: node.data?.label || node.data?.customLabel || node.type,
+          customLabel: node.data?.customLabel,
+          subNodes: [],
+        },
+        parentNode: node.parentNode || node.parentId,
+        ...node.data?.configuration,
       });
     });
 
-    return result;
+    const roots = [];
+
+    nodeMap.forEach((mappedNode) => {
+      const parentId = mappedNode.parentNode;
+      if (parentId && nodeMap.has(parentId)) {
+        nodeMap.get(parentId).data.subNodes.push(mappedNode);
+      } else {
+        roots.push(mappedNode);
+      }
+    });
+
+    return roots;
   }, [nodes]);
 
   // Handle JSON export (Client-Side)
@@ -168,6 +188,7 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges, projectId }) => {
 
       const result = await api.post("/export/code", {
         framework,
+        language,
         flow,
         projectId,
       });
@@ -188,22 +209,31 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges, projectId }) => {
     } finally {
       setIsProcessing(false);
     }
-  }, [convertNodesToFlow, framework, projectId, t]);
+  }, [convertNodesToFlow, framework, language, projectId, t]);
 
   // Download generated code
   const handleDownloadCode = useCallback(() => {
     if (!generatedCode) return;
 
-    const blob = new Blob([generatedCode], { type: "text/javascript" });
+    const extMap = {
+      javascript: "js",
+      typescript: "ts",
+      python: "py",
+      java: "java",
+      csharp: "cs",
+    };
+    const ext = extMap[language] || "js";
+
+    const blob = new Blob([generatedCode], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `hal_test_${framework}_${Date.now()}.js`;
+    a.download = `hal_test_${framework}_${Date.now()}.${ext}`;
     a.click();
     URL.revokeObjectURL(url);
 
     handleClose();
-  }, [generatedCode, framework, handleClose]);
+  }, [generatedCode, framework, language, handleClose]);
 
   // Copy code to clipboard
   const handleCopyCode = useCallback(() => {
@@ -271,8 +301,8 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges, projectId }) => {
                   <button
                     key={mode.id}
                     onClick={() => {
-                      setExportMode(mode.id);
                       resetState();
+                      setExportMode(mode.id);
                     }}
                     disabled={isProcessing}
                     className={cn(
@@ -339,17 +369,36 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges, projectId }) => {
                     {t("dialogs.export.code_desc")}
                   </p>
 
-                  <div className="w-full max-w-xs text-left">
-                    <label className="text-xs font-medium text-slate-400 ml-1">
-                      {t("dialogs.export.framework_label")}
-                    </label>
-                    <select
-                      value={framework}
-                      onChange={(e) => setFramework(e.target.value)}
-                      className="w-full mt-1 px-3 py-2 bg-slate-900 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-500"
-                    >
-                      <option value="playwright">Playwright</option>
-                    </select>
+                  <div className="w-full max-w-xs text-left flex flex-col gap-4">
+                    <div>
+                      <label className="text-xs font-medium text-slate-400 ml-1">
+                        {t("dialogs.export.framework_label")}
+                      </label>
+                      <select
+                        value={framework}
+                        onChange={(e) => setFramework(e.target.value)}
+                        className="w-full mt-1 px-3 py-2 bg-slate-900 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-500"
+                      >
+                        <option value="playwright">Playwright</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-medium text-slate-400 ml-1">
+                        {t("dialogs.export.language_label", "Language")}
+                      </label>
+                      <select
+                        value={language}
+                        onChange={(e) => setLanguage(e.target.value)}
+                        className="w-full mt-1 px-3 py-2 bg-slate-900 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-500"
+                      >
+                        <option value="javascript">JavaScript</option>
+                        <option value="typescript">TypeScript</option>
+                        <option value="python">Python</option>
+                        <option value="java">Java</option>
+                        <option value="csharp">C#</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
               )}

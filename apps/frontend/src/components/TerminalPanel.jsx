@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
@@ -13,6 +13,10 @@ import {
   Copy,
   Check,
   AlertTriangle,
+  Download,
+  RefreshCw,
+  Eye,
+  Edit2,
 } from "lucide-react";
 import { useLogs } from "../context/LogContext";
 import { cn } from "@/lib/utils";
@@ -20,6 +24,7 @@ import { useTranslation } from "react-i18next";
 import i18n from "../i18n";
 import { api } from "../utils/api";
 import { useProjectManager } from "./hooks/useProjectManager";
+import { useToast } from "../hooks/useToast";
 
 // ─── Log type → color mapping ─────────────────────────────────────────────────
 const LOG_COLORS = {
@@ -37,21 +42,152 @@ const LOG_COLORS = {
 const MAX_SHELL_LINES = 500;
 const CODE_DEBOUNCE_MS = 500;
 
-export default function TerminalPanel({ socket, nodes = [], edges = [] }) {
+export default function TerminalPanel({ socket, nodes = [], edges = [], setNodes, setEdges }) {
   const { logs, clearLogs, isPanelVisible, togglePanel } = useLogs();
   const { currentProject } = useProjectManager();
   const { t } = useTranslation();
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
+  const activeLineRef = useRef(null);
+  const toast = useToast();
 
   // ─── Mode ─────────────────────────────────────────────────────────────────
   const [mode, setMode] = useState("log");
 
   // ─── Code Preview ─────────────────────────────────────────────────────────
   const [generatedCode, setGeneratedCode] = useState("");
+  const [codeWarnings, setCodeWarnings] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
   const [language, setLanguage] = useState("javascript");
+  const [manualRefresh, setManualRefresh] = useState(0);
+
+  // ─── Advanced Edit & Execution Tracing states ─────────────────────────────
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editedCode, setEditedCode] = useState("");
+
+  const activeLineIndex = useMemo(() => {
+    const activeNode = nodes.find(
+      (n) =>
+        n.data?.state === "executing" ||
+        n.data?.state === "capturing-before" ||
+        n.data?.state === "capturing-after"
+    );
+    if (!activeNode) return -1;
+
+    const codeToSearch = isEditMode ? editedCode : generatedCode;
+    if (!codeToSearch) return -1;
+
+    const lines = codeToSearch.split("\n");
+    const index = lines.findIndex((line) => line.includes(`[node_id: ${activeNode.id}]`));
+
+    return index !== -1 ? index + 1 : -1;
+  }, [nodes, isEditMode, editedCode, generatedCode]);
+
+  useEffect(() => {
+    if (activeLineRef.current) {
+      activeLineRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+      });
+    }
+  }, [activeLineIndex]);
+
+  // Keep editedCode in sync with generatedCode when not editing
+  useEffect(() => {
+    if (!isEditMode) {
+      setEditedCode(generatedCode);
+    }
+  }, [generatedCode, isEditMode]);
+
+  // Helper to recursively map actions back to React Flow nodes/edges
+  const convertActionsToFlowData = useCallback((actions, parentId = null, depth = 0) => {
+    const nodesList = [];
+    const edgesList = [];
+
+    actions.forEach((actionObj, index) => {
+      const nodeId = `node_${actionObj.action}_${index}_${Math.random().toString(36).substring(2, 6)}`;
+      const { action, subNodes, label, ...config } = actionObj;
+
+      const nodeType = action === 'component' ? 'component' : action;
+
+      const mappedNode = {
+        id: nodeId,
+        type: nodeType,
+        position: { x: (parentId ? 50 : 100) + index * 250, y: (parentId ? 80 : 150) },
+        data: {
+          type: nodeType,
+          label: label || action
+            .replace(/_/g, " ")
+            .replace(/\b\w/g, (c) => c.toUpperCase()),
+          configuration: config,
+          state: "default",
+        },
+      };
+
+      if (parentId) {
+        mappedNode.parentId = parentId;
+        mappedNode.parentNode = parentId;
+        mappedNode.position = { x: 50 + index * 200, y: 80 };
+      }
+
+      nodesList.push(mappedNode);
+
+      if (subNodes && Array.isArray(subNodes) && subNodes.length > 0) {
+        const subResult = convertActionsToFlowData(subNodes, nodeId, depth + 1);
+        nodesList.push(...subResult.nodes);
+        edgesList.push(...subResult.edges);
+      }
+
+      if (index > 0) {
+        const prevSibling = nodesList.filter(n => (parentId ? n.parentId === parentId : !n.parentId))[index - 1];
+        if (prevSibling) {
+          edgesList.push({
+            id: `edge_${prevSibling.id}_to_${nodeId}`,
+            source: prevSibling.id,
+            target: nodeId,
+            animated: true,
+            type: "custom",
+          });
+        }
+      }
+    });
+
+    return { nodes: nodesList, edges: edgesList };
+  }, []);
+
+  // Debounced effect to convert and sync code edits back to canvas
+  useEffect(() => {
+    if (!isEditMode || !editedCode) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        const convertResult = await api.post("/import/convert", {
+          content: editedCode,
+          framework: "playwright",
+          language: language,
+        });
+
+        if (convertResult.success && convertResult.flows && convertResult.flows.length > 0) {
+          const importedFlow = convertResult.flows[0];
+          const { nodes: flowNodes, edges: flowEdges } = convertActionsToFlowData(importedFlow.flow || []);
+
+          if (setNodes && setEdges) {
+            setNodes(flowNodes);
+            setEdges(flowEdges);
+            toast.success(t("terminal.synced_to_canvas", "Synced to Canvas!"), {
+              id: "codegen-sync-toast",
+              duration: 1500,
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Failed to sync edited code back to canvas:", err);
+      }
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [editedCode, isEditMode, language, setNodes, setEdges, convertActionsToFlowData, toast, t]);
 
   const LANGUAGES = [
     { id: "javascript", label: t("terminal.lang_js"), ext: "js" },
@@ -77,23 +213,37 @@ export default function TerminalPanel({ socket, nodes = [], edges = [] }) {
     const timer = setTimeout(async () => {
       setIsGenerating(true);
       try {
-        // Simplified mapNodes: just list current level nodes,
-        // Backend now handles the recursion using projectId.
         const mapNodes = (allNodes) => {
           if (!allNodes || !Array.isArray(allNodes)) return [];
 
-          return allNodes
-            .filter((n) => !n.parentNode && !n.parentId) // Only root nodes of current flow
-            .map((node) => ({
+          const nodeMap = new Map();
+
+          allNodes.forEach((node) => {
+            nodeMap.set(node.id, {
               id: node.id,
               type: node.data?.type || node.type,
               data: {
                 configuration: node.data?.configuration || {},
                 label: node.data?.label || node.data?.customLabel || node.type,
                 customLabel: node.data?.customLabel,
+                subNodes: [],
               },
-            }))
-            .filter(Boolean);
+              parentNode: node.parentNode || node.parentId,
+            });
+          });
+
+          const roots = [];
+
+          nodeMap.forEach((mappedNode) => {
+            const parentId = mappedNode.parentNode;
+            if (parentId && nodeMap.has(parentId)) {
+              nodeMap.get(parentId).data.subNodes.push(mappedNode);
+            } else {
+              roots.push(mappedNode);
+            }
+          });
+
+          return roots;
         };
 
         const flowSteps = mapNodes(nodes);
@@ -108,6 +258,7 @@ export default function TerminalPanel({ socket, nodes = [], edges = [] }) {
 
         if (result.success && result.code) {
           setGeneratedCode(result.code);
+          setCodeWarnings(result.warnings || []);
         }
       } catch (err) {
         console.error("Failed to generate real-time code:", err);
@@ -117,15 +268,36 @@ export default function TerminalPanel({ socket, nodes = [], edges = [] }) {
     }, CODE_DEBOUNCE_MS);
 
     return () => clearTimeout(timer);
-  }, [nodes, edges, mode, language, currentProject?.id]);
+  }, [nodes, edges, mode, language, currentProject?.id, manualRefresh]);
 
   const handleCopyCode = useCallback(() => {
-    if (!generatedCode) return;
-    navigator.clipboard.writeText(generatedCode).then(() => {
+    const codeToCopy = isEditMode ? editedCode : generatedCode;
+    if (!codeToCopy) return;
+    navigator.clipboard.writeText(codeToCopy).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
-  }, [generatedCode]);
+  }, [generatedCode, editedCode, isEditMode]);
+
+  const handleDownloadCode = useCallback(() => {
+    const codeToDownload = isEditMode ? editedCode : generatedCode;
+    if (!codeToDownload) return;
+    const extMap = { javascript: "js", typescript: "ts", python: "py", java: "java", csharp: "cs" };
+    const ext = extMap[language] || "js";
+    const blob = new Blob([codeToDownload], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `hal_test_flow.${ext}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [generatedCode, editedCode, isEditMode, language]);
+
+  const handleRefreshCode = useCallback(() => {
+    setManualRefresh((prev) => prev + 1);
+  }, []);
 
   // Auto-scroll on new content
   useEffect(() => {
@@ -340,6 +512,46 @@ export default function TerminalPanel({ socket, nodes = [], edges = [] }) {
             </div>
           )}
 
+          {/* Code Actions (only in code mode) */}
+          {mode === "code" && (
+            <div className="flex items-center gap-0.5">
+              <button
+                onClick={handleRefreshCode}
+                disabled={isGenerating}
+                title={t("terminal.refresh_code", "Regenerate Code")}
+                className="p-1.5 text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded transition-all disabled:opacity-30"
+              >
+                <RefreshCw size={13} className={isGenerating ? "animate-spin" : ""} />
+              </button>
+              <button
+                onClick={handleDownloadCode}
+                disabled={!generatedCode}
+                title={t("terminal.download_code", "Download File")}
+                className="p-1.5 text-slate-500 hover:text-indigo-400 hover:bg-indigo-500/10 rounded transition-all disabled:opacity-30"
+              >
+                <Download size={13} />
+              </button>
+              <button
+                onClick={() => {
+                  setIsEditMode(!isEditMode);
+                  if (!isEditMode) {
+                    setEditedCode(generatedCode);
+                  }
+                }}
+                disabled={!generatedCode}
+                title={isEditMode ? t("terminal.exit_edit_mode", "View Mode") : t("terminal.enter_edit_mode", "Advanced Edit Mode")}
+                className={cn(
+                  "p-1.5 rounded transition-all ml-1 border",
+                  isEditMode
+                    ? "bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20"
+                    : "text-slate-500 border-transparent hover:text-amber-400 hover:bg-amber-500/10"
+                )}
+              >
+                {isEditMode ? <Eye size={13} /> : <Edit2 size={13} />}
+              </button>
+            </div>
+          )}
+
           {/* Kill button (interactive mode only) */}
           {mode === "interactive" && isRunning && (
             <button
@@ -455,16 +667,20 @@ export default function TerminalPanel({ socket, nodes = [], edges = [] }) {
                 exit={{ opacity: 0 }}
                 className="relative min-h-full"
               >
-                {/* Under Development Warning */}
-                <div className="mb-4 flex items-center gap-2 p-2 rounded bg-amber-500/10 border border-amber-500/20 text-amber-200/70 text-[10px]">
-                  <AlertTriangle size={12} className="text-amber-500" />
-                  <span>
-                    {t(
-                      "terminal.dev_warning",
-                      "Feature Under Development: Code Preview is experimental and may contain missing implementations.",
-                    )}
-                  </span>
-                </div>
+                {/* Warnings Banner */}
+                {codeWarnings.length > 0 && (
+                  <div className="mb-3 flex items-start gap-2 p-2 rounded bg-amber-500/10 border border-amber-500/20 text-amber-200/70 text-[10px]">
+                    <AlertTriangle size={12} className="text-amber-500 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-medium">
+                        {codeWarnings.length} {t("terminal.unmapped_nodes", "node(s) without Playwright implementation")}:
+                      </span>
+                      <span className="ml-1 text-amber-300/60">
+                        {codeWarnings.map((w) => w.nodeLabel).join(", ")}
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 {/* Copy Button */}
                 <button
@@ -475,15 +691,67 @@ export default function TerminalPanel({ socket, nodes = [], edges = [] }) {
                   {copied ? <Check size={14} /> : <Copy size={14} />}
                 </button>
 
-                <div className="pr-10">
+                <div className="pr-10 h-full flex flex-col">
+                  {isEditMode && (
+                    <div className="mb-2 px-2 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-200/80 rounded text-[9px] flex items-center gap-1.5 shrink-0">
+                      <AlertTriangle size={10} className="text-amber-500" />
+                      <span>{t("terminal.edit_mode_warning", "Advanced Edit Mode: Any changes will sync back to the visual workflow canvas in real-time.")}</span>
+                    </div>
+                  )}
                   {generatedCode ? (
-                    <pre className="text-[11px] leading-relaxed text-slate-300 font-mono overflow-x-auto selection:bg-indigo-500/30">
-                      <code
-                        dangerouslySetInnerHTML={{
-                          __html: highlightCode(generatedCode, language),
-                        }}
-                      />
-                    </pre>
+                    <div className="flex flex-1 min-h-[180px] overflow-hidden">
+                      {isEditMode ? (
+                        <div className="flex-1 flex gap-2 overflow-hidden h-[180px]">
+                          {/* Line Numbers */}
+                          <div className="select-none pr-3 mr-1 border-r border-white/5 text-right flex flex-col shrink-0 overflow-y-hidden">
+                            {editedCode.split("\n").map((_, i) => (
+                              <div
+                                key={i}
+                                className="text-[10px] leading-relaxed text-slate-700 font-mono h-[16px] flex items-center justify-end"
+                              >
+                                {i + 1}
+                              </div>
+                            ))}
+                          </div>
+                          <textarea
+                            value={editedCode}
+                            onChange={(e) => setEditedCode(e.target.value)}
+                            className="flex-1 bg-slate-900/40 text-[11px] leading-relaxed text-slate-200 font-mono outline-none border border-white/10 rounded p-2 focus:border-indigo-500/50 resize-none h-full overflow-y-auto selection:bg-indigo-500/30"
+                            spellCheck={false}
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex-1 font-mono text-[11px] leading-relaxed text-slate-300 overflow-x-auto selection:bg-indigo-500/30">
+                          {generatedCode.split("\n").map((line, idx) => {
+                            const isActive = idx === activeLineIndex;
+                            return (
+                              <div
+                                key={idx}
+                                ref={isActive ? activeLineRef : null}
+                                className={cn(
+                                  "flex items-start px-2 transition-all duration-300 w-full min-w-max",
+                                  isActive
+                                    ? "bg-amber-500/25 text-amber-200 border-l-2 border-amber-500 font-bold shadow-[inset_0_0_8px_rgba(245,158,11,0.15)]"
+                                    : "hover:bg-white/5 border-l-2 border-transparent"
+                                )}
+                              >
+                                {/* Line number column */}
+                                <span className="select-none w-8 text-right pr-3 mr-3 border-r border-white/5 text-slate-700 text-[10px] shrink-0">
+                                  {idx + 1}
+                                </span>
+                                {/* Line content */}
+                                <span
+                                  className="flex-1 whitespace-pre"
+                                  dangerouslySetInnerHTML={{
+                                    __html: highlightCode(line, language),
+                                  }}
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   ) : (
                     <div className="h-full flex flex-col items-center justify-center text-slate-600 gap-2 opacity-50 py-10">
                       <Code2 size={28} strokeWidth={1} />
@@ -600,7 +868,7 @@ function HelpLine({ cmd, desc }) {
   );
 }
 
-/** Simple syntax highlighting using regex (Single pass to avoid nested replacements) */
+/** Enhanced syntax highlighting using regex (Single pass to avoid nested replacements) */
 function highlightCode(code, language = "javascript") {
   if (!code) return "";
 
@@ -611,18 +879,38 @@ function highlightCode(code, language = "javascript") {
     .replace(/>/g, "&gt;");
 
   // 2. Define patterns in priority order
+  const isPython = language === "python";
   const patterns = [
     {
       name: "comment",
-      regex: language === "python" ? /(#.*$)/ : /(\/\/.*$|\/\*[\s\S]*?\*\/)/,
+      regex: isPython ? /(#.*$)/ : /(\/\/.*$|\/\*[\s\S]*?\*\/)/,
     },
-    { name: "string", regex: /("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/ },
+    {
+      name: "template",
+      regex: /(`(?:[^`\\]|\\.)*`)/,
+    },
+    {
+      name: "string",
+      regex: /("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/,
+    },
     {
       name: "keyword",
       regex:
-        /\b(await|async|import|test|expect|from|let|const|console|def|class|public|static|void|using|namespace|var|var)\b/,
+        /\b(await|async|import|test|expect|from|let|const|console|def|class|public|static|void|using|namespace|var|return|throw|new|if|else|for|while|switch|case|break|continue|try|catch|finally|in|of|function|lambda|pass|raise|with|as|match|foreach|int|string|bool)\b/,
     },
-    { name: "number", regex: /\b(\d+)\b/ },
+    {
+      name: "builtin",
+      regex:
+        /\b(page|browser|context|route|test|expect|assertThat|Expect|console|System|Console|print|require|JSON)\b/,
+    },
+    {
+      name: "method",
+      regex: /\.(\w+)\s*\(/,
+    },
+    {
+      name: "number",
+      regex: /\b(\d+(?:\.\d+)?)\b/,
+    },
   ];
 
   // 3. Combine into a single regex
@@ -633,17 +921,21 @@ function highlightCode(code, language = "javascript") {
 
   // 4. Single pass replacement
   return escaped.replace(combinedRegex, (match, ...args) => {
-    // Find which group matched
-    // args contains: [group1, group2, ..., offset, string]
     const m1 = args[0]; // comment
-    const m2 = args[1]; // string
-    const m3 = args[2]; // keyword
-    const m4 = args[3]; // number
+    const m2 = args[1]; // template literal
+    const m3 = args[2]; // string
+    const m4 = args[3]; // keyword
+    const m5 = args[4]; // builtin
+    const m6 = args[5]; // method
+    const m7 = args[6]; // number
 
     if (m1) return `<span class="text-slate-600">${m1}</span>`;
     if (m2) return `<span class="text-emerald-400">${m2}</span>`;
-    if (m3) return `<span class="text-indigo-400 font-bold">${m3}</span>`;
-    if (m4) return `<span class="text-amber-400">${m4}</span>`;
+    if (m3) return `<span class="text-emerald-400">${m3}</span>`;
+    if (m4) return `<span class="text-indigo-400 font-bold">${m4}</span>`;
+    if (m5) return `<span class="text-cyan-400">${m5}</span>`;
+    if (m6) return `.<span class="text-yellow-300">${m6}</span>(`;
+    if (m7) return `<span class="text-amber-400">${m7}</span>`;
     return match;
   });
 }

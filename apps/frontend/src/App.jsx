@@ -1843,7 +1843,7 @@ function Dashboard() {
             </div>
 
             {/* Real-time Execution Terminal - Now inside Main Layout */}
-            <TerminalPanel socket={socket} nodes={nodes} edges={edges} />
+            <TerminalPanel socket={socket} nodes={nodes} edges={edges} setNodes={setNodes} setEdges={setEdges} />
 
             {/* Ask AI Debug Console */}
             <AskAIPanel
