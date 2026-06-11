@@ -133,4 +133,38 @@ describe('Middleware de Validación Joi (validate.js)', () => {
         expect(error.details).toHaveLength(1);
         expect(error.details[0].field).toBe('name');
     });
+
+    test('Debe pre-resolver variables en el body antes de validar contra el esquema', () => {
+        const { req, res, next } = mockHttp({
+            body: {
+                name: 'Alice',
+                age: '{{myAgeVar}}',
+                variables: {
+                    myAgeVar: 25,
+                },
+            },
+        });
+
+        validate({ body: bodySchema })(req, res, next);
+
+        expect(next).toHaveBeenCalledTimes(1);
+        expect(next).toHaveBeenCalledWith();
+        expect(req.body.age).toBe(25);
+        expect(req.body.variables).toEqual({ myAgeVar: 25 });
+    });
+
+    test('Debe ignorar errores de validación de tipo si los campos contienen plantillas de variables no resueltas', () => {
+        const { req, res, next } = mockHttp({
+            body: {
+                name: 'Alice',
+                age: '{{unresolvedAgeVar}}', // Espera número, pero pasa por ser plantilla
+            },
+        });
+
+        validate({ body: bodySchema })(req, res, next);
+
+        expect(next).toHaveBeenCalledTimes(1);
+        expect(next).toHaveBeenCalledWith();
+        expect(req.body.age).toBe('{{unresolvedAgeVar}}');
+    });
 });

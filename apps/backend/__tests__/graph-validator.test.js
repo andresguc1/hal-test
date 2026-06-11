@@ -55,15 +55,15 @@ describe('GraphValidator - Validation Rules', () => {
         expect(result.errors.some((e) => e.includes('launch_browser'))).toBe(true);
     });
 
-    it('should fail when close_browser is missing', () => {
+    it('should pass when close_browser is missing', () => {
         const flow = {
             nodes: [makeNode('n1', 'launch_browser'), makeNode('n2', 'open_url')],
             edges: [makeEdge('n1', 'n2')],
         };
 
         const result = GraphValidator.validate(flow);
-        expect(result.valid).toBe(false);
-        expect(result.errors.some((e) => e.includes('close_browser'))).toBe(true);
+        expect(result.valid).toBe(true);
+        expect(result.errors).toHaveLength(0);
     });
 
     it('should fail when there are duplicate launch_browser nodes', () => {
@@ -152,21 +152,14 @@ describe('GraphValidator - Edge Validation', () => {
 // AUTO-REPAIR
 // =============================================================================
 describe('GraphValidator - Auto-Repair', () => {
-    it('should auto-add close_browser when missing', () => {
+    it('should not repair missing close_browser because it is now valid by default', () => {
         const flow = {
             nodes: [makeNode('n1', 'launch_browser'), makeNode('n2', 'open_url')],
             edges: [makeEdge('n1', 'n2')],
         };
 
         const result = GraphValidator.repair(flow);
-        expect(result.fixed).toBe(true);
-
-        const closeNode = result.flow.nodes.find((n) => n.type === 'close_browser');
-        expect(closeNode).toBeDefined();
-
-        // Should have added an edge from the last node to close_browser
-        const closeEdge = result.flow.edges.find((e) => e.target === closeNode.id);
-        expect(closeEdge).toBeDefined();
+        expect(result.fixed).toBe(false);
     });
 
     it('should not modify an already valid flow', () => {

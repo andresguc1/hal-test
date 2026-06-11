@@ -180,6 +180,40 @@ export function useAvailableVariables({
           description: `Direct reference to step "${cleanLabel}"`,
         });
       }
+
+      // Support custom variables declared by variable nodes or saveToVariable actions
+      const config = node.data?.configuration;
+      const isVarNode = nodeType === "variable";
+      const customName = isVarNode
+        ? (config?.name || config?.variableName || node.data?.name)
+        : (config?.variableName || config?.saveToVariable);
+
+      if (customName && typeof customName === "string" && customName.trim()) {
+        const trimmedName = customName.trim();
+        let customValue = isVarNode ? (config?.value ?? config?.initialValue ?? node.data?.value ?? "") : resultValue;
+        let customSource = source;
+
+        if (liveVariables[trimmedName] !== undefined) {
+          customValue = liveVariables[trimmedName];
+          customSource = "live";
+        } else if (node.data?.result !== undefined) {
+          customValue = node.data.result;
+          customSource = "persisted";
+        }
+
+        list.push({
+          name: trimmedName,
+          path: `{{${trimmedName}}}`,
+          type: typeof customValue,
+          scope: "local",
+          source: customSource,
+          value: customValue,
+          nodeLabel: cleanLabel,
+          description: isVarNode
+            ? `Variable "${trimmedName}" declared by node "${cleanLabel}"`
+            : `Output of node "${cleanLabel}" saved to variable "${trimmedName}"`,
+        });
+      }
     });
 
     // --- B. Global Variables ---

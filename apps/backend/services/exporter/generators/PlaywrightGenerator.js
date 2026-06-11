@@ -1,5 +1,6 @@
 import { BaseGenerator } from '../core/BaseGenerator.js';
 import { NodeMapperRegistry } from '../core/GeneratorRegistry.js';
+import { variableManager } from '../../VariableManager.js';
 
 export class PlaywrightGenerator extends BaseGenerator {
     constructor(language, locale) {
@@ -42,7 +43,11 @@ export class PlaywrightGenerator extends BaseGenerator {
 
     generateNodeCode(step, index, depth) {
         const type = step.type || step.action;
-        const config = step.data?.configuration || step.data || step || {};
+        const rawConfig = step.data?.configuration || step.data || step || {};
+        const config = variableManager.resolveRecursive(
+            rawConfig,
+            variableManager.getActiveRunId?.(),
+        );
         const mapper = NodeMapperRegistry.getMapper(type);
         const indent = '    '.repeat(depth + 1);
         const label = step.data?.label || step.data?.customLabel || step.label || type;

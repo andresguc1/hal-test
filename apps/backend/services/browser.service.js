@@ -50,6 +50,16 @@ class BrowserManager {
             recordVideo = true, // Default to true if not specified
         } = options;
 
+        if (slowMo !== undefined && slowMo !== null && slowMo !== '') {
+            const parsed = Number(slowMo);
+            if (!isNaN(parsed)) slowMo = parsed;
+        }
+
+        if (timeout !== undefined && timeout !== null && timeout !== '') {
+            const parsed = Number(timeout);
+            if (!isNaN(parsed)) timeout = parsed;
+        }
+
         // --- HEADLESS LOGIC ---
         // Respect the user's manual preference if provided exactly.
         // Otherwise, force headless in production servers (except CLI mode).

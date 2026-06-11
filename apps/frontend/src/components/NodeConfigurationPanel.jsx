@@ -13,6 +13,7 @@ import {
   Eye,
   EyeOff,
   Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -127,6 +128,7 @@ const NodeConfigurationPanel = ({
   );
 
   const [lightboxUrl, setLightboxUrl] = useState(null);
+  const [expandedWarnings, setExpandedWarnings] = useState({});
 
   React.useEffect(() => {
     if (!lightboxUrl) return;
@@ -196,6 +198,7 @@ const NodeConfigurationPanel = ({
         setLocalLabel(
           activeNode.data?.customLabel || activeNode.data?.label || "",
         );
+        setExpandedWarnings({});
       }
       lastSyncedConfigRef.current = {
         config: globalConfig,
@@ -629,16 +632,14 @@ const NodeConfigurationPanel = ({
               name={dataKey}
               control={control}
               render={({ field: { value, onChange } }) => (
-                <input
-                  type="number"
-                  value={value ?? ""}
-                  onChange={(e) =>
-                    onChange(
-                      e.target.value === "" ? "" : Number(e.target.value),
-                    )
-                  }
+                <VariableInput
+                  value={value}
+                  type="text"
+                  variables={variablesMap}
+                  suggestions={availableVariablePaths}
+                  onChange={(e) => onChange(e.target.value)}
                   placeholder={field.placeholder || ""}
-                  className="w-full px-3 py-2 text-xs font-mono bg-[var(--bg-canvas)]/50 border border-[var(--border-ui)] rounded-lg text-slate-200 focus:outline-none focus:border-indigo-500/50 focus:bg-slate-900/40 transition-colors"
+                  className="w-full text-xs font-mono px-3 py-2"
                 />
               )}
             />
@@ -706,6 +707,92 @@ const NodeConfigurationPanel = ({
           </div>
         );
     }
+  };
+
+  const renderVariableDebugTrace = () => {
+    const referenced = [];
+    const traverse = (obj) => {
+      if (!obj) return;
+      if (typeof obj === "string") {
+        const regex = /\{\{([^}]+)\}\}/g;
+        let match;
+        while ((match = regex.exec(obj)) !== null) {
+          const varName = match[1].trim();
+          if (!referenced.includes(varName)) {
+            referenced.push(varName);
+          }
+        }
+      } else if (typeof obj === "object") {
+        Object.values(obj).forEach(traverse);
+      }
+    };
+    
+    traverse(watchedValues);
+    
+    if (referenced.length === 0) return null;
+    
+    return (
+      <div className="mt-8 pt-6 border-t border-white/5 space-y-4">
+        <div className="flex items-center gap-2">
+          <Zap size={14} className="text-indigo-400 animate-pulse" />
+          <span className="text-[10px] uppercase tracking-wider font-bold text-slate-500">
+            Variable Debug Trace
+          </span>
+        </div>
+        <div className="space-y-2.5">
+          {referenced.map((varName) => {
+            const foundVar = availableVariables.find((v) => v.name === varName);
+            const value = foundVar ? foundVar.value : undefined;
+            const scope = foundVar ? foundVar.scope : "unknown";
+            const source = foundVar ? foundVar.source : "unknown";
+            
+            let statusText = "Resolved";
+            let statusColor = "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
+            if (foundVar === undefined) {
+              statusText = "Not Resolved";
+              statusColor = "text-rose-400 bg-rose-500/10 border-rose-500/20";
+            } else if (source === "static") {
+              statusText = "Schema Fallback";
+              statusColor = "text-amber-400 bg-amber-500/10 border-amber-500/20";
+            }
+            
+            return (
+              <div
+                key={varName}
+                className="bg-slate-950/45 border border-white/5 rounded-xl p-3 flex flex-col gap-2 hover:bg-slate-950/70 transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-mono font-bold text-indigo-300">
+                    {"{{"}{varName}{"}}"}
+                  </span>
+                  <span className={cn("text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded border", statusColor)}>
+                    {statusText}
+                  </span>
+                </div>
+                {foundVar && (
+                  <div className="text-[10px] text-slate-400 flex flex-col gap-1">
+                    <div className="flex justify-between border-b border-white/5 pb-1">
+                      <span className="text-slate-500">Scope:</span>
+                      <span className="font-semibold text-slate-300 uppercase">{scope}</span>
+                    </div>
+                    <div className="flex justify-between border-b border-white/5 pb-1">
+                      <span className="text-slate-500">Value Type:</span>
+                      <span className="font-mono text-slate-300">{foundVar.type}</span>
+                    </div>
+                    <div className="flex flex-col gap-1 mt-1">
+                      <span className="text-slate-500">Value Preview:</span>
+                      <pre className="text-[9.5px] font-mono text-slate-300 bg-black/40 border border-white/5 p-2 rounded-lg max-h-24 overflow-y-auto whitespace-pre-wrap break-all custom-scrollbar">
+                        {value === null || value === undefined ? "null" : typeof value === "object" ? JSON.stringify(value, null, 2) : String(value)}
+                      </pre>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
   };
 
   const renderNodeInputs = () => {
@@ -803,6 +890,64 @@ const NodeConfigurationPanel = ({
 
   const Body = () => (
     <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
+      {activeNode.data?.warnings && activeNode.data.warnings.length > 0 && (
+        <div className="mb-6 p-4 rounded-xl border border-yellow-500/20 bg-yellow-500/5 space-y-4">
+          <div className="flex items-center gap-2 text-yellow-400 font-bold text-[11px] uppercase tracking-wider">
+            <AlertTriangle size={14} className="shrink-0 text-yellow-500 animate-pulse" />
+            <span>{activeNode.data.warnings.length} Policy Violation{activeNode.data.warnings.length > 1 ? 's' : ''}</span>
+          </div>
+          
+          <div className="space-y-3.5 divide-y divide-white/5">
+            {activeNode.data.warnings.map((w, idx) => (
+              <div key={w.rule || idx} className={cn("space-y-2.5", idx > 0 && "pt-3.5")}>
+                <div className="text-xs text-yellow-200/90 font-bold flex items-start justify-between gap-1.5 leading-relaxed">
+                  <div className="flex items-start gap-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-yellow-500 mt-1.5 shrink-0" />
+                    <span>{w.message}</span>
+                  </div>
+                  {w.educationalGuide && (
+                    <button
+                      type="button"
+                      onClick={() => setExpandedWarnings(prev => ({
+                        ...prev,
+                        [w.rule || idx]: !prev[w.rule || idx]
+                      }))}
+                      className="text-[9.5px] uppercase tracking-wider text-yellow-400/80 hover:text-yellow-400 font-extrabold transition-colors shrink-0 ml-2 border border-yellow-500/20 hover:border-yellow-500/40 px-2 py-0.5 rounded bg-yellow-500/5 hover:bg-yellow-500/10 cursor-pointer"
+                    >
+                      {expandedWarnings[w.rule || idx] ? "Hide Guide" : "Learn More"}
+                    </button>
+                  )}
+                </div>
+                
+                {w.educationalGuide && expandedWarnings[w.rule || idx] && (
+                  <div className="text-[11px] text-slate-400 leading-relaxed bg-black/45 p-3 rounded-lg border border-white/5 space-y-2 font-sans">
+                    <div className="font-extrabold text-slate-350 uppercase tracking-widest text-[9px] border-b border-white/5 pb-1">
+                      Remediation: {w.educationalGuide.title}
+                    </div>
+                    <div>
+                      <span className="font-bold text-slate-200">Why: </span>
+                      {w.educationalGuide.why}
+                    </div>
+                    <div>
+                      <span className="font-bold text-slate-200">How to Fix: </span>
+                      {w.educationalGuide.remediation}
+                    </div>
+                    <div className="space-y-1.5 mt-2">
+                      <div className="text-[9.5px] text-red-400 font-mono bg-red-950/20 border border-red-900/35 p-2 rounded overflow-x-auto whitespace-pre">
+                        {w.educationalGuide.badCode}
+                      </div>
+                      <div className="text-[9.5px] text-emerald-400 font-mono bg-emerald-950/20 border border-emerald-900/35 p-2 rounded overflow-x-auto whitespace-pre">
+                        {w.educationalGuide.goodCode}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <form
         onSubmit={handleSubmit((data) =>
           updateNodeConfiguration(activeNode.id, data),
@@ -811,6 +956,7 @@ const NodeConfigurationPanel = ({
       >
         {renderNodeInputs()}
       </form>
+      {renderVariableDebugTrace()}
       {activeNode.data?.result && (
         <div className="mt-8 pt-6 border-t border-white/5">
           <div className="flex items-center gap-2 mb-4">

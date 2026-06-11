@@ -40,6 +40,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { useFlowManager } from "./components/hooks/useFlowManager.js";
 import { useProjectManager } from "./components/hooks/useProjectManager.js";
 import { migrateFromLegacy } from "./utils/migration";
+import { runPolicyEnforcer } from "./utils/policyEnforcer";
 
 import { useFlowShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useToast } from "./hooks/useToast";
@@ -1413,51 +1414,69 @@ function Dashboard() {
   const enrichedNodes = useMemo(() => {
     if (!nodes || nodes.length === 0 || !currentProject) return nodes;
 
+    // 1. Calculate linter warnings
+    const warningsMap = runPolicyEnforcer(nodes, edges);
+
     return nodes.map((node) => {
+      const nodeWarnings = warningsMap[node.id] || [];
       const isContainer = ["component", "loop"].includes(
         node.type || node.data?.type,
       );
-      if (!isContainer) return node;
 
-      const flowId = node.data?.flowId;
-      if (!flowId) return node;
+      let updatedNode = node;
 
-      const subFlow = currentProject.flows?.find((f) => f.id === flowId);
-      if (!subFlow) return node;
+      if (isContainer) {
+        const flowId = node.data?.flowId;
+        if (flowId) {
+          const subFlow = currentProject.flows?.find((f) => f.id === flowId);
+          if (subFlow) {
+            const nodeCount =
+              subFlow.nodeCount !== undefined
+                ? subFlow.nodeCount
+                : subFlow.nodes?.length || 0;
+            const hasInput =
+              subFlow.nodes?.some((n) => n.type === "input") || node.data?.hasInput;
+            const hasOutput =
+              subFlow.nodes?.some((n) => n.type === "output") || node.data?.hasOutput;
 
-      // Calculate stats
-      const nodeCount =
-        subFlow.nodeCount !== undefined
-          ? subFlow.nodeCount
-          : subFlow.nodes?.length || 0;
-      const hasInput =
-        subFlow.nodes?.some((n) => n.type === "input") || node.data?.hasInput;
-      const hasOutput =
-        subFlow.nodes?.some((n) => n.type === "output") || node.data?.hasOutput;
-
-      // Only update if data has changed to prevent React Flow re-renders
-      // IMPORTANT: Also check for onEnterSubFlow presence
-      if (
-        node.data?.nodeCount === nodeCount &&
-        node.data?.hasInput === hasInput &&
-        node.data?.hasOutput === hasOutput &&
-        node.data?.onEnterSubFlow === enterComponent
-      ) {
-        return node;
+            if (
+              node.data?.nodeCount !== nodeCount ||
+              node.data?.hasInput !== hasInput ||
+              node.data?.hasOutput !== hasOutput ||
+              node.data?.onEnterSubFlow !== enterComponent
+            ) {
+              updatedNode = {
+                ...node,
+                data: {
+                  ...node.data,
+                  nodeCount,
+                  hasInput,
+                  hasOutput,
+                  onEnterSubFlow: enterComponent,
+                },
+              };
+            }
+          }
+        }
       }
 
-      return {
-        ...node,
-        data: {
-          ...node.data,
-          nodeCount,
-          hasInput,
-          hasOutput,
-          onEnterSubFlow: enterComponent,
-        },
-      };
+      // Check if warnings changed to prevent re-renders when warnings are identical
+      const currentWarningsJSON = JSON.stringify(node.data?.warnings || []);
+      const newWarningsJSON = JSON.stringify(nodeWarnings);
+
+      if (currentWarningsJSON !== newWarningsJSON || updatedNode !== node) {
+        return {
+          ...updatedNode,
+          data: {
+            ...updatedNode.data,
+            warnings: nodeWarnings,
+          },
+        };
+      }
+
+      return node;
     });
-  }, [nodes, currentProject, enterComponent]);
+  }, [nodes, edges, currentProject, enterComponent]);
 
   // Props dinámicas que sí cambian
   const flowConfig = useMemo(
@@ -1858,7 +1877,7 @@ function Dashboard() {
             <NodeConfigurationPanel
               isVisible={isConfigurationPanelVisible}
               action={selectedAction}
-              nodes={nodes}
+              nodes={enrichedNodes}
               edges={edges}
               onSelectNode={handleNavigateToNode}
               nodeId={selectedAction.nodeId}

@@ -31,9 +31,8 @@ export class GraphValidator {
             );
         }
 
-        if (closes.length === 0) {
-            errors.push("Missing mandatory 'close_browser' node.");
-        } else if (closes.length > 1) {
+        // 'close_browser' is now optional (Phase 2 relaxation)
+        if (closes.length > 1) {
             errors.push("More than one 'close_browser' node detected. Only 1 is allowed per flow.");
         }
 
@@ -73,28 +72,47 @@ export class GraphValidator {
             return { valid: false, errors: [...errors, ...edgeErrors] };
         }
 
-        // 2. Connectivity and Path Verification
-        if (launches.length === 1) {
-            const root = launches[0];
+        // 2. Connectivity and Path Verification (Undirected Component Check)
+        const activeNodes = nodes.filter((n) => !n.data?.disabled);
+        if (activeNodes.length > 0) {
+            // Build undirected adjacency list
+            const undirectedAdj = new Map();
+            activeNodes.forEach((n) => undirectedAdj.set(n.id || n.nodeId, []));
+
+            edges.forEach((e) => {
+                const sourceId = e.source;
+                const targetId = e.target;
+                if (undirectedAdj.has(sourceId) && undirectedAdj.has(targetId)) {
+                    undirectedAdj.get(sourceId).push(targetId);
+                    undirectedAdj.get(targetId).push(sourceId);
+                }
+            });
+
+            // Start traversal from launch_browser nodes.
+            // Fallback to the first active node if no launch_browser exists.
+            const startNodes =
+                launches.length > 0
+                    ? launches.map((l) => l.id || l.nodeId)
+                    : [activeNodes[0].id || activeNodes[0].nodeId];
+
             const visited = new Set();
-            const queue = [root.id];
+            const queue = [...startNodes];
 
             while (queue.length > 0) {
                 const curr = queue.shift();
                 if (!visited.has(curr)) {
                     visited.add(curr);
-                    const neighbors = adj.get(curr) || [];
+                    const neighbors = undirectedAdj.get(curr) || [];
                     queue.push(...neighbors);
                 }
             }
 
-            const activeNodes = nodes.filter((n) => !n.data?.disabled);
             if (visited.size < activeNodes.length) {
                 const unreachableIds = activeNodes
                     .filter((n) => !visited.has(n.nodeId || n.id))
                     .map((n) => n.nodeId || n.id);
                 errors.push(
-                    `Found unreachable nodes: [${unreachableIds.join(', ')}]. All nodes must be connected to the main flow starting from 'Launch Browser'.`,
+                    `Found unreachable nodes: [${unreachableIds.join(', ')}]. All nodes must be connected to the main flow starting from the root nodes.`,
                 );
             }
         }

@@ -140,7 +140,7 @@ export const useAIStore = create((set, get) => ({
 }));
 
 // eslint-disable-next-line react-refresh/only-export-components
-export const useAIContext = () => useAIStore();
+export const useAIContext = (selector) => useAIStore(selector);
 
 import React, { useEffect, useMemo } from "react";
 import { useSettings } from "./SettingsContext";

@@ -473,38 +473,49 @@ export function useFlowExecution({
       const targets = new Set(filteredEdges.map((e) => e.target));
       const roots = executionNodes.filter((n) => !targets.has(n.id));
 
-      let activeRoot = null;
+      let activeRoots = [];
       if (roots.length === 0) {
         errors.push("No starting point found");
-      } else if (roots.length > 1) {
-        // Robust progressive flow support:
-        // If there are multiple starting points (because of unconnected drafts),
-        // but only ONE is the 'launch_browser' root, we treat that one as the active starting point.
-        const launchRoots = roots.filter(
-          (r) =>
-            r.type === "launch_browser" || r.data?.type === "launch_browser",
-        );
-        if (launchRoots.length === 1) {
-          activeRoot = launchRoots[0];
-        } else if (launchRoots.length > 1) {
-          errors.push("Multiple starting points detected");
-        } else {
-          errors.push("No starting point found");
-        }
       } else {
-        const rootNode = roots[0];
-        const type = rootNode.type || rootNode.data?.type;
-        if (type !== "launch_browser") {
-          errors.push("First node must be 'Launch Browser'");
+        // Find which roots can reach the 'launch_browser' node
+        const reachLaunch = roots.filter((r) => {
+          const visited = new Set();
+          const queue = [r.id];
+          while (queue.length > 0) {
+            const curr = queue.shift();
+            if (visited.has(curr)) continue;
+            visited.add(curr);
+            const node = executionNodes.find((n) => n.id === curr);
+            if (node && (node.type === "launch_browser" || node.data?.type === "launch_browser")) {
+              return true;
+            }
+            const outgoing = filteredEdges.filter((e) => e.source === curr).map((e) => e.target);
+            queue.push(...outgoing);
+          }
+          return false;
+        });
+
+        if (reachLaunch.length > 0) {
+          // All roots that can reach 'launch_browser' are valid starting points (e.g. parallel variable nodes)
+          activeRoots = reachLaunch;
         } else {
-          activeRoot = rootNode;
+          // Fallback: search for launch_browser itself among the roots
+          const launchRoots = roots.filter(
+            (r) =>
+              r.type === "launch_browser" || r.data?.type === "launch_browser",
+          );
+          if (launchRoots.length > 0) {
+            activeRoots = launchRoots;
+          } else {
+            errors.push("No starting point found");
+          }
         }
       }
 
       // ─── ACTIVE PATH BFS EXTRACTION ───
       const reachableNodeIds = new Set();
-      if (activeRoot) {
-        const queue = [activeRoot.id];
+      if (activeRoots.length > 0) {
+        const queue = activeRoots.map((r) => r.id);
         while (queue.length > 0) {
           const currId = queue.shift();
           if (!reachableNodeIds.has(currId)) {
@@ -879,6 +890,12 @@ export function useFlowExecution({
                   .replace(/\s+/g, "_");
                 flowContext[node.id] = result.result || result;
                 flowContext[slug] = result.result || result;
+
+                // Populate custom defined variableName/saveToVariable in flowContext
+                const customVarName = node.data?.configuration?.variableName || node.data?.configuration?.saveToVariable;
+                if (customVarName) {
+                  flowContext[customVarName] = result.result || result;
+                }
 
                 if (result.healed && result.healedValue) {
                   healedNodes.push({

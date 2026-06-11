@@ -1,6 +1,5 @@
-// middlewares/validator.js
-
 import Joi from 'joi';
+import { variableManager } from '../services/VariableManager.js';
 
 /**
  * Generic middleware to validate the request body, parameters (params),
@@ -10,6 +9,20 @@ import Joi from 'joi';
  * @returns {function} An Express middleware.
  */
 const validate = (schemas) => (req, res, next) => {
+    if (req.body && req.body.variables && typeof req.body.variables === 'object') {
+        try {
+            const effectiveRunId = req.body.runId || 'atomic_run';
+            variableManager.initRun(effectiveRunId, req.body.variables);
+            if (effectiveRunId !== 'atomic_run') {
+                variableManager.initRun('atomic_run', req.body.variables);
+            }
+            req.body.runId = effectiveRunId;
+            req.body = variableManager.resolveRecursive(req.body, effectiveRunId);
+        } catch (err) {
+            console.warn('[Validator Middleware] Failed to pre-resolve variables:', err.message);
+        }
+    }
+
     const errorDetails = [];
     const cleanedValues = { body: req.body, params: req.params, query: req.query };
     let hasError = false;
@@ -25,14 +38,36 @@ const validate = (schemas) => (req, res, next) => {
         if (typeof schema.safeParse === 'function') {
             const result = schema.safeParse(data);
             if (!result.success) {
-                hasError = true;
-                result.error.issues.forEach((issue) => {
-                    errorDetails.push({
-                        field: issue.path.join('.'),
-                        location: key,
-                        message: issue.message,
-                    });
+                const variablePattern = /^(?:\$\{[^}]+\}|\{\{[^}]+\}\})$/;
+                const genuineIssues = result.error.issues.filter((issue) => {
+                    const path = issue.path;
+                    let val = data;
+                    for (const p of path) {
+                        if (val && typeof val === 'object') {
+                            val = val[p];
+                        } else {
+                            val = undefined;
+                            break;
+                        }
+                    }
+                    if (typeof val === 'string' && variablePattern.test(val.trim())) {
+                        return false;
+                    }
+                    return true;
                 });
+
+                if (genuineIssues.length > 0) {
+                    hasError = true;
+                    genuineIssues.forEach((issue) => {
+                        errorDetails.push({
+                            field: issue.path.join('.'),
+                            location: key,
+                            message: issue.message,
+                        });
+                    });
+                } else {
+                    cleanedValues[key] = { ...data, ...result.data };
+                }
             } else {
                 cleanedValues[key] = result.data;
             }
@@ -44,14 +79,36 @@ const validate = (schemas) => (req, res, next) => {
                 stripUnknown: true,
             });
             if (error) {
-                hasError = true;
-                error.details.forEach((detail) => {
-                    errorDetails.push({
-                        field: detail.path.join('.'),
-                        location: key,
-                        message: detail.message.replace(/['"]/g, ''),
-                    });
+                const variablePattern = /^(?:\$\{[^}]+\}|\{\{[^}]+\}\})$/;
+                const genuineDetails = error.details.filter((detail) => {
+                    const path = detail.path;
+                    let val = data;
+                    for (const p of path) {
+                        if (val && typeof val === 'object') {
+                            val = val[p];
+                        } else {
+                            val = undefined;
+                            break;
+                        }
+                    }
+                    if (typeof val === 'string' && variablePattern.test(val.trim())) {
+                        return false;
+                    }
+                    return true;
                 });
+
+                if (genuineDetails.length > 0) {
+                    hasError = true;
+                    genuineDetails.forEach((detail) => {
+                        errorDetails.push({
+                            field: detail.path.join('.'),
+                            location: key,
+                            message: detail.message.replace(/['"]/g, ''),
+                        });
+                    });
+                } else {
+                    cleanedValues[key] = { ...data, ...value };
+                }
             } else {
                 cleanedValues[key] = value;
             }
@@ -77,6 +134,7 @@ const validate = (schemas) => (req, res, next) => {
     const originalContinueOnError = req.body?.continueOnError;
     const originalLabel = req.body?.label;
     const originalCustomLabel = req.body?.customLabel;
+    const originalVariables = req.body?.variables;
 
     if (schemas.body) {
         req.body = cleanedValues.body;
@@ -89,6 +147,7 @@ const validate = (schemas) => (req, res, next) => {
             req.body.continueOnError = originalContinueOnError;
         if (originalLabel !== undefined) req.body.label = originalLabel;
         if (originalCustomLabel !== undefined) req.body.customLabel = originalCustomLabel;
+        if (originalVariables !== undefined) req.body.variables = originalVariables;
     }
     if (schemas.params) req.params = cleanedValues.params;
     if (schemas.query) req.query = cleanedValues.query;

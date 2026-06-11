@@ -103,10 +103,15 @@ const AbyssNode = ({ id, data, selected, type }) => {
           color: data.state === "success" ? "#10b981" : "#ef4444",
           shadow:
             data.state === "success"
-              ? "0 0 30px rgba(16,185,129,0.5)"
-              : "0 0 30px rgba(239,68,68,0.5)",
+               ? "0 0 30px rgba(16,185,129,0.5)"
+               : "0 0 30px rgba(239,68,68,0.5)",
         }
-      : { color: null, shadow: null };
+      : data.warnings && data.warnings.length > 0
+        ? {
+            color: "#eab308", // warning yellow-500
+            shadow: "0 0 20px rgba(234,179,8,0.35)",
+          }
+        : { color: null, shadow: null };
 
   // Determine invalid style
   const invalidStyle = !isValid
@@ -130,6 +135,7 @@ const AbyssNode = ({ id, data, selected, type }) => {
         "group relative max-w-[400px] rounded-lg p-3 transition-[background,border,box-shadow,opacity] duration-400 select-none border-[2px]",
         themeParams.base,
         invalidStyle, // Add validation glow
+        data.warnings && data.warnings.length > 0 && "warning-node-glow border-yellow-500/50",
 
         // Running/Executing Animation (Breathing Glow using Category Color)
         (data.state === "running" || data.state === "executing") &&
@@ -220,6 +226,18 @@ const AbyssNode = ({ id, data, selected, type }) => {
             aria-label="Configuration error: required fields missing"
           >
             <AlertTriangle size={12} fill="currentColor" strokeWidth={3} />
+          </div>
+        )}
+
+        {/* LINTER POLICY WARNINGS (Priority 2) */}
+        {data.warnings && data.warnings.length > 0 && isValid && (
+          <div
+            className="bg-yellow-500 text-slate-950 rounded-full p-0.5 shadow-lg border border-yellow-400 z-10"
+            role="img"
+            title={`${data.warnings.length} Policy Violations`}
+            aria-label={`${data.warnings.length} Policy Violations`}
+          >
+            <AlertTriangle size={12} fill="currentColor" strokeWidth={2.5} />
           </div>
         )}
 
@@ -505,7 +523,9 @@ function arePropsEqual(prevProps, nextProps) {
       JSON.stringify(nextProps.data?.configuration) &&
     prevProps.data?.error === nextProps.data?.error &&
     prevProps.data?.disabled === nextProps.data?.disabled &&
-    prevProps.data?.result === nextProps.data?.result
+    prevProps.data?.result === nextProps.data?.result &&
+    JSON.stringify(prevProps.data?.warnings) ===
+      JSON.stringify(nextProps.data?.warnings)
   );
 }
 

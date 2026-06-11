@@ -54,6 +54,7 @@ export const VariableInput = ({
 }) => {
   const containerRef = useRef(null);
   const bgRef = useRef(null);
+  const inputRef = useRef(null);
   const datalistId = React.useId(); // Unique ID for datalist
   const [isFocused, setIsFocused] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -108,8 +109,12 @@ export const VariableInput = ({
             <Tooltip.Root>
               <Tooltip.Trigger asChild>
                 <span
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    inputRef.current?.focus();
+                  }}
                   className={cn(
-                    "rounded px-1.5 py-0.5 -mx-0.5 pointer-events-auto cursor-help transition-colors font-mono",
+                    "rounded px-0 py-0.5 pointer-events-auto cursor-help transition-colors font-mono",
                     statusColor === "indigo"
                       ? "bg-indigo-500/25 text-indigo-300 ring-1 ring-indigo-500/30 shadow-[0_0_10px_rgba(99,102,241,0.2)]"
                       : statusColor === "rose"
@@ -117,11 +122,11 @@ export const VariableInput = ({
                         : "bg-amber-500/20 text-amber-400 border-b-2 border-dashed border-amber-500/50",
                   )}
                 >
-                  <span className="opacity-40 select-none mr-0.5">
+                  <span className="opacity-40 select-none">
                     {part.prefix}
                   </span>
                   <span className="relative">{part.key}</span>
-                  <span className="opacity-40 select-none ml-0.5">
+                  <span className="opacity-40 select-none">
                     {part.suffix}
                   </span>
                 </span>
@@ -209,7 +214,7 @@ export const VariableInput = ({
           "font-mono antialiased",
           "!text-transparent !bg-transparent border-transparent",
           isTextarea ? "whitespace-pre-wrap break-words" : "whitespace-pre",
-          "z-0",
+          "z-20",
         )}
         style={
           {
@@ -228,6 +233,7 @@ export const VariableInput = ({
 
       {/* Actual interactive input */}
       <Component
+        ref={inputRef}
         id={props.id}
         type={isTextarea ? undefined : type}
         value={
@@ -324,9 +330,18 @@ export const VariableInput = ({
                         const closeIdx = value.indexOf("}}", lastOpen);
                         const suffix =
                           closeIdx !== -1 ? value.substring(closeIdx + 2) : "";
-                        const newValue = prefix + (item.path || "") + suffix;
+                        const inserted = item.path || "";
+                        const newValue = prefix + inserted + suffix;
                         onChange({ target: { value: newValue } });
                         setShowSuggestions(false);
+                        
+                        setTimeout(() => {
+                          if (inputRef.current) {
+                            inputRef.current.focus();
+                            const newCursorPos = prefix.length + inserted.length;
+                            inputRef.current.setSelectionRange(newCursorPos, newCursorPos);
+                          }
+                        }, 0);
                       }}
                       className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors group/item flex items-center justify-between gap-4"
                       title={item.description || ""}

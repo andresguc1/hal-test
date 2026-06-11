@@ -11,7 +11,19 @@
  * @param {boolean} defaultValue - The value to return if the input is invalid.
  * @returns {boolean}
  */
+const isVariableTemplate = (value) => {
+  return typeof value === "string" && (value.includes("{{") || value.includes("${"));
+};
+
+/**
+ * Normalizes and validates a boolean value.
+ * Accepts strings "true"/"false" and "1"/"0".
+ * @param {*} value - The input value.
+ * @param {boolean} defaultValue - The value to return if the input is invalid.
+ * @returns {boolean}
+ */
 const asBoolean = (value, defaultValue) => {
+  if (isVariableTemplate(value)) return value;
   if (typeof value === "boolean") return value;
   if (value === "true" || value === "1") return true;
   if (value === "false" || value === "0") return false;
@@ -27,6 +39,7 @@ const asBoolean = (value, defaultValue) => {
  * @returns {number | undefined} - Returns 'defaultValue' (which can be undefined) if invalid.
  */
 const asNumber = (value, defaultValue, min = -Infinity, max = Infinity) => {
+  if (isVariableTemplate(value)) return value;
   const num = Number(value);
   if (!Number.isFinite(num)) return defaultValue;
   return Math.min(Math.max(Math.round(num), min), max);
@@ -50,6 +63,7 @@ const asString = (value, defaultValue = "") => {
  * @returns {string} - The normalized JSON as a string.
  */
 const asJsonString = (value, required = false, fieldName = "Field") => {
+  if (isVariableTemplate(value)) return value;
   if (value == null || value === "") {
     if (required) throw new Error(`${fieldName} is required.`);
     return "";

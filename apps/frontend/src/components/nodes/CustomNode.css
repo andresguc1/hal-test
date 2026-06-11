@@ -28,3 +28,19 @@
 .onboarding-glow {
   animation: onboarding-glow 2s ease-in-out infinite;
 }
+
+@keyframes warning-glow {
+  0% {
+    box-shadow: 0 0 5px rgba(234, 179, 8, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(234, 179, 8, 0.5);
+  }
+  100% {
+    box-shadow: 0 0 5px rgba(234, 179, 8, 0.2);
+  }
+}
+
+.warning-node-glow {
+  animation: warning-glow 2s ease-in-out infinite;
+}

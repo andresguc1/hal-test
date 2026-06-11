@@ -490,6 +490,17 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
     if (opts.takeScreenshot === 'true' || opts.takeScreenshot === '1') opts.takeScreenshot = true;
     if (opts.takeScreenshot === 'false' || opts.takeScreenshot === '0') opts.takeScreenshot = false;
 
+    // Coerce numeric parameters if they are strings
+    const numParams = ['timeout', 'delay', 'slowMo', 'amount', 'maxScrolls', 'x', 'y'];
+    for (const key of numParams) {
+        if (opts[key] !== undefined && opts[key] !== null && opts[key] !== '') {
+            const parsed = Number(opts[key]);
+            if (!isNaN(parsed)) {
+                opts[key] = parsed;
+            }
+        }
+    }
+
     // --- LABEL SAFETY NET ---
     let finalLabel = opts.label || req.body.label || req.body.customLabel;
 
@@ -1279,8 +1290,55 @@ export const launchBrowserAction = async (req, res) => {
     let launchedBrowserId = null;
 
     try {
+        // --- VARIABLE RESOLUTION ---
+        const resolvedBody = variableManager.resolveRecursive(req.body, runId);
+
+        // Coerce types
+        if (
+            resolvedBody.slowMo !== undefined &&
+            resolvedBody.slowMo !== null &&
+            resolvedBody.slowMo !== ''
+        ) {
+            const parsed = Number(resolvedBody.slowMo);
+            if (!isNaN(parsed)) resolvedBody.slowMo = parsed;
+        }
+        if (
+            resolvedBody.timeout !== undefined &&
+            resolvedBody.timeout !== null &&
+            resolvedBody.timeout !== ''
+        ) {
+            const parsed = Number(resolvedBody.timeout);
+            if (!isNaN(parsed)) resolvedBody.timeout = parsed;
+        }
+        if (
+            resolvedBody.width !== undefined &&
+            resolvedBody.width !== null &&
+            resolvedBody.width !== ''
+        ) {
+            const parsed = Number(resolvedBody.width);
+            if (!isNaN(parsed)) resolvedBody.width = parsed;
+        }
+        if (
+            resolvedBody.height !== undefined &&
+            resolvedBody.height !== null &&
+            resolvedBody.height !== ''
+        ) {
+            const parsed = Number(resolvedBody.height);
+            if (!isNaN(parsed)) resolvedBody.height = parsed;
+        }
+
+        if (resolvedBody.headless === 'true' || resolvedBody.headless === '1')
+            resolvedBody.headless = true;
+        if (resolvedBody.headless === 'false' || resolvedBody.headless === '0')
+            resolvedBody.headless = false;
+
+        if (resolvedBody.maximizeWindow === 'true' || resolvedBody.maximizeWindow === '1')
+            resolvedBody.maximizeWindow = true;
+        if (resolvedBody.maximizeWindow === 'false' || resolvedBody.maximizeWindow === '0')
+            resolvedBody.maximizeWindow = false;
+
         // --- PERSISTENT BROWSER (Debug Mode) ---
-        const { debugMode } = req.body;
+        const { debugMode } = resolvedBody;
         if (debugMode) {
             const latestBrowser = browserService.getLatest();
             const latestId = Array.from(browserService.keys()).pop();
@@ -1288,7 +1346,7 @@ export const launchBrowserAction = async (req, res) => {
             // Reuse if exists and is connected, AND options match
             if (latestBrowser && latestBrowser.browser.isConnected()) {
                 const oldOpts = latestBrowser.options || {};
-                const newOpts = req.body || {};
+                const newOpts = resolvedBody || {};
 
                 // Detect changes that require a browser restart
                 const hasChanges =
@@ -1331,9 +1389,9 @@ export const launchBrowserAction = async (req, res) => {
 
         console.log(
             '[ACTION] Starting browser launch with options:',
-            JSON.stringify(req.body, null, 2),
+            JSON.stringify(resolvedBody, null, 2),
         );
-        const { browserId, version } = await browserService.launchBrowser(req.body);
+        const { browserId, version } = await browserService.launchBrowser(resolvedBody);
         launchedBrowserId = browserId;
 
         // Update Run record with browser version if we are in a run
@@ -1366,7 +1424,7 @@ export const launchBrowserAction = async (req, res) => {
                 {
                     status: 'success',
                     duration,
-                    input: req.body,
+                    input: resolvedBody,
                     output: { browserId },
                 },
             );
@@ -1380,7 +1438,7 @@ export const launchBrowserAction = async (req, res) => {
             success: true,
             message: req.t('actions.launch_browser.success'),
             browserId,
-            headless: req.body.headless || false,
+            headless: resolvedBody.headless || false,
         });
     } catch (error) {
         if (launchedBrowserId) {
@@ -1446,6 +1504,14 @@ export const openUrlAction = async (req, res) => {
             opts.takeScreenshot = true;
         if (opts.takeScreenshot === 'false' || opts.takeScreenshot === '0')
             opts.takeScreenshot = false;
+
+        // Coerce timeout if string
+        if (opts.timeout !== undefined && opts.timeout !== null && opts.timeout !== '') {
+            const parsed = Number(opts.timeout);
+            if (!isNaN(parsed)) {
+                opts.timeout = parsed;
+            }
+        }
 
         // --- TIMEOUT & NAVIGATION SETTINGS ---
         let { url, waitUntil = 'domcontentloaded', timeout = 30000, takeScreenshot } = opts ?? {};
