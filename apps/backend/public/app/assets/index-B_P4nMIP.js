@@ -95112,13 +95112,11 @@ var CRe = class extends _h {
             const n = this.options;
             ((this.options = this.#e.defaultMutationOptions(t)),
                 M_(this.options, n) ||
-                    this.#e
-                        .getMutationCache()
-                        .notify({
-                            type: 'observerOptionsUpdated',
-                            mutation: this.#n,
-                            observer: this,
-                        }),
+                    this.#e.getMutationCache().notify({
+                        type: 'observerOptionsUpdated',
+                        mutation: this.#n,
+                        observer: this,
+                    }),
                 n?.mutationKey &&
                 this.options.mutationKey &&
                 Ad(n.mutationKey) !== Ad(this.options.mutationKey)
