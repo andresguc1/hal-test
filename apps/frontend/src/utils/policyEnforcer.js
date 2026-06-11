@@ -42,7 +42,15 @@ export function runPolicyEnforcer(nodes, edges) {
   // Helper: check if node is a validation node
   const isValidationNode = (node) => {
     const type = node.type || node.data?.type;
-    return type === "validate_semantic" || type === "run_tests";
+    return (
+      type === "validate_semantic" ||
+      type === "run_tests" ||
+      type === "find_element" ||
+      type === "wait_visible" ||
+      type === "wait_for_element" ||
+      type === "wait_network_match" ||
+      type === "wait_conditional"
+    );
   };
 
   // Helper: check if node is a safe termination (doesn't warrant dead end warning, but isn't validation)
@@ -239,7 +247,7 @@ export function runPolicyEnforcer(nodes, edges) {
               why: "Modern UI frameworks generate class hashes dynamically and update DOM hierarchies frequently. Selecting elements by rigid structural paths or transient hashes breaks tests upon minor updates.",
               remediation: "Locate elements using stable attributes (e.g. data-testid), accessible ARIA attributes (roles/labels), or semantic selectors.",
               badCode: `// Bad: Highly brittle tag path or auto-generated hashes\nawait page.locator('div > div > div:nth-child(2) > .react-a5f1').click();`,
-              goodCode: `// Good: Stable custom test identifier\nawait page.locator('[data-testid=\"submit-button\"]').click();`
+              goodCode: `// Good: Stable custom test identifier\nawait page.locator('[data-testid="submit-button"]').click();`
             }
           });
           break; // only report one selector warning per node
@@ -266,7 +274,7 @@ export function runPolicyEnforcer(nodes, edges) {
               why: "Playwright actions enforce Strict Mode. If a locator matches more than one element on the page, any action (click, type, etc.) will immediately throw a Strictness Violation error.",
               remediation: "Qualify your selector using unique parent scopes, stable attributes, or context functions to ensure it resolves to a unique element.",
               badCode: `// Bad: Ambiguous tag target\nawait page.click('button');`,
-              goodCode: `// Good: Target uniquely within a specific form\nawait page.click('#login-form button[type=\"submit\"]');`
+              goodCode: `// Good: Target uniquely within a specific form\nawait page.click('#login-form button[type="submit"]');`
             }
           });
         }

@@ -68,6 +68,46 @@ export const updateNodeRecursively = (nodes, nodeId, updater) => {
   return hasChanges ? nextNodes : nodes;
 };
 
+export const sanitizeEdges = (edgesList, nodesList) => {
+  if (!Array.isArray(edgesList) || !Array.isArray(nodesList)) return [];
+
+  const nodeIds = new Set(nodesList.map((n) => n.id));
+  const seenEdgeIds = new Set();
+  const seenConnections = new Set();
+
+  return edgesList
+    .filter((edge) => {
+      if (!edge || !edge.id || !edge.source || !edge.target) {
+        return false;
+      }
+
+      // 1. Source and target nodes must exist in the nodes list
+      if (!nodeIds.has(edge.source) || !nodeIds.has(edge.target)) {
+        return false;
+      }
+
+      // 2. Prevent duplicate edge IDs
+      if (seenEdgeIds.has(edge.id)) {
+        return false;
+      }
+      seenEdgeIds.add(edge.id);
+
+      // 3. Prevent duplicate connections between same source/sourceHandle and target/targetHandle
+      const connKey = `${edge.source}::${edge.sourceHandle || ""} -> ${edge.target}::${edge.targetHandle || ""}`;
+      if (seenConnections.has(connKey)) {
+        return false;
+      }
+      seenConnections.add(connKey);
+
+      return true;
+    })
+    .map((edge) => ({
+      ...edge,
+      type: edge.type || "custom",
+      animated: edge.animated !== false,
+    }));
+};
+
 export function useFlowState({ currentProject, currentFlowId } = {}) {
   const toastHook = useToast();
   const { t: tHook } = useTranslation();
@@ -176,11 +216,15 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
           const newlySelected = nextNodes.find((n) => n.selected);
           setSelectedNodeId(newlySelected ? newlySelected.id : null);
         }
+        const hasRemoveChange = changes.some((c) => c.type === "remove");
+        if (hasRemoveChange) {
+          setEdges((eds) => sanitizeEdges(eds, nextNodes));
+        }
         return nextNodes;
       });
       setHasUnsavedChanges(true);
     },
-    [setNodes],
+    [setNodes, setEdges],
   );
 
   const onEdgesChange = useCallback((changes) => {
@@ -223,10 +267,13 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
   const deleteNode = useCallback(
     (nodeId) => {
       saveToHistory();
-      setNodes((nds) => nds.filter((n) => n.id !== nodeId));
-      setEdges((eds) =>
-        eds.filter((e) => e.source !== nodeId && e.target !== nodeId),
+      const nextNodes = nodesRef.current.filter((n) => n.id !== nodeId);
+      const nextEdges = sanitizeEdges(
+        edgesRef.current.filter((e) => e.source !== nodeId && e.target !== nodeId),
+        nextNodes
       );
+      setNodes(nextNodes);
+      setEdges(nextEdges);
       setHasUnsavedChanges(true);
       if (selectedNodeId === nodeId) setSelectedNodeId(null);
     },
@@ -524,23 +571,38 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
         // Incoming: Original Source -> Component Node
         const newIncomingEdges = externalIncoming.map((e) => ({
           ...e,
-          id: `e_${e.source}-${componentId}`,
+          id: `e_${e.source}-${componentId}_${e.target}_${e.targetHandle || "default"}`,
           target: componentId,
+          targetHandle: null, // component node doesn't have target handles
+          data: {
+            ...(e.data || {}),
+            originalTarget: e.target,
+            originalTargetHandle: e.targetHandle,
+          },
         }));
 
         // Outgoing: Component Node -> Original Target
         const newOutgoingEdges = externalOutgoing.map((e) => ({
           ...e,
-          id: `e_${componentId}-${e.target}`,
+          id: `e_${componentId}_${e.source}_${e.sourceHandle || "default"}-${e.target}`,
           source: componentId,
+          sourceHandle: null, // component node doesn't have source handles
+          data: {
+            ...(e.data || {}),
+            originalSource: e.source,
+            originalSourceHandle: e.sourceHandle,
+          },
         }));
 
         const nextNodes = [...remainingNodes, componentNode];
-        const nextEdges = [
-          ...remainingEdges,
-          ...newIncomingEdges,
-          ...newOutgoingEdges,
-        ];
+        const nextEdges = sanitizeEdges(
+          [
+            ...remainingEdges,
+            ...newIncomingEdges,
+            ...newOutgoingEdges,
+          ],
+          nextNodes
+        );
 
         // Synchronously update refs to prevent race condition during save
         nodesRef.current = nextNodes;
@@ -774,22 +836,37 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
 
         const newIncomingEdges = externalIncoming.map((e) => ({
           ...e,
-          id: `e_${e.source}-${loopId}`,
+          id: `e_${e.source}-${loopId}_${e.target}_${e.targetHandle || "default"}`,
           target: loopId,
+          targetHandle: null, // loop node doesn't have target handles
+          data: {
+            ...(e.data || {}),
+            originalTarget: e.target,
+            originalTargetHandle: e.targetHandle,
+          },
         }));
 
         const newOutgoingEdges = externalOutgoing.map((e) => ({
           ...e,
-          id: `e_${loopId}-${e.target}`,
+          id: `e_${loopId}_${e.source}_${e.sourceHandle || "default"}-${e.target}`,
           source: loopId,
+          sourceHandle: null, // loop node doesn't have source handles
+          data: {
+            ...(e.data || {}),
+            originalSource: e.source,
+            originalSourceHandle: e.sourceHandle,
+          },
         }));
 
         const nextNodes = [...remainingNodes, loopNode];
-        const nextEdges = [
-          ...remainingEdges,
-          ...newIncomingEdges,
-          ...newOutgoingEdges,
-        ];
+        const nextEdges = sanitizeEdges(
+          [
+            ...remainingEdges,
+            ...newIncomingEdges,
+            ...newOutgoingEdges,
+          ],
+          nextNodes
+        );
 
         // Synchronously update refs to prevent race condition during save
         nodesRef.current = nextNodes;
@@ -1074,8 +1151,25 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
       }
 
       saveToHistory();
-      const subFlow = componentNode.data.subFlow || { nodes: [], edges: [] };
-      const { nodes: subNodes = [] } = subFlow;
+      
+      let subFlow = componentNode.data?.subFlow;
+      const flowId = componentNode.data?.flowId;
+
+      if ((!subFlow || !subFlow.nodes || subFlow.nodes.length === 0) && flowId && currentProject?.flows) {
+        const matchingFlow = currentProject.flows.find((f) => f.id === flowId);
+        if (matchingFlow) {
+          subFlow = {
+            nodes: matchingFlow.nodes || [],
+            edges: matchingFlow.edges || [],
+          };
+        }
+      }
+
+      if (!subFlow) {
+        subFlow = { nodes: [], edges: [] };
+      }
+
+      const { nodes: subNodes = [], edges: subEdges = [] } = subFlow;
 
       const restoredNodes = subNodes
         .filter((n) => n.type !== "input" && n.type !== "output")
@@ -1088,12 +1182,126 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
           selected: true,
         }));
 
-      setNodes((nds) => [
-        ...nds.filter((n) => n.id !== componentNodeId),
+      // Find boundary node IDs
+      const inputNodeIds = new Set(subNodes.filter((n) => n.type === "input").map((n) => n.id));
+      const outputNodeIds = new Set(subNodes.filter((n) => n.type === "output").map((n) => n.id));
+
+      // Internal edges to restore
+      const internalEdges = subEdges.filter(
+        (e) =>
+          !inputNodeIds.has(e.source) &&
+          !inputNodeIds.has(e.target) &&
+          !outputNodeIds.has(e.source) &&
+          !outputNodeIds.has(e.target),
+      );
+
+      // Find current incoming/outgoing edges in the main flow
+      const currentIncoming = edgesRef.current.filter((e) => e.target === componentNodeId);
+      const currentOutgoing = edgesRef.current.filter((e) => e.source === componentNodeId);
+
+      const restoredIncoming = [];
+      const restoredOutgoing = [];
+
+      // Reconnect incoming edges
+      currentIncoming.forEach((incomingEdge) => {
+        const originalTarget = incomingEdge.data?.originalTarget;
+        const originalTargetHandle = incomingEdge.data?.originalTargetHandle;
+
+        if (originalTarget && restoredNodes.some((rn) => rn.id === originalTarget)) {
+          const restoredEdge = {
+            ...incomingEdge,
+            id: `e_${incomingEdge.source}-${originalTarget}`,
+            target: originalTarget,
+            targetHandle: originalTargetHandle,
+          };
+          if (restoredEdge.data) {
+            const { originalTarget: _, originalTargetHandle: __, ...cleanedData } = restoredEdge.data;
+            restoredEdge.data = Object.keys(cleanedData).length > 0 ? cleanedData : undefined;
+          }
+          restoredIncoming.push(restoredEdge);
+        } else {
+          // Fallback: connect to all nodes the input node connected to
+          const inputNode = subNodes.find((n) => n.type === "input");
+          if (inputNode) {
+            const subIncomingEdges = subEdges.filter((se) => se.source === inputNode.id);
+            subIncomingEdges.forEach((se) => {
+              restoredIncoming.push({
+                ...incomingEdge,
+                id: `e_${incomingEdge.source}-${se.target}`,
+                target: se.target,
+                targetHandle: se.targetHandle,
+              });
+            });
+          }
+        }
+      });
+
+      // Reconnect outgoing edges
+      currentOutgoing.forEach((outgoingEdge) => {
+        const originalSource = outgoingEdge.data?.originalSource;
+        const originalSourceHandle = outgoingEdge.data?.originalSourceHandle;
+
+        if (originalSource && restoredNodes.some((rn) => rn.id === originalSource)) {
+          const restoredEdge = {
+            ...outgoingEdge,
+            id: `e_${originalSource}-${outgoingEdge.target}`,
+            source: originalSource,
+            sourceHandle: originalSourceHandle,
+          };
+          if (restoredEdge.data) {
+            const { originalSource: _, originalSourceHandle: __, ...cleanedData } = restoredEdge.data;
+            restoredEdge.data = Object.keys(cleanedData).length > 0 ? cleanedData : undefined;
+          }
+          restoredOutgoing.push(restoredEdge);
+        } else {
+          // Fallback: connect from all nodes that connected to the output node
+          const outputNode = subNodes.find((n) => n.type === "output");
+          if (outputNode) {
+            const subOutgoingEdges = subEdges.filter((se) => se.target === outputNode.id);
+            subOutgoingEdges.forEach((se) => {
+              restoredOutgoing.push({
+                ...outgoingEdge,
+                id: `e_${se.source}-${outgoingEdge.target}`,
+                source: se.source,
+                sourceHandle: se.sourceHandle,
+              });
+            });
+          }
+        }
+      });
+
+      const nextNodes = [
+        ...nodesRef.current.filter((n) => n.id !== componentNodeId),
         ...restoredNodes,
-      ]);
+      ];
+
+      const nextEdges = sanitizeEdges(
+        [
+          ...edgesRef.current.filter(
+            (e) => e.source !== componentNodeId && e.target !== componentNodeId,
+          ),
+          ...internalEdges,
+          ...restoredIncoming,
+          ...restoredOutgoing,
+        ],
+        nextNodes
+      );
+
+      // Synchronously update refs to prevent race condition during save
+      nodesRef.current = nextNodes;
+      edgesRef.current = nextEdges;
+
+      setNodes(nextNodes);
+      setEdges(nextEdges);
+
+      // Persist changes immediately
+      setTimeout(async () => {
+        if (saveFlowRef.current) {
+          await saveFlowRef.current();
+        }
+      }, 50);
     },
-    [saveToHistory, setNodes],
+    [saveToHistory, setNodes, setEdges, currentProject],
   );
 
   const updateNodeConfiguration = useCallback(

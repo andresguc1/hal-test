@@ -10,6 +10,7 @@ import {
   Redo2,
   MousePointer2,
   ChevronRight,
+  ChevronLeft,
   Play,
   Globe,
   LayoutGrid,
@@ -635,9 +636,8 @@ const ContextMenu = ({
                 onClick={() => actions.selectNext(data.id)}
               />
               <ContextMenuItem
-                icon={ChevronRight}
+                icon={ChevronLeft}
                 label={t("context_menu.prev_node", "Previous Node")}
-                className="rotate-180"
                 onClick={() => actions.selectPrev(data.id)}
               />
               <Divider />
