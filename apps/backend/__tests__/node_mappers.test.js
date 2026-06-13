@@ -56,6 +56,56 @@ describe('HalTest Node Mappers Code Generation', () => {
             const jsCode = mapper.getCode(params, 'javascript');
             expect(jsCode).toContain('await expect(page.locator(`.title`)).toHaveText(`Welcome`);');
         });
+
+        it('generates correct code for assert_page_text', () => {
+            const params = {
+                actionType: 'assert_page_text',
+                textToFind: 'Dashboard',
+                matchType: 'contains',
+                caseSensitive: false,
+                timeout: 5000,
+            };
+
+            const jsCode = mapper.getCode(params, 'javascript');
+            expect(jsCode).toBe(
+                "await expect(page.locator('body')).toContainText(`Dashboard`, { ignoreCase: true });",
+            );
+
+            const pyCode = mapper.getCode(params, 'python');
+            expect(pyCode).toBe(
+                'expect(page.locator("body")).to_contain_text("Dashboard", ignore_case=True)',
+            );
+
+            const javaCode = mapper.getCode(params, 'java');
+            expect(javaCode).toBe(
+                'assertThat(page.locator("body")).containsText("Dashboard", new Locator.ContainsTextOptions().setIgnoreCase(true));',
+            );
+
+            const csharpCode = mapper.getCode(params, 'csharp');
+            expect(csharpCode).toBe(
+                'await Expect(page.Locator("body")).ToContainTextAsync("Dashboard", new() { IgnoreCase = true });',
+            );
+        });
+
+        it('generates correct code for assert_page_text with regex and case sensitivity', () => {
+            const params = {
+                actionType: 'assert_page_text',
+                textToFind: 'User \\d+',
+                matchType: 'regex',
+                caseSensitive: true,
+                timeout: 3000,
+            };
+
+            const jsCode = mapper.getCode(params, 'javascript');
+            expect(jsCode).toBe(
+                "await expect(page.locator('body')).toContainText(new RegExp(`User \\d+`, ''), { timeout: 3000 });",
+            );
+
+            const pyCode = mapper.getCode(params, 'python');
+            expect(pyCode).toBe(
+                'expect(page.locator("body")).to_contain_text(re.compile(r"User \\d+"), timeout=3000)',
+            );
+        });
     });
 
     describe('NetworkMapper', () => {

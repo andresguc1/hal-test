@@ -19,7 +19,7 @@ export function runPolicyEnforcer(nodes, edges) {
   // 1. Build Adjacency List for reachability/assertion checks
   const adjacency = {};
   const outDegree = {};
-  
+
   nodes.forEach((n) => {
     adjacency[n.id] = [];
     outDegree[n.id] = 0;
@@ -111,7 +111,7 @@ export function runPolicyEnforcer(nodes, edges) {
   const hasValidationUpstream = (nodeId) => {
     const visited = new Set();
     const queue = [nodeId];
-    
+
     // Build reverse adjacency list (incoming connections)
     const incoming = {};
     nodes.forEach((n) => {
@@ -168,10 +168,11 @@ export function runPolicyEnforcer(nodes, edges) {
           educationalGuide: {
             title: "Wait-Timeout Anti-Pattern",
             why: "Fixed delays (e.g. page.waitForTimeout()) cause flaky tests and slower build times. If a system under test loads faster, time is wasted; if it loads slower, the test fails unexpectedly.",
-            remediation: "Avoid pause nodes entirely. Replace them with dynamic event-based waits (e.g., Wait for Element, Wait Visible, or Wait for Network Match) or parameterize timeouts using variables.",
+            remediation:
+              "Avoid pause nodes entirely. Replace them with dynamic event-based waits (e.g., Wait for Element, Wait Visible, or Wait for Network Match) or parameterize timeouts using variables.",
             badCode: `// Bad: Arbitrary hardcoded sleep\nawait page.waitForTimeout(${duration});`,
-            goodCode: `// Good: Wait for dynamic state to complete\nawait page.locator('.modal-success').waitFor({ state: 'visible' });`
-          }
+            goodCode: `// Good: Wait for dynamic state to complete\nawait page.locator('.modal-success').waitFor({ state: 'visible' });`,
+          },
         });
       }
     } else {
@@ -182,7 +183,7 @@ export function runPolicyEnforcer(nodes, edges) {
         "delay",
         "idleTime",
         "delayBetweenIterations",
-        "slowMo"
+        "slowMo",
       ];
       for (const field of timeoutFields) {
         const value = config[field];
@@ -198,10 +199,11 @@ export function runPolicyEnforcer(nodes, edges) {
               educationalGuide: {
                 title: "Hardcoded Timeout Parameter",
                 why: "Hardcoding timeout values prevents tests from adapting dynamically to slow environments (like shared CI runners or staging servers).",
-                remediation: "Parameterize the timeout parameter with variables (e.g., `{{TIMEOUT_DEFAULT}}`) so it can be managed globally or overwritten at run-time.",
+                remediation:
+                  "Parameterize the timeout parameter with variables (e.g., `{{TIMEOUT_DEFAULT}}`) so it can be managed globally or overwritten at run-time.",
                 badCode: `// Bad: Hardcoded timeout parameter\nawait page.click('.btn', { timeout: ${value} });`,
-                goodCode: `// Good: Reference environment variable or variable hook\nawait page.click('.btn', { timeout: env.TIMEOUT_LONG || 30000 });`
-              }
+                goodCode: `// Good: Reference environment variable or variable hook\nawait page.click('.btn', { timeout: env.TIMEOUT_LONG || 30000 });`,
+              },
             });
             break; // only report one timeout issue per node to prevent clutter
           }
@@ -245,10 +247,11 @@ export function runPolicyEnforcer(nodes, edges) {
             educationalGuide: {
               title: "Brittle & Dynamic Selector Anti-Pattern",
               why: "Modern UI frameworks generate class hashes dynamically and update DOM hierarchies frequently. Selecting elements by rigid structural paths or transient hashes breaks tests upon minor updates.",
-              remediation: "Locate elements using stable attributes (e.g. data-testid), accessible ARIA attributes (roles/labels), or semantic selectors.",
+              remediation:
+                "Locate elements using stable attributes (e.g. data-testid), accessible ARIA attributes (roles/labels), or semantic selectors.",
               badCode: `// Bad: Highly brittle tag path or auto-generated hashes\nawait page.locator('div > div > div:nth-child(2) > .react-a5f1').click();`,
-              goodCode: `// Good: Stable custom test identifier\nawait page.locator('[data-testid="submit-button"]').click();`
-            }
+              goodCode: `// Good: Stable custom test identifier\nawait page.locator('[data-testid="submit-button"]').click();`,
+            },
           });
           break; // only report one selector warning per node
         }
@@ -256,13 +259,24 @@ export function runPolicyEnforcer(nodes, edges) {
     }
 
     // --- RULE 3: Strict Mode Violations (Broad Selectors) ---
-    const actionTypes = ["click", "type_text", "select_option", "hover", "submit_form"];
+    const actionTypes = [
+      "click",
+      "type_text",
+      "select_option",
+      "hover",
+      "submit_form",
+    ];
     if (actionTypes.includes(nodeType)) {
       const sel = config.selector || node.data?.selector;
       if (sel && typeof sel === "string") {
         // Very broad selectors (single tag names or generic single class names)
-        const isBroadTag = /^(button|input|select|textarea|a|div|span)$/i.test(sel.trim());
-        const isBroadClass = /^\.(btn|link|form-control|input-field|submit|active)$/i.test(sel.trim());
+        const isBroadTag = /^(button|input|select|textarea|a|div|span)$/i.test(
+          sel.trim(),
+        );
+        const isBroadClass =
+          /^\.(btn|link|form-control|input-field|submit|active)$/i.test(
+            sel.trim(),
+          );
 
         if (isBroadTag || isBroadClass) {
           nodeWarnings.push({
@@ -272,10 +286,11 @@ export function runPolicyEnforcer(nodes, edges) {
             educationalGuide: {
               title: "Strict Mode Selector Warning",
               why: "Playwright actions enforce Strict Mode. If a locator matches more than one element on the page, any action (click, type, etc.) will immediately throw a Strictness Violation error.",
-              remediation: "Qualify your selector using unique parent scopes, stable attributes, or context functions to ensure it resolves to a unique element.",
+              remediation:
+                "Qualify your selector using unique parent scopes, stable attributes, or context functions to ensure it resolves to a unique element.",
               badCode: `// Bad: Ambiguous tag target\nawait page.click('button');`,
-              goodCode: `// Good: Target uniquely within a specific form\nawait page.click('#login-form button[type="submit"]');`
-            }
+              goodCode: `// Good: Target uniquely within a specific form\nawait page.click('#login-form button[type="submit"]');`,
+            },
           });
         }
       }
@@ -289,14 +304,16 @@ export function runPolicyEnforcer(nodes, edges) {
           nodeWarnings.push({
             rule: "unasserted_path",
             severity: "warning",
-            message: "Unasserted Path: This path does not lead to any validation or assertion node.",
+            message:
+              "Unasserted Path: This path does not lead to any validation or assertion node.",
             educationalGuide: {
               title: "Unasserted Execution Path",
               why: "All execution pathways in an automation test should lead to a verification step. Actions without assertions do not confirm correctness of side-effects.",
-              remediation: "Ensure this branch eventually connects to a validation node (e.g., Validate Semantic) downstream.",
+              remediation:
+                "Ensure this branch eventually connects to a validation node (e.g., Validate Semantic) downstream.",
               badCode: `// Bad: Navigation path without assertion\nawait page.goto('/reports');\nawait page.click('#download-pdf');`,
-              goodCode: `// Good: Validate the resulting download state\nawait page.goto('/reports');\nawait page.click('#download-pdf');\nconst download = await downloadPromise;\nassert(download.suggestedFilename() === 'report.pdf');`
-            }
+              goodCode: `// Good: Validate the resulting download state\nawait page.goto('/reports');\nawait page.click('#download-pdf');\nconst download = await downloadPromise;\nassert(download.suggestedFilename() === 'report.pdf');`,
+            },
           });
         }
       } else if (!isValidationNode(node) && nodeType !== "input") {
@@ -304,14 +321,16 @@ export function runPolicyEnforcer(nodes, edges) {
         nodeWarnings.push({
           rule: "dead_end_path",
           severity: "warning",
-          message: "Dead End Path: This node is a terminal action but does not validate state.",
+          message:
+            "Dead End Path: This node is a terminal action but does not validate state.",
           educationalGuide: {
             title: "Missing Downstream Assertion",
             why: "A test path should terminate in an assertion. Without validations, tests pass silently even if the application displays incorrect data or errors, creating false confidence.",
-            remediation: "Add a validation node (e.g. Validate Semantic) at the end of this branch to assert the expected result of previous actions.",
+            remediation:
+              "Add a validation node (e.g. Validate Semantic) at the end of this branch to assert the expected result of previous actions.",
             badCode: `// Bad: Flow stops after user interaction\nawait page.click('#save-changes');`,
-            goodCode: `// Good: Flow verifies confirmation is visible\nawait page.click('#save-changes');\nawait expect(page.locator('.toast-success')).toBeVisible();`
-          }
+            goodCode: `// Good: Flow verifies confirmation is visible\nawait page.click('#save-changes');\nawait expect(page.locator('.toast-success')).toBeVisible();`,
+          },
         });
       }
     }

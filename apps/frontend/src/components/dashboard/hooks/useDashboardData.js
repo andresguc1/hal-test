@@ -115,14 +115,14 @@ export function useOverviewMetrics() {
 
   const totalFlows = projects.reduce(
     (sum, p) => sum + (p.flows?.length || 0),
-    0
+    0,
   );
 
   const completedRuns = runs.filter(
-    (r) => r.status === "completed" || r.status === "passed"
+    (r) => r.status === "completed" || r.status === "passed",
   );
   const failedRuns = runs.filter(
-    (r) => r.status === "failed" || r.status === "error"
+    (r) => r.status === "failed" || r.status === "error",
   );
   const activeRuns = runs.filter((r) => r.status === "running");
 
@@ -136,7 +136,7 @@ export function useOverviewMetrics() {
       ? Math.round(
           completedRuns.reduce((sum, r) => sum + (r.duration_ms || 0), 0) /
             completedRuns.length /
-            1000
+            1000,
         )
       : null;
 
@@ -157,10 +157,10 @@ export function useOverviewMetrics() {
       date: dateStr,
       label: date.toLocaleDateString("en", { weekday: "short" }),
       passed: dayRuns.filter(
-        (r) => r.status === "completed" || r.status === "passed"
+        (r) => r.status === "completed" || r.status === "passed",
       ).length,
       failed: dayRuns.filter(
-        (r) => r.status === "failed" || r.status === "error"
+        (r) => r.status === "failed" || r.status === "error",
       ).length,
       total: dayRuns.length,
     };

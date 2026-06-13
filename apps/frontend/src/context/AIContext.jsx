@@ -12,7 +12,7 @@ export const useAIStore = create((set, get) => ({
   isAiReady: false,
   availableKeys: [],
   aiConfig: null,
-  
+
   setInitialContext: (settings, available) => {
     const isReady = () => {
       if (!settings) return false;
@@ -93,7 +93,11 @@ export const useAIStore = create((set, get) => ({
       );
 
       let finalContent = result.message || result.text || "";
-      if (!finalContent.trim() && result.toolCalls && result.toolCalls.length > 0) {
+      if (
+        !finalContent.trim() &&
+        result.toolCalls &&
+        result.toolCalls.length > 0
+      ) {
         finalContent = "He ejecutado las acciones solicitadas en el lienzo.";
       }
 
@@ -151,7 +155,9 @@ export const AIProvider = ({ children }) => {
 
   const availableKeys = useMemo(() => {
     if (!aiConfig?.activeProvider) return [];
-    return vaultKeys?.filter((k) => k.provider === aiConfig.activeProvider) || [];
+    return (
+      vaultKeys?.filter((k) => k.provider === aiConfig.activeProvider) || []
+    );
   }, [vaultKeys, aiConfig?.activeProvider]);
 
   useEffect(() => {

@@ -59,14 +59,16 @@ export default function ActivityFeed({ runs = [], maxItems = 8, onViewRun }) {
                 run.status === "completed" || run.status === "passed"
                   ? "var(--dash-success)"
                   : run.status === "running"
-                  ? "var(--dash-running)"
-                  : run.status === "failed" || run.status === "error"
-                  ? "var(--dash-error)"
-                  : "var(--dash-text-tertiary)",
+                    ? "var(--dash-running)"
+                    : run.status === "failed" || run.status === "error"
+                      ? "var(--dash-error)"
+                      : "var(--dash-text-tertiary)",
             }}
           />
           <div className="dash-activity-text">
-            <span style={{ fontWeight: 600, color: "var(--dash-text-primary)" }}>
+            <span
+              style={{ fontWeight: 600, color: "var(--dash-text-primary)" }}
+            >
               {run.flow_name || "Flow"}
             </span>
             {run.project_name && (
@@ -84,12 +86,16 @@ export default function ActivityFeed({ runs = [], maxItems = 8, onViewRun }) {
               }}
             >
               <RunStatusBadge status={run.status} size="sm" />
-              <span style={{ fontSize: 11, color: "var(--dash-text-tertiary)" }}>
+              <span
+                style={{ fontSize: 11, color: "var(--dash-text-tertiary)" }}
+              >
                 {formatDuration(run.duration_ms)}
               </span>
             </div>
           </div>
-          <div className="dash-activity-time">{timeAgo(run.started_at || run.created_at)}</div>
+          <div className="dash-activity-time">
+            {timeAgo(run.started_at || run.created_at)}
+          </div>
         </div>
       ))}
     </div>

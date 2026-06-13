@@ -47,6 +47,7 @@ const NODE_CATEGORIES = {
       { id: "get_set_content" },
       { id: "wait_for_element" },
       { id: "execute_js" },
+      { id: "assert_page_text" },
     ],
   },
   user_simulation: {

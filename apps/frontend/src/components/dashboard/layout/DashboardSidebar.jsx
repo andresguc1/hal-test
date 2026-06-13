@@ -83,7 +83,13 @@ export default function DashboardSidebar({
                   id={`dash-nav-${item.id}`}
                   className={`dash-nav-item ${isActive ? "active" : ""}`}
                   onClick={() => onNavigate(item.id)}
-                  style={{ width: "100%", textAlign: "left", background: "none", border: "none", cursor: "pointer" }}
+                  style={{
+                    width: "100%",
+                    textAlign: "left",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                  }}
                   aria-current={isActive ? "page" : undefined}
                 >
                   <Icon size={15} className="dash-nav-icon" />
@@ -104,7 +110,12 @@ export default function DashboardSidebar({
         <button
           id="dash-back-to-canvas"
           className="dash-btn dash-btn-secondary"
-          style={{ width: "100%", justifyContent: "center", marginBottom: 8, gap: 6 }}
+          style={{
+            width: "100%",
+            justifyContent: "center",
+            marginBottom: 8,
+            gap: 6,
+          }}
           onClick={onBackToCanvas}
         >
           <ChevronLeft size={14} />

@@ -27,4 +27,14 @@ describe("validateNodeConfig", () => {
     const whileLoopInvalid = { loopType: "while", condition: "" };
     expect(validateNodeConfig("loop", whileLoopInvalid).isValid).toBe(false);
   });
+
+  it("should validate required fields for assert_page_text", () => {
+    expect(validateNodeConfig("assert_page_text", {}).isValid).toBe(false);
+    expect(
+      validateNodeConfig("assert_page_text", { textToFind: "" }).isValid,
+    ).toBe(false);
+    expect(
+      validateNodeConfig("assert_page_text", { textToFind: "Welcome" }).isValid,
+    ).toBe(true);
+  });
 });

@@ -486,10 +486,16 @@ export function useFlowExecution({
             if (visited.has(curr)) continue;
             visited.add(curr);
             const node = executionNodes.find((n) => n.id === curr);
-            if (node && (node.type === "launch_browser" || node.data?.type === "launch_browser")) {
+            if (
+              node &&
+              (node.type === "launch_browser" ||
+                node.data?.type === "launch_browser")
+            ) {
               return true;
             }
-            const outgoing = filteredEdges.filter((e) => e.source === curr).map((e) => e.target);
+            const outgoing = filteredEdges
+              .filter((e) => e.source === curr)
+              .map((e) => e.target);
             queue.push(...outgoing);
           }
           return false;
@@ -892,7 +898,9 @@ export function useFlowExecution({
                 flowContext[slug] = result.result || result;
 
                 // Populate custom defined variableName/saveToVariable in flowContext
-                const customVarName = node.data?.configuration?.variableName || node.data?.configuration?.saveToVariable;
+                const customVarName =
+                  node.data?.configuration?.variableName ||
+                  node.data?.configuration?.saveToVariable;
                 if (customVarName) {
                   flowContext[customVarName] = result.result || result;
                 }

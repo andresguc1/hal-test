@@ -19,7 +19,12 @@ export default function RunHistoryPanel({
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Fetch runs using the shared React Query hook
-  const { data: runs = [], isLoading, refetch, isFetching } = useRuns({
+  const {
+    data: runs = [],
+    isLoading,
+    refetch,
+    isFetching,
+  } = useRuns({
     flowId: currentFlowId,
     status: statusFilter !== "all" ? statusFilter : undefined,
   });

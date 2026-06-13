@@ -25,8 +25,15 @@ export default function StatCard({
   onClick,
 }) {
   const TrendIcon =
-    trend === null ? null : trend > 0 ? TrendingUp : trend < 0 ? TrendingDown : Minus;
-  const trendClass = trend === null ? "" : trend > 0 ? "up" : trend < 0 ? "down" : "";
+    trend === null
+      ? null
+      : trend > 0
+        ? TrendingUp
+        : trend < 0
+          ? TrendingDown
+          : Minus;
+  const trendClass =
+    trend === null ? "" : trend > 0 ? "up" : trend < 0 ? "down" : "";
 
   if (isLoading) {
     return (
@@ -58,7 +65,9 @@ export default function StatCard({
         className="dash-stat-card__icon-wrap"
         style={{ background: iconBg || "var(--dash-accent-subtle)" }}
       >
-        <span style={{ color: iconColor || "var(--dash-accent)", display: "flex" }}>
+        <span
+          style={{ color: iconColor || "var(--dash-accent)", display: "flex" }}
+        >
           {icon}
         </span>
       </div>
@@ -85,7 +94,9 @@ export default function StatCard({
             )}
           </>
         ) : (
-          <span style={{ color: "var(--dash-text-tertiary)", fontSize: "0.6em" }}>
+          <span
+            style={{ color: "var(--dash-text-tertiary)", fontSize: "0.6em" }}
+          >
             —
           </span>
         )}

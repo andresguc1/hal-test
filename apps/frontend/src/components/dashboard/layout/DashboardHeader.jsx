@@ -24,7 +24,15 @@ export default function DashboardHeader({
   return (
     <header className="hal-dashboard__header">
       {/* Breadcrumb */}
-      <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1, minWidth: 0 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          flex: 1,
+          minWidth: 0,
+        }}
+      >
         <span
           style={{
             fontSize: 12,
@@ -34,7 +42,10 @@ export default function DashboardHeader({
         >
           HalTest
         </span>
-        <ChevronRight size={12} style={{ color: "var(--dash-text-tertiary)", flexShrink: 0 }} />
+        <ChevronRight
+          size={12}
+          style={{ color: "var(--dash-text-tertiary)", flexShrink: 0 }}
+        />
         <h1
           style={{
             fontSize: 14,
@@ -51,7 +62,10 @@ export default function DashboardHeader({
       {/* Search */}
       {onSearchChange && (
         <div className="dash-search-input">
-          <Search size={13} style={{ color: "var(--dash-text-tertiary)", flexShrink: 0 }} />
+          <Search
+            size={13}
+            style={{ color: "var(--dash-text-tertiary)", flexShrink: 0 }}
+          />
           <input
             type="text"
             placeholder="Search..."

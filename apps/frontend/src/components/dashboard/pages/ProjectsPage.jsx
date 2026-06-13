@@ -52,7 +52,7 @@ export default function ProjectsPage({
       list = list.filter(
         (p) =>
           p.name?.toLowerCase().includes(q) ||
-          p.description?.toLowerCase().includes(q)
+          p.description?.toLowerCase().includes(q),
       );
     }
     if (sort === "name") {
@@ -135,9 +135,7 @@ export default function ProjectsPage({
         >
           <EmptyState
             icon={<FolderKanban size={24} />}
-            title={
-              search ? "No projects match your search" : "No projects yet"
-            }
+            title={search ? "No projects match your search" : "No projects yet"}
             description={
               search
                 ? "Try a different keyword"
@@ -177,10 +175,7 @@ export default function ProjectsPage({
               ))}
             </motion.div>
           ) : (
-            <div
-              className="dash-table-wrap"
-              style={{ marginTop: 20 }}
-            >
+            <div className="dash-table-wrap" style={{ marginTop: 20 }}>
               <table className="dash-table" style={{ width: "100%" }}>
                 <thead>
                   <tr>
@@ -216,13 +211,23 @@ export default function ProjectsPage({
                             </div>
                           )}
                         </td>
-                        <td style={{ color: "var(--dash-text-secondary)", fontSize: 12 }}>
+                        <td
+                          style={{
+                            color: "var(--dash-text-secondary)",
+                            fontSize: 12,
+                          }}
+                        >
                           {project.flows?.length || 0} flows
                         </td>
-                        <td style={{ color: "var(--dash-text-secondary)", fontSize: 12 }}>
+                        <td
+                          style={{
+                            color: "var(--dash-text-secondary)",
+                            fontSize: 12,
+                          }}
+                        >
                           {run
                             ? new Date(
-                                run.started_at || run.created_at
+                                run.started_at || run.created_at,
                               ).toLocaleDateString()
                             : "—"}
                         </td>
@@ -237,8 +242,8 @@ export default function ProjectsPage({
                                   run.status === "passed"
                                     ? "var(--dash-success)"
                                     : run.status === "running"
-                                    ? "var(--dash-running)"
-                                    : "var(--dash-error)",
+                                      ? "var(--dash-running)"
+                                      : "var(--dash-error)",
                               }}
                             >
                               {run.status}
@@ -337,8 +342,14 @@ function PageHeader({
         }}
       >
         {/* Search */}
-        <div className="dash-search-input" style={{ flex: 1, minWidth: 200, maxWidth: 340 }}>
-          <Search size={13} style={{ color: "var(--dash-text-tertiary)", flexShrink: 0 }} />
+        <div
+          className="dash-search-input"
+          style={{ flex: 1, minWidth: 200, maxWidth: 340 }}
+        >
+          <Search
+            size={13}
+            style={{ color: "var(--dash-text-tertiary)", flexShrink: 0 }}
+          />
           <input
             type="text"
             placeholder="Search projects..."

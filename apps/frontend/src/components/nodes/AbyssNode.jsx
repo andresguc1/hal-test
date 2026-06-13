@@ -103,8 +103,8 @@ const AbyssNode = ({ id, data, selected, type }) => {
           color: data.state === "success" ? "#10b981" : "#ef4444",
           shadow:
             data.state === "success"
-               ? "0 0 30px rgba(16,185,129,0.5)"
-               : "0 0 30px rgba(239,68,68,0.5)",
+              ? "0 0 30px rgba(16,185,129,0.5)"
+              : "0 0 30px rgba(239,68,68,0.5)",
         }
       : data.warnings && data.warnings.length > 0
         ? {
@@ -135,7 +135,9 @@ const AbyssNode = ({ id, data, selected, type }) => {
         "group relative max-w-[400px] rounded-lg p-3 transition-[background,border,box-shadow,opacity] duration-400 select-none border-[2px]",
         themeParams.base,
         invalidStyle, // Add validation glow
-        data.warnings && data.warnings.length > 0 && "warning-node-glow border-yellow-500/50",
+        data.warnings &&
+          data.warnings.length > 0 &&
+          "warning-node-glow border-yellow-500/50",
 
         // Running/Executing Animation (Breathing Glow using Category Color)
         (data.state === "running" || data.state === "executing") &&

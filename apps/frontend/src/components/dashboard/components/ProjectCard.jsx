@@ -1,11 +1,21 @@
 import React from "react";
-import { GitBranch, Clock, Play, MoreHorizontal, Copy, Trash2, ArrowRight } from "lucide-react";
+import {
+  GitBranch,
+  Clock,
+  Play,
+  MoreHorizontal,
+  Copy,
+  Trash2,
+  ArrowRight,
+} from "lucide-react";
 
 /**
  * Generates a deterministic gradient from a project name/id
  */
 function projectGradient(nameOrId = "") {
-  const hash = nameOrId.split("").reduce((acc, c) => acc * 31 + c.charCodeAt(0), 0);
+  const hash = nameOrId
+    .split("")
+    .reduce((acc, c) => acc * 31 + c.charCodeAt(0), 0);
   const hue = Math.abs(hash) % 360;
   const hue2 = (hue + 40) % 360;
   return {
@@ -57,11 +67,22 @@ export default function ProjectCard({
   return (
     <div className="dash-project-card" onClick={() => onOpen?.(project)}>
       {/* Accent bar */}
-      <div className="dash-project-card__accent-bar" style={{ background: gradient }} />
+      <div
+        className="dash-project-card__accent-bar"
+        style={{ background: gradient }}
+      />
 
       {/* Header */}
       <div className="dash-project-card__header">
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 12, flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 12,
+            flex: 1,
+            minWidth: 0,
+          }}
+        >
           {/* Avatar */}
           <div
             className="dash-project-card__avatar"
@@ -74,7 +95,9 @@ export default function ProjectCard({
           <div style={{ flex: 1, minWidth: 0 }}>
             <div className="dash-project-card__name">{project.name}</div>
             {project.description && (
-              <div className="dash-project-card__desc">{project.description}</div>
+              <div className="dash-project-card__desc">
+                {project.description}
+              </div>
             )}
           </div>
         </div>
@@ -110,19 +133,34 @@ export default function ProjectCard({
               <MenuItem
                 icon={<ArrowRight size={13} />}
                 label="Open Project"
-                onClick={() => { setMenuOpen(false); onOpen?.(project); }}
+                onClick={() => {
+                  setMenuOpen(false);
+                  onOpen?.(project);
+                }}
               />
               <MenuItem
                 icon={<Copy size={13} />}
                 label="Duplicate"
-                onClick={() => { setMenuOpen(false); onDuplicate?.(project); }}
+                onClick={() => {
+                  setMenuOpen(false);
+                  onDuplicate?.(project);
+                }}
               />
-              <div style={{ height: 1, background: "var(--dash-border-subtle)", margin: "4px 0" }} />
+              <div
+                style={{
+                  height: 1,
+                  background: "var(--dash-border-subtle)",
+                  margin: "4px 0",
+                }}
+              />
               <MenuItem
                 icon={<Trash2 size={13} />}
                 label="Delete"
                 danger
-                onClick={() => { setMenuOpen(false); onDelete?.(project); }}
+                onClick={() => {
+                  setMenuOpen(false);
+                  onDelete?.(project);
+                }}
               />
             </div>
           )}
@@ -163,15 +201,18 @@ export default function ProjectCard({
                   height: 6,
                   borderRadius: "50%",
                   background:
-                    recentRun.status === "completed" || recentRun.status === "passed"
+                    recentRun.status === "completed" ||
+                    recentRun.status === "passed"
                       ? "var(--dash-success)"
                       : recentRun.status === "running"
-                      ? "var(--dash-running)"
-                      : "var(--dash-error)",
+                        ? "var(--dash-running)"
+                        : "var(--dash-error)",
                   flexShrink: 0,
                 }}
               />
-              <span style={{ fontSize: 11, color: "var(--dash-text-tertiary)" }}>
+              <span
+                style={{ fontSize: 11, color: "var(--dash-text-tertiary)" }}
+              >
                 Last run
               </span>
             </div>
@@ -220,7 +261,11 @@ function MenuItem({ icon, label, danger, onClick }) {
         e.currentTarget.style.background = "none";
       }}
     >
-      <span style={{ color: danger ? "var(--dash-error)" : "var(--dash-text-secondary)" }}>
+      <span
+        style={{
+          color: danger ? "var(--dash-error)" : "var(--dash-text-secondary)",
+        }}
+      >
         {icon}
       </span>
       {label}

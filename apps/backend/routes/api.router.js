@@ -128,6 +128,12 @@ export const actionRoutes = [
         category: 'element',
     },
     {
+        path: 'assert_page_text',
+        schema: 'assertPageTextBodySchema',
+        action: 'assertPageTextAction',
+        category: 'element',
+    },
+    {
         path: 'interaction',
         schema: 'interactionBodySchema',
         action: 'interactionAction',

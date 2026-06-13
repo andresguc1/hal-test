@@ -130,7 +130,11 @@
     "cmd_test": "Run a specific HalTest-generated test file",
     "cmd_test_headed": "Run a HalTest file with visible browser",
     "cmd_report": "Open HTML report",
-    "cmd_install": "Install browsers"
+    "cmd_install": "Install browsers",
+    "confirm_sync_title": "Synchronization Disabled",
+    "confirm_sync_description": "Reverse synchronization from code to workflow is currently experimental and has been temporarily disabled to prevent workflow corruption.",
+    "confirm_sync_btn": "Got it",
+    "sync_disabled_toast": "Synchronization disabled."
   },
   "nodes": {
     "labels": {
@@ -145,6 +149,7 @@
       "manage_tabs": "Manage Tabs",
       "find_element": "Find Element",
       "get_set_content": "Modify Text/Attr",
+      "assert_page_text": "Assert Page Contains Text",
       "click": "Click",
       "type_text": "Type Text",
       "select_option": "Select Options",

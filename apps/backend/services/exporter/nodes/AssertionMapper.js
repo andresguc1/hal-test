@@ -6,10 +6,83 @@
  * When exporting to Playwright, we translate to the closest native assertion.
  */
 export const AssertionMapper = {
-    type: ['validate_semantic', 'assertion'],
+    type: ['validate_semantic', 'assertion', 'assert_page_text'],
 
     getCode: (params, lang) => {
         const action = params.actionType || params.type;
+
+        if (action === 'assert_page_text') {
+            const textToFind = params.textToFind || '';
+            const matchType = params.matchType || 'contains';
+            const caseSensitive = params.caseSensitive === true || params.caseSensitive === 'true';
+            const timeout = params.timeout !== undefined ? Number(params.timeout) : 5000;
+
+            switch (lang.toLowerCase()) {
+                case 'javascript':
+                case 'typescript': {
+                    const options = [];
+                    if (matchType === 'exact') options.push('exact: true');
+                    if (!caseSensitive) options.push('ignoreCase: true');
+                    if (timeout !== 5000) options.push(`timeout: ${timeout}`);
+                    const optStr = options.length > 0 ? `, { ${options.join(', ')} }` : '';
+
+                    if (matchType === 'regex') {
+                        const flags = caseSensitive ? '' : 'i';
+                        return `await expect(page.locator('body')).toContainText(new RegExp(\`${textToFind}\`, '${flags}')${optStr});`;
+                    } else {
+                        return `await expect(page.locator('body')).toContainText(\`${textToFind}\`${optStr});`;
+                    }
+                }
+                case 'python': {
+                    const options = [];
+                    if (matchType === 'exact') options.push('exact=True');
+                    if (!caseSensitive) options.push('ignore_case=True');
+                    if (timeout !== 5000) options.push(`timeout=${timeout}`);
+                    const optStr = options.length > 0 ? `, ${options.join(', ')}` : '';
+
+                    if (matchType === 'regex') {
+                        const flags = !caseSensitive ? ', re.IGNORECASE' : '';
+                        return `expect(page.locator("body")).to_contain_text(re.compile(r"${textToFind}"${flags})${optStr})`;
+                    } else {
+                        return `expect(page.locator("body")).to_contain_text("${textToFind}"${optStr})`;
+                    }
+                }
+                case 'java': {
+                    const options = [];
+                    if (matchType === 'exact') options.push('.setExact(true)');
+                    if (!caseSensitive) options.push('.setIgnoreCase(true)');
+                    if (timeout !== 5000) options.push(`.setTimeout(${timeout})`);
+                    const optStr =
+                        options.length > 0
+                            ? `, new Locator.ContainsTextOptions()${options.join('')}`
+                            : '';
+
+                    if (matchType === 'regex') {
+                        const flags = !caseSensitive ? 'Pattern.CASE_INSENSITIVE' : '0';
+                        return `assertThat(page.locator("body")).containsText(Pattern.compile("${textToFind}", ${flags})${optStr});`;
+                    } else {
+                        return `assertThat(page.locator("body")).containsText("${textToFind}"${optStr});`;
+                    }
+                }
+                case 'csharp': {
+                    const options = [];
+                    if (matchType === 'exact') options.push('Exact = true');
+                    if (!caseSensitive) options.push('IgnoreCase = true');
+                    if (timeout !== 5000) options.push(`Timeout = ${timeout}`);
+                    const optStr = options.length > 0 ? `, new() { ${options.join(', ')} }` : '';
+
+                    if (matchType === 'regex') {
+                        const flags = !caseSensitive ? ', RegexOptions.IgnoreCase' : '';
+                        return `await Expect(page.Locator("body")).ToContainTextAsync(new Regex(@"${textToFind}"${flags})${optStr});`;
+                    } else {
+                        return `await Expect(page.Locator("body")).ToContainTextAsync("${textToFind}"${optStr});`;
+                    }
+                }
+                default:
+                    return `// assertion not implemented for ${lang}`;
+            }
+        }
+
         const selector = params.selector || '';
         const expected = params.expected || params.text || params.value || '';
         const assertType = params.assertionType || params.assertType || 'text_contains';

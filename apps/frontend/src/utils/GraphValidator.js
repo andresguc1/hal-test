@@ -91,9 +91,10 @@ export class GraphValidator {
 
       // Start traversal from launch_browser nodes.
       // Fallback to the first active node if no launch_browser exists.
-      const startNodes = launches.length > 0
-        ? launches.map((l) => l.id || l.nodeId)
-        : [activeNodes[0].id || activeNodes[0].nodeId];
+      const startNodes =
+        launches.length > 0
+          ? launches.map((l) => l.id || l.nodeId)
+          : [activeNodes[0].id || activeNodes[0].nodeId];
 
       const visited = new Set();
       const queue = [...startNodes];

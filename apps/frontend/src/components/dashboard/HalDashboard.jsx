@@ -45,7 +45,10 @@ export default function HalDashboard() {
   const [creationModal, setCreationModal] = useState({ isOpen: false });
 
   // Track active runs count for sidebar badge
-  const { data: activeRunsData = [] } = useRuns({ status: "running", limit: 10 });
+  const { data: activeRunsData = [] } = useRuns({
+    status: "running",
+    limit: 10,
+  });
   const activeRunsCount = activeRunsData.length;
 
   // ── Navigation ──────────────────────────────────────────────
@@ -80,7 +83,7 @@ export default function HalDashboard() {
         toast.error("Failed to create project");
       }
     },
-    [createProject, qc, toast]
+    [createProject, qc, toast],
   );
 
   const handleOpenProject = useCallback(
@@ -88,7 +91,7 @@ export default function HalDashboard() {
       loadProject(project.id);
       navigate("/");
     },
-    [loadProject, navigate]
+    [loadProject, navigate],
   );
 
   const handleDeleteProject = useCallback(
@@ -102,7 +105,7 @@ export default function HalDashboard() {
         toast.error("Failed to delete project");
       }
     },
-    [deleteProject, qc, toast]
+    [deleteProject, qc, toast],
   );
 
   // ── Flows ─────────────────────────────────────────────────────
@@ -111,7 +114,7 @@ export default function HalDashboard() {
       if (flow.projectId) loadProject(flow.projectId);
       navigate("/");
     },
-    [loadProject, navigate]
+    [loadProject, navigate],
   );
 
   // ── Reports ───────────────────────────────────────────────────
@@ -123,7 +126,7 @@ export default function HalDashboard() {
         handleNavigate("runs");
       }
     },
-    [navigate, handleNavigate]
+    [navigate, handleNavigate],
   );
 
   // ── Primary action per page ───────────────────────────────────
@@ -135,7 +138,12 @@ export default function HalDashboard() {
   const renderPage = () => {
     switch (activePage) {
       case "overview":
-        return <OverviewPage onNavigate={handleNavigate} onViewRun={(run) => handleViewReport(run?.id)} />;
+        return (
+          <OverviewPage
+            onNavigate={handleNavigate}
+            onViewRun={(run) => handleViewReport(run?.id)}
+          />
+        );
       case "projects":
         return (
           <ProjectsPage
@@ -148,7 +156,9 @@ export default function HalDashboard() {
         return (
           <FlowsPage
             onOpenFlow={handleOpenFlow}
-            onRunFlow={(flow) => { handleOpenFlow(flow); }}
+            onRunFlow={(flow) => {
+              handleOpenFlow(flow);
+            }}
             onNavigate={handleNavigate}
           />
         );
@@ -161,7 +171,14 @@ export default function HalDashboard() {
       case "ai":
         return <AIPage />;
       case "settings":
-        return <SettingsPageDash onOpenSettings={() => { navigate("/"); openSettings(); }} />;
+        return (
+          <SettingsPageDash
+            onOpenSettings={() => {
+              navigate("/");
+              openSettings();
+            }}
+          />
+        );
       default:
         return <OverviewPage onNavigate={handleNavigate} />;
     }
@@ -185,10 +202,16 @@ export default function HalDashboard() {
           activePage={activePage}
           onRefresh={handleRefresh}
           isRefreshing={isRefreshing}
-          onPrimaryAction={PAGE_PRIMARY_ACTION[activePage] ? handlePrimaryAction : undefined}
+          onPrimaryAction={
+            PAGE_PRIMARY_ACTION[activePage] ? handlePrimaryAction : undefined
+          }
           primaryActionLabel={PAGE_PRIMARY_ACTION[activePage]}
-          searchValue={PAGE_SEARCH_ENABLED.includes(activePage) ? search : undefined}
-          onSearchChange={PAGE_SEARCH_ENABLED.includes(activePage) ? setSearch : undefined}
+          searchValue={
+            PAGE_SEARCH_ENABLED.includes(activePage) ? search : undefined
+          }
+          onSearchChange={
+            PAGE_SEARCH_ENABLED.includes(activePage) ? setSearch : undefined
+          }
         />
 
         {/* Content with page transition */}

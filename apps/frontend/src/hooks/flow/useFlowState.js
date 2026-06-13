@@ -269,8 +269,10 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
       saveToHistory();
       const nextNodes = nodesRef.current.filter((n) => n.id !== nodeId);
       const nextEdges = sanitizeEdges(
-        edgesRef.current.filter((e) => e.source !== nodeId && e.target !== nodeId),
-        nextNodes
+        edgesRef.current.filter(
+          (e) => e.source !== nodeId && e.target !== nodeId,
+        ),
+        nextNodes,
       );
       setNodes(nextNodes);
       setEdges(nextEdges);
@@ -596,12 +598,8 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
 
         const nextNodes = [...remainingNodes, componentNode];
         const nextEdges = sanitizeEdges(
-          [
-            ...remainingEdges,
-            ...newIncomingEdges,
-            ...newOutgoingEdges,
-          ],
-          nextNodes
+          [...remainingEdges, ...newIncomingEdges, ...newOutgoingEdges],
+          nextNodes,
         );
 
         // Synchronously update refs to prevent race condition during save
@@ -860,12 +858,8 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
 
         const nextNodes = [...remainingNodes, loopNode];
         const nextEdges = sanitizeEdges(
-          [
-            ...remainingEdges,
-            ...newIncomingEdges,
-            ...newOutgoingEdges,
-          ],
-          nextNodes
+          [...remainingEdges, ...newIncomingEdges, ...newOutgoingEdges],
+          nextNodes,
         );
 
         // Synchronously update refs to prevent race condition during save
@@ -1151,11 +1145,15 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
       }
 
       saveToHistory();
-      
+
       let subFlow = componentNode.data?.subFlow;
       const flowId = componentNode.data?.flowId;
 
-      if ((!subFlow || !subFlow.nodes || subFlow.nodes.length === 0) && flowId && currentProject?.flows) {
+      if (
+        (!subFlow || !subFlow.nodes || subFlow.nodes.length === 0) &&
+        flowId &&
+        currentProject?.flows
+      ) {
         const matchingFlow = currentProject.flows.find((f) => f.id === flowId);
         if (matchingFlow) {
           subFlow = {
@@ -1183,8 +1181,12 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
         }));
 
       // Find boundary node IDs
-      const inputNodeIds = new Set(subNodes.filter((n) => n.type === "input").map((n) => n.id));
-      const outputNodeIds = new Set(subNodes.filter((n) => n.type === "output").map((n) => n.id));
+      const inputNodeIds = new Set(
+        subNodes.filter((n) => n.type === "input").map((n) => n.id),
+      );
+      const outputNodeIds = new Set(
+        subNodes.filter((n) => n.type === "output").map((n) => n.id),
+      );
 
       // Internal edges to restore
       const internalEdges = subEdges.filter(
@@ -1196,8 +1198,12 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
       );
 
       // Find current incoming/outgoing edges in the main flow
-      const currentIncoming = edgesRef.current.filter((e) => e.target === componentNodeId);
-      const currentOutgoing = edgesRef.current.filter((e) => e.source === componentNodeId);
+      const currentIncoming = edgesRef.current.filter(
+        (e) => e.target === componentNodeId,
+      );
+      const currentOutgoing = edgesRef.current.filter(
+        (e) => e.source === componentNodeId,
+      );
 
       const restoredIncoming = [];
       const restoredOutgoing = [];
@@ -1207,7 +1213,10 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
         const originalTarget = incomingEdge.data?.originalTarget;
         const originalTargetHandle = incomingEdge.data?.originalTargetHandle;
 
-        if (originalTarget && restoredNodes.some((rn) => rn.id === originalTarget)) {
+        if (
+          originalTarget &&
+          restoredNodes.some((rn) => rn.id === originalTarget)
+        ) {
           const restoredEdge = {
             ...incomingEdge,
             id: `e_${incomingEdge.source}-${originalTarget}`,
@@ -1215,15 +1224,22 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
             targetHandle: originalTargetHandle,
           };
           if (restoredEdge.data) {
-            const { originalTarget: _, originalTargetHandle: __, ...cleanedData } = restoredEdge.data;
-            restoredEdge.data = Object.keys(cleanedData).length > 0 ? cleanedData : undefined;
+            const {
+              originalTarget: _,
+              originalTargetHandle: __,
+              ...cleanedData
+            } = restoredEdge.data;
+            restoredEdge.data =
+              Object.keys(cleanedData).length > 0 ? cleanedData : undefined;
           }
           restoredIncoming.push(restoredEdge);
         } else {
           // Fallback: connect to all nodes the input node connected to
           const inputNode = subNodes.find((n) => n.type === "input");
           if (inputNode) {
-            const subIncomingEdges = subEdges.filter((se) => se.source === inputNode.id);
+            const subIncomingEdges = subEdges.filter(
+              (se) => se.source === inputNode.id,
+            );
             subIncomingEdges.forEach((se) => {
               restoredIncoming.push({
                 ...incomingEdge,
@@ -1241,7 +1257,10 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
         const originalSource = outgoingEdge.data?.originalSource;
         const originalSourceHandle = outgoingEdge.data?.originalSourceHandle;
 
-        if (originalSource && restoredNodes.some((rn) => rn.id === originalSource)) {
+        if (
+          originalSource &&
+          restoredNodes.some((rn) => rn.id === originalSource)
+        ) {
           const restoredEdge = {
             ...outgoingEdge,
             id: `e_${originalSource}-${outgoingEdge.target}`,
@@ -1249,15 +1268,22 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
             sourceHandle: originalSourceHandle,
           };
           if (restoredEdge.data) {
-            const { originalSource: _, originalSourceHandle: __, ...cleanedData } = restoredEdge.data;
-            restoredEdge.data = Object.keys(cleanedData).length > 0 ? cleanedData : undefined;
+            const {
+              originalSource: _,
+              originalSourceHandle: __,
+              ...cleanedData
+            } = restoredEdge.data;
+            restoredEdge.data =
+              Object.keys(cleanedData).length > 0 ? cleanedData : undefined;
           }
           restoredOutgoing.push(restoredEdge);
         } else {
           // Fallback: connect from all nodes that connected to the output node
           const outputNode = subNodes.find((n) => n.type === "output");
           if (outputNode) {
-            const subOutgoingEdges = subEdges.filter((se) => se.target === outputNode.id);
+            const subOutgoingEdges = subEdges.filter(
+              (se) => se.target === outputNode.id,
+            );
             subOutgoingEdges.forEach((se) => {
               restoredOutgoing.push({
                 ...outgoingEdge,
@@ -1284,7 +1310,7 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
           ...restoredIncoming,
           ...restoredOutgoing,
         ],
-        nextNodes
+        nextNodes,
       );
 
       // Synchronously update refs to prevent race condition during save

@@ -726,11 +726,11 @@ const NodeConfigurationPanel = ({
         Object.values(obj).forEach(traverse);
       }
     };
-    
+
     traverse(watchedValues);
-    
+
     if (referenced.length === 0) return null;
-    
+
     return (
       <div className="mt-8 pt-6 border-t border-white/5 space-y-4">
         <div className="flex items-center gap-2">
@@ -745,17 +745,19 @@ const NodeConfigurationPanel = ({
             const value = foundVar ? foundVar.value : undefined;
             const scope = foundVar ? foundVar.scope : "unknown";
             const source = foundVar ? foundVar.source : "unknown";
-            
+
             let statusText = "Resolved";
-            let statusColor = "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
+            let statusColor =
+              "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
             if (foundVar === undefined) {
               statusText = "Not Resolved";
               statusColor = "text-rose-400 bg-rose-500/10 border-rose-500/20";
             } else if (source === "static") {
               statusText = "Schema Fallback";
-              statusColor = "text-amber-400 bg-amber-500/10 border-amber-500/20";
+              statusColor =
+                "text-amber-400 bg-amber-500/10 border-amber-500/20";
             }
-            
+
             return (
               <div
                 key={varName}
@@ -763,9 +765,16 @@ const NodeConfigurationPanel = ({
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-mono font-bold text-indigo-300">
-                    {"{{"}{varName}{"}}"}
+                    {"{{"}
+                    {varName}
+                    {"}}"}
                   </span>
-                  <span className={cn("text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded border", statusColor)}>
+                  <span
+                    className={cn(
+                      "text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded border",
+                      statusColor,
+                    )}
+                  >
                     {statusText}
                   </span>
                 </div>
@@ -773,16 +782,24 @@ const NodeConfigurationPanel = ({
                   <div className="text-[10px] text-slate-400 flex flex-col gap-1">
                     <div className="flex justify-between border-b border-white/5 pb-1">
                       <span className="text-slate-500">Scope:</span>
-                      <span className="font-semibold text-slate-300 uppercase">{scope}</span>
+                      <span className="font-semibold text-slate-300 uppercase">
+                        {scope}
+                      </span>
                     </div>
                     <div className="flex justify-between border-b border-white/5 pb-1">
                       <span className="text-slate-500">Value Type:</span>
-                      <span className="font-mono text-slate-300">{foundVar.type}</span>
+                      <span className="font-mono text-slate-300">
+                        {foundVar.type}
+                      </span>
                     </div>
                     <div className="flex flex-col gap-1 mt-1">
                       <span className="text-slate-500">Value Preview:</span>
                       <pre className="text-[9.5px] font-mono text-slate-300 bg-black/40 border border-white/5 p-2 rounded-lg max-h-24 overflow-y-auto whitespace-pre-wrap break-all custom-scrollbar">
-                        {value === null || value === undefined ? "null" : typeof value === "object" ? JSON.stringify(value, null, 2) : String(value)}
+                        {value === null || value === undefined
+                          ? "null"
+                          : typeof value === "object"
+                            ? JSON.stringify(value, null, 2)
+                            : String(value)}
                       </pre>
                     </div>
                   </div>
@@ -893,13 +910,22 @@ const NodeConfigurationPanel = ({
       {activeNode.data?.warnings && activeNode.data.warnings.length > 0 && (
         <div className="mb-6 p-4 rounded-xl border border-yellow-500/20 bg-yellow-500/5 space-y-4">
           <div className="flex items-center gap-2 text-yellow-400 font-bold text-[11px] uppercase tracking-wider">
-            <AlertTriangle size={14} className="shrink-0 text-yellow-500 animate-pulse" />
-            <span>{activeNode.data.warnings.length} Policy Violation{activeNode.data.warnings.length > 1 ? 's' : ''}</span>
+            <AlertTriangle
+              size={14}
+              className="shrink-0 text-yellow-500 animate-pulse"
+            />
+            <span>
+              {activeNode.data.warnings.length} Policy Violation
+              {activeNode.data.warnings.length > 1 ? "s" : ""}
+            </span>
           </div>
-          
+
           <div className="space-y-3.5 divide-y divide-white/5">
             {activeNode.data.warnings.map((w, idx) => (
-              <div key={w.rule || idx} className={cn("space-y-2.5", idx > 0 && "pt-3.5")}>
+              <div
+                key={w.rule || idx}
+                className={cn("space-y-2.5", idx > 0 && "pt-3.5")}
+              >
                 <div className="text-xs text-yellow-200/90 font-bold flex items-start justify-between gap-1.5 leading-relaxed">
                   <div className="flex items-start gap-1.5">
                     <div className="w-1.5 h-1.5 rounded-full bg-yellow-500 mt-1.5 shrink-0" />
@@ -908,17 +934,21 @@ const NodeConfigurationPanel = ({
                   {w.educationalGuide && (
                     <button
                       type="button"
-                      onClick={() => setExpandedWarnings(prev => ({
-                        ...prev,
-                        [w.rule || idx]: !prev[w.rule || idx]
-                      }))}
+                      onClick={() =>
+                        setExpandedWarnings((prev) => ({
+                          ...prev,
+                          [w.rule || idx]: !prev[w.rule || idx],
+                        }))
+                      }
                       className="text-[9.5px] uppercase tracking-wider text-yellow-400/80 hover:text-yellow-400 font-extrabold transition-colors shrink-0 ml-2 border border-yellow-500/20 hover:border-yellow-500/40 px-2 py-0.5 rounded bg-yellow-500/5 hover:bg-yellow-500/10 cursor-pointer"
                     >
-                      {expandedWarnings[w.rule || idx] ? "Hide Guide" : "Learn More"}
+                      {expandedWarnings[w.rule || idx]
+                        ? "Hide Guide"
+                        : "Learn More"}
                     </button>
                   )}
                 </div>
-                
+
                 {w.educationalGuide && expandedWarnings[w.rule || idx] && (
                   <div className="text-[11px] text-slate-400 leading-relaxed bg-black/45 p-3 rounded-lg border border-white/5 space-y-2 font-sans">
                     <div className="font-extrabold text-slate-350 uppercase tracking-widest text-[9px] border-b border-white/5 pb-1">
@@ -929,7 +959,9 @@ const NodeConfigurationPanel = ({
                       {w.educationalGuide.why}
                     </div>
                     <div>
-                      <span className="font-bold text-slate-200">How to Fix: </span>
+                      <span className="font-bold text-slate-200">
+                        How to Fix:{" "}
+                      </span>
                       {w.educationalGuide.remediation}
                     </div>
                     <div className="space-y-1.5 mt-2">

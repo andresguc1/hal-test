@@ -19,6 +19,11 @@
             "error": "Error al abrir la URL.",
             "url_required": "url es requerida."
         },
+        "assert_page_text": {
+            "success": "La página contiene el texto '{{text}}'.",
+            "text_required": "El texto a buscar es obligatorio.",
+            "timeout_error": "La página no contiene el texto '{{text}}' dentro del tiempo de espera de {{timeout}}ms."
+        },
         "close_browser": {
             "success": "Navegador cerrado correctamente.",
             "error": "Error al cerrar el navegador."

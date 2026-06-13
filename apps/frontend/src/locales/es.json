@@ -129,7 +129,11 @@
     "cmd_test": "Ejecutar un test generado por HalTest",
     "cmd_test_headed": "Ejecutar un test de HalTest con navegador visible",
     "cmd_report": "Abrir reporte HTML",
-    "cmd_install": "Instalar navegadores"
+    "cmd_install": "Instalar navegadores",
+    "confirm_sync_title": "Sincronización deshabilitada",
+    "confirm_sync_description": "La sincronización inversa desde el código al flujo de trabajo es experimental y ha sido deshabilitada temporalmente para evitar la corrupción del flujo.",
+    "confirm_sync_btn": "Entendido",
+    "sync_disabled_toast": "Sincronización deshabilitada."
   },
   "nodes": {
     "labels": {
@@ -144,6 +148,7 @@
       "manage_tabs": "Manejar Pestañas",
       "find_element": "Buscar Elemento",
       "get_set_content": "Modificar Texto/Attr",
+      "assert_page_text": "Validar Texto de la Página",
       "click": "Click",
       "type_text": "Escribir Texto",
       "select_option": "Seleccionar opciones",

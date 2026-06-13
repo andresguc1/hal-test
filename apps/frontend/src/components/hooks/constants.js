@@ -22,6 +22,7 @@ export const NODE_LABELS = {
   // Element Interaction
   find_element: "Find Element",
   get_set_content: "Modify Text/Attr",
+  assert_page_text: "Assert Page Contains Text",
   click: "Click",
   type_text: "Type Text",
   select_option: "Select Options",
@@ -2504,6 +2505,49 @@ export const NODE_FIELD_CONFIGS = {
       defaultValue: true,
     },
   ],
+  assert_page_text: [
+    {
+      name: "textToFind",
+      label: "Text to Find",
+      type: "text",
+      placeholder: "Ex: Welcome to Dashboard",
+      required: true,
+      validation: (v, allParams, t) => {
+        if (!v || String(v).trim() === "") return "Text to find is required";
+        return null;
+      },
+    },
+    {
+      name: "matchType",
+      label: "Match Type",
+      type: "select",
+      defaultValue: "contains",
+      options: [
+        { value: "contains", label: "Contains" },
+        { value: "exact", label: "Exact Match" },
+        { value: "regex", label: "Regex" },
+      ],
+    },
+    {
+      name: "caseSensitive",
+      label: "Case Sensitive",
+      type: "checkbox",
+      defaultValue: false,
+    },
+    {
+      name: "timeout",
+      label: "Timeout (ms)",
+      type: "number",
+      defaultValue: 5000,
+      validation: (v, allParams, t) => {
+        const num = Number(v);
+        if (v === "" || v === undefined || Number.isNaN(num))
+          return "Timeout must be a number";
+        if (num < 0) return "Timeout cannot be negative";
+        return null;
+      },
+    },
+  ],
 
   get_set_content: [
     {
@@ -2920,6 +2964,7 @@ export const NODE_TYPE_TO_CATEGORY = {
   get_set_content: "dom_manipulation",
   wait_for_element: "dom_manipulation",
   execute_js: "dom_manipulation",
+  assert_page_text: "dom_manipulation",
 
   // User Simulation
   click: "user_simulation",

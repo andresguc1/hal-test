@@ -185,12 +185,14 @@ export function useAvailableVariables({
       const config = node.data?.configuration;
       const isVarNode = nodeType === "variable";
       const customName = isVarNode
-        ? (config?.name || config?.variableName || node.data?.name)
-        : (config?.variableName || config?.saveToVariable);
+        ? config?.name || config?.variableName || node.data?.name
+        : config?.variableName || config?.saveToVariable;
 
       if (customName && typeof customName === "string" && customName.trim()) {
         const trimmedName = customName.trim();
-        let customValue = isVarNode ? (config?.value ?? config?.initialValue ?? node.data?.value ?? "") : resultValue;
+        let customValue = isVarNode
+          ? (config?.value ?? config?.initialValue ?? node.data?.value ?? "")
+          : resultValue;
         let customSource = source;
 
         if (liveVariables[trimmedName] !== undefined) {

@@ -1,4 +1,10 @@
-import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import React, {
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+  useMemo,
+} from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
@@ -42,7 +48,13 @@ const LOG_COLORS = {
 const MAX_SHELL_LINES = 500;
 const CODE_DEBOUNCE_MS = 500;
 
-export default function TerminalPanel({ socket, nodes = [], edges = [], setNodes, setEdges }) {
+export default function TerminalPanel({
+  socket,
+  nodes = [],
+  edges = [],
+  _setNodes,
+  _setEdges,
+}) {
   const { logs, clearLogs, isPanelVisible, togglePanel } = useLogs();
   const { currentProject } = useProjectManager();
   const { t } = useTranslation();
@@ -65,13 +77,15 @@ export default function TerminalPanel({ socket, nodes = [], edges = [], setNodes
   // ─── Advanced Edit & Execution Tracing states ─────────────────────────────
   const [isEditMode, setIsEditMode] = useState(false);
   const [editedCode, setEditedCode] = useState("");
+  const [isSyncing] = useState(false);
+  const [showSyncConfirm, setShowSyncConfirm] = useState(false);
 
   const activeLineIndex = useMemo(() => {
     const activeNode = nodes.find(
       (n) =>
         n.data?.state === "executing" ||
         n.data?.state === "capturing-before" ||
-        n.data?.state === "capturing-after"
+        n.data?.state === "capturing-after",
     );
     if (!activeNode) return -1;
 
@@ -79,7 +93,9 @@ export default function TerminalPanel({ socket, nodes = [], edges = [], setNodes
     if (!codeToSearch) return -1;
 
     const lines = codeToSearch.split("\n");
-    const index = lines.findIndex((line) => line.includes(`[node_id: ${activeNode.id}]`));
+    const index = lines.findIndex((line) =>
+      line.includes(`[node_id: ${activeNode.id}]`),
+    );
 
     return index !== -1 ? index + 1 : -1;
   }, [nodes, isEditMode, editedCode, generatedCode]);
@@ -100,6 +116,7 @@ export default function TerminalPanel({ socket, nodes = [], edges = [], setNodes
     }
   }, [generatedCode, isEditMode]);
 
+  /*
   // Helper to recursively map actions back to React Flow nodes/edges
   const convertActionsToFlowData = useCallback((actions, parentId = null, depth = 0) => {
     const nodesList = [];
@@ -155,39 +172,17 @@ export default function TerminalPanel({ socket, nodes = [], edges = [], setNodes
 
     return { nodes: nodesList, edges: edgesList };
   }, []);
+  */
 
-  // Debounced effect to convert and sync code edits back to canvas
-  useEffect(() => {
-    if (!isEditMode || !editedCode) return;
-
-    const timer = setTimeout(async () => {
-      try {
-        const convertResult = await api.post("/import/convert", {
-          content: editedCode,
-          framework: "playwright",
-          language: language,
-        });
-
-        if (convertResult.success && convertResult.flows && convertResult.flows.length > 0) {
-          const importedFlow = convertResult.flows[0];
-          const { nodes: flowNodes, edges: flowEdges } = convertActionsToFlowData(importedFlow.flow || []);
-
-          if (setNodes && setEdges) {
-            setNodes(flowNodes);
-            setEdges(flowEdges);
-            toast.success(t("terminal.synced_to_canvas", "Synced to Canvas!"), {
-              id: "codegen-sync-toast",
-              duration: 1500,
-            });
-          }
-        }
-      } catch (err) {
-        console.error("Failed to sync edited code back to canvas:", err);
-      }
-    }, 1500);
-
-    return () => clearTimeout(timer);
-  }, [editedCode, isEditMode, language, setNodes, setEdges, convertActionsToFlowData, toast, t]);
+  // Manual callback to convert and sync code edits back to canvas
+  const handleSyncCodeToCanvas = useCallback(() => {
+    toast.error(
+      t(
+        "terminal.sync_disabled_toast",
+        "Reverse synchronization is currently disabled to prevent workflow corruption.",
+      ),
+    );
+  }, [toast, t]);
 
   const LANGUAGES = [
     { id: "javascript", label: t("terminal.lang_js"), ext: "js" },
@@ -282,7 +277,13 @@ export default function TerminalPanel({ socket, nodes = [], edges = [], setNodes
   const handleDownloadCode = useCallback(() => {
     const codeToDownload = isEditMode ? editedCode : generatedCode;
     if (!codeToDownload) return;
-    const extMap = { javascript: "js", typescript: "ts", python: "py", java: "java", csharp: "cs" };
+    const extMap = {
+      javascript: "js",
+      typescript: "ts",
+      python: "py",
+      java: "java",
+      csharp: "cs",
+    };
     const ext = extMap[language] || "js";
     const blob = new Blob([codeToDownload], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
@@ -521,7 +522,10 @@ export default function TerminalPanel({ socket, nodes = [], edges = [], setNodes
                 title={t("terminal.refresh_code", "Regenerate Code")}
                 className="p-1.5 text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded transition-all disabled:opacity-30"
               >
-                <RefreshCw size={13} className={isGenerating ? "animate-spin" : ""} />
+                <RefreshCw
+                  size={13}
+                  className={isGenerating ? "animate-spin" : ""}
+                />
               </button>
               <button
                 onClick={handleDownloadCode}
@@ -539,16 +543,34 @@ export default function TerminalPanel({ socket, nodes = [], edges = [], setNodes
                   }
                 }}
                 disabled={!generatedCode}
-                title={isEditMode ? t("terminal.exit_edit_mode", "View Mode") : t("terminal.enter_edit_mode", "Advanced Edit Mode")}
+                title={
+                  isEditMode
+                    ? t("terminal.exit_edit_mode", "View Mode")
+                    : t("terminal.enter_edit_mode", "Advanced Edit Mode")
+                }
                 className={cn(
                   "p-1.5 rounded transition-all ml-1 border",
                   isEditMode
                     ? "bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20"
-                    : "text-slate-500 border-transparent hover:text-amber-400 hover:bg-amber-500/10"
+                    : "text-slate-500 border-transparent hover:text-amber-400 hover:bg-amber-500/10",
                 )}
               >
                 {isEditMode ? <Eye size={13} /> : <Edit2 size={13} />}
               </button>
+              {isEditMode && (
+                <button
+                  onClick={() => setShowSyncConfirm(true)}
+                  disabled={isSyncing || !editedCode}
+                  className="p-1.5 rounded transition-all ml-1 border bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 flex items-center gap-1 text-[10px]"
+                  title={t("terminal.sync_to_canvas", "Sync Code to Canvas")}
+                >
+                  <RefreshCw
+                    size={11}
+                    className={isSyncing ? "animate-spin" : ""}
+                  />
+                  <span>{t("terminal.sync", "Sync")}</span>
+                </button>
+              )}
             </div>
           )}
 
@@ -670,10 +692,18 @@ export default function TerminalPanel({ socket, nodes = [], edges = [], setNodes
                 {/* Warnings Banner */}
                 {codeWarnings.length > 0 && (
                   <div className="mb-3 flex items-start gap-2 p-2 rounded bg-amber-500/10 border border-amber-500/20 text-amber-200/70 text-[10px]">
-                    <AlertTriangle size={12} className="text-amber-500 shrink-0 mt-0.5" />
+                    <AlertTriangle
+                      size={12}
+                      className="text-amber-500 shrink-0 mt-0.5"
+                    />
                     <div>
                       <span className="font-medium">
-                        {codeWarnings.length} {t("terminal.unmapped_nodes", "node(s) without Playwright implementation")}:
+                        {codeWarnings.length}{" "}
+                        {t(
+                          "terminal.unmapped_nodes",
+                          "node(s) without Playwright implementation",
+                        )}
+                        :
                       </span>
                       <span className="ml-1 text-amber-300/60">
                         {codeWarnings.map((w) => w.nodeLabel).join(", ")}
@@ -695,7 +725,12 @@ export default function TerminalPanel({ socket, nodes = [], edges = [], setNodes
                   {isEditMode && (
                     <div className="mb-2 px-2 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-200/80 rounded text-[9px] flex items-center gap-1.5 shrink-0">
                       <AlertTriangle size={10} className="text-amber-500" />
-                      <span>{t("terminal.edit_mode_warning", "Advanced Edit Mode: Any changes will sync back to the visual workflow canvas in real-time.")}</span>
+                      <span>
+                        {t(
+                          "terminal.edit_mode_warning",
+                          "Advanced Edit Mode: Any changes will sync back to the visual workflow canvas in real-time.",
+                        )}
+                      </span>
                     </div>
                   )}
                   {generatedCode ? (
@@ -732,7 +767,7 @@ export default function TerminalPanel({ socket, nodes = [], edges = [], setNodes
                                   "flex items-start px-2 transition-all duration-300 w-full min-w-max",
                                   isActive
                                     ? "bg-amber-500/25 text-amber-200 border-l-2 border-amber-500 font-bold shadow-[inset_0_0_8px_rgba(245,158,11,0.15)]"
-                                    : "hover:bg-white/5 border-l-2 border-transparent"
+                                    : "hover:bg-white/5 border-l-2 border-transparent",
                                 )}
                               >
                                 {/* Line number column */}
@@ -799,6 +834,45 @@ export default function TerminalPanel({ socket, nodes = [], edges = [], setNodes
               <Send size={13} />
             </button>
           </motion.div>
+        )}
+      </AnimatePresence>
+      {/* Confirmation Modal */}
+      <AnimatePresence>
+        {showSyncConfirm && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-slate-900 border border-slate-800 rounded-lg max-w-md w-full p-6 shadow-2xl space-y-4"
+            >
+              <div className="flex items-start gap-3 text-amber-400">
+                <AlertTriangle className="shrink-0 mt-0.5" size={20} />
+                <div>
+                  <h3 className="text-sm font-bold text-slate-100">
+                    {t("terminal.confirm_sync_title", "Sync Code to Canvas?")}
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                    {t(
+                      "terminal.confirm_sync_description",
+                      "Syncing code will replace the current flow. Any manual node positions or custom layouts will be automatically reset to match the code sequence.",
+                    )}
+                  </p>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  onClick={() => {
+                    setShowSyncConfirm(false);
+                    handleSyncCodeToCanvas();
+                  }}
+                  className="px-3 py-1.5 rounded text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                >
+                  {t("terminal.confirm_sync_btn", "Got it")}
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </motion.div>

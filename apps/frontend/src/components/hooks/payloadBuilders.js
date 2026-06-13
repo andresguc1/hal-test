@@ -12,7 +12,9 @@
  * @returns {boolean}
  */
 const isVariableTemplate = (value) => {
-  return typeof value === "string" && (value.includes("{{") || value.includes("${"));
+  return (
+    typeof value === "string" && (value.includes("{{") || value.includes("${"))
+  );
 };
 
 /**
@@ -451,9 +453,16 @@ export const hover = (payload) => {
   };
 };
 
-// ---------------------------------------------
-// Builders (Waits)
-// ---------------------------------------------
+export const assert_page_text = (payload) => {
+  return {
+    textToFind: asString(payload?.textToFind),
+    matchType: asString(payload?.matchType, "contains"),
+    caseSensitive: asBoolean(payload?.caseSensitive, false),
+    timeout: asNumber(payload?.timeout, 5000, 0),
+    browserId: asString(payload?.browserId),
+    continueOnError: asBoolean(payload?.continueOnError, false),
+  };
+};
 
 export const wait_for_element = (payload) => {
   return {

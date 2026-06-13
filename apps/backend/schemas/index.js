@@ -97,3 +97,4 @@ export { default as failFlowBodySchema } from './fail_flow/body.js';
 export { default as componentBodySchema } from './component/body.js';
 export { default as inputBodySchema } from './input/body.js';
 export { default as outputBodySchema } from './output/body.js';
+export { default as assertPageTextBodySchema } from './assert_page_text/body.js';

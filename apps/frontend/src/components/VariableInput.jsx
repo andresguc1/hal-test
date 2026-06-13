@@ -122,13 +122,9 @@ export const VariableInput = ({
                         : "bg-amber-500/20 text-amber-400 border-b-2 border-dashed border-amber-500/50",
                   )}
                 >
-                  <span className="opacity-40 select-none">
-                    {part.prefix}
-                  </span>
+                  <span className="opacity-40 select-none">{part.prefix}</span>
                   <span className="relative">{part.key}</span>
-                  <span className="opacity-40 select-none">
-                    {part.suffix}
-                  </span>
+                  <span className="opacity-40 select-none">{part.suffix}</span>
                 </span>
               </Tooltip.Trigger>
               <Tooltip.Portal>
@@ -334,12 +330,16 @@ export const VariableInput = ({
                         const newValue = prefix + inserted + suffix;
                         onChange({ target: { value: newValue } });
                         setShowSuggestions(false);
-                        
+
                         setTimeout(() => {
                           if (inputRef.current) {
                             inputRef.current.focus();
-                            const newCursorPos = prefix.length + inserted.length;
-                            inputRef.current.setSelectionRange(newCursorPos, newCursorPos);
+                            const newCursorPos =
+                              prefix.length + inserted.length;
+                            inputRef.current.setSelectionRange(
+                              newCursorPos,
+                              newCursorPos,
+                            );
                           }
                         }, 0);
                       }}

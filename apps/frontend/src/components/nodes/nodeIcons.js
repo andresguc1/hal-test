@@ -81,6 +81,7 @@ export const NODE_TYPE_ICONS = {
   get_set_content: FileText,
   wait_for_element: Eye,
   execute_js: Zap,
+  assert_page_text: CheckSquare,
 
   // User Simulation
   click: MousePointerClick,

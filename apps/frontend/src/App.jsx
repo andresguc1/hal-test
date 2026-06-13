@@ -1435,9 +1435,11 @@ function Dashboard() {
                 ? subFlow.nodeCount
                 : subFlow.nodes?.length || 0;
             const hasInput =
-              subFlow.nodes?.some((n) => n.type === "input") || node.data?.hasInput;
+              subFlow.nodes?.some((n) => n.type === "input") ||
+              node.data?.hasInput;
             const hasOutput =
-              subFlow.nodes?.some((n) => n.type === "output") || node.data?.hasOutput;
+              subFlow.nodes?.some((n) => n.type === "output") ||
+              node.data?.hasOutput;
 
             if (
               node.data?.nodeCount !== nodeCount ||
@@ -1843,7 +1845,13 @@ function Dashboard() {
             </div>
 
             {/* Real-time Execution Terminal - Now inside Main Layout */}
-            <TerminalPanel socket={socket} nodes={nodes} edges={edges} setNodes={setNodes} setEdges={setEdges} />
+            <TerminalPanel
+              socket={socket}
+              nodes={nodes}
+              edges={edges}
+              setNodes={setNodes}
+              setEdges={setEdges}
+            />
 
             {/* Ask AI Debug Console */}
             <AskAIPanel

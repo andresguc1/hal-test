@@ -50,6 +50,7 @@ export const NODE_CATEGORIES = {
       "execute_js",
       "wait_for_element",
       "wait_visible",
+      "assert_page_text",
     ],
   },
   user_simulation: {
@@ -294,6 +295,11 @@ export const NODE_OUTPUTS = {
     success: "boolean",
     result: "any",
     message: "string",
+  },
+  assert_page_text: {
+    success: "boolean",
+    matched: "boolean",
+    textToFind: "string",
   },
 
   // --- Waits ---

@@ -17,12 +17,12 @@ export const useLogStore = create((set) => ({
     set((state) => {
       const updated = [...state.logs, newLog];
       const nextLogs = updated.length > 100 ? updated.slice(-100) : updated;
-      
+
       const shouldShowPanel = type === "error" || type === "warning";
-      
+
       return {
         logs: nextLogs,
-        ...(shouldShowPanel ? { isPanelVisible: true } : {})
+        ...(shouldShowPanel ? { isPanelVisible: true } : {}),
       };
     });
   },
@@ -31,7 +31,8 @@ export const useLogStore = create((set) => ({
 
   setIsPanelVisible: (isVisible) => set({ isPanelVisible: isVisible }),
 
-  togglePanel: () => set((state) => ({ isPanelVisible: !state.isPanelVisible })),
+  togglePanel: () =>
+    set((state) => ({ isPanelVisible: !state.isPanelVisible })),
 }));
 
 // Backward compatibility for components still using useLogs() without selectors.

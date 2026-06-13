@@ -157,7 +157,9 @@ export default function OverviewPage({ onNavigate, onViewRun }) {
             {last7Days.map((day, i) => {
               const maxTotal = Math.max(...last7Days.map((d) => d.total), 1);
               const totalH = Math.round((day.total / maxTotal) * 64);
-              const passedH = Math.round((day.passed / Math.max(day.total, 1)) * totalH);
+              const passedH = Math.round(
+                (day.passed / Math.max(day.total, 1)) * totalH,
+              );
               const failedH = totalH - passedH;
 
               return (
@@ -237,7 +239,12 @@ export default function OverviewPage({ onNavigate, onViewRun }) {
             }}
           >
             <div
-              style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11 }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 11,
+              }}
             >
               <span
                 style={{
@@ -248,10 +255,17 @@ export default function OverviewPage({ onNavigate, onViewRun }) {
                   flexShrink: 0,
                 }}
               />
-              <span style={{ color: "var(--dash-text-secondary)" }}>Passed</span>
+              <span style={{ color: "var(--dash-text-secondary)" }}>
+                Passed
+              </span>
             </div>
             <div
-              style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11 }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 11,
+              }}
             >
               <span
                 style={{
@@ -262,9 +276,17 @@ export default function OverviewPage({ onNavigate, onViewRun }) {
                   flexShrink: 0,
                 }}
               />
-              <span style={{ color: "var(--dash-text-secondary)" }}>Failed</span>
+              <span style={{ color: "var(--dash-text-secondary)" }}>
+                Failed
+              </span>
             </div>
-            <div style={{ marginLeft: "auto", fontSize: 11, color: "var(--dash-text-tertiary)" }}>
+            <div
+              style={{
+                marginLeft: "auto",
+                fontSize: 11,
+                color: "var(--dash-text-tertiary)",
+              }}
+            >
               {metrics.totalRuns} total runs
             </div>
           </div>
@@ -282,10 +304,7 @@ export default function OverviewPage({ onNavigate, onViewRun }) {
             flexDirection: "column",
           }}
         >
-          <div
-            className="dash-section-header"
-            style={{ marginBottom: 4 }}
-          >
+          <div className="dash-section-header" style={{ marginBottom: 4 }}>
             <div>
               <div className="dash-section-title" style={{ fontSize: 14 }}>
                 Recent Activity

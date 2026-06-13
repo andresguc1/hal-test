@@ -320,6 +320,45 @@ export const NODE_INPUTS = {
       required: true,
     },
   ],
+  assert_page_text: [
+    {
+      key: "textToFind",
+      label: "Text to Find",
+      type: "text",
+      placeholder: "e.g. Welcome to Dashboard",
+      required: true,
+    },
+    {
+      key: "matchType",
+      label: "Match Type",
+      type: "select",
+      options: [
+        { label: "Contains", value: "contains" },
+        { label: "Exact Match", value: "exact" },
+        { label: "Regex", value: "regex" },
+      ],
+      defaultValue: "contains",
+    },
+    {
+      key: "caseSensitive",
+      label: "Case Sensitive",
+      type: "checkbox",
+      defaultValue: false,
+    },
+    {
+      key: "timeout",
+      label: "Timeout (ms)",
+      type: "number",
+      placeholder: "5000",
+      defaultValue: 5000,
+    },
+    {
+      key: "continueOnError",
+      label: "🛡️ Continue on failure (Soft Fail)",
+      type: "checkbox",
+      defaultValue: false,
+    },
+  ],
   get_set_content: [
     {
       key: "selector",
@@ -1173,6 +1212,10 @@ export const getSmartLabel = (nodeType, config = {}) => {
       return "Extract Context";
     case "chain_of_thought":
       return "Reasoning (CoT)";
+    case "assert_page_text":
+      return config.textToFind
+        ? `Assert Text: ${truncate(config.textToFind, 15)}`
+        : "Assert Page Text";
     default:
       return null;
   }

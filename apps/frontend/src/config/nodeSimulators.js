@@ -78,6 +78,12 @@ export const NODE_SIMULATORS = {
     found: true,
   }),
 
+  assert_page_text: (config) => ({
+    success: true,
+    matched: true,
+    textToFind: config.textToFind || "",
+  }),
+
   conditional: (config, _incoming) => {
     const branches = config.branches || [];
     // Simple mock evaluation: if we have incoming data that matches any condition
