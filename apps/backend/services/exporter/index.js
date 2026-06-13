@@ -40,6 +40,7 @@ export const exportService = {
                         // Resolver recursivamente
                         newNode.data = {
                             ...newNode.data,
+                            flowName: subFlow.name,
                             subNodes: await exportService.resolveSubFlows(subNodesRaw, projectId),
                         };
                     }
@@ -56,7 +57,14 @@ export const exportService = {
      * @param {string} framework - Framework destino ('playwright', 'puppeteer', etc.).
      * @returns {object} - Resultado con el código generado y metadatos.
      */
-    generateCode: (flowData, framework = 'playwright', language = 'javascript', locale = 'es') => {
+    generateCode: (
+        flowData,
+        framework = 'playwright',
+        language = 'javascript',
+        locale = 'es',
+        usePOM = false,
+        includeCICD = false,
+    ) => {
         try {
             let code = '';
             let warnings = [];
@@ -71,8 +79,24 @@ export const exportService = {
 
             switch (framework.toLowerCase()) {
                 case 'playwright': {
-                    const generator = new PlaywrightGenerator(language, locale);
+                    const generator = new PlaywrightGenerator(
+                        language,
+                        locale,
+                        usePOM,
+                        includeCICD,
+                    );
                     const result = generator.generate(flowData);
+                    if (usePOM || includeCICD) {
+                        return {
+                            success: true,
+                            isZip: true,
+                            files: result.files,
+                            warnings: result.warnings || [],
+                            framework,
+                            language,
+                            extension,
+                        };
+                    }
                     code = result.code;
                     warnings = result.warnings || [];
                     break;

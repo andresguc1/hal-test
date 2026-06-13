@@ -6,7 +6,7 @@ const router = Router();
 // Endpoint to export to code (Playwright, etc.)
 router.post('/code', async (req, res) => {
     try {
-        const { flow, framework, language, locale, projectId } = req.body;
+        const { flow, framework, language, locale, projectId, usePOM, includeCICD } = req.body;
 
         if (!flow || !Array.isArray(flow)) {
             return res.status(400).json({
@@ -25,6 +25,8 @@ router.post('/code', async (req, res) => {
             framework || 'playwright',
             language || 'javascript',
             locale || 'es',
+            !!usePOM,
+            !!includeCICD,
         );
 
         if (result.success) {

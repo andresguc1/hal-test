@@ -14,6 +14,7 @@ import {
 import { cn } from "@/lib/utils";
 import { motion as Motion, AnimatePresence } from "framer-motion";
 import { api } from "../utils/api";
+import JSZip from "jszip";
 
 /**
  * ExportDialog Component
@@ -29,6 +30,10 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges, projectId }) => {
   const [progress, setProgress] = useState(null);
   const [error, setError] = useState(null);
   const [generatedCode, setGeneratedCode] = useState(null);
+  const [usePOM, setUsePOM] = useState(false);
+  const [includeCICD, setIncludeCICD] = useState(false);
+  const [generatedFiles, setGeneratedFiles] = useState(null);
+  const [activeFile, setActiveFile] = useState(null);
 
   const resetState = useCallback(() => {
     setIsProcessing(false);
@@ -36,6 +41,10 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges, projectId }) => {
     setError(null);
     setGeneratedCode(null);
     setLanguage("javascript");
+    setUsePOM(false);
+    setIncludeCICD(false);
+    setGeneratedFiles(null);
+    setActiveFile(null);
   }, []);
 
   const handleClose = useCallback(() => {
@@ -186,18 +195,40 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges, projectId }) => {
         message: t("dialogs.export.generating_code"),
       });
 
+      const pomEnabled =
+        usePOM &&
+        framework === "playwright" &&
+        (language === "javascript" || language === "typescript");
+
+      const cicdEnabled =
+        includeCICD &&
+        framework === "playwright" &&
+        (language === "javascript" || language === "typescript");
+
       const result = await api.post("/export/code", {
         framework,
         language,
         flow,
         projectId,
+        usePOM: pomEnabled,
+        includeCICD: cicdEnabled,
       });
 
-      if (!result.code) {
-        throw new Error(t("dialogs.export.error_no_code"));
+      if (result.isZip && result.files) {
+        setGeneratedFiles(result.files);
+        const firstFile =
+          Object.keys(result.files).find(
+            (k) => k.endsWith(".spec.js") || k.endsWith(".spec.ts"),
+          ) || Object.keys(result.files)[0];
+        setActiveFile(firstFile);
+        setGeneratedCode(result.files[firstFile]);
+      } else {
+        if (!result.code) {
+          throw new Error(t("dialogs.export.error_no_code"));
+        }
+        setGeneratedCode(result.code);
+        setGeneratedFiles(null);
       }
-
-      setGeneratedCode(result.code);
 
       setProgress({
         stage: "complete",
@@ -209,10 +240,38 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges, projectId }) => {
     } finally {
       setIsProcessing(false);
     }
-  }, [convertNodesToFlow, framework, language, projectId, t]);
+  }, [
+    convertNodesToFlow,
+    framework,
+    language,
+    projectId,
+    usePOM,
+    includeCICD,
+    t,
+  ]);
 
   // Download generated code
-  const handleDownloadCode = useCallback(() => {
+  const handleDownloadCode = useCallback(async () => {
+    if (generatedFiles) {
+      try {
+        const zip = new JSZip();
+        Object.entries(generatedFiles).forEach(([filename, content]) => {
+          zip.file(filename, content);
+        });
+        const zipBlob = await zip.generateAsync({ type: "blob" });
+        const url = URL.createObjectURL(zipBlob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `hal_test_${framework}_pom_${Date.now()}.zip`;
+        a.click();
+        URL.revokeObjectURL(url);
+        handleClose();
+      } catch (err) {
+        setError(err.message || "Failed to generate ZIP");
+      }
+      return;
+    }
+
     if (!generatedCode) return;
 
     const extMap = {
@@ -233,7 +292,7 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges, projectId }) => {
     URL.revokeObjectURL(url);
 
     handleClose();
-  }, [generatedCode, framework, language, handleClose]);
+  }, [generatedCode, generatedFiles, framework, language, handleClose]);
 
   // Copy code to clipboard
   const handleCopyCode = useCallback(() => {
@@ -265,7 +324,11 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges, projectId }) => {
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
             className={cn(
               "w-full bg-[#0f172a]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] transition-all duration-300",
-              generatedCode ? "max-w-4xl" : "max-w-lg",
+              generatedFiles
+                ? "max-w-5xl"
+                : generatedCode
+                  ? "max-w-4xl"
+                  : "max-w-lg",
             )}
           >
             {/* Header */}
@@ -399,12 +462,126 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges, projectId }) => {
                         <option value="csharp">C#</option>
                       </select>
                     </div>
+
+                    {framework === "playwright" &&
+                      (language === "javascript" ||
+                        language === "typescript") && (
+                        <>
+                          <div
+                            className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5 cursor-pointer hover:bg-white/10 transition-colors"
+                            onClick={() => setUsePOM(!usePOM)}
+                          >
+                            <div className="flex flex-col text-left pr-2">
+                              <span className="text-sm text-gray-200 font-medium">
+                                {t(
+                                  "dialogs.export.pom_label",
+                                  "Page Object Model (POM)",
+                                )}
+                              </span>
+                              <span className="text-xs text-slate-400">
+                                {t(
+                                  "dialogs.export.pom_desc",
+                                  "Structure code into page classes based on sub-flows",
+                                )}
+                              </span>
+                            </div>
+                            <input
+                              type="checkbox"
+                              checked={usePOM}
+                              onChange={(e) => setUsePOM(e.target.checked)}
+                              className="w-4 h-4 text-indigo-600 border-white/10 rounded focus:ring-indigo-500 bg-slate-900"
+                            />
+                          </div>
+
+                          <div
+                            className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5 cursor-pointer hover:bg-white/10 transition-colors"
+                            onClick={() => setIncludeCICD(!includeCICD)}
+                          >
+                            <div className="flex flex-col text-left pr-2">
+                              <span className="text-sm text-gray-200 font-medium">
+                                {t(
+                                  "dialogs.export.cicd_label",
+                                  "Include CI/CD Templates",
+                                )}
+                              </span>
+                              <span className="text-xs text-slate-400">
+                                {t(
+                                  "dialogs.export.cicd_desc",
+                                  "Add pipeline files (.github/workflows, .gitlab-ci) to run tests automatically",
+                                )}
+                              </span>
+                            </div>
+                            <input
+                              type="checkbox"
+                              checked={includeCICD}
+                              onChange={(e) => setIncludeCICD(e.target.checked)}
+                              className="w-4 h-4 text-indigo-600 border-white/10 rounded focus:ring-indigo-500 bg-slate-900"
+                            />
+                          </div>
+                        </>
+                      )}
                   </div>
                 </div>
               )}
 
               {/* Generated Code Preview */}
-              {generatedCode && (
+              {generatedFiles ? (
+                <div className="flex-1 flex min-h-0 bg-slate-950 border border-white/10 rounded-xl overflow-hidden">
+                  {/* Files Tree Sidebar */}
+                  <div className="w-60 border-r border-white/10 bg-slate-900/30 flex flex-col overflow-y-auto">
+                    <div className="px-4 py-3 text-xs font-semibold text-slate-400 border-b border-white/10 bg-slate-950/40">
+                      {t("dialogs.export.project_files", "Project Files")}
+                    </div>
+                    <div className="p-2 space-y-1">
+                      {Object.keys(generatedFiles).map((filename) => {
+                        const isActive = activeFile === filename;
+                        return (
+                          <button
+                            key={filename}
+                            onClick={() => {
+                              setActiveFile(filename);
+                              setGeneratedCode(generatedFiles[filename]);
+                            }}
+                            className={cn(
+                              "w-full text-left px-3 py-2 rounded-lg text-xs font-mono flex items-center gap-2 transition-colors",
+                              isActive
+                                ? "bg-indigo-500/10 text-indigo-300 border border-indigo-500/20"
+                                : "text-slate-400 hover:bg-white/5 hover:text-white border border-transparent",
+                            )}
+                          >
+                            <FileCode
+                              size={14}
+                              className={
+                                isActive ? "text-indigo-400" : "text-slate-500"
+                              }
+                            />
+                            <span className="truncate">{filename}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  {/* File Code Preview */}
+                  <div className="flex-1 flex flex-col min-h-0">
+                    <div className="flex items-center justify-between px-4 py-2 border-b border-white/10 bg-slate-900/50">
+                      <div className="flex items-center gap-2 text-xs text-indigo-300 font-mono">
+                        <FileCode size={14} />
+                        <span>{activeFile}</span>
+                      </div>
+                      <button
+                        onClick={handleCopyCode}
+                        className="text-xs flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors"
+                      >
+                        <FileCode size={14} />
+                        {t("common.copy")}
+                      </button>
+                    </div>
+                    <pre className="flex-1 overflow-auto p-4 text-xs font-mono text-slate-300 leading-relaxed custom-scrollbar">
+                      <code>{generatedCode}</code>
+                    </pre>
+                  </div>
+                </div>
+              ) : generatedCode ? (
                 <div className="flex-1 flex flex-col min-h-0 bg-slate-950 border border-white/10 rounded-xl overflow-hidden">
                   <div className="flex items-center justify-between px-4 py-2 border-b border-white/10 bg-slate-900/50">
                     <div className="flex items-center gap-2 text-xs text-indigo-300">
@@ -423,7 +600,7 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges, projectId }) => {
                     <code>{generatedCode}</code>
                   </pre>
                 </div>
-              )}
+              ) : null}
 
               {/* Status Messages */}
               {(progress || error) && (

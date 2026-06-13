@@ -173,6 +173,87 @@ describe('HalTest Import / Export API Endpoints', () => {
             expect(response.body.code).toContain('await page.click(`#submit`);');
         });
 
+        it('should generate POM structured files when usePOM is enabled', async () => {
+            const flow = [
+                { action: 'open_url', url: 'https://example.com' },
+                {
+                    action: 'component',
+                    label: 'Login Area',
+                    data: {
+                        flowId: 'login-flow-id',
+                        flowName: 'Login Area',
+                        subNodes: [
+                            { action: 'type_text', selector: '#user', text: 'alice' },
+                            { action: 'click', selector: '#login-btn' },
+                        ],
+                    },
+                },
+            ];
+
+            const response = await request(app).post(`${API_PREFIX}/export/code`).send({
+                flow,
+                framework: 'playwright',
+                language: 'javascript',
+                usePOM: true,
+            });
+
+            expect(response.statusCode).toBe(200);
+            expect(response.body.success).toBe(true);
+            expect(response.body.isZip).toBe(true);
+            expect(response.body.files).toBeTypeOf('object');
+
+            // Check expected POM files
+            expect(response.body.files).toHaveProperty('pages/LoginArea.page.js');
+            expect(response.body.files).toHaveProperty('tests/flow.spec.js');
+            expect(response.body.files).toHaveProperty('playwright.config.js');
+            expect(response.body.files).toHaveProperty('package.json');
+
+            // Verify content
+            expect(response.body.files['pages/LoginArea.page.js']).toContain(
+                'export class LoginAreaPage',
+            );
+            expect(response.body.files['pages/LoginArea.page.js']).toContain(
+                'await page.fill(`#user`, `alice`);',
+            );
+            expect(response.body.files['tests/flow.spec.js']).toContain(
+                "import { LoginAreaPage } from '../pages/LoginArea.page';",
+            );
+            expect(response.body.files['tests/flow.spec.js']).toContain(
+                'const loginArea = new LoginAreaPage(page);',
+            );
+            expect(response.body.files['tests/flow.spec.js']).toContain('await loginArea.run();');
+        });
+
+        it('should generate CI/CD pipeline template files when includeCICD is enabled', async () => {
+            const flow = [
+                { action: 'open_url', url: 'https://example.com' },
+                { action: 'click', selector: '#submit' },
+            ];
+
+            const response = await request(app).post(`${API_PREFIX}/export/code`).send({
+                flow,
+                framework: 'playwright',
+                language: 'javascript',
+                includeCICD: true,
+            });
+
+            expect(response.statusCode).toBe(200);
+            expect(response.body.success).toBe(true);
+            expect(response.body.isZip).toBe(true);
+            expect(response.body.files).toBeTypeOf('object');
+            expect(response.body.files).toHaveProperty('.github/workflows/playwright.yml');
+            expect(response.body.files).toHaveProperty('.gitlab-ci.yml');
+            expect(response.body.files).toHaveProperty('tests/flow.spec.js');
+            expect(response.body.files).toHaveProperty('playwright.config.js');
+            expect(response.body.files).toHaveProperty('package.json');
+
+            // Verify some CI/CD content
+            expect(response.body.files['.github/workflows/playwright.yml']).toContain(
+                'npx playwright install --with-deps',
+            );
+            expect(response.body.files['.gitlab-ci.yml']).toContain('mcr.microsoft.com/playwright');
+        });
+
         it('should return 400 if flow is missing or not an array', async () => {
             const response = await request(app)
                 .post(`${API_PREFIX}/export/code`)
