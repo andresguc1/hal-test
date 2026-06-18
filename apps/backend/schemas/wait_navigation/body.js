@@ -25,7 +25,6 @@ const waitNavigationBodySchema = Joi.object({
     waitUntil: Joi.string()
         .valid(...allowedWaitUntilValues)
         .default('load')
-        .required()
         .messages({
             'any.required': 'La condición de fin de navegación es obligatoria.',
             'any.only':

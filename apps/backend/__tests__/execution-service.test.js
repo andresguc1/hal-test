@@ -349,4 +349,42 @@ describe('ExecutionService - Graph Traversal & DPE', () => {
         browserService.get = originalBrowserGet;
         ExecutionService.executeNode = originalExecuteNode;
     });
+
+    describe('validateGraph - Node Configuration Validation & Defaults Injection', () => {
+        it('should validate click node configuration, fill missing default button, and not throw', async () => {
+            const clickNode = makeNode('n_click', 'click', {
+                configuration: {
+                    selector: '#submit-btn',
+                },
+            });
+
+            await expect(ExecutionService.validateGraph([clickNode], [])).resolves.not.toThrow();
+            expect(clickNode.data.configuration.button).toBe('left');
+        });
+
+        it('should throw Configuration Error if click node lacks a required selector', async () => {
+            const clickNode = makeNode('n_click', 'click', {
+                configuration: {
+                    button: 'left',
+                },
+            });
+
+            await expect(ExecutionService.validateGraph([clickNode], [])).rejects.toThrow(
+                /Configuration Error in node "click": El selector del elemento es obligatorio/,
+            );
+        });
+
+        it('should throw Configuration Error if click node has an invalid button value', async () => {
+            const clickNode = makeNode('n_click', 'click', {
+                configuration: {
+                    selector: '#submit-btn',
+                    button: 'invalid-button',
+                },
+            });
+
+            await expect(ExecutionService.validateGraph([clickNode], [])).rejects.toThrow(
+                /Configuration Error in node "click": El botón debe ser/,
+            );
+        });
+    });
 });

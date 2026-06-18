@@ -1109,8 +1109,17 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
         try {
           const snapshot = JSON.parse(runData.flow_snapshot);
           if (snapshot.nodes && snapshot.edges) {
-            setNodes(snapshot.nodes);
-            setEdges(snapshot.edges);
+            // Normalize nodes/edges to use React Flow IDs (nodeId/edgeId) if they came from database representation
+            const normalizedNodes = (snapshot.nodes || []).map((n) => ({
+              ...n,
+              id: n.nodeId || n.id,
+            }));
+            const normalizedEdges = (snapshot.edges || []).map((e) => ({
+              ...e,
+              id: e.edgeId || e.id,
+            }));
+            setNodes(normalizedNodes);
+            setEdges(normalizedEdges);
           }
         } catch (e) {
           console.error("Failed to parse flow snapshot", e);
@@ -1118,7 +1127,8 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
       }
 
       runData.steps.forEach((step) => {
-        updateNodeState(step.nodeId, step.status, { message: step.error });
+        const stepNodeId = step.nodeId || step.node_id;
+        updateNodeState(stepNodeId, step.status, { message: step.error });
       });
 
       if (toast) {

@@ -17,6 +17,7 @@ const getSocketURL = () => {
 const SOCKET_URL = getSocketURL();
 
 export const useHaltestSocket = ({
+  activeRunId,
   setNodes,
   setEdges,
   onElementPicked,
@@ -32,6 +33,7 @@ export const useHaltestSocket = ({
   toast,
 }) => {
   const socketRef = useRef(null);
+  const activeRunIdRef = useRef(activeRunId);
   const onElementPickedRef = useRef(onElementPicked);
   const setNodesRef = useRef(setNodes);
   const setEdgesRef = useRef(setEdges);
@@ -48,6 +50,7 @@ export const useHaltestSocket = ({
 
   // Update refs when props change (always keep latest)
   useEffect(() => {
+    activeRunIdRef.current = activeRunId;
     onElementPickedRef.current = onElementPicked;
     setNodesRef.current = setNodes;
     setEdgesRef.current = setEdges;
@@ -62,6 +65,7 @@ export const useHaltestSocket = ({
     onLogReceivedRef.current = onLogReceived;
     toastRef.current = toast;
   }, [
+    activeRunId,
     onElementPicked,
     setNodes,
     setEdges,
@@ -102,8 +106,28 @@ export const useHaltestSocket = ({
 
     socket.on("execution-status", (data) => {
       if (!data || !data.stepId) return;
-      const { stepId, status, error, result } = data;
-      console.log(`Haltest Socket: ⚡ Event [${stepId}] -> ${status}`);
+      const { stepId, status, error, result, runId, batchId } = data;
+
+      // Filter execution-status socket events to prevent background parallel runs from causing canvas lag, flickering, or darkening
+      if (activeRunIdRef.current) {
+        if (runId && runId !== activeRunIdRef.current) {
+          console.log(
+            `Haltest Socket: 🚫 Ignoring execution-status for runId ${runId} (Active: ${activeRunIdRef.current})`,
+          );
+          return;
+        }
+      } else {
+        if (batchId || runId) {
+          console.log(
+            `Haltest Socket: 🚫 Ignoring background batch/run execution-status (runId: ${runId}, batchId: ${batchId})`,
+          );
+          return;
+        }
+      }
+
+      console.log(
+        `Haltest Socket: ⚡ Event [${stepId}] -> ${status} (runId: ${runId})`,
+      );
 
       // Log structured error to console
       if (status === "failed" || status === "softfailed") {

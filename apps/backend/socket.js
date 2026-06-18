@@ -56,10 +56,19 @@ export const getIO = () => {
 
 // ─── Existing emitters ────────────────────────────────────────────────────────
 
-export const emitExecutionStatus = ({ stepId, status, error = null, result = null }) => {
+export const emitExecutionStatus = ({
+    stepId,
+    status,
+    error = null,
+    result = null,
+    runId = null,
+    batchId = null,
+}) => {
     if (io) {
-        console.log(`📡 [Socket.io] Emitting execution-status: ${stepId} -> ${status}`);
-        io.emit('execution-status', { stepId, status, error, result });
+        console.log(
+            `📡 [Socket.io] Emitting execution-status: ${stepId} -> ${status} (runId: ${runId}, batchId: ${batchId})`,
+        );
+        io.emit('execution-status', { stepId, status, error, result, runId, batchId });
     } else {
         console.warn('⚠️ [Socket.io] Skipping emission: Socket.io server not initialized');
     }

@@ -766,5 +766,31 @@
     "alt_text": "Execution result",
     "before": "Before",
     "after": "After"
+  },
+  "ddt": {
+    "modal_title": "Data-Driven Execution Runner",
+    "modal_subtitle": "Iterate workflow executions dynamically seeded with dataset values",
+    "upload_drag": "Drag and drop your dataset here",
+    "upload_formats": "Supports CSV or JSON array files",
+    "select_file": "Browse Files",
+    "dataset_loaded": "Dataset Loaded",
+    "change_dataset": "Remove",
+    "preview_rows": "Preview (First 3 rows)",
+    "total_rows": "Total rows in dataset:",
+    "variable_mapping": "Variable Mappings",
+    "no_flow_vars": "No variables detected in the current flow. All values will be run statically.",
+    "map_none": "-- Do not map --",
+    "concurrency": "Parallel Workers (Browser instances)",
+    "concurrency_warning": "Warning: High concurrency increases RAM & CPU consumption.",
+    "start_execution": "Start Dataset Run",
+    "batch_in_progress": "Dataset Iterations Execution",
+    "stat_total": "Total Iterations",
+    "stat_passed": "Passed",
+    "stat_failed": "Failed",
+    "stat_running": "Running",
+    "progress": "Progress",
+    "view_report": "Report",
+    "close_dashboard": "Close",
+    "load_to_configure": "Please load a dataset file to configure mappings"
   }
 }

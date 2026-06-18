@@ -86,7 +86,19 @@ class VariableManager {
         if (!this.scopes.runs[runId]) this.scopes.runs[runId] = {};
         this.scopes.runs[runId] = { ...this.scopes.runs[runId], ...initialVariables };
         if (!this.aliases[runId]) this.aliases[runId] = {};
+
+        // Track variables initialized for this run context (e.g. from dataset or overrides)
+        if (!this.initializedVars) {
+            this.initializedVars = {};
+        }
+        this.initializedVars[runId] = new Set(Object.keys(initialVariables));
+
         this.lastRunId = runId;
+    }
+
+    isInitializedFromDataset(name, runId) {
+        if (!runId || !this.initializedVars || !this.initializedVars[runId]) return false;
+        return this.initializedVars[runId].has(name);
     }
 
     getActiveRunId() {
@@ -97,6 +109,9 @@ class VariableManager {
         if (runId) {
             delete this.scopes.runs[runId];
             delete this.aliases[runId];
+            if (this.initializedVars) {
+                delete this.initializedVars[runId];
+            }
         }
         if (this.lastRunId === runId) this.lastRunId = null;
     }
@@ -106,6 +121,7 @@ class VariableManager {
         this.scopes.legacy_flow = {};
         this.scopes.global = {};
         this.aliases = {};
+        this.initializedVars = {};
         this.lastRunId = null;
     }
 

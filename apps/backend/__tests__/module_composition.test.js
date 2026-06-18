@@ -111,5 +111,26 @@ describe('Module Composition Actions', () => {
 
             expect(res.status).toHaveBeenCalledWith(200);
         });
+
+        it('should support subflows where entry node is of type input', async () => {
+            const mockSubflow = {
+                nodes: [{ nodeId: 'node-in', type: 'input', data: {} }],
+                edges: [],
+            };
+            Flow.findByPk.mockResolvedValue(mockSubflow);
+
+            const req = {
+                body: {
+                    configuration: {
+                        flowId: 'subflow-456',
+                    },
+                    nodeId: 'comp-node-2',
+                },
+            };
+            const res = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+
+            await expect(componentAction(req, res)).resolves.not.toThrow();
+            expect(res.status).toHaveBeenCalledWith(200);
+        });
     });
 });

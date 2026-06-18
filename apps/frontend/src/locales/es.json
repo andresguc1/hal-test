@@ -762,5 +762,31 @@
     "alt_text": "Resultado de la ejecución",
     "before": "Antes",
     "after": "Después"
+  },
+  "ddt": {
+    "modal_title": "Ejecutor de Pruebas Basadas en Datos",
+    "modal_subtitle": "Itera ejecuciones de flujos dinámicamente con valores de un dataset",
+    "upload_drag": "Arrastra y suelta tu dataset aquí",
+    "upload_formats": "Soporta archivos CSV o arreglos JSON",
+    "select_file": "Buscar Archivos",
+    "dataset_loaded": "Dataset Cargado",
+    "change_dataset": "Eliminar",
+    "preview_rows": "Vista previa (Primeras 3 filas)",
+    "total_rows": "Total de filas en dataset:",
+    "variable_mapping": "Mapeo de Variables",
+    "no_flow_vars": "No se detectaron variables en el flujo actual. Se ejecutará estáticamente.",
+    "map_none": "-- No mapear --",
+    "concurrency": "Trabajadores en Paralelo (Instancias de navegador)",
+    "concurrency_warning": "Advertencia: Una alta concurrencia aumenta el consumo de RAM y CPU.",
+    "start_execution": "Iniciar Ejecución",
+    "batch_in_progress": "Ejecución de Iteraciones del Dataset",
+    "stat_total": "Total de Iteraciones",
+    "stat_passed": "Exitosas",
+    "stat_failed": "Fallidas",
+    "stat_running": "Ejecutando",
+    "progress": "Progreso",
+    "view_report": "Reporte",
+    "close_dashboard": "Cerrar",
+    "load_to_configure": "Cargue un archivo de dataset para configurar el mapeo de variables"
   }
 }

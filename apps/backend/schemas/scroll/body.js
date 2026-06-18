@@ -26,7 +26,6 @@ const scrollBodySchema = Joi.object({
     behavior: Joi.string()
         .valid(...allowedBehaviors)
         .default('auto')
-        .required()
         .messages({
             'any.only': 'El comportamiento debe ser auto o smooth.',
         }),

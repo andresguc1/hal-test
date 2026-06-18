@@ -369,6 +369,233 @@ async function getOrCreateContext(req, browser, browserId) {
             const newContext = await browser.newContext(contextOptions);
             console.log('[SUCCESS] Context created successfully');
 
+            // Inject Interaction Visualizer Script
+            await newContext
+                .addInitScript(() => {
+                    if (window.__hal_recorder_injected) return;
+                    window.__hal_recorder_injected = true;
+
+                    const init = () => {
+                        if (document.getElementById('hal-interaction-recorder-overlay')) return;
+
+                        const container = document.createElement('div');
+                        container.id = 'hal-interaction-recorder-overlay';
+                        container.style.position = 'fixed';
+                        container.style.top = '0';
+                        container.style.left = '0';
+                        container.style.width = '0';
+                        container.style.height = '0';
+                        container.style.pointerEvents = 'none';
+                        container.style.zIndex = '2147483647';
+
+                        const shadow = container.attachShadow({ mode: 'open' });
+
+                        const style = document.createElement('style');
+                        style.textContent = `
+                        .cursor {
+                            position: fixed;
+                            width: 20px;
+                            height: 20px;
+                            border: 2px solid rgba(99, 102, 241, 0.8);
+                            background: rgba(99, 102, 241, 0.4);
+                            border-radius: 50%;
+                            pointer-events: none;
+                            z-index: 2147483647;
+                            transform: translate(-50%, -50%);
+                            transition: width 0.1s, height 0.1s, background-color 0.1s;
+                            display: none;
+                        }
+                        .cursor.active {
+                            width: 14px;
+                            height: 14px;
+                            background: rgba(239, 68, 68, 0.8);
+                            border-color: rgba(239, 68, 68, 1);
+                        }
+                        .ripple {
+                            position: fixed;
+                            width: 40px;
+                            height: 40px;
+                            border: 2px solid rgba(99, 102, 241, 1);
+                            border-radius: 50%;
+                            pointer-events: none;
+                            z-index: 2147483646;
+                            transform: translate(-50%, -50%) scale(0);
+                            animation: hal-ripple-animation 0.5s ease-out forwards;
+                        }
+                        @keyframes hal-ripple-animation {
+                            to {
+                                transform: translate(-50%, -50%) scale(1.5);
+                                opacity: 0;
+                            }
+                        }
+                        .key-toast {
+                            position: fixed;
+                            bottom: 20px;
+                            left: 50%;
+                            transform: translateX(-50%);
+                            background: rgba(15, 23, 42, 0.9);
+                            color: #f1f5f9;
+                            padding: 8px 16px;
+                            border-radius: 8px;
+                            font-family: monospace;
+                            font-size: 14px;
+                            border: 1px solid rgba(255, 255, 255, 0.1);
+                            pointer-events: none;
+                            z-index: 2147483647;
+                            opacity: 0;
+                            transition: opacity 0.2s;
+                            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+                        }
+                        .key-toast.visible {
+                            opacity: 1;
+                        }
+                        .step-badge {
+                            position: fixed;
+                            top: 15px;
+                            right: 15px;
+                            background: rgba(15, 23, 42, 0.9);
+                            color: #6366f1;
+                            border: 1px solid rgba(99, 102, 241, 0.3);
+                            padding: 6px 12px;
+                            border-radius: 6px;
+                            font-family: system-ui, -apple-system, sans-serif;
+                            font-size: 11px;
+                            font-weight: 700;
+                            text-transform: uppercase;
+                            letter-spacing: 0.05em;
+                            pointer-events: none;
+                            z-index: 2147483647;
+                            opacity: 0;
+                            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                            transform: translateY(-10px);
+                            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+                            display: flex;
+                            align-items: center;
+                            gap: 6px;
+                        }
+                    `;
+                        shadow.appendChild(style);
+
+                        const cursor = document.createElement('div');
+                        cursor.className = 'cursor';
+                        shadow.appendChild(cursor);
+
+                        const keyToast = document.createElement('div');
+                        keyToast.className = 'key-toast';
+                        shadow.appendChild(keyToast);
+
+                        const stepBadge = document.createElement('div');
+                        stepBadge.className = 'step-badge';
+                        shadow.appendChild(stepBadge);
+
+                        document.documentElement.appendChild(container);
+
+                        let lastX = 0,
+                            lastY = 0;
+
+                        window.addEventListener(
+                            'mousemove',
+                            (e) => {
+                                lastX = e.clientX;
+                                lastY = e.clientY;
+                                cursor.style.left = lastX + 'px';
+                                cursor.style.top = lastY + 'px';
+                                cursor.style.display = 'block';
+                            },
+                            { passive: true },
+                        );
+
+                        window.addEventListener(
+                            'mousedown',
+                            (e) => {
+                                cursor.classList.add('active');
+
+                                const ripple = document.createElement('div');
+                                ripple.className = 'ripple';
+                                ripple.style.left = e.clientX + 'px';
+                                ripple.style.top = e.clientY + 'px';
+                                shadow.appendChild(ripple);
+
+                                setTimeout(() => {
+                                    ripple.remove();
+                                }, 500);
+                            },
+                            { passive: true },
+                        );
+
+                        window.addEventListener(
+                            'mouseup',
+                            () => {
+                                cursor.classList.remove('active');
+                            },
+                            { passive: true },
+                        );
+
+                        let keyTimeout;
+                        let typedText = '';
+                        window.addEventListener(
+                            'keydown',
+                            (e) => {
+                                if (['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) return;
+
+                                if (e.key === 'Backspace') {
+                                    typedText = typedText.slice(0, -1);
+                                } else if (e.key === 'Enter') {
+                                    typedText += ' ↵';
+                                } else if (e.key.length === 1) {
+                                    typedText += e.key;
+                                }
+
+                                if (typedText) {
+                                    keyToast.textContent = `Typed: ${typedText}`;
+                                    keyToast.classList.add('visible');
+
+                                    clearTimeout(keyTimeout);
+                                    keyTimeout = setTimeout(() => {
+                                        keyToast.classList.remove('visible');
+                                        typedText = '';
+                                    }, 1500);
+                                }
+                            },
+                            { passive: true },
+                        );
+
+                        window.__hal_update_step = (label, status) => {
+                            if (!label) {
+                                stepBadge.style.opacity = '0';
+                                stepBadge.style.transform = 'translateY(-10px)';
+                                return;
+                            }
+                            let statusDot =
+                                '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#6366f1;box-shadow:0 0 8px #6366f1;"></span>';
+                            if (status === 'success') {
+                                statusDot =
+                                    '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#10b981;box-shadow:0 0 8px #10b981;"></span>';
+                                stepBadge.style.color = '#10b981';
+                                stepBadge.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+                            } else if (status === 'failed') {
+                                statusDot =
+                                    '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#ef4444;box-shadow:0 0 8px #ef4444;"></span>';
+                                stepBadge.style.color = '#ef4444';
+                                stepBadge.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                            } else {
+                                stepBadge.style.color = '#6366f1';
+                                stepBadge.style.borderColor = 'rgba(99, 102, 241, 0.3)';
+                            }
+                            stepBadge.innerHTML = `${statusDot} ${label}`;
+                            stepBadge.style.opacity = '1';
+                            stepBadge.style.transform = 'translateY(0)';
+                        };
+                    };
+
+                    if (document.body) {
+                        init();
+                    } else {
+                        document.addEventListener('DOMContentLoaded', init);
+                    }
+                })
+                .catch((e) => console.warn('[Visualizer] addInitScript error:', e.message));
+
             // Track background network history to avoid race conditions in sequential nodes
             networkHistoryService.track(browserId, newContext);
 
@@ -624,7 +851,50 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
         }
 
         // 2. Execute specific action logic
+        if (page && !page.isClosed()) {
+            // Update active step overlay
+            await page
+                .evaluate((lbl) => {
+                    if (typeof window.__hal_update_step === 'function') {
+                        window.__hal_update_step(lbl, 'running');
+                    }
+                }, label)
+                .catch(() => {});
+
+            // Highlight target selector
+            if (opts.selector) {
+                await page
+                    .evaluate((sel) => {
+                        try {
+                            const el = document.querySelector(sel);
+                            if (el) {
+                                el.style.outline = '3px solid #6366f1';
+                                el.style.outlineOffset = '2px';
+                                setTimeout(() => {
+                                    el.style.outline = '';
+                                    el.style.outlineOffset = '';
+                                }, 800);
+                            }
+                        } catch (e) {
+                            // Ignore invalid selector queries
+                        }
+                    }, opts.selector)
+                    .catch(() => {});
+            }
+        }
+
         const result = await actionLogic(page, opts, targetBrowserId, context);
+
+        if (page && !page.isClosed()) {
+            await page
+                .evaluate((lbl) => {
+                    if (typeof window.__hal_update_step === 'function') {
+                        window.__hal_update_step(lbl, 'success');
+                        setTimeout(() => window.__hal_update_step(null), 1000);
+                    }
+                }, label)
+                .catch(() => {});
+        }
 
         const duration = Date.now() - start;
         const finalMessage = result.message || `${actionName} completed successfully`;
@@ -1140,6 +1410,17 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
         // --------------------------
 
         // --- FLIGHT RECORDER: Log Failure (Initial) ---
+        if (page && !page.isClosed()) {
+            await page
+                .evaluate((lbl) => {
+                    if (typeof window.__hal_update_step === 'function') {
+                        window.__hal_update_step(lbl, 'failed');
+                        setTimeout(() => window.__hal_update_step(null), 2000);
+                    }
+                }, label)
+                .catch(() => {});
+        }
+
         if (runId && nodeId) {
             await executionLogger.logStep(
                 runId,
@@ -4529,6 +4810,14 @@ export const variableAction = async (req, res) => {
 
         switch (operation) {
             case 'set':
+                // Check if this variable is driven/pre-seeded by dataset or overrides
+                if (runId && variableManager.isInitializedFromDataset(name, runId)) {
+                    const datasetValue = variableManager.get(name, runId);
+                    result = { name, value: datasetValue, scope, operation: 'set', skipped: true };
+                    message = `Variable "${name}" is driven by dataset (value: "${datasetValue}"). Skipped overwriting with flow default "${value}".`;
+                    console.log(`[VariableManager] ${message}`);
+                    break;
+                }
                 variableManager.set(name, value, runId, scope);
                 result = { name, value, scope, operation: 'set' };
                 message = req.t('actions.variable.set_success', { name, scope });
@@ -5364,7 +5653,7 @@ export const componentAction = async (req, res) => {
             sourceHandle: e.sourceHandle,
         }));
 
-        const entryNodes = allNodes.filter((n) => n.type === 'entry');
+        const entryNodes = allNodes.filter((n) => n.type === 'entry' || n.type === 'input');
         if (entryNodes.length === 0) {
             throw new Error(`Subflow ${flowId} has no Entry node`);
         }

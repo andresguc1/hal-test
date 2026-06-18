@@ -88,6 +88,8 @@ export class ExecutionService {
                 validationError.message,
             );
 
+            await executionLogger.endRun(runId, 'failed').catch(() => {});
+
             // Signal failure with node metadata for UI auto-focus
             emitFlowFinished({
                 runId,
@@ -164,6 +166,20 @@ export class ExecutionService {
             );
 
             console.log(`✅ [ExecutionService] Flow ${flowId} completed successfully`);
+
+            // Close browser BEFORE ending the run to allow video files to flush to disk
+            if (runState.browserId) {
+                console.log(
+                    `[ExecutionService] Closing browser session ${runState.browserId} before endRun to finalize video`,
+                );
+                await browserService.delete(runState.browserId).catch((e) => {
+                    console.error(
+                        `[ExecutionService] Error closing browser before endRun: ${e.message}`,
+                    );
+                });
+                runState.browserId = null;
+            }
+
             await executionLogger.endRun(runId, 'completed');
             variableManager.clear(runId); // Free isolated variables
             emitLog({ message: `Flow execution finished successfully`, type: 'success' });
@@ -175,6 +191,20 @@ export class ExecutionService {
             await this.printExecutionSummary(runId, flow.name);
         } catch (error) {
             console.error(`❌ [ExecutionService] Flow ${flowId} failed:`, error.message);
+
+            // Close browser BEFORE ending the run to allow video files to flush to disk on failure too
+            if (runState.browserId) {
+                console.log(
+                    `[ExecutionService] Closing browser session ${runState.browserId} before endRun (on failure) to finalize video`,
+                );
+                await browserService.delete(runState.browserId).catch((e) => {
+                    console.error(
+                        `[ExecutionService] Error closing browser before endRun (failure path): ${e.message}`,
+                    );
+                });
+                runState.browserId = null;
+            }
+
             await executionLogger.endRun(runId, 'failed').catch(() => {});
             variableManager.clear(runId); // Free isolated variables on failure too
             emitLog({ message: `Flow execution failed: ${error.message}`, type: 'error' });
@@ -225,11 +255,32 @@ export class ExecutionService {
                 const schema = schemas[route.schema];
                 const config = node.data?.configuration || {};
 
-                // Execute Joi validation
-                const { error } = schema.validate(config, {
-                    abortEarly: true,
-                    stripUnknown: true,
-                });
+                let error = null;
+                if (typeof schema.validate === 'function') {
+                    // Joi validation
+                    const result = schema.validate(config, {
+                        abortEarly: true,
+                        stripUnknown: true,
+                    });
+                    error = result.error;
+                    if (!error && result.value) {
+                        if (!node.data) node.data = {};
+                        node.data.configuration = result.value;
+                    }
+                } else if (typeof schema.safeParse === 'function') {
+                    // Zod validation
+                    const result = schema.safeParse(config);
+                    if (!result.success) {
+                        error = {
+                            details: result.error.errors.map((err) => ({
+                                message: `${err.path.join('.') || 'configuration'}: ${err.message}`,
+                            })),
+                        };
+                    } else {
+                        if (!node.data) node.data = {};
+                        node.data.configuration = result.data;
+                    }
+                }
 
                 if (error) {
                     const label = node.data?.customLabel || node.data?.label || type;
@@ -590,7 +641,12 @@ export class ExecutionService {
 
         if (allSkipped && !state.executedNodeIds.has(targetNode.nodeId)) {
             console.log(`[DPE] Eliminating Dead Path: Node ${targetNode.nodeId} is now SKIPPED.`);
-            emitExecutionStatus({ stepId: targetNode.nodeId, status: 'skipped' });
+            emitExecutionStatus({
+                stepId: targetNode.nodeId,
+                status: 'skipped',
+                runId: state.runId,
+                batchId: state.batchId,
+            });
             state.executedNodeIds.add(targetNode.nodeId); // Prevents it from being executed later
 
             // 4. Recursively skip all outgoing edges
@@ -824,6 +880,8 @@ export class ExecutionService {
             stepId: node.nodeId,
             status: finalResult?.status || 'success',
             result: finalResult,
+            runId: state.runId,
+            batchId: state.batchId,
         });
 
         return resultData;

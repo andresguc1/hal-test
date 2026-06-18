@@ -326,12 +326,48 @@ export const cancelRunAction = async (req, res) => {
             });
         }
 
-        return res.status(404).json({
-            success: false,
+        return res.status(200).json({
+            success: true,
             message: `Active run ID ${id} not found or already finished.`,
         });
     } catch (error) {
         console.error('[RunController] cancelRunAction Error:', error);
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+export const startDatasetBatchRunAction = async (req, res) => {
+    try {
+        const { flowId, projectId, dataset, variablesMapping, concurrency, overrides } = req.body;
+
+        if (!flowId || !projectId) {
+            return res
+                .status(400)
+                .json({ success: false, message: 'flowId and projectId are required.' });
+        }
+
+        if (!dataset || !Array.isArray(dataset) || dataset.length === 0) {
+            return res
+                .status(400)
+                .json({ success: false, message: 'A non-empty dataset array is required.' });
+        }
+
+        const batchId = await testRunnerService.runDatasetBatch(
+            flowId,
+            projectId,
+            dataset,
+            variablesMapping,
+            concurrency || 2,
+            { overrides },
+        );
+
+        return res.status(200).json({
+            success: true,
+            batchId,
+            message: `Dataset batch execution initiated with ${dataset.length} iterations and concurrency ${concurrency || 2}`,
+        });
+    } catch (error) {
+        console.error('[RunController] startDatasetBatchRunAction Error:', error);
         return res.status(500).json({ success: false, error: error.message });
     }
 };

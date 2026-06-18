@@ -14,6 +14,7 @@ import {
   Box,
   RefreshCw,
   Repeat,
+  Database,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion as Motion, AnimatePresence } from "framer-motion";
@@ -410,6 +411,7 @@ function AppFooter({
   _onResetEnvironment,
   version,
   onRunBatch,
+  onRunDataset,
   apiStatus = { state: "idle" },
 }) {
   const [activeMenu, setActiveMenu] = useState(null); // 'project' | 'flow' | null
@@ -578,6 +580,14 @@ function AppFooter({
           className="h-6 w-px bg-white/10 mx-2"
           role="separator"
           aria-orientation="vertical"
+        />
+
+        <FooterButton
+          icon={Database}
+          label="RUN DATASET"
+          variant="outline"
+          onClick={onRunDataset}
+          className="pl-3 pr-4 py-2 hover:bg-emerald-500/10 hover:text-emerald-400 border-emerald-500/20"
         />
 
         <FooterButton

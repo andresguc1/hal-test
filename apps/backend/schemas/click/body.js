@@ -24,7 +24,6 @@ const clickBodySchema = Joi.object({
     button: Joi.string()
         .valid(...allowedButtonValues)
         .default('left')
-        .required()
         .messages({
             'any.required': 'El botón del mouse es obligatorio (left, right o middle).',
             'any.only': 'El botón debe ser "left", "right" o "middle".',

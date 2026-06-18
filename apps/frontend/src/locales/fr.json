@@ -744,5 +744,31 @@
     "alt_text": "Résultat de l'exécution",
     "before": "Avant",
     "after": "Après"
+  },
+  "ddt": {
+    "modal_title": "Exécuteur de Tests Basés sur les Données",
+    "modal_subtitle": "Itérer les exécutions de flux de manière dynamique avec les valeurs d'un dataset",
+    "upload_drag": "Glissez et déposez votre dataset ici",
+    "upload_formats": "Prend en charge les fichiers CSV ou tableaux JSON",
+    "select_file": "Parcourir les fichiers",
+    "dataset_loaded": "Dataset Chargé",
+    "change_dataset": "Supprimer",
+    "preview_rows": "Aperçu (3 premières lignes)",
+    "total_rows": "Total des lignes du dataset:",
+    "variable_mapping": "Mappage des Variables",
+    "no_flow_vars": "Aucune variable détectée dans le flux actuel. L'exécution sera statique.",
+    "map_none": "-- Ne pas mapper --",
+    "concurrency": "Exécuteurs en Parallèle (Instances de navigateur)",
+    "concurrency_warning": "Attention: Une haute concurrence augmente la consommation de RAM et CPU.",
+    "start_execution": "Démarrer l'exécution",
+    "batch_in_progress": "Exécution des itérations du dataset",
+    "stat_total": "Total des itérations",
+    "stat_passed": "Réussis",
+    "stat_failed": "Échoués",
+    "stat_running": "En cours",
+    "progress": "Progreso",
+    "view_report": "Rapport",
+    "close_dashboard": "Fermer",
+    "load_to_configure": "Veuillez charger un fichier de dataset pour configurer le mappage des variables"
   }
 }

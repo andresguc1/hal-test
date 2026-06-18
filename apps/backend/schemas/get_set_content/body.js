@@ -16,7 +16,6 @@ const getSetContentBodySchema = Joi.object({
     action: Joi.string()
         .valid(...allowedActions)
         .default('get')
-        .required()
         .messages({
             'any.required': 'Action (get/set) is required.',
             'any.only': 'Action must be "get" or "set".',

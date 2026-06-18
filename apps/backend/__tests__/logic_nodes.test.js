@@ -88,6 +88,38 @@ describe('Logic Engine Nodes Validation', () => {
             expect(result.success).toBe(true);
             expect(variableManager.get('counter')).toBe(8);
         });
+
+        it('debe omitir la asignación si la variable fue inicializada desde un dataset', async () => {
+            // Seed variable user_role in run scope
+            const runId = 'run-dataset-test';
+            variableManager.initRun(runId, { user_role: 'dataset_user' });
+
+            const req = {
+                body: {
+                    operation: 'set',
+                    name: 'user_role',
+                    value: 'default_user',
+                    scope: 'flow',
+                    runId,
+                },
+                t: (k) => k,
+            };
+            let result = null;
+            const res = {
+                status: () => res,
+                json: (d) => {
+                    result = d;
+                    return res;
+                },
+            };
+
+            await actions.variableAction(req, res);
+
+            expect(result.success).toBe(true);
+            expect(result.data.skipped).toBe(true);
+            // Verify variable manager still returns the dataset user, not the default
+            expect(variableManager.get('user_role', runId)).toBe('dataset_user');
+        });
     });
 
     // 2. Conditional Node

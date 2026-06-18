@@ -521,6 +521,7 @@ function arePropsEqual(prevProps, nextProps) {
     prevProps.id === nextProps.id &&
     prevProps.selected === nextProps.selected &&
     prevProps.data?.state === nextProps.data?.state &&
+    prevProps.data?.active === nextProps.data?.active && // allow re-render when active step changes
     JSON.stringify(prevProps.data?.configuration) ===
       JSON.stringify(nextProps.data?.configuration) &&
     prevProps.data?.error === nextProps.data?.error &&

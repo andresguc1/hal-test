@@ -30,7 +30,6 @@ const takeScreenshotBodySchema = Joi.object({
     format: Joi.string()
         .valid(...allowedFormats)
         .default('png')
-        .required()
         .messages({
             'any.required': 'El formato de imagen es obligatorio.',
             'any.only': 'El formato debe ser png o jpeg.',

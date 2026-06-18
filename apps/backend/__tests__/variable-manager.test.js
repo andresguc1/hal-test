@@ -544,3 +544,23 @@ describe('VariableManager - Sanitization', () => {
         expect(variableManager.get('nil', 'run-1')).toBeNull();
     });
 });
+
+// =============================================================================
+// DATASET VARIABLE TRACKING & OVERRIDES
+// =============================================================================
+describe('VariableManager - Dataset Variable Tracking', () => {
+    it('should track variables initialized from dataset', () => {
+        variableManager.initRun('run-dataset-1', { user_role: 'standard_user', env: 'dev' });
+        expect(variableManager.isInitializedFromDataset('user_role', 'run-dataset-1')).toBe(true);
+        expect(variableManager.isInitializedFromDataset('env', 'run-dataset-1')).toBe(true);
+        expect(variableManager.isInitializedFromDataset('other_var', 'run-dataset-1')).toBe(false);
+    });
+
+    it('should clean up tracked initialized variables on clear', () => {
+        variableManager.initRun('run-dataset-1', { user_role: 'standard_user' });
+        expect(variableManager.isInitializedFromDataset('user_role', 'run-dataset-1')).toBe(true);
+
+        variableManager.clear('run-dataset-1');
+        expect(variableManager.isInitializedFromDataset('user_role', 'run-dataset-1')).toBe(false);
+    });
+});
