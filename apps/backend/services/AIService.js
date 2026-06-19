@@ -694,8 +694,13 @@ IMPORTANT DIRECTIONS:
         }
     }
 
+    /**
+     * Advanced Tiered Selector Healing with Cache Alignment
+     * Layer 2: Prefix Stabilization for Ollama (KV Cache optimization)
+     * Layer 3: Tiered Prompt Escalation (Fast Pass -> Self-Correction -> Fuzzy Fallback)
+     */
     async healSelector({
-        screenshotBase64,
+        _screenshotBase64,
         domSnippet,
         originalSelector,
         error,
@@ -706,9 +711,10 @@ IMPORTANT DIRECTIONS:
         timeout: customTimeout,
         baseUrl,
         parentSignal,
+        retryCount = 0,
+        previousSelectors = [],
     }) {
         try {
-            // Apply Matrix Logic if no specific model/provider forced
             let selected = { provider, model: forcedModel };
             if (!forcedModel || !provider) {
                 selected = this.selectBestModel(forcedModel ? 'reasoning' : 'local', provider);
@@ -717,17 +723,12 @@ IMPORTANT DIRECTIONS:
             const activeProvider = provider || selected.provider;
             let activeModel = forcedModel || selected.model;
 
-            // --- SMART RESOLUTION FOR OLLAMA ---
             if (activeProvider === 'ollama' && activeModel) {
                 activeModel = await this.resolveOllamaModel({
                     baseUrl: baseUrl || process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434',
                     requestedModel: activeModel,
                 });
             }
-
-            console.log(
-                `[AIService] Healing selector. Using: ${activeProvider}/${activeModel} (Timeout: ${customTimeout || 'default'}ms)`,
-            );
 
             const providerInstance = llmFactory.getProviderInstance(
                 apiKey || activeProvider,
@@ -736,48 +737,49 @@ IMPORTANT DIRECTIONS:
             );
             const modelRef = providerInstance(activeModel);
 
-            const prompt = `You are a Senior QA Automation Expert and Selector Repair Specialist.
-The automation failed to find an element in the browser.
+            // Layer 2: Cache Alignment (Prefix Stabilization)
+            // System prompt and DOM layout are static and at the beginning.
+            const systemPrompt = `You are a Senior QA Automation Expert.
+Repair the failing Playwright selector based on the dense DOM context below.
 
-FAILED SELECTOR: "${originalSelector}"
-ERROR MESSAGE: "${error}"
-INTENT: "${intent}"
+DOM CONTEXT (Interactive elements):
+${domSnippet || 'No DOM available'}`;
 
-DOM CONTEXT (Interactive elements with structural breadcrumbs):
-${domSnippet || 'No DOM available'}
+            // Layer 3: Tiered Prompt Escalation
+            let tierInstructions = '';
+            let maxTokens = 150;
+            let temperature = 0.1;
 
-ANALYSIS STEPS:
-1. Identify why the original selector failed (e.g., dynamic ID, structure change).
-2. Look for the element that matches the "Intent" and resembles the "Original Selector".
-3. Propose up to 3 alternative CSS selectors, ranked by robustness. STRICT PRIORITIZATION:
-   - PRIORITY 1 (Best): Custom semantic attributes like [data-test], [data-testid], [data-qa], [data-cy].
-   - PRIORITY 2 (Very Good): Unique ARIA attributes ([aria-label], [role="button"], etc.) that clearly identify the element's function.
-   - PRIORITY 3 (Good): Tag names combined with unique stable classes or partial text matches.
-   - PRIORITY 4 (Fallback): Structural paths, but only if they start from a stable ID (e.g., #header-id >> .btn).
-   - AVOID: Auto-generated dynamic classes (e.g., .css-1ax2b3), absolute indexes (e.g., div:nth-child(5)), and fragile structural-only paths.
+            if (retryCount === 0) {
+                // Tier 1: Fast Pass
+                tierInstructions = `TIER 1 (Fast Pass): Identify the element matching intent: "${intent}".
+Original failing selector: "${originalSelector}"
+Response Format: Return ONLY raw JSON: {"correctedSelector": "css", "confidence": 0.9}`;
+            } else if (retryCount === 1) {
+                // Tier 2: Self-Correction Log Inversion
+                maxTokens = 200;
+                temperature = 0.2;
+                const failedList = previousSelectors.join(', ');
+                tierInstructions = `TIER 2 (Self-Correction): The following selectors failed: [${failedList}]. 
+Re-evaluate the dense layout data, avoid these signatures, and extract an alternative structural locator.
+Response Format: Return ONLY raw JSON: {"correctedSelector": "css", "confidence": 0.8, "reasoning": "..."}`;
+            } else {
+                // Tier 3: Fuzzy/Coordinate Fallback
+                maxTokens = 250;
+                temperature = 0.4;
+                tierInstructions = `TIER 3 (Fuzzy Fallback): Structural locators failed.
+Locate the element purely via fuzzy text matching or its relative position in the DOM sequence.
+Response Format: Return ONLY raw JSON: {"correctedSelector": "text=...", "confidence": 0.7}`;
+            }
 
-Response Format (Strict JSON - Return ONLY the JSON block, no markdown, no conversational text):
-{
-  "correctedSelector": "the best single CSS selector",
-  "alternative_selectors": ["list of up to 3 ranked css selectors"],
-  "confidence": number (0.0 to 1.0),
-  "reasoning": "detailed explanation of why the original failed and how the new one was found",
-  "is_breaking_change": boolean
-}
+            // Layer 2: Dynamic error context is appended at the ABSOLUTE END
+            const prompt = `${tierInstructions}\n\n[DYNAMIC ERROR CONTEXT]\nFailed Selector: "${originalSelector}"\nError: "${error}"`;
 
-IMPORTANT: Do not wrap the JSON in markdown code blocks. Return it as RAW text.
-If no element is found, return {"correctedSelector": null, "confidence": 0, "reasoning": "No matching element found in DOM context"}
-`;
+            console.log(
+                `[AIService] Healing Tier ${retryCount + 1}. Provider: ${activeProvider}. maxTokens: ${maxTokens}`,
+            );
 
-            console.log(`[AIService] Context size: DOM=${domSnippet?.length || 0} chars`);
-
-            // CRITICAL: Ollama does NOT support generateObject (tool-call based structured output).
-            // It hangs indefinitely. Use generateText + manual JSON parsing for local providers.
             if (activeProvider === 'ollama') {
-                console.log(
-                    `[AIService] Using generateText (Ollama mode) — avoids generateObject hang.`,
-                );
-
                 const timeoutSignal = AbortSignal.timeout(customTimeout || 25000);
                 const combinedSignal = parentSignal
                     ? AbortSignal.any
@@ -787,93 +789,58 @@ If no element is found, return {"correctedSelector": null, "confidence": 0, "rea
 
                 const { text } = await generateText({
                     model: modelRef,
-                    prompt,
-                    temperature: 0.1, // Low temperature for stability
+                    system: systemPrompt, // System prompt contains the static DOM tree
+                    prompt, // Prompt contains the dynamic tier/error instructions
+                    temperature,
+                    maxTokens,
                     abortSignal: combinedSignal,
                 });
 
-                console.log(`[AIService] Ollama raw response: ${text.substring(0, 300)}...`);
+                console.log(
+                    `[AIService] Ollama Tier ${retryCount + 1} response: ${text.substring(0, 200)}...`,
+                );
 
-                // Robust JSON parsing - handles markdown code blocks or raw JSON
                 const jsonMatch = text.match(/\{[\s\S]*\}/);
                 if (jsonMatch) {
                     try {
                         const parsed = JSON.parse(jsonMatch[0]);
-                        const corrected =
-                            parsed.correctedSelector ||
-                            parsed.new_selector ||
-                            parsed.suggested_selector ||
-                            (parsed.alternative_selectors && parsed.alternative_selectors[0]) ||
-                            null;
+                        const corrected = parsed.correctedSelector || parsed.new_selector || null;
 
                         return {
                             correctedSelector: corrected,
-                            alternative_selectors:
-                                parsed.alternative_selectors ||
-                                [corrected].slice(0, 1).filter(Boolean),
+                            alternative_selectors: [corrected].filter(Boolean),
                             confidence: parsed.confidence || (corrected ? 0.7 : 0),
-                            reasoning: parsed.reasoning || 'AI repaired based on DOM analysis',
-                            is_breaking_change: !!parsed.is_breaking_change,
+                            reasoning: parsed.reasoning || `Tier ${retryCount + 1} repair`,
+                            tier: retryCount + 1,
                         };
                     } catch (pErr) {
-                        console.warn(
-                            '[AIService] Failed to parse candidate JSON. Attempting fallback extraction...',
-                            pErr.message,
-                        );
-
-                        // Fallback: try to find anything that looks like "correctedSelector": "..."
-                        const selectorMatch = text.match(/"correctedSelector":\s*"([^"]+)"/);
-                        if (selectorMatch) {
-                            return {
-                                correctedSelector: selectorMatch[1],
-                                alternative_selectors: [selectorMatch[1]],
-                                confidence: 0.5,
-                                reasoning: 'Extracted via fallback regex',
-                            };
-                        }
+                        console.warn(`[AIService] Tier ${retryCount + 1} JSON parse failed.`);
                     }
                 }
 
                 return {
                     correctedSelector: null,
-                    alternative_selectors: [],
                     confidence: 0,
-                    reasoning: 'Could not parse structured AI response',
+                    reasoning: 'Failed to parse Tier response',
                 };
             }
 
-            // Cloud providers: use generateObject for structured output (faster, more reliable)
-            console.log(`[AIService] Using generateObject (cloud mode).`);
-
-            const content = [{ type: 'text', text: prompt }];
-
-            if (screenshotBase64) {
-                content.push({ type: 'image', image: screenshotBase64 });
-            }
-
-            const timeoutSignal = AbortSignal.timeout(customTimeout || 60000);
-            const combinedSignal = parentSignal
-                ? AbortSignal.any
-                    ? AbortSignal.any([parentSignal, timeoutSignal])
-                    : parentSignal
-                : timeoutSignal;
-
+            // Cloud fallback (unchanged but using tiered prompt)
             const { object } = await generateObject({
                 model: modelRef,
+                system: systemPrompt,
                 schema: z.object({
                     correctedSelector: z.string(),
-                    alternative_selectors: z.array(z.string()),
                     confidence: z.number(),
-                    reasoning: z.string(),
-                    is_breaking_change: z.boolean(),
+                    reasoning: z.string().optional(),
                 }),
-                messages: [{ role: 'user', content }],
-                abortSignal: combinedSignal,
+                prompt,
+                abortSignal: parentSignal || AbortSignal.timeout(customTimeout || 60000),
             });
 
-            return object;
+            return { ...object, tier: retryCount + 1 };
         } catch (error) {
-            console.error('[AIService] Error healing selector:', error);
+            console.error(`[AIService] Tier ${retryCount + 1} Error:`, error);
             return { correctedSelector: null, confidence: 0, reasoning: error.message };
         }
     }

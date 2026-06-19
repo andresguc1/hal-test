@@ -55,7 +55,6 @@ import ReportDashboard from "./components/reporting/ReportDashboard";
 import { ExportModal } from "./components/modals/ExportModal";
 import { ImportModal } from "./components/modals/ImportModal";
 import ExecutionDashboard from "./components/reporting/ExecutionDashboard";
-import DatasetRunModal from "./components/modals/DatasetRunModal";
 import HalDashboard from "./components/dashboard/HalDashboard";
 import { api } from "./utils/api";
 import { useElementPicker } from "./hooks/useElementPicker";
@@ -384,7 +383,6 @@ function Dashboard() {
   const [isAskAIPanelVisible, setIsAskAIPanelVisible] = useState(false);
   const [isExecutionDashboardOpen, setIsExecutionDashboardOpen] =
     useState(false);
-  const [isDatasetRunModalOpen, setIsDatasetRunModalOpen] = useState(false);
   const [proposedNodes, setProposedNodes] = useState(null);
   const [confirmationPromise, setConfirmationPromise] = useState(null);
   const [creationModal, setCreationModal] = useState({
@@ -2024,7 +2022,6 @@ function Dashboard() {
           onResetStates={resetExecutionStates}
           hasUnsavedChanges={hasUnsavedChanges}
           onRunBatch={() => setIsExecutionDashboardOpen(true)}
-          onRunDataset={() => setIsDatasetRunModalOpen(true)}
           apiStatus={apiStatus}
         />
 
@@ -2032,15 +2029,6 @@ function Dashboard() {
           isOpen={isExecutionDashboardOpen}
           onClose={() => setIsExecutionDashboardOpen(false)}
           currentProject={currentProject}
-          onViewReport={(id) => setReportingRunId(id)}
-        />
-
-        <DatasetRunModal
-          isOpen={isDatasetRunModalOpen}
-          onClose={() => setIsDatasetRunModalOpen(false)}
-          currentProject={currentProject}
-          currentFlowId={currentFlowId}
-          nodes={nodes}
           onViewReport={(id) => setReportingRunId(id)}
         />
 

@@ -799,6 +799,21 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
     }
     // ------------------------------------
 
+    /**
+     * MILESTONE C: Detects if running in CI environment
+     * Returns true if any CI indicator is present
+     */
+    function isCIEnvironment() {
+        return (
+            process.env.HALTEST_RUNNER_MODE === 'ci' || // Explicit enterprise switch
+            process.env.CI === 'true' ||
+            process.env.HALTEST_MODE === 'ci' ||
+            process.env.GITHUB_ACTIONS === 'true' ||
+            process.env.GITLAB_CI === 'true' ||
+            process.env.JENKINS_URL !== undefined
+        );
+    }
+
     try {
         // 1. Get resources (browser, page, context)
         const isBrowserAction = ['launch_browser', 'close_browser'].includes(actionName);
@@ -1071,6 +1086,28 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
     } catch (error) {
         // Clean HTML entities from error message (Playwright sometimes escapes them)
         const errorMessage = (error.message || 'Unknown selector error').replace(/&quot;/g, '"');
+
+        // MILESTONE C: CI Mode Short-Circuit
+        if (isCIEnvironment()) {
+            console.log('[CI-Mode] Selector healing bypass activated via HALTEST_RUNNER_MODE');
+            smartEmitLog(
+                `[CI Mode] Selector failed: ${opts?.selector || 'N/A'}. Healing disabled. Error: ${String(errorMessage).substring(0, 100)}`,
+                'error',
+                nodeId,
+            );
+
+            if (nodeId) {
+                emitExecutionStatus({ stepId: nodeId, status: 'failed' });
+            }
+
+            return res.status(400).json({
+                success: false,
+                message: `Selector failed in CI mode (healing disabled): ${errorMessage}`,
+                browserId: targetBrowserId,
+                ciMode: true,
+            });
+        }
+
         const isActionFailure =
             errorMessage.includes('Timeout') ||
             errorMessage.includes('selector') ||

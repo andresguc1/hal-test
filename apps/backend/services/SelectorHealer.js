@@ -93,47 +93,36 @@ class SelectorHealer {
             }
 
             // 4. Compact Representation (Max 500 elements)
+            // Layer 1: The "DOM-Crusher" (Content Routing & Data Compression)
+            // Maps interactive elements into a dense, non-redundant pipeline format (Pipe-delimited).
             return elements
                 .slice(0, 500)
                 .map((el, index) => {
-                    const breadcrumbs = [];
-                    let curr = el.parentElement;
-                    for (let i = 0; i < 3 && curr; i++) {
-                        breadcrumbs.unshift(
-                            curr.tagName.toLowerCase() + (curr.id ? '#' + curr.id : ''),
-                        );
-                        curr = curr.parentElement;
-                    }
-
-                    // Resolve class safely (handling SVGAnimatedString)
-                    const rawClass =
-                        typeof el.className === 'string'
-                            ? el.className
-                            : el.getAttribute('class') || '';
-                    const className = rawClass.trim()
-                        ? rawClass.split(/\s+/).slice(0, 3).join('.')
-                        : undefined;
-
-                    // Clean whitespace and newlines from text
-                    const textContent = el.textContent
-                        ? el.textContent.trim().replace(/\s+/g, ' ')
+                    const tag = el.tagName.toLowerCase();
+                    const id = el.id ? `id:${el.id}` : '';
+                    const testId = el.getAttribute('data-testid')
+                        ? `testId:${el.getAttribute('data-testid')}`
                         : '';
+                    const aria = el.getAttribute('aria-label')
+                        ? `aria:${el.getAttribute('aria-label')}`
+                        : '';
+                    const text = el.textContent
+                        ? `text:${el.textContent.trim().replace(/\s+/g, ' ').substring(0, 50)}`
+                        : '';
+                    const role = el.getAttribute('role') ? `role:${el.getAttribute('role')}` : '';
 
-                    const obj = {
-                        ref: index,
-                        tag: el.tagName.toLowerCase(),
-                        id: el.id || undefined,
-                        class: className || undefined,
-                        text: textContent.substring(0, 60) || undefined,
-                        'aria-label': el.getAttribute('aria-label') || undefined,
-                        'data-testid': el.getAttribute('data-testid') || undefined,
-                        path: breadcrumbs.join(' > '),
-                    };
+                    // Build pipe-delimited dense string
+                    const parts = [
+                        `ref:${index}`,
+                        `tag:${tag}`,
+                        id,
+                        testId,
+                        aria,
+                        role,
+                        text,
+                    ].filter((p) => p !== '' && !p.endsWith(':'));
 
-                    return Object.entries(obj)
-                        .filter(([_, v]) => v !== undefined && v !== '')
-                        .map(([k, v]) => `${k}="${v}"`)
-                        .join(' ');
+                    return parts.join('|');
                 })
                 .join('\n');
         };
@@ -189,10 +178,10 @@ class SelectorHealer {
     }) {
         try {
             console.log(
-                `[SelectorHealer] Healing selector: ${originalSelector} (Timeout: ${timeout}ms)`,
+                `[SelectorHealer] Starting Advanced Tiered Healing: ${originalSelector} (Timeout: ${timeout}ms)`,
             );
 
-            // 1. Extract Compressed DOM with Semantic Context
+            // 1. Extract Compressed DOM (Layer 1: DOM-Crusher)
             let compressedDOM = '';
             if (page && !page.isClosed()) {
                 compressedDOM = await Promise.race([
@@ -203,103 +192,71 @@ class SelectorHealer {
                 ]);
             }
 
-            // 2. Delegate to AI service requesting multiple candidates
-            const aiStart = Date.now();
-            const result = await aiService.healSelector({
-                screenshotBase64: null,
-                domSnippet: compressedDOM || 'No DOM available',
-                originalSelector: originalSelector,
-                error: errorMessage,
-                intent: `Perform action: ${actionName}`,
-                apiKey: aiConfig?.apiKey,
-                provider: aiConfig?.provider || 'ollama',
-                model: aiConfig?.model,
-                baseUrl: aiConfig?.baseUrl,
-                timeout: timeout,
-            });
-            const aiResponseTime = Date.now() - aiStart;
-            const domSize = compressedDOM?.length || 0;
+            const previousSelectors = [];
+            const maxTiers = 3;
 
-            // 3. Multi-Candidate Verification Loop (Phase 3)
-            const candidates = result.alternative_selectors || [result.correctedSelector];
-            console.log(
-                `[SelectorHealer] AI suggested ${candidates.length} candidates. Verifying...`,
-            );
-
-            for (let i = 0; i < candidates.length; i++) {
-                const candidate = candidates[i];
-                if (!candidate || candidate === originalSelector) continue;
-
+            for (let tier = 0; tier < maxTiers; tier++) {
                 if (onProgress) {
-                    onProgress({
-                        step: 'verifying_candidate',
-                        candidate,
-                        index: i + 1,
-                        total: candidates.length,
-                    });
+                    onProgress({ step: `tier_${tier + 1}_start`, tier: tier + 1 });
                 }
 
-                const verification = await this.verifySelector(page, candidate);
-                if (verification.valid && verification.visible) {
+                console.log(`[SelectorHealer] Executing Tier ${tier + 1} for: ${originalSelector}`);
+
+                // 2. AI Request with Tier context (Layer 2 & 3)
+                const result = await aiService.healSelector({
+                    domSnippet: compressedDOM || 'No DOM available',
+                    originalSelector,
+                    error: errorMessage,
+                    intent: `Perform action: ${actionName}`,
+                    apiKey: aiConfig?.apiKey,
+                    provider: aiConfig?.provider || 'ollama',
+                    model: aiConfig?.model,
+                    baseUrl: aiConfig?.baseUrl,
+                    timeout: timeout / maxTiers,
+                    retryCount: tier,
+                    previousSelectors: [...previousSelectors],
+                });
+
+                if (result.correctedSelector) {
+                    const candidate = result.correctedSelector;
+
                     if (onProgress) {
-                        onProgress({
-                            step: 'candidate_success',
-                            candidate,
-                            unique: verification.unique,
-                        });
+                        onProgress({ step: 'verifying_candidate', candidate, tier: tier + 1 });
                     }
-                    console.log(
-                        `[SelectorHealer] ✅ Verified candidate: ${candidate} (${verification.unique ? 'Unique' : 'Multiple matches: ' + verification.count})`,
-                    );
 
-                    return {
-                        correctedSelector: candidate,
-                        reasoning: result.reasoning,
-                        confidence: verification.unique
-                            ? result.confidence || 0.9
-                            : (result.confidence || 0.9) * 0.7,
-                        verified: true,
-                        isUnique: verification.unique,
-                        metadata: {
-                            aiResponseTime,
-                            domSize,
-                            model: aiConfig?.model || 'ollama',
-                            provider: aiConfig?.provider || 'ollama',
-                            candidateCount: candidates.length,
-                        },
-                    };
+                    const verification = await this.verifySelector(page, candidate);
+                    if (verification.valid && verification.visible) {
+                        console.log(`[SelectorHealer] ✅ Tier ${tier + 1} Success: ${candidate}`);
+                        return {
+                            correctedSelector: candidate,
+                            reasoning: result.reasoning,
+                            confidence: result.confidence || 0.9,
+                            verified: true,
+                            tier: tier + 1,
+                            metadata: {
+                                model: aiConfig?.model || 'ollama',
+                                provider: aiConfig?.provider || 'ollama',
+                                tier: tier + 1,
+                            },
+                        };
+                    } else {
+                        console.warn(
+                            `[SelectorHealer] ❌ Tier ${tier + 1} verification failed: ${candidate}`,
+                        );
+                        previousSelectors.push(candidate);
+                    }
+                } else {
+                    console.warn(`[SelectorHealer] ⚠️ Tier ${tier + 1} returned no selector.`);
                 }
-            }
-
-            // Fallback: If no candidate was verified as visible, return the first one if it's at least valid
-            if (result.correctedSelector) {
-                return {
-                    correctedSelector: result.correctedSelector,
-                    reasoning: result.reasoning,
-                    confidence: result.confidence || 0.5,
-                    verified: false,
-                    metadata: {
-                        aiResponseTime,
-                        domSize,
-                        model: aiConfig?.model || 'ollama',
-                        provider: aiConfig?.provider || 'ollama',
-                    },
-                };
             }
 
             return {
                 correctedSelector: null,
-                reasoning: 'No valid candidates found during verification',
+                reasoning: 'All 3 tiers failed to produce a valid, visible selector',
                 confidence: 0,
-                metadata: {
-                    aiResponseTime,
-                    domSize,
-                    model: aiConfig?.model || 'ollama',
-                    provider: aiConfig?.provider || 'ollama',
-                },
             };
         } catch (error) {
-            console.error('[SelectorHealer] Error during healing:', error);
+            console.error('[SelectorHealer] Error during tiered healing:', error);
             return { correctedSelector: null, reasoning: error.message, confidence: 0 };
         }
     }
