@@ -294,6 +294,16 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
                 state,
                 statusMessage: options.message,
                 lastUpdate: new Date().toISOString(),
+                // Persist healing data for HEALED state
+                ...(options.originalValue !== undefined && {
+                  originalValue: options.originalValue,
+                }),
+                ...(options.healedValue !== undefined && {
+                  healedValue: options.healedValue,
+                }),
+                ...(options.selector !== undefined && {
+                  selector: options.selector,
+                }),
               },
               style: getNodeStyle(state, node.style),
             };

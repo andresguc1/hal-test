@@ -60,6 +60,7 @@ import { api } from "./utils/api";
 import { useElementPicker } from "./hooks/useElementPicker";
 import { AnimatePresence } from "framer-motion";
 import GuestModeModal from "./components/modals/GuestModeModal";
+import DatasetRunModal from "./components/modals/DatasetRunModal";
 import { useAuth } from "./context/AuthContext";
 
 import { NODE_STATES } from "./components/hooks/flowStyles";
@@ -215,6 +216,36 @@ function Dashboard() {
     },
     [setSelectedNodeId, reactFlowFitView],
   );
+
+
+  const handleRunDataset = React.useCallback(async (dataset, concurrency = 2) => {
+    if (!currentFlowId) {
+      toast.info(t("common.save_before_dataset", "Save the flow before running dataset."));
+      return;
+    }
+    const toastId = toast.loading(t("common.dataset_processing", "Preparing dataset run..."));
+    try {
+      const result = await api.post("/runs/dataset-batch", {
+        flowId: currentFlowId,
+        projectId: currentProject?.id,
+        dataset: dataset,
+        variablesMapping: {},
+        concurrency: concurrency,
+      });
+      if (result.success) {
+        toast.dismiss(toastId);
+        toast.success(t("common.dataset_started", { defaultValue: `Dataset batch started with ${result.batchId ? "batch: " + result.batchId : "success"}` }));
+        setIsDatasetModalOpen(false);
+      } else {
+        toast.dismiss(toastId);
+        toast.error(result.message || t("common.dataset_error"));
+      }
+    } catch (error) {
+      toast.dismiss(toastId);
+      console.error("[App] Dataset run failed:", error);
+      toast.error(t("common.dataset_error", "Dataset run failed") + ": " + error.message);
+    }
+  }, [currentFlowId, currentProject?.id, toast, t]);
 
   const handleExecuteFlow = useCallback(async () => {
     // --- UNIVERSAL EXECUTION CONTEXT ---
@@ -381,6 +412,7 @@ function Dashboard() {
   const [isHistoryPanelVisible, setIsHistoryPanelVisible] = useState(false);
   const [isVariablePanelVisible, setIsVariablePanelVisible] = useState(false);
   const [isAskAIPanelVisible, setIsAskAIPanelVisible] = useState(false);
+  const [isDatasetModalOpen, setIsDatasetModalOpen] = useState(false);
   const [isExecutionDashboardOpen, setIsExecutionDashboardOpen] =
     useState(false);
   const [proposedNodes, setProposedNodes] = useState(null);
@@ -1938,6 +1970,12 @@ function Dashboard() {
           projectId={currentProject?.id}
         />
 
+        <DatasetRunModal
+          isOpen={isDatasetModalOpen}
+          onClose={() => setIsDatasetModalOpen(false)}
+          onRun={handleRunDataset}
+        />
+
         {/* FLOATING COMMAND CENTER (Footer) - Positioned Absolutely */}
         {/* MANIFIESTO DE REACTIVIDAD: Derived State for Flows */}
         {/* We merge persistent flows (DB) with live component nodes (Canvas) to ensure instant updates */}
@@ -2022,6 +2060,7 @@ function Dashboard() {
           onResetStates={resetExecutionStates}
           hasUnsavedChanges={hasUnsavedChanges}
           onRunBatch={() => setIsExecutionDashboardOpen(true)}
+          onRunDataset={() => setIsDatasetModalOpen(true)}
           apiStatus={apiStatus}
         />
 
@@ -2030,6 +2069,12 @@ function Dashboard() {
           onClose={() => setIsExecutionDashboardOpen(false)}
           currentProject={currentProject}
           onViewReport={(id) => setReportingRunId(id)}
+        />
+
+        <DatasetRunModal
+          isOpen={isDatasetModalOpen}
+          onClose={() => setIsDatasetModalOpen(false)}
+          onRun={handleRunDataset}
         />
 
         <StarterOverlay

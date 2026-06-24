@@ -47,7 +47,7 @@ const Breadcrumbs = ({ viewStack, onExit, currentFlowName }) => {
       {/* Root Link */}
       <button
         type="button"
-        onClick={() => onExit()}
+        onClick={() => onExit(0)}
         className="text-[var(--text-secondary)] hover:text-indigo-400 cursor-pointer transition-colors bg-transparent border-none p-0"
       >
         Main
@@ -63,7 +63,7 @@ const Breadcrumbs = ({ viewStack, onExit, currentFlowName }) => {
           </span>
           <button
             type="button"
-            onClick={() => (index < viewStack.length - 1 ? onExit() : null)} // Simple logic: clicking breadcrumb pops one level (not robust for deep nested yet)
+            onClick={() => onExit(index)}
             aria-current={
               index === viewStack.length - 1 ? "location" : undefined
             }

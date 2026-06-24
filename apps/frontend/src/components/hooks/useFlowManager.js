@@ -117,6 +117,7 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
     enterComponent: sync.enterComponent,
     exitComponent: sync.exitComponent,
     deepNavigate: sync.deepNavigate,
+    isNavigating: sync.isNavigating,
     copyElements: state.copyElements,
     cutElements: state.cutElements,
     pasteElements: state.pasteElements,

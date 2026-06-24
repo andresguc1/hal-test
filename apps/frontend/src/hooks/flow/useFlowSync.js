@@ -28,10 +28,12 @@ export function useFlowSync({
   const [isStarterTemplate, setIsStarterTemplate] = useState(false);
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
   const [viewStack, setViewStack] = useState([]);
+  const [isNavigating, setIsNavigating] = useState(false); // Navigation guard state
   const currentProjectId = currentProject?.id;
   const lastLoadedFlowId = useRef(null);
   const isSavingRef = useRef(false);
   const saveQueueRef = useRef([]);
+  const isNavigatingRef = useRef(isNavigating);
 
   const saveFlow = useCallback(
     async (silent = false) => {
@@ -175,131 +177,178 @@ export function useFlowSync({
     loadFlowData();
   }, [currentFlowId, loadFlowData]);
 
+  // Sync isNavigating state to ref for race condition prevention in callbacks
+  useEffect(() => {
+    isNavigatingRef.current = isNavigating;
+  }, [isNavigating]);
+
   const enterComponent = useCallback(
     async (componentId) => {
-      const componentNode = nodesRef.current.find((n) => n.id === componentId);
-      if (!componentNode) return;
-
-      const isContainer = ["component", "loop", "for_each"].includes(
-        componentNode.type || componentNode.data?.type,
-      );
-      if (!isContainer) return;
-
-      let flowId = componentNode.data?.flowId;
-
-      if (!flowId) {
-        if (!currentProject) {
-          logger.error("No active project to create a subflow");
-          return;
-        }
-        try {
-          const flowName =
-            componentNode.data?.customLabel ||
-            componentNode.data?.label ||
-            (componentNode.type === "loop" ||
-            componentNode.type === "for_each" ||
-            componentNode.data?.type === "loop" ||
-            componentNode.data?.type === "for_each"
-              ? "Loop Sub-flow"
-              : "Sub Flow");
-
-          const flowType =
-            componentNode.type === "loop" ||
-            componentNode.data?.type === "loop" ||
-            componentNode.type === "for_each" ||
-            componentNode.data?.type === "for_each"
-              ? "loop"
-              : "component";
-
-          const response = await projectManager.createFlow(
-            currentProject.id,
-            flowName,
-            { type: flowType },
-          );
-          flowId = response.flow?.id || response.id;
-
-          if (!flowId) {
-            throw new Error("Failed to retrieve new flow ID");
-          }
-
-          const defaultNodes = [];
-          const isContainer = ["component", "loop"].includes(
-            componentNode.type || componentNode.data?.type,
-          );
-          if (isContainer) {
-            defaultNodes.push(
-              {
-                id: `node_${uuidv4()}`,
-                type: "input",
-                position: { x: 100, y: 150 },
-                data: {
-                  type: "input",
-                  label: "Input Parameters",
-                  state: "default",
-                },
-              },
-              {
-                id: `node_${uuidv4()}`,
-                type: "output",
-                position: { x: 600, y: 150 },
-                data: {
-                  type: "output",
-                  label: "Output Return",
-                  state: "default",
-                },
-              },
-            );
-          }
-
-          await projectManager.updateFlow(currentProject.id, flowId, {
-            nodes: defaultNodes,
-            edges: [],
-            viewport: { x: 0, y: 0, zoom: 1 },
-          });
-
-          // Update parent node data
-          componentNode.data = {
-            ...componentNode.data,
-            flowId,
-            configuration: {
-              ...componentNode.data?.configuration,
-              flowId,
-            },
-          };
-
-          // Save the parent flow
-          await saveFlow(true);
-        } catch (err) {
-          logger.error(
-            "Failed to automatically create subflow for container",
-            err,
-          );
-          if (toast) toast.error("Failed to initialize sub-flow");
-          return;
-        }
+      if (isNavigatingRef.current) {
+        console.log(
+          "[useFlowSync] Navigation already in progress, skipping...",
+        );
+        return;
       }
+      setIsNavigating(true);
+      isNavigatingRef.current = true;
+      try {
+        const componentNode = nodesRef.current.find(
+          (n) => n.id === componentId,
+        );
+        if (!componentNode) return;
 
-      await saveFlow(true);
-      const flowName =
-        currentProject?.flows?.find((f) => f.id === currentFlowId)?.name ||
-        "Flow";
+        const isContainer = ["component", "loop", "for_each"].includes(
+          componentNode.type || componentNode.data?.type,
+        );
+        if (!isContainer) return;
 
-      setViewStack((prev) => [
-        ...prev,
-        { id: currentFlowId, label: flowName, nodeId: componentId },
-      ]);
-      switchFlow(flowId);
+        let flowId = componentNode.data?.flowId;
+
+        if (!flowId) {
+          if (!currentProject) {
+            logger.error("No active project to create a subflow");
+            return;
+          }
+          try {
+            const flowName =
+              componentNode.data?.customLabel ||
+              componentNode.data?.label ||
+              (componentNode.type === "loop" ||
+              componentNode.type === "for_each" ||
+              componentNode.data?.type === "loop" ||
+              componentNode.data?.type === "for_each"
+                ? "Loop Sub-flow"
+                : "Sub Flow");
+
+            const flowType =
+              componentNode.type === "loop" ||
+              componentNode.data?.type === "loop" ||
+              componentNode.type === "for_each" ||
+              componentNode.data?.type === "for_each"
+                ? "loop"
+                : "component";
+
+            const response = await projectManager.createFlow(
+              currentProject.id,
+              flowName,
+              { type: flowType },
+            );
+            flowId = response.flow?.id || response.id;
+
+            if (!flowId) {
+              throw new Error("Failed to retrieve new flow ID");
+            }
+
+            const defaultNodes = [];
+            const isContainer = ["component", "loop"].includes(
+              componentNode.type || componentNode.data?.type,
+            );
+            if (isContainer) {
+              defaultNodes.push(
+                {
+                  id: `node_${uuidv4()}`,
+                  type: "input",
+                  position: { x: 100, y: 150 },
+                  data: {
+                    type: "input",
+                    label: "Input Parameters",
+                    state: "default",
+                  },
+                },
+                {
+                  id: `node_${uuidv4()}`,
+                  type: "output",
+                  position: { x: 600, y: 150 },
+                  data: {
+                    type: "output",
+                    label: "Output Return",
+                    state: "default",
+                  },
+                },
+              );
+            }
+
+            await projectManager.updateFlow(currentProject.id, flowId, {
+              nodes: defaultNodes,
+              edges: [],
+              viewport: { x: 0, y: 0, zoom: 1 },
+            });
+
+            // Update parent node data
+            componentNode.data = {
+              ...componentNode.data,
+              flowId,
+              configuration: {
+                ...componentNode.data?.configuration,
+                flowId,
+              },
+            };
+
+            // Save the parent flow
+            await saveFlow(true);
+          } catch (err) {
+            logger.error(
+              "Failed to automatically create subflow for container",
+              err,
+            );
+            if (toast) toast.error("Failed to initialize sub-flow");
+            return;
+          }
+        }
+
+        await saveFlow(true);
+        const flowName =
+          currentProject?.flows?.find((f) => f.id === currentFlowId)?.name ||
+          "Flow";
+
+        setViewStack((prev) => [
+          ...prev,
+          { id: currentFlowId, label: flowName, nodeId: componentId },
+        ]);
+        switchFlow(flowId);
+      } catch (err) {
+        console.error("[useFlowSync] Error during enterComponent:", err);
+      } finally {
+        setIsNavigating(false);
+        isNavigatingRef.current = false;
+      }
     },
     [currentFlowId, currentProject, saveFlow, switchFlow, nodesRef, toast],
   );
 
-  const exitComponent = useCallback(async () => {
-    if (viewStack.length === 0) return;
-    await saveFlow(true);
-    const lastView = viewStack[viewStack.length - 1];
-    setViewStack((prev) => prev.slice(0, -1));
-    switchFlow(lastView.id);
-  }, [viewStack, saveFlow, switchFlow]);
+  const exitComponent = useCallback(
+    async (targetIndex) => {
+      if (isNavigatingRef.current) {
+        console.log(
+          "[useFlowSync] Navigation already in progress, skipping exit...",
+        );
+        return;
+      }
+      setIsNavigating(true);
+      isNavigatingRef.current = true;
+      try {
+        if (viewStack.length === 0) return;
+        await saveFlow(true);
+        // Support indexed exit: if targetIndex provided, truncate stack to that point
+        const newLength =
+          typeof targetIndex === "number"
+            ? Math.max(0, targetIndex + 1)
+            : viewStack.length - 1;
+        const parentView = viewStack[newLength];
+        setViewStack((prev) => prev.slice(0, newLength));
+        if (parentView) {
+          switchFlow(parentView.id);
+        }
+      } catch (err) {
+        console.error("[useFlowSync] Error during exitComponent:", err);
+      } finally {
+        setIsNavigating(false);
+        isNavigatingRef.current = false;
+      }
+    },
+    [viewStack, saveFlow, switchFlow],
+  );
 
   const loadStarterTemplate = useCallback(
     async (projectId) => {
@@ -405,6 +454,7 @@ export function useFlowSync({
     exitComponent,
     enterComponent,
     projectPath,
+    isNavigating,
     deepNavigate: useCallback(
       async (divePath, targetNodeId) => {
         if (divePath && divePath.length > 0) {

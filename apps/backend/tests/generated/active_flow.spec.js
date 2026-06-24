@@ -2,38 +2,72 @@ import { test } from '@playwright/test';
 
 test(`Flujo Generado Hal-Test`, async ({ page }) => {
     console.log(`🚀 Iniciando ejecución del flujo en javascript...`);
-    // [node_id: imported_launch_browser_0_c669f22c]
+    // [node_id: starter_launch]
     await test.step(`Launch Browser`, async () => {
         // Browser managed by runner
     });
 
-    // [node_id: imported_open_url_1_c8db90b3]
-    await test.step(`Open Url`, async () => {
-        await page.goto(`https://katalon-demo-cura.herokuapp.com/`);
+    // [node_id: starter_open]
+    await test.step(`Navigate`, async () => {
+        await page.goto(`https://www.saucedemo.com`);
     });
 
-    // [node_id: imported_click_2_c02af526]
-    await test.step(`Click`, async () => {
-        await page.click(`#btn-make-appointment`);
+    // [node_id: node_596d439d-96bb-46ae-91bb-a8274ce70576]
+    await test.step(`Assert Page Contains Text`, async () => {
+        await expect(page.locator('body')).toContainText(`Swag Labs`, { ignoreCase: true });
     });
 
-    // [node_id: imported_type_text_3_6e8f3fe7]
-    await test.step(`Type Text`, async () => {
-        await page.fill(`#txt-username`, `John Doe`);
+    // [node_id: starter_var_user]
+    await test.step(`Set User Role`, async () => {
+        const user_role = 'problem_user';
     });
 
-    // [node_id: imported_type_text_4_ce1b7e82]
-    await test.step(`Type Text`, async () => {
-        await page.fill(`#txt-password`, `ThisIsNotAPassword`);
+    // [node_id: starter_switch_role]
+    await test.step(`Select Username`, async () => {
+        switch (value) {
+            case 'option1':
+                // Case body
+                break;
+            default:
+                // Default case
+                break;
+        }
     });
 
-    // [node_id: imported_click_5_2ab7c477]
-    await test.step(`Click`, async () => {
-        await page.click(`[katalon-object="Object Repository/Page_CuraAppointment/btn_Login"]`);
+    // [node_id: sub_type_user]
+    await test.step(`Enter Username`, async () => {
+        await page.fill(`#user-name`, `{{user_role}}`);
     });
 
-    // [node_id: imported_close_browser_6_c73a2ad0]
-    await test.step(`Close Browser`, async () => {
+    // [node_id: sub_type_pass]
+    await test.step(`Enter Password`, async () => {
+        await page.fill(`#password`, `secret_sauce`);
+    });
+
+    // [node_id: sub_click]
+    await test.step(`Click Login`, async () => {
+        await page.click(`#login-button`);
+    });
+
+    // [node_id: starter_conditional]
+    await test.step(`Verify User Role`, async () => {
+        if (true) {
+            // Then branch
+        }
+    });
+
+    // [node_id: starter_fail]
+    await test.step(`Unexpected Role`, async () => {
+        throw new Error(`Routed invalid user role branch!`);
+    });
+
+    // [node_id: starter_screenshot]
+    await test.step(`Take Evidence`, async () => {
+        await page.screenshot({ path: 'screenshot_10.png' });
+    });
+
+    // [node_id: starter_close]
+    await test.step(`Complete Tour`, async () => {
         // Browser managed by runner
     });
     console.log(`✅ Flujo completado con éxito.`);
