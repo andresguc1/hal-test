@@ -70,8 +70,9 @@ function computeEdgeStates(steps, upToIndex, allEdges) {
   if (!steps || steps.length === 0 || upToIndex < 0) return map;
 
   for (let i = 1; i <= upToIndex; i++) {
-    const fromId = steps[i - 1].node_id;
-    const toId = steps[i].node_id;
+    // Normalize step fields: support both node_id and nodeId
+    const fromId = steps[i - 1].node_id || steps[i - 1].nodeId;
+    const toId = steps[i].node_id || steps[i].nodeId;
     const edge = allEdges.find((e) => e.source === fromId && e.target === toId);
     if (edge) {
       // The edge into the current (active) node is "running"; all prior are "success"
@@ -124,7 +125,8 @@ function ReportDashboardContent({ runId, onClose }) {
           if (runData.flow_snapshot) {
             const snapshot = JSON.parse(runData.flow_snapshot);
 
-            // Normalize nodes/edges to use React Flow IDs (nodeId/edgeId) if they came from database representation
+            // Build nodeId mapping: from database nodeId to React Flow id
+            // Backend stores nodes with `nodeId` field, React Flow expects `id`
             const normalizedNodes = (snapshot.nodes || []).map((n) => ({
               ...n,
               id: n.nodeId || n.id,
@@ -132,16 +134,21 @@ function ReportDashboardContent({ runId, onClose }) {
             const normalizedEdges = (snapshot.edges || []).map((e) => ({
               ...e,
               id: e.edgeId || e.id,
+              // Ensure source/target match node id format
+              source: e.source,
+              target: e.target,
             }));
 
             // Map status to nodes based on StepResults
             const steps = runData.steps || [];
-            const processedNodes = normalizedNodes.map((n) => {
-              const step = steps.find((s) => s.node_id === n.id);
+            const processedNodes = (normalizedNodes || []).map((n) => {
+              // Normalize step: support both node_id and nodeId field names
+              const step = steps.find((s) => (s.node_id || s.nodeId) === n.id);
               return {
                 ...n,
                 draggable: false, // Read only
                 selectable: true,
+                type: n.type || "default",
                 data: {
                   ...n.data,
                   // Use `state` (not `status`) — AbyssNode reads data.state for all visuals
@@ -149,14 +156,15 @@ function ReportDashboardContent({ runId, onClose }) {
                     ? stepStatusToNodeState(step.status)
                     : NODE_STATES.DEFAULT,
                   error: step?.error,
-                  screenshot: step?.screenshot_path,
+                  screenshot: step?.screenshot_path || step?.screenshot,
                 },
               };
             });
 
             // Initialize edges with idle executionState so CustomEdge renders in default mode
-            const processedEdges = normalizedEdges.map((e) => ({
+            const processedEdges = (normalizedEdges || []).map((e) => ({
               ...e,
+              type: e.type || "custom",
               data: { ...(e.data || {}), executionState: "idle" },
             }));
 
@@ -215,12 +223,18 @@ function ReportDashboardContent({ runId, onClose }) {
   useEffect(() => {
     if (!run || !run.steps) return;
 
-    const activeNodeId = currentStep?.node_id ?? null;
+    // Normalize all steps to use node_id consistently
+    const normalizedSteps = (run.steps || []).map((s) => ({
+      ...s,
+      node_id: s.node_id || s.nodeId,
+    }));
+
+    const activeNodeId = normalizedSteps[currentStepIndex]?.node_id ?? null;
 
     // 1. Update node visual states
     setNodes((prev) =>
       prev.map((node) => {
-        const stepForThisNode = run.steps
+        const stepForThisNode = normalizedSteps
           .slice(0, currentStepIndex + 1)
           .findLast((s) => s.node_id === node.id);
 
@@ -245,7 +259,11 @@ function ReportDashboardContent({ runId, onClose }) {
 
     // 2. Reconstruct edge traversal path and update edge visual states
     setEdges((prev) => {
-      const edgeStateMap = computeEdgeStates(run.steps, currentStepIndex, prev);
+      const edgeStateMap = computeEdgeStates(
+        normalizedSteps,
+        currentStepIndex,
+        prev,
+      );
       return prev.map((edge) => ({
         ...edge,
         data: {
@@ -254,7 +272,7 @@ function ReportDashboardContent({ runId, onClose }) {
         },
       }));
     });
-  }, [currentStepIndex, run, setNodes, setEdges, currentStep?.node_id]);
+  }, [currentStepIndex, run, setNodes, setEdges]);
 
   // Playback Logic (Slideshow mode for screenshot tab)
   useEffect(() => {
@@ -375,7 +393,9 @@ function ReportDashboardContent({ runId, onClose }) {
             elementsSelectable={true}
             onNodeClick={(_, node) => {
               setSelectedNodeId(node.id);
-              const idx = run?.steps?.findIndex((s) => s.node_id === node.id);
+              const idx = run?.steps?.findIndex(
+                (s) => (s.node_id || s.nodeId) === node.id,
+              );
               if (idx !== undefined && idx !== -1) {
                 setCurrentStepIndex(idx);
               }

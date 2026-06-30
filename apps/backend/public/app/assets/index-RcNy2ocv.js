@@ -103766,13 +103766,11 @@ var WRe = class extends Rh {
             const n = this.options;
             ((this.options = this.#e.defaultMutationOptions(t)),
                 U_(this.options, n) ||
-                    this.#e
-                        .getMutationCache()
-                        .notify({
-                            type: 'observerOptionsUpdated',
-                            mutation: this.#n,
-                            observer: this,
-                        }),
+                    this.#e.getMutationCache().notify({
+                        type: 'observerOptionsUpdated',
+                        mutation: this.#n,
+                        observer: this,
+                    }),
                 n?.mutationKey &&
                 this.options.mutationKey &&
                 Vd(n.mutationKey) !== Vd(this.options.mutationKey)

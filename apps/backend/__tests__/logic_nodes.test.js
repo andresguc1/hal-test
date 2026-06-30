@@ -120,6 +120,38 @@ describe('Logic Engine Nodes Validation', () => {
             // Verify variable manager still returns the dataset user, not the default
             expect(variableManager.get('user_role', runId)).toBe('dataset_user');
         });
+
+        it('debe permitir sobrescribir si isDynamicValue es true aunque venga de dataset', async () => {
+            const runId = 'run-dataset-dynamic-test';
+            variableManager.initRun(runId, { counter: 10 });
+
+            const req = {
+                body: {
+                    operation: 'set',
+                    name: 'counter',
+                    value: 11, // Simulated resolved value of {{counter}} + 1
+                    scope: 'flow',
+                    runId,
+                    isDynamicValue: true,
+                },
+                t: (k) => k,
+            };
+            let result = null;
+            const res = {
+                status: () => res,
+                json: (d) => {
+                    result = d;
+                    return res;
+                },
+            };
+
+            await actions.variableAction(req, res);
+
+            expect(result.success).toBe(true);
+            expect(result.data.skipped).toBeUndefined();
+            // Verify variable manager now has the updated value
+            expect(variableManager.get('counter', runId)).toBe(11);
+        });
     });
 
     // 2. Conditional Node

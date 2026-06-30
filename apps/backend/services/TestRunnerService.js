@@ -175,10 +175,22 @@ class TestRunnerService {
 
         let flowSnapshot = null;
         if (flow) {
-            const nodes = flow.nodes.map((n) => n.toJSON());
-            const nodeIds = new Set(nodes.map((n) => n.nodeId));
+            const nodes = flow.nodes.map((n) => {
+                const nodeObj = n.toJSON();
+                return {
+                    ...nodeObj,
+                    id: nodeObj.nodeId, // Map to React Flow id format
+                };
+            });
+            const nodeIds = new Set(nodes.map((n) => n.id));
             const edges = flow.edges
-                .map((e) => e.toJSON())
+                .map((e) => {
+                    const edgeObj = e.toJSON();
+                    return {
+                        ...edgeObj,
+                        id: edgeObj.edgeId, // Map to React Flow id format
+                    };
+                })
                 .filter((e) => nodeIds.has(e.source) && nodeIds.has(e.target));
             flowSnapshot = JSON.stringify({ nodes, edges });
         }
@@ -190,7 +202,11 @@ class TestRunnerService {
 
                 // 1. Map row fields to variables
                 const mappedVariables = {};
-                if (variablesMapping && typeof variablesMapping === 'object') {
+                if (
+                    variablesMapping &&
+                    typeof variablesMapping === 'object' &&
+                    Object.keys(variablesMapping).length > 0
+                ) {
                     for (const [varName, columnName] of Object.entries(variablesMapping)) {
                         if (columnName && row[columnName] !== undefined) {
                             mappedVariables[varName] = row[columnName];

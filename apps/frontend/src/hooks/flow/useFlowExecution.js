@@ -880,6 +880,15 @@ export function useFlowExecution({
                 },
               };
 
+              // 🚀 FIX: Special flag for variable nodes to allow overwriting dataset values if the value is dynamic/expression
+              // This prevents "Set Variable" nodes from being ignored if they are incrementing or calculating values.
+              if (nodeType === "variable" && node.data?.configuration?.value) {
+                const rawValue = String(node.data.configuration.value);
+                if (rawValue.includes("{{") || rawValue.includes("${")) {
+                  action.payload.isDynamicValue = true;
+                }
+              }
+
               updateEdgeStatusBySource(node.id, NODE_STATES.EXECUTING);
               result = await executeStep(action);
 

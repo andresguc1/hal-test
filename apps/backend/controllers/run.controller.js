@@ -152,7 +152,18 @@ export const getRunDetailsAction = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Run not found' });
         }
 
-        return res.status(200).json({ success: true, data: run });
+        // Normalize steps to use both node_id and nodeId for frontend compatibility
+        const runData = run.toJSON();
+        const normalizedSteps = (runData.steps || []).map((s) => ({
+            ...s,
+            nodeId: s.nodeId || s.node_id, // Ensure both field names exist
+        }));
+        const normalizedRun = {
+            ...runData,
+            steps: normalizedSteps,
+        };
+
+        return res.status(200).json({ success: true, data: normalizedRun });
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
     }

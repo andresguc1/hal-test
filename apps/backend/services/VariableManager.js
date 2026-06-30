@@ -93,12 +93,42 @@ class VariableManager {
         }
         this.initializedVars[runId] = new Set(Object.keys(initialVariables));
 
+        // Register aliases for each initial variable to make lookups case-insensitive
+        for (const key of Object.keys(initialVariables)) {
+            const normalized = this._normalizeName(key);
+            if (normalized && normalized !== key) {
+                this.registerAlias(normalized, key, runId);
+            }
+            const lower = key.toLowerCase();
+            if (lower !== key) {
+                this.registerAlias(lower, key, runId);
+            }
+        }
+
         this.lastRunId = runId;
     }
 
     isInitializedFromDataset(name, runId) {
         if (!runId || !this.initializedVars || !this.initializedVars[runId]) return false;
-        return this.initializedVars[runId].has(name);
+
+        // 1. Direct match
+        if (this.initializedVars[runId].has(name)) return true;
+
+        // 2. Resolve alias and check that
+        const canonical = this._resolveAlias(name, runId);
+        if (this.initializedVars[runId].has(canonical)) return true;
+
+        // 3. Case-insensitive and normalized match
+        const normName = this._normalizeName(name);
+        const normCanonical = this._normalizeName(canonical);
+        for (const varName of this.initializedVars[runId]) {
+            const normVarName = this._normalizeName(varName);
+            if (normVarName === normName || normVarName === normCanonical) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     getActiveRunId() {

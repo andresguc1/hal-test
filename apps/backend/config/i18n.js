@@ -15,6 +15,8 @@ const esTranslations = JSON.parse(fs.readFileSync(path.join(localesDir, 'es.json
 i18next.use(middleware.LanguageDetector).init({
     fallbackLng: 'en',
     preload: ['en', 'es'],
+    supportedLngs: ['en', 'es'],
+    nonExplicitSupportedLngs: false,
     resources: {
         en: { translation: enTranslations },
         es: { translation: esTranslations },

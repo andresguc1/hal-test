@@ -563,4 +563,19 @@ describe('VariableManager - Dataset Variable Tracking', () => {
         variableManager.clear('run-dataset-1');
         expect(variableManager.isInitializedFromDataset('user_role', 'run-dataset-1')).toBe(false);
     });
+
+    it('should track and look up dataset variables case-insensitively and normalized', () => {
+        variableManager.initRun('run-dataset-2', { Email: 'test@example.com', 'User ID': '123' });
+
+        // 1. Verify case-insensitivity on tracking check
+        expect(variableManager.isInitializedFromDataset('Email', 'run-dataset-2')).toBe(true);
+        expect(variableManager.isInitializedFromDataset('email', 'run-dataset-2')).toBe(true);
+        expect(variableManager.isInitializedFromDataset('EMAIL', 'run-dataset-2')).toBe(true);
+        expect(variableManager.isInitializedFromDataset('User ID', 'run-dataset-2')).toBe(true);
+        expect(variableManager.isInitializedFromDataset('userid', 'run-dataset-2')).toBe(true);
+
+        // 2. Verify case-insensitivity on variable lookup
+        expect(variableManager.get('email', 'run-dataset-2')).toBe('test@example.com');
+        expect(variableManager.get('userid', 'run-dataset-2')).toBe('123');
+    });
 });

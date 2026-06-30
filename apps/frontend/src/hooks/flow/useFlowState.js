@@ -1123,10 +1123,12 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
             const normalizedNodes = (snapshot.nodes || []).map((n) => ({
               ...n,
               id: n.nodeId || n.id,
+              type: n.type || "default",
             }));
             const normalizedEdges = (snapshot.edges || []).map((e) => ({
               ...e,
               id: e.edgeId || e.id,
+              type: e.type || "custom",
             }));
             setNodes(normalizedNodes);
             setEdges(normalizedEdges);

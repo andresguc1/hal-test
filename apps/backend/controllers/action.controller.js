@@ -4848,9 +4848,20 @@ export const variableAction = async (req, res) => {
         switch (operation) {
             case 'set':
                 // Check if this variable is driven/pre-seeded by dataset or overrides
-                if (runId && variableManager.isInitializedFromDataset(name, runId)) {
+                // 🚀 If isDynamicValue is true, it means it's an expression like {{count}} + 1, so we ALWAYS allow it.
+                if (
+                    !req.body.isDynamicValue &&
+                    runId &&
+                    variableManager.isInitializedFromDataset(name, runId)
+                ) {
                     const datasetValue = variableManager.get(name, runId);
-                    result = { name, value: datasetValue, scope, operation: 'set', skipped: true };
+                    result = {
+                        name,
+                        value: datasetValue,
+                        scope,
+                        operation: 'set',
+                        skipped: true,
+                    };
                     message = `Variable "${name}" is driven by dataset (value: "${datasetValue}"). Skipped overwriting with flow default "${value}".`;
                     console.log(`[VariableManager] ${message}`);
                     break;

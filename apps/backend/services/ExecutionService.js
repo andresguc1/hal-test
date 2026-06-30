@@ -41,16 +41,28 @@ export class ExecutionService {
             throw new Error(`Flow ${flowId} not found in project ${projectId}`);
         }
 
-        const nodes = flow.nodes.map((n) => n.toJSON());
-        const nodeIds = new Set(nodes.map((n) => n.nodeId));
+        const nodes = flow.nodes.map((n) => {
+            const nodeObj = n.toJSON();
+            return {
+                ...nodeObj,
+                id: nodeObj.nodeId, // Map to React Flow id format
+            };
+        });
+        const nodeIds = new Set(nodes.map((n) => n.id));
         const edges = flow.edges
-            .map((e) => e.toJSON())
+            .map((e) => {
+                const edgeObj = e.toJSON();
+                return {
+                    ...edgeObj,
+                    id: edgeObj.edgeId, // Map to React Flow id format
+                };
+            })
             .filter((e) => nodeIds.has(e.source) && nodeIds.has(e.target));
 
         console.log(`[ExecutionService] 📊 Loaded ${nodes.length} nodes for execution:`);
         nodes.forEach((n) => {
             console.log(
-                `   - ID: ${n.nodeId}, Type: ${n.type}, Parent: ${n.parentId || 'NULL'}, Label: ${n.data?.label || n.data?.customLabel || 'N/A'}`,
+                `   - ID: ${n.id}, Type: ${n.type}, Parent: ${n.parentId || 'NULL'}, Label: ${n.data?.label || n.data?.customLabel || 'N/A'}`,
             );
         });
 
@@ -62,7 +74,7 @@ export class ExecutionService {
                 flowName: flow.name,
                 trigger: 'api',
                 batchId: options.batchId || null,
-                flowSnapshot: JSON.stringify({ nodes, edges }),
+                flowSnapshot: JSON.stringify({ nodes, edges }), // Now in React Flow format
             });
         } else {
             // Update snapshot if we already have a record
