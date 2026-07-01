@@ -85,6 +85,9 @@ const checkSchemaHealth = async () => {
         await sequelize.query('SELECT "nodeId" FROM "ExperienceVaults" LIMIT 1', {
             logging: false,
         });
+        await sequelize.query('SELECT "created_at" FROM "step_results" LIMIT 1', {
+            logging: false,
+        });
         console.log(' [DB_INIT] ✅ Schema health check passed.');
     } catch (error) {
         const isMissingColumn =

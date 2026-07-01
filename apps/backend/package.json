@@ -14,7 +14,6 @@
     "format": "prettier --write \"**/*.js\" \"!node_modules/**\"",
     "clean": "rm -rf node_modules",
     "prepare": "husky",
-    "postinstall": "npx playwright install chromium",
     "db:init": "node database/init.js"
   },
   "keywords": [],

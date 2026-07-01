@@ -15,6 +15,7 @@ describe('Execution Cancellation & AI Interruption', () => {
         for (const runId of activeRunManager.runs.keys()) {
             activeRunManager.cleanup(runId);
         }
+        process.env.OPENAI_API_KEY = 'test-key';
     });
 
     describe('ActiveRunManager', () => {
