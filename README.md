@@ -138,12 +138,6 @@ pnpm run stop
 ```
 The CLI launcher also features **smart port detection**—it will automatically detect if the backend is already running and connect to it instead of failing.
 
-### Publish a New CLI Release
-*(Maintainers only)*. This command bumps the patch version, runs the standalone build for the CLI, and publishes it to NPM:
-```bash
-pnpm run release
-```
-
 ---
 
 ## 🤝 Community & Support
