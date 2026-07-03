@@ -22,6 +22,7 @@ class MetricsCollector {
     constructor(flowId, options = {}) {
         this.flowId = flowId;
         this.streamIntervalMs = options.streamIntervalMs || 2000;
+        this.runConfig = options.runConfig || null;
 
         // Initialize HDR Histogram (1ms to 1hr range, 2 digits of precision)
         this.histogram = hdr.build({
@@ -144,6 +145,7 @@ class MetricsCollector {
                 throughput: 0,
                 elapsed,
                 timestamp: Date.now(),
+                runConfig: this.runConfig,
             };
         }
 
@@ -164,6 +166,7 @@ class MetricsCollector {
             throughput: parseFloat((total / (elapsed / 1000)).toFixed(2)),
             elapsed,
             timestamp: Date.now(),
+            runConfig: this.runConfig,
         };
     }
 

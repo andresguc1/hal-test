@@ -2161,7 +2161,7 @@ function Dashboard() {
                 >
                   <X size={14} />
                 </button>
-                <PerformancePanel flowId={currentFlowId} />
+                <PerformancePanel flowId={currentFlowId} socket={socket} />
               </div>
             </motion.div>
           )}

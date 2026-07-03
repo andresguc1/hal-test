@@ -223,6 +223,7 @@ app.use((req, res) => {
 app.use(errorHandler);
 
 import { abortAllPools } from './services/WorkerPool.js';
+import { getIO } from './socket.js';
 
 // --- 7. SERVER START ---
 let serverInstance;
@@ -258,12 +259,28 @@ const startServer = async () => {
 };
 
 // --- GRACEFUL SHUTDOWN ---
+let shuttingDown = false;
 const gracefulShutdown = () => {
+    if (shuttingDown) return;
+    shuttingDown = true;
     console.log('\n[INIT] 🛑 Received termination signal. Starting graceful shutdown...');
-    // 1. Terminate any running Worker Pools (CPU Leak fix)
-    abortAllPools();
 
-    // 2. Close the Express Server
+    // 1. Terminate any running Worker Pools (CPU Leak fix)
+    try {
+        abortAllPools();
+    } catch (e) {
+        console.error('[INIT] Error aborting pools:', e);
+    }
+
+    // 2. Disconnect all sockets so Express can close
+    try {
+        const io = getIO();
+        if (io) io.close();
+    } catch (e) {
+        // socket not initialized
+    }
+
+    // 3. Close the Express Server
     if (serverInstance) {
         serverInstance.close(() => {
             console.log('[INIT] ❌ Express server closed.');
@@ -273,15 +290,16 @@ const gracefulShutdown = () => {
         process.exit(0);
     }
 
-    // Force exit after 5 seconds if not closed gracefully
+    // Force exit after 3 seconds if not closed gracefully
     setTimeout(() => {
         console.error('[INIT] ⚠️ Forced shutdown due to timeout');
         process.exit(1);
-    }, 5000);
+    }, 3000);
 };
 
 process.on('SIGINT', gracefulShutdown);
 process.on('SIGTERM', gracefulShutdown);
+process.on('SIGUSR2', gracefulShutdown); // Nodemon restart signal
 
 // Manual reload for schema update
 startServer();

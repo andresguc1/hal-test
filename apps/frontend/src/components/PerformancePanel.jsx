@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { io } from 'socket.io-client';
 import { Loader2 } from 'lucide-react';
 
 /**
@@ -7,25 +6,37 @@ import { Loader2 } from 'lucide-react';
  * 
  * Subscribes to backend socket events for real-time load testing metrics.
  */
-const PerformancePanel = ({ flowId }) => {
+const PerformancePanel = ({ flowId, socket }) => {
     const [runConfig, setRunConfig] = useState(null);
     const [metrics, setMetrics] = useState(null);
     const [vuStatus, setVuStatus] = useState(null);
     const [resourceWarning, setResourceWarning] = useState(null);
-    const [isConnected, setIsConnected] = useState(false);
+    const [isConnected, setIsConnected] = useState(socket ? socket.connected : false);
     const [status, setStatus] = useState('connecting'); // connecting, preparing, running, completed
 
     useEffect(() => {
-        const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:2001');
+        if (!socket) {
+            console.warn('[PerformancePanel] No socket provided!');
+            return;
+        }
 
-        socket.on('connect', () => {
+        // If it's already connected, set waiting state
+        if (socket.connected) {
             setIsConnected(true);
             setStatus('waiting');
-        });
+        }
 
-        socket.on('disconnect', () => {
+        const handleConnect = () => {
+            setIsConnected(true);
+            setStatus('waiting');
+        };
+
+        const handleDisconnect = () => {
             setIsConnected(false);
-        });
+        };
+
+        socket.on('connect', handleConnect);
+        socket.on('disconnect', handleDisconnect);
 
         socket.on('perf-run-started', (config) => {
             if (config.flowId === flowId) {
@@ -37,6 +48,12 @@ const PerformancePanel = ({ flowId }) => {
         socket.on('perf-metrics-update', (data) => {
             if (data.flowId === flowId) {
                 setMetrics(data);
+                
+                // Fallback: If we missed the 'perf-run-started' event, extract config from the metrics stream
+                if (data.runConfig) {
+                    setRunConfig(prev => prev || data.runConfig);
+                }
+
                 if (status !== 'completed') {
                     setStatus('running');
                 }
@@ -59,16 +76,15 @@ const PerformancePanel = ({ flowId }) => {
         });
 
         return () => {
-            socket.off('connect');
-            socket.off('disconnect');
+            socket.off('connect', handleConnect);
+            socket.off('disconnect', handleDisconnect);
             socket.off('perf-run-started');
             socket.off('perf-metrics-update');
             socket.off('perf-vu-status');
             socket.off('perf-resource-warning');
             socket.off('perf-run-finished');
-            socket.disconnect();
         };
-    }, [flowId]);
+    }, [flowId, socket]);
 
     // Render loading or preparing state
     if (status === 'connecting' || status === 'waiting' || status === 'preparing' || (!metrics && status === 'running')) {

@@ -102,7 +102,14 @@ class PerformanceRunner extends Runner {
         }
 
         // 3. Initialize metrics collector
-        const metrics = new MetricsCollector(flowId);
+        const metrics = new MetricsCollector(flowId, {
+            runConfig: {
+                flowId,
+                totalVUs: effectiveVUs,
+                durationSec: duration,
+                flowName: 'Load Test', // Ideally fetched from DB
+            },
+        });
 
         // Start streaming if socket is available
         try {
