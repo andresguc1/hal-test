@@ -179,3 +179,49 @@ export const emitFineTuningProgress = (data) => {
         io.emit('fine_tuning_progress', { ...data, timestamp: Date.now() });
     }
 };
+
+// ─── Performance Testing emitters ────────────────────────────────────────────
+
+/**
+ * Emits a live performance metrics snapshot to all connected clients.
+ * Throttled to every 2 seconds by MetricsCollector.
+ * @param {Object} metricsSnapshot - Output from MetricsCollector.snapshot()
+ */
+export const emitPerfMetricsUpdate = (metricsSnapshot) => {
+    if (io) {
+        io.emit('perf-metrics-update', { ...metricsSnapshot, timestamp: Date.now() });
+    }
+};
+
+/**
+ * Emits VU status updates (active count, completed count).
+ * @param {{ activeVUs: number, completedVUs: number, totalVUs: number }} data
+ */
+export const emitPerfVUStatus = (data) => {
+    if (io) {
+        io.emit('perf-vu-status', { ...data, timestamp: Date.now() });
+    }
+};
+
+/**
+ * Emits the final performance run summary.
+ * @param {Object} summary - Output from MetricsCollector.summarize()
+ */
+export const emitPerfRunFinished = (summary) => {
+    if (io) {
+        console.log(
+            `📡 [Socket.io] Emitting perf-run-finished: ${summary.data?.totalRequests || 0} requests`,
+        );
+        io.emit('perf-run-finished', { ...summary, timestamp: Date.now() });
+    }
+};
+
+/**
+ * Emits resource warnings when memory pressure is detected during performance runs.
+ * @param {{ freeMemoryMB: number, usedPercent: string, health: string }} data
+ */
+export const emitPerfResourceWarning = (data) => {
+    if (io) {
+        io.emit('perf-resource-warning', { ...data, timestamp: Date.now() });
+    }
+};

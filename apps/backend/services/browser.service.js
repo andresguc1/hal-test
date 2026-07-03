@@ -12,12 +12,13 @@ if (!fs.existsSync(BROWSER_TMP_DIR)) {
 }
 process.env.TMPDIR = BROWSER_TMP_DIR;
 
-const MAX_BROWSERS = 5;
+const MAX_BROWSERS = parseInt(process.env.HAL_MAX_BROWSERS || '5', 10);
 
 class BrowserManager {
     constructor() {
         this.browsers = new Map();
         this.lastAccessed = new Map();
+        this._acquireQueue = []; // Pending browser slot requests (for PerformanceRunner)
 
         // --- Idle Garbage Collector ---
         // Sweeps frequently to close sessions idle for > 2 minutes
@@ -31,6 +32,47 @@ class BrowserManager {
                 }
             }
         }, 30 * 1000); // 30 seconds sweep (faster)
+    }
+
+    /**
+     * Acquires a browser slot, waiting if the pool is full.
+     * Used by PerformanceRunner for controlled concurrency.
+     *
+     * @param {number} [timeoutMs=30000] - Maximum wait time for a slot
+     * @returns {Promise<boolean>} Resolves true when a slot is available
+     */
+    async acquireSlot(timeoutMs = 30000) {
+        if (this.browsers.size < MAX_BROWSERS) {
+            return true;
+        }
+
+        return new Promise((resolve, reject) => {
+            const timer = setTimeout(() => {
+                // Remove from queue on timeout
+                const idx = this._acquireQueue.indexOf(releaseSlot);
+                if (idx !== -1) this._acquireQueue.splice(idx, 1);
+                reject(new Error(`Browser pool exhausted — timeout after ${timeoutMs}ms`));
+            }, timeoutMs);
+
+            const releaseSlot = () => {
+                clearTimeout(timer);
+                resolve(true);
+            };
+
+            this._acquireQueue.push(releaseSlot);
+        });
+    }
+
+    /**
+     * Returns the current pool utilization info.
+     * @returns {{ active: number, max: number, queued: number }}
+     */
+    getPoolStatus() {
+        return {
+            active: this.browsers.size,
+            max: MAX_BROWSERS,
+            queued: this._acquireQueue.length,
+        };
     }
 
     /**
@@ -264,6 +306,12 @@ class BrowserManager {
         }
         this.browsers.delete(id);
         this.lastAccessed.delete(id);
+
+        // Release slot to next waiting worker (performance runner semaphore)
+        if (this._acquireQueue.length > 0) {
+            const next = this._acquireQueue.shift();
+            next();
+        }
     }
 
     evictOldest() {
@@ -297,19 +345,15 @@ class BrowserManager {
         // Cleanup only internal app instances
         console.log('[BrowserService] 🧹 Internal session cleanup complete.');
 
-        // 🚀 HARD CLEANUP: Wipe any orphaned playwright-related processes
-        // Only if we are on Linux/Mac
-        if (process.platform === 'linux' || process.platform === 'darwin') {
-            try {
-                const { exec } = await import('child_process');
-                // Kill all chromium processes launched by playwright that might have been orphaned
-                // We use -f to match the full command line
-                exec('pkill -f "chrome|chromium|playwright"');
-                console.log('[BrowserService] 🚀 OS-level pkill executed for orphaned processes.');
-            } catch (e) {
-                console.warn('[BrowserService] Failed to run OS-level pkill:', e.message);
-            }
-        }
+        // ⚠️ SAFETY: We intentionally do NOT run a global `pkill -f chrome` here.
+        // That approach kills ALL chrome/chromium processes on the system — including:
+        //   - Other VU browsers during performance tests
+        //   - The user's personal Chrome browser
+        //   - Other Playwright instances from CI runners
+        //
+        // Instead, Playwright's browser.close() (called in this.delete()) handles
+        // graceful shutdown of the process tree it owns. If orphans persist after
+        // close(), they will be reaped by the OS or by the idle GC sweep.
     }
 
     keys() {

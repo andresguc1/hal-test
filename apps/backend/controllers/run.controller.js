@@ -4,6 +4,8 @@ import { Run, StepResult, Flow } from '../database/init.js';
 import { reportExporter } from '../services/exporter/ReportExporter.js';
 import { testRunnerService } from '../services/TestRunnerService.js';
 import { activeRunManager } from '../services/ActiveRunManager.js';
+import { executionManager } from '../services/ExecutionManager.js';
+import { ThrottlePolicy } from '../services/ThrottlePolicy.js';
 
 export const startBatchRunAction = async (req, res) => {
     try {
@@ -379,6 +381,99 @@ export const startDatasetBatchRunAction = async (req, res) => {
         });
     } catch (error) {
         console.error('[RunController] startDatasetBatchRunAction Error:', error);
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+/**
+ * Starts a performance (load/stress) test run.
+ * Uses the PerformanceRunner to execute the flow with multiple VUs concurrently.
+ */
+export const startPerformanceRunAction = async (req, res) => {
+    try {
+        const { flowId, projectId, performanceConfig = {} } = req.body;
+
+        if (!flowId || !projectId) {
+            return res
+                .status(400)
+                .json({ success: false, message: 'flowId and projectId are required.' });
+        }
+
+        // Pre-flight resource check
+        const estimate = ThrottlePolicy.estimate(
+            performanceConfig.virtualUsers || 1,
+            null,
+            performanceConfig.headless !== false,
+        );
+
+        // Block if resources are insufficient (unless aggressive mode)
+        if (estimate.exceeds && performanceConfig.throttleStrategy !== 'aggressive') {
+            return res.status(422).json({
+                success: false,
+                error: 'RESOURCE_LIMIT',
+                message: `Estimated ${estimate.ramGB}GB RAM needed but only ${estimate.freeGB}GB available.`,
+                suggestion: {
+                    safeVUs: estimate.safeVUs,
+                    message: `Reduce VUs to ${estimate.safeVUs} or enable headless mode.`,
+                },
+                estimate,
+            });
+        }
+
+        // Fetch flow for the runner
+        const flow = await Flow.findByPk(flowId);
+        if (!flow) {
+            return res.status(404).json({ success: false, message: 'Flow not found.' });
+        }
+
+        // Fire-and-forget: performance runs are long-lived
+        const perfRunPromise = executionManager.execute(
+            'performance',
+            { ...flow.toJSON(), projectId },
+            { performanceConfig },
+        );
+
+        perfRunPromise
+            .then((result) => {
+                console.log(
+                    `[RunController] Performance run completed for flow ${flowId}: ` +
+                        `${result.data?.totalRequests || 0} requests`,
+                );
+            })
+            .catch((err) => {
+                console.error(`[RunController] Performance run failed: ${err.message}`);
+            });
+
+        return res.status(200).json({
+            success: true,
+            message: `Performance test initiated: ${performanceConfig.virtualUsers || 1} VUs × ${performanceConfig.duration || 30}s`,
+            estimate,
+        });
+    } catch (error) {
+        console.error('[RunController] startPerformanceRunAction Error:', error);
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+/**
+ * Returns a resource estimate for a proposed performance run configuration.
+ * Used by the frontend to show RAM/VU warnings before starting.
+ */
+export const estimatePerformanceAction = async (req, res) => {
+    try {
+        const { virtualUsers = 1, headless = true } = req.body;
+
+        const estimate = ThrottlePolicy.estimate(virtualUsers, null, headless);
+        const systemSnapshot = ThrottlePolicy.snapshot();
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                estimate,
+                system: systemSnapshot,
+            },
+        });
+    } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
     }
 };

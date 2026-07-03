@@ -28,6 +28,13 @@ import { conditionEvaluator } from './ConditionEvaluator.js';
 const GLOBALS_FILE = path.join(STORAGE_DIR, 'global_variables.json');
 
 class VariableManager {
+    /**
+     * Maximum number of concurrent run scopes allowed.
+     * Prevents memory overflow during performance/load testing where
+     * each VU × iteration creates an isolated scope.
+     */
+    static MAX_CONCURRENT_SCOPES = parseInt(process.env.HAL_MAX_SCOPES || '200', 10);
+
     constructor() {
         this.scopes = {
             global: {},
@@ -83,8 +90,28 @@ class VariableManager {
 
     initRun(runId, initialVariables = {}) {
         if (!runId) return;
-        if (!this.scopes.runs[runId]) this.scopes.runs[runId] = {};
-        this.scopes.runs[runId] = { ...this.scopes.runs[runId], ...initialVariables };
+
+        // Scope budget: prevent memory overflow under load testing
+        if (!this.scopes.runs[runId]) {
+            const activeScopes = Object.keys(this.scopes.runs).length;
+            if (activeScopes >= VariableManager.MAX_CONCURRENT_SCOPES) {
+                this._evictStaleScopes();
+                const afterEviction = Object.keys(this.scopes.runs).length;
+                if (afterEviction >= VariableManager.MAX_CONCURRENT_SCOPES) {
+                    console.error(
+                        `[VariableManager] ⚠️ Scope limit reached (${afterEviction}/${VariableManager.MAX_CONCURRENT_SCOPES})`,
+                    );
+                    throw new Error(
+                        `[VariableManager] Scope limit reached (${afterEviction}). ` +
+                            `Reduce concurrency or set HAL_MAX_SCOPES env variable.`,
+                    );
+                }
+            }
+            this.scopes.runs[runId] = {};
+        }
+
+        // PERF: Use Object.assign instead of spread for large variable sets
+        Object.assign(this.scopes.runs[runId], initialVariables);
         if (!this.aliases[runId]) this.aliases[runId] = {};
 
         // Track variables initialized for this run context (e.g. from dataset or overrides)
@@ -153,6 +180,39 @@ class VariableManager {
         this.aliases = {};
         this.initializedVars = {};
         this.lastRunId = null;
+    }
+
+    /**
+     * Evicts the oldest 30% of run scopes to free memory.
+     * Called automatically when the scope budget is exceeded.
+     * @private
+     */
+    _evictStaleScopes() {
+        const scopeKeys = Object.keys(this.scopes.runs);
+        const evictCount = Math.max(1, Math.floor(scopeKeys.length * 0.3));
+        const toEvict = scopeKeys.slice(0, evictCount);
+
+        for (const key of toEvict) {
+            delete this.scopes.runs[key];
+            delete this.aliases[key];
+            if (this.initializedVars) {
+                delete this.initializedVars[key];
+            }
+        }
+
+        console.warn(
+            `[VariableManager] ♻️ Evicted ${toEvict.length} stale scopes ` +
+                `(${Object.keys(this.scopes.runs).length} remaining)`,
+        );
+    }
+
+    /**
+     * Returns the current number of active run scopes.
+     * Useful for monitoring during performance tests.
+     * @returns {number}
+     */
+    getActiveScopeCount() {
+        return Object.keys(this.scopes.runs).length;
     }
 
     // ─── Alias Registry ──────────────────────────────────────────────────

@@ -42,10 +42,23 @@ if (isProduction && process.env.DATABASE_URL) {
         },
     });
 
-    // Enforce FKs after connection
+    // Enforce FKs and enable WAL mode for concurrent write support
     sequelize.beforeConnect(async (config) => {
         config.foreign_keys = true;
     });
+
+    // Enable WAL mode after first connection — critical for performance testing.
+    // WAL allows concurrent readers while a single writer operates, preventing
+    // SQLITE_BUSY errors when multiple VUs log steps simultaneously.
+    sequelize
+        .query('PRAGMA journal_mode=WAL;')
+        .then(() => console.log('[Database] ✅ SQLite WAL mode enabled'))
+        .catch((e) => console.warn('[Database] WAL mode setup skipped:', e.message));
+
+    sequelize
+        .query('PRAGMA busy_timeout=10000;')
+        .then(() => console.log('[Database] ✅ SQLite busy_timeout set to 10s'))
+        .catch((e) => console.warn('[Database] busy_timeout setup skipped:', e.message));
 }
 
 export default sequelize;
