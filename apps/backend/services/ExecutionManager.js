@@ -124,9 +124,6 @@ class PerformanceRunner extends Runner {
         const concurrency = Math.min(maxConcurrentBrowsers, effectiveVUs);
         const pool = new WorkerPool(concurrency);
 
-        // Lazy import to avoid circular dependency
-        const { executionService } = await import('./ExecutionService.js');
-
         let totalIterations = 0;
         let aborted = false;
         const startTime = Date.now();
@@ -194,14 +191,18 @@ class PerformanceRunner extends Runner {
                         );
 
                         try {
-                            await executionService.executeFlow(flowId, projectId, {
-                                overrides: { headless: true, recordVideo: false },
-                                variables: {
-                                    __vu: vuId,
-                                    __iteration: totalIterations,
-                                    __perfMode: true,
+                            await pool.runTask({
+                                flowId,
+                                projectId,
+                                options: {
+                                    overrides: { headless: true, recordVideo: false },
+                                    variables: {
+                                        __vu: vuId,
+                                        __iteration: totalIterations,
+                                        __perfMode: true,
+                                    },
+                                    mode: 'e2e', // Run through standard E2E pipeline inside child
                                 },
-                                mode: 'e2e', // Run through standard E2E pipeline
                             });
                             metrics.record('success', Date.now() - iterStart, null, vuId);
                         } catch (err) {
@@ -211,7 +212,7 @@ class PerformanceRunner extends Runner {
                 });
 
                 // Run this phase's VUs through the worker pool
-                await pool.runAll(vuTasks);
+                await Promise.allSettled(vuTasks.map((fn) => fn()));
 
                 // Delay between phases (for ramp profile)
                 if (phase.delayMs > 0 && !aborted) {

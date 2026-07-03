@@ -19,19 +19,19 @@ test(`Flujo Generado Hal-Test`, async ({ page }) => {
 
     // [node_id: starter_var_user]
     await test.step(`Set User Role`, async () => {
-        const user_role = 'problem_user';
+        const user_role = "problem_user";
     });
 
     // [node_id: starter_switch_role]
     await test.step(`Select Username`, async () => {
         switch (value) {
-            case 'option1':
-                // Case body
-                break;
-            default:
-                // Default case
-                break;
-        }
+        case 'option1':
+            // Case body
+            break;
+        default:
+            // Default case
+            break;
+    }
     });
 
     // [node_id: sub_type_user]
@@ -52,8 +52,8 @@ test(`Flujo Generado Hal-Test`, async ({ page }) => {
     // [node_id: starter_conditional]
     await test.step(`Verify User Role`, async () => {
         if (true) {
-            // Then branch
-        }
+        // Then branch
+    }
     });
 
     // [node_id: starter_fail]

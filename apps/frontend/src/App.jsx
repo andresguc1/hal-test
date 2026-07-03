@@ -61,6 +61,8 @@ import { useElementPicker } from "./hooks/useElementPicker";
 import { AnimatePresence } from "framer-motion";
 import GuestModeModal from "./components/modals/GuestModeModal";
 import DatasetRunModal from "./components/modals/DatasetRunModal";
+import PerformanceRunModal from "./components/modals/PerformanceRunModal";
+import PerformancePanel from "./components/PerformancePanel";
 import { useAuth } from "./context/AuthContext";
 
 import { NODE_STATES } from "./components/hooks/flowStyles";
@@ -431,6 +433,8 @@ function Dashboard() {
   const [isVariablePanelVisible, setIsVariablePanelVisible] = useState(false);
   const [isAskAIPanelVisible, setIsAskAIPanelVisible] = useState(false);
   const [isDatasetModalOpen, setIsDatasetModalOpen] = useState(false);
+  const [isPerformanceModalOpen, setIsPerformanceModalOpen] = useState(false);
+  const [isPerformancePanelOpen, setIsPerformancePanelOpen] = useState(false);
   const [isExecutionDashboardOpen, setIsExecutionDashboardOpen] =
     useState(false);
   const [proposedNodes, setProposedNodes] = useState(null);
@@ -471,6 +475,42 @@ function Dashboard() {
   }, []);
 
   const [reportingRunId, setReportingRunId] = useState(null);
+
+  const handleStartPerformanceRun = useCallback(async (config) => {
+    if (!currentFlowId) {
+      toast.info(t("common.save_before_dataset", "Save the flow before running load test."));
+      return;
+    }
+    
+    setIsPerformanceModalOpen(false); // Close config modal
+    const toastId = toast.loading("Initializing Performance Engine...");
+    
+    try {
+      const result = await api.post("/runs/performance", {
+        flowId: currentFlowId,
+        projectId: currentProject?.id,
+        performanceConfig: {
+           virtualUsers: config.vus,
+           duration: config.duration,
+           profile: config.profile,
+           headless: true
+        }
+      });
+      
+      if (result.success) {
+        toast.dismiss(toastId);
+        toast.success("Load Test launched successfully!");
+        setIsPerformancePanelOpen(true); // Open live metrics panel
+      } else {
+        toast.dismiss(toastId);
+        toast.error(result.message || "Failed to launch load test");
+      }
+    } catch (error) {
+      toast.dismiss(toastId);
+      console.error("[App] Performance run failed:", error);
+      toast.error("Performance Engine Error: " + error.message);
+    }
+  }, [currentFlowId, currentProject?.id, toast, t]);
 
   // 5. Effects
   React.useEffect(() => {
@@ -2079,6 +2119,7 @@ function Dashboard() {
           hasUnsavedChanges={hasUnsavedChanges}
           onRunBatch={() => setIsExecutionDashboardOpen(true)}
           onRunDataset={() => setIsDatasetModalOpen(true)}
+          onRunPerformance={() => setIsPerformanceModalOpen(true)}
           apiStatus={apiStatus}
         />
 
@@ -2094,6 +2135,36 @@ function Dashboard() {
           onClose={() => setIsDatasetModalOpen(false)}
           onRun={handleRunDataset}
         />
+
+        <PerformanceRunModal
+          isOpen={isPerformanceModalOpen}
+          onClose={() => setIsPerformanceModalOpen(false)}
+          onRun={handleStartPerformanceRun}
+          flowName={selectedFlow?.name || "Current Flow"}
+        />
+
+        {/* Live Performance Panel Overlay */}
+        <AnimatePresence>
+          {isPerformancePanelOpen && (
+            <motion.div 
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 50 }}
+              className="absolute top-20 right-6 w-96 z-50 shadow-2xl"
+            >
+              <div className="relative">
+                <button 
+                  onClick={() => setIsPerformancePanelOpen(false)}
+                  className="absolute -top-3 -right-3 z-10 p-1.5 bg-slate-800 border border-slate-700 text-slate-400 hover:text-white hover:bg-slate-700 rounded-full shadow-lg transition-colors"
+                  title="Close Panel"
+                >
+                  <X size={14} />
+                </button>
+                <PerformancePanel flowId={currentFlowId} />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <StarterOverlay
           isVisible={

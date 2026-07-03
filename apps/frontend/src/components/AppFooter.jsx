@@ -15,6 +15,7 @@ import {
   RefreshCw,
   Repeat,
   Database,
+  Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion as Motion, AnimatePresence } from "framer-motion";
@@ -412,6 +413,7 @@ function AppFooter({
   version,
   onRunBatch,
   onRunDataset,
+  onRunPerformance,
   apiStatus = { state: "idle" },
 }) {
   const [activeMenu, setActiveMenu] = useState(null); // 'project' | 'flow' | null
@@ -596,6 +598,14 @@ function AppFooter({
           variant="outline"
           onClick={onRunBatch}
           className="pl-3 pr-4 py-2 hover:bg-yellow-500/10 hover:text-yellow-400 border-yellow-500/20"
+        />
+
+        <FooterButton
+          icon={Activity}
+          label="RUN LOAD TEST"
+          variant="outline"
+          onClick={onRunPerformance}
+          className="pl-3 pr-4 py-2 text-indigo-400 border-indigo-500/30 hover:bg-indigo-500/20 hover:text-indigo-300"
         />
 
         <FooterButton
