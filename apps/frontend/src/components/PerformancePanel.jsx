@@ -15,7 +15,7 @@ const PerformancePanel = ({ flowId }) => {
     useEffect(() => {
         // Connect to the backend socket
         // Adjust URL as needed based on your environment
-        const socket = io(process.env.VITE_API_URL || 'http://localhost:2001');
+        const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:2001');
 
         socket.on('connect', () => {
             setIsConnected(true);
