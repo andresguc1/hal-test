@@ -58,7 +58,7 @@ import ExecutionDashboard from "./components/reporting/ExecutionDashboard";
 import HalDashboard from "./components/dashboard/HalDashboard";
 import { api } from "./utils/api";
 import { useElementPicker } from "./hooks/useElementPicker";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import GuestModeModal from "./components/modals/GuestModeModal";
 import DatasetRunModal from "./components/modals/DatasetRunModal";
 import PerformanceRunModal from "./components/modals/PerformanceRunModal";
@@ -80,6 +80,7 @@ import {
   Info,
   ChevronDown,
   Wand2,
+  X,
 } from "lucide-react";
 import { useLogStore } from "./context/LogContext";
 import TerminalPanel from "./components/TerminalPanel";
