@@ -222,7 +222,10 @@ app.use((req, res) => {
 });
 app.use(errorHandler);
 
+import { abortAllPools } from './services/WorkerPool.js';
+
 // --- 7. SERVER START ---
+let serverInstance;
 const startServer = async () => {
     await initDb();
 
@@ -233,7 +236,7 @@ const startServer = async () => {
 
     await storageCleanupService.run();
     if (process.env.NODE_ENV !== 'test') {
-        server.listen(PORT, '0.0.0.0', () => {
+        serverInstance = server.listen(PORT, '0.0.0.0', () => {
             const baseUrl = `http://localhost:${PORT}`;
             console.log(`\n🚀 =================================================`);
             console.log(`   HaltTest Server is Up & Running!`);
@@ -253,6 +256,32 @@ const startServer = async () => {
         });
     }
 };
+
+// --- GRACEFUL SHUTDOWN ---
+const gracefulShutdown = () => {
+    console.log('\n[INIT] 🛑 Received termination signal. Starting graceful shutdown...');
+    // 1. Terminate any running Worker Pools (CPU Leak fix)
+    abortAllPools();
+
+    // 2. Close the Express Server
+    if (serverInstance) {
+        serverInstance.close(() => {
+            console.log('[INIT] ❌ Express server closed.');
+            process.exit(0);
+        });
+    } else {
+        process.exit(0);
+    }
+
+    // Force exit after 5 seconds if not closed gracefully
+    setTimeout(() => {
+        console.error('[INIT] ⚠️ Forced shutdown due to timeout');
+        process.exit(1);
+    }, 5000);
+};
+
+process.on('SIGINT', gracefulShutdown);
+process.on('SIGTERM', gracefulShutdown);
 
 // Manual reload for schema update
 startServer();

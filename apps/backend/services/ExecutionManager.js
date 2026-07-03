@@ -137,6 +137,20 @@ class PerformanceRunner extends Runner {
             // Socket not available
         }
 
+        if (ioRef) {
+            try {
+                // Emit initial configuration so UI doesn't look stuck
+                ioRef.emit('perf-run-started', {
+                    flowId,
+                    totalVUs: effectiveVUs,
+                    durationSec: duration,
+                    flowName: 'Load Test', // Could fetch actual flow name if passed
+                });
+            } catch {
+                // Ignore
+            }
+        }
+
         // Health check interval (dynamic throttling during execution)
         const healthInterval = setInterval(() => {
             const health = ThrottlePolicy.checkHealth();

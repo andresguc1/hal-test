@@ -19,5 +19,18 @@ process.on('message', async (message) => {
 
 process.on('uncaughtException', (err) => {
     console.error('[PerfWorker] Uncaught Exception:', err);
-    process.send({ type: 'error', error: { message: err.message } });
+    // Ignore IPC channel closed errors if parent is dying
+    if (err.code !== 'ERR_IPC_CHANNEL_CLOSED') {
+        try {
+            process.send({ type: 'error', error: { message: err.message } });
+        } catch (e) {
+            /* ignore */
+        }
+    }
+});
+
+// Self-destruct if parent process dies unexpectedly or closes IPC
+process.on('disconnect', () => {
+    console.log(`[PerfWorker ${process.pid}] 🔌 Parent disconnected, shutting down worker...`);
+    process.exit(0);
 });

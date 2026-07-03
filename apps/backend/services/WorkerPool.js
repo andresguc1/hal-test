@@ -4,6 +4,8 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+const activePools = new Set();
+
 /**
  * WorkerPool — Concurrency-Limited child_process Scheduler
  *
@@ -20,6 +22,7 @@ class WorkerPool {
         this._aborted = false;
 
         this._initPool();
+        activePools.add(this);
     }
 
     _initPool() {
@@ -101,19 +104,36 @@ class WorkerPool {
     }
 
     abort() {
+        if (this._aborted) return;
         this._aborted = true;
         this.queue.forEach((t) => t.reject(new Error('Aborted')));
         this.queue = [];
         this.workers.forEach((w) => {
             if (w.process && !w.process.killed) {
+                // disconnect IPC first
+                w.process.disconnect();
+                // We don't strictly need to kill here since the worker handles 'disconnect',
+                // but doing it ensures it dies if 'disconnect' fails.
                 w.process.kill('SIGTERM');
             }
         });
         this.workers = [];
         this.activeTasks.clear();
+        activePools.delete(this);
         console.log('[WorkerPool] 🛑 All child processes terminated.');
     }
 }
+
+export const abortAllPools = () => {
+    if (activePools.size > 0) {
+        console.log(
+            `[WorkerPool] 🛑 Aborting ${activePools.size} active pools for graceful shutdown...`,
+        );
+        for (const pool of activePools) {
+            pool.abort();
+        }
+    }
+};
 
 export default WorkerPool;
 export { WorkerPool };
