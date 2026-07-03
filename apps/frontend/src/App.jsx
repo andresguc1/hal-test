@@ -62,7 +62,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import GuestModeModal from "./components/modals/GuestModeModal";
 import DatasetRunModal from "./components/modals/DatasetRunModal";
 import PerformanceRunModal from "./components/modals/PerformanceRunModal";
-import PerformancePanel from "./components/PerformancePanel";
+import PerformanceDashboard from './components/PerformanceDashboard';
+import NodeCreationPanel from './components/NodeCreationPanel';
 import { useAuth } from "./context/AuthContext";
 
 import { NODE_STATES } from "./components/hooks/flowStyles";
@@ -2147,23 +2148,12 @@ function Dashboard() {
         {/* Live Performance Panel Overlay */}
         <AnimatePresence>
           {isPerformancePanelOpen && (
-            <motion.div 
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 50 }}
-              className="absolute top-20 right-6 w-96 z-50 shadow-2xl"
-            >
-              <div className="relative">
-                <button 
-                  onClick={() => setIsPerformancePanelOpen(false)}
-                  className="absolute -top-3 -right-3 z-10 p-1.5 bg-slate-800 border border-slate-700 text-slate-400 hover:text-white hover:bg-slate-700 rounded-full shadow-lg transition-colors"
-                  title="Close Panel"
-                >
-                  <X size={14} />
-                </button>
-                <PerformancePanel flowId={currentFlowId} socket={socket} />
-              </div>
-            </motion.div>
+            <PerformanceDashboard 
+              flowId={currentFlowId} 
+              flowName={currentProject?.flows?.find(f => f.id === currentFlowId)?.name}
+              socket={socket}
+              onClose={() => setIsPerformancePanelOpen(false)}
+            />
           )}
         </AnimatePresence>
 
