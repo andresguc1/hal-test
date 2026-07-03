@@ -2140,7 +2140,7 @@ function Dashboard() {
           isOpen={isPerformanceModalOpen}
           onClose={() => setIsPerformanceModalOpen(false)}
           onRun={handleStartPerformanceRun}
-          flowName={selectedFlow?.name || "Current Flow"}
+          flowName={currentProject?.flows?.find(f => f.id === currentFlowId)?.name || "Current Flow"}
         />
 
         {/* Live Performance Panel Overlay */}
