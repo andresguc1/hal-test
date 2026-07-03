@@ -212,7 +212,7 @@ class PerformanceRunner extends Runner {
                         );
 
                         try {
-                            await pool.runTask({
+                            const result = await pool.runTask({
                                 flowId,
                                 projectId,
                                 options: {
@@ -225,9 +225,15 @@ class PerformanceRunner extends Runner {
                                     mode: 'e2e', // Run through standard E2E pipeline inside child
                                 },
                             });
-                            metrics.record('success', Date.now() - iterStart, null, vuId);
+                            metrics.record(
+                                'success',
+                                Date.now() - iterStart,
+                                null,
+                                vuId,
+                                result?.nodeMetrics || [],
+                            );
                         } catch (err) {
-                            metrics.record('error', Date.now() - iterStart, err, vuId);
+                            metrics.record('error', Date.now() - iterStart, err, vuId, []);
                         }
                     };
                 });

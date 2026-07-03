@@ -38,6 +38,8 @@ class MetricsCollector {
         this.samples = [];
 
         this.vuTimeline = [];
+        this.nodeHistograms = new Map();
+        this.nodeLabels = new Map();
 
         this.startTime = Date.now();
         this._emitInterval = null;
@@ -56,12 +58,32 @@ class MetricsCollector {
      * @param {number} durationMs - Total iteration wall-clock time in ms
      * @param {Error|null} [error]
      * @param {number} [vuId] - Virtual User identifier
+     * @param {Array} [nodeMetrics=[]] - Node execution durations
      */
-    record(status, durationMs, error = null, vuId = undefined) {
+    record(status, durationMs, error = null, vuId = undefined, nodeMetrics = []) {
         // Record in HDR Histogram
         // Cap the duration to highestTrackableValue to avoid exceptions
         const safeDuration = Math.min(Math.max(1, durationMs), 3600000);
         this.histogram.recordValue(safeDuration);
+
+        // Process Node Level Metrics
+        if (nodeMetrics && nodeMetrics.length > 0) {
+            for (const { nodeId, durationMs: nodeDuration, label } of nodeMetrics) {
+                if (!this.nodeHistograms.has(nodeId)) {
+                    this.nodeHistograms.set(
+                        nodeId,
+                        hdr.build({
+                            lowestDiscernibleValue: 1,
+                            highestTrackableValue: 3600000,
+                            numberOfSignificantValueDigits: 2,
+                        }),
+                    );
+                    if (label) this.nodeLabels.set(nodeId, label);
+                }
+                const safeNodeDuration = Math.min(Math.max(1, nodeDuration), 3600000);
+                this.nodeHistograms.get(nodeId).recordValue(safeNodeDuration);
+            }
+        }
 
         // Keep raw sample
         const sample = {
@@ -146,6 +168,7 @@ class MetricsCollector {
                 elapsed,
                 timestamp: Date.now(),
                 runConfig: this.runConfig,
+                bottlenecks: [],
             };
         }
 
@@ -167,7 +190,29 @@ class MetricsCollector {
             elapsed,
             timestamp: Date.now(),
             runConfig: this.runConfig,
+            bottlenecks: this.calculateBottlenecks(),
         };
+    }
+
+    /**
+     * Calculates the top 5 slowest nodes
+     */
+    calculateBottlenecks() {
+        const bottlenecks = [];
+        for (const [nodeId, hist] of this.nodeHistograms.entries()) {
+            if (hist.totalCount > 0) {
+                bottlenecks.push({
+                    nodeId,
+                    label: this.nodeLabels.get(nodeId) || nodeId,
+                    avg: Math.round(hist.mean),
+                    p95: hist.getValueAtPercentile(95),
+                    count: hist.totalCount,
+                });
+            }
+        }
+        // Sort by P95 latency descending
+        bottlenecks.sort((a, b) => b.p95 - a.p95);
+        return bottlenecks.slice(0, 5);
     }
 
     /**

@@ -146,6 +146,7 @@ export class ExecutionService {
             headers: options.headers || {},
             startTime: Date.now(),
             signal: abortSignal,
+            nodeMetrics: [],
         };
 
         // Initialize all edges to 'idle' visually
@@ -237,7 +238,9 @@ export class ExecutionService {
                 });
             }
         }
-
+        if (options.variables && options.variables.__perfMode) {
+            return { runId, nodeMetrics: runState.nodeMetrics };
+        }
         return runId;
     }
 
@@ -674,8 +677,8 @@ export class ExecutionService {
      */
     async executeNode(node, allNodes, allEdges, state) {
         const actionType = node.type;
-
         let resultData = null;
+        const nodeStartTime = Date.now();
 
         // SPECIAL CASE: Composition Containers (Loop, ForEach)
         if (actionType === 'loop') {
@@ -895,6 +898,14 @@ export class ExecutionService {
             runId: state.runId,
             batchId: state.batchId,
         });
+
+        if (state.nodeMetrics) {
+            state.nodeMetrics.push({
+                nodeId: node.nodeId,
+                durationMs: Date.now() - nodeStartTime,
+                label: finalResult.label || node.data?.label || node.type,
+            });
+        }
 
         return resultData;
     }

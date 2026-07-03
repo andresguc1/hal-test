@@ -184,6 +184,31 @@ const PerformancePanel = ({ flowId, socket }) => {
                 </div>
             </div>
 
+            {/* Bottlenecks (Top Slowest Nodes) */}
+            {metrics.bottlenecks && metrics.bottlenecks.length > 0 && (
+                <div className="mt-4 pt-3 border-t border-slate-700">
+                    <div className="text-xs uppercase tracking-wider text-slate-400 mb-2 font-semibold">
+                        Cuellos de Botella (P95 Latencia)
+                    </div>
+                    <div className="space-y-1.5">
+                        {metrics.bottlenecks.map((b, idx) => (
+                            <div key={b.nodeId} className="flex justify-between items-center text-sm p-1.5 rounded bg-slate-800/30 hover:bg-slate-800/80 transition-colors">
+                                <div className="flex items-center space-x-2 overflow-hidden">
+                                    <span className="text-slate-500 font-mono text-xs">{idx + 1}.</span>
+                                    <span className="truncate text-slate-200" title={b.nodeId}>{b.label}</span>
+                                </div>
+                                <div className="flex items-center space-x-3">
+                                    <span className="text-xs text-slate-500">{b.count} reqs</span>
+                                    <span className={`font-mono font-medium ${b.p95 > 2000 ? 'text-red-400' : b.p95 > 500 ? 'text-yellow-400' : 'text-green-400'}`}>
+                                        {b.p95}ms
+                                    </span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {/* VU Status timeline (Active Iterations) */}
             {vuStatus && (
                 <div className="mt-2 pt-3 border-t border-slate-700">
