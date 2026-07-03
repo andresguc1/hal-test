@@ -43,6 +43,7 @@
     "express": "^4.21.2",
     "express-rate-limit": "^8.2.2",
     "filbert": "^0.1.20",
+    "hdr-histogram-js": "^3.0.1",
     "helmet": "^8.1.0",
     "i18next": "^25.7.3",
     "i18next-http-middleware": "^3.9.7",
