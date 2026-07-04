@@ -102,7 +102,34 @@ export function ReportsPage({ onViewReport }) {
   );
 }
 
-export function AIPage() {
+export function AIPage({ onOpenSettings }) {
+  const cards = [
+    {
+      icon: <Sparkles size={20} />,
+      title: "AI Provider",
+      desc: "Configure Ollama, OpenAI, Anthropic, or Google AI for flow generation and healing",
+      badge: "Active",
+      onClick: () => onOpenSettings?.("integrations"),
+    },
+    {
+      icon: <Settings size={20} />,
+      title: "Fine-Tuning",
+      desc: "Train custom models using your execution history as JSONL datasets",
+    },
+    {
+      icon: <ExternalLink size={20} />,
+      title: "CI/CD Integration",
+      desc: "Connect HalTest to your GitHub Actions, GitLab CI, or Jenkins pipeline",
+      badge: "Coming Soon",
+    },
+    {
+      icon: <BarChart2 size={20} />,
+      title: "Webhooks",
+      desc: "Receive notifications when runs complete, fail, or trigger events",
+      badge: "Coming Soon",
+    },
+  ];
+
   return (
     <div>
       <div style={{ marginBottom: 20 }}>
@@ -135,40 +162,24 @@ export function AIPage() {
           gap: 14,
         }}
       >
-        {[
-          {
-            icon: <Sparkles size={20} />,
-            title: "AI Provider",
-            desc: "Configure Ollama, OpenAI, Anthropic, or Google AI for flow generation and healing",
-            badge: "Active",
-          },
-          {
-            icon: <Settings size={20} />,
-            title: "Fine-Tuning",
-            desc: "Train custom models using your execution history as JSONL datasets",
-          },
-          {
-            icon: <ExternalLink size={20} />,
-            title: "CI/CD Integration",
-            desc: "Connect HalTest to your GitHub Actions, GitLab CI, or Jenkins pipeline",
-            badge: "Coming Soon",
-          },
-          {
-            icon: <BarChart2 size={20} />,
-            title: "Webhooks",
-            desc: "Receive notifications when runs complete, fail, or trigger events",
-            badge: "Coming Soon",
-          },
-        ].map(({ icon, title, desc, badge }) => (
+        {cards.map(({ icon, title, desc, badge, onClick }) => (
           <div
             key={title}
+            onClick={onClick}
             style={{
               background: "var(--dash-surface)",
               border: "1px solid var(--dash-border)",
               borderRadius: 12,
               padding: 20,
               boxShadow: "var(--dash-shadow-card)",
+              cursor: onClick ? "pointer" : "default",
+              transition: "all 0.2s ease",
             }}
+            className={
+              onClick
+                ? "hover:border-blue-500/50 hover:bg-slate-800/20 active:scale-[0.98]"
+                : ""
+            }
           >
             <div
               style={{

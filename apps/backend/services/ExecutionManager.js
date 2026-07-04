@@ -55,23 +55,31 @@ class E2ERunner extends Runner {
 class PerformanceRunner extends Runner {
     async execute(flow, options) {
         const config = options.performanceConfig || {};
-        const {
+
+        let {
             virtualUsers = 1,
             duration = 30,
             rampUp = 0,
             profile = 'constant',
+            stages = null,
             throttleStrategy = 'auto',
             maxConcurrentBrowsers = 3,
             headless = true,
         } = config;
+
+        // If custom stages are provided, derive duration and max VUs
+        if (stages && stages.length > 0) {
+            duration = stages.reduce((acc, stage) => acc + (Number(stage.durationSec) || 0), 0);
+            virtualUsers = Math.max(...stages.map((stage) => Number(stage.target) || 0));
+        }
 
         const flowId = flow.id;
         const projectId = flow.projectId;
 
         console.log(`[PerformanceRunner] ⚡ Starting performance run for flow: ${flowId}`);
         console.log(
-            `[PerformanceRunner] Config: ${virtualUsers} VUs, ${duration}s, ` +
-                `profile=${profile}, throttle=${throttleStrategy}, maxBrowsers=${maxConcurrentBrowsers}`,
+            `[PerformanceRunner] Config: ${virtualUsers} max VUs, ${duration}s, ` +
+                `profile=${stages ? 'custom' : profile}, throttle=${throttleStrategy}, maxBrowsers=${maxConcurrentBrowsers}`,
         );
 
         // 1. Pre-flight: Estimate resource cost
@@ -96,9 +104,13 @@ class PerformanceRunner extends Runner {
         if (throttleStrategy === 'auto' && estimate.exceeds) {
             effectiveVUs = estimate.safeVUs;
             emitLog({
-                message: `[Performance] Auto-throttled from ${virtualUsers} to ${effectiveVUs} VUs (memory constraint)`,
+                message: `[Performance] Auto-throttled from ${virtualUsers} to ${effectiveVUs} max VUs (memory constraint)`,
                 type: 'warning',
             });
+            // If throttled and using stages, we must cap all stages to effectiveVUs
+            if (stages) {
+                stages = stages.map((s) => ({ ...s, target: Math.min(s.target, effectiveVUs) }));
+            }
         }
 
         // 3. Initialize metrics collector
@@ -120,14 +132,11 @@ class PerformanceRunner extends Runner {
         }
 
         emitLog({
-            message: `[Performance] Starting ${effectiveVUs} VUs × ${duration}s (${profile} profile)`,
+            message: `[Performance] Starting ${effectiveVUs} max VUs × ${duration}s (${stages ? 'custom stages' : profile} profile)`,
             type: 'info',
         });
 
-        // 4. Build schedule based on profile
-        const schedule = this._buildSchedule(profile, effectiveVUs, duration, rampUp);
-
-        // 5. Execute with worker pool
+        // 4. Execute with worker pool
         const concurrency = Math.min(maxConcurrentBrowsers, effectiveVUs);
         const pool = new WorkerPool(concurrency);
 
@@ -192,39 +201,60 @@ class PerformanceRunner extends Runner {
         }, 5000);
 
         try {
-            for (const phase of schedule) {
-                if (aborted) break;
+            // Translate profile to stages if custom stages are not provided
+            const finalStages =
+                stages && stages.length > 0
+                    ? stages
+                    : this._buildStages(profile, effectiveVUs, duration, rampUp);
 
-                const elapsedSec = (Date.now() - startTime) / 1000;
-                if (elapsedSec >= duration) break;
+            await new Promise((resolve) => {
+                let activeVUs = 0;
+                let nextVuId = 1;
+                let isFinished = false;
 
-                const vuTasks = Array.from({ length: phase.vus }, (_, vuIndex) => {
-                    return async () => {
-                        if (aborted) return;
+                const getTargetVUs = (elapsedSec) => {
+                    let accumulated = 0;
+                    for (const stage of finalStages) {
+                        accumulated += stage.durationSec;
+                        if (elapsedSec <= accumulated) {
+                            return stage.target;
+                        }
+                    }
+                    return 0; // If beyond last stage, scale down to 0
+                };
 
-                        const iterStart = Date.now();
-                        totalIterations++;
-                        const vuId = vuIndex + 1;
+                const spawnVU = (vuId) => {
+                    if (aborted || isFinished) return;
 
-                        metrics.recordVUStatus(
-                            pool.activeCount + 1,
-                            totalIterations - pool.activeCount,
-                        );
+                    activeVUs++;
+                    totalIterations++;
+                    const iterStart = Date.now();
+                    const currentIteration = totalIterations;
 
-                        try {
-                            const result = await pool.runTask({
-                                flowId,
-                                projectId,
-                                options: {
-                                    overrides: { headless: true, recordVideo: false },
-                                    variables: {
-                                        __vu: vuId,
-                                        __iteration: totalIterations,
-                                        __perfMode: true,
-                                    },
-                                    mode: 'e2e', // Run through standard E2E pipeline inside child
+                    metrics.recordVUStatus(activeVUs, totalIterations - activeVUs);
+
+                    pool.runTask(
+                        {
+                            flowId,
+                            projectId,
+                            options: {
+                                performanceConfig: config, // Enables telemetry in ExecutionService
+                                overrides: { headless: true, recordVideo: false },
+                                variables: {
+                                    __vu: vuId,
+                                    __iteration: currentIteration,
+                                    __perfMode: true,
                                 },
-                            });
+                                mode: 'e2e',
+                            },
+                        },
+                        (metricPayload) => {
+                            if (metrics.recordNodeMetric) {
+                                metrics.recordNodeMetric(metricPayload, vuId, currentIteration);
+                            }
+                        },
+                    )
+                        .then((result) => {
                             metrics.record(
                                 'success',
                                 Date.now() - iterStart,
@@ -232,22 +262,57 @@ class PerformanceRunner extends Runner {
                                 vuId,
                                 result?.nodeMetrics || [],
                             );
-                        } catch (err) {
+                        })
+                        .catch((err) => {
                             metrics.record('error', Date.now() - iterStart, err, vuId, []);
-                        }
-                    };
-                });
+                        })
+                        .finally(() => {
+                            activeVUs--;
+                            metrics.recordVUStatus(activeVUs, totalIterations - activeVUs);
 
-                // Run this phase's VUs through the worker pool
-                await Promise.allSettled(vuTasks.map((fn) => fn()));
+                            if (aborted || isFinished) return;
 
-                // Delay between phases (for ramp profile)
-                if (phase.delayMs > 0 && !aborted) {
-                    await new Promise((r) => setTimeout(r, phase.delayMs));
-                }
-            }
+                            // Scale check on completion
+                            const currentElapsed = (Date.now() - startTime) / 1000;
+                            const target = getTargetVUs(currentElapsed);
+
+                            if (activeVUs < target) {
+                                spawnVU(vuId); // Reuse this VU's slot
+                            }
+                        });
+                };
+
+                // Main Ticker Loop (evaluates every 500ms)
+                const ticker = setInterval(() => {
+                    if (aborted) {
+                        clearInterval(ticker);
+                        resolve();
+                        return;
+                    }
+
+                    const elapsedSec = (Date.now() - startTime) / 1000;
+
+                    if (elapsedSec >= duration) {
+                        isFinished = true;
+                        clearInterval(ticker);
+                        // Wait for active VUs to drain (simplified: we just resolve immediately for hard-stop)
+                        resolve();
+                        return;
+                    }
+
+                    const target = getTargetVUs(elapsedSec);
+
+                    // Scale Up
+                    while (activeVUs < target && !aborted && !isFinished) {
+                        spawnVU(nextVuId++);
+                    }
+
+                    // Note: Scaling down happens naturally when tasks finish and we don't respawn them
+                }, 500);
+            });
         } finally {
             clearInterval(healthInterval);
+            pool.abort(); // Ensure workers are killed after test completes
         }
 
         // 6. Generate summary
@@ -265,52 +330,77 @@ class PerformanceRunner extends Runner {
     }
 
     /**
-     * Builds a VU schedule based on the load profile.
-     *
-     * @param {'constant'|'ramp'|'spike'} profile
-     * @param {number} totalVUs
-     * @param {number} durationSec
-     * @param {number} rampUpSec
-     * @returns {Array<{ vus: number, delayMs: number }>}
+     * Translates the load profile into a series of temporal stages.
      * @private
      */
-    _buildSchedule(profile, totalVUs, durationSec, rampUpSec) {
-        const phases = [];
+    _buildStages(profile, totalVUs, durationSec, rampUpSec = 0) {
+        const stages = [];
 
-        if (profile === 'spike') {
-            // Single burst: all VUs at once, then repeat for duration
-            const iterations = Math.max(1, Math.ceil(durationSec / 5)); // ~5s per iteration batch
-            for (let i = 0; i < iterations; i++) {
-                phases.push({ vus: totalVUs, delayMs: 0 });
+        switch (profile) {
+            case 'baseline':
+                // Single user running normally to establish baseline metrics
+                stages.push({ durationSec, target: 1 });
+                break;
+
+            case 'spike': {
+                // 30% low, 20% max spike, 50% low
+                const lowVUs = Math.max(1, Math.floor(totalVUs * 0.1));
+                const t1 = Math.floor(durationSec * 0.3);
+                const t2 = Math.floor(durationSec * 0.2);
+                const t3 = durationSec - t1 - t2;
+                stages.push({ durationSec: t1, target: lowVUs });
+                stages.push({ durationSec: t2, target: totalVUs });
+                if (t3 > 0) stages.push({ durationSec: t3, target: lowVUs });
+                break;
             }
-        } else if (profile === 'ramp' && rampUpSec > 0) {
-            // Gradually increase VUs
-            const steps = Math.min(totalVUs, Math.ceil(rampUpSec / 2));
-            const vusPerStep = totalVUs / steps;
-            const delayPerStep = (rampUpSec * 1000) / steps;
 
-            for (let i = 1; i <= steps; i++) {
-                const currentVUs = Math.ceil(vusPerStep * i);
-                phases.push({ vus: Math.min(currentVUs, totalVUs), delayMs: delayPerStep });
-            }
-
-            // Sustain phase after ramp-up
-            const sustainSec = durationSec - rampUpSec;
-            if (sustainSec > 0) {
-                const sustainIterations = Math.max(1, Math.ceil(sustainSec / 5));
-                for (let i = 0; i < sustainIterations; i++) {
-                    phases.push({ vus: totalVUs, delayMs: 0 });
+            case 'stress': {
+                // Stepped increments (4 steps)
+                const steps = 4;
+                const stepDuration = Math.floor(durationSec / steps);
+                for (let i = 1; i <= steps; i++) {
+                    const targetAtStep = Math.ceil((totalVUs / steps) * i);
+                    const dur =
+                        i === steps ? durationSec - stepDuration * (steps - 1) : stepDuration;
+                    stages.push({ durationSec: dur, target: targetAtStep });
                 }
+                break;
             }
-        } else {
-            // Constant: steady VU count throughout
-            const iterations = Math.max(1, Math.ceil(durationSec / 5));
-            for (let i = 0; i < iterations; i++) {
-                phases.push({ vus: totalVUs, delayMs: 0 });
+
+            case 'capacity':
+                // Continuous ramp up from 1 to totalVUs over the entire duration
+                for (let i = 1; i <= durationSec; i++) {
+                    const targetAtStep = Math.ceil((totalVUs / durationSec) * i);
+                    stages.push({ durationSec: 1, target: targetAtStep });
+                }
+                break;
+
+            case 'load':
+            case 'ramp': {
+                // Ramp up for rampUpSec (or 20% of duration), then sustain
+                const actualRamp = rampUpSec > 0 ? rampUpSec : Math.floor(durationSec * 0.2);
+                if (actualRamp > 0) {
+                    for (let i = 1; i <= actualRamp; i++) {
+                        const targetAtStep = Math.ceil((totalVUs / actualRamp) * i);
+                        stages.push({ durationSec: 1, target: targetAtStep });
+                    }
+                }
+                const sustain = durationSec - actualRamp;
+                if (sustain > 0) {
+                    stages.push({ durationSec: sustain, target: totalVUs });
+                }
+                break;
             }
+
+            case 'endurance':
+            case 'constant':
+            default:
+                // Constant profile
+                stages.push({ durationSec: durationSec, target: totalVUs });
+                break;
         }
 
-        return phases;
+        return stages;
     }
 }
 

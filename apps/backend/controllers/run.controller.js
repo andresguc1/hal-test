@@ -426,6 +426,13 @@ export const startPerformanceRunAction = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Flow not found.' });
         }
 
+        // Create run record for history
+        const runId = await executionLogger.startRun(flowId, {
+            flowName: flow.name,
+            trigger: 'performance',
+            flowSnapshot: JSON.stringify({ performanceConfig }),
+        });
+
         // Fire-and-forget: performance runs are long-lived
         const perfRunPromise = executionManager.execute(
             'performance',
@@ -434,18 +441,26 @@ export const startPerformanceRunAction = async (req, res) => {
         );
 
         perfRunPromise
-            .then((result) => {
+            .then(async (result) => {
                 console.log(
                     `[RunController] Performance run completed for flow ${flowId}: ` +
                         `${result.data?.totalRequests || 0} requests`,
                 );
+                const run = await Run.findByPk(runId);
+                if (run) {
+                    run.flow_snapshot = JSON.stringify(result);
+                    await run.save();
+                }
+                await executionLogger.endRun(runId, result.success ? 'completed' : 'failed');
             })
-            .catch((err) => {
+            .catch(async (err) => {
                 console.error(`[RunController] Performance run failed: ${err.message}`);
+                await executionLogger.endRun(runId, 'failed');
             });
 
         return res.status(200).json({
             success: true,
+            runId,
             message: `Performance test initiated: ${performanceConfig.virtualUsers || 1} VUs × ${performanceConfig.duration || 30}s`,
             estimate,
         });

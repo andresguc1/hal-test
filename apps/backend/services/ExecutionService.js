@@ -147,6 +147,7 @@ export class ExecutionService {
             startTime: Date.now(),
             signal: abortSignal,
             nodeMetrics: [],
+            options: options,
         };
 
         // Initialize all edges to 'idle' visually
@@ -678,7 +679,17 @@ export class ExecutionService {
     async executeNode(node, allNodes, allEdges, state) {
         const actionType = node.type;
         let resultData = null;
-        const nodeStartTime = Date.now();
+
+        // 🚀 BEGIN TELEMETRY 🚀
+        const isPerformanceMode = state.options?.performanceConfig !== undefined;
+        let startCpu = null;
+        let startMem = null;
+        const nodeStartTime = process.hrtime.bigint();
+
+        if (isPerformanceMode) {
+            startCpu = process.cpuUsage();
+            startMem = process.memoryUsage();
+        }
 
         // SPECIAL CASE: Composition Containers (Loop, ForEach)
         if (actionType === 'loop') {
@@ -818,6 +829,34 @@ export class ExecutionService {
                 state.runId,
             );
 
+            // 🚀 TELEMETRY — record node metric BEFORE throwing so metrics are captured even on failure
+            if (isPerformanceMode) {
+                const nodeEndTime = process.hrtime.bigint();
+                const endCpu = process.cpuUsage(startCpu);
+                const endMem = process.memoryUsage();
+                const durationMs = Number(nodeEndTime - nodeStartTime) / 1e6;
+                const totalCpuUs = endCpu.user + endCpu.system;
+                const durationUs = durationMs * 1000;
+                const cpuPercent = durationUs > 0 ? (totalCpuUs / durationUs) * 100 : 0;
+                const memUsedMB = (endMem.rss - startMem.rss) / (1024 * 1024);
+                if (process.send) {
+                    process.send({
+                        type: 'node-metric',
+                        payload: {
+                            nodeId: node.nodeId,
+                            type: actionType,
+                            label: node.data?.customLabel || node.data?.label || actionType,
+                            durationMs,
+                            cpuPercent,
+                            memUsedMB,
+                            success: false,
+                            datasetId: state.currentDatasetId || null,
+                            subflowId: state.callerId || null,
+                        },
+                    });
+                }
+            }
+
             // 🛡️ SOFT FAIL PROTECTION: Check if node should continue even on failure
             const continueOnFailure =
                 node.data?.configuration?.continueOnFailure ||
@@ -839,6 +878,39 @@ export class ExecutionService {
 
             // Error is already logged by controller/emitLog, we just throw to stop flow
             throw new Error(errMsg);
+        }
+
+        // 🚀 END TELEMETRY — success path
+        if (isPerformanceMode) {
+            const nodeEndTime = process.hrtime.bigint();
+            const endCpu = process.cpuUsage(startCpu);
+            const endMem = process.memoryUsage();
+
+            const durationMs = Number(nodeEndTime - nodeStartTime) / 1e6;
+
+            const totalCpuUs = endCpu.user + endCpu.system;
+            const durationUs = durationMs * 1000;
+            const cpuPercent = durationUs > 0 ? (totalCpuUs / durationUs) * 100 : 0;
+
+            const memUsedMB = (endMem.rss - startMem.rss) / (1024 * 1024);
+
+            // Emit via IPC if we are in a worker process
+            if (process.send) {
+                process.send({
+                    type: 'node-metric',
+                    payload: {
+                        nodeId: node.nodeId,
+                        type: actionType,
+                        label: node.data?.customLabel || node.data?.label || actionType,
+                        durationMs,
+                        cpuPercent,
+                        memUsedMB,
+                        success: resultData ? resultData.success !== false : true,
+                        datasetId: state.currentDatasetId || null,
+                        subflowId: state.callerId || null,
+                    },
+                });
+            }
         }
 
         // Update state with browserId if it was a launch action
@@ -902,7 +974,7 @@ export class ExecutionService {
         if (state.nodeMetrics) {
             state.nodeMetrics.push({
                 nodeId: node.nodeId,
-                durationMs: Date.now() - nodeStartTime,
+                durationMs: Number(process.hrtime.bigint() - nodeStartTime) / 1e6,
                 label: finalResult.label || node.data?.label || node.type,
             });
         }

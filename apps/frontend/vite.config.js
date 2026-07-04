@@ -9,7 +9,7 @@ const { version } = require("./package.json");
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  base: "/app/",
+  base: process.env.NODE_ENV === "production" ? "/app/" : "/",
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

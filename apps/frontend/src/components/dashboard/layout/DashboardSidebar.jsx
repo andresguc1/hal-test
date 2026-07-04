@@ -10,9 +10,12 @@ import {
   Sparkles,
   ChevronLeft,
   Zap,
+  Activity,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Sun, Moon } from "lucide-react";
+import UserMenu from "../../UserMenu";
+import { useSettings } from "../../../context/SettingsContext";
 
 const NAV_SECTIONS = [
   {
@@ -31,6 +34,7 @@ const NAV_SECTIONS = [
       { id: "runs", label: "Runs", icon: Play, badgeKey: "activeRuns" },
       { id: "history", label: "History", icon: History },
       { id: "reports", label: "Reports", icon: BarChart2 },
+      { id: "performance", label: "Performance", icon: Activity },
     ],
   },
   {
@@ -50,6 +54,7 @@ export default function DashboardSidebar({
   user,
 }) {
   const { theme, setTheme } = useTheme();
+  const { openSettings } = useSettings();
 
   return (
     <aside className="hal-dashboard__sidebar">
@@ -131,23 +136,12 @@ export default function DashboardSidebar({
             padding: "4px 0",
           }}
         >
-          {/* User avatar */}
-          <div
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: "50%",
-              background: "var(--dash-accent)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 11,
-              fontWeight: 700,
-              color: "white",
-              flexShrink: 0,
-            }}
-          >
-            {user?.email?.[0]?.toUpperCase() || "U"}
+          {/* User Menu Dropdown */}
+          <div style={{ flexShrink: 0 }}>
+            <UserMenu
+              onOpenSettings={(tab) => openSettings(tab)}
+              onOpenApiKeys={() => openSettings("integrations")}
+            />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div

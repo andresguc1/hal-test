@@ -11,6 +11,7 @@ import {
   Sparkles,
   Cloud,
   LayoutDashboard,
+  Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
@@ -101,6 +102,7 @@ function AppHeader({
   onOpenApiKeys,
   onToggleHistory,
   onToggleVariables,
+
   isToolboxVisible,
   isVariablesVisible,
   onToggleToolbox,
@@ -378,6 +380,16 @@ function AppHeader({
 
         <HeaderButton onClick={onToggleHistory} title="Execution History">
           <History size={18} />
+        </HeaderButton>
+
+        <HeaderButton
+          onClick={() =>
+            navigate("/dashboard", { state: { activePage: "performance" } })
+          }
+          title="Performance Dashboard"
+          className="text-blue-400 hover:text-blue-300"
+        >
+          <Activity size={18} />
         </HeaderButton>
 
         <HeaderButton

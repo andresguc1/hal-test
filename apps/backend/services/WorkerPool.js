@@ -28,28 +28,49 @@ class WorkerPool {
     _initPool() {
         const workerPath = path.join(__dirname, 'perf-worker.js');
         for (let i = 0; i < this.concurrency; i++) {
-            const worker = fork(workerPath, [], {
-                env: process.env, // Pass environment (like HAL_MAX_BROWSERS)
-                stdio: 'inherit', // Pipe logs to main process
-            });
-
-            worker.on('message', (msg) => this._handleWorkerMessage(worker.pid, msg));
-            worker.on('error', (err) => console.error(`[Worker ${worker.pid}] error:`, err));
-            worker.on('exit', (code) => {
-                if (code !== 0 && !this._aborted) {
-                    console.warn(`[Worker ${worker.pid}] exited with code ${code}. Replacing...`);
-                    // If a worker dies unexpectedly, replace it (simplified for brevity)
-                }
-            });
-
-            this.workers.push({ id: worker.pid, process: worker, isBusy: false });
+            this._spawnWorker(workerPath);
         }
         console.log(`[WorkerPool] 🚀 Initialized ${this.concurrency} isolated child processes.`);
+    }
+
+    _spawnWorker(workerPath) {
+        const worker = fork(workerPath, [], {
+            env: process.env,
+            stdio: 'inherit',
+        });
+
+        worker.on('message', (msg) => this._handleWorkerMessage(worker.pid, msg));
+        worker.on('error', (err) => console.error(`[Worker ${worker.pid}] error:`, err));
+        worker.on('exit', (code) => this._handleWorkerExit(worker.pid, code, workerPath));
+
+        this.workers.push({ id: worker.pid, process: worker, isBusy: false });
+    }
+
+    _handleWorkerExit(workerPid, code, workerPath) {
+        if (!this._aborted) {
+            console.warn(`[Worker ${workerPid}] exited with code ${code}.`);
+            const task = this.activeTasks.get(workerPid);
+            if (task) {
+                task.reject(new Error(`Worker ${workerPid} exited unexpectedly with code ${code}`));
+                this.activeTasks.delete(workerPid);
+            }
+            this.workers = this.workers.filter((w) => w.id !== workerPid);
+            this._spawnWorker(workerPath);
+            console.log(`[WorkerPool] ♻️ Respawned a new worker to replace ${workerPid}`);
+            this._dequeue();
+        }
     }
 
     _handleWorkerMessage(workerId, msg) {
         const task = this.activeTasks.get(workerId);
         if (!task) return;
+
+        if (msg.type === 'node-metric') {
+            if (task.onMetric) {
+                task.onMetric(msg.payload);
+            }
+            return; // Do not resolve/free the worker yet
+        }
 
         const workerObj = this.workers.find((w) => w.id === workerId);
         if (workerObj) workerObj.isBusy = false;
@@ -58,7 +79,7 @@ class WorkerPool {
         if (msg.type === 'success') {
             task.resolve(msg.result);
         } else if (msg.type === 'error') {
-            task.reject(new Error(msg.error.message || 'Worker Error'));
+            task.reject(new Error(msg.error?.message || 'Worker Error'));
         }
 
         this._dequeue();
@@ -75,12 +96,13 @@ class WorkerPool {
     /**
      * Schedules a task. Resolves when the child process completes it.
      * @param {Object} payload - { flowId, projectId, options }
+     * @param {Function} [onMetric] - Callback for intermediate node metrics
      */
-    runTask(payload) {
+    runTask(payload, onMetric) {
         if (this._aborted) return Promise.reject(new Error('WorkerPool aborted'));
 
         return new Promise((resolve, reject) => {
-            this.queue.push({ payload, resolve, reject });
+            this.queue.push({ payload, resolve, reject, onMetric });
             this._dequeue();
         });
     }
@@ -93,7 +115,11 @@ class WorkerPool {
 
         const task = this.queue.shift();
         availableWorker.isBusy = true;
-        this.activeTasks.set(availableWorker.id, { resolve: task.resolve, reject: task.reject });
+        this.activeTasks.set(availableWorker.id, {
+            resolve: task.resolve,
+            reject: task.reject,
+            onMetric: task.onMetric,
+        });
 
         availableWorker.process.send({ type: 'execute', payload: task.payload });
     }

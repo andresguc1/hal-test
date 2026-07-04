@@ -41,6 +41,11 @@ class MetricsCollector {
         this.nodeHistograms = new Map();
         this.nodeLabels = new Map();
 
+        this.nodeCpuAccumulators = new Map();
+        this.nodeMemAccumulators = new Map();
+        this.nodeErrors = new Map();
+        this.nodeSubflowIds = new Map();
+
         this.startTime = Date.now();
         this._emitInterval = null;
         this._io = null;
@@ -52,13 +57,55 @@ class MetricsCollector {
     }
 
     /**
+     * Record live performance metric from a node execution
+     */
+    recordNodeMetric(payload, _vuId, _iteration) {
+        const { nodeId, label, durationMs, cpuPercent, memUsedMB, success, subflowId } = payload;
+
+        if (subflowId) {
+            this.nodeSubflowIds.set(nodeId, subflowId);
+        }
+
+        if (!this.nodeHistograms.has(nodeId)) {
+            this.nodeHistograms.set(
+                nodeId,
+                hdr.build({
+                    lowestDiscernibleValue: 1,
+                    highestTrackableValue: 3600000,
+                    numberOfSignificantValueDigits: 2,
+                }),
+            );
+            this.nodeLabels.set(nodeId, label || nodeId);
+            this.nodeCpuAccumulators.set(nodeId, { sum: 0, count: 0 });
+            this.nodeMemAccumulators.set(nodeId, { sum: 0, count: 0, max: 0 });
+            this.nodeErrors.set(nodeId, 0);
+        }
+
+        const safeNodeDuration = Math.min(Math.max(1, durationMs), 3600000);
+        this.nodeHistograms.get(nodeId).recordValue(safeNodeDuration);
+
+        const cpuObj = this.nodeCpuAccumulators.get(nodeId);
+        cpuObj.sum += cpuPercent || 0;
+        cpuObj.count++;
+
+        const memObj = this.nodeMemAccumulators.get(nodeId);
+        memObj.sum += memUsedMB || 0;
+        memObj.count++;
+        memObj.max = Math.max(memObj.max, memUsedMB || 0);
+
+        if (!success) {
+            this.nodeErrors.set(nodeId, this.nodeErrors.get(nodeId) + 1);
+        }
+    }
+
+    /**
      * Records a single iteration result.
      *
      * @param {'success'|'error'} status
      * @param {number} durationMs - Total iteration wall-clock time in ms
      * @param {Error|null} [error]
      * @param {number} [vuId] - Virtual User identifier
-     * @param {Array} [nodeMetrics=[]] - Node execution durations
+     * @param {Array} [nodeMetrics=[]] - Legacy array of node execution durations
      */
     record(status, durationMs, error = null, vuId = undefined, nodeMetrics = []) {
         // Record in HDR Histogram
@@ -66,22 +113,10 @@ class MetricsCollector {
         const safeDuration = Math.min(Math.max(1, durationMs), 3600000);
         this.histogram.recordValue(safeDuration);
 
-        // Process Node Level Metrics
+        // Process Node Level Metrics (Legacy support if passed here)
         if (nodeMetrics && nodeMetrics.length > 0) {
-            for (const { nodeId, durationMs: nodeDuration, label } of nodeMetrics) {
-                if (!this.nodeHistograms.has(nodeId)) {
-                    this.nodeHistograms.set(
-                        nodeId,
-                        hdr.build({
-                            lowestDiscernibleValue: 1,
-                            highestTrackableValue: 3600000,
-                            numberOfSignificantValueDigits: 2,
-                        }),
-                    );
-                    if (label) this.nodeLabels.set(nodeId, label);
-                }
-                const safeNodeDuration = Math.min(Math.max(1, nodeDuration), 3600000);
-                this.nodeHistograms.get(nodeId).recordValue(safeNodeDuration);
+            for (const metric of nodeMetrics) {
+                this.recordNodeMetric(metric, vuId, null);
             }
         }
 
@@ -117,6 +152,9 @@ class MetricsCollector {
             activeVUs,
             completedVUs,
         });
+        if (this._io) {
+            this._io.emit('perf-vu-status', { activeVUs, completedVUs });
+        }
     }
 
     /**
@@ -168,7 +206,7 @@ class MetricsCollector {
                 elapsed,
                 timestamp: Date.now(),
                 runConfig: this.runConfig,
-                bottlenecks: [],
+                nodeStats: [],
             };
         }
 
@@ -190,29 +228,45 @@ class MetricsCollector {
             elapsed,
             timestamp: Date.now(),
             runConfig: this.runConfig,
-            bottlenecks: this.calculateBottlenecks(),
+            nodeStats: this.computeNodeStats(),
         };
     }
 
     /**
-     * Calculates the top 5 slowest nodes
+     * Computes the aggregated statistics for all nodes
      */
-    calculateBottlenecks() {
-        const bottlenecks = [];
+    computeNodeStats() {
+        const stats = [];
         for (const [nodeId, hist] of this.nodeHistograms.entries()) {
             if (hist.totalCount > 0) {
-                bottlenecks.push({
+                const cpuObj = this.nodeCpuAccumulators.get(nodeId);
+                const memObj = this.nodeMemAccumulators.get(nodeId);
+                const errCount = this.nodeErrors.get(nodeId) || 0;
+
+                stats.push({
                     nodeId,
                     label: this.nodeLabels.get(nodeId) || nodeId,
+                    subflowId: this.nodeSubflowIds.get(nodeId) || null,
                     avg: Math.round(hist.mean),
                     p95: hist.getValueAtPercentile(95),
                     count: hist.totalCount,
+                    cpuAvg:
+                        cpuObj && cpuObj.count > 0
+                            ? Number((cpuObj.sum / cpuObj.count).toFixed(2))
+                            : 0,
+                    memAvg:
+                        memObj && memObj.count > 0
+                            ? Number((memObj.sum / memObj.count).toFixed(2))
+                            : 0,
+                    memMax: memObj ? Number(memObj.max.toFixed(2)) : 0,
+                    errors: errCount,
+                    errorRate: ((errCount / hist.totalCount) * 100).toFixed(1),
                 });
             }
         }
-        // Sort by P95 latency descending
-        bottlenecks.sort((a, b) => b.p95 - a.p95);
-        return bottlenecks.slice(0, 5);
+        // Sort by P95 latency descending by default
+        stats.sort((a, b) => b.p95 - a.p95);
+        return stats;
     }
 
     /**
@@ -228,7 +282,7 @@ class MetricsCollector {
 
         // Emit final results if socket is available
         if (this._io) {
-            this._io.emit('perf-run-finished', snap);
+            this._io.emit('perf-run-finished', { data: snap });
         }
 
         console.log(

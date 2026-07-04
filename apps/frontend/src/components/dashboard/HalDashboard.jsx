@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAuth } from "../../context/AuthContext";
@@ -7,6 +7,7 @@ import { useSettings } from "../../context/SettingsContext";
 import { useToast } from "../../hooks/useToast";
 import { useProjectManager } from "../hooks/useProjectManager";
 import "./dashboard.css";
+import SettingsModal from "../SettingsModal";
 
 import DashboardSidebar from "./layout/DashboardSidebar";
 import DashboardHeader from "./layout/DashboardHeader";
@@ -19,6 +20,7 @@ import { ReportsPage, AIPage, SettingsPageDash } from "./pages/StubPages";
 import { dashboardKeys } from "./hooks/useDashboardData";
 import CreationModal from "../CreationModal";
 import { useRuns } from "./hooks/useDashboardData";
+import PerformanceDashboard from "../PerformanceDashboard";
 
 const PAGE_SEARCH_ENABLED = ["projects", "flows", "history", "runs"];
 const PAGE_PRIMARY_ACTION = {
@@ -33,13 +35,17 @@ const pageVariants = {
 
 export default function HalDashboard() {
   const navigate = useNavigate();
+  const location = useLocation();
   const qc = useQueryClient();
   const toast = useToast();
   const { user } = useAuth();
-  const { openSettings } = useSettings();
+  const { openSettings, isSettingsOpen, closeSettings, settingsTab } =
+    useSettings();
   const { createProject, loadProject, deleteProject } = useProjectManager();
 
-  const [activePage, setActivePage] = useState("overview");
+  const [activePage, setActivePage] = useState(
+    location.state?.activePage || "overview",
+  );
   const [search, setSearch] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [creationModal, setCreationModal] = useState({ isOpen: false });
@@ -166,16 +172,17 @@ export default function HalDashboard() {
         return <RunsPage onViewReport={handleViewReport} />;
       case "history":
         return <HistoryPage onViewReport={handleViewReport} />;
+      case "performance":
+        return <PerformanceDashboard />;
       case "reports":
         return <ReportsPage onViewReport={() => handleNavigate("runs")} />;
       case "ai":
-        return <AIPage />;
+        return <AIPage onOpenSettings={openSettings} />;
       case "settings":
         return (
           <SettingsPageDash
             onOpenSettings={() => {
-              navigate("/");
-              openSettings();
+              openSettings("general");
             }}
           />
         );
@@ -243,6 +250,13 @@ export default function HalDashboard() {
           }
           setCreationModal({ isOpen: false });
         }}
+      />
+
+      {/* Global Settings Modal (Unified Hub) */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={closeSettings}
+        initialTab={settingsTab}
       />
     </div>
   );
