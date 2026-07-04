@@ -85,7 +85,7 @@ const checkSchemaHealth = async () => {
         await sequelize.query('SELECT nodeId FROM ExperienceVaults LIMIT 1', {
             logging: false,
         });
-        await sequelize.query('SELECT created_at FROM step_results LIMIT 1', {
+        await sequelize.query('SELECT createdAt FROM step_results LIMIT 1', {
             logging: false,
         });
         console.log(' [DB_INIT] ✅ Schema health check passed.');
@@ -278,4 +278,4 @@ if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith
             process.exit(1);
         });
 }
-// Watch reload comment
+// Watch reload comment 2
