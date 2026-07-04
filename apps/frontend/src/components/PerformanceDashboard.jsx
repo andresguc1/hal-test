@@ -62,6 +62,7 @@ const PerformanceDashboard = () => {
     timeline,
     progressPercent,
     resetRun,
+    cancelTest,
   } = usePerformanceSocket(flowId);
 
   // Tab control: 'config' | 'live' | 'results' | 'history'
@@ -175,9 +176,28 @@ const PerformanceDashboard = () => {
         {/* Quick Status Info */}
         <div className="flex items-center space-x-3">
           {status === "running" && runConfig && (
-            <div className="text-xs text-blue-400 font-mono bg-blue-500/10 px-3 py-1.5 rounded-lg border border-blue-500/20 animate-pulse">
-              Ejecutando: {runConfig.totalVUs} VUs
-            </div>
+            <>
+              <div className="text-xs text-blue-400 font-mono bg-blue-500/10 px-3 py-1.5 rounded-lg border border-blue-500/20 animate-pulse">
+                Ejecutando: {runConfig.totalVUs} VUs
+              </div>
+              <button
+                onClick={async () => {
+                  try {
+                    await cancelTest();
+                    toast.success("Cancelación solicitada con éxito.");
+                  } catch (err) {
+                    toast.error("Error al cancelar la prueba: " + err.message);
+                  }
+                }}
+                className="bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-semibold px-3 py-1.5 rounded-lg border border-red-500/20 transition-colors flex items-center gap-1.5"
+              >
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                </span>
+                Detener
+              </button>
+            </>
           )}
           {status === "completed" && (
             <button
@@ -321,15 +341,18 @@ const PerformanceDashboard = () => {
   );
 };
 
-const TabButton = ({ active, onClick, label, icon: Icon, disabled }) => (
-  <button
-    onClick={onClick}
-    disabled={disabled}
-    className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold tracking-wide transition-all ${disabled ? "opacity-30 cursor-not-allowed text-slate-600" : active ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"}`}
-  >
-    <Icon size={14} />
-    <span>{label}</span>
-  </button>
-);
+const TabButton = ({ active, onClick, label, icon: _icon, disabled }) => {
+  const IconComponent = _icon;
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold tracking-wide transition-all ${disabled ? "opacity-30 cursor-not-allowed text-slate-600" : active ? "bg-blue-600 text-white shadow-md" : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"}`}
+    >
+      <IconComponent size={14} />
+      <span>{label}</span>
+    </button>
+  );
+};
 
 export default PerformanceDashboard;

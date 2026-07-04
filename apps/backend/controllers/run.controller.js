@@ -437,7 +437,7 @@ export const startPerformanceRunAction = async (req, res) => {
         const perfRunPromise = executionManager.execute(
             'performance',
             { ...flow.toJSON(), projectId },
-            { performanceConfig },
+            { performanceConfig, runId },
         );
 
         perfRunPromise

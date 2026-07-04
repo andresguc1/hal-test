@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { io } from "socket.io-client";
+import { api } from "../../utils/api";
 
 /**
  * Custom hook that manages the Socket.io connection and all performance-related events.
@@ -101,6 +102,16 @@ export function usePerformanceSocket(flowId) {
   const progressPercent =
     duration > 0 ? Math.min(100, (elapsed / duration) * 100) : 0;
 
+  const cancelTest = useCallback(async () => {
+    const runId = runConfig?.runId;
+    if (!runId) return;
+    try {
+      await api.post(`/runs/${runId}/cancel`);
+    } catch (err) {
+      console.error("Failed to cancel performance run:", err);
+    }
+  }, [runConfig]);
+
   return {
     socket,
     status,
@@ -112,5 +123,6 @@ export function usePerformanceSocket(flowId) {
     timeline,
     progressPercent,
     resetRun,
+    cancelTest,
   };
 }

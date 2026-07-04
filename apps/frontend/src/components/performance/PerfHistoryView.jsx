@@ -32,7 +32,7 @@ const PerfHistoryView = ({ flowId, onReRun }) => {
   const [compareRight, setCompareRight] = useState(null);
   const [compareMode, setCompareMode] = useState(false);
 
-  const fetchHistory = async () => {
+  const fetchHistory = React.useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.get(`/runs?flowId=${flowId}&limit=50`);
@@ -47,13 +47,13 @@ const PerfHistoryView = ({ flowId, onReRun }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [flowId, toast]);
 
   useEffect(() => {
     if (flowId) {
       fetchHistory();
     }
-  }, [flowId]);
+  }, [flowId, fetchHistory]);
 
   const handleSelectRun = (run) => {
     setSelectedRun(run);
@@ -152,7 +152,7 @@ const PerfHistoryView = ({ flowId, onReRun }) => {
           metrics: metricsData,
         });
       }
-    } catch (e) {
+    } catch {
       toast.error("Datos incompatibles para comparación.");
     }
   };
@@ -338,7 +338,9 @@ const PerfHistoryView = ({ flowId, onReRun }) => {
                       summary = run.flow_snapshot
                         ? JSON.parse(run.flow_snapshot)
                         : null;
-                    } catch (e) {}
+                    } catch {
+                      // ignore parsing errors
+                    }
 
                     const metricsData = summary?.data || summary;
                     const success =

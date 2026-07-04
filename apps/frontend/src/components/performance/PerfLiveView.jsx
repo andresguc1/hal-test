@@ -21,8 +21,8 @@ const PerfLiveView = ({
   runConfig,
   resourceWarning,
   timeline,
-  status,
-  progressPercent,
+  status: _status,
+  progressPercent: _progressPercent,
 }) => {
   if (!metrics) {
     return (
@@ -251,26 +251,29 @@ const PerfLiveView = ({
   );
 };
 
-const KPICard = ({ icon: Icon, label, value, unit, sub, color }) => (
-  <div className="bg-slate-900/80 border border-slate-800/80 rounded-2xl p-5 relative overflow-hidden group">
-    <div
-      className={`absolute -right-6 -top-6 text-slate-800/30 group-hover:text-${color}-900/20 transition-colors`}
-    >
-      <Icon size={100} />
-    </div>
-    <div className="relative z-10">
-      <div className="text-slate-400 text-xs font-semibold uppercase tracking-widest mb-2">
-        {label}
-      </div>
+const KPICard = ({ icon: _icon, label, value, unit, sub, color }) => {
+  const IconComponent = _icon;
+  return (
+    <div className="bg-slate-900/80 border border-slate-800/80 rounded-2xl p-5 relative overflow-hidden group">
       <div
-        className={`text-4xl font-light mb-1 flex items-baseline gap-2 ${color === "emerald" ? "text-emerald-400" : color === "red" ? "text-red-400" : "text-white"}`}
+        className={`absolute -right-6 -top-6 text-slate-800/30 group-hover:text-${color}-900/20 transition-colors`}
       >
-        <span>{value}</span>
-        <span className="text-lg text-slate-500 font-normal">{unit}</span>
+        <IconComponent size={100} />
       </div>
-      <div className="text-xs text-slate-400">{sub}</div>
+      <div className="relative z-10">
+        <div className="text-slate-400 text-xs font-semibold uppercase tracking-widest mb-2">
+          {label}
+        </div>
+        <div
+          className={`text-4xl font-light mb-1 flex items-baseline gap-2 ${color === "emerald" ? "text-emerald-400" : color === "red" ? "text-red-400" : "text-white"}`}
+        >
+          <span>{value}</span>
+          <span className="text-lg text-slate-500 font-normal">{unit}</span>
+        </div>
+        <div className="text-xs text-slate-400">{sub}</div>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default PerfLiveView;

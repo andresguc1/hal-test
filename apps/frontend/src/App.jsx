@@ -476,50 +476,7 @@ function Dashboard() {
 
   const [reportingRunId, setReportingRunId] = useState(null);
 
-  const handleStartPerformanceRun = useCallback(
-    async (config) => {
-      if (!currentFlowId) {
-        toast.info(
-          t(
-            "common.save_before_dataset",
-            "Save the flow before running load test.",
-          ),
-        );
-        return;
-      }
 
-      const toastId = toast.loading("Initializing Performance Engine...");
-
-      try {
-        const result = await api.post("/runs/performance", {
-          flowId: currentFlowId,
-          projectId: currentProject?.id,
-          performanceConfig: {
-            virtualUsers: config.vus,
-            duration: config.duration,
-            profile: config.profile,
-            rampUp: config.rampUp,
-            stages: config.stages,
-            headless: true,
-          },
-        });
-
-        if (result.success) {
-          toast.dismiss(toastId);
-          toast.success("Load Test launched successfully!");
-          setIsPerformancePanelOpen(true); // Open live metrics panel
-        } else {
-          toast.dismiss(toastId);
-          toast.error(result.message || "Failed to launch load test");
-        }
-      } catch (error) {
-        toast.dismiss(toastId);
-        console.error("[App] Performance run failed:", error);
-        toast.error("Performance Engine Error: " + error.message);
-      }
-    },
-    [currentFlowId, currentProject?.id, toast, t],
-  );
 
   // 5. Effects
   React.useEffect(() => {

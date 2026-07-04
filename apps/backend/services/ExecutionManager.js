@@ -2,6 +2,7 @@ import { emitLog } from '../socket.js';
 import { ThrottlePolicy } from './ThrottlePolicy.js';
 import { MetricsCollector } from './MetricsCollector.js';
 import { WorkerPool } from './WorkerPool.js';
+import { activeRunManager } from './ActiveRunManager.js';
 
 /**
  * @typedef {Object} RunOptions
@@ -140,9 +141,24 @@ class PerformanceRunner extends Runner {
         const concurrency = Math.min(maxConcurrentBrowsers, effectiveVUs);
         const pool = new WorkerPool(concurrency);
 
+        const runId = options.runId;
+        const abortSignal = runId ? activeRunManager.register(runId) : null;
+
         let totalIterations = 0;
         let aborted = false;
         const startTime = Date.now();
+
+        if (abortSignal) {
+            abortSignal.addEventListener('abort', () => {
+                console.log(`[PerformanceRunner] 🛑 User aborted performance run ID: ${runId}`);
+                emitLog({
+                    message: `[Performance] Run aborted by user.`,
+                    type: 'warning',
+                });
+                aborted = true;
+                pool.abort();
+            });
+        }
 
         // Pre-import for use in interval
         let ioRef = null;
@@ -157,6 +173,7 @@ class PerformanceRunner extends Runner {
             try {
                 // Emit initial configuration so UI doesn't look stuck
                 ioRef.emit('perf-run-started', {
+                    runId,
                     flowId,
                     totalVUs: effectiveVUs,
                     durationSec: duration,
@@ -311,6 +328,9 @@ class PerformanceRunner extends Runner {
                 }, 500);
             });
         } finally {
+            if (runId) {
+                activeRunManager.cleanup(runId);
+            }
             clearInterval(healthInterval);
             pool.abort(); // Ensure workers are killed after test completes
         }

@@ -19,12 +19,15 @@ describe('ExecutionManager', () => {
             nodes: [{ type: 'open_url', data: { url: 'https://example.com' } }],
             edges: [],
         };
-        const state = { runId: 'run-perf' };
+        const state = {
+            runId: 'run-perf',
+            performanceConfig: { duration: 0.1, virtualUsers: 1 },
+        };
 
         const result = await executionManager.execute('performance', flow, state);
 
         expect(result.mode).toBe('performance');
-        expect(result.data.script).toContain('https://example.com');
+        expect(result.data.totalRequests).toBeDefined();
     });
 
     it('should switch to security mode', async () => {

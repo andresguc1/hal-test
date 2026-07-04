@@ -50,10 +50,12 @@ describe('ExecutionManager - Mode Routing', () => {
             edges: [],
         };
 
-        const result = await executionManager.execute('performance', flow, {});
+        const result = await executionManager.execute('performance', flow, {
+            performanceConfig: { duration: 0.1, virtualUsers: 1 },
+        });
         expect(result.success).toBe(true);
         expect(result.mode).toBe('performance');
-        expect(result.data.script).toBeDefined();
+        expect(result.data.totalRequests).toBeDefined();
     });
 
     it('should delegate to SecurityRunner for "security" mode', async () => {

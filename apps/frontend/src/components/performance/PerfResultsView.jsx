@@ -22,7 +22,7 @@ import {
  * PerfResultsView — Detailed post-execution report with node-level and SubFlow analysis.
  * Supports hierarchical inspection: Flow -> SubFlows -> Nodes.
  */
-const PerfResultsView = ({ metrics, runConfig }) => {
+const PerfResultsView = ({ metrics, runConfig: _runConfig }) => {
   const [expandedGroups, setExpandedGroups] = useState(new Set(["main-flow"]));
   const [expandedNodes, setExpandedNodes] = useState(new Set());
   const [sortBy, setSortBy] = useState("p95"); // p95 | cpuAvg | memAvg | errors
@@ -326,7 +326,7 @@ const PerfResultsView = ({ metrics, runConfig }) => {
                       className="overflow-hidden"
                     >
                       <div className="p-4 space-y-2">
-                        {sortedNodes.map((node, idx) => {
+                        {sortedNodes.map((node) => {
                           const nodeExpanded = expandedNodes.has(node.nodeId);
                           const nodePct =
                             totalDuration > 0
@@ -456,19 +456,22 @@ const PerfResultsView = ({ metrics, runConfig }) => {
   );
 };
 
-const SummaryCard = ({ label, value, icon: Icon, color }) => (
-  <div className="bg-slate-900/80 border border-slate-800/80 rounded-xl p-4 flex items-center gap-3">
-    <Icon size={20} className="text-slate-500 shrink-0" />
-    <div>
-      <div className="text-[10px] uppercase text-slate-500 font-semibold tracking-wider">
-        {label}
-      </div>
-      <div className={`text-lg font-mono ${color || "text-slate-200"}`}>
-        {value}
+const SummaryCard = ({ label, value, icon: _icon, color }) => {
+  const IconComponent = _icon;
+  return (
+    <div className="bg-slate-900/80 border border-slate-800/80 rounded-xl p-4 flex items-center gap-3">
+      <IconComponent size={20} className="text-slate-500 shrink-0" />
+      <div>
+        <div className="text-[10px] uppercase text-slate-500 font-semibold tracking-wider">
+          {label}
+        </div>
+        <div className={`text-lg font-mono ${color || "text-slate-200"}`}>
+          {value}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 const BottleneckBadge = ({ label, node, metric, color }) => {
   const colorClasses = {

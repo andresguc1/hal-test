@@ -15,7 +15,7 @@ import {
   BarChart2,
 } from "lucide-react";
 
-const ScenarioBuilder = ({ onRun, flowName }) => {
+const ScenarioBuilder = ({ onRun, flowName: _flowName }) => {
   const [profile, setProfile] = useState("constant");
   const [vus, setVus] = useState(5);
   const [duration, setDuration] = useState(30);
