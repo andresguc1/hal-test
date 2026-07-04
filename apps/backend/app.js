@@ -305,3 +305,4 @@ process.on('SIGUSR2', gracefulShutdown); // Nodemon restart signal
 startServer();
 
 export default app;
+// Trigger reload for schema update

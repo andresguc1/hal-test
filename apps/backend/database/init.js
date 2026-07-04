@@ -76,16 +76,16 @@ const checkSchemaHealth = async () => {
     try {
         console.log(' [DB_INIT] Running schema health check...');
         // Check critical new columns that often cause 500s if missing
-        await sequelize.query('SELECT "parentId" FROM "Nodes" LIMIT 1', {
+        await sequelize.query('SELECT parentId FROM Nodes LIMIT 1', {
             logging: false,
         });
-        await sequelize.query('SELECT "batch_id" FROM "execution_runs" LIMIT 1', {
+        await sequelize.query('SELECT batch_id FROM execution_runs LIMIT 1', {
             logging: false,
         });
-        await sequelize.query('SELECT "nodeId" FROM "ExperienceVaults" LIMIT 1', {
+        await sequelize.query('SELECT nodeId FROM ExperienceVaults LIMIT 1', {
             logging: false,
         });
-        await sequelize.query('SELECT "created_at" FROM "step_results" LIMIT 1', {
+        await sequelize.query('SELECT created_at FROM step_results LIMIT 1', {
             logging: false,
         });
         console.log(' [DB_INIT] ✅ Schema health check passed.');
@@ -278,3 +278,4 @@ if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith
             process.exit(1);
         });
 }
+// Watch reload comment
