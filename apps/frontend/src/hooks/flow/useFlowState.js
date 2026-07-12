@@ -308,7 +308,7 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
           e.source === params.source &&
           e.sourceHandle === params.sourceHandle &&
           e.target === params.target &&
-          e.targetHandle === params.targetHandle
+          e.targetHandle === params.targetHandle,
       );
       if (isDuplicate) return;
 

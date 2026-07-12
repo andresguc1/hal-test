@@ -61,10 +61,9 @@ const LoopNode = ({ id, data, selected }) => {
     isSuccess || isError
       ? {
           color: isSuccess ? "#10b981" : "#ef4444",
-          shadow:
-            isSuccess
-              ? "0 0 30px rgba(16,185,129,0.5)"
-              : "0 0 30px rgba(239,68,68,0.5)",
+          shadow: isSuccess
+            ? "0 0 30px rgba(16,185,129,0.5)"
+            : "0 0 30px rgba(239,68,68,0.5)",
         }
       : { color: null, shadow: null };
 
@@ -80,7 +79,8 @@ const LoopNode = ({ id, data, selected }) => {
         selected && statusColor ? "scale-[1.05] z-50 border-[3px]" : "",
         selected && !statusColor ? themeParams.selected : "",
         !selected && !statusColor && "shadow-lg",
-        isRunning && "ring-4 ring-purple-500/30 animate-pulse border-purple-400",
+        isRunning &&
+          "ring-4 ring-purple-500/30 animate-pulse border-purple-400",
       )}
     >
       {/* ERROR TINT */}

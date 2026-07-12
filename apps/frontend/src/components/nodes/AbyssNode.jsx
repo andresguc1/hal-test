@@ -35,7 +35,7 @@ const AbyssNode = ({ id, data, selected, type }) => {
   const { t } = useTranslation();
   const updateNodeInternals = useUpdateNodeInternals();
   const internalNode = useInternalNode(id);
-  
+
   useEffect(() => {
     // Force measurement of handles on mount and whenever branches change
     const timer = setTimeout(() => {
@@ -357,7 +357,11 @@ const AbyssNode = ({ id, data, selected, type }) => {
                       .join("")
                   }
                 >
-                  <AlertTriangle size={10} strokeWidth={3} className="shrink-0" />
+                  <AlertTriangle
+                    size={10}
+                    strokeWidth={3}
+                    className="shrink-0"
+                  />
                   <span>{data.warnings.length}</span>
                 </div>
               )}

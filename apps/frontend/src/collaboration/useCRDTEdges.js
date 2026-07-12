@@ -15,8 +15,8 @@ import { useCollaboration } from "./CollaborationProvider";
  */
 function yEdgeToPlain(id, yEdge) {
   const json = yEdge instanceof Y.Map ? yEdge.toJSON() : yEdge;
-  return { 
-    id, 
+  return {
+    id,
     ...json,
     // Sanitize falsy handles to "default" so React Flow v12 finds the explicit default handles
     sourceHandle: json.sourceHandle || "default",
@@ -33,10 +33,8 @@ function plainToYEdge(edge) {
 
   if (rest.source) yEdge.set("source", rest.source);
   if (rest.target) yEdge.set("target", rest.target);
-  if (rest.sourceHandle)
-    yEdge.set("sourceHandle", rest.sourceHandle);
-  if (rest.targetHandle)
-    yEdge.set("targetHandle", rest.targetHandle);
+  if (rest.sourceHandle) yEdge.set("sourceHandle", rest.sourceHandle);
+  if (rest.targetHandle) yEdge.set("targetHandle", rest.targetHandle);
   if (rest.type) yEdge.set("type", rest.type);
   if (rest.animated !== undefined) yEdge.set("animated", rest.animated);
   if (rest.data) yEdge.set("data", rest.data);
@@ -152,12 +150,16 @@ export function useCRDTEdges({ enabled = false } = {}) {
             if (edge.source !== undefined) existing.set("source", edge.source);
             if (edge.target !== undefined) existing.set("target", edge.target);
             if (edge.data !== undefined) existing.set("data", edge.data);
-            if (edge.animated !== undefined) existing.set("animated", edge.animated);
+            if (edge.animated !== undefined)
+              existing.set("animated", edge.animated);
             if (edge.type !== undefined) existing.set("type", edge.type);
-            if (edge.sourceHandle !== undefined) existing.set("sourceHandle", edge.sourceHandle);
-            if (edge.targetHandle !== undefined) existing.set("targetHandle", edge.targetHandle);
+            if (edge.sourceHandle !== undefined)
+              existing.set("sourceHandle", edge.sourceHandle);
+            if (edge.targetHandle !== undefined)
+              existing.set("targetHandle", edge.targetHandle);
             if (edge.style !== undefined) existing.set("style", edge.style);
-            if (edge.markerEnd !== undefined) existing.set("markerEnd", edge.markerEnd);
+            if (edge.markerEnd !== undefined)
+              existing.set("markerEnd", edge.markerEnd);
             if (edge.label !== undefined) existing.set("label", edge.label);
           } else {
             yEdges.set(edge.id, plainToYEdge(edge));

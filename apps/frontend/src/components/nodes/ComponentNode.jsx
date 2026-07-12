@@ -1,6 +1,12 @@
 import React, { memo, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Handle, Position, useStore, useUpdateNodeInternals, useInternalNode } from "@xyflow/react";
+import {
+  Handle,
+  Position,
+  useStore,
+  useUpdateNodeInternals,
+  useInternalNode,
+} from "@xyflow/react";
 import {
   Layers,
   MoreHorizontal,
@@ -63,10 +69,9 @@ const ComponentNode = ({ id, data, selected }) => {
     isSuccess || isError
       ? {
           color: isSuccess ? "#10b981" : "#ef4444",
-          shadow:
-            isSuccess
-              ? "0 0 30px rgba(16,185,129,0.5)"
-              : "0 0 30px rgba(239,68,68,0.5)",
+          shadow: isSuccess
+            ? "0 0 30px rgba(16,185,129,0.5)"
+            : "0 0 30px rgba(239,68,68,0.5)",
         }
       : { color: null, shadow: null };
 
