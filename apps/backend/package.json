@@ -50,6 +50,7 @@
     "joi": "^18.2.1",
     "joi-to-swagger": "^6.2.0",
     "jsonwebtoken": "^9.0.2",
+    "lib0": "^0.2.117",
     "morgan": "^1.11.0",
     "multer": "^2.2.0",
     "pg": "^8.16.3",
@@ -60,6 +61,11 @@
     "sqlite3": "^5.1.7",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
+    "ws": "^8.21.0",
+    "y-leveldb": "^0.2.0",
+    "y-protocols": "^1.0.7",
+    "y-websocket": "^3.0.0",
+    "yjs": "^13.6.31",
     "zod": "^4.2.1"
   },
   "devDependencies": {

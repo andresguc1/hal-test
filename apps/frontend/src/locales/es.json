@@ -219,7 +219,9 @@
       "nodes_inside_plural": "{{count}} NODOS DENTRO",
       "array": "Array",
       "while": "While",
-      "sub_flow_loop": "Bucle de Subflujo"
+      "sub_flow_loop": "Bucle de Subflujo",
+      "sticky_note": "Nota Adhesiva",
+      "discussion": "Discusión"
     },
     "categories": {
       "browser_management": "Navegador",
@@ -234,7 +236,8 @@
       "llm_ai": "Inteligencia Artificial",
       "execution_interface": "Ejecución",
       "flow_control": "Motor Lógico",
-      "composition": "Composición de Módulos"
+      "composition": "Composición de Módulos",
+      "collaboration": "Colaboración"
     },
     "fields": {
       "browserType": "Tipo de navegador",

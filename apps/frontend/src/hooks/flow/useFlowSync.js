@@ -4,6 +4,7 @@ import { logger } from "../../utils/logger";
 import { projectManager } from "../../utils/ProjectManager";
 import { debounce } from "../../utils/flowUtils";
 import { STARTER_TEMPLATE } from "../../config/starterTemplate";
+import { useCollaboration } from "../../collaboration";
 
 export function useFlowSync({
   currentProject,
@@ -120,8 +121,12 @@ export function useFlowSync({
     ],
   );
 
+  const collab = useCollaboration();
+  const isCollabActive = collab.isCollaborative && collab.isSynced;
+
   useEffect(() => {
     if (
+      isCollabActive ||
       !autoSaveEnabled ||
       !hasUnsavedChanges ||
       lastLoadedFlowId.current !== currentFlowId
@@ -137,6 +142,7 @@ export function useFlowSync({
     hasUnsavedChanges,
     currentFlowId,
     saveFlow,
+    isCollabActive,
   ]);
 
   const loadFlowData = useCallback(async () => {
@@ -151,6 +157,8 @@ export function useFlowSync({
         setEdges(
           (flow.edges || []).map((e) => ({
             ...e,
+            sourceHandle: e.sourceHandle || "default",
+            targetHandle: e.targetHandle || "default",
             type: "custom",
             animated: true,
           })),
@@ -174,8 +182,46 @@ export function useFlowSync({
     // Clear save queue and reset state when switching flows
     saveQueueRef.current = [];
     isSavingRef.current = false;
-    loadFlowData();
-  }, [currentFlowId, loadFlowData]);
+
+    if (collab.isCollaborative) {
+      if (collab.isSynced && collab.ydoc) {
+        const yMeta = collab.ydoc.getMap("meta");
+        const isSeeded = yMeta.get("seeded");
+        const yNodes = collab.ydoc.getMap("nodes");
+        const yEdges = collab.ydoc.getMap("edges");
+
+        // Self-healing: if the room was already marked seeded but edges are empty (e.g. due to the previous connection regression),
+        // we force re-seeding from the SQLite database to restore the flow connections.
+        const needsSeeding =
+          !isSeeded ||
+          yNodes.size === 0 ||
+          (yEdges.size === 0 && !yMeta.get("edges_seeded"));
+
+        if (needsSeeding) {
+          console.log(
+            `[Collaboration] CRDT room needs seeding (isSeeded: ${!!isSeeded}, nodes: ${yNodes.size}, edges: ${yEdges.size}). Seeding from SQLite...`,
+          );
+          loadFlowData().then(() => {
+            yMeta.set("seeded", true);
+            yMeta.set("edges_seeded", true);
+          });
+        } else {
+          console.log(
+            "[Collaboration] CRDT room is already seeded, skipping SQLite load.",
+          );
+          lastLoadedFlowId.current = currentFlowId;
+        }
+      }
+    } else {
+      loadFlowData();
+    }
+  }, [
+    currentFlowId,
+    loadFlowData,
+    collab.isCollaborative,
+    collab.isSynced,
+    collab.ydoc,
+  ]);
 
   // Sync isNavigating state to ref for race condition prevention in callbacks
   useEffect(() => {

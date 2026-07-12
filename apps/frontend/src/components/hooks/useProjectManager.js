@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { projectManager } from "../../utils/ProjectManager";
 import { api } from "../../utils/api";
@@ -29,23 +29,23 @@ export function useProjectManager() {
       queryKey: ["project", currentProjectId],
       queryFn: () => projectManager.getProject(currentProjectId),
       enabled: !!currentProjectId,
-      onSuccess: (project) => {
-        // Auto-select first flow if none selected
-        if (
-          project &&
-          (!currentFlowId || !project.flows.find((f) => f.id === currentFlowId))
-        ) {
-          if (project.flows && project.flows.length > 0) {
-            setCurrentFlowId(project.flows[0].id);
-          } else {
-            setCurrentFlowId(null);
-          }
-        }
-      },
-      onError: (err) =>
-        logger.error("Failed to load project", err, "useProjectManager"),
     },
   );
+
+  useEffect(() => {
+    // Auto-select first flow if none selected
+    if (
+      currentProject &&
+      (!currentFlowId ||
+        !currentProject.flows.find((f) => f.id === currentFlowId))
+    ) {
+      if (currentProject.flows && currentProject.flows.length > 0) {
+        setCurrentFlowId(currentProject.flows[0].id);
+      } else {
+        setCurrentFlowId(null);
+      }
+    }
+  }, [currentProject, currentFlowId]);
 
   // ========================================
   // MUTATIONS (Projects)

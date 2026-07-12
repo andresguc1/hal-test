@@ -5,6 +5,15 @@ process.on('message', async (message) => {
     if (message.type === 'execute') {
         const { flowId, projectId, options } = message.payload;
         try {
+            // Emits intermediate metrics directly back to the parent WorkerPool
+            options.onNodeComplete = (metricPayload) => {
+                try {
+                    process.send({ type: 'node-metric', payload: metricPayload });
+                } catch (e) {
+                    // ignore
+                }
+            };
+
             // Re-use standard execution pipeline in the child process
             const result = await executionService.executeFlow(flowId, projectId, options);
             process.send({ type: 'success', result });

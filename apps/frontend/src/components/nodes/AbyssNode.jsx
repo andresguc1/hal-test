@@ -1,6 +1,12 @@
-import React, { memo } from "react";
+import React, { memo, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Handle, Position, useStore } from "@xyflow/react";
+import {
+  Handle,
+  Position,
+  useStore,
+  useUpdateNodeInternals,
+  useInternalNode,
+} from "@xyflow/react";
 import {
   Code,
   Terminal,
@@ -26,6 +32,17 @@ import {
 
 const AbyssNode = ({ id, data, selected, type }) => {
   const { t } = useTranslation();
+  const updateNodeInternals = useUpdateNodeInternals();
+  const internalNode = useInternalNode(id);
+  
+  useEffect(() => {
+    // Force measurement of handles on mount and whenever branches change
+    const timer = setTimeout(() => {
+      updateNodeInternals(id);
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [id, updateNodeInternals, data?.configuration?.branches]);
+
   // 1. Determine Node Type & Config
   const nodeKey = data.subType || data.type || type;
   const config = NODE_TYPE_MAP[nodeKey] || NODE_TYPE_MAP.launch_browser;
@@ -49,7 +66,7 @@ const AbyssNode = ({ id, data, selected, type }) => {
 
   // 4. Validation Logic (SMART NODES)
   const validation = validateNodeConfig(nodeKey, data.configuration);
-  const isValid = validation.isValid;
+  const isNodeValid = validation.isValid;
 
   // 5. Smart Label Logic
   const smartLabel = getSmartLabel(nodeKey, data.configuration);
@@ -65,6 +82,18 @@ const AbyssNode = ({ id, data, selected, type }) => {
   const showInputs = data.configuration?.showInputs !== false;
   const showOutputs =
     data.configuration?.showOutputs !== false && !safeConfig.terminal;
+
+  // React Flow v12 needs this to recalculate handle positions if they render conditionally
+  // or if zoom changes mount/unmount behavior unexpectedly
+  React.useEffect(() => {
+    // If the node is in the store but handleBounds are missing, force a re-measure!
+    if (internalNode && !internalNode.internals?.handleBounds) {
+      const timeout = setTimeout(() => {
+        updateNodeInternals(id);
+      }, 50);
+      return () => clearTimeout(timeout);
+    }
+  }, [id, data, updateNodeInternals, internalNode]);
 
   const isConditional = nodeKey === "conditional";
   const isSwitch = nodeKey === "switch";
@@ -114,7 +143,7 @@ const AbyssNode = ({ id, data, selected, type }) => {
         : { color: null, shadow: null };
 
   // Determine invalid style
-  const invalidStyle = !isValid
+  const invalidStyle = !isNodeValid
     ? "shadow-[inset_0_0_10px_rgba(239,68,68,0.4)] border-red-500/50"
     : "";
 
@@ -172,7 +201,9 @@ const AbyssNode = ({ id, data, selected, type }) => {
         <Handle
           type="target"
           position={Position.Left}
-          className="!-left-3 !w-3 !h-3 !bg-white !border-[2px] !border-black/20 transition-colors"
+          id="default"
+          className="!-left-3 !bg-white !border-[2px] !border-black/20 transition-colors"
+          style={{ width: 12, height: 12 }}
         />
       )}
 
@@ -221,27 +252,46 @@ const AbyssNode = ({ id, data, selected, type }) => {
       {/* STATUS LED & ICONS */}
       <div className="absolute -top-2 -right-2 z-20 flex gap-1.5 items-center">
         {/* VALIDATION WARNING (Priority 1) */}
-        {!isValid && (
+        {!isNodeValid && (
           <div
-            className="bg-red-500 text-white rounded-full p-0.5 shadow-lg border border-red-400 animate-pulse"
-            role="img"
-            aria-label="Configuration error: required fields missing"
+            className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-red-500/10 text-red-400 border border-red-500/20 cursor-help"
+            title={validation.errors[0] || "Configuration Error"}
           >
-            <AlertTriangle size={12} fill="currentColor" strokeWidth={3} />
+            <AlertCircle size={10} className="shrink-0" />
+            <span className="text-[9px] font-semibold uppercase tracking-wider">
+              {t("nodes.status.invalid", "Invalid")}
+            </span>
           </div>
         )}
 
-        {/* LINTER POLICY WARNINGS (Priority 2) */}
-        {data.warnings && data.warnings.length > 0 && isValid && (
+        {/* Warnings */}
+        {data.warnings && data.warnings.length > 0 && isNodeValid && (
           <div
-            className="bg-yellow-500 text-slate-950 rounded-full p-0.5 shadow-lg border border-yellow-400 z-10"
-            role="img"
-            title={`${data.warnings.length} Policy Violations`}
-            aria-label={`${data.warnings.length} Policy Violations`}
+            className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 cursor-help transition-colors hover:bg-yellow-500/20"
+            title={`${data.warnings.length} Warnings`}
           >
-            <AlertTriangle size={12} fill="currentColor" strokeWidth={2.5} />
+            <AlertTriangle size={10} className="shrink-0" />
+            <span className="text-[9px] font-semibold uppercase tracking-wider">
+              {data.warnings.length}{" "}
+              {data.warnings.length === 1 ? "Warning" : "Warnings"}
+            </span>
           </div>
         )}
+
+        {/* Status Pills (Only show if valid and no warnings overriding it) */}
+        {data.state === "error" && isNodeValid && (
+          <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20">
+            <XCircle size={10} className="shrink-0" />
+            <span className="text-[9px] font-medium tracking-wide">Error</span>
+          </div>
+        )}
+        {data.state === "success" &&
+          isNodeValid && (
+            <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.2)]">
+              <CheckCircle size={10} className="shrink-0" />
+              <span className="text-[9px] font-medium tracking-wide">Done</span>
+            </div>
+          )}
 
         {(data.state === "running" || data.state === "executing") && (
           <div
@@ -265,7 +315,7 @@ const AbyssNode = ({ id, data, selected, type }) => {
         )}
 
         {/* Error: LED (Only show if valid, otherwise the Triangle is enough) */}
-        {data.state === "error" && isValid && (
+        {data.state === "error" && isNodeValid && (
           <div
             className="w-3 h-3 bg-red-500 rounded-full border border-white shadow-lg animate-pulse"
             role="img"
@@ -279,7 +329,7 @@ const AbyssNode = ({ id, data, selected, type }) => {
             data.state !== "running" &&
             data.state !== "success" &&
             data.state !== "error")) &&
-          isValid && (
+          isNodeValid && (
             <div
               className={cn(
                 "w-2.5 h-2.5 rounded-full border border-white/20 bg-slate-600",
@@ -506,7 +556,9 @@ const AbyssNode = ({ id, data, selected, type }) => {
             <Handle
               type="source"
               position={Position.Right}
-              className="!-right-3 !w-3 !h-3 !bg-white !border-[2px] !border-black/20 transition-colors"
+              id="default"
+              className="!-right-3 !bg-white !border-[2px] !border-black/20 transition-colors"
+              style={{ width: 12, height: 12 }}
             />
           )}
     </div>

@@ -10,7 +10,9 @@ import {
   ControlButton,
   Background,
   useReactFlow,
+  useStoreApi,
   MarkerType,
+  ConnectionMode,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import "./components/styles/App.css";
@@ -64,6 +66,11 @@ import DatasetRunModal from "./components/modals/DatasetRunModal";
 
 import NodeCreationPanel from "./components/NodeCreationPanel";
 import { useAuth } from "./context/AuthContext";
+import {
+  CollaborationProvider,
+  RemoteCursors,
+  useCollaboration,
+} from "./collaboration";
 
 import { NODE_STATES } from "./components/hooks/flowStyles";
 import {
@@ -95,7 +102,20 @@ const edgeTypes = {
 // DASHBOARD COMPONENT (Main Work Area)
 // ========================================
 
-function Dashboard() {
+function Dashboard({
+  projects,
+  currentProject,
+  currentFlowId,
+  loadProjects,
+  createProject,
+  loadProject,
+  deleteProject,
+  createFlow,
+  switchFlow,
+  deleteFlow,
+  renameFlow,
+  renameProject,
+}) {
   // 1. Utility Hooks
   const { t } = useTranslation();
   const { theme } = useTheme();
@@ -105,22 +125,10 @@ function Dashboard() {
   const isPanelVisible = useLogStore((state) => state.isPanelVisible);
   const togglePanel = useLogStore((state) => state.togglePanel);
   const reactFlowWrapper = React.useRef(null);
+  const prevEnforceStructureRef = React.useRef("");
+  const warningsMapRef = React.useRef({});
 
   // 2. Navigation & Context Hooks
-  const {
-    projects,
-    currentProject,
-    currentFlowId,
-    loadProjects,
-    createProject,
-    loadProject,
-    deleteProject,
-    createFlow,
-    switchFlow,
-    deleteFlow,
-    renameFlow,
-    renameProject,
-  } = useProjectManager();
 
   const {
     openSettings,
@@ -142,7 +150,12 @@ function Dashboard() {
     deleteElements,
     setViewport,
     fitView: reactFlowFitView,
+    screenToFlowPosition,
   } = useReactFlow();
+  const store = useStoreApi();
+  window.rfGetNodes = getNodes;
+  window.rfGetEdges = getEdges;
+  window.rfStore = store;
 
   // 3. Core Flow Management Hub
   const {
@@ -201,6 +214,34 @@ function Dashboard() {
     simulatedResults,
     activeRunId,
   } = useFlowManager(currentProject, currentFlowId, switchFlow);
+  window.nodes = nodes;
+  window.edges = edges;
+
+  const { updateCursor } = useCollaboration();
+
+  const handleMouseMove = useCallback(
+    (event) => {
+      if (!updateCursor) return;
+      const flowPos = screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
+      updateCursor(flowPos);
+    },
+    [updateCursor, screenToFlowPosition],
+  );
+
+  useEffect(() => {
+    const handleUpdateNodeConfig = (event) => {
+      const { nodeId, configuration } = event.detail;
+      updateNodeConfiguration(nodeId, configuration);
+    };
+
+    window.addEventListener("update-node-config", handleUpdateNodeConfig);
+    return () => {
+      window.removeEventListener("update-node-config", handleUpdateNodeConfig);
+    };
+  }, [updateNodeConfiguration]);
 
   // Navigate to a node: select it AND center the canvas on it
   const handleNavigateToNode = useCallback(
@@ -475,8 +516,6 @@ function Dashboard() {
   }, []);
 
   const [reportingRunId, setReportingRunId] = useState(null);
-
-
 
   // 5. Effects
   React.useEffect(() => {
@@ -1340,7 +1379,6 @@ function Dashboard() {
   // ========================================
   // DRAG & DROP HANDLERS
   // ========================================
-  const { screenToFlowPosition } = useReactFlow();
 
   const handleResetCanvas = useCallback(async () => {
     setNodes([]);
@@ -1452,9 +1490,10 @@ function Dashboard() {
       zoomOnDoubleClick: false, // Deshabilitar zoom con doble click
 
       // OPTIMIZATION: Performance Overhaul
-      minZoom: 0.2, // Allow zooming out far
-      maxZoom: 4, // Prevent excessive zoom in
-      onlyRenderVisibleElements: true, // Critical for performance
+      minZoom: 0.4, // Standard zoom limits
+      maxZoom: 2.0, // Standard zoom limits
+      connectionMode: ConnectionMode.Loose, // Loose connections for smoother flows
+      onlyRenderVisibleElements: false, // Critical for performance
       translateExtent: [
         [-5000, -5000],
         [5000, 5000],
@@ -1472,8 +1511,22 @@ function Dashboard() {
   const enrichedNodes = useMemo(() => {
     if (!nodes || nodes.length === 0 || !currentProject) return nodes;
 
-    // 1. Calculate linter warnings
-    const warningsMap = runPolicyEnforcer(nodes, edges);
+    const currentStructure =
+      nodes
+        .map(
+          (n) =>
+            `${n.id}:${n.type}:${JSON.stringify(n.data?.configuration || {})}`,
+        )
+        .join(",") +
+      "|" +
+      edges.map((e) => `${e.source}->${e.target}`).join(",");
+
+    if (currentStructure !== prevEnforceStructureRef.current) {
+      prevEnforceStructureRef.current = currentStructure;
+      warningsMapRef.current = runPolicyEnforcer(nodes, edges);
+    }
+
+    const warningsMap = warningsMapRef.current;
 
     return nodes.map((node) => {
       const nodeWarnings = warningsMap[node.id] || [];
@@ -1502,8 +1555,7 @@ function Dashboard() {
             if (
               node.data?.nodeCount !== nodeCount ||
               node.data?.hasInput !== hasInput ||
-              node.data?.hasOutput !== hasOutput ||
-              node.data?.onEnterSubFlow !== enterComponent
+              node.data?.hasOutput !== hasOutput
             ) {
               updatedNode = {
                 ...node,
@@ -1536,7 +1588,7 @@ function Dashboard() {
 
       return node;
     });
-  }, [nodes, edges, currentProject, enterComponent]);
+  }, [nodes, edges, currentProject]); // Removed enterComponent because it changes on every node update
 
   // Props dinámicas que sí cambian
   const flowConfig = useMemo(
@@ -1759,7 +1811,11 @@ function Dashboard() {
           >
             <div ref={reactFlowWrapper} className="flex-1 w-full relative">
               <ErrorBoundary onReset={handleResetCanvas}>
-                <ReactFlow {...flowConfig} onNodesDelete={onNodesDelete}>
+                <ReactFlow
+                  {...flowConfig}
+                  onNodesDelete={onNodesDelete}
+                  onMouseMove={handleMouseMove}
+                >
                   {showMinimap && <StyledMiniMap />}
                   <Controls>
                     <ControlButton
@@ -1899,6 +1955,7 @@ function Dashboard() {
                     />
                   )}
                 </ReactFlow>
+                <RemoteCursors />
               </ErrorBoundary>
             </div>
 
@@ -2184,12 +2241,31 @@ function Dashboard() {
 }
 
 // ========================================
+// COLLABORATIVE DASHBOARD WRAPPER
+// ========================================
+
+function CollaborativeDashboard() {
+  const { user } = useAuth();
+  const projectManagerData = useProjectManager();
+
+  return (
+    <CollaborationProvider
+      flowId={projectManagerData.currentFlowId}
+      user={user}
+      enabled={true}
+    >
+      <Dashboard {...projectManagerData} />
+    </CollaborationProvider>
+  );
+}
+
+// ========================================
 // MAIN APP COMPONENT (Router Entry)
 // ========================================
 
 export default function App() {
   return (
-    <BrowserRouter basename="/app">
+    <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
@@ -2197,7 +2273,7 @@ export default function App() {
           path="/"
           element={
             <ProtectedRoute>
-              <Dashboard />
+              <CollaborativeDashboard />
             </ProtectedRoute>
           }
         />

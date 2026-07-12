@@ -191,8 +191,17 @@ class MetricsCollector {
      * @returns {Object} Metrics snapshot
      */
     snapshot() {
-        const total = this.histogram.totalCount;
+        let total = this.histogram.totalCount;
         const elapsed = Date.now() - this.startTime;
+
+        const nodeStats = this.computeNodeStats();
+
+        // If no full iteration has completed yet, fall back to node-level stats for live telemetry
+        let isNodeFallback = false;
+        if (total === 0 && nodeStats.length > 0) {
+            total = nodeStats.reduce((sum, n) => sum + n.count, 0);
+            isNodeFallback = true;
+        }
 
         if (total === 0) {
             return {
@@ -210,25 +219,41 @@ class MetricsCollector {
             };
         }
 
+        // If we are falling back to nodes, we compute synthetic latency from node stats
+        let latencyObj = {
+            avg: Math.round(this.histogram.mean),
+            median: this.histogram.getValueAtPercentile(50),
+            p95: this.histogram.getValueAtPercentile(95),
+            p99: this.histogram.getValueAtPercentile(99),
+            min: this.histogram.minNonZeroValue,
+            max: this.histogram.maxValue,
+        };
+
+        if (isNodeFallback) {
+            let maxP95 = 0;
+            nodeStats.forEach((n) => {
+                if (n.p95 > maxP95) maxP95 = n.p95;
+            });
+            latencyObj = { avg: 0, median: 0, p95: maxP95, p99: 0, min: 0, max: 0 };
+        }
+
+        const errCount = isNodeFallback
+            ? nodeStats.reduce((sum, n) => sum + n.errors, 0)
+            : this._errorCount;
+        const succCount = isNodeFallback ? total - errCount : this._successCount;
+
         return {
             flowId: this.flowId,
             totalRequests: total,
-            successCount: this._successCount,
-            errorCount: this._errorCount,
-            errorRate: ((this._errorCount / total) * 100).toFixed(2),
-            latency: {
-                avg: Math.round(this.histogram.mean),
-                median: this.histogram.getValueAtPercentile(50),
-                p95: this.histogram.getValueAtPercentile(95),
-                p99: this.histogram.getValueAtPercentile(99),
-                min: this.histogram.minNonZeroValue,
-                max: this.histogram.maxValue,
-            },
+            successCount: succCount,
+            errorCount: errCount,
+            errorRate: ((errCount / total) * 100).toFixed(2),
+            latency: latencyObj,
             throughput: parseFloat((total / (elapsed / 1000)).toFixed(2)),
             elapsed,
             timestamp: Date.now(),
             runConfig: this.runConfig,
-            nodeStats: this.computeNodeStats(),
+            nodeStats,
         };
     }
 

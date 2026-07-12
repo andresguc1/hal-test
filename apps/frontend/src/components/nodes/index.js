@@ -4,6 +4,8 @@ import InputNode from "./InputNode";
 import OutputNode from "./OutputNode";
 import LoopNode from "./LoopNode";
 import ForEachNode from "./ForEachNode";
+import StickyNoteNode from "./StickyNoteNode";
+import DiscussionNode from "./DiscussionNode";
 import { NODE_TYPE_MAP } from "@/config/nodeConstants";
 
 // DYNAMIC REGISTRY
@@ -21,6 +23,10 @@ const dynamicNodeTypes = Object.keys(NODE_TYPE_MAP).reduce((acc, type) => {
     acc[type] = LoopNode;
   } else if (type === "for_each") {
     acc[type] = ForEachNode;
+  } else if (type === "sticky_note") {
+    acc[type] = StickyNoteNode;
+  } else if (type === "discussion") {
+    acc[type] = DiscussionNode;
   } else {
     acc[type] = AbyssNode;
   }

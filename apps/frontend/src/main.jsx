@@ -26,34 +26,32 @@ import { AuthProvider } from "./context/AuthContext";
 import { AIProvider } from "./context/AIContext";
 
 createRoot(document.getElementById("root")).render(
-  <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="dark"
-        enableSystem={false}
-        storageKey="haltest-theme"
-      >
-        <ReactFlowProvider>
-          <ToastProvider>
-            <AuthProvider>
-              <SettingsProvider>
-                <LogProvider>
-                  <AIProvider>
-                    <App />
-                  </AIProvider>
-                </LogProvider>
-              </SettingsProvider>
-            </AuthProvider>
-          </ToastProvider>
-        </ReactFlowProvider>
-      </ThemeProvider>
-      {import.meta.env.DEV && (
-        <ReactQueryDevtools
-          initialIsOpen={false}
-          buttonPosition="bottom-left"
-        />
-      )}
-    </QueryClientProvider>
-  </StrictMode>,
+  <QueryClientProvider client={queryClient}>
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="dark"
+      enableSystem={false}
+      storageKey="haltest-theme"
+    >
+      <ReactFlowProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <SettingsProvider>
+              <LogProvider>
+                <AIProvider>
+                  <App />
+                </AIProvider>
+              </LogProvider>
+            </SettingsProvider>
+          </AuthProvider>
+        </ToastProvider>
+      </ReactFlowProvider>
+    </ThemeProvider>
+    {import.meta.env.DEV && (
+      <ReactQueryDevtools
+        initialIsOpen={false}
+        buttonPosition="bottom-left"
+      />
+    )}
+  </QueryClientProvider>,
 );

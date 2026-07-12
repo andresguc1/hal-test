@@ -1,6 +1,6 @@
-import React, { memo } from "react";
+import React, { memo, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Handle, Position, useStore } from "@xyflow/react";
+import { Handle, Position, useStore, useUpdateNodeInternals, useInternalNode } from "@xyflow/react";
 import {
   Layers,
   MoreHorizontal,
@@ -15,6 +15,17 @@ import { NODE_STATES } from "../hooks/flowStyles";
 
 const ComponentNode = ({ id, data, selected }) => {
   const { t } = useTranslation();
+  const updateNodeInternals = useUpdateNodeInternals();
+  const internalNode = useInternalNode(id);
+
+  React.useEffect(() => {
+    if (internalNode && !internalNode.internals?.handleBounds) {
+      const timeout = setTimeout(() => {
+        updateNodeInternals(id);
+      }, 50);
+      return () => clearTimeout(timeout);
+    }
+  }, [id, data, updateNodeInternals, internalNode]);
 
   // 1. Config
   const nodeKey = "component";
@@ -67,7 +78,9 @@ const ComponentNode = ({ id, data, selected }) => {
         <Handle
           type="target"
           position={Position.Left}
-          className="!-left-3 !w-3 !h-3 !bg-white !border-[2px] !border-black/20 transition-colors"
+          id="default"
+          className="!-left-3 !bg-white !border-[2px] !border-black/20 transition-colors"
+          style={{ width: 12, height: 12 }}
         />
       )}
 
@@ -161,7 +174,9 @@ const ComponentNode = ({ id, data, selected }) => {
         <Handle
           type="source"
           position={Position.Right}
-          className="!-right-3 !w-3 !h-3 !bg-white !border-[2px] !border-black/20 transition-colors"
+          id="default"
+          className="!-right-3 !bg-white !border-[2px] !border-black/20 transition-colors"
+          style={{ width: 12, height: 12 }}
         />
       )}
     </div>

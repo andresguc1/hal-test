@@ -310,6 +310,20 @@ playwright_tests:
 
     generateNodeCode(step, index, depth) {
         const type = step.type || step.action;
+        const ignoredTypes = [
+            'guide',
+            'note',
+            'comment',
+            'annotation',
+            'label',
+            'sticky',
+            'sticky_note',
+            'discussion',
+        ];
+        if (ignoredTypes.includes(type)) {
+            return '';
+        }
+
         const rawConfig = step.data?.configuration || step.data || step || {};
         const config = variableManager.resolveRecursive(
             rawConfig,

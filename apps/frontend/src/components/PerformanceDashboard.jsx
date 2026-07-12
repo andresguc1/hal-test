@@ -45,7 +45,7 @@ const PerformanceDashboard = () => {
     }
   }, [currentFlowId, selectedFlowId]);
 
-  const flowId = selectedFlowId;
+  const flowId = selectedFlowId || currentProject?.flows?.[0]?.id;
   const flowName =
     currentProject?.flows?.find((f) => f.id === flowId)?.name ||
     "Ningún Flujo Seleccionado";

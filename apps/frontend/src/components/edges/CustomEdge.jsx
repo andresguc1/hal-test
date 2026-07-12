@@ -21,11 +21,13 @@ const CustomEdge = ({
   const [edgePath] = getBezierPath({
     sourceX,
     sourceY,
-    sourcePosition,
+    sourcePosition: sourcePosition || "right",
     targetX,
     targetY,
-    targetPosition,
+    targetPosition: targetPosition || "left",
   });
+
+  console.log("CUSTOM_EDGE_RENDER:", { id, edgePath, sourceX, sourceY, targetX, targetY });
 
   // 2. Definir estados y colores según la regla de negocio
   const executionState = data?.executionState || "idle";
@@ -50,18 +52,26 @@ const CustomEdge = ({
     strokeColor = "#facc15"; // Amarillo (Yellow-400)
   else if (isSkipped) strokeColor = "#D1D5DB"; // Gris (Gray-300)
 
+  console.log("CUSTOM_EDGE_RENDER:", { id, edgePath, sourceX, sourceY, targetX, targetY });
+
   const strokeWidth = selected || isRunning ? 3 : 2;
 
   return (
     <>
-      <svg style={{ position: "absolute", width: 0, height: 0 }}>
-        <defs>
-          <linearGradient id="edge-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#6366f1" />
-            <stop offset="100%" stopColor="#06b6d4" />
-          </linearGradient>
-        </defs>
-      </svg>
+      <text x={sourceX} y={sourceY} className="DUMMY-EDGE-TEXT" fill="red" fontSize="20" style={{zIndex: 9999}}>
+        EDGE-RENDERING-TEST: {id}
+      </text>
+      {/* Background glow path (simulated vector glow instead of expensive GPU CSS filters) */}
+      {(selected || isRunning || isSuccess || isHealed) && (
+        <BaseEdge
+          path={edgePath}
+          style={{
+            stroke: selected ? "#6366f1" : strokeColor,
+            strokeWidth: strokeWidth + 4,
+            opacity: 0.2,
+          }}
+        />
+      )}
 
       <BaseEdge
         path={edgePath}
@@ -84,10 +94,6 @@ const CustomEdge = ({
             : isSuccess || isHealed || isRunning
               ? 1
               : 0.7,
-          filter:
-            isRunning || isSuccess || isHealed
-              ? `drop-shadow(0 0 4px ${strokeColor})`
-              : "none",
         }}
         className={cn(
           "transition-all duration-300",
@@ -96,7 +102,6 @@ const CustomEdge = ({
           isError && "edge-error",
           isHealed && "edge-healed",
           isSkipped && "edge-skipped",
-          selected && "filter drop-shadow-[0_0_3px_rgba(99,102,241,0.5)]",
         )}
       />
 

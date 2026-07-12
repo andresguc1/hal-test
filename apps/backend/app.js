@@ -12,6 +12,7 @@ import { createServer } from 'http';
 import { storageCleanupService } from './services/StorageCleanupService.js';
 import { STORAGE_DIR, PUBLIC_DIR } from './config/paths.js';
 import { init as initSocket } from './socket.js';
+import { yjsServer } from './services/collaboration/YjsServer.js';
 
 // Express Modules and Middlewares
 import { apiLimiter, helmetMiddleware } from './middlewares/security.js';
@@ -40,6 +41,13 @@ const server = createServer(app);
 const PORT = process.env.PORT || 2001;
 
 initSocket(server);
+
+// Initialize Yjs collaboration server (runs on /collab/:flowId via HTTP upgrade)
+if (process.env.COLLAB_ENABLED !== 'false') {
+    yjsServer.init(server, {
+        storagePath: path.join(STORAGE_DIR, 'yjs-docs'),
+    });
+}
 
 // --- 1. SECURITY & CONFIG MIDDLEWARES ---
 app.set('trust proxy', 1);
@@ -112,12 +120,15 @@ if (process.env.NODE_ENV === 'production') {
 
 // Public Status Route
 app.get('/api/status', (req, res) => {
+    const collabEnabled = process.env.COLLAB_ENABLED !== 'false';
     res.json({
         status: 'ok',
         message: 'HaltTest API is up and running 🚀',
         version: '1.0.0-NO-MCP',
         mode: process.env.HALTEST_MODE || 'cloud',
         auth_enabled: process.env.AUTH_ENABLED !== 'false',
+        collaboration_enabled: collabEnabled,
+        collaboration_stats: collabEnabled ? yjsServer.getStats() : null,
         timestamp: new Date().toISOString(),
     });
 });
@@ -224,6 +235,7 @@ app.use(errorHandler);
 
 import { abortAllPools } from './services/WorkerPool.js';
 import { getIO } from './socket.js';
+import { executionLock } from './services/collaboration/ExecutionLock.js';
 
 // --- 7. SERVER START ---
 let serverInstance;
@@ -260,7 +272,7 @@ const startServer = async () => {
 
 // --- GRACEFUL SHUTDOWN ---
 let shuttingDown = false;
-const gracefulShutdown = () => {
+const gracefulShutdown = async () => {
     if (shuttingDown) return;
     shuttingDown = true;
     console.log('\n[INIT] 🛑 Received termination signal. Starting graceful shutdown...');
@@ -278,6 +290,14 @@ const gracefulShutdown = () => {
         if (io) io.close();
     } catch (e) {
         // socket not initialized
+    }
+
+    // 3. Shutdown collaboration server
+    try {
+        executionLock.releaseAll();
+        await yjsServer.destroy();
+    } catch (e) {
+        console.error('[INIT] Error shutting down collaboration:', e);
     }
 
     // 3. Close the Express Server

@@ -19,6 +19,7 @@ import { useTranslation } from "react-i18next";
 import UserMenu from "./UserMenu";
 import HalLogo from "./HalLogo";
 import { useAuth } from "../context/AuthContext";
+import PresenceIndicator from "../collaboration/PresenceIndicator";
 
 const HeaderButton = ({ onClick, children, title, className }) => (
   <Motion.button
@@ -361,6 +362,7 @@ function AppHeader({
 
       {/* RIGHT */}
       <div className="flex items-center gap-1 md:gap-2 lg:gap-3 relative z-20 shrink-0">
+        <PresenceIndicator />
         <HeaderButton
           onClick={() => navigate("/dashboard")}
           title="Dashboard"

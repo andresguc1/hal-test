@@ -213,7 +213,9 @@
       "input": "Entrée du Module",
       "output": "Sortie du Module",
       "backend_js": "JS Backend",
-      "fail_flow": "Échouer le Flux"
+      "fail_flow": "Échouer le Flux",
+      "sticky_note": "Note Adhésive",
+      "discussion": "Discussion"
     },
     "categories": {
       "browser_management": "Navigateur",
@@ -227,7 +229,8 @@
       "llm_ai": "Modèles d'IA",
       "execution_interface": "Exécution",
       "flow_control": "Moteur Logique",
-      "composition": "Composition de Module"
+      "composition": "Composition de Module",
+      "collaboration": "Collaboration"
     },
     "fields": {
       "browserType": "Type de Navigateur",

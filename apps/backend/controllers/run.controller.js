@@ -393,11 +393,17 @@ export const startPerformanceRunAction = async (req, res) => {
     try {
         const { flowId, projectId, performanceConfig = {} } = req.body;
 
-        if (!flowId || !projectId) {
-            return res
-                .status(400)
-                .json({ success: false, message: 'flowId and projectId are required.' });
+        if (!flowId) {
+            return res.status(400).json({ success: false, message: 'flowId is required.' });
         }
+
+        // Fetch flow for the runner
+        const flow = await Flow.findByPk(flowId);
+        if (!flow) {
+            return res.status(404).json({ success: false, message: 'Flow not found.' });
+        }
+
+        const effectiveProjectId = projectId || flow.project_id || flow.projectId;
 
         // Pre-flight resource check
         const estimate = ThrottlePolicy.estimate(
@@ -420,12 +426,6 @@ export const startPerformanceRunAction = async (req, res) => {
             });
         }
 
-        // Fetch flow for the runner
-        const flow = await Flow.findByPk(flowId);
-        if (!flow) {
-            return res.status(404).json({ success: false, message: 'Flow not found.' });
-        }
-
         // Create run record for history
         const runId = await executionLogger.startRun(flowId, {
             flowName: flow.name,
@@ -436,7 +436,7 @@ export const startPerformanceRunAction = async (req, res) => {
         // Fire-and-forget: performance runs are long-lived
         const perfRunPromise = executionManager.execute(
             'performance',
-            { ...flow.toJSON(), projectId },
+            { ...flow.toJSON(), projectId: effectiveProjectId },
             { performanceConfig, runId },
         );
 

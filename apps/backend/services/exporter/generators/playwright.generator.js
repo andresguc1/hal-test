@@ -141,7 +141,21 @@ export const generatePlaywrightCode = (flowSteps, language = 'javascript', local
      */
     const generateSteps = (steps, generatorFunc, depth = 0) => {
         if (!steps || !Array.isArray(steps)) return '';
+        const ignoredTypes = [
+            'guide',
+            'note',
+            'comment',
+            'annotation',
+            'label',
+            'sticky',
+            'sticky_note',
+            'discussion',
+        ];
         return steps
+            .filter((step) => {
+                const action = step.type || step.action;
+                return !ignoredTypes.includes(action);
+            })
             .map((step, index) => {
                 const action = step.type || step.action;
                 const data = step.data || {};

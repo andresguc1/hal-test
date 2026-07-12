@@ -134,6 +134,9 @@ class WorkerPool {
         this._aborted = true;
         this.queue.forEach((t) => t.reject(new Error('Aborted')));
         this.queue = [];
+        this.activeTasks.forEach((t) => t.reject(new Error('Aborted')));
+        this.activeTasks.clear();
+
         this.workers.forEach((w) => {
             if (w.process && !w.process.killed) {
                 // disconnect IPC first
@@ -144,7 +147,6 @@ class WorkerPool {
             }
         });
         this.workers = [];
-        this.activeTasks.clear();
         activePools.delete(this);
         console.log('[WorkerPool] 🛑 All child processes terminated.');
     }

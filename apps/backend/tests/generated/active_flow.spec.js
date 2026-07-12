@@ -12,11 +12,6 @@ test(`Flujo Generado Hal-Test`, async ({ page }) => {
         await page.goto(`https://www.saucedemo.com`);
     });
 
-    // [node_id: node_596d439d-96bb-46ae-91bb-a8274ce70576]
-    await test.step(`Assert Page Contains Text`, async () => {
-        await expect(page.locator('body')).toContainText(`Swag Labs`, { ignoreCase: true });
-    });
-
     // [node_id: starter_var_user]
     await test.step(`Set User Role`, async () => {
         const user_role = 'standard_user';
@@ -63,7 +58,7 @@ test(`Flujo Generado Hal-Test`, async ({ page }) => {
 
     // [node_id: starter_screenshot]
     await test.step(`Take Evidence`, async () => {
-        await page.screenshot({ path: 'screenshot_10.png' });
+        await page.screenshot({ path: 'screenshot_9.png' });
     });
 
     // [node_id: starter_close]

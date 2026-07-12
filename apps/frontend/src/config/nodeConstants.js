@@ -18,6 +18,8 @@ import {
   Sparkles,
   Zap,
   Repeat2,
+  StickyNote,
+  MessageSquare,
 } from "lucide-react";
 
 // --- GLOBAL ALL-IN-ONE CONFIGURATION ---
@@ -154,6 +156,12 @@ export const NODE_CATEGORIES = {
     label: "Components",
     nodes: ["component", "input", "output"],
   },
+  collaboration: {
+    icon: MessageSquare,
+    color: "amber",
+    label: "Collaboration",
+    nodes: ["sticky_note", "discussion"],
+  },
 };
 
 // 2. HELPER: MAP NODE TYPE -> CATEGORY INFO
@@ -171,6 +179,8 @@ export const NODE_TYPE_MAP = Object.entries(NODE_CATEGORIES).reduce(
       if (nodeType === "fail_flow") overrides.icon = Bug;
       if (nodeType === "input") overrides.icon = RefreshCw;
       if (nodeType === "output") overrides.icon = CheckSquare;
+      if (nodeType === "sticky_note") overrides.icon = StickyNote;
+      if (nodeType === "discussion") overrides.icon = MessageSquare;
 
       acc[nodeType] = {
         category: catKey,

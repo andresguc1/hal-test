@@ -15,6 +15,11 @@ import { calculateDesignTimeContext } from "../../utils/graphPropagation";
 import { getLayoutedElements } from "../../utils/layoutUtils";
 import { projectManager } from "../../utils/ProjectManager";
 import { logger } from "../../utils/logger";
+import {
+  useCollaboration,
+  useCRDTNodes,
+  useCRDTEdges,
+} from "../../collaboration";
 
 const DEFAULT_EDGE_OPTIONS = {
   animated: true,
@@ -118,7 +123,23 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
     saveFlowRef.current = fn;
   }, []);
 
+  const collab = useCollaboration();
+  const {
+    nodes: crdtNodes,
+    onNodesChange: crdtOnNodesChange,
+    setNodes: crdtSetNodes,
+  } = useCRDTNodes({ enabled: collab.isCollaborative });
+
+  const {
+    edges: crdtEdges,
+    onEdgesChange: crdtOnEdgesChange,
+    setEdges: crdtSetEdges,
+  } = useCRDTEdges({ enabled: collab.isCollaborative });
+
+  const isCollabActive = collab.isCollaborative && collab.isSynced;
+
   const [rawNodes, _setNodes] = useState([]);
+  const [rawEdges, _setEdges] = useState([]);
 
   const sanitizeNodes = useCallback((nds) => {
     if (!Array.isArray(nds)) return [];
@@ -169,17 +190,36 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
 
   const setNodes = useCallback(
     (updater) => {
-      _setNodes((prevNodes) => {
-        const next =
-          typeof updater === "function" ? updater(prevNodes) : updater;
-        return sanitizeNodes(next);
-      });
+      if (isCollabActive) {
+        if (typeof updater === "function") {
+          crdtSetNodes((prev) => sanitizeNodes(updater(prev)));
+        } else {
+          crdtSetNodes(sanitizeNodes(updater));
+        }
+      } else {
+        _setNodes((prevNodes) => {
+          const next =
+            typeof updater === "function" ? updater(prevNodes) : updater;
+          return sanitizeNodes(next);
+        });
+      }
     },
-    [sanitizeNodes],
+    [isCollabActive, crdtSetNodes, sanitizeNodes],
   );
 
-  const nodes = rawNodes;
-  const [edges, setEdges] = useState([]);
+  const setEdges = useCallback(
+    (updater) => {
+      if (isCollabActive) {
+        crdtSetEdges(updater);
+      } else {
+        _setEdges(updater);
+      }
+    },
+    [isCollabActive, crdtSetEdges],
+  );
+
+  const nodes = isCollabActive ? sanitizeNodes(crdtNodes) : rawNodes;
+  const edges = isCollabActive ? crdtEdges : rawEdges;
   const [history, setHistory] = useState({ past: [], future: [] });
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -187,6 +227,8 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
 
   const nodesRef = useRef(nodes);
   const edgesRef = useRef(edges);
+  const prevDesignStructureRef = useRef("");
+  const designTimeContextRef = useRef({ context: {}, nodeResults: {} });
 
   useEffect(() => {
     nodesRef.current = nodes;
@@ -208,6 +250,21 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
 
   const onNodesChange = useCallback(
     (changes) => {
+      if (isCollabActive) {
+        crdtOnNodesChange(changes);
+        const hasSelectChange = changes.some((c) => c.type === "select");
+        if (hasSelectChange) {
+          const selectedNodeIds = crdtNodes
+            .filter((n) => n.selected)
+            .map((n) => n.id);
+          collab.updateSelection(selectedNodeIds);
+          const newlySelected = changes.find(
+            (c) => c.type === "select" && c.selected,
+          );
+          setSelectedNodeId(newlySelected ? newlySelected.id : null);
+        }
+        return;
+      }
       setNodes((nds) => {
         const nextNodes = applyNodeChanges(changes, nds);
         // Special logic for selection
@@ -224,21 +281,52 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
       });
       setHasUnsavedChanges(true);
     },
-    [setNodes, setEdges],
+    [isCollabActive, crdtOnNodesChange, crdtNodes, collab, setNodes, setEdges],
   );
 
-  const onEdgesChange = useCallback((changes) => {
-    setEdges((eds) => applyEdgeChanges(changes, eds));
-    setHasUnsavedChanges(true);
-  }, []);
+  const onEdgesChange = useCallback(
+    (changes) => {
+      if (isCollabActive) {
+        crdtOnEdgesChange(changes);
+        return;
+      }
+      setEdges((eds) => applyEdgeChanges(changes, eds));
+      setHasUnsavedChanges(true);
+    },
+    [isCollabActive, crdtOnEdgesChange, setEdges],
+  );
 
-  const onConnect = useCallback((params) => {
-    if (wouldCreateCycle(params, nodesRef.current, edgesRef.current)) {
-      return;
-    }
-    setEdges((eds) => addEdge({ ...params, ...DEFAULT_EDGE_OPTIONS }, eds));
-    setHasUnsavedChanges(true);
-  }, []);
+  const onConnect = useCallback(
+    (params) => {
+      if (wouldCreateCycle(params, nodesRef.current, edgesRef.current)) {
+        return;
+      }
+
+      // Prevenir conexiones duplicadas
+      const isDuplicate = edgesRef.current.some(
+        (e) =>
+          e.source === params.source &&
+          e.sourceHandle === params.sourceHandle &&
+          e.target === params.target &&
+          e.targetHandle === params.targetHandle
+      );
+      if (isDuplicate) return;
+
+      const newEdge = {
+        ...params,
+        id: `edge_${uuidv4()}`,
+        sourceHandle: params.sourceHandle || "default",
+        targetHandle: params.targetHandle || "default",
+        type: "custom",
+        animated: true,
+        ...DEFAULT_EDGE_OPTIONS,
+      };
+
+      setEdges((eds) => addEdge(newEdge, eds));
+      setHasUnsavedChanges(true);
+    },
+    [setEdges],
+  );
 
   const onNodeClick = useCallback((_, node) => {
     setSelectedNodeId(node.id);
@@ -1610,7 +1698,21 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
   }, [saveToHistory, setNodes, setEdges]);
 
   const designTimeContext = useMemo(() => {
-    return calculateDesignTimeContext(nodes, edges);
+    const currentStructure =
+      nodes
+        .map(
+          (n) =>
+            `${n.id}:${n.type}:${JSON.stringify(n.data?.configuration || {})}`,
+        )
+        .join(",") +
+      "|" +
+      edges.map((e) => `${e.source}->${e.target}`).join(",");
+
+    if (currentStructure !== prevDesignStructureRef.current) {
+      prevDesignStructureRef.current = currentStructure;
+      designTimeContextRef.current = calculateDesignTimeContext(nodes, edges);
+    }
+    return designTimeContextRef.current;
   }, [nodes, edges]);
 
   const simulatedResults = useMemo(() => ({}), []);

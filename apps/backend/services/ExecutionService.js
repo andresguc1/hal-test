@@ -251,7 +251,7 @@ export class ExecutionService {
 
             const type = node.type || node.data?.type;
 
-            // Skip non-action nodes (guide, note, etc.)
+            // Skip non-action nodes (guide, note, collaborative annotation types, etc.)
             const ignoredTypes = [
                 'guide',
                 'note',
@@ -261,6 +261,9 @@ export class ExecutionService {
                 'sticky',
                 'input',
                 'output',
+                // Collaborative toolbox nodes (non-executable)
+                'sticky_note',
+                'discussion',
             ];
             if (ignoredTypes.includes(type)) continue;
 
@@ -370,7 +373,16 @@ export class ExecutionService {
             }
 
             // --- Live-State Interceptor ---
-            const ignoredTypes = ['guide', 'note', 'comment', 'annotation', 'label', 'sticky'];
+            const ignoredTypes = [
+                'guide',
+                'note',
+                'comment',
+                'annotation',
+                'label',
+                'sticky',
+                'sticky_note',
+                'discussion',
+            ];
             if (node.type && !ignoredTypes.includes(node.type)) {
                 await this.captureLiveState(node, state);
             }
@@ -678,6 +690,23 @@ export class ExecutionService {
      */
     async executeNode(node, allNodes, allEdges, state) {
         const actionType = node.type;
+        const ignoredTypes = [
+            'guide',
+            'note',
+            'comment',
+            'annotation',
+            'label',
+            'sticky',
+            'sticky_note',
+            'discussion',
+        ];
+        if (ignoredTypes.includes(actionType)) {
+            console.log(
+                `[ExecutionService] Skipping execution of non-executable node: ${node.nodeId} (${actionType})`,
+            );
+            return { success: true };
+        }
+
         let resultData = null;
 
         // 🚀 BEGIN TELEMETRY 🚀
@@ -972,11 +1001,17 @@ export class ExecutionService {
         });
 
         if (state.nodeMetrics) {
-            state.nodeMetrics.push({
+            const metricObj = {
                 nodeId: node.nodeId,
                 durationMs: Number(process.hrtime.bigint() - nodeStartTime) / 1e6,
                 label: finalResult.label || node.data?.label || node.type,
-            });
+                success: finalResult?.status !== 'failed' && finalResult?.status !== 'error',
+            };
+            state.nodeMetrics.push(metricObj);
+
+            if (state.options?.onNodeComplete) {
+                state.options.onNodeComplete(metricObj);
+            }
         }
 
         return resultData;
