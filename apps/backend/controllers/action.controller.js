@@ -2717,11 +2717,100 @@ export const selectOptionAction = (req, res) =>
 
 export const submitFormAction = (req, res) =>
     executePlaywrightAction(req, res, 'submit_form', async (page, opts) => {
-        const { selector } = opts;
+        const { selector, waitForNavigation = true, timeout = 30000 } = opts;
 
         if (!selector) throw new Error(req.t('errors.selector_required'));
-        await page.locator(selector).press('Enter'); // Or use evaluate for submit()
-        return { message: req.t('actions.submit_form.success'), traceDetails: { selector } };
+        const timeoutMs = typeof timeout === 'number' ? timeout : 30000;
+
+        const locator = page.locator(selector);
+        // Wait for target element to exist
+        await locator.waitFor({ state: 'attached', timeout: timeoutMs });
+
+        // Retrieve information about the element tag and form structure
+        const formInfo = await locator
+            .evaluate((el) => {
+                const tagName = el.tagName.toLowerCase();
+                if (tagName === 'form') {
+                    return { isForm: true, hasParentForm: false, isSubmitButton: false };
+                }
+                const closestForm = el.closest('form');
+                const isSubmitButton =
+                    (tagName === 'button' && (el.type === 'submit' || !el.type)) ||
+                    (tagName === 'input' && el.type === 'submit');
+                return {
+                    isForm: false,
+                    hasParentForm: !!closestForm,
+                    isSubmitButton,
+                };
+            })
+            .catch(() => ({ isForm: false, hasParentForm: false, isSubmitButton: false }));
+
+        const triggerSubmit = async () => {
+            if (formInfo.isForm) {
+                await locator.evaluate((form) => {
+                    if (typeof form.requestSubmit === 'function') {
+                        form.requestSubmit();
+                    } else {
+                        form.submit();
+                    }
+                });
+            } else if (formInfo.hasParentForm && !formInfo.isSubmitButton) {
+                await locator.evaluate((el) => {
+                    const form = el.closest('form');
+                    if (form) {
+                        if (typeof form.requestSubmit === 'function') {
+                            form.requestSubmit();
+                        } else {
+                            form.submit();
+                        }
+                    }
+                });
+            } else {
+                await locator.click({ timeout: timeoutMs });
+            }
+        };
+
+        if (waitForNavigation) {
+            await Promise.all([
+                page.waitForNavigation({ timeout: timeoutMs, waitUntil: 'load' }).catch((err) => {
+                    console.warn(`[submitFormAction] waitForNavigation timed out: ${err.message}`);
+                    throw err;
+                }),
+                triggerSubmit(),
+            ]);
+        } else {
+            await triggerSubmit();
+        }
+
+        return {
+            message: req.t('actions.submit_form.success'),
+            data: {
+                traceDetails: {
+                    selector,
+                    waitForNavigation,
+                    timeout: timeoutMs,
+                    detectedType: formInfo.isForm
+                        ? 'form'
+                        : formInfo.isSubmitButton
+                          ? 'submit_button'
+                          : formInfo.hasParentForm
+                            ? 'form_input'
+                            : 'other',
+                },
+            },
+            traceDetails: {
+                selector,
+                waitForNavigation,
+                timeout: timeoutMs,
+                detectedType: formInfo.isForm
+                    ? 'form'
+                    : formInfo.isSubmitButton
+                      ? 'submit_button'
+                      : formInfo.hasParentForm
+                        ? 'form_input'
+                        : 'other',
+            },
+        };
     });
 
 export const uploadFileAction = (req, res) =>

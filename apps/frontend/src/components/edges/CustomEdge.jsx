@@ -39,7 +39,7 @@ const CustomEdge = ({
 
   // Dynamic Stroke Color (Matching User Request)
   let strokeColor = "var(--connection-line)"; // Default/Idle
-  if (selected) strokeColor = "url(#edge-gradient)";
+  if (selected) strokeColor = "#6366f1"; // Indigo-500 for selection
   else if (isRunning)
     strokeColor = "#f59e0b"; // Naranja (Amber-500)
   else if (isSuccess)

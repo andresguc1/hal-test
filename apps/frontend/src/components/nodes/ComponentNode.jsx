@@ -59,20 +59,43 @@ const ComponentNode = ({ id, data, selected }) => {
   // 4. Sub-flow Stats
   const subNodeCount = data.nodeCount ?? (data.subFlow?.nodes?.length || 0);
 
+  const { color: statusColor, shadow: statusShadow } =
+    isSuccess || isError
+      ? {
+          color: isSuccess ? "#10b981" : "#ef4444",
+          shadow:
+            isSuccess
+              ? "0 0 30px rgba(16,185,129,0.5)"
+              : "0 0 30px rgba(239,68,68,0.5)",
+        }
+      : { color: null, shadow: null };
+
   return (
     <div
+      style={{
+        borderColor: statusColor || undefined,
+        boxShadow: statusShadow || undefined,
+      }}
       className={cn(
         "group relative min-w-[160px] max-w-[300px] rounded-lg p-3 transition-[background,border,box-shadow,transform] duration-400 select-none border-[2px]",
         themeParams.base,
-        selected ? themeParams.selected : "shadow-lg",
-        // Status Colors
-        isError && "border-red-500 bg-red-500/10",
-        isSuccess && "border-green-500/50",
-        isRunning && "border-blue-400 animate-pulse",
+        selected && statusColor ? "scale-[1.05] z-50 border-[3px]" : "",
+        selected && !statusColor ? themeParams.selected : "",
+        !selected && !statusColor && "shadow-lg",
+        isRunning && "ring-4 ring-blue-500/30 animate-pulse border-blue-400",
         // Onboarding Glow (Matches AbyssNode)
         data.starterHint && "onboarding-glow border-sky-400/50",
       )}
     >
+      {/* ERROR TINT */}
+      {isError && (
+        <div className="absolute inset-0 bg-red-500/10 rounded-lg pointer-events-none border border-red-500/30" />
+      )}
+
+      {/* SUCCESS TINT */}
+      {isSuccess && (
+        <div className="absolute inset-0 bg-emerald-500/10 rounded-lg pointer-events-none border border-emerald-500/30" />
+      )}
       {/* INPUT HANDLE */}
       {showInputs && (
         <Handle

@@ -62,17 +62,41 @@ const ForEachNode = ({ id, data, selected }) => {
   const zoom = useStore((s) => s.transform[2]);
   const showDetails = zoom > 0.5;
 
+  const { color: statusColor, shadow: statusShadow } =
+    isSuccess || isError
+      ? {
+          color: isSuccess ? "#10b981" : "#ef4444",
+          shadow:
+            isSuccess
+              ? "0 0 30px rgba(16,185,129,0.5)"
+              : "0 0 30px rgba(239,68,68,0.5)",
+        }
+      : { color: null, shadow: null };
+
   return (
     <div
+      style={{
+        borderColor: statusColor || undefined,
+        boxShadow: statusShadow || undefined,
+      }}
       className={cn(
         "group relative min-w-[180px] max-w-[320px] rounded-lg p-3 transition-[background,border,box-shadow,transform] duration-400 select-none border-[2px]",
         themeParams.base,
-        selected ? themeParams.selected : "shadow-lg",
-        isError && "border-red-500 bg-red-500/10",
-        isSuccess && "border-emerald-500/50",
-        isRunning && "border-purple-400 animate-pulse",
+        selected && statusColor ? "scale-[1.05] z-50 border-[3px]" : "",
+        selected && !statusColor ? themeParams.selected : "",
+        !selected && !statusColor && "shadow-lg",
+        isRunning && "ring-4 ring-purple-500/30 animate-pulse border-purple-400",
       )}
     >
+      {/* ERROR TINT */}
+      {isError && (
+        <div className="absolute inset-0 bg-red-500/10 rounded-lg pointer-events-none border border-red-500/30" />
+      )}
+
+      {/* SUCCESS TINT */}
+      {isSuccess && (
+        <div className="absolute inset-0 bg-emerald-500/10 rounded-lg pointer-events-none border border-emerald-500/30" />
+      )}
       {/* INPUT HANDLE */}
       <Handle
         type="target"

@@ -17,6 +17,7 @@ import {
   MousePointer,
   CheckCircle,
   Sparkles,
+  XCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -250,7 +251,7 @@ const AbyssNode = ({ id, data, selected, type }) => {
       )}
 
       {/* STATUS LED & ICONS */}
-      <div className="absolute -top-2 -right-2 z-20 flex gap-1.5 items-center">
+      <div className="absolute -top-2.5 -right-2.5 z-20 flex gap-1.5 items-center w-max max-w-none">
         {/* VALIDATION WARNING (Priority 1) */}
         {!isNodeValid && (
           <div
@@ -258,40 +259,11 @@ const AbyssNode = ({ id, data, selected, type }) => {
             title={validation.errors[0] || "Configuration Error"}
           >
             <AlertCircle size={10} className="shrink-0" />
-            <span className="text-[9px] font-semibold uppercase tracking-wider">
+            <span className="text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap">
               {t("nodes.status.invalid", "Invalid")}
             </span>
           </div>
         )}
-
-        {/* Warnings */}
-        {data.warnings && data.warnings.length > 0 && isNodeValid && (
-          <div
-            className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 cursor-help transition-colors hover:bg-yellow-500/20"
-            title={`${data.warnings.length} Warnings`}
-          >
-            <AlertTriangle size={10} className="shrink-0" />
-            <span className="text-[9px] font-semibold uppercase tracking-wider">
-              {data.warnings.length}{" "}
-              {data.warnings.length === 1 ? "Warning" : "Warnings"}
-            </span>
-          </div>
-        )}
-
-        {/* Status Pills (Only show if valid and no warnings overriding it) */}
-        {data.state === "error" && isNodeValid && (
-          <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20">
-            <XCircle size={10} className="shrink-0" />
-            <span className="text-[9px] font-medium tracking-wide">Error</span>
-          </div>
-        )}
-        {data.state === "success" &&
-          isNodeValid && (
-            <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.2)]">
-              <CheckCircle size={10} className="shrink-0" />
-              <span className="text-[9px] font-medium tracking-wide">Done</span>
-            </div>
-          )}
 
         {(data.state === "running" || data.state === "executing") && (
           <div
@@ -306,7 +278,7 @@ const AbyssNode = ({ id, data, selected, type }) => {
         {/* Success: Checkmark */}
         {data.state === "success" && (
           <div
-            className="bg-emerald-500 text-white rounded-full p-0.5 shadow-lg border border-emerald-400"
+            className="bg-emerald-500 text-white rounded-full p-0.5 shadow-lg border border-emerald-400 animate-in zoom-in-50 duration-200"
             role="img"
             aria-label="Node succeeded"
           >
@@ -314,13 +286,15 @@ const AbyssNode = ({ id, data, selected, type }) => {
           </div>
         )}
 
-        {/* Error: LED (Only show if valid, otherwise the Triangle is enough) */}
+        {/* Error: Badge */}
         {data.state === "error" && isNodeValid && (
           <div
-            className="w-3 h-3 bg-red-500 rounded-full border border-white shadow-lg animate-pulse"
+            className="bg-red-500 text-white rounded-full p-0.5 shadow-lg border border-red-400 animate-in zoom-in-50 duration-200"
             role="img"
             aria-label="Node failed"
-          />
+          >
+            <XCircle size={14} strokeWidth={3} />
+          </div>
         )}
 
         {/* Neutral/Ready LED - Only show if NO active state and valid */}
@@ -365,10 +339,29 @@ const AbyssNode = ({ id, data, selected, type }) => {
         <div className="relative flex items-center gap-3 mb-1 pt-1 px-1">
           <Icon size={20} className="shrink-0 text-white drop-shadow-sm" />
 
-          <div className="flex flex-col min-w-0">
-            <span className="text-sm font-bold truncate leading-tight text-white drop-shadow-sm">
-              {displayLabel}
-            </span>
+          <div className="flex flex-col min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-sm font-bold truncate leading-tight text-white drop-shadow-sm">
+                {displayLabel}
+              </span>
+              {data.warnings && data.warnings.length > 0 && isNodeValid && (
+                <div
+                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500 text-slate-950 font-black text-[9px] tracking-wider cursor-help shrink-0 shadow-[0_0_10px_rgba(245,158,11,0.6)] hover:bg-amber-400 transition-colors animate-[pulse_1.5s_infinite]"
+                  title={
+                    `${data.warnings.length} Warning${data.warnings.length > 1 ? "s" : ""}:` +
+                    data.warnings
+                      .map(
+                        (w, idx) =>
+                          `\n• ${typeof w === "object" ? w.message || w.rule || idx : w}`,
+                      )
+                      .join("")
+                  }
+                >
+                  <AlertTriangle size={10} strokeWidth={3} className="shrink-0" />
+                  <span>{data.warnings.length}</span>
+                </div>
+              )}
+            </div>
             {showDetails && (
               <span className="text-[10px] font-bold uppercase tracking-wider text-white drop-shadow-sm">
                 {safeConfig.category === "network_control"
