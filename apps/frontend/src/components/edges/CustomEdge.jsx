@@ -27,8 +27,6 @@ const CustomEdge = ({
     targetPosition: targetPosition || "left",
   });
 
-  console.log("CUSTOM_EDGE_RENDER:", { id, edgePath, sourceX, sourceY, targetX, targetY });
-
   // 2. Definir estados y colores según la regla de negocio
   const executionState = data?.executionState || "idle";
 
@@ -52,15 +50,10 @@ const CustomEdge = ({
     strokeColor = "#facc15"; // Amarillo (Yellow-400)
   else if (isSkipped) strokeColor = "#D1D5DB"; // Gris (Gray-300)
 
-  console.log("CUSTOM_EDGE_RENDER:", { id, edgePath, sourceX, sourceY, targetX, targetY });
-
   const strokeWidth = selected || isRunning ? 3 : 2;
 
   return (
     <>
-      <text x={sourceX} y={sourceY} className="DUMMY-EDGE-TEXT" fill="red" fontSize="20" style={{zIndex: 9999}}>
-        EDGE-RENDERING-TEST: {id}
-      </text>
       {/* Background glow path (simulated vector glow instead of expensive GPU CSS filters) */}
       {(selected || isRunning || isSuccess || isHealed) && (
         <BaseEdge
@@ -72,14 +65,6 @@ const CustomEdge = ({
           }}
         />
       )}
-
-      <BaseEdge
-        path={edgePath}
-        style={{
-          stroke: "var(--bg-canvas)",
-          strokeWidth: strokeWidth + 2,
-        }}
-      />
 
       <BaseEdge
         id={id}

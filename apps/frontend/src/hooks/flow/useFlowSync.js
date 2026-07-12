@@ -211,6 +211,13 @@ export function useFlowSync({
           );
           lastLoadedFlowId.current = currentFlowId;
         }
+      } else {
+        // Fallback: if collaborative but not yet synced, load from SQLite
+        // so the canvas isn't empty while waiting for WebSocket connection.
+        console.log(
+          "[Collaboration] Not yet synced, loading from SQLite as fallback...",
+        );
+        loadFlowData();
       }
     } else {
       loadFlowData();

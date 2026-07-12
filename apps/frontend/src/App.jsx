@@ -2252,7 +2252,7 @@ function CollaborativeDashboard() {
     <CollaborationProvider
       flowId={projectManagerData.currentFlowId}
       user={user}
-      enabled={true}
+      enabled={false}
     >
       <Dashboard {...projectManagerData} />
     </CollaborationProvider>
