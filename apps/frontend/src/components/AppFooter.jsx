@@ -16,6 +16,7 @@ import {
   Repeat,
   Database,
   Activity,
+  Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion as Motion, AnimatePresence } from "framer-motion";
@@ -414,9 +415,14 @@ function AppFooter({
   onRunBatch,
   onRunDataset,
   apiStatus = { state: "idle" },
+  isRemoteExecuting = false,
+  remoteExecution = null,
+  role = "owner",
+  isCollaborative = false,
 }) {
   const [activeMenu, setActiveMenu] = useState(null); // 'project' | 'flow' | null
   const containerRef = useRef(null);
+  const isLocked = isRemoteExecuting || (isCollaborative && role !== "owner");
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -600,14 +606,30 @@ function AppFooter({
         />
 
         <FooterButton
-          icon={apiStatus.state === "running" ? RefreshCw : Play}
-          label={apiStatus.state === "running" ? "RUNNING..." : "RUN FLOW"}
-          variant="primary"
-          onClick={apiStatus.state === "running" ? null : onRun}
+          icon={isLocked ? Lock : (apiStatus.state === "running" ? RefreshCw : Play)}
+          label={
+            isRemoteExecuting
+              ? "LOCKED"
+              : isCollaborative && role !== "owner"
+                ? "OWNER ONLY"
+                : apiStatus.state === "running"
+                  ? "RUNNING..."
+                  : "RUN FLOW"
+          }
+          variant={isLocked ? "outline" : "primary"}
+          onClick={apiStatus.state === "running" || isLocked ? null : onRun}
+          title={
+            isRemoteExecuting
+              ? `Locked: ${remoteExecution?.user?.name || "Another user"} is executing...`
+              : isCollaborative && role !== "owner"
+                ? "Only the flow owner can execute it."
+                : "Run Flow"
+          }
           className={cn(
             "pl-4 pr-5 py-2",
-            apiStatus.state === "running" &&
-              "opacity-70 cursor-not-allowed grayscale pointer-events-none",
+            (apiStatus.state === "running" || isLocked) &&
+              "opacity-75 cursor-not-allowed grayscale pointer-events-none",
+            isLocked && "border-amber-500/30 text-amber-500 hover:bg-transparent"
           )}
         />
 

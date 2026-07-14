@@ -36,14 +36,9 @@ export const helmetMiddleware = helmet({
     },
     // Required to allow cross-origin asset loading (like videos from backend to frontend)
     crossOriginResourcePolicy: { policy: 'cross-origin' },
-    // Configuración HSTS (HTTP Strict Transport Security)
-    strictTransportSecurity: {
-        maxAge: 31536000, // 1 año
-        includeSubDomains: true,
-        preload: true,
-    },
+    // Deshabilitamos HSTS para evitar redirigir a HTTPS localmente
+    hsts: false,
 });
-
 // -------------------------------------------------------------
 // 2. RATE LIMITING: Limitación de Solicitudes
 // -------------------------------------------------------------

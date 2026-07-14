@@ -15,12 +15,14 @@ import { useCollaboration } from "./CollaborationProvider";
  */
 function yEdgeToPlain(id, yEdge) {
   const json = yEdge instanceof Y.Map ? yEdge.toJSON() : yEdge;
+  const sourceHandle = json.sourceHandle === "default" ? undefined : json.sourceHandle;
+  const targetHandle = json.targetHandle === "default" ? undefined : json.targetHandle;
   return {
     id,
     ...json,
-    // Sanitize falsy handles to "default" so React Flow v12 finds the explicit default handles
-    sourceHandle: json.sourceHandle || "default",
-    targetHandle: json.targetHandle || "default",
+    type: json.type || "custom",
+    ...(sourceHandle !== undefined && sourceHandle !== null && { sourceHandle }),
+    ...(targetHandle !== undefined && targetHandle !== null && { targetHandle }),
   };
 }
 
@@ -31,10 +33,13 @@ function plainToYEdge(edge) {
   const yEdge = new Y.Map();
   const { id: _id, ...rest } = edge;
 
+  const sourceHandle = rest.sourceHandle === "default" ? undefined : rest.sourceHandle;
+  const targetHandle = rest.targetHandle === "default" ? undefined : rest.targetHandle;
+
   if (rest.source) yEdge.set("source", rest.source);
   if (rest.target) yEdge.set("target", rest.target);
-  if (rest.sourceHandle) yEdge.set("sourceHandle", rest.sourceHandle);
-  if (rest.targetHandle) yEdge.set("targetHandle", rest.targetHandle);
+  if (sourceHandle) yEdge.set("sourceHandle", sourceHandle);
+  if (targetHandle) yEdge.set("targetHandle", targetHandle);
   if (rest.type) yEdge.set("type", rest.type);
   if (rest.animated !== undefined) yEdge.set("animated", rest.animated);
   if (rest.data) yEdge.set("data", rest.data);
@@ -57,6 +62,12 @@ export function useCRDTEdges({ enabled = false } = {}) {
   const [edges, setLocalEdges] = useState([]);
   const isActive = enabled && isCollaborative && ydoc;
   const suppressObserverRef = useRef(false);
+
+  // Track edges ref to keep callback references completely stable
+  const edgesRef = useRef(edges);
+  useEffect(() => {
+    edgesRef.current = edges;
+  }, [edges]);
 
   // Yjs → React: Observe CRDT changes
   useEffect(() => {
@@ -123,14 +134,13 @@ export function useCRDTEdges({ enabled = false } = {}) {
     [ydoc, isActive],
   );
 
-  // Direct setEdges for bulk operations
   const setEdges = useCallback(
     (updater) => {
       if (!isActive) return;
 
       const yEdges = ydoc.getMap("edges");
       const currentEdges =
-        typeof updater === "function" ? updater(edges) : updater;
+        typeof updater === "function" ? updater(edgesRef.current) : updater;
 
       suppressObserverRef.current = true;
 
@@ -162,6 +172,7 @@ export function useCRDTEdges({ enabled = false } = {}) {
               existing.set("markerEnd", edge.markerEnd);
             if (edge.label !== undefined) existing.set("label", edge.label);
           } else {
+            console.log("[DEBUG-CRDTEDGES] plainToYEdge called for:", edge.id);
             yEdges.set(edge.id, plainToYEdge(edge));
           }
         }
@@ -170,7 +181,7 @@ export function useCRDTEdges({ enabled = false } = {}) {
       suppressObserverRef.current = false;
       setLocalEdges(currentEdges);
     },
-    [ydoc, isActive, edges],
+    [ydoc, isActive],
   );
 
   // Add a connection (from ReactFlow's onConnect callback)

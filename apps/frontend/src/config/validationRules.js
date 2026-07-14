@@ -1117,6 +1117,17 @@ export const NODE_INPUTS = {
     },
   ],
 
+  // --- COLLABORATION NODES ---
+  sticky_note: [
+    {
+      key: "text",
+      label: "Note Content",
+      type: "textarea",
+      placeholder: "Write your note here...",
+    },
+  ],
+  discussion: [],
+
   // --- DEFAULT FALLBACK ---
   default: [
     {

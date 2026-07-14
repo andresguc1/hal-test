@@ -1,5 +1,7 @@
-import React, { useMemo, useState, useCallback } from "react";
+import React, { useMemo, useState, useCallback, useEffect } from "react";
 import { motion as Motion, AnimatePresence } from "framer-motion";
+import { useCollaboration } from "../collaboration/CollaborationProvider";
+import { useAIStore } from "../context/AIContext";
 import {
   X,
   Play,
@@ -14,6 +16,8 @@ import {
   EyeOff,
   Trash2,
   AlertTriangle,
+  Lock,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -49,10 +53,35 @@ const NodeConfigurationPanel = ({
   _onUngroup,
   currentProject,
   _designTimeContext,
-  _isReadOnly,
+  isReadOnly = false,
   _viewStack,
   onSelectNode,
 }) => {
+  // Collaboration soft-lock awareness
+  const { peers, lockNode, unlockNode, isCollaborative } = useCollaboration();
+  const isAiReady = useAIStore((state) => state.isAiReady);
+
+  // Determine if another peer is currently editing this node
+  const peerEditingThisNode = useMemo(() => {
+    if (!isCollaborative || !action) return null;
+    const nodeId = action.nodeId || action.id;
+    return peers.find((p) => p.editingNodeId === nodeId) || null;
+  }, [peers, action, isCollaborative]);
+
+  const isSoftLocked = !!peerEditingThisNode;
+  const effectiveReadOnly = isReadOnly || isSoftLocked;
+
+  // Announce editing state when panel opens/closes
+  useEffect(() => {
+    if (!isCollaborative || !action) return;
+    const nodeId = action.nodeId || action.id;
+    if (nodeId && !isReadOnly) {
+      lockNode(nodeId);
+    }
+    return () => {
+      unlockNode();
+    };
+  }, [action?.nodeId, action?.id, isCollaborative, isReadOnly, lockNode, unlockNode]);
   const [liveVariables, setLiveVariables] = useState({});
 
   const refreshVariables = useCallback(async () => {
@@ -683,6 +712,28 @@ const NodeConfigurationPanel = ({
             />
           </div>
         );
+      case "textarea":
+        return (
+          <div key={reactKey} className="space-y-1.5">
+            <label className="text-[10px] uppercase tracking-wider font-semibold text-slate-500">
+              {field.label}{" "}
+              {field.required && <span className="text-rose-500 ml-1">*</span>}
+            </label>
+            <Controller
+              name={dataKey}
+              control={control}
+              render={({ field: { value, onChange } }) => (
+                <textarea
+                  value={value || ""}
+                  onChange={onChange}
+                  placeholder={field.placeholder || ""}
+                  rows={5}
+                  className="w-full text-xs font-sans px-3 py-2 bg-[var(--bg-canvas)]/50 border border-[var(--border-ui)] rounded-lg text-slate-200 focus:outline-none focus:border-indigo-500/50 focus:bg-slate-900/40 transition-colors resize-none font-medium leading-relaxed"
+                />
+              )}
+            />
+          </div>
+        );
       default:
         return (
           <div key={reactKey} className="space-y-1.5">
@@ -813,6 +864,36 @@ const NodeConfigurationPanel = ({
   };
 
   const renderNodeInputs = () => {
+    const nodeType = activeNode.data?.type || activeNode.type;
+    if (nodeType === "discussion") {
+      return (
+        <div className="p-4 rounded-xl border border-indigo-500/20 bg-indigo-500/5 space-y-3">
+          <div className="flex items-center gap-2 text-indigo-400 font-bold text-xs uppercase tracking-wider">
+            <MessageSquare size={16} />
+            <span>Collaboration Thread</span>
+          </div>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            This discussion board allows real-time communication between workspace members.
+          </p>
+          {isAiReady ? (
+            <div className="pt-2 border-t border-white/5 flex flex-col gap-2">
+              <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">AI Assistant Integration</span>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                You can prompt HAL (AI) directly using the sparkles button on the Discussion Board canvas card to participate in this discussion thread.
+              </p>
+            </div>
+          ) : (
+            <div className="pt-2 border-t border-white/5 flex flex-col gap-2">
+              <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">AI Integration Offline</span>
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                Configure your OpenAI, Anthropic, or Ollama provider in the workspace Settings to enable AI participation in this thread.
+              </p>
+            </div>
+          )}
+        </div>
+      );
+    }
+
     const inputs = definedInputs || [];
     return (
       <div className="space-y-5">
@@ -826,87 +907,111 @@ const NodeConfigurationPanel = ({
   const Header = () => (
     <div
       className={cn(
-        "h-14 shrink-0 flex items-center justify-between px-5 border-b",
+        "shrink-0 flex flex-col border-b",
         CATEGORY_STYLES[colorKey]?.panel?.headerBorder,
         CATEGORY_STYLES[colorKey]?.panel?.headerGradient,
       )}
     >
-      <div className="flex flex-col justify-center max-w-[60%]">
-        <span
-          className={cn(
-            "text-[9px] uppercase tracking-widest font-bold mb-0.5",
-            CATEGORY_STYLES[colorKey]?.panel?.categoryText,
-          )}
-        >
-          {NODE_CATEGORIES[safeConfig.category]?.label ||
-            safeConfig.category.replace("_", " ")}
-        </span>
-        <input
-          type="text"
-          value={localLabel}
-          onChange={(e) => setLocalLabel(e.target.value)}
-          className="bg-transparent border-none text-sm font-bold text-white w-full focus:outline-none"
-        />
-      </div>
-      <div className="flex items-center gap-1">
-        <button
-          onClick={() => {
-            const isDisabled = !activeNode.data?.disabled;
-            activeNode.data.disabled = isDisabled; // optimistically update local object
-            updateNodeConfiguration(activeNode.id, {
-              ...activeNode.data,
-              disabled: isDisabled,
-            });
-            window.dispatchEvent(
-              new CustomEvent("node-data-updated", {
-                detail: { nodeId: activeNode.id },
-              }),
-            );
-          }}
-          className={cn(
-            "p-1.5 rounded-lg transition-colors mr-1",
-            activeNode.data?.disabled
-              ? "text-amber-400 bg-amber-500/10 hover:bg-amber-500/20"
-              : "text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10",
-          )}
-          title={activeNode.data?.disabled ? "Enable Node" : "Disable Node"}
-        >
-          {activeNode.data?.disabled ? <EyeOff size={16} /> : <Eye size={16} />}
-        </button>
-        {(activeNode.type === "component" || activeNode.type === "loop") && (
-          <button
-            onClick={() => onEnterSubFlow?.(activeNode.id)}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10 transition-all"
-            title="Dive In"
+      {/* Soft-Lock Banner */}
+      {isSoftLocked && (
+        <div className="flex items-center gap-2 px-4 py-2 bg-amber-500/10 border-b border-amber-500/20 text-amber-300 text-[11px] font-medium">
+          <Lock size={12} className="shrink-0 text-amber-400" />
+          <span>
+            <strong
+              style={{ color: peerEditingThisNode?.user?.color || '#fbbf24' }}
+            >
+              {peerEditingThisNode?.user?.name || 'Another user'}
+            </strong>
+            {' '}is editing this node — view only
+          </span>
+        </div>
+      )}
+      <div className="h-14 flex items-center justify-between px-5">
+        <div className="flex flex-col justify-center max-w-[60%]">
+          <span
+            className={cn(
+              "text-[9px] uppercase tracking-widest font-bold mb-0.5",
+              CATEGORY_STYLES[colorKey]?.panel?.categoryText,
+            )}
           >
-            <Maximize2 size={16} />
+            {NODE_CATEGORIES[safeConfig.category]?.label ||
+              safeConfig.category.replace("_", " ")}
+          </span>
+          <input
+            type="text"
+            value={localLabel}
+            onChange={(e) => setLocalLabel(e.target.value)}
+            disabled={effectiveReadOnly}
+            className={cn(
+              "bg-transparent border-none text-sm font-bold text-white w-full focus:outline-none",
+              effectiveReadOnly && "opacity-60 cursor-not-allowed",
+            )}
+          />
+        </div>
+        <div className="flex items-center gap-1">
+          {!effectiveReadOnly && (
+            <>
+              <button
+                onClick={() => {
+                  const isDisabled = !activeNode.data?.disabled;
+                  activeNode.data.disabled = isDisabled;
+                  updateNodeConfiguration(activeNode.id, {
+                    ...activeNode.data,
+                    disabled: isDisabled,
+                  });
+                  window.dispatchEvent(
+                    new CustomEvent("node-data-updated", {
+                      detail: { nodeId: activeNode.id },
+                    }),
+                  );
+                }}
+                className={cn(
+                  "p-1.5 rounded-lg transition-colors mr-1",
+                  activeNode.data?.disabled
+                    ? "text-amber-400 bg-amber-500/10 hover:bg-amber-500/20"
+                    : "text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10",
+                )}
+                title={activeNode.data?.disabled ? "Enable Node" : "Disable Node"}
+              >
+                {activeNode.data?.disabled ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+              {(activeNode.type === "component" || activeNode.type === "loop") && (
+                <button
+                  onClick={() => onEnterSubFlow?.(activeNode.id)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10 transition-all"
+                  title="Dive In"
+                >
+                  <Maximize2 size={16} />
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  if (confirm("Are you sure you want to delete this node?")) {
+                    onDeleteNode?.(activeNode.id);
+                    onClose();
+                  }
+                }}
+                className="p-2 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all"
+                title="Delete Node"
+              >
+                <Trash2 size={16} />
+              </button>
+              <div className="w-px h-4 bg-white/10 mx-1" />
+            </>
+          )}
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+          >
+            <X size={18} />
           </button>
-        )}
-        <button
-          onClick={() => {
-            if (confirm("Are you sure you want to delete this node?")) {
-              onDeleteNode?.(activeNode.id);
-              onClose();
-            }
-          }}
-          className="p-2 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all"
-          title="Delete Node"
-        >
-          <Trash2 size={16} />
-        </button>
-        <div className="w-px h-4 bg-white/10 mx-1" />
-        <button
-          onClick={onClose}
-          className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all"
-        >
-          <X size={18} />
-        </button>
+        </div>
       </div>
     </div>
   );
 
   const Body = () => (
-    <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
+    <div className={cn("flex-1 overflow-y-auto p-5 custom-scrollbar", effectiveReadOnly && "pointer-events-none opacity-70")}>
       {activeNode.data?.warnings && activeNode.data.warnings.length > 0 && (
         <div className="mb-6 p-4 rounded-xl border border-yellow-500/20 bg-yellow-500/5 space-y-4">
           <div className="flex items-center gap-2 text-yellow-400 font-bold text-[11px] uppercase tracking-wider">
@@ -1004,6 +1109,11 @@ const NodeConfigurationPanel = ({
   );
 
   const Footer = () => {
+    const nodeType = activeNode.data?.type || activeNode.type;
+    if (nodeType === "sticky_note" || nodeType === "discussion") {
+      return null;
+    }
+
     // Find neighbors for navigation
     const prevNodeId = edges.find((e) => e.target === activeNode.id)?.source;
     const nextNodeId = edges.find((e) => e.source === activeNode.id)?.target;

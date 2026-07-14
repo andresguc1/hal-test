@@ -14,5 +14,6 @@ export {
 export { useAwareness } from "./useAwareness";
 export { useCRDTNodes } from "./useCRDTNodes";
 export { useCRDTEdges } from "./useCRDTEdges";
+export { default as useExecutionSync } from "./useExecutionSync";
 export { default as RemoteCursors } from "./RemoteCursors";
 export { default as PresenceIndicator } from "./PresenceIndicator";

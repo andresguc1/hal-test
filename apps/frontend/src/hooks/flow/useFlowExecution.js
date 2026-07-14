@@ -14,6 +14,7 @@ import { GraphValidator } from "../../utils/GraphValidator";
 import { SCREENSHOT_RECOMMENDATIONS } from "../../components/hooks/constants";
 import { updateNodeRecursively } from "./useFlowState";
 import { resolveVariables } from "../../utils/flowUtils";
+import { useCollaboration } from "../../collaboration/CollaborationProvider";
 
 const MAX_RETRIES = 3;
 const RETRY_BASE_MS = 1000;
@@ -64,7 +65,11 @@ export function useFlowExecution({
   currentFlowId,
   addLog,
   toast,
+  isCollabActive = false,
+  broadcastElementState,
+  clearExecutionStates,
 }) {
+  const collab = useCollaboration();
   const [isLoading, setIsLoading] = useState(false);
   const [apiStatus, setApiStatus] = useState({ state: "idle", message: "" });
   const [executionStats, setExecutionStats] = useState({
@@ -144,14 +149,18 @@ export function useFlowExecution({
   }, [activeBrowserId, activeRunId, setApiStatus, toast]);
 
   const resetExecutionStates = useCallback(() => {
-    setNodes((nds) => resetExecutionStatesRecursively(nds));
-    setEdges((eds) =>
-      eds.map((e) => ({
-        ...e,
-        animated: false,
-        data: { ...e.data, executionState: "default" },
-      })),
-    );
+    if (isCollabActive) {
+      if (clearExecutionStates) clearExecutionStates();
+    } else {
+      setNodes((nds) => resetExecutionStatesRecursively(nds));
+      setEdges((eds) =>
+        eds.map((e) => ({
+          ...e,
+          animated: false,
+          data: { ...e.data, executionState: "default" },
+        })),
+      );
+    }
     setExecutionStats({
       total: 0,
       successful: 0,
@@ -160,7 +169,7 @@ export function useFlowExecution({
       duration: 0,
     });
     setApiStatus({ state: "idle", message: "Node states reset" });
-  }, [setNodes, setEdges]);
+  }, [isCollabActive, clearExecutionStates, setNodes, setEdges]);
 
   const updateNodeScreenshot = useCallback(
     (nodeId, timing, screenshotData) => {
@@ -179,6 +188,10 @@ export function useFlowExecution({
 
   const updateEdgeStatus = useCallback(
     (edgeId, state, animated = true) => {
+      if (isCollabActive) {
+        if (broadcastElementState) broadcastElementState(edgeId, "edge", state, { animated });
+        return;
+      }
       setEdges((eds) =>
         eds.map((edge) => {
           if (edge.id === edgeId) {
@@ -208,11 +221,15 @@ export function useFlowExecution({
         }),
       );
     },
-    [setEdges],
+    [isCollabActive, broadcastElementState, setEdges],
   );
 
   const updateEdgeStatusBySource = useCallback(
     (sourceId, state, animated = true) => {
+      if (isCollabActive) {
+        if (broadcastElementState) broadcastElementState(sourceId, "edge_by_source", state, { animated });
+        return;
+      }
       setEdges((eds) =>
         eds.map((edge) => {
           if (edge.source === sourceId) {
@@ -242,7 +259,7 @@ export function useFlowExecution({
         }),
       );
     },
-    [setEdges],
+    [isCollabActive, broadcastElementState, setEdges],
   );
 
   const captureScreenshot = useCallback(
@@ -583,16 +600,49 @@ export function useFlowExecution({
       const { stopOnError = true } = options;
       if (!currentProject) return { success: false, error: "No project" };
 
-      executionAbortController.current = new AbortController();
-      resetExecutionStates();
+      // Collaboration validation checks
+      if (collab.isCollaborative) {
+        if (collab.role !== "owner") {
+          const errMessage = "🔒 Only owners can execute the flow.";
+          if (toast) toast.error(errMessage);
+          return { success: false, error: errMessage };
+        }
 
-      if (!options.nodes) {
-        const errors = validateFlowStructure(nodes, edges);
-        if (errors.length > 0) {
-          setApiStatus({ state: "error", message: errors[0] });
-          return { success: false, error: errors[0] };
+        const remoteExecution = collab.peers.find(p => p.executionState?.running);
+        if (remoteExecution) {
+          const errMessage = `🔒 Cannot execute: ${remoteExecution.user?.name || "Another user"} is running this flow.`;
+          if (toast) toast.error(errMessage);
+          return { success: false, error: "Flow is locked by another collaborator" };
         }
       }
+
+      // Clear execution states map at start of execution
+      if (isCollabActive && clearExecutionStates) {
+        clearExecutionStates();
+      }
+
+      // Set local execution state in awareness
+      if (collab.isCollaborative) {
+        const localUser = collab.provider?.awareness?.getLocalState()?.user;
+        collab.setExecutionState({
+          running: true,
+          userId: localUser?.id || "anonymous",
+          userName: localUser?.name || "Owner",
+          startedAt: Date.now(),
+        });
+      }
+
+      try {
+        executionAbortController.current = new AbortController();
+        resetExecutionStates();
+
+        if (!options.nodes) {
+          const errors = validateFlowStructure(nodes, edges);
+          if (errors.length > 0) {
+            setApiStatus({ state: "error", message: errors[0] });
+            return { success: false, error: errors[0] };
+          }
+        }
 
       const globalStats = {
         total: 0,
@@ -1043,22 +1093,31 @@ export function useFlowExecution({
       if (runId) await api.post(`/runs/${runId}/end`, { status: "completed" });
       setApiStatus({ state: "success", message: "Flow complete" });
       return { ...finalResult, stats: globalStats };
-    },
-    [
-      currentProject,
-      currentFlowId,
-      nodes,
-      edges,
-      executeStep,
-      resetExecutionStates,
-      validateFlowStructure,
-      updateNodeState,
-      updateEdgeStatus,
-      updateEdgeStatusBySource,
-      activeBrowserId,
-      setActiveRunId,
-      setApiStatus,
-    ],
+    } finally {
+      if (collab.isCollaborative) {
+        collab.setExecutionState(null);
+      }
+    }
+  },
+  [
+    currentProject,
+    currentFlowId,
+    nodes,
+    edges,
+    executeStep,
+    resetExecutionStates,
+    validateFlowStructure,
+    updateNodeState,
+    updateEdgeStatus,
+    updateEdgeStatusBySource,
+    activeBrowserId,
+    setActiveRunId,
+    setApiStatus,
+    collab,
+    isCollabActive,
+    clearExecutionStates,
+    toast,
+  ],
   );
 
   return {

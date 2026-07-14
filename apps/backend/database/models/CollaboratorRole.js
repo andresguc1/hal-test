@@ -1,39 +1,37 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../index.js';
 
-const Project = sequelize.define(
-    'Project',
+const CollaboratorRole = sequelize.define(
+    'CollaboratorRole',
     {
         id: {
             type: DataTypes.STRING,
             defaultValue: DataTypes.UUIDV4,
             primaryKey: true,
         },
-        name: {
+        projectId: {
             type: DataTypes.STRING,
             allowNull: false,
-        },
-        description: {
-            type: DataTypes.TEXT,
-            allowNull: true,
-        },
-        activeFlowId: {
-            type: DataTypes.STRING,
-            allowNull: true,
         },
         userId: {
             type: DataTypes.STRING,
-            allowNull: true,
-        },
-        collaborationEnabled: {
-            type: DataTypes.BOOLEAN,
-            defaultValue: false,
             allowNull: false,
+        },
+        role: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            defaultValue: 'editor', // 'owner', 'admin', 'editor', 'viewer'
         },
     },
     {
         timestamps: true,
+        indexes: [
+            {
+                unique: true,
+                fields: ['projectId', 'userId'],
+            },
+        ],
     },
 );
 
-export default Project;
+export default CollaboratorRole;

@@ -64,14 +64,44 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
           'https://hal-test-backend.onrender.com',
       ];
 
+/**
+ * Validates if the origin is a local host, local domain, or private LAN IP address.
+ */
+const isLocalOrPrivateOrigin = (origin) => {
+    if (!origin) return true;
+
+    // Check localhost, 127.0.0.1, ::1
+    if (origin.includes('localhost') || origin.includes('127.0.0.1') || origin.includes('::1')) {
+        return true;
+    }
+
+    // Regex for private network IPs:
+    // 10.x.x.x, 192.168.x.x, 172.16.x.x to 172.31.x.x
+    const privateIpRegex =
+        /^https?:\/\/(?:10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(?:1[6-9]|2\d|3[01])\.\d+\.\d+)(?::\d+)?$/;
+    if (privateIpRegex.test(origin)) {
+        return true;
+    }
+
+    // Regex for mDNS local domains (e.g. mymac.local)
+    const localDomainRegex = /^https?:\/\/[a-zA-Z0-9-]+\.local(?::\d+)?$/;
+    if (localDomainRegex.test(origin)) {
+        return true;
+    }
+
+    return false;
+};
+
 app.use(
     cors({
         origin: (origin, callback) => {
             // Allow requests with no origin (like mobile apps or same-origin)
             if (!origin) return callback(null, true);
 
-            // Check if origin is allowed or if it's the same origin
-            const isAllowed = allowedOrigins.some((allowed) => origin.startsWith(allowed));
+            // Check if origin is allowed, is local/private network, or if it's the same origin
+            const isAllowed =
+                allowedOrigins.some((allowed) => origin.startsWith(allowed)) ||
+                isLocalOrPrivateOrigin(origin);
 
             if (isAllowed || process.env.NODE_ENV !== 'production') {
                 callback(null, true);

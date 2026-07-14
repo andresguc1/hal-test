@@ -74,6 +74,12 @@ export function useCRDTNodes({ enabled = false } = {}) {
   const [nodes, setLocalNodes] = useState([]);
   const isActive = enabled && isCollaborative && ydoc;
   const suppressObserverRef = useRef(false);
+  
+  // Track nodes ref to keep callback references completely stable
+  const nodesRef = useRef(nodes);
+  useEffect(() => {
+    nodesRef.current = nodes;
+  }, [nodes]);
 
   // Yjs → React: Observe CRDT changes and update local state
   useEffect(() => {
@@ -131,20 +137,7 @@ export function useCRDTNodes({ enabled = false } = {}) {
               break;
             }
 
-            case "dimensions": {
-              const yNode = yNodes.get(change.id);
-              if (yNode && yNode instanceof Y.Map) {
-                if (change.dimensions) {
-                  if (change.dimensions.width !== undefined) {
-                    yNode.set("width", change.dimensions.width);
-                  }
-                  if (change.dimensions.height !== undefined) {
-                    yNode.set("height", change.dimensions.height);
-                  }
-                }
-              }
-              break;
-            }
+
 
             case "select": {
               // Selection is LOCAL ONLY — not synced via CRDT
@@ -179,17 +172,16 @@ export function useCRDTNodes({ enabled = false } = {}) {
     [ydoc, isActive],
   );
 
-  // Direct setNodes for bulk operations (e.g., loading from DB, paste)
   const setNodes = useCallback(
     (updater) => {
       if (!isActive) return;
-
+ 
       const yNodes = ydoc.getMap("nodes");
       const currentNodes =
-        typeof updater === "function" ? updater(nodes) : updater;
-
+        typeof updater === "function" ? updater(nodesRef.current) : updater;
+ 
       suppressObserverRef.current = true;
-
+ 
       ydoc.transact(() => {
         // Clear existing
         yNodes.forEach((_, key) => {
@@ -197,7 +189,7 @@ export function useCRDTNodes({ enabled = false } = {}) {
             yNodes.delete(key);
           }
         });
-
+ 
         // Set all nodes
         for (const node of currentNodes) {
           const existing = yNodes.get(node.id);
@@ -224,12 +216,12 @@ export function useCRDTNodes({ enabled = false } = {}) {
           }
         }
       });
-
+ 
       suppressObserverRef.current = false;
       // Force local state update
       setLocalNodes(currentNodes);
     },
-    [ydoc, isActive, nodes],
+    [ydoc, isActive],
   );
 
   // Add a single node to the CRDT

@@ -111,6 +111,7 @@ You are the system.`;
                 apiKey,
                 _baseUrl: baseUrl,
                 maxSteps: 10,
+                browserId, // Pass browserId for fallback resolution
             });
         } catch (err) {
             // FALLBACK: If model doesn't support tools, try standard chat

@@ -19,9 +19,12 @@ import {
   useCollaboration,
   useCRDTNodes,
   useCRDTEdges,
+  useExecutionSync,
+  useAwareness,
 } from "../../collaboration";
 
 const DEFAULT_EDGE_OPTIONS = {
+  type: "custom",
   animated: true,
   style: {
     stroke: "#ff8c32", // hal-orange
@@ -136,7 +139,14 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
     setEdges: crdtSetEdges,
   } = useCRDTEdges({ enabled: collab.isCollaborative });
 
+  const execSync = useExecutionSync();
+  const { remoteExecution, isRemoteExecuting } = useAwareness();
+
   const isCollabActive = collab.isCollaborative && collab.isSynced;
+
+  // Is anyone executing (either remote peer or local client in awareness state)
+  const localExecution = collab.awareness?.getLocalState()?.executionState;
+  const isExecuting = !!localExecution?.running || isRemoteExecuting;
 
   const [rawNodes, _setNodes] = useState([]);
   const [rawEdges, _setEdges] = useState([]);
@@ -218,8 +228,89 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
     [isCollabActive, crdtSetEdges],
   );
 
-  const nodes = isCollabActive ? sanitizeNodes(crdtNodes) : rawNodes;
-  const edges = isCollabActive ? crdtEdges : rawEdges;
+  const nodes = useMemo(() => {
+    const baseNodes = isCollabActive ? sanitizeNodes(crdtNodes) : rawNodes;
+    if (!isCollabActive || !isExecuting) return baseNodes;
+
+    return baseNodes.map((node) => {
+      const exec = execSync.executionStates[node.id];
+      if (exec && exec.type === "node") {
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            state: exec.state,
+            statusMessage: exec.data?.message,
+            lastUpdate: exec.ts ? new Date(exec.ts).toISOString() : new Date().toISOString(),
+            ...(exec.data?.originalValue !== undefined && { originalValue: exec.data.originalValue }),
+            ...(exec.data?.healedValue !== undefined && { healedValue: exec.data.healedValue }),
+            ...(exec.data?.selector !== undefined && { selector: exec.data.selector }),
+          },
+          style: getNodeStyle(exec.state, node.style),
+        };
+      }
+      return node;
+    });
+  }, [isCollabActive, crdtNodes, rawNodes, sanitizeNodes, isExecuting, execSync.executionStates]);
+
+  const edges = useMemo(() => {
+    const baseEdges = isCollabActive ? crdtEdges : rawEdges;
+    if (!isCollabActive || !isExecuting) return baseEdges;
+
+    return baseEdges.map((edge) => {
+      // Check for specific edge update or edge_by_source update
+      let exec = execSync.executionStates[edge.id];
+      if (!exec) {
+        // Fallback to edge_by_source
+        exec = execSync.executionStates[edge.source];
+        if (exec && exec.type !== "edge_by_source") {
+          exec = null;
+        }
+      }
+
+      if (exec) {
+        const state = exec.state;
+        const animated = exec.data?.animated !== false;
+        const isError = state === NODE_STATES.ERROR;
+        const isSuccess = state === NODE_STATES.SUCCESS;
+        const isRunning = state === NODE_STATES.EXECUTING;
+
+        return {
+          ...edge,
+          animated: animated && !isError,
+          data: { ...edge.data, executionState: state },
+          style: {
+            ...edge.style,
+            stroke: isError
+              ? "#ef4444"
+              : isSuccess
+                ? "#22c55e"
+                : isRunning
+                  ? "#ff8c32"
+                  : "#64748b",
+            strokeWidth: isRunning || isSuccess || isError ? 3 : 2,
+            opacity: isRunning || isSuccess || isError ? 1 : 0.6,
+          },
+        };
+      }
+      return edge;
+    });
+  }, [isCollabActive, crdtEdges, rawEdges, isExecuting, execSync.executionStates]);
+
+  useEffect(() => {
+    console.log("[DEBUG-FLOWSTATE] isCollabActive:", isCollabActive);
+    console.log("[DEBUG-FLOWSTATE] rawNodes count:", rawNodes.length);
+    console.log("[DEBUG-FLOWSTATE] crdtNodes count:", crdtNodes.length);
+    console.log("[DEBUG-FLOWSTATE] rawEdges count:", rawEdges.length);
+    console.log("[DEBUG-FLOWSTATE] crdtEdges count:", crdtEdges.length);
+    console.log("[DEBUG-FLOWSTATE] Final edges count applied to React Flow:", edges.length);
+    if (isCollabActive && crdtNodes.length > 0) {
+      console.log("[DEBUG-FLOWSTATE] Sample CRDT Node:", crdtNodes[0]);
+    }
+    if (isCollabActive && crdtEdges.length > 0) {
+      console.log("[DEBUG-FLOWSTATE] Sample CRDT Edge:", crdtEdges[0]);
+    }
+  }, [isCollabActive, rawNodes, crdtNodes, rawEdges, crdtEdges, edges]);
   const [history, setHistory] = useState({ past: [], future: [] });
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -372,6 +463,10 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
 
   const updateNodeState = useCallback(
     (nodeId, state, options = {}) => {
+      if (isCollabActive) {
+        execSync.broadcastElementState(nodeId, "node", state, options);
+        return;
+      }
       setNodes((nds) =>
         nds.map((node) => {
           if (node.id === nodeId) {
@@ -400,7 +495,7 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
         }),
       );
     },
-    [setNodes],
+    [isCollabActive, execSync, setNodes],
   );
 
   const clearFlow = useCallback(
@@ -1767,5 +1862,10 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
     designTimeContext,
     simulatedResults,
     setSaveFlow,
+    broadcastElementState: execSync.broadcastElementState,
+    clearExecutionStates: execSync.clearExecutionStates,
+    isRemoteExecuting,
+    remoteExecution,
+    isCollabActive,
   };
 }

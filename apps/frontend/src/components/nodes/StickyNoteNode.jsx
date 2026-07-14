@@ -1,7 +1,9 @@
 import React, { memo, useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "../../context/AuthContext";
 
 function StickyNoteNode({ id, data, selected }) {
+  const { user } = useAuth();
   const text = data?.configuration?.text ?? "Write something...";
   const [isEditing, setIsEditing] = useState(false);
   const [localText, setLocalText] = useState(text);
@@ -15,20 +17,15 @@ function StickyNoteNode({ id, data, selected }) {
 
   const handleBlur = () => {
     setIsEditing(false);
-    // Trigger updateNodeConfiguration or custom setNodes directly via window/context if needed,
-    // but the cleanest way is using React Flow's setNodes or calling the window method if registered.
-    // Wait! Let's update the node configuration using ReactFlow's hook or custom window event,
-    // or we can find updateNodeConfiguration in the context.
-    // Since we are inside a node component, we can use window.updateNodeConfiguration if available,
-    // or trigger a custom DOM event, or React Flow custom node hook.
-    // Wait, let's see if there's a React Flow hook or window global to update state.
-    // In our useFlowState hook, we can expose a global hook or register it.
-    // Wait! React Flow nodes are rendered within the React Flow context, but do not have easy access
-    // to custom hook setters unless they are passed in the data or registered on window.
-    // Let's check if the parent passes a setter, or we can just dispatch a custom event.
-    // Custom events are clean and 100% decouple components:
     const event = new CustomEvent("update-node-config", {
-      detail: { nodeId: id, configuration: { text: localText } },
+      detail: {
+        nodeId: id,
+        configuration: {
+          text: localText,
+          lastEditedBy: user?.name || "Anonymous",
+          lastEditedColor: user?.color || "#6b7280"
+        }
+      },
     });
     window.dispatchEvent(event);
   };
@@ -65,8 +62,20 @@ function StickyNoteNode({ id, data, selected }) {
           </div>
         )}
       </div>
-      <div className="text-[9px] text-amber-600/70 dark:text-amber-400/50 font-bold uppercase tracking-wider text-right select-none">
-        Sticky Note
+      <div className="flex items-center justify-between mt-2 pt-2 border-t border-amber-200/40 dark:border-amber-700/20 text-[9px] select-none">
+        <div className="truncate max-w-[120px]">
+          {data?.configuration?.lastEditedBy && (
+            <span
+              style={{ color: data.configuration.lastEditedColor }}
+              className="font-black tracking-wider uppercase opacity-85"
+            >
+              ✏️ {data.configuration.lastEditedBy}
+            </span>
+          )}
+        </div>
+        <div className="text-amber-600/70 dark:text-amber-400/50 font-bold uppercase tracking-wider text-right">
+          Sticky Note
+        </div>
       </div>
     </div>
   );

@@ -34,6 +34,9 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
     addLog,
     toast,
     t,
+    isCollabActive: state.isCollabActive,
+    broadcastElementState: state.broadcastElementState,
+    clearExecutionStates: state.clearExecutionStates,
   });
 
   // 3. PERSISTENCE & SYNC (Load, Save, Auto-save, Navigation)

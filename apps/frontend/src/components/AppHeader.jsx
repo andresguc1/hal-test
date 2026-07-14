@@ -12,6 +12,8 @@ import {
   Cloud,
   LayoutDashboard,
   Activity,
+  Users,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
@@ -20,6 +22,7 @@ import UserMenu from "./UserMenu";
 import HalLogo from "./HalLogo";
 import { useAuth } from "../context/AuthContext";
 import PresenceIndicator from "../collaboration/PresenceIndicator";
+import { useCollaboration } from "../collaboration/CollaborationProvider";
 
 const HeaderButton = ({ onClick, children, title, className }) => (
   <Motion.button
@@ -118,10 +121,16 @@ function AppHeader({
   apiStatus = { state: "idle" },
   viewStack = [],
   onExitComponent,
+  onToggleCollaboration,
+  isCollaborationEnabled = false,
+  isRemoteExecuting = false,
+  remoteExecution = null,
+  role = "owner",
 }) {
   const { theme, setTheme } = useTheme();
   const { t } = useTranslation();
   const { user, authMode } = useAuth();
+  const { peers, isCollaborative, isConnected } = useCollaboration();
   const navigate = useNavigate();
   const isGuest = user?.isGuest || authMode === "local";
 
@@ -129,6 +138,11 @@ function AppHeader({
   const [indicatorState, setIndicatorState] = React.useState("idle");
 
   React.useEffect(() => {
+    if (isRemoteExecuting) {
+      setIndicatorState("remote_running");
+      return;
+    }
+
     if (!activeBrowserId) {
       setIndicatorState("none");
       return;
@@ -145,7 +159,7 @@ function AppHeader({
     } else {
       setIndicatorState("idle");
     }
-  }, [apiStatus.state, activeBrowserId]);
+  }, [apiStatus.state, activeBrowserId, isRemoteExecuting]);
 
   const renderIndicator = () => {
     if (indicatorState === "none") return null;
@@ -160,6 +174,17 @@ function AppHeader({
     };
 
     switch (indicatorState) {
+      case "remote_running":
+        config = {
+          bg: "bg-amber-500/10",
+          border: "border-amber-500/20",
+          dotOuter:
+            "animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75",
+          dotInner: "bg-amber-500",
+          text: "text-amber-500",
+          label: `🔒 ${remoteExecution?.user?.name || "Another user"} is executing...`,
+        };
+        break;
       case "running":
         config = {
           bg: "bg-emerald-500/10",
@@ -415,6 +440,55 @@ function AppHeader({
         >
           <Cloud size={18} />
         </HeaderButton>
+
+        {/* Collaboration Toggle + Presence */}
+        <div className="flex items-center gap-1">
+          <div className="relative">
+            <HeaderButton
+              onClick={onToggleCollaboration}
+              title={isCollaborationEnabled ? "Disable Collaboration (Beta)" : "Enable Collaboration (Beta)"}
+              className={cn(
+                isCollaborative && isConnected
+                  ? "text-emerald-400 bg-emerald-500/10 border border-emerald-500/20"
+                  : isCollaborationEnabled
+                    ? "text-amber-400 bg-amber-500/10 animate-pulse"
+                    : "",
+              )}
+            >
+              {isCollaborationEnabled && (!isCollaborative || !isConnected) ? (
+                <Loader2 className="animate-spin" size={18} />
+              ) : (
+                <Users size={18} />
+              )}
+              {isCollaborative && isConnected && (
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 border border-black/30" />
+              )}
+            </HeaderButton>
+            <span className="absolute -top-1 -left-2 px-1 py-0.2 text-[8px] font-bold font-mono tracking-wider uppercase bg-amber-500/90 text-black rounded scale-90 border border-amber-400 shadow-sm pointer-events-none select-none z-10">
+              Beta
+            </span>
+          </div>
+          {/* Peer Avatars */}
+          {isCollaborative && peers.length > 0 && (
+            <div className="flex items-center -space-x-1.5 ml-1">
+              {peers.slice(0, 4).map((peer) => (
+                <div
+                  key={peer.clientId}
+                  className="w-6 h-6 rounded-full border-2 border-[var(--bg-primary)] flex items-center justify-center text-[9px] font-bold text-white shadow-sm"
+                  style={{ backgroundColor: peer.user?.color || '#6366f1' }}
+                  title={peer.user?.name || 'Peer'}
+                >
+                  {(peer.user?.name || '?')[0].toUpperCase()}
+                </div>
+              ))}
+              {peers.length > 4 && (
+                <div className="w-6 h-6 rounded-full border-2 border-[var(--bg-primary)] flex items-center justify-center text-[8px] font-bold text-white bg-slate-600 shadow-sm">
+                  +{peers.length - 4}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         <HeaderButton
           onClick={onToggleAskAI}

@@ -1,4 +1,5 @@
 import { supabase } from '../services/supabaseClient.js';
+import { User } from '../database/init.js';
 
 /**
  * Middleware to verify Supabase JWT token from Authorization header
@@ -43,6 +44,16 @@ export const authenticated = async (req, res, next) => {
                 error: error?.message,
             });
         }
+
+        // Ensure user is mirrored in local SQLite database
+        await User.findOrCreate({
+            where: { id: user.id },
+            defaults: {
+                email: user.email,
+                name: user.user_metadata?.full_name || user.email.split('@')[0],
+                role: 'user',
+            },
+        });
 
         // Attach user to request object
         req.user = user;

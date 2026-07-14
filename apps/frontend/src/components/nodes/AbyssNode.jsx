@@ -18,6 +18,7 @@ import {
   CheckCircle,
   Sparkles,
   XCircle,
+  Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -30,6 +31,7 @@ import {
   getSmartLabel,
   truncate,
 } from "@/config/validationRules";
+import { useCollaboration } from "../../collaboration/CollaborationProvider";
 
 const AbyssNode = ({ id, data, selected, type }) => {
   const { t } = useTranslation();
@@ -43,6 +45,13 @@ const AbyssNode = ({ id, data, selected, type }) => {
     }, 50);
     return () => clearTimeout(timer);
   }, [id, updateNodeInternals, data?.configuration?.branches]);
+
+  // Collaboration: check if a peer is editing this node
+  const { peers, isCollaborative } = useCollaboration();
+  const peerEditing = React.useMemo(() => {
+    if (!isCollaborative) return null;
+    return peers.find((p) => p.editingNodeId === id) || null;
+  }, [peers, id, isCollaborative]);
 
   // 1. Determine Node Type & Config
   const nodeKey = data.subType || data.type || type;
@@ -150,17 +159,6 @@ const AbyssNode = ({ id, data, selected, type }) => {
 
   return (
     <div
-      style={{
-        borderColor: statusColor || undefined,
-        boxShadow: statusShadow || undefined,
-        minWidth: isConditional || isSwitch ? 300 : 160,
-        minHeight:
-          (isConditional || isSwitch) && showOutputs
-            ? Math.max(100, branches.length * 45)
-            : undefined,
-        transition:
-          "background-color 0.4s, border-color 0.4s, box-shadow 0.4s, transform 0s", // CRITICAL: transform 0s
-      }}
       className={cn(
         "group relative max-w-[400px] rounded-lg p-3 transition-[background,border,box-shadow,opacity] duration-400 select-none border-[2px]",
         themeParams.base,
@@ -195,7 +193,22 @@ const AbyssNode = ({ id, data, selected, type }) => {
 
         // DISABLED STATE
         data.disabled && "opacity-40 grayscale brightness-75",
+
+        // COLLABORATIVE EDITING INDICATOR
+        peerEditing && "ring-2 ring-offset-1 ring-offset-transparent",
       )}
+      style={{
+        borderColor: statusColor || undefined,
+        boxShadow: statusShadow || undefined,
+        minWidth: isConditional || isSwitch ? 300 : 160,
+        minHeight:
+          (isConditional || isSwitch) && showOutputs
+            ? Math.max(100, branches.length * 45)
+            : undefined,
+        transition:
+          "background-color 0.4s, border-color 0.4s, box-shadow 0.4s, transform 0s", // CRITICAL: transform 0s
+        ...(peerEditing ? { '--tw-ring-color': peerEditing.user?.color || '#fbbf24' } : {}),
+      }}
     >
       {/* INPUT HANDLE */}
       {showInputs && (
@@ -250,13 +263,25 @@ const AbyssNode = ({ id, data, selected, type }) => {
         </div>
       )}
 
+      {/* COLLABORATIVE EDITING BADGE */}
+      {peerEditing && (
+        <div
+          className="absolute -top-3 -left-3 z-30 flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-bold tracking-wide text-white shadow-lg border border-white/20"
+          style={{ backgroundColor: peerEditing.user?.color || '#fbbf24' }}
+          title={`${peerEditing.user?.name || 'User'} is editing`}
+        >
+          <Lock size={8} />
+          {(peerEditing.user?.name || 'User').split(' ')[0]}
+        </div>
+      )}
+
       {/* STATUS LED & ICONS */}
       <div className="absolute -top-2.5 -right-2.5 z-20 flex gap-1.5 items-center w-max max-w-none">
         {/* VALIDATION WARNING (Priority 1) */}
         {!isNodeValid && (
           <div
             className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-red-500/10 text-red-400 border border-red-500/20 cursor-help"
-            title={validation.errors[0] || "Configuration Error"}
+            title={validation.errors?.[0] || (validation.missingField ? `Missing: ${validation.missingField}` : "Configuration Error")}
           >
             <AlertCircle size={10} className="shrink-0" />
             <span className="text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap">

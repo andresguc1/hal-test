@@ -22,6 +22,7 @@ import React, {
   useCallback,
 } from "react";
 import * as Y from "yjs";
+import { useAuth } from "../context/AuthContext";
 import { WebsocketProvider } from "y-websocket";
 import { IndexeddbPersistence } from "y-indexeddb";
 
@@ -86,8 +87,10 @@ export function CollaborationProvider({
   flowId,
   user,
   enabled = false,
+  role = 'owner',
   children,
 }) {
+  const { session } = useAuth();
   const [isConnected, setIsConnected] = useState(false);
   const [isSynced, setIsSynced] = useState(false);
   const [peers, setPeers] = useState([]);
@@ -159,6 +162,10 @@ export function CollaborationProvider({
         connect: true,
         resyncInterval: 5000, // Re-sync every 5 seconds as a safety net
         maxBackoffTime: 5000,
+        params: {
+          token: session?.access_token || "local-dev-token",
+          userId: user.id || "anonymous",
+        },
       },
     );
     providerRef.current = wsProvider;
@@ -169,7 +176,9 @@ export function CollaborationProvider({
       name: user.name || user.email || "Anonymous",
       color: getColorForUser(user.id || user.email || "anonymous"),
       avatar: user.avatar || null,
+      role: role,
     });
+    wsProvider.awareness.setLocalStateField("editingNodeId", null);
 
     // Track connection status
     wsProvider.on("status", ({ status }) => {
@@ -199,10 +208,19 @@ export function CollaborationProvider({
             user: state.user,
             cursor: state.cursor || null,
             selection: state.selection || [],
+            editingNodeId: state.editingNodeId || null,
+            executionState: state.executionState || null,
           });
         }
       });
-      setPeers(states);
+      
+      // ONLY update if it actually changed meaningfully to prevent mouse-move lag
+      setPeers((prev) => {
+        if (JSON.stringify(prev) === JSON.stringify(states)) {
+          return prev;
+        }
+        return states;
+      });
     };
 
     wsProvider.awareness.on("change", awarenessChangeHandler);
@@ -211,7 +229,7 @@ export function CollaborationProvider({
       wsProvider.awareness.off("change", awarenessChangeHandler);
       cleanup();
     };
-  }, [flowId, user, enabled, cleanup]);
+  }, [flowId, user, enabled, role, session, cleanup]);
 
   // Cursor update (throttled via requestAnimationFrame)
   const cursorRafRef = useRef(null);
@@ -235,6 +253,32 @@ export function CollaborationProvider({
     [enabled],
   );
 
+  // Lock/Unlock editing node for advisory soft-locks
+  const lockNode = useCallback(
+    (nodeId) => {
+      if (!providerRef.current || !enabled) return;
+      providerRef.current.awareness.setLocalStateField("editingNodeId", nodeId);
+    },
+    [enabled],
+  );
+
+  const unlockNode = useCallback(
+    () => {
+      if (!providerRef.current || !enabled) return;
+      providerRef.current.awareness.setLocalStateField("editingNodeId", null);
+    },
+    [enabled],
+  );
+
+  // Execution state update (e.g. running: true/false, user details, etc.)
+  const setExecutionState = useCallback(
+    (execState) => {
+      if (!providerRef.current || !enabled) return;
+      providerRef.current.awareness.setLocalStateField("executionState", execState);
+    },
+    [enabled],
+  );
+
   const contextValue = useMemo(
     () => ({
       ydoc: ydocRef.current,
@@ -244,8 +288,12 @@ export function CollaborationProvider({
       isSynced,
       isCollaborative: enabled && !!flowId,
       peers,
+      role,
       updateCursor,
       updateSelection,
+      lockNode,
+      unlockNode,
+      setExecutionState,
     }),
     [
       isConnected,
@@ -253,8 +301,12 @@ export function CollaborationProvider({
       enabled,
       flowId,
       peers,
+      role,
       updateCursor,
       updateSelection,
+      lockNode,
+      unlockNode,
+      setExecutionState,
     ],
   );
 
@@ -285,8 +337,12 @@ export function useCollaboration() {
       isSynced: false,
       isCollaborative: false,
       peers: [],
+      role: 'owner',
       updateCursor: () => {},
       updateSelection: () => {},
+      lockNode: () => {},
+      unlockNode: () => {},
+      setExecutionState: () => {},
     };
   }
 

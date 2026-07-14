@@ -155,13 +155,17 @@ export function useFlowSync({
       if (flow) {
         setNodes(flow.nodes || []);
         setEdges(
-          (flow.edges || []).map((e) => ({
-            ...e,
-            sourceHandle: e.sourceHandle || "default",
-            targetHandle: e.targetHandle || "default",
-            type: "custom",
-            animated: true,
-          })),
+          (flow.edges || []).map((e) => {
+            const sourceHandle = e.sourceHandle === "default" ? undefined : e.sourceHandle;
+            const targetHandle = e.targetHandle === "default" ? undefined : e.targetHandle;
+            return {
+              ...e,
+              ...(sourceHandle && { sourceHandle }),
+              ...(targetHandle && { targetHandle }),
+              type: "custom",
+              animated: true,
+            };
+          }),
         );
         // Only set loaded ID after state is successfully populated to prevent auto-saving old state
         lastLoadedFlowId.current = currentFlowId;
@@ -195,11 +199,11 @@ export function useFlowSync({
         const needsSeeding =
           !isSeeded ||
           yNodes.size === 0 ||
-          (yEdges.size === 0 && !yMeta.get("edges_seeded"));
+          yEdges.size === 0;
 
         if (needsSeeding) {
           console.log(
-            `[Collaboration] CRDT room needs seeding (isSeeded: ${!!isSeeded}, nodes: ${yNodes.size}, edges: ${yEdges.size}). Seeding from SQLite...`,
+            `[Collaboration] CRDT room needs seeding (isSeeded: ${!!isSeeded}, yNodes: ${yNodes.size}, yEdges: ${yEdges.size}). Seeding from SQLite...`,
           );
           loadFlowData().then(() => {
             yMeta.set("seeded", true);
@@ -207,7 +211,7 @@ export function useFlowSync({
           });
         } else {
           console.log(
-            "[Collaboration] CRDT room is already seeded, skipping SQLite load.",
+            `[Collaboration] CRDT room is already seeded (isSeeded: ${!!isSeeded}, yNodes: ${yNodes.size}, yEdges: ${yEdges.size}), skipping SQLite load.`,
           );
           lastLoadedFlowId.current = currentFlowId;
         }

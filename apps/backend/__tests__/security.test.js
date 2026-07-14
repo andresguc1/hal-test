@@ -56,9 +56,9 @@ describe('Middleware de Seguridad (Helmet)', () => {
         expect(response.headers['x-powered-by']).toBeUndefined();
     });
 
-    it('debe establecer la cabecera Strict-Transport-Security (HSTS)', async () => {
+    it('no debe establecer la cabecera Strict-Transport-Security (HSTS) para evitar problemas de HTTPS local', async () => {
         const response = await request(app).get('/secure');
-        expect(response.headers['strict-transport-security']).toContain('max-age=31536000');
+        expect(response.headers['strict-transport-security']).toBeUndefined();
     });
 });
 

@@ -29,6 +29,19 @@ const repairJson = (str) => {
 };
 
 /**
+ * Extrae el primer bloque JSON delimitado por llaves de una cadena de texto.
+ */
+const extractJson = (str) => {
+    if (!str) return '{}';
+    const firstBrace = str.indexOf('{');
+    const lastBrace = str.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+        return str.substring(firstBrace, lastBrace + 1);
+    }
+    return str;
+};
+
+/**
  * Robustly parses tool calls inside XML-like tags <tool_call name="...">JSON</tool_call>,
  * even if the closing tag is missing or the content is malformed.
  */
@@ -198,6 +211,7 @@ class AIService {
         maxSteps = 5,
         taskType = 'reasoning',
         parentSignal,
+        browserId, // Fallback browserId parameter
     }) {
         try {
             // Apply Matrix
@@ -260,7 +274,7 @@ class AIService {
             let activeSystem = system || 'You are HAL-9001.';
             if (activeProvider === 'ollama') {
                 activeSystem += `\n\n[OLLAMA_TOOL_INSTRUCTIONS]
-You have access to tools that can manipulate the Visual Canvas. If you need to use a tool to fulfill the user's request, include a <tool_call> tag in your response.
+You have access to tools that can manipulate the Visual Canvas and inspect the active browser page. If you need to use a tool to fulfill the user's request, include a <tool_call> tag in your response.
 If the user is just asking a question, analyzing the canvas, or making conversation, answer normally and DO NOT use a <tool_call>.
 Format for tool usage:
 <tool_call name="tool_name">{ "argument_key": "value" }</tool_call>
@@ -273,6 +287,10 @@ Supported Tools:
 4. execute_playwright_cmd: { "browserId": "id", "code": "..." }
 5. remove_node: { "id": "node_id" }
 6. update_node: { "id": "node_id", "data": { "url": "...", "selector": "..." } }
+7. read_canvas_state: {} (Reads current canvas nodes and edges)
+8. inspect_page: { "browserId": "browserId", "strategy": "accessibility" | "html" } (Retrieves the page structural tree or DOM)
+9. suggest_selector: { "browserId": "browserId", "description": "element description" } (Finds a CSS selector for a description)
+10. highlight_element: { "browserId": "browserId", "selector": "css selector" } (Highlights element on page)
 
 IMPORTANT DIRECTIONS:
 - Always create the COMPLETE sequence of nodes for the requested flow at once in a single response step.
@@ -341,6 +359,24 @@ IMPORTANT DIRECTIONS:
                     }
 
                     if (!toolName) {
+                        // Fallback 2: Check if first word matches a known tool name
+                        const firstWordMatch = argsString.match(
+                            /^([a-zA-Z0-9_-]+)(?:\s+([\s\S]*))?$/,
+                        );
+                        if (firstWordMatch) {
+                            const candidateName = firstWordMatch[1];
+                            if (
+                                tools[candidateName] ||
+                                candidateName === 'read_canvas_state' ||
+                                candidateName === 'get_canvas_state'
+                            ) {
+                                toolName = candidateName;
+                                argsString = (firstWordMatch[2] || '{}').trim();
+                            }
+                        }
+                    }
+
+                    if (!toolName) {
                         console.warn(
                             `[AIService] Failed to extract tool name from match: ${call.raw}`,
                         );
@@ -355,17 +391,46 @@ IMPORTANT DIRECTIONS:
                             console.warn(
                                 `[AIService] JSON.parse failed, attempting repair for ${toolName}`,
                             );
-                            const repaired = repairJson(argsString);
-                            parsedArgs = JSON.parse(repaired); // Will throw to outer catch if fails
+                            try {
+                                const extracted = extractJson(argsString);
+                                const repaired = repairJson(extracted);
+                                parsedArgs = JSON.parse(repaired);
+                            } catch (secondErr) {
+                                if (argsString.trim() === '') {
+                                    parsedArgs = {};
+                                } else {
+                                    throw secondErr;
+                                }
+                            }
                         }
 
                         // Unwrap array if LLM wrapped the tool argument in a list: [{...}]
                         if (
+                            parsedArgs &&
                             Array.isArray(parsedArgs) &&
                             parsedArgs.length === 1 &&
                             typeof parsedArgs[0] === 'object'
                         ) {
                             parsedArgs = parsedArgs[0];
+                        }
+
+                        if (parsedArgs && typeof parsedArgs === 'object') {
+                            // Fallback browserId resolution
+                            if (browserId) {
+                                if (
+                                    !parsedArgs.browserId ||
+                                    parsedArgs.browserId === 'id' ||
+                                    parsedArgs.browserId === 'default' ||
+                                    parsedArgs.browserId === 'active'
+                                ) {
+                                    parsedArgs.browserId = browserId;
+                                }
+                            }
+                        } else {
+                            parsedArgs = {};
+                            if (browserId) {
+                                parsedArgs.browserId = browserId;
+                            }
                         }
 
                         if (toolName === 'inject_nodes' && parsedArgs && parsedArgs.nodes) {
@@ -396,7 +461,7 @@ IMPORTANT DIRECTIONS:
                             toolCalls.push({
                                 id: callId,
                                 type: 'function',
-                                function: { name: toolName, arguments: argsString },
+                                function: { name: toolName, arguments: JSON.stringify(parsedArgs) },
                             });
                             toolResults.push({
                                 toolCallId: callId,
@@ -565,37 +630,38 @@ IMPORTANT DIRECTIONS:
      */
     async resolveOllamaModel({ baseUrl, requestedModel }) {
         try {
+            const trimmedModel = requestedModel?.trim() || '';
             const health = await this.healthCheck({ baseUrl });
-            if (!health.ollamaRunning) return requestedModel; // Let it fail normally if not running
+            if (!health.ollamaRunning) return trimmedModel; // Let it fail normally if not running
 
             const availableModels = health.models || [];
-            if (availableModels.length === 0) return requestedModel;
+            if (availableModels.length === 0) return trimmedModel;
 
             // 1. Exact match
-            if (availableModels.includes(requestedModel)) return requestedModel;
+            if (availableModels.includes(trimmedModel)) return trimmedModel;
 
             // 2. Case-insensitive exact match
             const exactCi = availableModels.find(
-                (m) => m.toLowerCase() === requestedModel.toLowerCase(),
+                (m) => m.toLowerCase() === trimmedModel.toLowerCase(),
             );
             if (exactCi) return exactCi;
 
             // 3. Prefix match (e.g. "gemma" matches "gemma3:latest")
             const prefixMatch = availableModels.find(
                 (m) =>
-                    m.startsWith(`${requestedModel}:`) ||
-                    m.startsWith(`${requestedModel}3`) ||
-                    m.includes(requestedModel),
+                    m.startsWith(`${trimmedModel}:`) ||
+                    m.startsWith(`${trimmedModel}3`) ||
+                    m.includes(trimmedModel),
             );
             if (prefixMatch) {
                 console.log(
-                    `[AIService] Resolved Ollama model '${requestedModel}' to '${prefixMatch}'`,
+                    `[AIService] Resolved Ollama model '${trimmedModel}' to '${prefixMatch}'`,
                 );
                 return prefixMatch;
             }
 
             // 4. Default to client-optimized models first, then gemma3, then first available
-            if (requestedModel === 'ollama' || requestedModel === 'local') {
+            if (trimmedModel === 'ollama' || trimmedModel === 'local') {
                 for (const recommended of RECOMMENDED_LOCAL_MODELS) {
                     const found = availableModels.find((m) => m.includes(recommended));
                     if (found) return found;
@@ -604,14 +670,15 @@ IMPORTANT DIRECTIONS:
                 return gemma || availableModels[0];
             }
 
-            // 5. Ultimate transparent fallback: if requested model is not found, auto-fallback to first available!
+            // 5. Ultimate fallback: if requested model is not found, return the trimmedModel directly
+            // so that the validation/health-check system can report it as missing (and prompt user to run "ollama pull ...")
             console.log(
-                `[AIService] Requested Ollama model '${requestedModel}' not found in local tags. Auto-falling back to first available model: '${availableModels[0]}'`,
+                `[AIService] Requested Ollama model '${trimmedModel}' not found in local tags.`,
             );
-            return availableModels[0];
+            return trimmedModel;
         } catch (e) {
             console.warn(`[AIService] Failed to resolve Ollama model: ${e.message}`);
-            return requestedModel;
+            return requestedModel?.trim();
         }
     }
 

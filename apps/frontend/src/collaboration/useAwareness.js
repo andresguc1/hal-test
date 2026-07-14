@@ -35,12 +35,18 @@ export function useAwareness() {
     return acc;
   }, {});
 
+  // Find if any remote peer is executing the flow
+  const remoteExecution = peers.find((p) => p.executionState?.running);
+  const isRemoteExecuting = !!remoteExecution;
+
   return {
     peers,
     peerCount,
     updateCursor,
     updateSelection,
     remoteSelections,
+    remoteExecution,
+    isRemoteExecuting,
     isCollaborative,
   };
 }

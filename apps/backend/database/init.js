@@ -9,6 +9,7 @@ import Run from './models/Run.js';
 import StepResult from './models/StepResult.js';
 import HealingLog from './models/HealingLog.js';
 import ExperienceVault from './models/ExperienceVault.js';
+import CollaboratorRole from './models/CollaboratorRole.js';
 
 // Define associations
 User.hasMany(Project, { as: 'projects', foreignKey: 'userId', onDelete: 'CASCADE', hooks: true });
@@ -38,6 +39,23 @@ Edge.belongsTo(Flow, { as: 'flow', foreignKey: 'flowId' });
 // Execution History Associations
 Run.hasMany(StepResult, { as: 'steps', foreignKey: 'run_id', onDelete: 'CASCADE', hooks: true });
 StepResult.belongsTo(Run, { as: 'run', foreignKey: 'run_id' });
+
+// Collaborator associations
+Project.hasMany(CollaboratorRole, {
+    as: 'collaboratorRoles',
+    foreignKey: 'projectId',
+    onDelete: 'CASCADE',
+    hooks: true,
+});
+CollaboratorRole.belongsTo(Project, { as: 'project', foreignKey: 'projectId' });
+
+User.hasMany(CollaboratorRole, {
+    as: 'collaboratorRoles',
+    foreignKey: 'userId',
+    onDelete: 'CASCADE',
+    hooks: true,
+});
+CollaboratorRole.belongsTo(User, { as: 'user', foreignKey: 'userId' });
 
 const safeSync = async (options) => {
     const isSqlite = sequelize.getDialect() === 'sqlite';
@@ -86,6 +104,12 @@ const checkSchemaHealth = async () => {
             logging: false,
         });
         await sequelize.query('SELECT createdAt FROM step_results LIMIT 1', {
+            logging: false,
+        });
+        await sequelize.query('SELECT collaborationEnabled FROM Projects LIMIT 1', {
+            logging: false,
+        });
+        await sequelize.query('SELECT role FROM CollaboratorRoles LIMIT 1', {
             logging: false,
         });
         console.log(' [DB_INIT] ✅ Schema health check passed.');
@@ -263,7 +287,19 @@ export const initDb = async (_force = false) => {
     }
 };
 
-export { User, Project, Canvas, Flow, Node, Edge, Run, StepResult, HealingLog, ExperienceVault };
+export {
+    User,
+    Project,
+    Canvas,
+    Flow,
+    Node,
+    Edge,
+    Run,
+    StepResult,
+    HealingLog,
+    ExperienceVault,
+    CollaboratorRole,
+};
 
 // Allow running directly from CLI
 if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith('init.js')) {

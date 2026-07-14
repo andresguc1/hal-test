@@ -237,7 +237,7 @@
       "execution_interface": "Ejecución",
       "flow_control": "Motor Lógico",
       "composition": "Composición de Módulos",
-      "collaboration": "Colaboración"
+      "collaboration": "Anotación de UI"
     },
     "fields": {
       "browserType": "Tipo de navegador",

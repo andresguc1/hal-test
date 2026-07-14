@@ -185,6 +185,18 @@ class LLMFactory {
      */
     mapError(error) {
         const msg = error.message?.toLowerCase() || '';
+        const bodyStr = error.responseBody?.toLowerCase() || '';
+        const fullErrStr = `${msg} ${bodyStr}`;
+
+        if (
+            fullErrStr.includes('llama-server process has terminated') ||
+            fullErrStr.includes('exit status 1') ||
+            fullErrStr.includes('exit status 137')
+        ) {
+            return new Error(
+                "Ollama's llama-server process terminated (exit status 1). This usually indicates that the selected model (e.g. gemma3:latest) is too large for your system's VRAM/RAM. Please go to AI Settings and select a lighter, client-optimized model such as 'gemma3:2b', 'phi4:mini', or 'qwen2.5:1.5b'.",
+            );
+        }
 
         if (
             msg.includes('401') ||

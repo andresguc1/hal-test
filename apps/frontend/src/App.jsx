@@ -70,6 +70,7 @@ import {
   CollaborationProvider,
   RemoteCursors,
   useCollaboration,
+  useAwareness,
 } from "./collaboration";
 
 import { NODE_STATES } from "./components/hooks/flowStyles";
@@ -115,6 +116,7 @@ function Dashboard({
   deleteFlow,
   renameFlow,
   renameProject,
+  updateProject,
 }) {
   // 1. Utility Hooks
   const { t } = useTranslation();
@@ -217,7 +219,25 @@ function Dashboard({
   window.nodes = nodes;
   window.edges = edges;
 
-  const { updateCursor } = useCollaboration();
+  const { updateCursor, role, isCollaborative } = useCollaboration();
+  const { isRemoteExecuting, remoteExecution } = useAwareness();
+  const isWorkspaceReadOnly = isReadOnly || (isCollaborative && role === "viewer");
+
+  // DEBUG COLLABORATION
+  useEffect(() => {
+    console.log('[App] Collaboration State:', { isWorkspaceReadOnly, isReadOnly, isCollaborative, role });
+  }, [isWorkspaceReadOnly, isReadOnly, isCollaborative, role]);
+
+  // Collaboration toggle handler
+  const handleToggleCollaboration = useCallback(async () => {
+    if (!currentProject) return;
+    try {
+      const newValue = !currentProject.collaborationEnabled;
+      await updateProject(currentProject.id, { collaborationEnabled: newValue });
+    } catch (err) {
+      console.error('[Dashboard] Failed to toggle collaboration:', err);
+    }
+  }, [currentProject, updateProject]);
 
   const handleMouseMove = useCallback(
     (event) => {
@@ -310,6 +330,22 @@ function Dashboard({
   );
 
   const handleExecuteFlow = useCallback(async () => {
+    // --- COLLABORATION LOCK CHECKS ---
+    if (isCollaborative) {
+      if (role !== "owner") {
+        toast.error(t("common.owner_execute_only", "🔒 Solo el propietario (owner) puede ejecutar el flujo."));
+        return;
+      }
+      if (isRemoteExecuting) {
+        toast.error(
+          t("common.remote_executing", "🔒 {{user}} está ejecutando este flujo actualmente...", {
+            user: remoteExecution?.user?.name || "Otro colaborador",
+          }),
+        );
+        return;
+      }
+    }
+
     // --- UNIVERSAL EXECUTION CONTEXT ---
     // We stay in the current view context (sub-flow or root) to allow local monitoring.
     // The engine handles global initialization automatically.
@@ -464,6 +500,10 @@ function Dashboard({
     deepNavigate,
     addLog,
     handleNavigateToNode,
+    isCollaborative,
+    role,
+    isRemoteExecuting,
+    remoteExecution,
   ]);
 
   // 4. Local UI State
@@ -1597,9 +1637,9 @@ function Dashboard({
       snapToGrid: enableSnapping, // Controlled by Global Settings
       nodes: enrichedNodes,
       edges,
-      onNodesChange,
-      onEdgesChange,
-      onConnect,
+      onNodesChange: isWorkspaceReadOnly ? undefined : onNodesChange,
+      onEdgesChange: isWorkspaceReadOnly ? undefined : onEdgesChange,
+      onConnect: isWorkspaceReadOnly ? undefined : onConnect,
       onNodeClick,
       onPaneClick: (event) => {
         // Prevent closing the panel if the user clicked on a Node or Edge by checking the DOM target
@@ -1613,10 +1653,10 @@ function Dashboard({
         closeConfiguration();
         setMenu(null);
       },
-      onNodeContextMenu,
-      onEdgeContextMenu,
-      onPaneContextMenu,
-      onSelectionContextMenu,
+      onNodeContextMenu: isWorkspaceReadOnly ? undefined : onNodeContextMenu,
+      onEdgeContextMenu: isWorkspaceReadOnly ? undefined : onEdgeContextMenu,
+      onPaneContextMenu: isWorkspaceReadOnly ? undefined : onPaneContextMenu,
+      onSelectionContextMenu: isWorkspaceReadOnly ? undefined : onSelectionContextMenu,
       onNodeDoubleClick: (event, node) => {
         if (
           node.type === "component" ||
@@ -1634,9 +1674,12 @@ function Dashboard({
           });
         }
       },
-      onDrop,
-      onDragOver,
-      onNodeDragStop,
+      onDrop: isWorkspaceReadOnly ? undefined : onDrop,
+      onDragOver: isWorkspaceReadOnly ? undefined : onDragOver,
+      onNodeDragStop: isWorkspaceReadOnly ? undefined : onNodeDragStop,
+      nodesDraggable: !isWorkspaceReadOnly,
+      nodesConnectable: !isWorkspaceReadOnly,
+      elementsSelectable: true,
       nodeTypes, // Custom node types for optimized rendering
       edgeTypes, // Custom edge types with animations
       // Visual feedback for connections
@@ -1664,6 +1707,7 @@ function Dashboard({
       onDragOver,
       onNodeDragStop,
       enableSnapping, // Dependency for memo
+      isWorkspaceReadOnly,
     ],
   );
 
@@ -1755,6 +1799,11 @@ function Dashboard({
           onStopSession={stopSession}
           apiStatus={apiStatus}
           onSyncCloud={handleSyncCloud}
+          onToggleCollaboration={handleToggleCollaboration}
+          isCollaborationEnabled={currentProject?.collaborationEnabled || false}
+          isRemoteExecuting={isRemoteExecuting}
+          remoteExecution={remoteExecution}
+          role={role}
         />
 
         <GuestModeModal
@@ -2018,7 +2067,7 @@ function Dashboard({
               }
               onDeleteNode={deleteNode}
               projectPath={projectPath}
-              isReadOnly={isReadOnly}
+              isReadOnly={isWorkspaceReadOnly}
               onStartPick={handleStartPicking}
               onCancelPick={handleCancelPicking}
               onUngroup={ungroupNodes}
@@ -2143,6 +2192,10 @@ function Dashboard({
           onRunBatch={() => setIsExecutionDashboardOpen(true)}
           onRunDataset={() => setIsDatasetModalOpen(true)}
           apiStatus={apiStatus}
+          isRemoteExecuting={isRemoteExecuting}
+          remoteExecution={remoteExecution}
+          role={role}
+          isCollaborative={isCollaborative}
         />
 
         <ExecutionDashboard
@@ -2252,7 +2305,8 @@ function CollaborativeDashboard() {
     <CollaborationProvider
       flowId={projectManagerData.currentFlowId}
       user={user}
-      enabled={false}
+      enabled={projectManagerData.currentProject?.collaborationEnabled || false}
+      role={projectManagerData.currentProject?.role || 'owner'}
     >
       <Dashboard {...projectManagerData} />
     </CollaborationProvider>

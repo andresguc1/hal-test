@@ -20,6 +20,8 @@ import * as decoding from 'lib0/decoding';
 import { LeveldbPersistence } from 'y-leveldb';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { supabase } from '../supabaseClient.js';
+import { User, Project, Flow, CollaboratorRole } from '../../database/init.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -89,9 +91,43 @@ class YjsCollaborationServer {
                     return;
                 }
 
-                this.wss.handleUpgrade(request, socket, head, (ws) => {
-                    this._onConnection(ws, roomName);
-                });
+                // Parse token and userId from URL query parameters
+                let token = '';
+                let userId = '';
+                try {
+                    const parsedUrl = new URL(
+                        request.url,
+                        `http://${request.headers.host || 'localhost'}`,
+                    );
+                    token = parsedUrl.searchParams.get('token') || '';
+                    userId = parsedUrl.searchParams.get('userId') || '';
+                } catch (e) {
+                    console.warn(
+                        '[YjsServer] Failed to parse upgrade URL query parameters:',
+                        e.message,
+                    );
+                }
+
+                this.authenticateUpgrade(token, userId, roomName)
+                    .then((authResult) => {
+                        if (!authResult.success) {
+                            console.warn(`[YjsServer] 🚫 Upgrade denied: ${authResult.message}`);
+                            socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+                            socket.destroy();
+                            return;
+                        }
+
+                        this.wss.handleUpgrade(request, socket, head, (ws) => {
+                            ws.userRole = authResult.role;
+                            ws.userId = authResult.userId;
+                            this._onConnection(ws, roomName);
+                        });
+                    })
+                    .catch((err) => {
+                        console.error('[YjsServer] Auth error during connection upgrade:', err);
+                        socket.write('HTTP/1.1 500 Internal Server Error\r\n\r\n');
+                        socket.destroy();
+                    });
             }
             // Note: Socket.IO handles its own upgrade via its attach() method,
             // so we don't need an else clause here
@@ -99,6 +135,104 @@ class YjsCollaborationServer {
 
         this.isInitialized = true;
         console.log('🤝 [YjsServer] Collaboration WebSocket server ready on /collab/:flowId');
+    }
+
+    /**
+     * Authenticate connection upgrade and resolve user project role.
+     * @param {string} token
+     * @param {string} userId
+     * @param {string} roomName
+     * @returns {Promise<{ success: boolean, role?: string, userId?: string, message?: string }>}
+     */
+    async authenticateUpgrade(token, userId, roomName) {
+        if (process.env.COLLAB_ENABLED === 'false') {
+            return { success: false, message: 'Collaboration server is disabled' };
+        }
+
+        const isDev = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
+        const isAuthDisabled =
+            process.env.AUTH_ENABLED === 'false' || process.env.VITE_AUTH_ENABLED === 'false';
+        const isLocalMode =
+            process.env.HALTEST_MODE === 'local' || process.env.HAL_CLI_MODE === 'true';
+
+        let resolvedUser = null;
+
+        if (
+            (isDev && isAuthDisabled) ||
+            isLocalMode ||
+            token === 'local-dev-token' ||
+            token === 'local-guest-token'
+        ) {
+            resolvedUser = {
+                id: userId || 'guest-user',
+                email: 'guest@haltest.dev',
+                role: 'guest',
+            };
+        } else {
+            if (!token) {
+                return { success: false, message: 'Missing token' };
+            }
+            try {
+                const {
+                    data: { user },
+                    error,
+                } = await supabase.auth.getUser(token);
+
+                if (error || !user) {
+                    return { success: false, message: 'Invalid token' };
+                }
+
+                // Ensure user exists in SQLite User table
+                await User.findOrCreate({
+                    where: { id: user.id },
+                    defaults: {
+                        email: user.email,
+                        name: user.user_metadata?.full_name || user.email.split('@')[0],
+                        role: 'user',
+                    },
+                });
+
+                resolvedUser = user;
+            } catch (err) {
+                console.error('[YjsServer] Auth resolution error:', err);
+                return { success: false, message: 'Authentication service error' };
+            }
+        }
+
+        // Determine Role based on Project and CollaboratorRole
+        try {
+            const flowId = roomName.replace('flow-', '');
+            const flow = await Flow.findByPk(flowId);
+            if (!flow) {
+                return { success: false, message: 'Flow not found' };
+            }
+
+            const projectId = flow.projectId || flow.project_id;
+            const project = await Project.findByPk(projectId);
+            if (!project) {
+                return { success: false, message: 'Project not found' };
+            }
+
+            // If local bypass or if the user is project owner, they are 'owner'
+            if ((isDev && isAuthDisabled) || isLocalMode || project.userId === resolvedUser.id) {
+                return { success: true, role: 'owner', userId: resolvedUser.id };
+            }
+
+            // Lookup CollaboratorRole table
+            const collab = await CollaboratorRole.findOne({
+                where: { projectId, userId: resolvedUser.id },
+            });
+
+            if (collab) {
+                return { success: true, role: collab.role, userId: resolvedUser.id };
+            }
+
+            // Default to viewer for authenticated users
+            return { success: true, role: 'viewer', userId: resolvedUser.id };
+        } catch (err) {
+            console.error('[YjsServer] Role resolution error:', err);
+            return { success: false, message: 'Role verification error' };
+        }
     }
 
     /**
@@ -261,6 +395,18 @@ class YjsCollaborationServer {
 
         switch (messageType) {
             case MSG_SYNC: {
+                // Check if viewer client is attempting to write updates
+                const checkDecoder = decoding.createDecoder(message);
+                decoding.readVarUint(checkDecoder); // consume messageType
+                const syncType = decoding.readVarUint(checkDecoder);
+
+                if (conn.userRole === 'viewer' && syncType !== 0) {
+                    console.warn(
+                        `[YjsServer] 🚫 Blocked write sync from viewer (UserId: ${conn.userId})`,
+                    );
+                    break;
+                }
+
                 const encoder = encoding.createEncoder();
                 encoding.writeVarUint(encoder, MSG_SYNC);
                 syncProtocol.readSyncMessage(decoder, encoder, room.doc, conn);

@@ -286,4 +286,48 @@ describe("Policy Enforcer - Static Analysis Engine", () => {
       expect(deadEnd).toBeUndefined();
     });
   });
+
+  // --- COLLABORATIVE NODES EXEMPTION ---
+  describe("Collaborative/Annotation Nodes Exemption", () => {
+    it("should completely skip warnings and reachability checks for sticky_note and discussion", () => {
+      const nodes = [
+        {
+          id: "note-1",
+          type: "sticky_note",
+          data: {
+            configuration: { text: "Some notes" },
+          },
+        },
+        {
+          id: "disc-1",
+          type: "discussion",
+          data: {
+            configuration: { comments: [] },
+          },
+        },
+      ];
+      const warnings = runPolicyEnforcer(nodes, []);
+      expect(warnings["note-1"]).toBeUndefined();
+      expect(warnings["disc-1"]).toBeUndefined();
+    });
+
+    it("should not affect other execution path rules when collaborative nodes exist", () => {
+      const nodes = [
+        {
+          id: "node-1",
+          type: "click",
+          data: { configuration: { selector: "button" } },
+        },
+        {
+          id: "note-1",
+          type: "sticky_note",
+          data: { configuration: { text: "Hello" } },
+        },
+      ];
+      // node-1 is a terminal action node, so it should still flag a dead_end warning
+      const warnings = runPolicyEnforcer(nodes, []);
+      expect(warnings["node-1"]).toBeDefined();
+      expect(warnings["note-1"]).toBeUndefined();
+    });
+  });
 });

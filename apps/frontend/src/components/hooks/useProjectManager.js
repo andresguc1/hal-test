@@ -239,6 +239,11 @@ export function useProjectManager() {
         projectId,
         updates: { name: newName },
       }),
+    updateProject: (projectId, updates) =>
+      updateProjectMutation.mutateAsync({
+        projectId,
+        updates,
+      }),
 
     createFlow: (name, projectId, options = {}) =>
       createFlowMutation.mutateAsync({

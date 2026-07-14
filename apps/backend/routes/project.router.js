@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { User, Project, Canvas, Flow, Node, Edge } from '../database/init.js';
+import { User, Project, Canvas, Flow, Node, Edge, CollaboratorRole } from '../database/init.js';
 import sequelize from '../database/index.js';
 import { exportService } from '../services/exporter/index.js';
 import fs from 'fs';
@@ -402,14 +402,14 @@ router.get('/projects/:id', async (req, res) => {
 // Update project
 router.put('/projects/:id', async (req, res) => {
     try {
-        const { name, description, activeFlowId } = req.body;
+        const { name, description, activeFlowId, collaborationEnabled } = req.body;
         const project = await Project.findByPk(req.params.id);
         if (!project) {
             console.warn(`[ProjectRouter] Project NOT FOUND for update: ID=${req.params.id}`);
             return res.status(404).json({ error: 'Project not found' });
         }
 
-        await project.update({ name, description, activeFlowId });
+        await project.update({ name, description, activeFlowId, collaborationEnabled });
 
         // Return project with flows
         const updatedProject = await getProjectWithFlowStats(project.id);
@@ -430,6 +430,90 @@ router.delete('/projects/:id', async (req, res) => {
 
         await project.destroy();
         res.json({ message: 'Project deleted' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ========================================
+// COLLABORATORS
+// ========================================
+
+// Get collaborators for a project
+router.get('/projects/:projectId/collaborators', async (req, res) => {
+    try {
+        const { projectId } = req.params;
+        const project = await Project.findByPk(projectId);
+        if (!project) return res.status(404).json({ error: 'Project not found' });
+
+        const collaborators = await CollaboratorRole.findAll({
+            where: { projectId },
+            include: [{ model: User, as: 'user', attributes: ['id', 'email', 'name'] }],
+        });
+
+        res.json({ success: true, data: collaborators });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Add or update a collaborator
+router.post('/projects/:projectId/collaborators', async (req, res) => {
+    try {
+        const { projectId } = req.params;
+        const { email, role } = req.body;
+
+        if (!email || !role) {
+            return res.status(400).json({ error: 'Email and role are required' });
+        }
+
+        const project = await Project.findByPk(projectId);
+        if (!project) return res.status(404).json({ error: 'Project not found' });
+
+        const user = await User.findOne({ where: { email } });
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        if (project.userId === user.id) {
+            return res.status(400).json({ error: 'Owner cannot be added as a collaborator' });
+        }
+
+        const [collab, created] = await CollaboratorRole.findOrCreate({
+            where: { projectId, userId: user.id },
+            defaults: { role },
+        });
+
+        if (!created) {
+            collab.role = role;
+            await collab.save();
+        }
+
+        // Return updated collaborator object with user details
+        const updatedCollab = await CollaboratorRole.findByPk(collab.id, {
+            include: [{ model: User, as: 'user', attributes: ['id', 'email', 'name'] }],
+        });
+
+        res.json({ success: true, data: updatedCollab });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Remove a collaborator
+router.delete('/projects/:projectId/collaborators/:userId', async (req, res) => {
+    try {
+        const { projectId, userId } = req.params;
+
+        const deleted = await CollaboratorRole.destroy({
+            where: { projectId, userId },
+        });
+
+        if (!deleted) {
+            return res.status(404).json({ error: 'Collaborator not found' });
+        }
+
+        res.json({ success: true, message: 'Collaborator removed' });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

@@ -16,16 +16,28 @@ export function runPolicyEnforcer(nodes, edges) {
 
   const warningsMap = {};
 
+  // Exclude collaboration/annotation nodes from the execution flow graph
+  const activeNodes = nodes.filter((n) => {
+    const type = n.type || n.data?.type;
+    return type !== "sticky_note" && type !== "discussion";
+  });
+  const activeNodeIds = new Set(activeNodes.map((n) => n.id));
+
+  // Filter edges to only include connections between active nodes
+  const activeEdges = edgesList.filter(
+    (e) => activeNodeIds.has(e.source) && activeNodeIds.has(e.target)
+  );
+
   // 1. Build Adjacency List for reachability/assertion checks
   const adjacency = {};
   const outDegree = {};
 
-  nodes.forEach((n) => {
+  activeNodes.forEach((n) => {
     adjacency[n.id] = [];
     outDegree[n.id] = 0;
   });
 
-  edgesList.forEach((e) => {
+  activeEdges.forEach((e) => {
     if (adjacency[e.source]) {
       adjacency[e.source].push(e.target);
     }
@@ -73,7 +85,7 @@ export function runPolicyEnforcer(nodes, edges) {
       return canReachValidation[nodeId];
     }
 
-    const node = nodes.find((n) => n.id === nodeId);
+    const node = activeNodes.find((n) => n.id === nodeId);
     if (!node) {
       return false;
     }
@@ -103,7 +115,7 @@ export function runPolicyEnforcer(nodes, edges) {
   };
 
   // Pre-calculate reachability for all nodes
-  nodes.forEach((n) => {
+  activeNodes.forEach((n) => {
     checkReachability(n.id);
   });
 
@@ -114,10 +126,10 @@ export function runPolicyEnforcer(nodes, edges) {
 
     // Build reverse adjacency list (incoming connections)
     const incoming = {};
-    nodes.forEach((n) => {
+    activeNodes.forEach((n) => {
       incoming[n.id] = [];
     });
-    edgesList.forEach((e) => {
+    activeEdges.forEach((e) => {
       if (incoming[e.target]) {
         incoming[e.target].push(e.source);
       }
@@ -128,7 +140,7 @@ export function runPolicyEnforcer(nodes, edges) {
       if (visited.has(current)) continue;
       visited.add(current);
 
-      const nodeObj = nodes.find((n) => n.id === current);
+      const nodeObj = activeNodes.find((n) => n.id === current);
       if (nodeObj && isValidationNode(nodeObj)) {
         return true;
       }
@@ -144,7 +156,7 @@ export function runPolicyEnforcer(nodes, edges) {
   };
 
   // 3. Evaluate each node against policy rules
-  nodes.forEach((node) => {
+  activeNodes.forEach((node) => {
     const nodeWarnings = [];
     const config = node.data?.configuration || {};
     const nodeType = node.type || node.data?.type;

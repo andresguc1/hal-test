@@ -230,7 +230,7 @@
       "execution_interface": "Exécution",
       "flow_control": "Moteur Logique",
       "composition": "Composition de Module",
-      "collaboration": "Collaboration"
+      "collaboration": "Annotation d'interface"
     },
     "fields": {
       "browserType": "Type de Navigateur",

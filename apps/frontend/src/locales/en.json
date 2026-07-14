@@ -237,7 +237,7 @@
       "execution_interface": "Exec",
       "flow_control": "Logic Engine",
       "composition": "Module Composition",
-      "collaboration": "Collaboration"
+      "collaboration": "UI Annotation"
     },
     "fields": {
       "browserType": "Browser Type",

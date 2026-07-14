@@ -159,7 +159,7 @@ export const NODE_CATEGORIES = {
   collaboration: {
     icon: MessageSquare,
     color: "amber",
-    label: "Collaboration",
+    label: "UI Annotation",
     nodes: ["sticky_note", "discussion"],
   },
 };

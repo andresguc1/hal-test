@@ -1,11 +1,12 @@
 import { executionService } from '../services/ExecutionService.js';
 import { executionLogger } from '../services/ExecutionLogger.js';
-import { Run, StepResult, Flow } from '../database/init.js';
+import { Run, StepResult, Flow, Project, CollaboratorRole } from '../database/init.js';
 import { reportExporter } from '../services/exporter/ReportExporter.js';
 import { testRunnerService } from '../services/TestRunnerService.js';
 import { activeRunManager } from '../services/ActiveRunManager.js';
 import { executionManager } from '../services/ExecutionManager.js';
 import { ThrottlePolicy } from '../services/ThrottlePolicy.js';
+import { executionLock } from '../services/collaboration/ExecutionLock.js';
 
 export const startBatchRunAction = async (req, res) => {
     try {
@@ -35,6 +36,57 @@ export const startBatchRunAction = async (req, res) => {
 export const startRunAction = async (req, res) => {
     try {
         const { flowId, flowName, trigger, nodes, edges, projectId, overrides } = req.body;
+        const userId = req.user?.id || 'anonymous';
+        const userName = req.user?.email || req.user?.name || 'Anonymous';
+
+        // Backend Role Validation for Collaborative Projects
+        const isDev = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
+        const isAuthDisabled =
+            process.env.AUTH_ENABLED === 'false' || process.env.VITE_AUTH_ENABLED === 'false';
+        const isLocalMode =
+            process.env.HALTEST_MODE === 'local' || process.env.HAL_CLI_MODE === 'true';
+
+        if (flowId) {
+            const flow = await Flow.findByPk(flowId);
+            if (!flow) {
+                return res.status(404).json({ success: false, message: 'Flow not found' });
+            }
+            const resolvedProjectId = projectId || flow.projectId || flow.project_id;
+            if (resolvedProjectId) {
+                const project = await Project.findByPk(resolvedProjectId);
+                if (project && project.collaborationEnabled) {
+                    let role = 'viewer';
+                    if ((isDev && isAuthDisabled) || isLocalMode || project.userId === userId) {
+                        role = 'owner';
+                    } else {
+                        const collab = await CollaboratorRole.findOne({
+                            where: { projectId: resolvedProjectId, userId },
+                        });
+                        if (collab) {
+                            role = collab.role;
+                        }
+                    }
+
+                    if (role !== 'owner') {
+                        return res.status(403).json({
+                            success: false,
+                            message:
+                                'Unauthorized: Only the project owner can execute flows when collaboration is enabled.',
+                        });
+                    }
+                }
+            }
+        }
+
+        // Check if flow execution is already locked by another user
+        const lockCheck = executionLock.check(flowId);
+        if (lockCheck.locked && lockCheck.holder.userId !== userId) {
+            return res.status(409).json({
+                success: false,
+                message: `Cannot execute flow: Locked by ${lockCheck.holder.userName} who is running another execution.`,
+                holder: lockCheck.holder,
+            });
+        }
 
         // If nodes/edges are provided, it's a frontend-orchestrated run
         if (nodes && edges) {
@@ -48,6 +100,10 @@ export const startRunAction = async (req, res) => {
             if (!runId) {
                 return res.status(500).json({ success: false, message: 'Failed to start run' });
             }
+
+            // Acquire execution lock
+            executionLock.acquire(flowId, userId, userName, runId);
+
             return res.status(200).json({ success: true, runId });
         }
 
@@ -74,6 +130,9 @@ export const startRunAction = async (req, res) => {
                     .json({ success: false, message: 'Failed to initialize run' });
             }
 
+            // Acquire execution lock
+            executionLock.acquire(flowId, userId, userName, runId);
+
             console.log(`[RemoteRun] Run created with ID: ${runId}. Triggering execution...`);
 
             // 3. Trigger execution in the background (DO NOT AWAIT)
@@ -90,7 +149,10 @@ export const startRunAction = async (req, res) => {
                 .then(() => console.log(`[RemoteRun] Execution completed for runId: ${runId}`))
                 .catch((err) =>
                     console.error(`[RemoteExecution] Background task failed: ${err.message}`, err),
-                );
+                )
+                .finally(() => {
+                    executionLock.release(flowId);
+                });
 
             return res.status(200).json({
                 success: true,
@@ -113,6 +175,13 @@ export const endRunAction = async (req, res) => {
     try {
         const { id } = req.params;
         const { status } = req.body; // 'completed' | 'failed'
+
+        // Release execution lock if it exists
+        const run = await Run.findByPk(id);
+        if (run) {
+            executionLock.release(run.flow_id || run.flowId);
+        }
+
         await executionLogger.endRun(id, status);
         return res.status(200).json({ success: true });
     } catch (error) {
@@ -331,6 +400,12 @@ export const cancelRunAction = async (req, res) => {
         const { id } = req.params;
         console.log(`[RunController] Request to cancel run ID: ${id}`);
 
+        // Release execution lock if it exists
+        const run = await Run.findByPk(id);
+        if (run) {
+            executionLock.release(run.flow_id || run.flowId);
+        }
+
         const aborted = activeRunManager.abort(id);
         if (aborted) {
             return res.status(200).json({
@@ -352,11 +427,22 @@ export const cancelRunAction = async (req, res) => {
 export const startDatasetBatchRunAction = async (req, res) => {
     try {
         const { flowId, projectId, dataset, variablesMapping, concurrency, overrides } = req.body;
+        const userId = req.user?.id || 'anonymous';
 
         if (!flowId || !projectId) {
             return res
                 .status(400)
                 .json({ success: false, message: 'flowId and projectId are required.' });
+        }
+
+        // Check lock before starting dataset runs
+        const lockCheck = executionLock.check(flowId);
+        if (lockCheck.locked && lockCheck.holder.userId !== userId) {
+            return res.status(409).json({
+                success: false,
+                message: `Cannot execute flow: Locked by ${lockCheck.holder.userName} who is running another execution.`,
+                holder: lockCheck.holder,
+            });
         }
 
         if (!dataset || !Array.isArray(dataset) || dataset.length === 0) {
@@ -392,9 +478,21 @@ export const startDatasetBatchRunAction = async (req, res) => {
 export const startPerformanceRunAction = async (req, res) => {
     try {
         const { flowId, projectId, performanceConfig = {} } = req.body;
+        const userId = req.user?.id || 'anonymous';
+        const userName = req.user?.email || req.user?.name || 'Anonymous';
 
         if (!flowId) {
             return res.status(400).json({ success: false, message: 'flowId is required.' });
+        }
+
+        // Check if locked
+        const lockCheck = executionLock.check(flowId);
+        if (lockCheck.locked && lockCheck.holder.userId !== userId) {
+            return res.status(409).json({
+                success: false,
+                message: `Cannot execute flow: Locked by ${lockCheck.holder.userName} who is running another execution.`,
+                holder: lockCheck.holder,
+            });
         }
 
         // Fetch flow for the runner
@@ -433,6 +531,9 @@ export const startPerformanceRunAction = async (req, res) => {
             flowSnapshot: JSON.stringify({ performanceConfig }),
         });
 
+        // Acquire lock
+        executionLock.acquire(flowId, userId, userName, runId);
+
         // Fire-and-forget: performance runs are long-lived
         const perfRunPromise = executionManager.execute(
             'performance',
@@ -456,6 +557,9 @@ export const startPerformanceRunAction = async (req, res) => {
             .catch(async (err) => {
                 console.error(`[RunController] Performance run failed: ${err.message}`);
                 await executionLogger.endRun(runId, 'failed');
+            })
+            .finally(() => {
+                executionLock.release(flowId);
             });
 
         return res.status(200).json({
