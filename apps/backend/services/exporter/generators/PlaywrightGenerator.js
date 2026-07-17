@@ -5,6 +5,7 @@ import { variableManager } from '../../VariableManager.js';
 export class PlaywrightGenerator extends BaseGenerator {
     constructor(language, locale, usePOM = false, includeCICD = false) {
         super(language, locale);
+        this.framework = 'playwright';
         this.usePOM = usePOM;
         this.includeCICD = includeCICD;
 
@@ -370,7 +371,7 @@ playwright_tests:
 
         if (mapper) {
             const mapperParams = { ...config, type, actionType: type };
-            nodeCode = mapper.getCode(mapperParams, this.language, index);
+            nodeCode = mapper.getCode(mapperParams, this.language, index, this.framework);
         } else {
             this.addWarning(type, label, index);
 

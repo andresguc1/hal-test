@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Download,
@@ -46,6 +46,15 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges, projectId }) => {
     setGeneratedFiles(null);
     setActiveFile(null);
   }, []);
+
+  // Auto-reset language based on framework selection
+  useEffect(() => {
+    if (framework === "cypress" && language !== "javascript" && language !== "typescript") {
+      setLanguage("javascript");
+    } else if (framework === "selenium" && language !== "python" && language !== "java") {
+      setLanguage("python");
+    }
+  }, [framework, language]);
 
   const handleClose = useCallback(() => {
     resetState();
@@ -443,6 +452,8 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges, projectId }) => {
                         className="w-full mt-1 px-3 py-2 bg-slate-900 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-500"
                       >
                         <option value="playwright">Playwright</option>
+                        <option value="cypress">Cypress</option>
+                        <option value="selenium">Selenium</option>
                       </select>
                     </div>
 
@@ -455,11 +466,27 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges, projectId }) => {
                         onChange={(e) => setLanguage(e.target.value)}
                         className="w-full mt-1 px-3 py-2 bg-slate-900 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-500"
                       >
-                        <option value="javascript">JavaScript</option>
-                        <option value="typescript">TypeScript</option>
-                        <option value="python">Python</option>
-                        <option value="java">Java</option>
-                        <option value="csharp">C#</option>
+                        {framework === "playwright" && (
+                          <>
+                            <option value="javascript">JavaScript</option>
+                            <option value="typescript">TypeScript</option>
+                            <option value="python">Python</option>
+                            <option value="java">Java</option>
+                            <option value="csharp">C#</option>
+                          </>
+                        )}
+                        {framework === "cypress" && (
+                          <>
+                            <option value="javascript">JavaScript</option>
+                            <option value="typescript">TypeScript</option>
+                          </>
+                        )}
+                        {framework === "selenium" && (
+                          <>
+                            <option value="python">Python</option>
+                            <option value="java">Java</option>
+                          </>
+                        )}
                       </select>
                     </div>
 

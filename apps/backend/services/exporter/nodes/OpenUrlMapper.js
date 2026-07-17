@@ -10,8 +10,22 @@ export const OpenUrlMapper = {
      * @param {string} lang - Programming language
      * @returns {string}
      */
-    getCode: (params, lang) => {
+    getCode: (params, lang, index, framework = 'playwright') => {
         const url = params.url || '';
+
+        if (framework.toLowerCase() === 'cypress') {
+            return `cy.visit(\`${url}\`);`;
+        }
+
+        if (framework.toLowerCase() === 'selenium') {
+            if (lang.toLowerCase() === 'python') {
+                return `driver.get("${url}")`;
+            }
+            if (lang.toLowerCase() === 'java') {
+                return `driver.get("${url}");`;
+            }
+            return `// open_url not implemented for Selenium in ${lang}`;
+        }
 
         switch (lang.toLowerCase()) {
             case 'javascript':

@@ -4,9 +4,51 @@
 export const WaitMapper = {
     type: ['wait_fixed', 'wait_visible', 'wait_for_element', 'wait_network', 'wait_network_match'],
 
-    getCode: (params, lang) => {
+    getCode: (params, lang, index, framework = 'playwright') => {
         const selector = params.selector || '';
         const timeout = params.timeout || 30000;
+
+        if (framework.toLowerCase() === 'cypress') {
+            return (
+                {
+                    wait_fixed: `cy.wait(${params.ms || timeout || 1000});`,
+                    wait_visible: `cy.get('${selector}', { timeout: ${timeout} }).should('be.visible');`,
+                    wait_for_element: `cy.get('${selector}', { timeout: ${timeout} }).should('exist');`,
+                    wait_network: `// Cypress waits for network automatically, or use cy.wait() for aliases`,
+                    wait_network_match: params.urlMatch
+                        ? `cy.intercept('${params.urlMatch}').as('netWait_${index}');\ncy.wait('@netWait_${index}');`
+                        : '// Network wait skipped: no URL pattern provided',
+                }[params.actionType || params.type] || `// wait action not implemented for Cypress`
+            );
+        }
+
+        if (framework.toLowerCase() === 'selenium') {
+            if (lang.toLowerCase() === 'python') {
+                return (
+                    {
+                        wait_fixed: `time.sleep(${(params.ms || timeout || 1000) / 1000})`,
+                        wait_visible: `WebDriverWait(driver, ${timeout / 1000}).until(EC.visibility_of_element_located((By.CSS_SELECTOR, "${selector}")))`,
+                        wait_for_element: `WebDriverWait(driver, ${timeout / 1000}).until(EC.presence_of_element_located((By.CSS_SELECTOR, "${selector}")))`,
+                        wait_network: `# Selenium has no native networkidle wait. Using explicit sleep or selector wait.`,
+                        wait_network_match: `# Network request matching not supported natively in Selenium`,
+                    }[params.actionType || params.type] ||
+                    `# wait action not implemented for Selenium Python`
+                );
+            }
+            if (lang.toLowerCase() === 'java') {
+                return (
+                    {
+                        wait_fixed: `try { Thread.sleep(${params.ms || timeout || 1000}); } catch (InterruptedException e) { e.printStackTrace(); }`,
+                        wait_visible: `new WebDriverWait(driver, Duration.ofMillis(${timeout})).until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("${selector}")));`,
+                        wait_for_element: `new WebDriverWait(driver, Duration.ofMillis(${timeout})).until(ExpectedConditions.presenceOfElementLocated(By.cssSelector("${selector}")));`,
+                        wait_network: `// Selenium has no native networkidle wait. Using explicit sleep or selector wait.`,
+                        wait_network_match: `// Network request matching not supported natively in Selenium Java`,
+                    }[params.actionType || params.type] ||
+                    `// wait action not implemented for Selenium Java`
+                );
+            }
+            return `// wait not implemented for Selenium in ${lang}`;
+        }
 
         switch (lang.toLowerCase()) {
             case 'javascript':

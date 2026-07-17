@@ -1,4 +1,6 @@
 import { PlaywrightGenerator } from './generators/PlaywrightGenerator.js';
+import { CypressGenerator } from './generators/CypressGenerator.js';
+import { SeleniumGenerator } from './generators/SeleniumGenerator.js';
 
 export const exportService = {
     /**
@@ -97,6 +99,20 @@ export const exportService = {
                             extension,
                         };
                     }
+                    code = result.code;
+                    warnings = result.warnings || [];
+                    break;
+                }
+                case 'cypress': {
+                    const generator = new CypressGenerator(language, locale);
+                    const result = generator.generate(flowData);
+                    code = result.code;
+                    warnings = result.warnings || [];
+                    break;
+                }
+                case 'selenium': {
+                    const generator = new SeleniumGenerator(language, locale);
+                    const result = generator.generate(flowData);
                     code = result.code;
                     warnings = result.warnings || [];
                     break;

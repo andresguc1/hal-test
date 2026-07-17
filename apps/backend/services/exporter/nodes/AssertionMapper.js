@@ -8,8 +8,131 @@
 export const AssertionMapper = {
     type: ['validate_semantic', 'assertion', 'assert_page_text'],
 
-    getCode: (params, lang) => {
+    getCode: (params, lang, index, framework = 'playwright') => {
         const action = params.actionType || params.type;
+
+        if (framework.toLowerCase() === 'cypress') {
+            if (action === 'assert_page_text') {
+                const textToFind = params.textToFind || '';
+                return `cy.contains(\`${textToFind}\`).should('exist');`;
+            }
+
+            const selector = params.selector || '';
+            const expected = params.expected || params.text || params.value || '';
+            const assertType = params.assertionType || params.assertType || 'text_contains';
+
+            const cypressAssertion = () => {
+                switch (assertType) {
+                    case 'text_equals':
+                        return `cy.get(\`${selector}\`).should('have.text', \`${expected}\`);`;
+                    case 'text_contains':
+                        return `cy.get(\`${selector}\`).should('contain', \`${expected}\`);`;
+                    case 'visible':
+                        return `cy.get(\`${selector}\`).should('be.visible');`;
+                    case 'hidden':
+                        return `cy.get(\`${selector}\`).should('not.be.visible');`;
+                    case 'enabled':
+                        return `cy.get(\`${selector}\`).should('be.enabled');`;
+                    case 'disabled':
+                        return `cy.get(\`${selector}\`).should('be.disabled');`;
+                    case 'has_attribute':
+                        return `cy.get(\`${selector}\`).should('have.attr', \`${params.attribute || ''}\`, \`${expected}\`);`;
+                    case 'url_contains':
+                        return `cy.url().should('include', \`${expected}\`);`;
+                    case 'title_contains':
+                        return `cy.title().should('include', \`${expected}\`);`;
+                    default:
+                        return `cy.get(\`${selector}\`).should('contain', \`${expected}\`);`;
+                }
+            };
+
+            if (action === 'validate_semantic') {
+                return `// HalTest AI Validation → translated to Cypress assertion\n    ${cypressAssertion()}`;
+            }
+            return cypressAssertion();
+        }
+
+        if (framework.toLowerCase() === 'selenium') {
+            const selector = params.selector || '';
+            const expected = params.expected || params.text || params.value || '';
+            const assertType = params.assertionType || params.assertType || 'text_contains';
+
+            if (lang.toLowerCase() === 'python') {
+                if (action === 'assert_page_text') {
+                    const textToFind = params.textToFind || '';
+                    return `self.assertIn("${textToFind}", driver.page_source)`;
+                }
+
+                const seleniumAssertion = () => {
+                    switch (assertType) {
+                        case 'text_equals':
+                            return `self.assertEqual(driver.find_element(By.CSS_SELECTOR, "${selector}").text, "${expected}")`;
+                        case 'text_contains':
+                            return `self.assertIn("${expected}", driver.find_element(By.CSS_SELECTOR, "${selector}").text)`;
+                        case 'visible':
+                            return `self.assertTrue(driver.find_element(By.CSS_SELECTOR, "${selector}").is_displayed())`;
+                        case 'hidden':
+                            return `self.assertFalse(driver.find_element(By.CSS_SELECTOR, "${selector}").is_displayed())`;
+                        case 'enabled':
+                            return `self.assertTrue(driver.find_element(By.CSS_SELECTOR, "${selector}").is_enabled())`;
+                        case 'disabled':
+                            return `self.assertFalse(driver.find_element(By.CSS_SELECTOR, "${selector}").is_enabled())`;
+                        case 'has_attribute':
+                            return `self.assertEqual(driver.find_element(By.CSS_SELECTOR, "${selector}").get_attribute("${params.attribute || ''}"), "${expected}")`;
+                        case 'url_contains':
+                            return `self.assertIn("${expected}", driver.current_url)`;
+                        case 'title_contains':
+                            return `self.assertIn("${expected}", driver.title)`;
+                        default:
+                            return `self.assertIn("${expected}", driver.find_element(By.CSS_SELECTOR, "${selector}").text)`;
+                    }
+                };
+
+                if (action === 'validate_semantic') {
+                    return `# HalTest AI Validation → translated to Selenium assertion\n    ${seleniumAssertion()}`;
+                }
+                return seleniumAssertion();
+            }
+
+            if (lang.toLowerCase() === 'java') {
+                if (action === 'assert_page_text') {
+                    const textToFind = params.textToFind || '';
+                    return `org.junit.jupiter.api.Assertions.assertTrue(driver.getPageSource().contains("${textToFind}"));`;
+                }
+
+                const seleniumAssertion = () => {
+                    switch (assertType) {
+                        case 'text_equals':
+                            return `org.junit.jupiter.api.Assertions.assertEquals("${expected}", driver.findElement(By.cssSelector("${selector}")).getText());`;
+                        case 'text_contains':
+                            return `org.junit.jupiter.api.Assertions.assertTrue(driver.findElement(By.cssSelector("${selector}")).getText().contains("${expected}"));`;
+                        case 'visible':
+                            return `org.junit.jupiter.api.Assertions.assertTrue(driver.findElement(By.cssSelector("${selector}")).isDisplayed());`;
+                        case 'hidden':
+                            return `org.junit.jupiter.api.Assertions.assertFalse(driver.findElement(By.cssSelector("${selector}")).isDisplayed());`;
+                        case 'enabled':
+                            return `org.junit.jupiter.api.Assertions.assertTrue(driver.findElement(By.cssSelector("${selector}")).isEnabled());`;
+                        case 'disabled':
+                            return `org.junit.jupiter.api.Assertions.assertFalse(driver.findElement(By.cssSelector("${selector}")).isEnabled());`;
+                        case 'has_attribute':
+                            return `org.junit.jupiter.api.Assertions.assertEquals("${expected}", driver.findElement(By.cssSelector("${selector}")).getAttribute("${params.attribute || ''}"));`;
+                        case 'url_contains':
+                            return `org.junit.jupiter.api.Assertions.assertTrue(driver.getCurrentUrl().contains("${expected}"));`;
+                        case 'title_contains':
+                            return `org.junit.jupiter.api.Assertions.assertTrue(driver.getTitle().contains("${expected}"));`;
+                        default:
+                            return `org.junit.jupiter.api.Assertions.assertTrue(driver.findElement(By.cssSelector("${selector}")).getText().contains("${expected}"));`;
+                    }
+                };
+
+                if (action === 'validate_semantic') {
+                    return `// HalTest AI Validation → translated to Selenium Java assertion\n    ${seleniumAssertion()}`;
+                }
+                return seleniumAssertion();
+            }
+
+            return `// assertion not implemented for Selenium in ${lang}`;
+        }
 
         if (action === 'assert_page_text') {
             const textToFind = params.textToFind || '';

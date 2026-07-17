@@ -61,13 +61,16 @@ export class BaseGenerator {
      * @param {number} index
      */
     addWarning(nodeType, nodeLabel, index) {
+        const fwName = this.framework
+            ? this.framework.charAt(0).toUpperCase() + this.framework.slice(1)
+            : 'Playwright';
         this.warnings.push({
             nodeType,
             nodeLabel: nodeLabel || nodeType,
             index,
             message: this.isEn
-                ? `Node type "${nodeType}" has no Playwright implementation. A placeholder comment was generated.`
-                : `El tipo de nodo "${nodeType}" no tiene implementación Playwright. Se generó un comentario placeholder.`,
+                ? `Node type "${nodeType}" has no ${fwName} implementation. A placeholder comment was generated.`
+                : `El tipo de nodo "${nodeType}" no tiene implementación ${fwName}. Se generó un comentario placeholder.`,
         });
     }
 
