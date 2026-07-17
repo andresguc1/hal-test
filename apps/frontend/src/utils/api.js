@@ -105,9 +105,13 @@ const getHeaders = async () => {
 };
 
 export const api = {
-  async get(endpoint) {
+  async get(endpoint, customConfig = {}) {
+    const headers = {
+      ...(await getHeaders()),
+      ...(customConfig.headers || {}),
+    };
     const response = await fetch(normalizeUrl(API_BASE_URL, endpoint), {
-      headers: await getHeaders(),
+      headers,
     });
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -118,10 +122,14 @@ export const api = {
     return await response.json();
   },
 
-  async post(endpoint, data) {
+  async post(endpoint, data, customConfig = {}) {
+    const headers = {
+      ...(await getHeaders()),
+      ...(customConfig.headers || {}),
+    };
     const response = await fetch(normalizeUrl(API_BASE_URL, endpoint), {
       method: "POST",
-      headers: await getHeaders(),
+      headers,
       body: JSON.stringify(data),
     });
     if (!response.ok) {
@@ -133,10 +141,14 @@ export const api = {
     return await response.json();
   },
 
-  async put(endpoint, data) {
+  async put(endpoint, data, customConfig = {}) {
+    const headers = {
+      ...(await getHeaders()),
+      ...(customConfig.headers || {}),
+    };
     const response = await fetch(normalizeUrl(API_BASE_URL, endpoint), {
       method: "PUT",
-      headers: await getHeaders(),
+      headers,
       body: JSON.stringify(data),
     });
     if (!response.ok) {
@@ -148,10 +160,14 @@ export const api = {
     return await response.json();
   },
 
-  async delete(endpoint, data = null) {
+  async delete(endpoint, data = null, customConfig = {}) {
+    const headers = {
+      ...(await getHeaders()),
+      ...(customConfig.headers || {}),
+    };
     const options = {
       method: "DELETE",
-      headers: await getHeaders(),
+      headers,
     };
     if (data) {
       options.body = JSON.stringify(data);

@@ -584,10 +584,12 @@ IMPORTANT DIRECTIONS:
             // For Ollama, resolve the model name using our smart resolver first!
             const validationModelInput = model || process.env.OLLAMA_MODEL || DEFAULT_LOCAL_MODEL;
             const activeBaseUrl = baseUrl || 'http://127.0.0.1:11434';
-            const validationModel = await this.resolveOllamaModel({
+            let validationModel = await this.resolveOllamaModel({
                 baseUrl: activeBaseUrl,
                 requestedModel: validationModelInput,
             });
+
+            if (!validationModel) validationModel = DEFAULT_LOCAL_MODEL;
 
             const health = await this.healthCheck({
                 baseUrl: activeBaseUrl,
@@ -601,6 +603,38 @@ IMPORTANT DIRECTIONS:
                     `Model '${validationModel}' is not available. Pull it with: ollama pull ${validationModel}`,
                 );
             }
+
+            // --- ACTUALLY TEST THE LOCAL MODEL (Avoid OOM during real usage) ---
+            const providerInstance = llmFactory.getProviderInstance(
+                'ollama',
+                'ollama',
+                activeBaseUrl,
+            );
+            const modelRef = providerInstance(validationModel);
+            const validationPromise = generateText({
+                model: modelRef,
+                prompt: 'ping',
+                maxTokens: 1,
+            });
+
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(
+                    () =>
+                        reject(
+                            new Error(
+                                'Validation Timeout (90s). The external server or local model took too long to respond. It might still be loading into memory.',
+                            ),
+                        ),
+                    90000,
+                ),
+            );
+
+            try {
+                await Promise.race([validationPromise, timeoutPromise]);
+            } catch (valErr) {
+                throw llmFactory.mapError(valErr);
+            }
+
             return health;
         } catch (e) {
             // Enhanced Ollama-specific error mapping

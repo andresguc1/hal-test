@@ -23,8 +23,8 @@ function StickyNoteNode({ id, data, selected }) {
         configuration: {
           text: localText,
           lastEditedBy: user?.name || "Anonymous",
-          lastEditedColor: user?.color || "#6b7280"
-        }
+          lastEditedColor: user?.color || "#6b7280",
+        },
       },
     });
     window.dispatchEvent(event);

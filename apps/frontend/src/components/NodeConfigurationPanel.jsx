@@ -81,7 +81,15 @@ const NodeConfigurationPanel = ({
     return () => {
       unlockNode();
     };
-  }, [action?.nodeId, action?.id, isCollaborative, isReadOnly, lockNode, unlockNode]);
+  }, [
+    action,
+    action?.nodeId,
+    action?.id,
+    isCollaborative,
+    isReadOnly,
+    lockNode,
+    unlockNode,
+  ]);
   const [liveVariables, setLiveVariables] = useState({});
 
   const refreshVariables = useCallback(async () => {
@@ -873,20 +881,28 @@ const NodeConfigurationPanel = ({
             <span>Collaboration Thread</span>
           </div>
           <p className="text-xs text-slate-400 leading-relaxed">
-            This discussion board allows real-time communication between workspace members.
+            This discussion board allows real-time communication between
+            workspace members.
           </p>
           {isAiReady ? (
             <div className="pt-2 border-t border-white/5 flex flex-col gap-2">
-              <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">AI Assistant Integration</span>
+              <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+                AI Assistant Integration
+              </span>
               <p className="text-[11px] text-slate-400 leading-relaxed">
-                You can prompt HAL (AI) directly using the sparkles button on the Discussion Board canvas card to participate in this discussion thread.
+                You can prompt HAL (AI) directly using the sparkles button on
+                the Discussion Board canvas card to participate in this
+                discussion thread.
               </p>
             </div>
           ) : (
             <div className="pt-2 border-t border-white/5 flex flex-col gap-2">
-              <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">AI Integration Offline</span>
+              <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+                AI Integration Offline
+              </span>
               <p className="text-[11px] text-slate-500 leading-relaxed">
-                Configure your OpenAI, Anthropic, or Ollama provider in the workspace Settings to enable AI participation in this thread.
+                Configure your OpenAI, Anthropic, or Ollama provider in the
+                workspace Settings to enable AI participation in this thread.
               </p>
             </div>
           )}
@@ -918,11 +934,11 @@ const NodeConfigurationPanel = ({
           <Lock size={12} className="shrink-0 text-amber-400" />
           <span>
             <strong
-              style={{ color: peerEditingThisNode?.user?.color || '#fbbf24' }}
+              style={{ color: peerEditingThisNode?.user?.color || "#fbbf24" }}
             >
-              {peerEditingThisNode?.user?.name || 'Another user'}
-            </strong>
-            {' '}is editing this node — view only
+              {peerEditingThisNode?.user?.name || "Another user"}
+            </strong>{" "}
+            is editing this node — view only
           </span>
         </div>
       )}
@@ -971,11 +987,18 @@ const NodeConfigurationPanel = ({
                     ? "text-amber-400 bg-amber-500/10 hover:bg-amber-500/20"
                     : "text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10",
                 )}
-                title={activeNode.data?.disabled ? "Enable Node" : "Disable Node"}
+                title={
+                  activeNode.data?.disabled ? "Enable Node" : "Disable Node"
+                }
               >
-                {activeNode.data?.disabled ? <EyeOff size={16} /> : <Eye size={16} />}
+                {activeNode.data?.disabled ? (
+                  <EyeOff size={16} />
+                ) : (
+                  <Eye size={16} />
+                )}
               </button>
-              {(activeNode.type === "component" || activeNode.type === "loop") && (
+              {(activeNode.type === "component" ||
+                activeNode.type === "loop") && (
                 <button
                   onClick={() => onEnterSubFlow?.(activeNode.id)}
                   className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10 transition-all"
@@ -1011,7 +1034,12 @@ const NodeConfigurationPanel = ({
   );
 
   const Body = () => (
-    <div className={cn("flex-1 overflow-y-auto p-5 custom-scrollbar", effectiveReadOnly && "pointer-events-none opacity-70")}>
+    <div
+      className={cn(
+        "flex-1 overflow-y-auto p-5 custom-scrollbar",
+        effectiveReadOnly && "pointer-events-none opacity-70",
+      )}
+    >
       {activeNode.data?.warnings && activeNode.data.warnings.length > 0 && (
         <div className="mb-6 p-4 rounded-xl border border-yellow-500/20 bg-yellow-500/5 space-y-4">
           <div className="flex items-center gap-2 text-yellow-400 font-bold text-[11px] uppercase tracking-wider">

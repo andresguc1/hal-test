@@ -189,7 +189,8 @@ export function useFlowExecution({
   const updateEdgeStatus = useCallback(
     (edgeId, state, animated = true) => {
       if (isCollabActive) {
-        if (broadcastElementState) broadcastElementState(edgeId, "edge", state, { animated });
+        if (broadcastElementState)
+          broadcastElementState(edgeId, "edge", state, { animated });
         return;
       }
       setEdges((eds) =>
@@ -227,7 +228,10 @@ export function useFlowExecution({
   const updateEdgeStatusBySource = useCallback(
     (sourceId, state, animated = true) => {
       if (isCollabActive) {
-        if (broadcastElementState) broadcastElementState(sourceId, "edge_by_source", state, { animated });
+        if (broadcastElementState)
+          broadcastElementState(sourceId, "edge_by_source", state, {
+            animated,
+          });
         return;
       }
       setEdges((eds) =>
@@ -608,11 +612,16 @@ export function useFlowExecution({
           return { success: false, error: errMessage };
         }
 
-        const remoteExecution = collab.peers.find(p => p.executionState?.running);
+        const remoteExecution = collab.peers.find(
+          (p) => p.executionState?.running,
+        );
         if (remoteExecution) {
           const errMessage = `🔒 Cannot execute: ${remoteExecution.user?.name || "Another user"} is running this flow.`;
           if (toast) toast.error(errMessage);
-          return { success: false, error: "Flow is locked by another collaborator" };
+          return {
+            success: false,
+            error: "Flow is locked by another collaborator",
+          };
         }
       }
 
@@ -644,480 +653,494 @@ export function useFlowExecution({
           }
         }
 
-      const globalStats = {
-        total: 0,
-        successful: 0,
-        failed: 0,
-        skipped: 0,
-        duration: 0,
-      };
+        const globalStats = {
+          total: 0,
+          successful: 0,
+          failed: 0,
+          skipped: 0,
+          duration: 0,
+        };
 
-      const flowContext = {};
-      let browserId = activeBrowserId || null;
-      let runId = null;
+        const flowContext = {};
+        let browserId = activeBrowserId || null;
+        let runId = null;
 
-      try {
-        const { runId: newRunId } = await projectManager.createRun(
-          currentProject.id,
-          currentFlowId,
-          {
-            nodes: nodes.map((n) => ({
-              ...n,
-              data: { ...n.data, result: undefined },
-            })),
-            edges,
-          },
-        );
-        runId = newRunId;
-        setActiveRunId(runId);
-      } catch (err) {
-        console.warn("Run creation failed", err);
-      }
-
-      setApiStatus({ state: "loading", message: "Preparing execution..." });
-
-      // Cache for subflows fetched during this execution run
-      const subFlowCache = new Map();
-      const getSubFlowCached = async (projectId, flowId) => {
-        if (!subFlowCache.has(flowId)) {
-          const flow = await projectManager.getFlow(projectId, flowId);
-          subFlowCache.set(flowId, flow);
+        try {
+          const { runId: newRunId } = await projectManager.createRun(
+            currentProject.id,
+            currentFlowId,
+            {
+              nodes: nodes.map((n) => ({
+                ...n,
+                data: { ...n.data, result: undefined },
+              })),
+              edges,
+            },
+          );
+          runId = newRunId;
+          setActiveRunId(runId);
+        } catch (err) {
+          console.warn("Run creation failed", err);
         }
-        return subFlowCache.get(flowId);
-      };
 
-      const executeGraph = async (
-        graphNodes,
-        graphEdges,
-        depth = 0,
-        visitedFlows = new Set(),
-      ) => {
-        if (depth > 15) throw new Error("Max recursion depth exceeded");
+        setApiStatus({ state: "loading", message: "Preparing execution..." });
 
-        const activeNodes = graphNodes.filter((n) => !n.data?.disabled);
-        const activeEdges = graphEdges.filter((e) => {
-          const s = activeNodes.find((n) => n.id === e.source);
-          const t = activeNodes.find((n) => n.id === e.target);
-          return s && t;
-        });
-
-        if (activeNodes.length === 0) return { success: true };
-
-        let startNodes = activeNodes;
-        if (depth === 0 && activeNodes.length > 1 && !options.nodes) {
-          const incomingCount = new Map();
-          activeNodes.forEach((n) => incomingCount.set(n.id, 0));
-          activeEdges.forEach((e) => {
-            if (incomingCount.has(e.target)) {
-              incomingCount.set(e.target, incomingCount.get(e.target) + 1);
-            }
-          });
-          startNodes = activeNodes.filter((n) => incomingCount.get(n.id) === 0);
-          if (startNodes.length === 0 && graphNodes.length > 0) {
-            startNodes = [graphNodes[0]];
+        // Cache for subflows fetched during this execution run
+        const subFlowCache = new Map();
+        const getSubFlowCached = async (projectId, flowId) => {
+          if (!subFlowCache.has(flowId)) {
+            const flow = await projectManager.getFlow(projectId, flowId);
+            subFlowCache.set(flowId, flow);
           }
-        } else if (options.nodes) {
-          startNodes = options.nodes;
-        }
+          return subFlowCache.get(flowId);
+        };
 
-        const internalExecuted = new Set();
-        const queue = [...startNodes];
-        globalStats.total = activeNodes.length;
-        const healedNodes = [];
-        let lastResult = { success: true };
+        const executeGraph = async (
+          graphNodes,
+          graphEdges,
+          depth = 0,
+          visitedFlows = new Set(),
+        ) => {
+          if (depth > 15) throw new Error("Max recursion depth exceeded");
 
-        while (queue.length > 0) {
-          if (executionAbortController.current?.signal.aborted) break;
+          const activeNodes = graphNodes.filter((n) => !n.data?.disabled);
+          const activeEdges = graphEdges.filter((e) => {
+            const s = activeNodes.find((n) => n.id === e.source);
+            const t = activeNodes.find((n) => n.id === e.target);
+            return s && t;
+          });
 
-          const node = queue.shift();
-          if (internalExecuted.has(node.id)) continue;
-          internalExecuted.add(node.id);
+          if (activeNodes.length === 0) return { success: true };
 
-          let result = { success: true };
-          lastResult = result;
-
-          try {
-            if (node.type === "component" || node.data?.type === "component") {
-              const { flowId } = node.data || {};
-              if (flowId) {
-                if (visitedFlows.has(flowId)) {
-                  updateNodeState(node.id, NODE_STATES.ERROR, {
-                    message: "Circular dependency detected",
-                  });
-                  return { success: false, error: "Circular dependency" };
-                }
-                setApiStatus({
-                  state: "loading",
-                  message: `Entering component: ${node.data.label || "Sub-flow"}...`,
-                });
-                const subFlow = await getSubFlowCached(
-                  currentProject.id,
-                  flowId,
-                );
-                if (subFlow?.nodes?.length > 0) {
-                  const newVisited = new Set(visitedFlows);
-                  newVisited.add(flowId);
-                  updateNodeState(node.id, NODE_STATES.EXECUTING);
-                  updateEdgeStatusBySource(node.id, NODE_STATES.EXECUTING);
-
-                  const subResult = await executeGraph(
-                    subFlow.nodes,
-                    subFlow.edges,
-                    depth + 1,
-                    newVisited,
-                  );
-                  result = subResult || { success: true };
-
-                  const isSoftFail =
-                    result.status === "softfailed" ||
-                    result.data?.status === "softfailed";
-                  const finalNodeState = result.success
-                    ? isSoftFail
-                      ? NODE_STATES.SOFTFAILED
-                      : NODE_STATES.SUCCESS
-                    : NODE_STATES.ERROR;
-
-                  updateNodeState(node.id, finalNodeState);
-
-                  if (!result.success && stopOnError) {
-                    const divePath = result.divePath || [];
-                    return {
-                      ...result,
-                      divePath: [node.id, ...divePath],
-                      healedNodes,
-                    };
-                  }
-                  if (result.healedNodes?.length > 0) {
-                    healedNodes.push(...result.healedNodes);
-                  }
-                }
+          let startNodes = activeNodes;
+          if (depth === 0 && activeNodes.length > 1 && !options.nodes) {
+            const incomingCount = new Map();
+            activeNodes.forEach((n) => incomingCount.set(n.id, 0));
+            activeEdges.forEach((e) => {
+              if (incomingCount.has(e.target)) {
+                incomingCount.set(e.target, incomingCount.get(e.target) + 1);
               }
-            } else if (node.type === "loop" || node.data?.type === "loop") {
-              const { flowId } = node.data || {};
-              const config = node.data?.configuration || {};
-              updateNodeState(node.id, NODE_STATES.EXECUTING);
-              updateEdgeStatusBySource(node.id, NODE_STATES.EXECUTING);
+            });
+            startNodes = activeNodes.filter(
+              (n) => incomingCount.get(n.id) === 0,
+            );
+            if (startNodes.length === 0 && graphNodes.length > 0) {
+              startNodes = [graphNodes[0]];
+            }
+          } else if (options.nodes) {
+            startNodes = options.nodes;
+          }
 
-              let finished = false;
-              let loopResult = { success: true };
+          const internalExecuted = new Set();
+          const queue = [...startNodes];
+          globalStats.total = activeNodes.length;
+          const healedNodes = [];
+          let lastResult = { success: true };
 
-              while (
-                !finished &&
-                !executionAbortController.current?.signal.aborted
+          while (queue.length > 0) {
+            if (executionAbortController.current?.signal.aborted) break;
+
+            const node = queue.shift();
+            if (internalExecuted.has(node.id)) continue;
+            internalExecuted.add(node.id);
+
+            let result = { success: true };
+            lastResult = result;
+
+            try {
+              if (
+                node.type === "component" ||
+                node.data?.type === "component"
               ) {
-                const resolvedConfig = resolveVariables(config, flowContext);
-                const action = {
-                  nodeId: node.id,
-                  type: "loop",
-                  payload: { ...resolvedConfig, browserId, runId },
-                };
-
-                const stepResult = await executeStep(action);
-                if (!stepResult.success) {
-                  loopResult = stepResult;
-                  finished = true;
-                  break;
-                }
-
-                const path = String(
-                  stepResult.path ||
-                    stepResult.result?.path ||
-                    stepResult.result?.data?.path ||
-                    "",
-                )
-                  .trim()
-                  .toLowerCase();
-
-                if (
-                  path === "completed" ||
-                  path === "done" ||
-                  path === "finish"
-                ) {
-                  finished = true;
-                  break;
-                }
-
-                if (flowId && (path === "body" || path === "iteration")) {
+                const { flowId } = node.data || {};
+                if (flowId) {
+                  if (visitedFlows.has(flowId)) {
+                    updateNodeState(node.id, NODE_STATES.ERROR, {
+                      message: "Circular dependency detected",
+                    });
+                    return { success: false, error: "Circular dependency" };
+                  }
                   setApiStatus({
                     state: "loading",
-                    message: `Loop Iteration ${stepResult.result?.data?.index || ""}...`,
+                    message: `Entering component: ${node.data.label || "Sub-flow"}...`,
                   });
                   const subFlow = await getSubFlowCached(
                     currentProject.id,
                     flowId,
                   );
                   if (subFlow?.nodes?.length > 0) {
+                    const newVisited = new Set(visitedFlows);
+                    newVisited.add(flowId);
+                    updateNodeState(node.id, NODE_STATES.EXECUTING);
+                    updateEdgeStatusBySource(node.id, NODE_STATES.EXECUTING);
+
                     const subResult = await executeGraph(
                       subFlow.nodes,
                       subFlow.edges,
                       depth + 1,
+                      newVisited,
                     );
-                    if (!subResult.success && stopOnError) {
-                      loopResult = subResult;
-                      finished = true;
-                      break;
+                    result = subResult || { success: true };
+
+                    const isSoftFail =
+                      result.status === "softfailed" ||
+                      result.data?.status === "softfailed";
+                    const finalNodeState = result.success
+                      ? isSoftFail
+                        ? NODE_STATES.SOFTFAILED
+                        : NODE_STATES.SUCCESS
+                      : NODE_STATES.ERROR;
+
+                    updateNodeState(node.id, finalNodeState);
+
+                    if (!result.success && stopOnError) {
+                      const divePath = result.divePath || [];
+                      return {
+                        ...result,
+                        divePath: [node.id, ...divePath],
+                        healedNodes,
+                      };
                     }
-                    if (subResult.healedNodes?.length > 0) {
-                      healedNodes.push(...subResult.healedNodes);
+                    if (result.healedNodes?.length > 0) {
+                      healedNodes.push(...result.healedNodes);
+                    }
+                  }
+                }
+              } else if (node.type === "loop" || node.data?.type === "loop") {
+                const { flowId } = node.data || {};
+                const config = node.data?.configuration || {};
+                updateNodeState(node.id, NODE_STATES.EXECUTING);
+                updateEdgeStatusBySource(node.id, NODE_STATES.EXECUTING);
+
+                let finished = false;
+                let loopResult = { success: true };
+
+                while (
+                  !finished &&
+                  !executionAbortController.current?.signal.aborted
+                ) {
+                  const resolvedConfig = resolveVariables(config, flowContext);
+                  const action = {
+                    nodeId: node.id,
+                    type: "loop",
+                    payload: { ...resolvedConfig, browserId, runId },
+                  };
+
+                  const stepResult = await executeStep(action);
+                  if (!stepResult.success) {
+                    loopResult = stepResult;
+                    finished = true;
+                    break;
+                  }
+
+                  const path = String(
+                    stepResult.path ||
+                      stepResult.result?.path ||
+                      stepResult.result?.data?.path ||
+                      "",
+                  )
+                    .trim()
+                    .toLowerCase();
+
+                  if (
+                    path === "completed" ||
+                    path === "done" ||
+                    path === "finish"
+                  ) {
+                    finished = true;
+                    break;
+                  }
+
+                  if (flowId && (path === "body" || path === "iteration")) {
+                    setApiStatus({
+                      state: "loading",
+                      message: `Loop Iteration ${stepResult.result?.data?.index || ""}...`,
+                    });
+                    const subFlow = await getSubFlowCached(
+                      currentProject.id,
+                      flowId,
+                    );
+                    if (subFlow?.nodes?.length > 0) {
+                      const subResult = await executeGraph(
+                        subFlow.nodes,
+                        subFlow.edges,
+                        depth + 1,
+                      );
+                      if (!subResult.success && stopOnError) {
+                        loopResult = subResult;
+                        finished = true;
+                        break;
+                      }
+                      if (subResult.healedNodes?.length > 0) {
+                        healedNodes.push(...subResult.healedNodes);
+                      }
+                    } else {
+                      finished = true;
                     }
                   } else {
                     finished = true;
                   }
-                } else {
-                  finished = true;
                 }
-              }
-              result = loopResult;
-              updateNodeState(
-                node.id,
-                result.success ? NODE_STATES.SUCCESS : NODE_STATES.ERROR,
-              );
-            } else if (
-              node.type === "for_each" ||
-              node.data?.type === "for_each"
-            ) {
-              // ForEach is handled entirely by the backend ExecutionService.
-              // In frontend debug mode, we treat it as a composition container.
-              const config = node.data?.configuration || {};
-              updateNodeState(node.id, NODE_STATES.EXECUTING);
-              updateEdgeStatusBySource(node.id, NODE_STATES.EXECUTING);
+                result = loopResult;
+                updateNodeState(
+                  node.id,
+                  result.success ? NODE_STATES.SUCCESS : NODE_STATES.ERROR,
+                );
+              } else if (
+                node.type === "for_each" ||
+                node.data?.type === "for_each"
+              ) {
+                // ForEach is handled entirely by the backend ExecutionService.
+                // In frontend debug mode, we treat it as a composition container.
+                const config = node.data?.configuration || {};
+                updateNodeState(node.id, NODE_STATES.EXECUTING);
+                updateEdgeStatusBySource(node.id, NODE_STATES.EXECUTING);
 
-              const resolvedConfig = resolveVariables(config, flowContext);
-              const action = {
-                nodeId: node.id,
-                type: "for_each",
-                payload: { ...resolvedConfig, browserId, runId },
-              };
-
-              const stepResult = await executeStep(action);
-              result = stepResult || { success: true };
-
-              const forEachFinalState = result.success
-                ? NODE_STATES.SUCCESS
-                : NODE_STATES.ERROR;
-              updateNodeState(node.id, forEachFinalState);
-
-              if (!result.success && stopOnError) {
-                return {
-                  ...result,
-                  divePath: [node.id],
-                  healedNodes,
+                const resolvedConfig = resolveVariables(config, flowContext);
+                const action = {
+                  nodeId: node.id,
+                  type: "for_each",
+                  payload: { ...resolvedConfig, browserId, runId },
                 };
-              }
-            } else if (
-              node.type !== "input" &&
-              node.type !== "output" &&
-              node.type !== "annotation"
-            ) {
-              const nodeType = node.data?.type || node.type;
-              const isLogicNode =
-                nodeType === "conditional" ||
-                nodeType === "wait_conditional" ||
-                nodeType === "switch";
-              const resolvedConfig = isLogicNode
-                ? node.data?.configuration || {}
-                : resolveVariables(node.data?.configuration || {}, flowContext);
 
-              const action = {
-                nodeId: node.id,
-                type: nodeType,
-                payload: {
-                  ...resolvedConfig,
-                  browserId,
-                  runId,
-                  customLabel: node.data?.customLabel,
-                  label: node.data?.label,
-                },
-              };
+                const stepResult = await executeStep(action);
+                result = stepResult || { success: true };
 
-              // 🚀 FIX: Special flag for variable nodes to allow overwriting dataset values if the value is dynamic/expression
-              // This prevents "Set Variable" nodes from being ignored if they are incrementing or calculating values.
-              if (nodeType === "variable" && node.data?.configuration?.value) {
-                const rawValue = String(node.data.configuration.value);
-                if (rawValue.includes("{{") || rawValue.includes("${")) {
-                  action.payload.isDynamicValue = true;
-                }
-              }
+                const forEachFinalState = result.success
+                  ? NODE_STATES.SUCCESS
+                  : NODE_STATES.ERROR;
+                updateNodeState(node.id, forEachFinalState);
 
-              updateEdgeStatusBySource(node.id, NODE_STATES.EXECUTING);
-              result = await executeStep(action);
-
-              if (result.skipped) {
-                globalStats.skipped++;
-              } else if (result.success) {
-                globalStats.successful++;
-                if (result.instanceId) {
-                  browserId = result.instanceId;
-                  flowContext.browserId = result.instanceId;
-                }
-                const slug = (node.data?.label || node.id)
-                  .toLowerCase()
-                  .replace(/\s+/g, "_");
-                flowContext[node.id] = result.result || result;
-                flowContext[slug] = result.result || result;
-
-                // Populate custom defined variableName/saveToVariable in flowContext
-                const customVarName =
-                  node.data?.configuration?.variableName ||
-                  node.data?.configuration?.saveToVariable;
-                if (customVarName) {
-                  flowContext[customVarName] = result.result || result;
-                }
-
-                if (result.healed && result.healedValue) {
-                  healedNodes.push({
-                    nodeId: node.id,
-                    newSelector: result.healedValue,
-                  });
-                }
-              } else {
-                globalStats.failed++;
-                if (stopOnError) {
+                if (!result.success && stopOnError) {
                   return {
-                    success: false,
-                    error: result.error || "Action failed",
-                    failedNodeId: node.id,
-                    divePath: [],
+                    ...result,
+                    divePath: [node.id],
+                    healedNodes,
                   };
                 }
-              }
-            } else if (node.type === "output") {
-              result = {
-                success: true,
-                path:
-                  node.data?.configuration?.path || node.data?.path || node.id,
-              };
-            }
+              } else if (
+                node.type !== "input" &&
+                node.type !== "output" &&
+                node.type !== "annotation"
+              ) {
+                const nodeType = node.data?.type || node.type;
+                const isLogicNode =
+                  nodeType === "conditional" ||
+                  nodeType === "wait_conditional" ||
+                  nodeType === "switch";
+                const resolvedConfig = isLogicNode
+                  ? node.data?.configuration || {}
+                  : resolveVariables(
+                      node.data?.configuration || {},
+                      flowContext,
+                    );
 
-            // Path resolution and queueing
-            let nextEdges = activeEdges.filter((e) => e.source === node.id);
-            const path = String(
-              result?.path ||
-                result?.result?.path ||
-                result?.result?.data?.path ||
-                result?.result?.data?.targetPath ||
-                result?.result?.targetPath ||
-                "",
-            )
-              .trim()
-              .toLowerCase();
+                const action = {
+                  nodeId: node.id,
+                  type: nodeType,
+                  payload: {
+                    ...resolvedConfig,
+                    browserId,
+                    runId,
+                    customLabel: node.data?.customLabel,
+                    label: node.data?.label,
+                  },
+                };
 
-            const nodeKey = String(
-              node.data?.subType || node.data?.type || node.type || "",
-            ).toLowerCase();
-            const isBranchingNode =
-              nodeKey === "switch" ||
-              nodeKey === "conditional" ||
-              nodeKey === "backend_js";
-
-            const shouldEnforceStrictPath =
-              nodeKey === "switch" || nodeKey === "conditional";
-
-            if (path && path !== "undefined" && path !== "") {
-              let filtered = nextEdges.filter((e) => {
-                const handle = String(e.sourceHandle || "").toLowerCase();
-                const targetPath = String(path).toLowerCase();
-                if (handle === targetPath) return true;
+                // 🚀 FIX: Special flag for variable nodes to allow overwriting dataset values if the value is dynamic/expression
+                // This prevents "Set Variable" nodes from being ignored if they are incrementing or calculating values.
                 if (
-                  targetPath === "false" &&
-                  (handle === "else" || handle === "fallback")
-                )
-                  return true;
-                if (targetPath === "else" && handle === "false") return true;
-                return false;
-              });
+                  nodeType === "variable" &&
+                  node.data?.configuration?.value
+                ) {
+                  const rawValue = String(node.data.configuration.value);
+                  if (rawValue.includes("{{") || rawValue.includes("${")) {
+                    action.payload.isDynamicValue = true;
+                  }
+                }
 
-              if (shouldEnforceStrictPath || isBranchingNode) {
-                if (filtered.length === 0 && nextEdges.length > 0) {
-                  if (shouldEnforceStrictPath) {
-                    updateNodeState(node.id, NODE_STATES.ERROR, {
-                      message: `Path not found: ${path}`,
+                updateEdgeStatusBySource(node.id, NODE_STATES.EXECUTING);
+                result = await executeStep(action);
+
+                if (result.skipped) {
+                  globalStats.skipped++;
+                } else if (result.success) {
+                  globalStats.successful++;
+                  if (result.instanceId) {
+                    browserId = result.instanceId;
+                    flowContext.browserId = result.instanceId;
+                  }
+                  const slug = (node.data?.label || node.id)
+                    .toLowerCase()
+                    .replace(/\s+/g, "_");
+                  flowContext[node.id] = result.result || result;
+                  flowContext[slug] = result.result || result;
+
+                  // Populate custom defined variableName/saveToVariable in flowContext
+                  const customVarName =
+                    node.data?.configuration?.variableName ||
+                    node.data?.configuration?.saveToVariable;
+                  if (customVarName) {
+                    flowContext[customVarName] = result.result || result;
+                  }
+
+                  if (result.healed && result.healedValue) {
+                    healedNodes.push({
+                      nodeId: node.id,
+                      newSelector: result.healedValue,
                     });
-                    nextEdges = [];
-                  } else {
-                    nextEdges = [];
                   }
                 } else {
+                  globalStats.failed++;
+                  if (stopOnError) {
+                    return {
+                      success: false,
+                      error: result.error || "Action failed",
+                      failedNodeId: node.id,
+                      divePath: [],
+                    };
+                  }
+                }
+              } else if (node.type === "output") {
+                result = {
+                  success: true,
+                  path:
+                    node.data?.configuration?.path ||
+                    node.data?.path ||
+                    node.id,
+                };
+              }
+
+              // Path resolution and queueing
+              let nextEdges = activeEdges.filter((e) => e.source === node.id);
+              const path = String(
+                result?.path ||
+                  result?.result?.path ||
+                  result?.result?.data?.path ||
+                  result?.result?.data?.targetPath ||
+                  result?.result?.targetPath ||
+                  "",
+              )
+                .trim()
+                .toLowerCase();
+
+              const nodeKey = String(
+                node.data?.subType || node.data?.type || node.type || "",
+              ).toLowerCase();
+              const isBranchingNode =
+                nodeKey === "switch" ||
+                nodeKey === "conditional" ||
+                nodeKey === "backend_js";
+
+              const shouldEnforceStrictPath =
+                nodeKey === "switch" || nodeKey === "conditional";
+
+              if (path && path !== "undefined" && path !== "") {
+                let filtered = nextEdges.filter((e) => {
+                  const handle = String(e.sourceHandle || "").toLowerCase();
+                  const targetPath = String(path).toLowerCase();
+                  if (handle === targetPath) return true;
+                  if (
+                    targetPath === "false" &&
+                    (handle === "else" || handle === "fallback")
+                  )
+                    return true;
+                  if (targetPath === "else" && handle === "false") return true;
+                  return false;
+                });
+
+                if (shouldEnforceStrictPath || isBranchingNode) {
+                  if (filtered.length === 0 && nextEdges.length > 0) {
+                    if (shouldEnforceStrictPath) {
+                      updateNodeState(node.id, NODE_STATES.ERROR, {
+                        message: `Path not found: ${path}`,
+                      });
+                      nextEdges = [];
+                    } else {
+                      nextEdges = [];
+                    }
+                  } else {
+                    nextEdges = filtered;
+                  }
+                } else if (filtered.length > 0) {
                   nextEdges = filtered;
                 }
-              } else if (filtered.length > 0) {
-                nextEdges = filtered;
+              } else if (shouldEnforceStrictPath && nextEdges.length > 0) {
+                updateNodeState(node.id, NODE_STATES.ERROR, {
+                  message: "Could not resolve branching path",
+                });
+                nextEdges = [];
               }
-            } else if (shouldEnforceStrictPath && nextEdges.length > 0) {
-              updateNodeState(node.id, NODE_STATES.ERROR, {
-                message: "Could not resolve branching path",
-              });
-              nextEdges = [];
-            }
 
-            nextEdges.forEach((e) => {
-              if (result.success) {
-                const hasPath = path && path !== "undefined" && path !== "";
-                if (
-                  shouldEnforceStrictPath &&
-                  hasPath &&
-                  String(e.sourceHandle || "").toLowerCase() !== path
-                ) {
-                  return;
+              nextEdges.forEach((e) => {
+                if (result.success) {
+                  const hasPath = path && path !== "undefined" && path !== "";
+                  if (
+                    shouldEnforceStrictPath &&
+                    hasPath &&
+                    String(e.sourceHandle || "").toLowerCase() !== path
+                  ) {
+                    return;
+                  }
+                  updateEdgeStatus(e.id, NODE_STATES.SUCCESS, false);
+                } else {
+                  updateEdgeStatus(e.id, NODE_STATES.ERROR, false);
                 }
-                updateEdgeStatus(e.id, NODE_STATES.SUCCESS, false);
-              } else {
-                updateEdgeStatus(e.id, NODE_STATES.ERROR, false);
-              }
-            });
+              });
 
-            nextEdges.forEach((e) => {
-              const targetNode = activeNodes.find((n) => n.id === e.target);
-              if (targetNode) queue.push(targetNode);
-            });
-          } catch (err) {
-            console.error(`Error in node "${node.id}":`, err);
-            globalStats.failed++;
-            updateNodeState(node.id, NODE_STATES.ERROR, {
-              message: err.message,
-            });
-            if (stopOnError) {
-              return {
-                success: false,
-                error: err.message,
-                failedNodeId: node.id,
-                divePath: [],
-              };
+              nextEdges.forEach((e) => {
+                const targetNode = activeNodes.find((n) => n.id === e.target);
+                if (targetNode) queue.push(targetNode);
+              });
+            } catch (err) {
+              console.error(`Error in node "${node.id}":`, err);
+              globalStats.failed++;
+              updateNodeState(node.id, NODE_STATES.ERROR, {
+                message: err.message,
+              });
+              if (stopOnError) {
+                return {
+                  success: false,
+                  error: err.message,
+                  failedNodeId: node.id,
+                  divePath: [],
+                };
+              }
             }
           }
-        }
-        return { success: lastResult.success, healedNodes };
-      };
+          return { success: lastResult.success, healedNodes };
+        };
 
-      const finalResult = await executeGraph(options.nodes || nodes, edges);
-      if (runId) await api.post(`/runs/${runId}/end`, { status: "completed" });
-      setApiStatus({ state: "success", message: "Flow complete" });
-      return { ...finalResult, stats: globalStats };
-    } finally {
-      if (collab.isCollaborative) {
-        collab.setExecutionState(null);
+        const finalResult = await executeGraph(options.nodes || nodes, edges);
+        if (runId)
+          await api.post(`/runs/${runId}/end`, { status: "completed" });
+        setApiStatus({ state: "success", message: "Flow complete" });
+        return { ...finalResult, stats: globalStats };
+      } finally {
+        if (collab.isCollaborative) {
+          collab.setExecutionState(null);
+        }
       }
-    }
-  },
-  [
-    currentProject,
-    currentFlowId,
-    nodes,
-    edges,
-    executeStep,
-    resetExecutionStates,
-    validateFlowStructure,
-    updateNodeState,
-    updateEdgeStatus,
-    updateEdgeStatusBySource,
-    activeBrowserId,
-    setActiveRunId,
-    setApiStatus,
-    collab,
-    isCollabActive,
-    clearExecutionStates,
-    toast,
-  ],
+    },
+    [
+      currentProject,
+      currentFlowId,
+      nodes,
+      edges,
+      executeStep,
+      resetExecutionStates,
+      validateFlowStructure,
+      updateNodeState,
+      updateEdgeStatus,
+      updateEdgeStatusBySource,
+      activeBrowserId,
+      setActiveRunId,
+      setApiStatus,
+      collab,
+      isCollabActive,
+      clearExecutionStates,
+      toast,
+    ],
   );
 
   return {

@@ -606,7 +606,9 @@ function AppFooter({
         />
 
         <FooterButton
-          icon={isLocked ? Lock : (apiStatus.state === "running" ? RefreshCw : Play)}
+          icon={
+            isLocked ? Lock : apiStatus.state === "running" ? RefreshCw : Play
+          }
           label={
             isRemoteExecuting
               ? "LOCKED"
@@ -629,7 +631,8 @@ function AppFooter({
             "pl-4 pr-5 py-2",
             (apiStatus.state === "running" || isLocked) &&
               "opacity-75 cursor-not-allowed grayscale pointer-events-none",
-            isLocked && "border-amber-500/30 text-amber-500 hover:bg-transparent"
+            isLocked &&
+              "border-amber-500/30 text-amber-500 hover:bg-transparent",
           )}
         />
 

@@ -221,21 +221,21 @@ function Dashboard({
 
   const { updateCursor, role, isCollaborative } = useCollaboration();
   const { isRemoteExecuting, remoteExecution } = useAwareness();
-  const isWorkspaceReadOnly = isReadOnly || (isCollaborative && role === "viewer");
+  const isWorkspaceReadOnly =
+    isReadOnly || (isCollaborative && role === "viewer");
 
-  // DEBUG COLLABORATION
-  useEffect(() => {
-    console.log('[App] Collaboration State:', { isWorkspaceReadOnly, isReadOnly, isCollaborative, role });
-  }, [isWorkspaceReadOnly, isReadOnly, isCollaborative, role]);
+
 
   // Collaboration toggle handler
   const handleToggleCollaboration = useCallback(async () => {
     if (!currentProject) return;
     try {
       const newValue = !currentProject.collaborationEnabled;
-      await updateProject(currentProject.id, { collaborationEnabled: newValue });
+      await updateProject(currentProject.id, {
+        collaborationEnabled: newValue,
+      });
     } catch (err) {
-      console.error('[Dashboard] Failed to toggle collaboration:', err);
+      console.error("[Dashboard] Failed to toggle collaboration:", err);
     }
   }, [currentProject, updateProject]);
 
@@ -333,14 +333,23 @@ function Dashboard({
     // --- COLLABORATION LOCK CHECKS ---
     if (isCollaborative) {
       if (role !== "owner") {
-        toast.error(t("common.owner_execute_only", "🔒 Solo el propietario (owner) puede ejecutar el flujo."));
+        toast.error(
+          t(
+            "common.owner_execute_only",
+            "🔒 Solo el propietario (owner) puede ejecutar el flujo.",
+          ),
+        );
         return;
       }
       if (isRemoteExecuting) {
         toast.error(
-          t("common.remote_executing", "🔒 {{user}} está ejecutando este flujo actualmente...", {
-            user: remoteExecution?.user?.name || "Otro colaborador",
-          }),
+          t(
+            "common.remote_executing",
+            "🔒 {{user}} está ejecutando este flujo actualmente...",
+            {
+              user: remoteExecution?.user?.name || "Otro colaborador",
+            },
+          ),
         );
         return;
       }
@@ -1628,6 +1637,7 @@ function Dashboard({
 
       return node;
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nodes, edges, currentProject]); // Removed enterComponent because it changes on every node update
 
   // Props dinámicas que sí cambian
@@ -1656,7 +1666,9 @@ function Dashboard({
       onNodeContextMenu: isWorkspaceReadOnly ? undefined : onNodeContextMenu,
       onEdgeContextMenu: isWorkspaceReadOnly ? undefined : onEdgeContextMenu,
       onPaneContextMenu: isWorkspaceReadOnly ? undefined : onPaneContextMenu,
-      onSelectionContextMenu: isWorkspaceReadOnly ? undefined : onSelectionContextMenu,
+      onSelectionContextMenu: isWorkspaceReadOnly
+        ? undefined
+        : onSelectionContextMenu,
       onNodeDoubleClick: (event, node) => {
         if (
           node.type === "component" ||
@@ -2306,7 +2318,7 @@ function CollaborativeDashboard() {
       flowId={projectManagerData.currentFlowId}
       user={user}
       enabled={projectManagerData.currentProject?.collaborationEnabled || false}
-      role={projectManagerData.currentProject?.role || 'owner'}
+      role={projectManagerData.currentProject?.role || "owner"}
     >
       <Dashboard {...projectManagerData} />
     </CollaborationProvider>
@@ -2319,7 +2331,7 @@ function CollaborativeDashboard() {
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />

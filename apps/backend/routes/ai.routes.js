@@ -40,7 +40,7 @@ router.post('/validate', async (req, res) => {
         });
     } catch (error) {
         console.error('Validation Exception:', error);
-        res.status(401).json({ success: false, message: error.message });
+        res.status(400).json({ success: false, message: error.message });
     }
 });
 

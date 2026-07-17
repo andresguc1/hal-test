@@ -156,8 +156,10 @@ export function useFlowSync({
         setNodes(flow.nodes || []);
         setEdges(
           (flow.edges || []).map((e) => {
-            const sourceHandle = e.sourceHandle === "default" ? undefined : e.sourceHandle;
-            const targetHandle = e.targetHandle === "default" ? undefined : e.targetHandle;
+            const sourceHandle =
+              e.sourceHandle === "default" ? undefined : e.sourceHandle;
+            const targetHandle =
+              e.targetHandle === "default" ? undefined : e.targetHandle;
             return {
               ...e,
               ...(sourceHandle && { sourceHandle }),
@@ -197,9 +199,7 @@ export function useFlowSync({
         // Self-healing: if the room was already marked seeded but edges are empty (e.g. due to the previous connection regression),
         // we force re-seeding from the SQLite database to restore the flow connections.
         const needsSeeding =
-          !isSeeded ||
-          yNodes.size === 0 ||
-          yEdges.size === 0;
+          !isSeeded || yNodes.size === 0 || yEdges.size === 0;
 
         if (needsSeeding) {
           console.log(

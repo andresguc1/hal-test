@@ -74,7 +74,7 @@ export function useCRDTNodes({ enabled = false } = {}) {
   const [nodes, setLocalNodes] = useState([]);
   const isActive = enabled && isCollaborative && ydoc;
   const suppressObserverRef = useRef(false);
-  
+
   // Track nodes ref to keep callback references completely stable
   const nodesRef = useRef(nodes);
   useEffect(() => {
@@ -137,8 +137,6 @@ export function useCRDTNodes({ enabled = false } = {}) {
               break;
             }
 
-
-
             case "select": {
               // Selection is LOCAL ONLY — not synced via CRDT
               // (Awareness protocol handles remote selection display)
@@ -175,13 +173,13 @@ export function useCRDTNodes({ enabled = false } = {}) {
   const setNodes = useCallback(
     (updater) => {
       if (!isActive) return;
- 
+
       const yNodes = ydoc.getMap("nodes");
       const currentNodes =
         typeof updater === "function" ? updater(nodesRef.current) : updater;
- 
+
       suppressObserverRef.current = true;
- 
+
       ydoc.transact(() => {
         // Clear existing
         yNodes.forEach((_, key) => {
@@ -189,7 +187,7 @@ export function useCRDTNodes({ enabled = false } = {}) {
             yNodes.delete(key);
           }
         });
- 
+
         // Set all nodes
         for (const node of currentNodes) {
           const existing = yNodes.get(node.id);
@@ -216,7 +214,7 @@ export function useCRDTNodes({ enabled = false } = {}) {
           }
         }
       });
- 
+
       suppressObserverRef.current = false;
       // Force local state update
       setLocalNodes(currentNodes);

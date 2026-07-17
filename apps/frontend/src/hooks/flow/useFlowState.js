@@ -241,17 +241,32 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
             ...node.data,
             state: exec.state,
             statusMessage: exec.data?.message,
-            lastUpdate: exec.ts ? new Date(exec.ts).toISOString() : new Date().toISOString(),
-            ...(exec.data?.originalValue !== undefined && { originalValue: exec.data.originalValue }),
-            ...(exec.data?.healedValue !== undefined && { healedValue: exec.data.healedValue }),
-            ...(exec.data?.selector !== undefined && { selector: exec.data.selector }),
+            lastUpdate: exec.ts
+              ? new Date(exec.ts).toISOString()
+              : new Date().toISOString(),
+            ...(exec.data?.originalValue !== undefined && {
+              originalValue: exec.data.originalValue,
+            }),
+            ...(exec.data?.healedValue !== undefined && {
+              healedValue: exec.data.healedValue,
+            }),
+            ...(exec.data?.selector !== undefined && {
+              selector: exec.data.selector,
+            }),
           },
           style: getNodeStyle(exec.state, node.style),
         };
       }
       return node;
     });
-  }, [isCollabActive, crdtNodes, rawNodes, sanitizeNodes, isExecuting, execSync.executionStates]);
+  }, [
+    isCollabActive,
+    crdtNodes,
+    rawNodes,
+    sanitizeNodes,
+    isExecuting,
+    execSync.executionStates,
+  ]);
 
   const edges = useMemo(() => {
     const baseEdges = isCollabActive ? crdtEdges : rawEdges;
@@ -295,22 +310,15 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
       }
       return edge;
     });
-  }, [isCollabActive, crdtEdges, rawEdges, isExecuting, execSync.executionStates]);
+  }, [
+    isCollabActive,
+    crdtEdges,
+    rawEdges,
+    isExecuting,
+    execSync.executionStates,
+  ]);
 
-  useEffect(() => {
-    console.log("[DEBUG-FLOWSTATE] isCollabActive:", isCollabActive);
-    console.log("[DEBUG-FLOWSTATE] rawNodes count:", rawNodes.length);
-    console.log("[DEBUG-FLOWSTATE] crdtNodes count:", crdtNodes.length);
-    console.log("[DEBUG-FLOWSTATE] rawEdges count:", rawEdges.length);
-    console.log("[DEBUG-FLOWSTATE] crdtEdges count:", crdtEdges.length);
-    console.log("[DEBUG-FLOWSTATE] Final edges count applied to React Flow:", edges.length);
-    if (isCollabActive && crdtNodes.length > 0) {
-      console.log("[DEBUG-FLOWSTATE] Sample CRDT Node:", crdtNodes[0]);
-    }
-    if (isCollabActive && crdtEdges.length > 0) {
-      console.log("[DEBUG-FLOWSTATE] Sample CRDT Edge:", crdtEdges[0]);
-    }
-  }, [isCollabActive, rawNodes, crdtNodes, rawEdges, crdtEdges, edges]);
+
   const [history, setHistory] = useState({ past: [], future: [] });
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);

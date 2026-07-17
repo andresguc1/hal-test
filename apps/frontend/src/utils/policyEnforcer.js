@@ -25,7 +25,7 @@ export function runPolicyEnforcer(nodes, edges) {
 
   // Filter edges to only include connections between active nodes
   const activeEdges = edgesList.filter(
-    (e) => activeNodeIds.has(e.source) && activeNodeIds.has(e.target)
+    (e) => activeNodeIds.has(e.source) && activeNodeIds.has(e.target),
   );
 
   // 1. Build Adjacency List for reachability/assertion checks

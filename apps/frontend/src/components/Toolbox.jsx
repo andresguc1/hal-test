@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { NODE_CATEGORIES, CATEGORY_STYLES } from "@/config/nodeConstants";
 import { useSettings } from "@/context/SettingsContext";
 import { useAIContext } from "@/context/AIContext";
+import { useToast } from "@/hooks/useToast";
 
 const ToolboxItem = ({ label, nodeId, color, onAdd }) => {
   // Select styles based on color theme, fallback to slate
@@ -382,13 +383,14 @@ export default function ToolboxPanel({
   // Let's check props. `addNode` is passed.
   // I will add `activeBrowserId` to props in the function signature.
 
+  const toast = useToast();
   const [chatInput, setChatInput] = useState("");
 
   const handleSendMessageLocal = async () => {
     if (!chatInput.trim() || !isAiReady) return;
     const text = chatInput;
     setChatInput("");
-    await sendMessage(text, activeBrowserId);
+    await sendMessage(text, activeBrowserId, toast);
   };
 
   const handleKeyDown = (e) => {

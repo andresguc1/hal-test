@@ -94,29 +94,29 @@ const checkSchemaHealth = async () => {
     try {
         console.log(' [DB_INIT] Running schema health check...');
         // Check critical new columns that often cause 500s if missing
-        await sequelize.query('SELECT parentId FROM Nodes LIMIT 1', {
+        await sequelize.query('SELECT "parentId" FROM "Nodes" LIMIT 1', {
             logging: false,
         });
-        await sequelize.query('SELECT batch_id FROM execution_runs LIMIT 1', {
+        await sequelize.query('SELECT "batch_id" FROM "execution_runs" LIMIT 1', {
             logging: false,
         });
-        await sequelize.query('SELECT nodeId FROM ExperienceVaults LIMIT 1', {
+        await sequelize.query('SELECT "nodeId" FROM "ExperienceVaults" LIMIT 1', {
             logging: false,
         });
-        await sequelize.query('SELECT createdAt FROM step_results LIMIT 1', {
+        await sequelize.query('SELECT "createdAt" FROM "step_results" LIMIT 1', {
             logging: false,
         });
-        await sequelize.query('SELECT collaborationEnabled FROM Projects LIMIT 1', {
+        await sequelize.query('SELECT "collaborationEnabled" FROM "Projects" LIMIT 1', {
             logging: false,
         });
-        await sequelize.query('SELECT role FROM CollaboratorRoles LIMIT 1', {
+        await sequelize.query('SELECT "role" FROM "CollaboratorRoles" LIMIT 1', {
             logging: false,
         });
         console.log(' [DB_INIT] ✅ Schema health check passed.');
     } catch (error) {
         const isMissingColumn =
             error.name === 'SequelizeDatabaseError' &&
-            ['42703', 'SQLITE_ERROR'].some((code) =>
+            ['42703', '42P01', 'SQLITE_ERROR'].some((code) =>
                 (error.original?.code || error.message).includes(code),
             );
 

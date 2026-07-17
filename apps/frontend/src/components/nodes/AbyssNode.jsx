@@ -207,7 +207,9 @@ const AbyssNode = ({ id, data, selected, type }) => {
             : undefined,
         transition:
           "background-color 0.4s, border-color 0.4s, box-shadow 0.4s, transform 0s", // CRITICAL: transform 0s
-        ...(peerEditing ? { '--tw-ring-color': peerEditing.user?.color || '#fbbf24' } : {}),
+        ...(peerEditing
+          ? { "--tw-ring-color": peerEditing.user?.color || "#fbbf24" }
+          : {}),
       }}
     >
       {/* INPUT HANDLE */}
@@ -267,11 +269,11 @@ const AbyssNode = ({ id, data, selected, type }) => {
       {peerEditing && (
         <div
           className="absolute -top-3 -left-3 z-30 flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-bold tracking-wide text-white shadow-lg border border-white/20"
-          style={{ backgroundColor: peerEditing.user?.color || '#fbbf24' }}
-          title={`${peerEditing.user?.name || 'User'} is editing`}
+          style={{ backgroundColor: peerEditing.user?.color || "#fbbf24" }}
+          title={`${peerEditing.user?.name || "User"} is editing`}
         >
           <Lock size={8} />
-          {(peerEditing.user?.name || 'User').split(' ')[0]}
+          {(peerEditing.user?.name || "User").split(" ")[0]}
         </div>
       )}
 
@@ -281,7 +283,12 @@ const AbyssNode = ({ id, data, selected, type }) => {
         {!isNodeValid && (
           <div
             className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-red-500/10 text-red-400 border border-red-500/20 cursor-help"
-            title={validation.errors?.[0] || (validation.missingField ? `Missing: ${validation.missingField}` : "Configuration Error")}
+            title={
+              validation.errors?.[0] ||
+              (validation.missingField
+                ? `Missing: ${validation.missingField}`
+                : "Configuration Error")
+            }
           >
             <AlertCircle size={10} className="shrink-0" />
             <span className="text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap">

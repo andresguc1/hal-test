@@ -15,14 +15,18 @@ import { useCollaboration } from "./CollaborationProvider";
  */
 function yEdgeToPlain(id, yEdge) {
   const json = yEdge instanceof Y.Map ? yEdge.toJSON() : yEdge;
-  const sourceHandle = json.sourceHandle === "default" ? undefined : json.sourceHandle;
-  const targetHandle = json.targetHandle === "default" ? undefined : json.targetHandle;
+  const sourceHandle =
+    json.sourceHandle === "default" ? undefined : json.sourceHandle;
+  const targetHandle =
+    json.targetHandle === "default" ? undefined : json.targetHandle;
   return {
     id,
     ...json,
     type: json.type || "custom",
-    ...(sourceHandle !== undefined && sourceHandle !== null && { sourceHandle }),
-    ...(targetHandle !== undefined && targetHandle !== null && { targetHandle }),
+    ...(sourceHandle !== undefined &&
+      sourceHandle !== null && { sourceHandle }),
+    ...(targetHandle !== undefined &&
+      targetHandle !== null && { targetHandle }),
   };
 }
 
@@ -33,8 +37,10 @@ function plainToYEdge(edge) {
   const yEdge = new Y.Map();
   const { id: _id, ...rest } = edge;
 
-  const sourceHandle = rest.sourceHandle === "default" ? undefined : rest.sourceHandle;
-  const targetHandle = rest.targetHandle === "default" ? undefined : rest.targetHandle;
+  const sourceHandle =
+    rest.sourceHandle === "default" ? undefined : rest.sourceHandle;
+  const targetHandle =
+    rest.targetHandle === "default" ? undefined : rest.targetHandle;
 
   if (rest.source) yEdge.set("source", rest.source);
   if (rest.target) yEdge.set("target", rest.target);

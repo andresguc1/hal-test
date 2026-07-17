@@ -40,7 +40,9 @@ describe("validateNodeConfig", () => {
 
   it("should validate sticky_note and discussion nodes without selector requirement", () => {
     expect(validateNodeConfig("sticky_note", {}).isValid).toBe(true);
-    expect(validateNodeConfig("sticky_note", { text: "Hello" }).isValid).toBe(true);
+    expect(validateNodeConfig("sticky_note", { text: "Hello" }).isValid).toBe(
+      true,
+    );
     expect(validateNodeConfig("discussion", {}).isValid).toBe(true);
   });
 });

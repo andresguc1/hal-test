@@ -53,9 +53,12 @@ const getCollabServerUrl = () => {
     return baseUrl.replace(/^http/, "ws");
   }
 
-  const hostname = window.location.hostname;
-  const isLocal = hostname === "localhost" || hostname === "127.0.0.1";
-  return isLocal ? "ws://127.0.0.1:2001" : `wss://${hostname}`;
+  if (import.meta.env.DEV) {
+    return "ws://127.0.0.1:2001";
+  }
+
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  return `${protocol}//${window.location.host}`;
 };
 
 const USER_COLORS = [
@@ -87,7 +90,7 @@ export function CollaborationProvider({
   flowId,
   user,
   enabled = false,
-  role = 'owner',
+  role = "owner",
   children,
 }) {
   const { session } = useAuth();
@@ -213,7 +216,7 @@ export function CollaborationProvider({
           });
         }
       });
-      
+
       // ONLY update if it actually changed meaningfully to prevent mouse-move lag
       setPeers((prev) => {
         if (JSON.stringify(prev) === JSON.stringify(states)) {
@@ -262,19 +265,19 @@ export function CollaborationProvider({
     [enabled],
   );
 
-  const unlockNode = useCallback(
-    () => {
-      if (!providerRef.current || !enabled) return;
-      providerRef.current.awareness.setLocalStateField("editingNodeId", null);
-    },
-    [enabled],
-  );
+  const unlockNode = useCallback(() => {
+    if (!providerRef.current || !enabled) return;
+    providerRef.current.awareness.setLocalStateField("editingNodeId", null);
+  }, [enabled]);
 
   // Execution state update (e.g. running: true/false, user details, etc.)
   const setExecutionState = useCallback(
     (execState) => {
       if (!providerRef.current || !enabled) return;
-      providerRef.current.awareness.setLocalStateField("executionState", execState);
+      providerRef.current.awareness.setLocalStateField(
+        "executionState",
+        execState,
+      );
     },
     [enabled],
   );
@@ -337,7 +340,7 @@ export function useCollaboration() {
       isSynced: false,
       isCollaborative: false,
       peers: [],
-      role: 'owner',
+      role: "owner",
       updateCursor: () => {},
       updateSelection: () => {},
       lockNode: () => {},

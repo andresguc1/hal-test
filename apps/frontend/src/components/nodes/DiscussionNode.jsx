@@ -52,11 +52,13 @@ function DiscussionNode({ id, data, selected }) {
     try {
       const provider = aiConfig.activeProvider;
       const model = aiConfig.selectedModel;
-      const apiKeyToSend = selectedKeyId !== "default" ? selectedKeyId : aiConfig.keys?.[provider];
+      const apiKeyToSend =
+        selectedKeyId !== "default" ? selectedKeyId : aiConfig.keys?.[provider];
 
-      const threadContext = comments.length > 0
-        ? comments.map(c => `${c.userName}: ${c.text}`).join("\n")
-        : "(No messages in this thread yet. Introduce yourself and ask how you can help.)";
+      const threadContext =
+        comments.length > 0
+          ? comments.map((c) => `${c.userName}: ${c.text}`).join("\n")
+          : "(No messages in this thread yet. Introduce yourself and ask how you can help.)";
 
       const res = await api.post(
         "/ai/chat",
@@ -152,9 +154,11 @@ Please participate in the discussion. Answer questions, suggest improvements, or
               key={c.id}
               className={cn(
                 "flex flex-col gap-0.5 bg-slate-950/40 p-2 rounded-lg border border-slate-800/40",
-                c.isAi || c.userName?.includes("(AI)") || c.userName === "HAL-9001"
+                c.isAi ||
+                  c.userName?.includes("(AI)") ||
+                  c.userName === "HAL-9001"
                   ? "border-violet-500/40 bg-violet-950/20 shadow-[0_0_10px_rgba(139,92,246,0.05)]"
-                  : ""
+                  : "",
               )}
             >
               <div className="flex items-center justify-between gap-2">
@@ -165,7 +169,9 @@ Please participate in the discussion. Answer questions, suggest improvements, or
                   >
                     {c.userName}
                   </span>
-                  {(c.isAi || c.userName?.includes("(AI)") || c.userName === "HAL-9001") && (
+                  {(c.isAi ||
+                    c.userName?.includes("(AI)") ||
+                    c.userName === "HAL-9001") && (
                     <span className="text-[7px] font-black bg-gradient-to-r from-violet-500 to-indigo-500 text-white px-1 py-0.25 rounded uppercase tracking-wider scale-90 origin-left flex items-center gap-0.5 shrink-0 select-none">
                       <Sparkles size={6} className="text-white" />
                       SYSTEM AI

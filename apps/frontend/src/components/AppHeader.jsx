@@ -125,7 +125,6 @@ function AppHeader({
   isCollaborationEnabled = false,
   isRemoteExecuting = false,
   remoteExecution = null,
-  role = "owner",
 }) {
   const { theme, setTheme } = useTheme();
   const { t } = useTranslation();
@@ -446,7 +445,11 @@ function AppHeader({
           <div className="relative">
             <HeaderButton
               onClick={onToggleCollaboration}
-              title={isCollaborationEnabled ? "Disable Collaboration (Beta)" : "Enable Collaboration (Beta)"}
+              title={
+                isCollaborationEnabled
+                  ? "Disable Collaboration (Beta)"
+                  : "Enable Collaboration (Beta)"
+              }
               className={cn(
                 isCollaborative && isConnected
                   ? "text-emerald-400 bg-emerald-500/10 border border-emerald-500/20"
@@ -475,10 +478,10 @@ function AppHeader({
                 <div
                   key={peer.clientId}
                   className="w-6 h-6 rounded-full border-2 border-[var(--bg-primary)] flex items-center justify-center text-[9px] font-bold text-white shadow-sm"
-                  style={{ backgroundColor: peer.user?.color || '#6366f1' }}
-                  title={peer.user?.name || 'Peer'}
+                  style={{ backgroundColor: peer.user?.color || "#6366f1" }}
+                  title={peer.user?.name || "Peer"}
                 >
-                  {(peer.user?.name || '?')[0].toUpperCase()}
+                  {(peer.user?.name || "?")[0].toUpperCase()}
                 </div>
               ))}
               {peers.length > 4 && (
