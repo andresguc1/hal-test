@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ShieldAlert,
@@ -12,6 +12,8 @@ import {
   Shield,
   Search,
 } from "lucide-react";
+import { RealTimeTelemetryChart } from "../telemetry/RealTimeTelemetryChart";
+import { TelemetryDataNormalizer } from "../telemetry/telemetryTypes";
 
 export default function SecurityLiveView({
   status, // 'idle' | 'preparing' | 'running' | 'completed' | 'failed'
@@ -21,6 +23,32 @@ export default function SecurityLiveView({
   onStopExecution,
   onViewResults,
 }) {
+  const chartRef = useRef(null);
+  const normalizerRef = useRef(new TelemetryDataNormalizer());
+
+  useEffect(() => {
+    if (!chartRef.current || liveAlerts.length === 0) return;
+
+    const riskPoints = [];
+    const candlesticks = [];
+
+    liveAlerts.forEach((a, idx) => {
+      const timeMs = a.timestamp || (Date.now() - (liveAlerts.length - idx) * 1000);
+      const time = normalizerRef.current.ensureAscendingTimestamp(timeMs);
+      const riskScore = a.severity === 'critical' ? 95 : a.severity === 'high' ? 80 : a.severity === 'medium' ? 50 : 20;
+
+      riskPoints.push({ time, value: riskScore });
+      candlesticks.push({
+        time,
+        open: Math.max(10, riskScore - 15),
+        high: Math.min(100, riskScore + 10),
+        low: Math.max(5, riskScore - 20),
+        close: riskScore
+      });
+    });
+
+    chartRef.current.setHistoricalData(candlesticks, { riskIndex: riskPoints });
+  }, [liveAlerts]);
   const isRunning = status === "running" || status === "preparing";
 
   // Calculate live counters
@@ -150,6 +178,13 @@ export default function SecurityLiveView({
           </div>
         </div>
       </div>
+
+      {/* Real-time DAST Telemetry Chart */}
+      <RealTimeTelemetryChart
+        ref={chartRef}
+        height={280}
+        title="Telemetría de Riesgo de Seguridad (Live DAST)"
+      />
 
       {/* Live Alerts Telemetry Stream */}
       <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-4">

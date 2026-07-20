@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import {
   Zap,
@@ -11,19 +11,52 @@ import {
   CheckCircle2,
   Gauge,
 } from "lucide-react";
+import { RealTimeTelemetryChart } from "../telemetry/RealTimeTelemetryChart";
+import { TelemetryDataNormalizer } from "../telemetry/telemetryTypes";
 
 /**
- * PerfLiveView — Real-time execution dashboard with KPIs, bottlenecks, and timeline chart
+ * PerfLiveView — Real-time execution dashboard with KPIs, bottlenecks, and TradingView telemetry chart
  */
 const PerfLiveView = ({
   metrics,
   vuStatus,
   runConfig,
   resourceWarning,
-  timeline,
+  timeline = [],
   status: _status,
   progressPercent: _progressPercent,
 }) => {
+  const chartRef = useRef(null);
+  const normalizerRef = useRef(new TelemetryDataNormalizer());
+
+  useEffect(() => {
+    if (!chartRef.current || !timeline || timeline.length === 0) return;
+
+    const candlesticks = [];
+    const riskPoints = [];
+
+    timeline.forEach((pt, idx) => {
+      const timeMs = pt.timestamp || (Date.now() - (timeline.length - idx) * 1000);
+      const time = normalizerRef.current.ensureAscendingTimestamp(timeMs);
+      const p95 = metrics?.latency?.p95 || 50;
+      const median = metrics?.latency?.median || 20;
+
+      candlesticks.push({
+        time,
+        open: Math.max(5, median - 5),
+        high: Math.max(median, p95),
+        low: Math.max(1, median - 10),
+        close: median
+      });
+
+      riskPoints.push({
+        time,
+        value: pt.throughput || 0
+      });
+    });
+
+    chartRef.current.setHistoricalData(candlesticks, { riskIndex: riskPoints });
+  }, [timeline, metrics]);
   if (!metrics) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -203,48 +236,12 @@ const PerfLiveView = ({
         </div>
 
         {/* Timeline Chart */}
-        <div className="lg:col-span-2 bg-slate-900/80 border border-slate-800/80 rounded-2xl p-5 flex flex-col">
-          <h3 className="text-base font-medium text-slate-200 flex items-center gap-2 mb-4">
-            <Activity className="text-blue-400" size={18} />
-            Rendimiento en Tiempo Real
-          </h3>
-          <div className="flex-1 relative bg-slate-950/50 border border-slate-800/50 rounded-xl overflow-hidden flex items-end p-4 gap-1 min-h-[280px]">
-            <div className="absolute inset-0 flex flex-col justify-between pointer-events-none p-4 pb-8">
-              {[...Array(5)].map((_, i) => (
-                <div
-                  key={i}
-                  className="w-full border-t border-slate-800/50 border-dashed opacity-50"
-                />
-              ))}
-            </div>
-            {timeline.length > 0 ? (
-              timeline.map((point, i) => {
-                const heightPercent = Math.min(
-                  100,
-                  (point.throughput / (runConfig?.totalVUs || 10)) * 100,
-                );
-                return (
-                  <div
-                    key={i}
-                    className="relative flex-1 flex flex-col justify-end group h-full"
-                  >
-                    <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-slate-800 border border-slate-700 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
-                      {point.throughput} req/s @ {point.time}
-                    </div>
-                    <motion.div
-                      initial={{ height: 0 }}
-                      animate={{ height: `${heightPercent}%` }}
-                      className="bg-blue-500/40 hover:bg-blue-400/60 rounded-t-sm transition-colors border-t border-blue-400/50 w-full mx-[1px]"
-                    />
-                  </div>
-                );
-              })
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center text-slate-600 italic">
-                Recolectando datos...
-              </div>
-            )}
-          </div>
+        <div className="lg:col-span-2">
+          <RealTimeTelemetryChart
+            ref={chartRef}
+            height={360}
+            title="Telemetría de Rendimiento en Tiempo Real"
+          />
         </div>
       </div>
     </div>
