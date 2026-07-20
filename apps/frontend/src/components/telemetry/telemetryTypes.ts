@@ -1,18 +1,16 @@
-import type { UTCTimestamp, CandlestickData, LineData } from 'lightweight-charts';
+import type { UTCTimestamp, HistogramData, LineData } from 'lightweight-charts';
 
 /**
- * Custom Candlestick Data Point for aggregated execution batches (ms latency)
+ * Custom Histogram Bar Data Point for execution latency or batch counts (ms or count)
  */
-export interface TelemetryCandlestickPoint extends CandlestickData<UTCTimestamp> {
+export interface TelemetryBarPoint extends HistogramData<UTCTimestamp> {
   time: UTCTimestamp;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
+  value: number;
+  color?: string;
 }
 
 /**
- * Custom Line Data Point for continuous metrics (e.g. Risk Index, CPU load)
+ * Custom Line Data Point for continuous metrics (e.g. Risk Index, Throughput, CPU load)
  */
 export interface TelemetryLinePoint extends LineData<UTCTimestamp> {
   time: UTCTimestamp;
@@ -25,12 +23,8 @@ export interface TelemetryLinePoint extends LineData<UTCTimestamp> {
 export interface RawTelemetryBatch {
   timestampMs?: number; // Epoch time in ms
   timestampSec?: number; // Epoch time in seconds
-  // Candlestick execution metrics
-  open?: number;
-  high?: number;
-  low?: number;
-  close?: number;
-  // Line metrics
+  value?: number;
+  throughput?: number;
   riskIndex?: number;
   cpuUsage?: number;
   memoryUsage?: number;
@@ -51,13 +45,13 @@ export interface LineSeriesConfig {
  * Imperative Ref Handle exposed by RealTimeTelemetryChart
  */
 export interface RealTimeTelemetryChartRef {
-  /** Direct 60fps update for Candlestick execution batch */
-  updateCandlestick: (point: TelemetryCandlestickPoint) => void;
-  /** Direct 60fps update for a specific line metric (e.g. risk index) */
+  /** Direct 60fps update for Bar/Histogram execution point */
+  updateBar: (point: TelemetryBarPoint) => void;
+  /** Direct 60fps update for a specific line metric */
   updateLineMetric: (seriesId: string, point: TelemetryLinePoint) => void;
   /** Bulk set data for historical view initialization */
   setHistoricalData: (
-    candlesticks: TelemetryCandlestickPoint[],
+    bars: TelemetryBarPoint[],
     lines?: Record<string, TelemetryLinePoint[]>
   ) => void;
   /** Reset chart series data */
@@ -81,7 +75,7 @@ export class TelemetryDataNormalizer {
 
   /**
    * Guarantees strictly ascending UTCTimestamp required by lightweight-charts.
-   * If a point arrives within the same second, returns null or micro-increments timestamp.
+   * If a point arrives within the same second, returns micro-incremented timestamp.
    */
   public ensureAscendingTimestamp(timeInMsOrSec: number): UTCTimestamp {
     let timestamp = (

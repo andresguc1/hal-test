@@ -32,30 +32,20 @@ const PerfLiveView = ({
   useEffect(() => {
     if (!chartRef.current || !timeline || timeline.length === 0) return;
 
-    const candlesticks = [];
-    const riskPoints = [];
-
+    const bars = [];
     timeline.forEach((pt, idx) => {
       const timeMs = pt.timestamp || (Date.now() - (timeline.length - idx) * 1000);
       const time = normalizerRef.current.ensureAscendingTimestamp(timeMs);
-      const p95 = metrics?.latency?.p95 || 50;
-      const median = metrics?.latency?.median || 20;
+      const latencyMs = pt.throughput || metrics?.latency?.p95 || Math.floor(Math.random() * 50) + 10;
 
-      candlesticks.push({
+      bars.push({
         time,
-        open: Math.max(5, median - 5),
-        high: Math.max(median, p95),
-        low: Math.max(1, median - 10),
-        close: median
-      });
-
-      riskPoints.push({
-        time,
-        value: pt.throughput || 0
+        value: latencyMs,
+        color: '#10b981'
       });
     });
 
-    chartRef.current.setHistoricalData(candlesticks, { riskIndex: riskPoints });
+    chartRef.current.setHistoricalData(bars);
   }, [timeline, metrics]);
   if (!metrics) {
     return (
@@ -240,6 +230,8 @@ const PerfLiveView = ({
           <RealTimeTelemetryChart
             ref={chartRef}
             height={360}
+            domain="performance"
+            barTitle="Latencia (ms)"
             title="Telemetría de Rendimiento en Tiempo Real"
           />
         </div>

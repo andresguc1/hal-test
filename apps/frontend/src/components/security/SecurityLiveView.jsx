@@ -30,7 +30,7 @@ export default function SecurityLiveView({
     if (!chartRef.current || liveAlerts.length === 0) return;
 
     const riskPoints = [];
-    const candlesticks = [];
+    const bars = [];
 
     liveAlerts.forEach((a, idx) => {
       const timeMs = a.timestamp || (Date.now() - (liveAlerts.length - idx) * 1000);
@@ -38,16 +38,14 @@ export default function SecurityLiveView({
       const riskScore = a.severity === 'critical' ? 95 : a.severity === 'high' ? 80 : a.severity === 'medium' ? 50 : 20;
 
       riskPoints.push({ time, value: riskScore });
-      candlesticks.push({
+      bars.push({
         time,
-        open: Math.max(10, riskScore - 15),
-        high: Math.min(100, riskScore + 10),
-        low: Math.max(5, riskScore - 20),
-        close: riskScore
+        value: 1, // Alert count
+        color: a.severity === 'critical' || a.severity === 'high' ? '#ef4444' : a.severity === 'medium' ? '#f59e0b' : '#3b82f6'
       });
     });
 
-    chartRef.current.setHistoricalData(candlesticks, { riskIndex: riskPoints });
+    chartRef.current.setHistoricalData(bars, { riskIndex: riskPoints });
   }, [liveAlerts]);
   const isRunning = status === "running" || status === "preparing";
 
@@ -183,6 +181,7 @@ export default function SecurityLiveView({
       <RealTimeTelemetryChart
         ref={chartRef}
         height={280}
+        domain="security"
         title="Telemetría de Riesgo de Seguridad (Live DAST)"
       />
 

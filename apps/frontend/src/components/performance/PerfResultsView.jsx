@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Clock,
@@ -17,6 +17,8 @@ import {
   Folder,
   FileText,
 } from "lucide-react";
+import { RealTimeTelemetryChart } from "../telemetry/RealTimeTelemetryChart";
+import { TelemetryDataNormalizer } from "../telemetry/telemetryTypes";
 
 /**
  * PerfResultsView — Detailed post-execution report with node-level and SubFlow analysis.
@@ -26,6 +28,38 @@ const PerfResultsView = ({ metrics, runConfig: _runConfig }) => {
   const [expandedGroups, setExpandedGroups] = useState(new Set(["main-flow"]));
   const [expandedNodes, setExpandedNodes] = useState(new Set());
   const [sortBy, setSortBy] = useState("p95"); // p95 | cpuAvg | memAvg | errors
+  const chartRef = useRef(null);
+  const normalizerRef = useRef(new TelemetryDataNormalizer());
+
+  useEffect(() => {
+    if (!chartRef.current || !metrics) return;
+
+    const nodeStats = metrics.nodeStats || [];
+    const bars = [];
+
+    if (nodeStats.length > 0) {
+      const now = Date.now();
+      nodeStats.forEach((node, idx) => {
+        const timeMs = now - (nodeStats.length - idx) * 2000;
+        const time = normalizerRef.current.ensureAscendingTimestamp(timeMs);
+        bars.push({
+          time,
+          value: node.p95 || node.avg || 10,
+          color: node.p95 > 2000 ? '#ef4444' : node.p95 > 800 ? '#f59e0b' : '#10b981'
+        });
+      });
+    } else {
+      // Default fallback graph points if no node stats
+      const now = Date.now();
+      const points = [metrics.latency?.min, metrics.latency?.median, metrics.latency?.avg, metrics.latency?.p95, metrics.latency?.p99, metrics.latency?.max].filter(Boolean);
+      points.forEach((val, idx) => {
+        const time = normalizerRef.current.ensureAscendingTimestamp(now - (points.length - idx) * 2000);
+        bars.push({ time, value: val, color: '#10b981' });
+      });
+    }
+
+    chartRef.current.setHistoricalData(bars);
+  }, [metrics]);
 
   if (!metrics) {
     return (
@@ -186,6 +220,15 @@ const PerfResultsView = ({ metrics, runConfig: _runConfig }) => {
           ))}
         </div>
       </div>
+
+      {/* Performance Telemetry Results Chart */}
+      <RealTimeTelemetryChart
+        ref={chartRef}
+        height={320}
+        domain="performance"
+        barTitle="Latencia (ms)"
+        title="Histórico de Latencia por Nodo"
+      />
 
       {/* Bottleneck Highlights */}
       {nodeStats.length > 0 && (
