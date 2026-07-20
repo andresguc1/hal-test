@@ -21,6 +21,7 @@ import { dashboardKeys } from "./hooks/useDashboardData";
 import CreationModal from "../CreationModal";
 import { useRuns } from "./hooks/useDashboardData";
 import PerformanceDashboard from "../PerformanceDashboard";
+import SecurityDashboard from "../SecurityDashboard";
 
 const PAGE_SEARCH_ENABLED = ["projects", "flows", "history", "runs"];
 const PAGE_PRIMARY_ACTION = {
@@ -174,6 +175,8 @@ export default function HalDashboard() {
         return <HistoryPage onViewReport={handleViewReport} />;
       case "performance":
         return <PerformanceDashboard />;
+      case "security":
+        return <SecurityDashboard />;
       case "reports":
         return <ReportsPage onViewReport={() => handleNavigate("runs")} />;
       case "ai":

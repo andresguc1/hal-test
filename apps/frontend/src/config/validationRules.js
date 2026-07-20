@@ -8,6 +8,18 @@
 export const NODE_INPUTS = {
   // --- BROWSER MANAGEMENT ---
   launch_browser: [
+    {
+      key: "browserType",
+      label: "🌐 Browser Type",
+      type: "select",
+      options: [
+        { label: "Chromium", value: "chromium" },
+        { label: "Firefox", value: "firefox" },
+        { label: "WebKit", value: "webkit" },
+      ],
+      defaultValue: "chromium",
+      required: true,
+    },
     { key: "headless", label: "Headless Mode", type: "checkbox" },
     {
       key: "devicePreset",
@@ -1127,6 +1139,36 @@ export const NODE_INPUTS = {
     },
   ],
   discussion: [],
+
+  // --- SECURITY CHECKPOINTS ---
+  audit_policy: [
+    {
+      key: "checkCSP",
+      label: "🛡️ Validate Content-Security-Policy (CSP)",
+      type: "checkbox",
+      defaultValue: true,
+    },
+    {
+      key: "checkHeaders",
+      label: "🛡️ Validate HTTP Security Headers",
+      type: "checkbox",
+      defaultValue: true,
+    },
+  ],
+  sensitive_data_monitor: [
+    {
+      key: "checkInputs",
+      label: "🛡️ Audit Unsanitized Form Fields (XSS)",
+      type: "checkbox",
+      defaultValue: true,
+    },
+    {
+      key: "checkRequests",
+      label: "🛡️ Monitor Sensitive Transmissions (Plain Text)",
+      type: "checkbox",
+      defaultValue: true,
+    },
+  ],
 
   // --- DEFAULT FALLBACK ---
   default: [

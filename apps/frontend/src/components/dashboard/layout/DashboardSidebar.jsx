@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   Zap,
   Activity,
+  Shield,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Sun, Moon } from "lucide-react";
@@ -35,6 +36,7 @@ const NAV_SECTIONS = [
       { id: "history", label: "History", icon: History },
       { id: "reports", label: "Reports", icon: BarChart2 },
       { id: "performance", label: "Performance", icon: Activity },
+      { id: "security", label: "Security", icon: Shield },
     ],
   },
   {

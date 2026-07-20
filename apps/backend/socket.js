@@ -225,3 +225,14 @@ export const emitPerfResourceWarning = (data) => {
         io.emit('perf-resource-warning', { ...data, timestamp: Date.now() });
     }
 };
+
+/**
+ * Emits security alerts captured in real-time.
+ * @param {Object} alert
+ */
+export const emitSecurityAlert = (alert) => {
+    if (io) {
+        console.log(`📡 [Socket.io] Emitting security-alert: ${alert.ruleId} (${alert.severity})`);
+        io.emit('security-alert', alert);
+    }
+};

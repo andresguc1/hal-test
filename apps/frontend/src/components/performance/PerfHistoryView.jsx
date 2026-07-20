@@ -53,6 +53,13 @@ const PerfHistoryView = ({ flowId, onReRun }) => {
     if (flowId) {
       fetchHistory();
     }
+    const handleRunFinished = () => {
+      if (flowId) fetchHistory();
+    };
+    window.addEventListener("hal:run-completed", handleRunFinished);
+    return () => {
+      window.removeEventListener("hal:run-completed", handleRunFinished);
+    };
   }, [flowId, fetchHistory]);
 
   const handleSelectRun = (run) => {

@@ -11,6 +11,7 @@ import {
   Loader2,
   AlertCircle,
   Sparkles,
+  Shield,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
@@ -207,6 +208,27 @@ function CustomNode({ data, selected }) {
           >
             <Sparkles size={10} fill="currentColor" />
             <span>IA</span>
+          </div>
+        )}
+
+        {/* Security Shield Badge */}
+        {data?.securityAlerts && data.securityAlerts.length > 0 && (
+          <div
+            className={cn(
+              "absolute flex items-center justify-center w-5 h-5 rounded-full bg-red-600 text-white shadow-lg border border-red-400 cursor-pointer hover:bg-red-500 transition-colors z-20 animate-pulse",
+              isHealed ? "top-2 right-9" : "top-2 right-2"
+            )}
+            title={`${data.securityAlerts.length} Security Checkpoint Warnings`}
+            onClick={(e) => {
+              e.stopPropagation();
+              window.dispatchEvent(
+                new CustomEvent("hal:focus-node", {
+                  detail: { nodeId: data.id || data.nodeId || data.key, autoSwitchToSecurity: true },
+                })
+              );
+            }}
+          >
+            <Shield size={10} fill="currentColor" />
           </div>
         )}
 

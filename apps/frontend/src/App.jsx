@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import Login from "./components/auth/Login";
 import Signup from "./components/auth/Signup";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -63,6 +63,8 @@ import { useElementPicker } from "./hooks/useElementPicker";
 import { AnimatePresence, motion } from "framer-motion";
 import GuestModeModal from "./components/modals/GuestModeModal";
 import DatasetRunModal from "./components/modals/DatasetRunModal";
+import PerformanceRunModal from "./components/performance/PerformanceRunModal";
+import SecurityRunModal from "./components/security/SecurityRunModal";
 
 import NodeCreationPanel from "./components/NodeCreationPanel";
 import { useAuth } from "./context/AuthContext";
@@ -94,6 +96,7 @@ import { useLogStore } from "./context/LogContext";
 import TerminalPanel from "./components/TerminalPanel";
 import VariablePanel from "./components/VariablePanel";
 import AskAIPanel from "./components/AskAIPanel";
+import { cn } from "@/lib/utils";
 
 const edgeTypes = {
   custom: CustomEdge,
@@ -122,6 +125,7 @@ function Dashboard({
   const { t } = useTranslation();
   const { theme } = useTheme();
   const toast = useToast();
+  const navigate = useNavigate();
   const hasLogs = useLogStore((state) => state.logs.length > 0);
   const addLog = useLogStore((state) => state.addLog);
   const isPanelVisible = useLogStore((state) => state.isPanelVisible);
@@ -268,6 +272,12 @@ function Dashboard({
     (nodeId) => {
       if (!nodeId) return;
       setSelectedNodeId(nodeId);
+      setNodes((nds) =>
+        nds.map((n) => ({
+          ...n,
+          selected: n.id === nodeId,
+        }))
+      );
       // Small delay so the panel re-renders with the new node first
       setTimeout(() => {
         reactFlowFitView({
@@ -278,7 +288,7 @@ function Dashboard({
         });
       }, 80);
     },
-    [setSelectedNodeId, reactFlowFitView],
+    [setSelectedNodeId, reactFlowFitView, setNodes],
   );
 
   const handleRunDataset = React.useCallback(
@@ -329,7 +339,8 @@ function Dashboard({
     [currentFlowId, currentProject?.id, toast, t],
   );
 
-  const handleExecuteFlow = useCallback(async () => {
+  const handleExecuteFlow = useCallback(async (options = {}) => {
+    const targetMode = options?.executionMode || canvasViewMode;
     // --- COLLABORATION LOCK CHECKS ---
     if (isCollaborative) {
       if (role !== "owner") {
@@ -398,6 +409,14 @@ function Dashboard({
       return;
     }
 
+    // Log execution start indicating active view mode
+    const modeLabel = targetMode === "performance"
+      ? "PERFORMANCE"
+      : targetMode === "seguridad"
+        ? "SECURITY"
+        : "QUALITY AUTOMATION";
+    addLog(`[System] 🚀 Starting ${modeLabel} flow execution...`, "info");
+
     // 1. Show Loading Toast immediately (Duration 0 = indefinite until dismissed)
     const toastId = toast.loading(t("common.processing"));
 
@@ -423,7 +442,7 @@ function Dashboard({
       }
       // ------------------------------------------
 
-      const result = await executeFlow(); // Returns { success, stats, failedNodeId, divePath, healedNodes }
+      const result = await executeFlow({ executionMode: targetMode }); // Returns { success, stats, failedNodeId, divePath, healedNodes }
 
       // 2. Clear loading
       toast.dismiss(toastId);
@@ -446,9 +465,28 @@ function Dashboard({
 
       // --- DEEP DIVE LOGIC (If execution failed inside a composite) ---
       if (result.success) {
+        addLog(
+          `[System] ✓ Flow execution completed successfully in ${
+            targetMode === "performance"
+              ? "performance"
+              : targetMode === "seguridad"
+                ? "security"
+                : "quality"
+          } mode.`,
+          "success",
+        );
         toast.success(
           t("common.flow_exec_success", "Flow executed successfully"),
         );
+        
+        // Redirect to dashboard tab after 1.5 seconds
+        setTimeout(() => {
+          if (targetMode === "performance") {
+            navigate("/dashboard", { state: { activePage: "performance" } });
+          } else if (targetMode === "seguridad") {
+            navigate("/dashboard", { state: { activePage: "security" } });
+          }
+        }, 1500);
         return;
       }
 
@@ -469,6 +507,17 @@ function Dashboard({
 
           // Synchronize with Internal Execution Log
           addLog(
+            `[System] ✗ Execution failed on node ${result.failedNodeId} during ${
+              canvasViewMode === "performance"
+                ? "performance"
+                : canvasViewMode === "seguridad"
+                  ? "security"
+                  : "quality"
+            } run.`,
+            "error",
+            result.failedNodeId,
+          );
+          addLog(
             `[NodeError] NodeId=${result.failedNodeId} Error="${errorMsg}"`,
             "error",
             result.failedNodeId,
@@ -484,10 +533,30 @@ function Dashboard({
         if (result.error !== "Max reintentos alcanzados") {
           toast.error(result.error);
         }
+        addLog(
+          `[System] ✗ Execution failed: ${result.error} during ${
+            canvasViewMode === "performance"
+              ? "performance"
+              : canvasViewMode === "seguridad"
+                ? "security"
+                : "quality"
+          } run.`,
+          "error",
+        );
       } else {
         // Failure with Count (Run happened but no specific node tracked)
         const failedCount = result.stats?.failed || 0;
         toast.error(`${t("common.flow_exec_error")} (${failedCount} failed)`);
+        addLog(
+          `[System] ✗ Execution completed with ${failedCount} failures during ${
+            canvasViewMode === "performance"
+              ? "performance"
+              : canvasViewMode === "seguridad"
+                ? "security"
+                : "quality"
+          } run.`,
+          "error",
+        );
       }
     } catch (error) {
       // 3. Unexpected Error
@@ -524,6 +593,8 @@ function Dashboard({
   const [isVariablePanelVisible, setIsVariablePanelVisible] = useState(false);
   const [isAskAIPanelVisible, setIsAskAIPanelVisible] = useState(false);
   const [isDatasetModalOpen, setIsDatasetModalOpen] = useState(false);
+  const [isPerfModalOpen, setIsPerfModalOpen] = useState(false);
+  const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
 
   const [isExecutionDashboardOpen, setIsExecutionDashboardOpen] =
     useState(false);
@@ -545,6 +616,8 @@ function Dashboard({
     isOpen: false,
     nodeData: null,
   });
+  const [canvasViewMode, setCanvasViewMode] = useState("calidad");
+  const [pendingFocusNode, setPendingFocusNode] = useState(null);
   const { user, authMode } = useAuth();
   const isGuest = user?.isGuest || authMode === "local";
 
@@ -843,6 +916,7 @@ function Dashboard({
     onRemoveNode: handleMCPRemoveNode,
     onUpdateNode: handleMCPUpdateNode,
     toast,
+    executionMode: canvasViewMode,
   });
 
   // Computed values
@@ -876,17 +950,31 @@ function Dashboard({
   // Navigate to a node moved up.
   useEffect(() => {
     const handleFocusRequest = (e) => {
-      const { nodeId, divePath } = e.detail;
+      const { nodeId, divePath, autoSwitchToSecurity } = e.detail;
+      if (autoSwitchToSecurity) {
+        setCanvasViewMode("seguridad");
+      }
+      setPendingFocusNode({ nodeId, divePath });
+    };
+    window.addEventListener("hal:focus-node", handleFocusRequest);
+    return () =>
+      window.removeEventListener("hal:focus-node", handleFocusRequest);
+  }, []);
+
+  // Process pending focus request once the nodes are loaded/updated in state
+  useEffect(() => {
+    if (!pendingFocusNode) return;
+    const { nodeId, divePath } = pendingFocusNode;
+    const nodeExists = nodes.some((n) => n.id === nodeId);
+    if (nodeExists) {
+      setPendingFocusNode(null);
       if (divePath && divePath.length > 0) {
         deepNavigate(divePath, nodeId);
       } else {
         handleNavigateToNode(nodeId);
       }
-    };
-    window.addEventListener("hal:focus-node", handleFocusRequest);
-    return () =>
-      window.removeEventListener("hal:focus-node", handleFocusRequest);
-  }, [deepNavigate, handleNavigateToNode]);
+    }
+  }, [nodes, pendingFocusNode, deepNavigate, handleNavigateToNode]);
 
   // ========================================
   // CALLBACKS - Footer Actions
@@ -1621,16 +1709,21 @@ function Dashboard({
         }
       }
 
-      // Check if warnings changed to prevent re-renders when warnings are identical
+      // Check if warnings/mode changed to prevent re-renders when identical
       const currentWarningsJSON = JSON.stringify(node.data?.warnings || []);
       const newWarningsJSON = JSON.stringify(nodeWarnings);
 
-      if (currentWarningsJSON !== newWarningsJSON || updatedNode !== node) {
+      if (
+        currentWarningsJSON !== newWarningsJSON ||
+        updatedNode !== node ||
+        node.data?.canvasViewMode !== canvasViewMode
+      ) {
         return {
           ...updatedNode,
           data: {
             ...updatedNode.data,
             warnings: nodeWarnings,
+            canvasViewMode,
           },
         };
       }
@@ -1638,7 +1731,7 @@ function Dashboard({
       return node;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nodes, edges, currentProject]); // Removed enterComponent because it changes on every node update
+  }, [nodes, edges, currentProject, canvasViewMode]); // Removed enterComponent because it changes on every node update
 
   // Props dinámicas que sí cambian
   const flowConfig = useMemo(
@@ -1872,6 +1965,32 @@ function Dashboard({
           >
             <div ref={reactFlowWrapper} className="flex-1 w-full relative">
               <ErrorBoundary onReset={handleResetCanvas}>
+                {/* Canvas View Mode Toggle */}
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[10] flex bg-slate-900/90 border border-white/10 p-1 rounded-xl shadow-lg backdrop-blur-md">
+                  {["calidad", "performance", "seguridad"].map((mode) => (
+                    <button
+                      key={mode}
+                      onClick={() => setCanvasViewMode(mode)}
+                      className={cn(
+                        "px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all",
+                        canvasViewMode === mode
+                          ? mode === "seguridad"
+                            ? "bg-red-500/20 text-red-400 border border-red-500/30 font-bold animate-[pulse_2s_infinite]"
+                            : mode === "performance"
+                              ? "bg-blue-500/20 text-blue-400 border border-blue-500/30 font-bold"
+                              : "bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 font-bold"
+                          : "text-slate-400 hover:text-slate-200 border border-transparent hover:bg-white/5"
+                      )}
+                    >
+                      {mode === "calidad"
+                        ? t("canvas.view_mode.quality", "Quality")
+                        : mode === "performance"
+                        ? t("canvas.view_mode.performance", "Performance")
+                        : t("canvas.view_mode.security", "Security")}
+                    </button>
+                  ))}
+                </div>
+
                 <ReactFlow
                   {...flowConfig}
                   onNodesDelete={onNodesDelete}
@@ -2118,6 +2237,30 @@ function Dashboard({
           onRun={handleRunDataset}
         />
 
+        <PerformanceRunModal
+          isOpen={isPerfModalOpen}
+          onClose={() => setIsPerfModalOpen(false)}
+          flowId={currentFlowId}
+          projectId={currentProject?.id}
+          onRunProfiling={handleExecuteFlow}
+          flowName={
+            currentProject?.flows?.find((f) => f.id === currentFlowId)?.name ||
+            "Sin Nombre"
+          }
+        />
+
+        <SecurityRunModal
+          isOpen={isSecurityModalOpen}
+          onClose={() => setIsSecurityModalOpen(false)}
+          flowId={currentFlowId}
+          projectId={currentProject?.id}
+          onRunSecurity={handleExecuteFlow}
+          flowName={
+            currentProject?.flows?.find((f) => f.id === currentFlowId)?.name ||
+            "Sin Nombre"
+          }
+        />
+
         {/* FLOATING COMMAND CENTER (Footer) - Positioned Absolutely */}
         {/* MANIFIESTO DE REACTIVIDAD: Derived State for Flows */}
         {/* We merge persistent flows (DB) with live component nodes (Canvas) to ensure instant updates */}
@@ -2195,7 +2338,15 @@ function Dashboard({
           version={`v${__APP_VERSION__}`}
           isReadOnly={false}
           isRunning={executionProgress.status === "running"}
-          onRun={handleExecuteFlow}
+          onRun={() => {
+            if (canvasViewMode === "performance") {
+              setIsPerfModalOpen(true);
+            } else if (canvasViewMode === "seguridad") {
+              setIsSecurityModalOpen(true);
+            } else {
+              handleExecuteFlow();
+            }
+          }}
           onSave={handleSaveFlow}
           onShowImport={() => setIsImportDialogOpen(true)}
           onShowExport={() => setIsExportDialogOpen(true)}
@@ -2208,6 +2359,7 @@ function Dashboard({
           remoteExecution={remoteExecution}
           role={role}
           isCollaborative={isCollaborative}
+          executionMode={canvasViewMode}
         />
 
         <ExecutionDashboard

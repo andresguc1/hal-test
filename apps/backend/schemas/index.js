@@ -98,3 +98,10 @@ export { default as componentBodySchema } from './component/body.js';
 export { default as inputBodySchema } from './input/body.js';
 export { default as outputBodySchema } from './output/body.js';
 export { default as assertPageTextBodySchema } from './assert_page_text/body.js';
+
+// 🛡️ Security Observability Layer
+export { default as cspValidatorBodySchema } from './csp_validator/body.js';
+export { default as headerAuditorBodySchema } from './header_auditor/body.js';
+export { default as domSanitizerBodySchema } from './dom_sanitizer/body.js';
+export { default as auditPolicyBodySchema } from './audit_policy/body.js';
+export { default as sensitiveDataMonitorBodySchema } from './sensitive_data_monitor/body.js';

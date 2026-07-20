@@ -548,6 +548,36 @@ export const actionRoutes = [
         action: 'smartSelectorAction',
         category: 'llm_ai',
     },
+    {
+        path: 'csp_validator',
+        schema: 'cspValidatorBodySchema',
+        action: 'cspValidatorAction',
+        category: 'security',
+    },
+    {
+        path: 'header_auditor',
+        schema: 'headerAuditorBodySchema',
+        action: 'headerAuditorAction',
+        category: 'security',
+    },
+    {
+        path: 'dom_sanitizer',
+        schema: 'domSanitizerBodySchema',
+        action: 'domSanitizerAction',
+        category: 'security',
+    },
+    {
+        path: 'audit_policy',
+        schema: 'auditPolicyBodySchema',
+        action: 'auditPolicyAction',
+        category: 'security',
+    },
+    {
+        path: 'sensitive_data_monitor',
+        schema: 'sensitiveDataMonitorBodySchema',
+        action: 'sensitiveDataMonitorAction',
+        category: 'security',
+    },
 ];
 
 // ==========================================================

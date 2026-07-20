@@ -7,6 +7,7 @@ import { activeRunManager } from '../services/ActiveRunManager.js';
 import { executionManager } from '../services/ExecutionManager.js';
 import { ThrottlePolicy } from '../services/ThrottlePolicy.js';
 import { executionLock } from '../services/collaboration/ExecutionLock.js';
+import { emitFlowFinished } from '../socket.js';
 
 export const startBatchRunAction = async (req, res) => {
     try {
@@ -593,6 +594,85 @@ export const estimatePerformanceAction = async (req, res) => {
             },
         });
     } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+/**
+ * Starts a security audit test run.
+ * Executes the flow in security mode.
+ */
+export const startSecurityRunAction = async (req, res) => {
+    try {
+        const { flowId, projectId, securityConfig = {} } = req.body;
+        const userId = req.user?.id || 'anonymous';
+        const userName = req.user?.email || req.user?.name || 'Anonymous';
+
+        if (!flowId) {
+            return res.status(400).json({ success: false, message: 'flowId is required.' });
+        }
+
+        // Check if locked
+        const lockCheck = executionLock.check(flowId);
+        if (lockCheck.locked && lockCheck.holder.userId !== userId) {
+            return res.status(409).json({
+                success: false,
+                message: `Cannot execute flow: Locked by ${lockCheck.holder.userName} who is running another execution.`,
+                holder: lockCheck.holder,
+            });
+        }
+
+        // Fetch flow
+        const flow = await Flow.findByPk(flowId);
+        if (!flow) {
+            return res.status(404).json({ success: false, message: 'Flow not found.' });
+        }
+
+        const effectiveProjectId = projectId || flow.project_id || flow.projectId;
+
+        // Create run record for history
+        const runId = await executionLogger.startRun(flowId, {
+            flowName: flow.name,
+            trigger: 'security',
+            flowSnapshot: JSON.stringify({ securityConfig }),
+        });
+
+        // Acquire lock
+        executionLock.acquire(flowId, userId, userName, runId);
+
+        // Execute in background
+        const securityRunPromise = executionManager.execute(
+            'security',
+            { ...flow.toJSON(), projectId: effectiveProjectId },
+            { securityConfig, runId },
+        );
+
+        securityRunPromise
+            .then(async (result) => {
+                console.log(`[RunController] Security run completed for flow ${flowId}`);
+                await executionLogger.endRun(runId, result.success ? 'completed' : 'failed');
+                emitFlowFinished({
+                    runId,
+                    status: result.success ? 'completed' : 'failed',
+                    flowId,
+                });
+            })
+            .catch(async (err) => {
+                console.error(`[RunController] Security run failed: ${err.message}`);
+                await executionLogger.endRun(runId, 'failed');
+                emitFlowFinished({ runId, status: 'failed', flowId, error: err.message });
+            })
+            .finally(() => {
+                executionLock.release(flowId);
+            });
+
+        return res.status(200).json({
+            success: true,
+            runId,
+            message: 'Security audit initiated successfully.',
+        });
+    } catch (error) {
+        console.error('[RunController] startSecurityRunAction Error:', error);
         return res.status(500).json({ success: false, error: error.message });
     }
 };

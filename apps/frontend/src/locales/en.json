@@ -84,7 +84,9 @@
     "default_path": "Default Path",
     "true": "True",
     "false": "False",
-    "optional_label": "Optional label"
+    "optional_label": "Optional label",
+    "select": "Select",
+    "pick": "Pick"
   },
   "api_status": {
     "status": "API Status",
@@ -222,9 +224,13 @@
       "while": "While",
       "sub_flow_loop": "Sub-flow Loop",
       "sticky_note": "Sticky Note",
-      "discussion": "Discussion"
+      "discussion": "Discussion",
+      "csp_validator": "CSP Validator",
+      "header_auditor": "Header Auditor",
+      "dom_sanitizer": "DOM Sanitizer"
     },
     "categories": {
+      "security_audit": "Security",
       "browser_management": "Browser",
       "dom_manipulation": "DOM",
       "user_simulation": "Input",
@@ -795,5 +801,30 @@
     "view_report": "Report",
     "close_dashboard": "Close",
     "load_to_configure": "Please load a dataset file to configure mappings"
+  },
+  "canvas": {
+    "view_mode": {
+      "quality": "Quality",
+      "performance": "Performance",
+      "security": "Security"
+    },
+    "run_automation": "Run Automation",
+    "tooltip_run_automation": "Run automation quality test flow",
+    "run_performance": "Run Performance",
+    "tooltip_run_performance": "Run performance latency test flow",
+    "run_security": "Run Security",
+    "tooltip_run_security": "Run security auditor scanner flow"
+  },
+  "security_modal": {
+    "title": "Configure Security Audit (Quality Gate)",
+    "target_flow": "Target Flow:",
+    "subtitle": "Active Trust Audits",
+    "policy_compliance": "Policy Compliance",
+    "policy_compliance_desc": "Audits HTTP response headers (CSP, HSTS, X-Frame-Options) and session cookie security flags.",
+    "data_leak": "Data Leak & DOM Protection",
+    "data_leak_desc": "Monitors sensitive data in the DOM, prevents cleartext transmission (HTTP), and audits vulnerable inputs.",
+    "warning_title": "Non-Intrusive Audit Warning (Quality Gate)",
+    "warning_desc": "The security audit is performed passively and non-destructively during the normal execution of the E2E flow, serving as a Quality Gate that generates trust alerts without blocking execution or overloading the target server.",
+    "start_audit": "Start Audit"
   }
 }

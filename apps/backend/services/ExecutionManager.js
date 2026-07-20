@@ -3,6 +3,7 @@ import { ThrottlePolicy } from './ThrottlePolicy.js';
 import { MetricsCollector } from './MetricsCollector.js';
 import { WorkerPool } from './WorkerPool.js';
 import { activeRunManager } from './ActiveRunManager.js';
+import { executionService } from './ExecutionService.js';
 
 /**
  * @typedef {Object} RunOptions
@@ -433,21 +434,63 @@ class SecurityRunner extends Runner {
         this.actions = null;
     }
 
-    async execute(flow, _options) {
-        console.log(`[SecurityRunner] Starting Security Audit for flow: ${flow.id}`);
+    async execute(flow, options = {}, runFn) {
+        const flowId = flow?.id || flow?.flowId || flow?.flow_id;
+        console.log(`[SecurityRunner] Starting Security Audit for flow: ${flowId}`);
 
-        // Find Audit Nodes
-        const auditNodes = flow.nodes.filter((n) => n.type === 'security_header_audit');
+        // Safely extract nodes from flow (handles undefined, arrays, or JSON strings)
+        let nodes = [];
+        if (Array.isArray(flow?.nodes)) {
+            nodes = flow.nodes;
+        } else if (flow?.flow_data?.nodes && Array.isArray(flow.flow_data.nodes)) {
+            nodes = flow.flow_data.nodes;
+        } else if (typeof flow?.flow_data === 'string') {
+            try {
+                const parsed = JSON.parse(flow.flow_data);
+                if (Array.isArray(parsed?.nodes)) nodes = parsed.nodes;
+            } catch (e) {
+                /* ignore parse error */
+            }
+        } else if (flow?.data?.nodes && Array.isArray(flow.data.nodes)) {
+            nodes = flow.data.nodes;
+        }
+
+        // Find Audit Checkpoint Nodes
+        const auditNodes = nodes.filter(
+            (n) =>
+                n?.type === 'audit_policy' ||
+                n?.type === 'sensitive_data_monitor' ||
+                n?.type === 'security_header_audit',
+        );
 
         if (auditNodes.length === 0) {
             emitLog({
-                message: 'No security audit nodes found in flow. Running global ZAP spider...',
+                message:
+                    'No security checkpoint nodes found in flow. Running non-intrusive Quality Gate audit...',
                 type: 'info',
             });
-            // Here we would call ZAP API
+        } else {
+            emitLog({
+                message: `Found ${auditNodes.length} security checkpoint node(s) in flow. Initiating Quality Gate...`,
+                type: 'info',
+            });
         }
 
-        emitLog({ message: 'Security Audit completed (Mock)', type: 'success' });
+        // 1. Delegate execution to runFn if provided
+        if (typeof runFn === 'function') {
+            return await runFn(flow, options);
+        }
+
+        // 2. Fallback to executionService if available
+        if (executionService && flowId) {
+            const projectId = flow.projectId || flow.project_id;
+            return await executionService.executeFlow(flowId, projectId, {
+                runId: options?.runId,
+                securityConfig: options?.securityConfig,
+            });
+        }
+
+        emitLog({ message: 'Security Audit completed', type: 'success' });
         return { success: true, mode: 'security' };
     }
 }

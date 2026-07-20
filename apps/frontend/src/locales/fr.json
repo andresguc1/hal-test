@@ -84,7 +84,9 @@
     "default_path": "Chemin par Défaut",
     "true": "Vrai",
     "false": "Faux",
-    "optional_label": "Libellé optionnel"
+    "optional_label": "Libellé optionnel",
+    "select": "Sélectionner",
+    "pick": "Capturer"
   },
   "api_status": {
     "status": "Statut de l'API",
@@ -215,9 +217,13 @@
       "backend_js": "JS Backend",
       "fail_flow": "Échouer le Flux",
       "sticky_note": "Note Adhésive",
-      "discussion": "Discussion"
+      "discussion": "Discussion",
+      "csp_validator": "Validateur CSP",
+      "header_auditor": "Auditeur d'En-têtes",
+      "dom_sanitizer": "Désinfecteur DOM"
     },
     "categories": {
+      "security_audit": "Sécurité",
       "browser_management": "Navigateur",
       "dom_manipulation": "DOM",
       "user_simulation": "Entrée",
@@ -773,5 +779,18 @@
     "view_report": "Rapport",
     "close_dashboard": "Fermer",
     "load_to_configure": "Veuillez charger un fichier de dataset pour configurer le mappage des variables"
+  },
+  "canvas": {
+    "view_mode": {
+      "quality": "Qualité",
+      "performance": "Performance",
+      "security": "Sécurité"
+    },
+    "run_automation": "Lancer l'automatisation",
+    "tooltip_run_automation": "Lancer le flux de test de qualité d'automatisation",
+    "run_performance": "Lancer la performance",
+    "tooltip_run_performance": "Lancer le flux de test de latence de performance",
+    "run_security": "Lancer la sécurité",
+    "tooltip_run_security": "Lancer le flux de scanner d'audit de sécurité"
   }
 }

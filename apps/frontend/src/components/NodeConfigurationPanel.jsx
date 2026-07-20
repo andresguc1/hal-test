@@ -33,6 +33,7 @@ import { NODE_INPUTS } from "@/config/validationRules";
 
 import ConditionalBranchesEditor from "./editors/ConditionalBranchesEditor";
 import SwitchCasesEditor from "./editors/SwitchCasesEditor";
+import { useTranslation } from "react-i18next";
 import { useForm, Controller } from "react-hook-form";
 import { createPortal } from "react-dom";
 
@@ -60,6 +61,7 @@ const NodeConfigurationPanel = ({
   // Collaboration soft-lock awareness
   const { peers, lockNode, unlockNode, isCollaborative } = useCollaboration();
   const isAiReady = useAIStore((state) => state.isAiReady);
+  const { t } = useTranslation();
 
   // Determine if another peer is currently editing this node
   const peerEditingThisNode = useMemo(() => {
@@ -195,6 +197,7 @@ const NodeConfigurationPanel = ({
         "description",
         "technicalName",
         "headless",
+        "browserType",
         "continueOnFailure",
         "continueOnError",
         "takeScreenshot",
@@ -514,6 +517,8 @@ const NodeConfigurationPanel = ({
   const renderInput = (field) => {
     const dataKey = field.key;
     const reactKey = `input-${field.key}`;
+    const fieldLabel = t("nodes.fields." + field.key, field.label);
+    const fieldPlaceholder = field.placeholder ? t("nodes.placeholders." + field.key, field.placeholder) : "";
 
     switch (field.type) {
       case "conditional_branches":
@@ -526,7 +531,7 @@ const NodeConfigurationPanel = ({
             render={({ field: { value, onChange } }) => (
               <div className="space-y-1.5">
                 <label className="text-[10px] uppercase tracking-wider font-semibold text-slate-500">
-                  {field.label}{" "}
+                  {fieldLabel}{" "}
                   {field.required && (
                     <span className="text-rose-500 ml-1">*</span>
                   )}
@@ -552,7 +557,7 @@ const NodeConfigurationPanel = ({
             render={({ field: { value, onChange } }) => (
               <div className="space-y-1.5">
                 <label className="text-[10px] uppercase tracking-wider font-semibold text-slate-500">
-                  {field.label}{" "}
+                  {fieldLabel}{" "}
                   {field.required && (
                     <span className="text-rose-500 ml-1">*</span>
                   )}
@@ -582,7 +587,7 @@ const NodeConfigurationPanel = ({
             render={({ field: { value, onChange } }) => (
               <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5">
                 <label className="text-[10px] uppercase tracking-widest font-black text-slate-400">
-                  {field.label}{" "}
+                  {fieldLabel}{" "}
                   {field.required && (
                     <span className="text-rose-500 ml-1">*</span>
                   )}
@@ -610,7 +615,7 @@ const NodeConfigurationPanel = ({
         return (
           <div key={reactKey} className="space-y-1.5">
             <label className="text-[10px] uppercase tracking-wider font-semibold text-slate-500">
-              {field.label}{" "}
+              {fieldLabel}{" "}
               {field.required && <span className="text-rose-500 ml-1">*</span>}
             </label>
             <Controller
@@ -624,7 +629,7 @@ const NodeConfigurationPanel = ({
                     className="w-full px-3 py-2 text-xs font-mono bg-[var(--bg-canvas)]/50 border border-[var(--border-ui)] rounded-lg text-slate-200 focus:outline-none focus:border-indigo-500/50 focus:bg-slate-900/40 transition-colors appearance-none cursor-pointer"
                   >
                     <option value="" disabled>
-                      Select {field.label}...
+                      {t("common.select", "Select")} {fieldLabel}...
                     </option>
                     {(typeof field.options === "function"
                       ? field.options(localConfig)
@@ -635,7 +640,7 @@ const NodeConfigurationPanel = ({
                         value={opt.value}
                         className="bg-slate-800 text-slate-200"
                       >
-                        {opt.label}
+                        {t("nodes.options." + field.key + "." + opt.value, opt.label)}
                       </option>
                     ))}
                   </select>
@@ -662,7 +667,7 @@ const NodeConfigurationPanel = ({
         return (
           <div key={reactKey} className="space-y-1.5">
             <label className="text-[10px] uppercase tracking-wider font-semibold text-slate-500">
-              {field.label}{" "}
+              {fieldLabel}{" "}
               {field.required && <span className="text-rose-500 ml-1">*</span>}
             </label>
             <Controller
@@ -675,7 +680,7 @@ const NodeConfigurationPanel = ({
                   variables={variablesMap}
                   suggestions={availableVariablePaths}
                   onChange={(e) => onChange(e.target.value)}
-                  placeholder={field.placeholder || ""}
+                  placeholder={fieldPlaceholder}
                   className="w-full text-xs font-mono px-3 py-2"
                 />
               )}
@@ -687,7 +692,7 @@ const NodeConfigurationPanel = ({
           <div key={reactKey} className="space-y-1.5">
             <div className="flex justify-between items-center">
               <label className="text-[10px] uppercase tracking-wider font-semibold text-slate-500">
-                {field.label}{" "}
+                {fieldLabel}{" "}
                 {field.required && (
                   <span className="text-rose-500 ml-1">*</span>
                 )}
@@ -701,7 +706,7 @@ const NodeConfigurationPanel = ({
                 }
                 className="text-[10px] text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded"
               >
-                {activeNode.data?.state === "picking" ? "Cancel" : "Pick"}
+                {activeNode.data?.state === "picking" ? t("common.cancel", "Cancel") : t("common.pick", "Pick")}
               </button>
             </div>
             <Controller
@@ -724,7 +729,7 @@ const NodeConfigurationPanel = ({
         return (
           <div key={reactKey} className="space-y-1.5">
             <label className="text-[10px] uppercase tracking-wider font-semibold text-slate-500">
-              {field.label}{" "}
+              {fieldLabel}{" "}
               {field.required && <span className="text-rose-500 ml-1">*</span>}
             </label>
             <Controller
@@ -734,7 +739,7 @@ const NodeConfigurationPanel = ({
                 <textarea
                   value={value || ""}
                   onChange={onChange}
-                  placeholder={field.placeholder || ""}
+                  placeholder={fieldPlaceholder}
                   rows={5}
                   className="w-full text-xs font-sans px-3 py-2 bg-[var(--bg-canvas)]/50 border border-[var(--border-ui)] rounded-lg text-slate-200 focus:outline-none focus:border-indigo-500/50 focus:bg-slate-900/40 transition-colors resize-none font-medium leading-relaxed"
                 />
@@ -746,7 +751,7 @@ const NodeConfigurationPanel = ({
         return (
           <div key={reactKey} className="space-y-1.5">
             <label className="text-[10px] uppercase tracking-wider font-semibold text-slate-500">
-              {field.label}{" "}
+              {fieldLabel}{" "}
               {field.required && <span className="text-rose-500 ml-1">*</span>}
             </label>
             <Controller
@@ -988,7 +993,9 @@ const NodeConfigurationPanel = ({
                     : "text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10",
                 )}
                 title={
-                  activeNode.data?.disabled ? "Enable Node" : "Disable Node"
+                  activeNode.data?.disabled
+                    ? t("context_menu.enable_node", "Enable Node")
+                    : t("context_menu.disable_node", "Disable Node")
                 }
               >
                 {activeNode.data?.disabled ? (
@@ -1002,20 +1009,20 @@ const NodeConfigurationPanel = ({
                 <button
                   onClick={() => onEnterSubFlow?.(activeNode.id)}
                   className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10 transition-all"
-                  title="Dive In"
+                  title={t("context_menu.dive_in", "Dive In")}
                 >
                   <Maximize2 size={16} />
                 </button>
               )}
               <button
                 onClick={() => {
-                  if (confirm("Are you sure you want to delete this node?")) {
+                  if (confirm(t("common.delete_confirm", "Are you sure you want to delete this node?"))) {
                     onDeleteNode?.(activeNode.id);
                     onClose();
                   }
                 }}
                 className="p-2 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all"
-                title="Delete Node"
+                title={t("common.delete", "Delete Node")}
               >
                 <Trash2 size={16} />
               </button>

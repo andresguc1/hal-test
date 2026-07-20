@@ -14,6 +14,7 @@ import {
   Activity,
   Users,
   Loader2,
+  Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
@@ -32,7 +33,7 @@ const HeaderButton = ({ onClick, children, title, className }) => (
     title={title}
     aria-label={title}
     className={cn(
-      "relative flex items-center justify-center p-2 rounded-lg transition-all duration-300",
+      "relative flex items-center justify-center p-2 rounded-lg transition-all duration-300 group",
       "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--border-color)]",
       className,
     )}
@@ -391,7 +392,7 @@ function AppHeader({
           onClick={() => navigate("/dashboard")}
           title="Dashboard"
           id="header-dashboard-btn"
-          className="hidden md:flex"
+          className="hidden md:flex text-slate-400 hover:text-indigo-400"
         >
           <LayoutDashboard size={18} />
         </HeaderButton>
@@ -399,12 +400,12 @@ function AppHeader({
         <HeaderButton
           onClick={onToggleToolbox}
           title={isToolboxVisible ? "Hide Toolbox" : "Show Toolbox"}
-          className={cn(isToolboxVisible && "text-indigo-500 bg-indigo-500/10")}
+          className={cn(isToolboxVisible ? "text-slate-200 bg-slate-800/80 border border-slate-700" : "text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10")}
         >
           <Layout size={18} />
         </HeaderButton>
 
-        <HeaderButton onClick={onToggleHistory} title="Execution History">
+        <HeaderButton onClick={onToggleHistory} title="Execution History" className="text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10">
           <History size={18} />
         </HeaderButton>
 
@@ -413,16 +414,26 @@ function AppHeader({
             navigate("/dashboard", { state: { activePage: "performance" } })
           }
           title="Performance Dashboard"
-          className="text-blue-400 hover:text-blue-300"
+          className="text-slate-400 hover:text-blue-400 hover:bg-blue-500/10"
         >
           <Activity size={18} />
+        </HeaderButton>
+
+        <HeaderButton
+          onClick={() =>
+            navigate("/dashboard", { state: { activePage: "security" } })
+          }
+          title="Security Dashboard"
+          className="text-slate-400 hover:text-red-400 hover:bg-red-500/10"
+        >
+          <Shield size={18} />
         </HeaderButton>
 
         <HeaderButton
           onClick={onToggleVariables}
           title="Variable Explorer"
           className={cn(
-            isVariablesVisible && "text-emerald-500 bg-emerald-500/10",
+            isVariablesVisible ? "text-slate-200 bg-slate-800/80 border border-slate-700" : "text-slate-400 hover:text-emerald-400 hover:bg-emerald-500/10",
           )}
         >
           <Database size={18} />
@@ -433,8 +444,8 @@ function AppHeader({
           title="Sync to Cloud"
           className={cn(
             isGuest
-              ? "text-indigo-400 hover:text-indigo-300 bg-indigo-500/5 border border-indigo-500/10"
-              : "text-indigo-500 bg-indigo-500/10",
+              ? "text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10"
+              : "text-slate-200 bg-slate-800/80 border border-slate-700",
           )}
         >
           <Cloud size={18} />
@@ -455,7 +466,7 @@ function AppHeader({
                   ? "text-emerald-400 bg-emerald-500/10 border border-emerald-500/20"
                   : isCollaborationEnabled
                     ? "text-amber-400 bg-amber-500/10 animate-pulse"
-                    : "",
+                    : "text-slate-400 hover:text-emerald-400",
               )}
             >
               {isCollaborationEnabled && (!isCollaborative || !isConnected) ? (
@@ -496,7 +507,7 @@ function AppHeader({
         <HeaderButton
           onClick={onToggleAskAI}
           title="Ask AI (Debug Console)"
-          className={cn(isAskAIVisible && "text-indigo-400 bg-indigo-500/10")}
+          className={cn(isAskAIVisible ? "text-indigo-400 bg-indigo-500/10" : "text-slate-400 hover:text-indigo-450")}
         >
           <Sparkles size={18} />
         </HeaderButton>
@@ -506,6 +517,7 @@ function AppHeader({
           title={
             theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"
           }
+          className="text-slate-400"
         >
           <Motion.div
             key={theme}
@@ -516,12 +528,12 @@ function AppHeader({
               stiffness: 200,
               damping: 15,
             }}
-            className="flex items-center justify-center"
+            className="flex items-center justify-center font-normal"
           >
             {theme === "dark" ? (
-              <Sun size={18} className="text-orange-400 fill-orange-400/10" />
+              <Sun size={18} className="text-slate-400 group-hover:text-orange-400 group-hover:fill-orange-400/10 transition-colors duration-300" />
             ) : (
-              <Moon size={18} className="text-blue-500 fill-blue-500/10" />
+              <Moon size={18} className="text-slate-400 group-hover:text-blue-500 group-hover:fill-blue-500/10 transition-colors duration-300" />
             )}
           </Motion.div>
         </HeaderButton>

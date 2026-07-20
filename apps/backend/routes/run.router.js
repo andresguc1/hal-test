@@ -14,6 +14,7 @@ import {
     startDatasetBatchRunAction,
     startPerformanceRunAction,
     estimatePerformanceAction,
+    startSecurityRunAction,
 } from '../controllers/run.controller.js';
 
 const router = Router();
@@ -24,6 +25,7 @@ router.post('/start', startRunAction);
 router.post('/batch', startBatchRunAction);
 router.post('/dataset-batch', startDatasetBatchRunAction);
 router.post('/performance', startPerformanceRunAction);
+router.post('/security', startSecurityRunAction);
 router.post('/performance/estimate', estimatePerformanceAction);
 router.get('/batch/:batchId/summary', getBatchSummaryAction);
 router.post('/:id/end', endRunAction);

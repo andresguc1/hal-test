@@ -20,12 +20,19 @@ import {
   Repeat2,
   StickyNote,
   MessageSquare,
+  Shield,
 } from "lucide-react";
 
 // --- GLOBAL ALL-IN-ONE CONFIGURATION ---
 
 // 1. COLORS & CATEGORIES
 export const NODE_CATEGORIES = {
+  security_audit: {
+    icon: Shield,
+    color: "red",
+    label: "Security Audit",
+    nodes: ["audit_policy", "sensitive_data_monitor"],
+  },
   browser_management: {
     icon: Globe,
     color: "blue", // Browser = Blue (#3b82f6)
@@ -484,6 +491,17 @@ export const NODE_OUTPUTS = {
     passed: "number",
     failed: "number",
     total: "number",
+  },
+  // --- Security Checkpoints ---
+  audit_policy: {
+    success: "boolean",
+    message: "string",
+    data: "object",
+  },
+  sensitive_data_monitor: {
+    success: "boolean",
+    message: "string",
+    data: "object",
   },
 };
 

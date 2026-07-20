@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { io } from "socket.io-client";
+import { useLogStore } from "../context/LogContext";
 
 const getSocketURL = () => {
   const apiUrl = import.meta.env.VITE_API_URL;
@@ -31,6 +32,8 @@ export const useHaltestSocket = ({
   onRemoveNode,
   onUpdateNode,
   toast,
+  onSecurityAlert,
+  executionMode,
 }) => {
   const socketRef = useRef(null);
   const activeRunIdRef = useRef(activeRunId);
@@ -47,6 +50,8 @@ export const useHaltestSocket = ({
   const onUpdateNodeRef = useRef(onUpdateNode);
   const onLogReceivedRef = useRef(onLogReceived);
   const toastRef = useRef(toast);
+  const onSecurityAlertRef = useRef(onSecurityAlert);
+  const executionModeRef = useRef(executionMode);
 
   // Update refs when props change (always keep latest)
   useEffect(() => {
@@ -64,6 +69,8 @@ export const useHaltestSocket = ({
     onUpdateNodeRef.current = onUpdateNode;
     onLogReceivedRef.current = onLogReceived;
     toastRef.current = toast;
+    onSecurityAlertRef.current = onSecurityAlert;
+    executionModeRef.current = executionMode;
   }, [
     activeRunId,
     onElementPicked,
@@ -79,6 +86,8 @@ export const useHaltestSocket = ({
     onUpdateNode,
     onLogReceived,
     toast,
+    onSecurityAlert,
+    executionMode,
   ]);
 
   // Handle socket connection and listeners
@@ -302,6 +311,10 @@ export const useHaltestSocket = ({
       console.log("Haltest Socket: 🏁 Flow finished", data);
       const { status, error, failedNodeId, divePath } = data;
 
+      window.dispatchEvent(
+        new CustomEvent("hal:run-completed", { detail: data })
+      );
+
       if (status === "failed" && error) {
         if (toastRef.current) {
           toastRef.current.error(`Execution Failed: ${error}`, {
@@ -369,6 +382,91 @@ export const useHaltestSocket = ({
       const { message, type, nodeId } = data;
       if (onLogReceivedRef.current) {
         onLogReceivedRef.current(message, type, nodeId);
+      }
+    });
+
+    socket.on("perf-run-started", (data) => {
+      if (executionModeRef.current === "performance") {
+        const msg = `[Performance] 🚀 Multi-User Load Test started (Duration: ${data.durationSec || data.duration || 0}s, Target VUs: ${data.virtualUsers || data.vus || 0}, Profile: ${data.profile || "constant"})`;
+        useLogStore.getState().addLog(msg, "info");
+      }
+    });
+
+    socket.on("perf-vu-status", (data) => {
+      if (executionModeRef.current === "performance") {
+        const msg = `[Performance] 👥 Active Virtual Users: ${data.activeVUs || 0} / ${data.totalVUs || 0}`;
+        useLogStore.getState().addLog(msg, "info");
+      }
+    });
+
+    socket.on("perf-resource-warning", (data) => {
+      if (executionModeRef.current === "performance") {
+        const msg = `[Performance] ⚠️ High Resource Pressure: Used RAM ${data.usedPercent || "N/A"}% | Health: ${data.health || "warning"}`;
+        useLogStore.getState().addLog(msg, "warning");
+      }
+    });
+
+    socket.on("perf-run-finished", (summary) => {
+      window.dispatchEvent(
+        new CustomEvent("hal:run-completed", { detail: summary })
+      );
+      if (executionModeRef.current === "performance") {
+        const stats = summary.data || summary;
+        const msg = `[Performance] ✓ Load test finished. Total requests: ${stats.totalRequests || 0} | Success rate: ${stats.successRate || 100}% | P95 Latency: ${stats.latency?.p95 || 0}ms`;
+        useLogStore.getState().addLog(msg, "success");
+      }
+    });
+
+    socket.on("security-alert", (alert) => {
+      if (!alert) return;
+      const mode = executionModeRef.current;
+      if (mode && mode !== "seguridad" && mode !== "security") return;
+
+      const { nodeId } = alert;
+      console.log(`Haltest Socket: 🛡️ Security alert received:`, alert);
+
+      // Write to execution log drawer ONLY if active mode is security
+      const severityType = (alert.severity === "critical" || alert.severity === "high")
+        ? "error"
+        : (alert.severity === "medium" || alert.severity === "low")
+          ? "warning"
+          : "info";
+
+      const alertMsg = `[SecurityAudit] ⚠️ NodeId=${nodeId || "global"}: ${alert.message || alert.description} (CVSS: ${alert.cvssScore || "N/A"} | OWASP: ${alert.owaspCategory || "N/A"})`;
+      useLogStore.getState().addLog(alertMsg, severityType, nodeId);
+
+      if (onSecurityAlertRef.current) {
+        onSecurityAlertRef.current(alert);
+      }
+
+      // Dispatch global event for the dashboard or detail view
+      window.dispatchEvent(
+        new CustomEvent("hal:security-alert", { detail: alert })
+      );
+
+      // Update node data with the alert
+      if (nodeId && setNodesRef.current) {
+        setNodesRef.current((nds) => {
+          if (!Array.isArray(nds)) return nds;
+          return nds.map((node) => {
+            if (node.id === nodeId) {
+              const currentAlerts = node.data?.securityAlerts || [];
+              const alreadyExists = currentAlerts.some(
+                (a) => a.ruleId === alert.ruleId && a.message === alert.message
+              );
+              if (alreadyExists) return node;
+
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  securityAlerts: [...currentAlerts, alert],
+                },
+              };
+            }
+            return node;
+          });
+        });
       }
     });
 

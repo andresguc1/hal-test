@@ -601,7 +601,7 @@ export function useFlowExecution({
 
   const executeFlow = useCallback(
     async (options = {}) => {
-      const { stopOnError = true } = options;
+      const { stopOnError = true, executionMode = "calidad" } = options;
       if (!currentProject) return { success: false, error: "No project" };
 
       // Collaboration validation checks
@@ -666,10 +666,17 @@ export function useFlowExecution({
         let runId = null;
 
         try {
+          const currentFlowName =
+            currentProject?.flows?.find((f) => f.id === currentFlowId)?.name ||
+            currentProject?.name ||
+            "Flow Execution";
+
           const { runId: newRunId } = await projectManager.createRun(
             currentProject.id,
             currentFlowId,
             {
+              flowName: currentFlowName,
+              trigger: options?.executionMode || "manual",
               nodes: nodes.map((n) => ({
                 ...n,
                 data: { ...n.data, result: undefined },
@@ -823,7 +830,7 @@ export function useFlowExecution({
                   const action = {
                     nodeId: node.id,
                     type: "loop",
-                    payload: { ...resolvedConfig, browserId, runId },
+                    payload: { ...resolvedConfig, browserId, runId, executionMode },
                   };
 
                   const stepResult = await executeStep(action);
@@ -831,6 +838,16 @@ export function useFlowExecution({
                     loopResult = stepResult;
                     finished = true;
                     break;
+                  } else {
+                    let logMsg = "";
+                    if (executionMode === "performance") {
+                      logMsg = `[Performance] Loop Iteration Latency: ${stepResult.duration || 0}ms | Node: "${node.data?.label || "Loop"}" (ID: ${node.id}) | Status: SUCCESS`;
+                    } else if (executionMode === "seguridad") {
+                      logMsg = `[Security] Loop Iteration on Node: "${node.data?.label || "Loop"}" (ID: ${node.id}) executed | Scanning iteration...`;
+                    }
+                    if (logMsg) {
+                      addLog(logMsg, "success", node.id);
+                    }
                   }
 
                   const path = String(
@@ -900,11 +917,22 @@ export function useFlowExecution({
                 const action = {
                   nodeId: node.id,
                   type: "for_each",
-                  payload: { ...resolvedConfig, browserId, runId },
+                  payload: { ...resolvedConfig, browserId, runId, executionMode },
                 };
 
                 const stepResult = await executeStep(action);
                 result = stepResult || { success: true };
+                if (result.success) {
+                  let logMsg = "";
+                  if (executionMode === "performance") {
+                    logMsg = `[Performance] ForEach Latency: ${result.duration || 0}ms | Node: "${node.data?.label || "ForEach"}" (ID: ${node.id}) | Status: SUCCESS`;
+                  } else if (executionMode === "seguridad") {
+                    logMsg = `[Security] ForEach Node: "${node.data?.label || "ForEach"}" (ID: ${node.id}) executed | Scanning container...`;
+                  }
+                  if (logMsg) {
+                    addLog(logMsg, "success", node.id);
+                  }
+                }
 
                 const forEachFinalState = result.success
                   ? NODE_STATES.SUCCESS
@@ -944,6 +972,7 @@ export function useFlowExecution({
                     runId,
                     customLabel: node.data?.customLabel,
                     label: node.data?.label,
+                    executionMode,
                   },
                 };
 
@@ -966,6 +995,15 @@ export function useFlowExecution({
                   globalStats.skipped++;
                 } else if (result.success) {
                   globalStats.successful++;
+                  let logMsg = "";
+                  if (executionMode === "performance") {
+                    logMsg = `[Performance] Latency: ${result.duration || 0}ms | Node: "${node.data?.label || nodeType}" (ID: ${node.id}) | Status: SUCCESS`;
+                  } else if (executionMode === "seguridad") {
+                    logMsg = `[Security] Node: "${node.data?.label || nodeType}" (ID: ${node.id}) executed | Scanning node...`;
+                  }
+                  if (logMsg) {
+                    addLog(logMsg, "success", node.id);
+                  }
                   if (result.instanceId) {
                     browserId = result.instanceId;
                     flowContext.browserId = result.instanceId;
@@ -1115,6 +1153,11 @@ export function useFlowExecution({
         if (runId)
           await api.post(`/runs/${runId}/end`, { status: "completed" });
         setApiStatus({ state: "success", message: "Flow complete" });
+        window.dispatchEvent(
+          new CustomEvent("hal:run-completed", {
+            detail: { runId, status: "completed", executionMode },
+          })
+        );
         return { ...finalResult, stats: globalStats };
       } finally {
         if (collab.isCollaborative) {

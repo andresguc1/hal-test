@@ -17,7 +17,9 @@ import {
   Database,
   Activity,
   Lock,
+  Shield,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { motion as Motion, AnimatePresence } from "framer-motion";
 
@@ -35,6 +37,10 @@ const FooterButton = ({
     ghost: "text-slate-400 hover:text-white hover:bg-white/5 active:scale-95",
     primary:
       "bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-lg shadow-indigo-500/20 active:scale-95 dark:shadow-[0_0_20px_rgba(59,130,246,0.5)] shadow-[0_0_20px_rgba(245,158,11,0.5)]",
+    primary_performance:
+      "bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white shadow-lg shadow-blue-500/20 active:scale-95 dark:shadow-[0_0_20px_rgba(37,99,235,0.5)]",
+    primary_security:
+      "bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white shadow-lg shadow-red-500/20 active:scale-95 dark:shadow-[0_0_20px_rgba(220,38,38,0.5)] shadow-[0_0_20px_rgba(239,68,68,0.5)]",
     outline:
       "border border-white/10 text-slate-300 hover:bg-white/5 active:scale-95",
   };
@@ -419,7 +425,9 @@ function AppFooter({
   remoteExecution = null,
   role = "owner",
   isCollaborative = false,
+  executionMode = "calidad",
 }) {
+  const { t } = useTranslation();
   const [activeMenu, setActiveMenu] = useState(null); // 'project' | 'flow' | null
   const containerRef = useRef(null);
   const isLocked = isRemoteExecuting || (isCollaborative && role !== "owner");
@@ -487,6 +495,61 @@ function AppFooter({
     }
     return { left: 16 }; // Fallback
   };
+
+  // Decoupled button configurations based on execution/view mode
+  const getButtonConfig = () => {
+    if (isLocked) {
+      return {
+        icon: Lock,
+        label: isCollaborative && role !== "owner" ? "OWNER ONLY" : "LOCKED",
+        variant: "outline",
+        tooltip: isCollaborative && role !== "owner"
+          ? "Only the flow owner can execute it."
+          : `Locked: ${remoteExecution?.user?.name || "Another user"} is executing...`,
+        className: "border-amber-500/30 text-amber-500 hover:bg-transparent",
+      };
+    }
+
+    if (apiStatus.state === "running") {
+      return {
+        icon: RefreshCw,
+        label: "RUNNING...",
+        variant: "outline",
+        tooltip: "Running flow...",
+        className: "opacity-75 cursor-not-allowed grayscale pointer-events-none",
+      };
+    }
+
+    switch (executionMode) {
+      case "performance":
+        return {
+          icon: Activity,
+          label: t("canvas.run_performance", "Run Performance"),
+          variant: "primary_performance",
+          tooltip: t("canvas.tooltip_run_performance", "Run performance latency test flow"),
+          className: "",
+        };
+      case "seguridad":
+        return {
+          icon: Shield,
+          label: t("canvas.run_security", "Run Security"),
+          variant: "primary_security",
+          tooltip: t("canvas.tooltip_run_security", "Run security auditor scanner flow"),
+          className: "",
+        };
+      case "calidad":
+      default:
+        return {
+          icon: Play,
+          label: t("canvas.run_automation", "Run Automation"),
+          variant: "primary",
+          tooltip: t("canvas.tooltip_run_automation", "Run automation quality test flow"),
+          className: "",
+        };
+    }
+  };
+
+  const btnConfig = getButtonConfig();
 
   return (
     <div className="w-full h-14 flex items-center justify-between px-2 md:px-4 glass-panel z-[var(--z-hud)] relative rounded-none border-t border-white/5">
@@ -606,33 +669,16 @@ function AppFooter({
         />
 
         <FooterButton
-          icon={
-            isLocked ? Lock : apiStatus.state === "running" ? RefreshCw : Play
-          }
-          label={
-            isRemoteExecuting
-              ? "LOCKED"
-              : isCollaborative && role !== "owner"
-                ? "OWNER ONLY"
-                : apiStatus.state === "running"
-                  ? "RUNNING..."
-                  : "RUN FLOW"
-          }
-          variant={isLocked ? "outline" : "primary"}
+          icon={btnConfig.icon}
+          label={btnConfig.label}
+          variant={btnConfig.variant}
           onClick={apiStatus.state === "running" || isLocked ? null : onRun}
-          title={
-            isRemoteExecuting
-              ? `Locked: ${remoteExecution?.user?.name || "Another user"} is executing...`
-              : isCollaborative && role !== "owner"
-                ? "Only the flow owner can execute it."
-                : "Run Flow"
-          }
+          title={btnConfig.tooltip}
           className={cn(
             "pl-4 pr-5 py-2",
             (apiStatus.state === "running" || isLocked) &&
               "opacity-75 cursor-not-allowed grayscale pointer-events-none",
-            isLocked &&
-              "border-amber-500/30 text-amber-500 hover:bg-transparent",
+            btnConfig.className,
           )}
         />
 

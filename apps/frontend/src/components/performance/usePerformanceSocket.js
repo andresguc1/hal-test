@@ -43,14 +43,16 @@ export function usePerformanceSocket(flowId) {
     socket.on("connect", handleConnect);
 
     socket.on("perf-run-started", (config) => {
-      if (config.flowId === flowId) {
+      const eventFlowId = config?.flowId;
+      if (!flowId || !eventFlowId || String(eventFlowId) === String(flowId)) {
         setRunConfig(config);
         setStatus("running");
       }
     });
 
     socket.on("perf-metrics-update", (data) => {
-      if (data.flowId === flowId) {
+      const eventFlowId = data?.flowId || data?.runConfig?.flowId;
+      if (!flowId || !eventFlowId || String(eventFlowId) === String(flowId)) {
         setMetrics(data);
         if (data.runConfig) setRunConfig((prev) => prev || data.runConfig);
         setStatus((prev) => (prev === "completed" ? prev : "running"));
@@ -59,7 +61,7 @@ export function usePerformanceSocket(flowId) {
             ...prev,
             {
               time: new Date().toLocaleTimeString(),
-              throughput: data.throughput,
+              throughput: data.throughput || 0,
               latency: data.latency?.p95 || 0,
             },
           ];
@@ -72,9 +74,14 @@ export function usePerformanceSocket(flowId) {
     socket.on("perf-resource-warning", (data) => setResourceWarning(data));
 
     socket.on("perf-run-finished", (summary) => {
-      if (summary.data && summary.data.flowId === flowId) {
-        setMetrics(summary.data);
+      const metricsData = summary?.data || summary;
+      const eventFlowId = summary?.flowId || summary?.data?.flowId || metricsData?.flowId;
+      if (!flowId || !eventFlowId || String(eventFlowId) === String(flowId)) {
+        setMetrics(metricsData);
         setStatus("completed");
+        window.dispatchEvent(
+          new CustomEvent("hal:run-completed", { detail: { summary: metricsData } })
+        );
       }
     });
 

@@ -1,3 +1,4 @@
+/* global page */
 // controllers/action.controller.js - REFACTORED
 // ==========================================================
 // 🧠 Connectors of individual actions to Playwright
@@ -17,6 +18,7 @@ import {
     emitLog,
     emitVariableChange,
     emitAutoHealingUpdate,
+    emitSecurityAlert,
 } from '../socket.js';
 import { z } from 'zod';
 import * as fsp from 'fs/promises';
@@ -27,6 +29,7 @@ import { executionLogger } from '../services/ExecutionLogger.js';
 import { STORAGE_RUNS_DIR, STORAGE_DIR } from '../config/paths.js';
 import { isSafePath } from '../utils/security.js';
 import { auditService } from '../services/AuditService.js';
+import { SecurityAuditor } from '../services/SecurityAuditor.js';
 
 // Create Variable Manager instance
 // Use shared Variable Manager instance
@@ -599,6 +602,63 @@ async function getOrCreateContext(req, browser, browserId) {
             // Track background network history to avoid race conditions in sequential nodes
             networkHistoryService.track(browserId, newContext);
 
+            // Security Observability Layer: Listen for console events and HTTP responses
+            newContext.on('page', (page) => {
+                page._securityAlerts = [];
+                page.on('response', async (response) => {
+                    try {
+                        const url = response.url();
+                        if (url.startsWith('data:') || url.startsWith('blob:')) return;
+                        const headers = response.headers();
+                        const alerts = SecurityAuditor.auditHeaders(url, headers);
+                        const setCookie = headers['set-cookie'];
+                        if (setCookie) {
+                            const cookieAlerts = SecurityAuditor.auditCookies(url, setCookie);
+                            alerts.push(...cookieAlerts);
+                        }
+
+                        const currentRunId = page._currentRunId;
+                        const currentNodeId = page._currentNodeId;
+
+                        for (const alert of alerts) {
+                            const enriched = {
+                                ...alert,
+                                url,
+                                runId: currentRunId || null,
+                                nodeId: currentNodeId || null,
+                                timestamp: Date.now(),
+                            };
+                            page._securityAlerts.push(enriched);
+
+                            emitSecurityAlert(enriched);
+                        }
+                    } catch (e) {
+                        /* ignore */
+                    }
+                });
+
+                page.on('console', async (msg) => {
+                    try {
+                        const alert = SecurityAuditor.auditConsoleMessage(msg);
+                        if (alert) {
+                            const currentRunId = page._currentRunId;
+                            const currentNodeId = page._currentNodeId;
+                            const enriched = {
+                                ...alert,
+                                runId: currentRunId || null,
+                                nodeId: currentNodeId || null,
+                                timestamp: Date.now(),
+                            };
+                            page._securityAlerts.push(enriched);
+
+                            emitSecurityAlert(enriched);
+                        }
+                    } catch (e) {
+                        /* ignore */
+                    }
+                });
+            });
+
             return newContext;
         } catch (err) {
             console.error('[ERROR] Could not create context:', err.message);
@@ -836,6 +896,12 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
             } = await getActivePage(req, opts.browserId));
             // browser = context.browser(); // Unused
 
+            if (page && !page.isClosed()) {
+                page._currentRunId = runId;
+                page._currentNodeId = nodeId;
+                if (!page._securityAlerts) page._securityAlerts = [];
+            }
+
             if (page && !page.isClosed() && enableFineTuning) {
                 try {
                     const { default: selectorHealer } =
@@ -963,7 +1029,18 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
                     status: 'success',
                     duration,
                     input: opts,
-                    output: result.data || result.traceDetails,
+                    output: {
+                        ...(typeof result.data === 'object' ? result.data : { value: result.data }),
+                        ...(typeof result.traceDetails === 'object' ? result.traceDetails : {}),
+                        securityAlerts:
+                            page && page._securityAlerts
+                                ? page._securityAlerts.filter(
+                                      (a) => !a.nodeId || a.nodeId === nodeId,
+                                  )
+                                : Array.isArray(result?.data?.alerts)
+                                  ? result.data.alerts
+                                  : [],
+                    },
                     screenshot: screenshotPath,
                     videoTimestamp: req.body.runStartTime
                         ? (Date.now() - req.body.runStartTime) / 1000
@@ -1362,7 +1439,17 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
                                     status: 'healed',
                                     duration: totalDuration,
                                     input: { ...opts, selector: diagnosis.correctedSelector },
-                                    output: retryResult.data || retryResult,
+                                    output: {
+                                        ...(typeof retryResult.data === 'object'
+                                            ? retryResult.data
+                                            : { value: retryResult.data }),
+                                        securityAlerts:
+                                            currentPage && currentPage._securityAlerts
+                                                ? currentPage._securityAlerts.filter(
+                                                      (a) => a.nodeId === opts.nodeId,
+                                                  )
+                                                : [],
+                                    },
                                     memoryHit: diagnosis.source === 'memory',
                                     aiDiagnosis: diagnosis.reasoning,
                                 },
@@ -1467,6 +1554,12 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
                     duration,
                     input: opts,
                     error: errorMessage,
+                    output: {
+                        securityAlerts:
+                            page && page._securityAlerts
+                                ? page._securityAlerts.filter((a) => a.nodeId === nodeId)
+                                : [],
+                    },
                     videoTimestamp: req.body.runStartTime
                         ? (Date.now() - req.body.runStartTime) / 1000
                         : null,
@@ -1880,6 +1973,12 @@ export const openUrlAction = async (req, res) => {
             console.log('[INFO] Creating new page for navigation.');
         }
 
+        if (page && !page.isClosed()) {
+            page._currentRunId = runId;
+            page._currentNodeId = nodeId;
+            if (!page._securityAlerts) page._securityAlerts = [];
+        }
+
         await page.bringToFront().catch(() => {});
 
         try {
@@ -1966,7 +2065,14 @@ export const openUrlAction = async (req, res) => {
                     status: 'success',
                     duration,
                     input: opts,
-                    output: { url, browserId },
+                    output: {
+                        url,
+                        browserId,
+                        securityAlerts:
+                            page && page._securityAlerts
+                                ? page._securityAlerts.filter((a) => a.nodeId === nodeId)
+                                : [],
+                    },
                     screenshot: screenshotPath,
                 },
             );
@@ -2021,6 +2127,12 @@ export const openUrlAction = async (req, res) => {
                     duration,
                     input: req.body,
                     error: error.message,
+                    output: {
+                        securityAlerts:
+                            typeof page !== 'undefined' && page && page._securityAlerts
+                                ? page._securityAlerts.filter((a) => a.nodeId === nodeId)
+                                : [],
+                    },
                 },
             );
         }
@@ -6852,3 +6964,186 @@ export const deleteVariableAction = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
+export const cspValidatorAction = (req, res) =>
+    executePlaywrightAction(req, res, 'csp_validator', async (page, _opts) => {
+        const url = page.url();
+        const alerts = (page._securityAlerts || []).filter((a) => a.ruleId.startsWith('csp'));
+        const hasViolations = alerts.some(
+            (a) => a.severity === 'high' || a.severity === 'critical',
+        );
+        return {
+            message:
+                alerts.length > 0
+                    ? `CSP validation finished with issues: ${alerts.map((a) => a.message).join(', ')}`
+                    : 'CSP validated successfully and looks secure.',
+            data: {
+                url,
+                alerts,
+                status: hasViolations ? 'failed' : 'success',
+            },
+        };
+    });
+
+export const headerAuditorAction = (req, res) =>
+    executePlaywrightAction(req, res, 'header_auditor', async (page, _opts) => {
+        const url = page.url();
+        const alerts = (page._securityAlerts || []).filter(
+            (a) =>
+                a.ruleId.includes('hsts') ||
+                a.ruleId.includes('xfo') ||
+                a.ruleId.includes('xcto') ||
+                a.ruleId.includes('cors') ||
+                a.ruleId.includes('cookie'),
+        );
+        const hasIssues = alerts.some((a) => a.severity === 'high' || a.severity === 'critical');
+        return {
+            message:
+                alerts.length > 0
+                    ? `Header auditor found issues: ${alerts.map((a) => a.message).join(', ')}`
+                    : 'Headers/Cookies audited successfully.',
+            data: {
+                url,
+                alerts,
+                status: hasIssues ? 'failed' : 'success',
+            },
+        };
+    });
+
+export const domSanitizerAction = (req, res) =>
+    executePlaywrightAction(req, res, 'dom_sanitizer', async (page, _opts) => {
+        const url = page.url();
+        const activeDomAlerts = await SecurityAuditor.auditDOM(page);
+
+        const runId = page._currentRunId;
+        const nodeId = req.body.nodeId;
+        const enriched = activeDomAlerts.map((a) => ({
+            ...a,
+            runId: runId || null,
+            nodeId: nodeId || null,
+            url,
+            timestamp: Date.now(),
+        }));
+
+        if (page._securityAlerts) {
+            page._securityAlerts.push(...enriched);
+        }
+
+        // Live emit alerts over WebSockets
+        for (const alert of enriched) {
+            emitSecurityAlert(alert);
+        }
+
+        const hasIssues = enriched.some((a) => a.severity === 'high' || a.severity === 'critical');
+        return {
+            message:
+                enriched.length > 0
+                    ? `DOM Sanitizer found unsafe attributes/elements: ${enriched.map((a) => a.message).join(', ')}`
+                    : 'DOM Sanitizer completed. No issues found.',
+            data: {
+                url,
+                alerts: enriched,
+                status: hasIssues ? 'failed' : 'success',
+            },
+        };
+    });
+
+export const auditPolicyAction = (req, res) =>
+    executePlaywrightAction(req, res, 'audit_policy', async (page, _opts) => {
+        const url = page.url();
+        const alerts = (page._securityAlerts || []).filter(
+            (a) =>
+                a.ruleId.startsWith('csp') ||
+                a.ruleId.includes('hsts') ||
+                a.ruleId.includes('xfo') ||
+                a.ruleId.includes('xcto') ||
+                a.ruleId.includes('cors') ||
+                a.ruleId.includes('cookie'),
+        );
+
+        const runId = page._currentRunId;
+        const nodeId = req.body.nodeId;
+        const enriched = alerts.map((a) => ({
+            ...a,
+            runId: runId || null,
+            nodeId: nodeId || null,
+            url,
+            timestamp: Date.now(),
+        }));
+
+        for (const alert of enriched) {
+            emitSecurityAlert(alert);
+        }
+
+        const hasIssues = enriched.some((a) => a.severity === 'high' || a.severity === 'critical');
+        return {
+            message:
+                enriched.length > 0
+                    ? `Audit Policy Checkpoint finished with issues: ${enriched.map((a) => a.message).join(', ')}`
+                    : 'Audit Policy Checkpoint passed. CSP, cookies and headers look secure.',
+            data: {
+                url,
+                alerts: enriched,
+                status: hasIssues ? 'failed' : 'success',
+            },
+        };
+    });
+
+export const sensitiveDataMonitorAction = (req, res) =>
+    executePlaywrightAction(req, res, 'sensitive_data_monitor', async (page, _opts) => {
+        const url = page.url();
+        const activeDomAlerts = await SecurityAuditor.auditDOM(page);
+
+        const isPlaintext = url.startsWith('http://');
+        if (isPlaintext) {
+            activeDomAlerts.push(
+                SecurityAuditor.enrichAlert({
+                    ruleId: 'dom-plaintext-transmit',
+                    severity: 'high',
+                    message: 'Page transmits all data over unencrypted HTTP plaintext protocol.',
+                    evidence: { url },
+                }),
+            );
+        }
+
+        const runId = page._currentRunId;
+        const nodeId = req.body.nodeId;
+        const enriched = activeDomAlerts.map((a) => ({
+            ...a,
+            runId: runId || null,
+            nodeId: nodeId || null,
+            url,
+            timestamp: Date.now(),
+        }));
+
+        if (page._securityAlerts) {
+            for (const alert of enriched) {
+                const exists = page._securityAlerts.some(
+                    (a) =>
+                        a.ruleId === alert.ruleId &&
+                        a.message === alert.message &&
+                        a.nodeId === alert.nodeId,
+                );
+                if (!exists) {
+                    page._securityAlerts.push(alert);
+                }
+            }
+        }
+
+        for (const alert of enriched) {
+            emitSecurityAlert(alert);
+        }
+
+        const hasIssues = enriched.some((a) => a.severity === 'high' || a.severity === 'critical');
+        return {
+            message:
+                enriched.length > 0
+                    ? `Sensitive Data Monitor found potential exposures: ${enriched.map((a) => a.message).join(', ')}`
+                    : 'Sensitive Data Monitor completed. No input or transmit issues found.',
+            data: {
+                url,
+                alerts: enriched,
+                status: hasIssues ? 'failed' : 'success',
+            },
+        };
+    });
