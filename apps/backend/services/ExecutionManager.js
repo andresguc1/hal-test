@@ -232,11 +232,17 @@ class PerformanceRunner extends Runner {
 
                 const getTargetVUs = (elapsedSec) => {
                     let accumulated = 0;
+                    let prevTarget = 0;
                     for (const stage of finalStages) {
-                        accumulated += stage.durationSec;
-                        if (elapsedSec <= accumulated) {
-                            return stage.target;
+                        const stageEnd = accumulated + stage.durationSec;
+                        if (elapsedSec <= stageEnd) {
+                            const timeInStage = elapsedSec - accumulated;
+                            const progress =
+                                stage.durationSec > 0 ? timeInStage / stage.durationSec : 1;
+                            return Math.round(prevTarget + (stage.target - prevTarget) * progress);
                         }
+                        accumulated = stageEnd;
+                        prevTarget = stage.target;
                     }
                     return 0; // If beyond last stage, scale down to 0
                 };
@@ -368,7 +374,7 @@ class PerformanceRunner extends Runner {
                 const lowVUs = Math.max(1, Math.floor(totalVUs * 0.1));
                 const t1 = Math.floor(durationSec * 0.3);
                 const t2 = Math.floor(durationSec * 0.2);
-                const t3 = durationSec - t1 - t2;
+                const t3 = Math.max(0, durationSec - t1 - t2);
                 stages.push({ durationSec: t1, target: lowVUs });
                 stages.push({ durationSec: t2, target: totalVUs });
                 if (t3 > 0) stages.push({ durationSec: t3, target: lowVUs });
@@ -390,10 +396,7 @@ class PerformanceRunner extends Runner {
 
             case 'capacity':
                 // Continuous ramp up from 1 to totalVUs over the entire duration
-                for (let i = 1; i <= durationSec; i++) {
-                    const targetAtStep = Math.ceil((totalVUs / durationSec) * i);
-                    stages.push({ durationSec: 1, target: targetAtStep });
-                }
+                stages.push({ durationSec, target: totalVUs });
                 break;
 
             case 'load':
@@ -401,10 +404,7 @@ class PerformanceRunner extends Runner {
                 // Ramp up for rampUpSec (or 20% of duration), then sustain
                 const actualRamp = rampUpSec > 0 ? rampUpSec : Math.floor(durationSec * 0.2);
                 if (actualRamp > 0) {
-                    for (let i = 1; i <= actualRamp; i++) {
-                        const targetAtStep = Math.ceil((totalVUs / actualRamp) * i);
-                        stages.push({ durationSec: 1, target: targetAtStep });
-                    }
+                    stages.push({ durationSec: actualRamp, target: totalVUs });
                 }
                 const sustain = durationSec - actualRamp;
                 if (sustain > 0) {
@@ -417,7 +417,7 @@ class PerformanceRunner extends Runner {
             case 'constant':
             default:
                 // Constant profile
-                stages.push({ durationSec: durationSec, target: totalVUs });
+                stages.push({ durationSec, target: totalVUs });
                 break;
         }
 

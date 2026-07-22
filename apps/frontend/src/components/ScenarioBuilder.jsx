@@ -107,9 +107,9 @@ const ScenarioBuilder = ({ onRun, flowName: _flowName }) => {
     e.preventDefault();
 
     if (profile === "custom") {
-      onRun({ profile: "custom", stages });
+      onRun({ profile: "custom", stages, vus: maxVUs, duration: totalDuration });
     } else {
-      onRun({ vus, duration, profile, rampUp });
+      onRun({ vus: profile === "baseline" ? 1 : vus, duration, profile, rampUp });
     }
   };
 

@@ -505,24 +505,22 @@ export const startPerformanceRunAction = async (req, res) => {
         const effectiveProjectId = projectId || flow.project_id || flow.projectId;
 
         // Pre-flight resource check
+        const requestedVUs = performanceConfig.virtualUsers || 1;
         const estimate = ThrottlePolicy.estimate(
-            performanceConfig.virtualUsers || 1,
+            requestedVUs,
             null,
             performanceConfig.headless !== false,
         );
 
-        // Block if resources are insufficient (unless aggressive mode)
+        // Auto-throttle if requested VUs exceed safe RAM limit (unless aggressive mode)
         if (estimate.exceeds && performanceConfig.throttleStrategy !== 'aggressive') {
-            return res.status(422).json({
-                success: false,
-                error: 'RESOURCE_LIMIT',
-                message: `Estimated ${estimate.ramGB}GB RAM needed but only ${estimate.freeGB}GB available.`,
-                suggestion: {
-                    safeVUs: estimate.safeVUs,
-                    message: `Reduce VUs to ${estimate.safeVUs} or enable headless mode.`,
-                },
-                estimate,
-            });
+            performanceConfig.virtualUsers = estimate.safeVUs;
+            if (performanceConfig.stages && Array.isArray(performanceConfig.stages)) {
+                performanceConfig.stages = performanceConfig.stages.map((s) => ({
+                    ...s,
+                    target: Math.min(s.target, estimate.safeVUs),
+                }));
+            }
         }
 
         // Create run record for history

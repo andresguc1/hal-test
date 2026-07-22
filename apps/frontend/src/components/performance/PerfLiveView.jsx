@@ -30,7 +30,7 @@ const PerfLiveView = ({
   const normalizerRef = useRef(new TelemetryDataNormalizer());
 
   useEffect(() => {
-    if (!timeline || timeline.length === 0) return;
+    if (!metrics && (!timeline || timeline.length === 0)) return;
 
     let isMounted = true;
     let timerId = null;
@@ -43,20 +43,41 @@ const PerfLiveView = ({
         return;
       }
 
+      const nodeStats = metrics?.nodeStats || [];
       const bars = [];
-      timeline.forEach((pt, idx) => {
-        const timeMs = pt.timestamp || (Date.now() - (timeline.length - idx) * 1000);
-        const time = normalizerRef.current.ensureAscendingTimestamp(timeMs);
-        const latencyMs = pt.throughput || metrics?.latency?.p95 || Math.floor(Math.random() * 50) + 10;
 
-        bars.push({
-          time,
-          value: latencyMs,
-          color: '#10b981'
+      if (nodeStats.length > 0) {
+        const now = Date.now();
+        nodeStats.forEach((node, idx) => {
+          const timeMs = now - (nodeStats.length - idx) * 2000;
+          const time = normalizerRef.current.ensureAscendingTimestamp(timeMs);
+          const val = node.p95 || node.avg || 10;
+          bars.push({
+            time,
+            value: val,
+            color: val > 2000 ? "#ef4444" : val > 800 ? "#f59e0b" : "#10b981",
+            label: node.label ? `#${idx + 1} ${node.label}` : `Nodo #${idx + 1}`,
+            nodeId: node.nodeId || `node_${idx + 1}`,
+          });
         });
-      });
+      } else if (timeline && timeline.length > 0) {
+        timeline.forEach((pt, idx) => {
+          const timeMs = pt.timestamp || (Date.now() - (timeline.length - idx) * 1000);
+          const time = normalizerRef.current.ensureAscendingTimestamp(timeMs);
+          const latencyMs = pt.latency || metrics?.latency?.p95 || 10;
 
-      chartRef.current.setHistoricalData(bars);
+          bars.push({
+            time,
+            value: latencyMs,
+            color: latencyMs > 2000 ? "#ef4444" : latencyMs > 800 ? "#f59e0b" : "#10b981",
+            label: `Muestreo #${idx + 1}`,
+          });
+        });
+      }
+
+      if (bars.length > 0) {
+        chartRef.current.setHistoricalData(bars);
+      }
     };
 
     renderChartData();
@@ -251,7 +272,7 @@ const PerfLiveView = ({
             height={360}
             domain="performance"
             barTitle="Latencia (ms)"
-            title="Telemetría de Rendimiento en Tiempo Real"
+            title="Línea de Tiempo de Latencia por Nodo"
           />
         </div>
       </div>
