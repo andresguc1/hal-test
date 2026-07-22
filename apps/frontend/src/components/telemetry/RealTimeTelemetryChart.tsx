@@ -3,7 +3,9 @@ import React, {
   useRef,
   useImperativeHandle,
   forwardRef,
-  useCallback
+  useCallback,
+  useState,
+  useMemo,
 } from 'react';
 import {
   createChart,
@@ -56,31 +58,54 @@ export const RealTimeTelemetryChart = forwardRef<
     const barSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null);
     const lineSeriesMapRef = useRef<Map<string, ISeriesApi<'Line'>>>(new Map());
 
+    // Persistent data store so canvas recreation never loses dataset
+    const lastBarsRef = useRef<TelemetryBarPoint[]>([]);
+    const lastLinesRef = useRef<Record<string, TelemetryLinePoint[]>>({});
+
+    const [nodeBadges, setNodeBadges] = useState<TelemetryBarPoint[]>([]);
+    const [hoverInfo, setHoverInfo] = useState<{
+      label: string;
+      value: number;
+      color?: string;
+      nodeId?: string;
+    } | null>(null);
+
     const isSecurity = domain === 'security';
     const primaryBarTitle = barTitle || (isSecurity ? 'Alertas Detectadas' : 'Latencia (ms)');
 
-    // Theme Palette
-    const themeColors = darkMode
-      ? {
-          bg: '#0b0f19',
-          text: '#94a3b8',
-          grid: '#1e293b',
-          barColor: isSecurity ? '#ef4444' : '#10b981',
-          lineColor: isSecurity ? '#f59e0b' : '#3b82f6'
-        }
-      : {
-          bg: '#ffffff',
-          text: '#475569',
-          grid: '#f1f5f9',
-          barColor: isSecurity ? '#dc2626' : '#059669',
-          lineColor: isSecurity ? '#d97706' : '#2563eb'
-        };
+    // Theme Palette (Memoized to prevent chart teardown on re-renders)
+    const themeColors = useMemo(
+      () =>
+        darkMode
+          ? {
+              bg: '#0b0f19',
+              text: '#94a3b8',
+              grid: '#1e293b',
+              barColor: isSecurity ? '#ef4444' : '#10b981',
+              lineColor: isSecurity ? '#f59e0b' : '#3b82f6',
+            }
+          : {
+              bg: '#ffffff',
+              text: '#475569',
+              grid: '#f1f5f9',
+              barColor: isSecurity ? '#dc2626' : '#059669',
+              lineColor: isSecurity ? '#d97706' : '#2563eb',
+            },
+      [darkMode, isSecurity]
+    );
 
     // 1. Imperative Ref Handlers for 60FPS Direct Canvas Updates
     const updateBar = useCallback((point: TelemetryBarPoint) => {
+      lastBarsRef.current = [...lastBarsRef.current, point];
       if (barSeriesRef.current) {
         try {
           barSeriesRef.current.update(point);
+          if (point.label || point.nodeId) {
+            setNodeBadges((prev) => {
+              const filtered = prev.filter((p) => p.nodeId !== point.nodeId);
+              return [...filtered, point];
+            });
+          }
         } catch (err) {
           console.warn('[RealTimeTelemetryChart] Bar update error:', err);
         }
@@ -88,6 +113,8 @@ export const RealTimeTelemetryChart = forwardRef<
     }, []);
 
     const updateLineMetric = useCallback((seriesId: string, point: TelemetryLinePoint) => {
+      const currentPoints = lastLinesRef.current[seriesId] || [];
+      lastLinesRef.current[seriesId] = [...currentPoints, point];
       const lineSeries = lineSeriesMapRef.current.get(seriesId);
       if (lineSeries) {
         try {
@@ -100,8 +127,13 @@ export const RealTimeTelemetryChart = forwardRef<
 
     const setHistoricalData = useCallback(
       (bars: TelemetryBarPoint[], lines?: Record<string, TelemetryLinePoint[]>) => {
+        lastBarsRef.current = bars;
+        if (lines) lastLinesRef.current = lines;
+
         if (barSeriesRef.current && bars.length > 0) {
           barSeriesRef.current.setData(bars);
+          const labeledBars = bars.filter((b) => b.label || b.nodeId);
+          setNodeBadges(labeledBars);
         }
         if (lines) {
           Object.entries(lines).forEach(([seriesId, points]) => {
@@ -119,10 +151,14 @@ export const RealTimeTelemetryChart = forwardRef<
     );
 
     const clear = useCallback(() => {
+      lastBarsRef.current = [];
+      lastLinesRef.current = {};
       if (barSeriesRef.current) {
         barSeriesRef.current.setData([]);
       }
       lineSeriesMapRef.current.forEach((series) => series.setData([]));
+      setNodeBadges([]);
+      setHoverInfo(null);
     }, []);
 
     const fitContent = useCallback(() => {
@@ -186,8 +222,12 @@ export const RealTimeTelemetryChart = forwardRef<
       });
       barSeriesRef.current = barSeries;
 
+      // Populate existing stored bars if chart is recreated
+      if (lastBarsRef.current.length > 0) {
+        barSeries.setData(lastBarsRef.current);
+      }
+
       // Add Domain-Specific Line Series:
-      // SECURITY -> "Security Risk Score" on Right Scale
       if (isSecurity) {
         const riskSeries = chart.addSeries(LineSeries, {
           color: themeColors.lineColor,
@@ -196,8 +236,10 @@ export const RealTimeTelemetryChart = forwardRef<
           title: 'Índice de Riesgo CVSS'
         });
         lineSeriesMapRef.current.set('riskIndex', riskSeries);
+        if (lastLinesRef.current['riskIndex']) {
+          riskSeries.setData(lastLinesRef.current['riskIndex']);
+        }
       } else if (lineConfigs.length > 0) {
-        // PERFORMANCE -> Custom line metrics (e.g. Throughput or VUs) if configured
         lineConfigs.forEach((cfg) => {
           const series = chart.addSeries(LineSeries, {
             color: cfg.color || '#3b82f6',
@@ -206,8 +248,34 @@ export const RealTimeTelemetryChart = forwardRef<
             title: cfg.name
           });
           lineSeriesMapRef.current.set(cfg.id, series);
+          if (lastLinesRef.current[cfg.id]) {
+            series.setData(lastLinesRef.current[cfg.id]);
+          }
         });
       }
+
+      if (lastBarsRef.current.length > 0) {
+        chart.timeScale().fitContent();
+      }
+
+      // Add Crosshair movement listener to display interactive node label tooltip
+      chart.subscribeCrosshairMove((param) => {
+        if (!param.time || !param.seriesData || param.seriesData.size === 0) {
+          setHoverInfo(null);
+          return;
+        }
+        const data = param.seriesData.get(barSeries) as TelemetryBarPoint | undefined;
+        if (data) {
+          setHoverInfo({
+            label: data.label || 'Nodo',
+            value: data.value,
+            color: data.color || (isSecurity ? '#ef4444' : '#10b981'),
+            nodeId: data.nodeId,
+          });
+        } else {
+          setHoverInfo(null);
+        }
+      });
 
       // Hide TradingView Watermark / Logo Links completely via DOM cleanup
       const hideLogo = () => {
@@ -249,7 +317,7 @@ export const RealTimeTelemetryChart = forwardRef<
           lineSeriesMapRef.current.clear();
         }
       };
-    }, [height, darkMode, domain, primaryBarTitle, isSecurity, lineConfigs, themeColors.barColor, themeColors.bg, themeColors.grid, themeColors.lineColor, themeColors.text]);
+    }, [height, domain, primaryBarTitle, isSecurity, lineConfigs, themeColors]);
 
     return (
       <div className="w-full flex flex-col rounded-xl border border-slate-800 bg-[#0b0f19] p-4 shadow-xl text-slate-200 relative overflow-hidden">
@@ -296,12 +364,51 @@ export const RealTimeTelemetryChart = forwardRef<
           </div>
         </div>
 
+        {/* Floating Tooltip for Hovered Node */}
+        {hoverInfo && (
+          <div className="absolute top-12 left-6 z-20 bg-slate-900/95 border border-slate-700/80 backdrop-blur-md px-3 py-1.5 rounded-lg shadow-2xl text-xs flex items-center gap-2 font-mono pointer-events-none">
+            <span
+              className="w-2.5 h-2.5 rounded-full shrink-0"
+              style={{ backgroundColor: hoverInfo.color || '#10b981' }}
+            />
+            <span className="font-bold text-slate-100">{hoverInfo.label}</span>
+            {hoverInfo.nodeId && (
+              <span className="text-[10px] text-slate-400 font-normal">({hoverInfo.nodeId})</span>
+            )}
+            <span className="text-emerald-400 font-bold ml-1 font-mono">
+              {hoverInfo.value} ms
+            </span>
+          </div>
+        )}
+
         {/* Chart Canvas Mount Container */}
         <div
           ref={containerRef}
           className="w-full rounded-lg overflow-hidden relative"
           style={{ height: typeof height === 'number' ? `${height}px` : height }}
         />
+
+        {/* Node Identification Badges Legend */}
+        {nodeBadges.length > 0 && (
+          <div className="mt-3 pt-2.5 border-t border-slate-800/80 flex flex-wrap items-center gap-2">
+            <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mr-1">
+              Identificación de Nodos:
+            </span>
+            {nodeBadges.map((badge, i) => (
+              <div
+                key={badge.nodeId || i}
+                className="px-2.5 py-1 rounded-lg bg-slate-900/90 border border-slate-800/90 flex items-center gap-1.5 text-xs font-mono shadow-sm hover:border-slate-700 transition-colors"
+              >
+                <span
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ backgroundColor: badge.color || '#10b981' }}
+                />
+                <span className="font-semibold text-slate-200">{badge.label}</span>
+                <span className="text-slate-400 font-bold text-[11px] ml-0.5">{badge.value}ms</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   }

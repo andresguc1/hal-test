@@ -27,25 +27,44 @@ export default function SecurityLiveView({
   const normalizerRef = useRef(new TelemetryDataNormalizer());
 
   useEffect(() => {
-    if (!chartRef.current || liveAlerts.length === 0) return;
+    if (!liveAlerts || liveAlerts.length === 0) return;
 
-    const riskPoints = [];
-    const bars = [];
+    let isMounted = true;
+    let timerId = null;
 
-    liveAlerts.forEach((a, idx) => {
-      const timeMs = a.timestamp || (Date.now() - (liveAlerts.length - idx) * 1000);
-      const time = normalizerRef.current.ensureAscendingTimestamp(timeMs);
-      const riskScore = a.severity === 'critical' ? 95 : a.severity === 'high' ? 80 : a.severity === 'medium' ? 50 : 20;
+    const renderChartData = () => {
+      if (!isMounted) return;
 
-      riskPoints.push({ time, value: riskScore });
-      bars.push({
-        time,
-        value: 1, // Alert count
-        color: a.severity === 'critical' || a.severity === 'high' ? '#ef4444' : a.severity === 'medium' ? '#f59e0b' : '#3b82f6'
+      if (!chartRef.current) {
+        timerId = setTimeout(renderChartData, 50);
+        return;
+      }
+
+      const riskPoints = [];
+      const bars = [];
+
+      liveAlerts.forEach((a, idx) => {
+        const timeMs = a.timestamp || (Date.now() - (liveAlerts.length - idx) * 1000);
+        const time = normalizerRef.current.ensureAscendingTimestamp(timeMs);
+        const riskScore = a.severity === 'critical' ? 95 : a.severity === 'high' ? 80 : a.severity === 'medium' ? 50 : 20;
+
+        riskPoints.push({ time, value: riskScore });
+        bars.push({
+          time,
+          value: 1, // Alert count
+          color: a.severity === 'critical' || a.severity === 'high' ? '#ef4444' : a.severity === 'medium' ? '#f59e0b' : '#3b82f6'
+        });
       });
-    });
 
-    chartRef.current.setHistoricalData(bars, { riskIndex: riskPoints });
+      chartRef.current.setHistoricalData(bars, { riskIndex: riskPoints });
+    };
+
+    renderChartData();
+
+    return () => {
+      isMounted = false;
+      if (timerId) clearTimeout(timerId);
+    };
   }, [liveAlerts]);
   const isRunning = status === "running" || status === "preparing";
 

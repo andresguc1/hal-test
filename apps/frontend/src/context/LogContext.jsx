@@ -1,41 +1,96 @@
 import { create } from "zustand";
 import { useExecutionStore } from "../stores/useExecutionStore";
 
+/**
+ * Normalizes execution modes to canonical mode strings:
+ * - 'calidad' (Automatización)
+ * - 'performance' (Performance)
+ * - 'seguridad' (Seguridad)
+ */
+export const normalizeMode = (mode) => {
+  if (!mode) return "calidad";
+  const m = String(mode).toLowerCase().trim();
+  if (m === "performance" || m === "perf") return "performance";
+  if (m === "seguridad" || m === "security" || m === "sec") return "seguridad";
+  return "calidad"; // Default to automatización ('calidad')
+};
+
 // eslint-disable-next-line react-refresh/only-export-components
 export const useLogStore = create((set) => ({
+  logsByMode: {
+    calidad: [],
+    performance: [],
+    seguridad: [],
+  },
   logs: [],
   isPanelVisible: false,
 
   addLog: (message, type = "info", nodeId = null, mode = null) => {
-    const activeMode = mode || useExecutionStore.getState().mode || "calidad";
+    const rawMode = mode || useExecutionStore.getState().mode || "calidad";
+    const targetMode = normalizeMode(rawMode);
+
     const newLog = {
       id: Date.now() + Math.random().toString(36).substr(2, 9),
       timestamp: new Date().toLocaleTimeString(),
       message,
       type, // 'info', 'error', 'success', 'warning'
       nodeId,
-      mode: activeMode,
+      mode: targetMode,
     };
 
     set((state) => {
-      const updated = [...state.logs, newLog];
-      const nextLogs = updated.length > 100 ? updated.slice(-100) : updated;
+      const currentStream = state.logsByMode[targetMode] || [];
+      const updatedStream = [...currentStream, newLog];
+      const cappedStream =
+        updatedStream.length > 100 ? updatedStream.slice(-100) : updatedStream;
 
+      const newLogsByMode = {
+        ...state.logsByMode,
+        [targetMode]: cappedStream,
+      };
+
+      const activeMode = normalizeMode(
+        useExecutionStore.getState().mode || "calidad"
+      );
+      const activeLogs = newLogsByMode[activeMode] || [];
       const shouldShowPanel = type === "error" || type === "warning";
 
       return {
-        logs: nextLogs,
+        logsByMode: newLogsByMode,
+        logs: activeLogs,
         ...(shouldShowPanel ? { isPanelVisible: true } : {}),
       };
     });
   },
 
-  clearLogs: (mode = null) => set((state) => {
-    if (mode) {
-      return { logs: state.logs.filter((log) => (log.mode || "calidad") !== mode) };
-    }
-    return { logs: [] };
-  }),
+  syncActiveModeLogs: (activeMode) => {
+    const norm = normalizeMode(activeMode);
+    set((state) => ({
+      logs: state.logsByMode[norm] || [],
+    }));
+  },
+
+  clearLogs: (mode = null) =>
+    set((state) => {
+      if (mode) {
+        const targetMode = normalizeMode(mode);
+        const newLogsByMode = {
+          ...state.logsByMode,
+          [targetMode]: [],
+        };
+        const activeMode = normalizeMode(
+          useExecutionStore.getState().mode || "calidad"
+        );
+        return {
+          logsByMode: newLogsByMode,
+          logs: newLogsByMode[activeMode] || [],
+        };
+      }
+      return {
+        logsByMode: { calidad: [], performance: [], seguridad: [] },
+        logs: [],
+      };
+    }),
 
   setIsPanelVisible: (isVisible) => set({ isPanelVisible: isVisible }),
 
@@ -44,11 +99,10 @@ export const useLogStore = create((set) => ({
 }));
 
 // Backward compatibility for components still using useLogs() without selectors.
-// NOTE: This will still trigger re-renders if logs change. Components should migrate to useLogStore(selector).
 // eslint-disable-next-line react-refresh/only-export-components
 export const useLogs = () => useLogStore();
 
 export const LogProvider = ({ children }) => {
-  // No-op provider to avoid breaking existing trees.
   return children;
 };
+

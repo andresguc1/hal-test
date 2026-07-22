@@ -30,22 +30,41 @@ const PerfLiveView = ({
   const normalizerRef = useRef(new TelemetryDataNormalizer());
 
   useEffect(() => {
-    if (!chartRef.current || !timeline || timeline.length === 0) return;
+    if (!timeline || timeline.length === 0) return;
 
-    const bars = [];
-    timeline.forEach((pt, idx) => {
-      const timeMs = pt.timestamp || (Date.now() - (timeline.length - idx) * 1000);
-      const time = normalizerRef.current.ensureAscendingTimestamp(timeMs);
-      const latencyMs = pt.throughput || metrics?.latency?.p95 || Math.floor(Math.random() * 50) + 10;
+    let isMounted = true;
+    let timerId = null;
 
-      bars.push({
-        time,
-        value: latencyMs,
-        color: '#10b981'
+    const renderChartData = () => {
+      if (!isMounted) return;
+
+      if (!chartRef.current) {
+        timerId = setTimeout(renderChartData, 50);
+        return;
+      }
+
+      const bars = [];
+      timeline.forEach((pt, idx) => {
+        const timeMs = pt.timestamp || (Date.now() - (timeline.length - idx) * 1000);
+        const time = normalizerRef.current.ensureAscendingTimestamp(timeMs);
+        const latencyMs = pt.throughput || metrics?.latency?.p95 || Math.floor(Math.random() * 50) + 10;
+
+        bars.push({
+          time,
+          value: latencyMs,
+          color: '#10b981'
+        });
       });
-    });
 
-    chartRef.current.setHistoricalData(bars);
+      chartRef.current.setHistoricalData(bars);
+    };
+
+    renderChartData();
+
+    return () => {
+      isMounted = false;
+      if (timerId) clearTimeout(timerId);
+    };
   }, [timeline, metrics]);
   if (!metrics) {
     return (

@@ -105,12 +105,13 @@ export const emitLog = ({
     message,
     type = 'info',
     nodeId = null,
+    mode = 'calidad',
     timestamp = new Date().toISOString(),
 }) => {
     if (io) {
         const prefix = nodeId ? `[${nodeId}] ` : '';
         console.log(`📡 [Socket.io] Emitting execution-log: ${prefix}${message}`);
-        io.emit('execution-log', { message, type, nodeId, timestamp });
+        io.emit('execution-log', { message, type, nodeId, mode, timestamp });
     }
 };
 

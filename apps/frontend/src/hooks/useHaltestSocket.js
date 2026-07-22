@@ -400,30 +400,33 @@ export const useHaltestSocket = ({
     });
 
     socket.on("execution-log", (data) => {
-      const { message, type, nodeId } = data;
+      const { message, type, nodeId, mode } = data;
+      const logMode = mode || executionModeRef.current || "calidad";
       if (onLogReceivedRef.current) {
-        onLogReceivedRef.current(message, type, nodeId);
+        onLogReceivedRef.current(message, type, nodeId, logMode);
+      } else {
+        useLogStore.getState().addLog(message, type, nodeId, logMode);
       }
     });
 
     socket.on("perf-run-started", (data) => {
       if (executionModeRef.current === "performance") {
         const msg = `[Performance] 🚀 Multi-User Load Test started (Duration: ${data.durationSec || data.duration || 0}s, Target VUs: ${data.virtualUsers || data.vus || 0}, Profile: ${data.profile || "constant"})`;
-        useLogStore.getState().addLog(msg, "info");
+        useLogStore.getState().addLog(msg, "info", null, "performance");
       }
     });
 
     socket.on("perf-vu-status", (data) => {
       if (executionModeRef.current === "performance") {
         const msg = `[Performance] 👥 Active Virtual Users: ${data.activeVUs || 0} / ${data.totalVUs || 0}`;
-        useLogStore.getState().addLog(msg, "info");
+        useLogStore.getState().addLog(msg, "info", null, "performance");
       }
     });
 
     socket.on("perf-resource-warning", (data) => {
       if (executionModeRef.current === "performance") {
         const msg = `[Performance] ⚠️ High Resource Pressure: Used RAM ${data.usedPercent || "N/A"}% | Health: ${data.health || "warning"}`;
-        useLogStore.getState().addLog(msg, "warning");
+        useLogStore.getState().addLog(msg, "warning", null, "performance");
       }
     });
 
@@ -435,7 +438,7 @@ export const useHaltestSocket = ({
       if (executionModeRef.current === "performance") {
         const stats = summary.data || summary;
         const msg = `[Performance] ✓ Load test finished. Total requests: ${stats.totalRequests || 0} | Success rate: ${stats.successRate || 100}% | P95 Latency: ${stats.latency?.p95 || 0}ms`;
-        useLogStore.getState().addLog(msg, "success");
+        useLogStore.getState().addLog(msg, "success", null, "performance");
       }
     });
 
@@ -446,14 +449,16 @@ export const useHaltestSocket = ({
       console.log(`Haltest Socket: 🛡️ Security alert received:`, alert);
 
       // Write to execution log drawer ONLY if active mode is security
-      const severityType = (alert.severity === "critical" || alert.severity === "high")
-        ? "error"
-        : (alert.severity === "medium" || alert.severity === "low")
-          ? "warning"
-          : "info";
+      if (executionModeRef.current === "seguridad") {
+        const severityType = (alert.severity === "critical" || alert.severity === "high")
+          ? "error"
+          : (alert.severity === "medium" || alert.severity === "low")
+            ? "warning"
+            : "info";
 
-      const alertMsg = `[SecurityAudit] ⚠️ NodeId=${nodeId || "global"}: ${alert.message || alert.description} (CVSS: ${alert.cvssScore || "N/A"} | OWASP: ${alert.owaspCategory || "N/A"})`;
-      useLogStore.getState().addLog(alertMsg, severityType, nodeId);
+        const alertMsg = `[SecurityAudit] ⚠️ NodeId=${nodeId || "global"}: ${alert.message || alert.description} (CVSS: ${alert.cvssScore || "N/A"} | OWASP: ${alert.owaspCategory || "N/A"})`;
+        useLogStore.getState().addLog(alertMsg, severityType, nodeId, "seguridad");
+      }
 
       if (onSecurityAlertRef.current) {
         onSecurityAlertRef.current(alert);

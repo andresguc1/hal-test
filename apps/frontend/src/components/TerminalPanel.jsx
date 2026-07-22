@@ -24,7 +24,7 @@ import {
   Eye,
   Edit2,
 } from "lucide-react";
-import { useLogs } from "../context/LogContext";
+import { useLogs, normalizeMode } from "../context/LogContext";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import i18n from "../i18n";
@@ -59,7 +59,8 @@ export default function TerminalPanel({
   const { logs, clearLogs, isPanelVisible, togglePanel } = useLogs();
 
   const filteredLogs = useMemo(() => {
-    return logs.filter((log) => (log.mode || "calidad") === executionMode);
+    const targetMode = normalizeMode(executionMode);
+    return logs.filter((log) => normalizeMode(log.mode) === targetMode);
   }, [logs, executionMode]);
 
   const { currentProject } = useProjectManager();
@@ -424,7 +425,7 @@ export default function TerminalPanel({
           </span>
           <span className="px-2 py-0.5 rounded bg-slate-800 text-[9px] text-slate-500">
             {mode === "log"
-              ? `${logs.length} entries`
+              ? `${filteredLogs.length} entries`
               : mode === "interactive"
                 ? shellLines.length > 0
                   ? `${shellLines.length} lines`

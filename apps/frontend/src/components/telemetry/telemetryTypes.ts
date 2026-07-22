@@ -7,6 +7,8 @@ export interface TelemetryBarPoint extends HistogramData<UTCTimestamp> {
   time: UTCTimestamp;
   value: number;
   color?: string;
+  label?: string;
+  nodeId?: string;
 }
 
 /**
