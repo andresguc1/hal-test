@@ -65,6 +65,7 @@ import GuestModeModal from "./components/modals/GuestModeModal";
 import DatasetRunModal from "./components/modals/DatasetRunModal";
 import PerformanceRunModal from "./components/performance/PerformanceRunModal";
 import SecurityRunModal from "./components/security/SecurityRunModal";
+import { useExecutionStore } from "./stores/useExecutionStore";
 
 import NodeCreationPanel from "./components/NodeCreationPanel";
 import { useAuth } from "./context/AuthContext";
@@ -416,10 +417,15 @@ function Dashboard({
         ? "SECURITY"
         : "QUALITY AUTOMATION";
     addLog(`[System] 🚀 Starting ${modeLabel} flow execution...`, "info");
+    useExecutionStore.getState().startExecution({
+      mode: targetMode,
+      flowId: currentFlowId,
+    });
 
     // 1. Show Loading Toast immediately (Duration 0 = indefinite until dismissed)
     const toastId = toast.loading(t("common.processing"));
 
+    let executionSuccess = false;
     try {
       // --- EXECUTION ISOLATION (Debug vs E2E) ---
       if (activeBrowserId) {
@@ -437,12 +443,14 @@ function Dashboard({
           // If user refuses to close, we abort to prevent collisions
           toast.dismiss(toastId);
           toast.info("Execution cancelled to preserve debug session.");
+          useExecutionStore.getState().finishExecution({ status: "cancelled" });
           return;
         }
       }
       // ------------------------------------------
 
       const result = await executeFlow({ executionMode: targetMode }); // Returns { success, stats, failedNodeId, divePath, healedNodes }
+      executionSuccess = result?.success === true;
 
       // 2. Clear loading
       toast.dismiss(toastId);
@@ -482,9 +490,9 @@ function Dashboard({
         // Redirect to dashboard tab after 1.5 seconds
         setTimeout(() => {
           if (targetMode === "performance") {
-            navigate("/dashboard", { state: { activePage: "performance" } });
+            navigate("/dashboard", { state: { activePage: "performance", activeTab: "results" } });
           } else if (targetMode === "seguridad") {
-            navigate("/dashboard", { state: { activePage: "security" } });
+            navigate("/dashboard", { state: { activePage: "security", activeTab: "results" } });
           }
         }, 1500);
         return;
@@ -563,6 +571,23 @@ function Dashboard({
       toast.dismiss(toastId);
       console.error("Error ejecutando flujo:", error);
       toast.error(t("common.flow_exec_error") + ": " + error.message);
+    } finally {
+      let runDetails = null;
+      const activeRunId = useExecutionStore.getState().activeRunId;
+      if (activeRunId && targetMode === "performance") {
+        try {
+          const runRes = await api.get(`/runs/${activeRunId}`);
+          if (runRes.success && runRes.data) {
+            runDetails = runRes.data;
+          }
+        } catch (e) {
+          console.error("Failed to fetch run details for profiling dashboard:", e);
+        }
+      }
+      useExecutionStore.getState().finishExecution({
+        status: executionSuccess ? "completed" : "failed",
+        perfReport: runDetails,
+      });
     }
   }, [
     executeFlow,
@@ -2146,6 +2171,7 @@ function Dashboard({
               edges={edges}
               setNodes={setNodes}
               setEdges={setEdges}
+              executionMode={canvasViewMode}
             />
 
             {/* Ask AI Debug Console */}

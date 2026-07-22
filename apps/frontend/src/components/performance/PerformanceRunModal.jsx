@@ -13,6 +13,8 @@ import {
   BarChart2,
   Settings,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { useExecutionStore } from "@/stores/useExecutionStore";
 import { cn } from "@/lib/utils";
 import { api } from "@/utils/api";
 import { useToast } from "@/hooks/useToast";
@@ -26,6 +28,7 @@ export default function PerformanceRunModal({
   onRunProfiling,
   flowName,
 }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const navigate = useNavigate();
 
@@ -123,7 +126,7 @@ export default function PerformanceRunModal({
                 </div>
                 <div>
                   <h3 className="font-semibold text-slate-100 text-sm tracking-wide">
-                    Configurar Ejecución de Performance
+                    {t("performance_modal.title", "Configurar Ejecución de Performance")}
                   </h3>
                   <p className="text-[11px] text-slate-500">
                     Flujo: <span className="text-slate-300 font-medium">{flowName || "Sin Nombre"}</span>
@@ -143,7 +146,7 @@ export default function PerformanceRunModal({
               {/* RUN TYPE SELECTOR */}
               <div className="space-y-2">
                 <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-                  Modo de Ejecución
+                  {t("performance_modal.execution_mode", "Modo de Ejecución")}
                 </label>
                 <div className="grid grid-cols-2 gap-4">
                   {/* Profiling option */}
@@ -159,10 +162,12 @@ export default function PerformanceRunModal({
                   >
                     <div className="flex items-center gap-2 mb-1.5">
                       <Activity size={16} className={runType === "profiling" ? "text-blue-400" : "text-slate-500"} />
-                      <span className="text-xs font-semibold uppercase tracking-wider">Perfilado de Latencia</span>
+                      <span className="text-xs font-semibold uppercase tracking-wider">
+                        {t("performance_modal.latency_profiling", "Perfilado de Latencia")}
+                      </span>
                     </div>
                     <span className="text-[11px] text-slate-500 leading-relaxed">
-                      Ejecuta el flujo una vez de forma visual. Mide y resalta el tiempo exacto de respuesta de cada paso sobre el lienzo.
+                      {t("performance_modal.latency_profiling_desc", "Ejecuta el flujo una vez de forma visual. Mide y resalta el tiempo exacto de respuesta de cada paso sobre el lienzo.")}
                     </span>
                   </button>
 
@@ -179,10 +184,12 @@ export default function PerformanceRunModal({
                   >
                     <div className="flex items-center gap-2 mb-1.5">
                       <Users size={16} className={runType === "load_test" ? "text-purple-400" : "text-slate-500"} />
-                      <span className="text-xs font-semibold uppercase tracking-wider">Prueba de Carga (Multi-User)</span>
+                      <span className="text-xs font-semibold uppercase tracking-wider">
+                        {t("performance_modal.load_testing", "Prueba de Carga (Multi-User)")}
+                      </span>
                     </div>
                     <span className="text-[11px] text-slate-500 leading-relaxed">
-                      Simula accesos concurrentes paralelos de múltiples usuarios virtuales (VUs) para probar los límites y estrés del sistema.
+                      {t("performance_modal.load_testing_desc", "Simula accesos concurrentes paralelos de múltiples usuarios virtuales (VUs) para probar los límites y estrés del sistema.")}
                     </span>
                   </button>
                 </div>
@@ -194,7 +201,7 @@ export default function PerformanceRunModal({
                   {/* Load profile selector */}
                   <div className="space-y-2">
                     <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-                      Perfil de Carga
+                      {t("performance_modal.load_profile", "Perfil de Carga")}
                     </label>
                     <div className="grid grid-cols-3 gap-2">
                       {[
@@ -228,7 +235,7 @@ export default function PerformanceRunModal({
                     <div className="space-y-1.5 bg-slate-900/30 p-4 rounded-xl border border-slate-850">
                       <div className="flex justify-between text-xs font-semibold text-slate-400">
                         <span className="flex items-center gap-1.5">
-                          <Users size={14} className="text-purple-400" /> VUs Máximos
+                          <Users size={14} className="text-purple-400" /> {t("performance_modal.max_vus", "VUs Máximos")}
                         </span>
                         <span className="text-purple-400 font-mono">{vus} VUs</span>
                       </div>
@@ -248,7 +255,7 @@ export default function PerformanceRunModal({
                     <div className="space-y-1.5 bg-slate-900/30 p-4 rounded-xl border border-slate-850">
                       <div className="flex justify-between text-xs font-semibold text-slate-400">
                         <span className="flex items-center gap-1.5">
-                          <Clock size={14} className="text-purple-400" /> Duración Total
+                          <Clock size={14} className="text-purple-400" /> {t("performance_modal.total_duration", "Duración Total")}
                         </span>
                         <span className="text-purple-400 font-mono">{duration}s</span>
                       </div>
@@ -284,7 +291,7 @@ export default function PerformanceRunModal({
                 />
                 <div>
                   <h4 className={cn("text-xs font-semibold mb-0.5", isDangerous ? "text-red-200" : "text-slate-300")}>
-                    Uso Estimado de Recursos Locales
+                    {t("performance_modal.estimated_resources", "Uso Estimado de Recursos Locales")}
                   </h4>
                   <p className="text-[11px] leading-relaxed">
                     Se ejecutarán instancias de navegador en modo headless para capturar telemetría. Consumo de RAM estimado:{" "}
@@ -307,7 +314,7 @@ export default function PerformanceRunModal({
                 disabled={isSubmitting}
                 className="px-4 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
               >
-                Cancelar
+                {t("performance_modal.cancel", "Cancelar")}
               </button>
               <button
                 type="button"
@@ -321,7 +328,9 @@ export default function PerformanceRunModal({
                 )}
               >
                 <Play size={12} fill="currentColor" />
-                {runType === "profiling" ? "Iniciar Perfilado" : "Lanzar Prueba de Carga"}
+                {runType === "profiling"
+                  ? t("performance_modal.launch_profiling", "Iniciar Perfilado")
+                  : t("performance_modal.launch_load_test", "Lanzar Prueba de Carga")}
               </button>
             </div>
           </Motion.div>

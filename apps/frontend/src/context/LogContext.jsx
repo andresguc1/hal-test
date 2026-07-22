@@ -1,17 +1,20 @@
 import { create } from "zustand";
+import { useExecutionStore } from "../stores/useExecutionStore";
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const useLogStore = create((set) => ({
   logs: [],
   isPanelVisible: false,
 
-  addLog: (message, type = "info", nodeId = null) => {
+  addLog: (message, type = "info", nodeId = null, mode = null) => {
+    const activeMode = mode || useExecutionStore.getState().mode || "calidad";
     const newLog = {
       id: Date.now() + Math.random().toString(36).substr(2, 9),
       timestamp: new Date().toLocaleTimeString(),
       message,
       type, // 'info', 'error', 'success', 'warning'
       nodeId,
+      mode: activeMode,
     };
 
     set((state) => {
@@ -27,7 +30,12 @@ export const useLogStore = create((set) => ({
     });
   },
 
-  clearLogs: () => set({ logs: [] }),
+  clearLogs: (mode = null) => set((state) => {
+    if (mode) {
+      return { logs: state.logs.filter((log) => (log.mode || "calidad") !== mode) };
+    }
+    return { logs: [] };
+  }),
 
   setIsPanelVisible: (isVisible) => set({ isPanelVisible: isVisible }),
 

@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { logger } from "../../utils/logger";
 import { api } from "../../utils/api";
+import { useExecutionStore } from "../../stores/useExecutionStore";
 import { projectManager } from "../../utils/ProjectManager";
 import {
   NODE_LABELS,
@@ -686,6 +687,13 @@ export function useFlowExecution({
           );
           runId = newRunId;
           setActiveRunId(runId);
+          // Sync with the unified execution store immediately
+          useExecutionStore.getState().startExecution({
+            mode: executionMode,
+            runId: runId,
+            flowId: currentFlowId,
+            totalNodes: nodes.length,
+          });
         } catch (err) {
           console.warn("Run creation failed", err);
         }

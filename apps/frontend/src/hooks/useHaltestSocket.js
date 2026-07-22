@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { io } from "socket.io-client";
 import { useLogStore } from "../context/LogContext";
+import { useExecutionStore } from "../stores/useExecutionStore";
 
 const getSocketURL = () => {
   const apiUrl = import.meta.env.VITE_API_URL;
@@ -117,18 +118,32 @@ export const useHaltestSocket = ({
       if (!data || !data.stepId) return;
       const { stepId, status, error, result, runId, batchId } = data;
 
-      // Filter execution-status socket events to prevent background parallel runs from causing canvas lag, flickering, or darkening
+      // Update global execution store
+      if (status === "running") {
+        const store = useExecutionStore.getState();
+        if (store.status !== "running") store.setStatus("running");
+        store.updateProgress({ currentNode: { id: stepId, name: data.nodeName || stepId } });
+      }
+
+      // Always dispatch global event for external telemetry dashboards (e.g., SecurityDashboard, Performance)
+      window.dispatchEvent(
+        new CustomEvent("hal:execution-status", {
+          detail: { ...data, nodeId: stepId, nodeName: data.nodeName || stepId },
+        })
+      );
+
+      // Filter canvas React Flow state updates to prevent background parallel runs from causing canvas lag or flickering
       if (activeRunIdRef.current) {
         if (runId && runId !== activeRunIdRef.current) {
           console.log(
-            `Haltest Socket: 🚫 Ignoring execution-status for runId ${runId} (Active: ${activeRunIdRef.current})`,
+            `Haltest Socket: 🚫 Ignoring canvas node state for runId ${runId} (Active: ${activeRunIdRef.current})`,
           );
           return;
         }
       } else {
         if (batchId || runId) {
           console.log(
-            `Haltest Socket: 🚫 Ignoring background batch/run execution-status (runId: ${runId}, batchId: ${batchId})`,
+            `Haltest Socket: 🚫 Ignoring background batch/run canvas update (runId: ${runId}, batchId: ${batchId})`,
           );
           return;
         }
@@ -311,6 +326,12 @@ export const useHaltestSocket = ({
       console.log("Haltest Socket: 🏁 Flow finished", data);
       const { status, error, failedNodeId, divePath } = data;
 
+      useExecutionStore.getState().finishExecution({
+        status: status === "failed" ? "failed" : "completed",
+        error: error || null,
+        summary: data,
+      });
+
       window.dispatchEvent(
         new CustomEvent("hal:run-completed", { detail: data })
       );
@@ -407,6 +428,7 @@ export const useHaltestSocket = ({
     });
 
     socket.on("perf-run-finished", (summary) => {
+      useExecutionStore.getState().finishExecution({ status: "completed" });
       window.dispatchEvent(
         new CustomEvent("hal:run-completed", { detail: summary })
       );
@@ -419,8 +441,6 @@ export const useHaltestSocket = ({
 
     socket.on("security-alert", (alert) => {
       if (!alert) return;
-      const mode = executionModeRef.current;
-      if (mode && mode !== "seguridad" && mode !== "security") return;
 
       const { nodeId } = alert;
       console.log(`Haltest Socket: 🛡️ Security alert received:`, alert);

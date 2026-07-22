@@ -28,9 +28,13 @@ export class ExecutionService {
     async executeFlow(flowId, projectId, options = {}) {
         console.log(`🚀 [ExecutionService] Starting remote execution for flow: ${flowId}`);
 
-        // 1. Fetch flow data
+        const whereClause = { id: flowId };
+        if (projectId !== undefined && projectId !== null) {
+            whereClause.projectId = projectId;
+        }
+
         const flow = await Flow.findOne({
-            where: { id: flowId, projectId },
+            where: whereClause,
             include: [
                 { model: Node, as: 'nodes' },
                 { model: Edge, as: 'edges' },

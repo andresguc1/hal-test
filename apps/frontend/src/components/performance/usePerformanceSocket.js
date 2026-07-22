@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { io } from "socket.io-client";
 import { api } from "../../utils/api";
+import { useExecutionStore } from "../../stores/useExecutionStore";
 
 /**
  * Custom hook that manages the Socket.io connection and all performance-related events.
@@ -47,6 +48,11 @@ export function usePerformanceSocket(flowId) {
       if (!flowId || !eventFlowId || String(eventFlowId) === String(flowId)) {
         setRunConfig(config);
         setStatus("running");
+        useExecutionStore.getState().startExecution({
+          mode: "performance",
+          runId: config?.runId,
+          flowId: config?.flowId,
+        });
       }
     });
 
@@ -56,6 +62,9 @@ export function usePerformanceSocket(flowId) {
         setMetrics(data);
         if (data.runConfig) setRunConfig((prev) => prev || data.runConfig);
         setStatus((prev) => (prev === "completed" ? prev : "running"));
+        if (useExecutionStore.getState().status !== "running") {
+          useExecutionStore.getState().setStatus("running");
+        }
         setTimeline((prev) => {
           const next = [
             ...prev,
@@ -79,6 +88,7 @@ export function usePerformanceSocket(flowId) {
       if (!flowId || !eventFlowId || String(eventFlowId) === String(flowId)) {
         setMetrics(metricsData);
         setStatus("completed");
+        useExecutionStore.getState().finishExecution({ status: "completed" });
         window.dispatchEvent(
           new CustomEvent("hal:run-completed", { detail: { summary: metricsData } })
         );

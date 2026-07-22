@@ -9,6 +9,7 @@ import {
   LockOpen
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useExecutionStore } from "@/stores/useExecutionStore";
 import { cn } from "@/lib/utils";
 import { api } from "@/utils/api";
 import { useToast } from "@/hooks/useToast";
@@ -36,6 +37,7 @@ export default function SecurityRunModal({
       return;
     }
 
+    useExecutionStore.getState().startExecution({ mode: "seguridad", flowId });
     setIsSubmitting(true);
     const toastId = toast.loading(t("common.processing", "Procesando..."));
 

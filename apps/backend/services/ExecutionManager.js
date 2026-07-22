@@ -481,17 +481,24 @@ class SecurityRunner extends Runner {
             return await runFn(flow, options);
         }
 
-        // 2. Fallback to executionService if available
-        if (executionService && flowId) {
-            const projectId = flow.projectId || flow.project_id;
-            return await executionService.executeFlow(flowId, projectId, {
-                runId: options?.runId,
-                securityConfig: options?.securityConfig,
-            });
+        // 2. Fallback to executionService if flow is persisted in DB (has projectId)
+        if (executionService && flowId && (flow.projectId || flow.project_id)) {
+            try {
+                const projectId = flow.projectId || flow.project_id;
+                return await executionService.executeFlow(flowId, projectId, {
+                    runId: options?.runId,
+                    securityConfig: options?.securityConfig,
+                    mode: 'security',
+                });
+            } catch (err) {
+                console.warn(
+                    `[SecurityRunner] executionService.executeFlow skipped: ${err.message}`,
+                );
+            }
         }
 
         emitLog({ message: 'Security Audit completed', type: 'success' });
-        return { success: true, mode: 'security' };
+        return { success: true, mode: 'security', auditNodesCount: auditNodes.length };
     }
 }
 

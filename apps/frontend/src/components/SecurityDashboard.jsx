@@ -24,6 +24,8 @@ import {
   Play,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { useExecutionStore } from "../stores/useExecutionStore";
 import { useProjectManager } from "./hooks/useProjectManager";
 import { useToast } from "../hooks/useToast";
 import { api } from "../utils/api";
@@ -231,6 +233,9 @@ export default function SecurityDashboard() {
 
       if (data.status === "running") {
         setStatus("running");
+        if (useExecutionStore.getState().status !== "running") {
+          useExecutionStore.getState().setStatus("running");
+        }
         setActiveTab((prev) => (prev === "config" || prev === "results" ? "live" : prev));
         if (data.nodeId) {
           setCurrentNode({ id: data.nodeId, name: data.nodeName || data.nodeId, type: data.nodeType });
@@ -246,8 +251,13 @@ export default function SecurityDashboard() {
 
     const handleRunFinished = (e) => {
       const data = e.detail;
-      setStatus(data?.status === "failed" ? "failed" : "completed");
+      const finalStatus = data?.status === "failed" ? "failed" : "completed";
+      setStatus(finalStatus);
+      useExecutionStore.getState().finishExecution({ status: finalStatus });
       setProgressPercent(100);
+      if (data?.runId) {
+        setSelectedRunId(data.runId);
+      }
       fetchRuns(true);
       fetchDetails();
       setTimeout(() => {
@@ -292,12 +302,19 @@ export default function SecurityDashboard() {
         toast.success("Auditoría de seguridad iniciada!");
         if (res.data?.runId) {
           setActiveRunId(res.data.runId);
+          setSelectedRunId(res.data.runId);
         }
         setStatus("running");
+        useExecutionStore.getState().startExecution({
+          mode: "seguridad",
+          flowId: currentFlowId,
+          runId: res.data?.runId,
+        });
       } else {
         toast.dismiss(toastId);
         toast.error(res.message || "Error al iniciar la auditoría");
         setStatus("idle");
+        useExecutionStore.getState().finishExecution({ status: "failed" });
         setActiveTab("config");
       }
     } catch (err) {
@@ -330,8 +347,9 @@ export default function SecurityDashboard() {
         if (step.result_data) {
           try {
             const parsed = typeof step.result_data === "string" ? JSON.parse(step.result_data) : step.result_data;
-            if (parsed.securityAlerts && Array.isArray(parsed.securityAlerts)) {
-              parsed.securityAlerts.forEach((alert) => {
+            const stepAlerts = parsed.securityAlerts || parsed.alerts || (parsed.data && parsed.data.alerts);
+            if (Array.isArray(stepAlerts)) {
+              stepAlerts.forEach((alert) => {
                 alerts.push({
                   ...alert,
                   nodeId: step.node_id,
@@ -564,6 +582,49 @@ export default function SecurityDashboard() {
           <div className="flex-1 flex overflow-hidden">
             {/* Left Content Area: Dashboard Metrics & Findings */}
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* Quality Gate Status Banner */}
+              <div className={`p-4 rounded-2xl border flex items-center justify-between shadow-lg ${
+                criticalCount === 0 && healthScore >= 80
+                  ? "bg-emerald-950/30 border-emerald-500/30 text-emerald-400"
+                  : "bg-red-950/30 border-red-500/30 text-red-400"
+              }`}>
+                <div className="flex items-center space-x-3">
+                  <div className={`p-2.5 rounded-xl border ${
+                    criticalCount === 0 && healthScore >= 80
+                      ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300"
+                      : "bg-red-500/20 border-red-500/40 text-red-300 animate-pulse"
+                  }`}>
+                    {criticalCount === 0 && healthScore >= 80 ? (
+                      <ShieldCheck size={22} />
+                    ) : (
+                      <ShieldAlert size={22} />
+                    )}
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-mono font-bold uppercase tracking-widest opacity-80">
+                      Security Quality Gate
+                    </div>
+                    <div className="text-base font-extrabold flex items-center space-x-2">
+                      <span>
+                        {criticalCount === 0 && healthScore >= 80
+                          ? "QUALITY GATE: PASSED (APROBADO)"
+                          : "QUALITY GATE: FAILED (RECHAZADO)"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-300 mt-0.5">
+                      {criticalCount === 0 && healthScore >= 80
+                        ? "El flujo cumple con los criterios de aceptación de seguridad y políticas DAST."
+                        : `Se detectaron ${criticalCount} hallazgos críticos/altos o el Security Score es inferior al 80%.`}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="text-right font-mono hidden sm:block">
+                  <div className="text-[10px] text-slate-400 uppercase">Puntuación Global</div>
+                  <div className="text-xl font-bold">{healthScore}/100</div>
+                </div>
+              </div>
+
               {/* Radial Score & Semantic Risk Buckets */}
               <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
                 {/* Radial Health Ring */}

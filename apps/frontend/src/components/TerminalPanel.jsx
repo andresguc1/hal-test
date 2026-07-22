@@ -54,8 +54,14 @@ export default function TerminalPanel({
   edges = [],
   _setNodes,
   _setEdges,
+  executionMode = "calidad",
 }) {
   const { logs, clearLogs, isPanelVisible, togglePanel } = useLogs();
+
+  const filteredLogs = useMemo(() => {
+    return logs.filter((log) => (log.mode || "calidad") === executionMode);
+  }, [logs, executionMode]);
+
   const { currentProject } = useProjectManager();
   const { t } = useTranslation();
   const scrollRef = useRef(null);
@@ -588,7 +594,7 @@ export default function TerminalPanel({
           {/* Clear */}
           <button
             onClick={() => {
-              if (mode === "log") clearLogs();
+              if (mode === "log") clearLogs(executionMode);
               else setShellLines([]);
             }}
             title={t("terminal.clear", "Clear")}
@@ -624,10 +630,10 @@ export default function TerminalPanel({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
               >
-                {logs.length === 0 ? (
+                {filteredLogs.length === 0 ? (
                   <EmptyState />
                 ) : (
-                  logs.map((log) => <LogLine key={log.id} log={log} />)
+                  filteredLogs.map((log) => <LogLine key={log.id} log={log} />)
                 )}
               </motion.div>
             ) : mode === "interactive" ? (

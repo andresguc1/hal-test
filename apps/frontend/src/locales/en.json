@@ -813,7 +813,9 @@
     "run_performance": "Run Performance",
     "tooltip_run_performance": "Run performance latency test flow",
     "run_security": "Run Security",
-    "tooltip_run_security": "Run security auditor scanner flow"
+    "tooltip_run_security": "Run security auditor scanner flow",
+    "running": "Running...",
+    "running_tooltip": "Running flow..."
   },
   "security_modal": {
     "title": "Configure Security Audit (Quality Gate)",
@@ -826,5 +828,62 @@
     "warning_title": "Non-Intrusive Audit Warning (Quality Gate)",
     "warning_desc": "The security audit is performed passively and non-destructively during the normal execution of the E2E flow, serving as a Quality Gate that generates trust alerts without blocking execution or overloading the target server.",
     "start_audit": "Start Audit"
+  },
+  "performance_modal": {
+    "title": "Configure Performance Execution",
+    "execution_mode": "Execution Mode",
+    "latency_profiling": "Latency Profiling",
+    "latency_profiling_desc": "Runs the flow once visually. Measures and highlights the exact response time of each step directly on the canvas.",
+    "load_testing": "Load Testing (Multi-User)",
+    "load_testing_desc": "Simulates parallel concurrent access from multiple Virtual Users (VUs) to stress test system bounds.",
+    "load_profile": "Load Profile",
+    "max_vus": "Max VUs",
+    "total_duration": "Total Duration",
+    "estimated_resources": "Estimated Local Hardware Resource Usage",
+    "cancel": "Cancel",
+    "launch_profiling": "Start Profiling",
+    "launch_load_test": "Launch Load Test"
+  },
+  "performance_dashboard": {
+    "title": "Performance Dashboard",
+    "sub_title": "Performance Testing",
+    "tab_config": "Configuration",
+    "tab_live": "Live View",
+    "tab_results": "Results",
+    "tab_history": "History",
+    "status_running": "Running...",
+    "status_completed": "Completed",
+    "status_failed": "Failed",
+    "throughput": "Throughput",
+    "latency": "Latency",
+    "p50": "P50 Latency",
+    "p95": "P95 Latency",
+    "p99": "P99 Latency",
+    "active_users": "Virtual Users (VUs)",
+    "requests": "Total Requests",
+    "errors": "Errors",
+    "success_rate": "Success Rate",
+    "error_rate": "Error Rate",
+    "remaining_time": "Time Remaining",
+    "elapsed_time": "Time Elapsed",
+    "stop": "Stop",
+    "new_test": "New Test"
+  },
+  "security_dashboard": {
+    "title": "Security Dashboard",
+    "quality_gate": "Security Quality Gate",
+    "policy_compliance": "Policy Compliance",
+    "data_leak_protection": "Data Leak Protection",
+    "status_running": "Audit In Progress",
+    "status_completed": "Audit Completed",
+    "status_failed": "Audit Failed (Critical Findings)",
+    "vulnerabilities": "Detected Vulnerabilities",
+    "compliance": "Compliance Level",
+    "security_score": "Security Score",
+    "total_findings": "Total Findings",
+    "critical": "Critical",
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low"
   }
 }

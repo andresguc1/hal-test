@@ -809,7 +809,9 @@
     "run_performance": "Ejecutar Performance",
     "tooltip_run_performance": "Ejecutar pruebas de rendimiento y latencia",
     "run_security": "Ejecutar Seguridad",
-    "tooltip_run_security": "Ejecutar auditoría y escáner de seguridad"
+    "tooltip_run_security": "Ejecutar auditoría y escáner de seguridad",
+    "running": "Ejecutando...",
+    "running_tooltip": "Ejecutando flujo..."
   },
   "security_modal": {
     "title": "Configurar Auditoría de Seguridad (Quality Gate)",
@@ -822,5 +824,62 @@
     "warning_title": "Aviso de Auditoría No Intrusiva (Quality Gate)",
     "warning_desc": "La auditoría de seguridad se realiza de forma pasiva y no destructiva durante la ejecución normal del flujo E2E, sirviendo como un Quality Gate que genera alertas de confianza sin bloquear la ejecución ni sobrecargar el servidor objetivo.",
     "start_audit": "Iniciar Auditoría"
+  },
+  "performance_modal": {
+    "title": "Configurar Ejecución de Performance",
+    "execution_mode": "Modo de Ejecución",
+    "latency_profiling": "Perfilado de Latencia",
+    "latency_profiling_desc": "Ejecuta el flujo una vez de forma visual. Mide y resalta el tiempo exacto de respuesta de cada paso sobre el lienzo.",
+    "load_testing": "Prueba de Carga (Multi-User)",
+    "load_testing_desc": "Simula accesos concurrentes paralelos de múltiples usuarios virtuales (VUs) para probar los límites y estrés del sistema.",
+    "load_profile": "Perfil de Carga",
+    "max_vus": "VUs Máximos",
+    "total_duration": "Duración Total",
+    "estimated_resources": "Uso Estimado de Recursos Locales",
+    "cancel": "Cancelar",
+    "launch_profiling": "Iniciar Perfilado",
+    "launch_load_test": "Lanzar Prueba de Carga"
+  },
+  "performance_dashboard": {
+    "title": "Dashboard de Performance",
+    "sub_title": "Pruebas de Performance",
+    "tab_config": "Configuración",
+    "tab_live": "En Vivo",
+    "tab_results": "Resultados",
+    "tab_history": "Historial",
+    "status_running": "Ejecutando...",
+    "status_completed": "Completado",
+    "status_failed": "Fallido",
+    "throughput": "Throughput",
+    "latency": "Latencia",
+    "p50": "P50 Latencia",
+    "p95": "P95 Latencia",
+    "p99": "P99 Latencia",
+    "active_users": "Usuarios Virtuales (VUs)",
+    "requests": "Peticiones Totales",
+    "errors": "Errores",
+    "success_rate": "Tasa de Éxito",
+    "error_rate": "Tasa de Error",
+    "remaining_time": "Tiempo Restante",
+    "elapsed_time": "Tiempo Transcurrido",
+    "stop": "Detener",
+    "new_test": "Nueva Prueba"
+  },
+  "security_dashboard": {
+    "title": "Security Dashboard",
+    "quality_gate": "Quality Gate de Seguridad",
+    "policy_compliance": "Cumplimiento de Políticas",
+    "data_leak_protection": "Protección de Fugas de Datos",
+    "status_running": "Auditoría En Curso",
+    "status_completed": "Auditoría Completada",
+    "status_failed": "Auditoría Con Hallazgos Críticos",
+    "vulnerabilities": "Vulnerabilidades Detectadas",
+    "compliance": "Nivel de Cumplimiento",
+    "security_score": "Security Score",
+    "total_findings": "Total de Hallazgos",
+    "critical": "Crítico",
+    "high": "Alto",
+    "medium": "Medio",
+    "low": "Bajo"
   }
 }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Activity,
@@ -21,11 +22,14 @@ import { usePerformanceSocket } from "./performance/usePerformanceSocket";
 import PerfLiveView from "./performance/PerfLiveView";
 import PerfResultsView from "./performance/PerfResultsView";
 import PerfHistoryView from "./performance/PerfHistoryView";
+import { useExecutionStore } from "../stores/useExecutionStore";
 
 /**
  * PerformanceDashboard — Evolved Load Testing Control Center
  */
 const PerformanceDashboard = () => {
+  const location = useLocation();
+  const lastPerfReport = useExecutionStore((s) => s.lastPerfReport);
   const { projects, currentProject, currentFlowId, loadProject } =
     useProjectManager();
   const toast = useToast();
@@ -76,6 +80,13 @@ const PerformanceDashboard = () => {
       setActiveTab("results");
     }
   }, [status]);
+
+  // Sync tab with navigation state (e.g., from profiling flow redirect)
+  useEffect(() => {
+    if (location.state?.activeTab) {
+      setActiveTab(location.state.activeTab);
+    }
+  }, [location.state?.activeTab]);
 
   const handleStartTest = async (config) => {
     if (!flowId) {
@@ -162,7 +173,7 @@ const PerformanceDashboard = () => {
             onClick={() => setActiveTab("results")}
             label="Resultados"
             icon={BarChart2}
-            disabled={!metrics && status !== "completed"}
+            disabled={!metrics && !lastPerfReport && status !== "completed"}
           />
           <TabButton
             id="history"
@@ -320,7 +331,10 @@ const PerformanceDashboard = () => {
               exit={{ opacity: 0 }}
               className="flex-1 flex flex-col overflow-hidden"
             >
-              <PerfResultsView metrics={metrics} runConfig={runConfig} />
+              <PerfResultsView
+                metrics={metrics || useExecutionStore.getState().lastPerfReport}
+                runConfig={runConfig}
+              />
             </motion.div>
           )}
 

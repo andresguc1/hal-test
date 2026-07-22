@@ -20,6 +20,7 @@ import {
   Shield,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useExecutionStore } from "@/stores/useExecutionStore";
 import { cn } from "@/lib/utils";
 import { motion as Motion, AnimatePresence } from "framer-motion";
 
@@ -496,6 +497,22 @@ function AppFooter({
     return { left: 16 }; // Fallback
   };
 
+  const globalExecutionStatus = useExecutionStore((s) => s.status);
+  const isRunning = apiStatus.state === "running" || globalExecutionStatus === "running";
+
+  const handleCancelOrResetRun = async () => {
+    const activeRunId = useExecutionStore.getState().activeRunId;
+    if (activeRunId) {
+      try {
+        const { api } = await import("@/utils/api");
+        await api.post(`/runs/${activeRunId}/cancel`);
+      } catch (err) {
+        console.warn("Could not cancel run on backend", err);
+      }
+    }
+    useExecutionStore.getState().finishExecution({ status: "cancelled" });
+  };
+
   // Decoupled button configurations based on execution/view mode
   const getButtonConfig = () => {
     if (isLocked) {
@@ -510,13 +527,13 @@ function AppFooter({
       };
     }
 
-    if (apiStatus.state === "running") {
+    if (isRunning) {
       return {
         icon: RefreshCw,
-        label: "RUNNING...",
+        label: t("canvas.running", "RUNNING... (CANCELAR)"),
         variant: "outline",
-        tooltip: "Running flow...",
-        className: "opacity-75 cursor-not-allowed grayscale pointer-events-none",
+        tooltip: "Haz clic para cancelar la ejecución y desbloquear la interfaz.",
+        className: "border-amber-500/50 text-amber-400 hover:bg-amber-500/20 cursor-pointer animate-pulse",
       };
     }
 
@@ -672,12 +689,11 @@ function AppFooter({
           icon={btnConfig.icon}
           label={btnConfig.label}
           variant={btnConfig.variant}
-          onClick={apiStatus.state === "running" || isLocked ? null : onRun}
+          onClick={isLocked ? null : isRunning ? handleCancelOrResetRun : onRun}
           title={btnConfig.tooltip}
           className={cn(
             "pl-4 pr-5 py-2",
-            (apiStatus.state === "running" || isLocked) &&
-              "opacity-75 cursor-not-allowed grayscale pointer-events-none",
+            isLocked && "opacity-75 cursor-not-allowed grayscale pointer-events-none",
             btnConfig.className,
           )}
         />
