@@ -19,9 +19,20 @@ import { api } from "../../utils/api";
 import { useToast } from "../../hooks/useToast";
 import PerfResultsView from "./PerfResultsView";
 
-/**
- * PerfHistoryView — Interactive History Explorer for past performance runs
- */
+const extractMetricsFromRun = (run) => {
+  if (!run || !run.flow_snapshot) return null;
+  try {
+    let parsed = typeof run.flow_snapshot === "string" ? JSON.parse(run.flow_snapshot) : run.flow_snapshot;
+    if (typeof parsed === "string") {
+      parsed = JSON.parse(parsed);
+    }
+    return parsed?.data || parsed;
+  } catch (e) {
+    console.error("Failed to parse run snapshot:", e);
+    return null;
+  }
+};
+
 const PerfHistoryView = ({ flowId, onReRun }) => {
   const toast = useToast();
   const [history, setHistory] = useState([]);
@@ -64,20 +75,8 @@ const PerfHistoryView = ({ flowId, onReRun }) => {
 
   const handleSelectRun = (run) => {
     setSelectedRun(run);
-    try {
-      const parsed = run.flow_snapshot ? JSON.parse(run.flow_snapshot) : null;
-      // The flow_snapshot could be double nested or directly stringified MetricsCollector result
-      if (parsed) {
-        // Backend saves it as summary directly, or { data: snap }
-        const metricsData = parsed.data || parsed;
-        setSelectedRunDetails(metricsData);
-      } else {
-        setSelectedRunDetails(null);
-      }
-    } catch (e) {
-      console.error("Failed to parse run details:", e);
-      setSelectedRunDetails(null);
-    }
+    const metricsData = extractMetricsFromRun(run);
+    setSelectedRunDetails(metricsData);
   };
 
   const handleDeleteRun = async (runId, e) => {
@@ -107,33 +106,25 @@ const PerfHistoryView = ({ flowId, onReRun }) => {
 
   const handleReRunAction = (run, e) => {
     e.stopPropagation();
-    try {
-      const parsed = run.flow_snapshot ? JSON.parse(run.flow_snapshot) : null;
-      const perfConfig =
-        parsed?.performanceConfig || parsed?.data?.runConfig || null;
-      if (perfConfig) {
-        // Map fields to what scenario builder expects
-        onReRun({
-          vus: perfConfig.virtualUsers || perfConfig.totalVUs || 5,
-          duration: perfConfig.duration || perfConfig.durationSec || 30,
-          profile: perfConfig.profile || "constant",
-          rampUp: perfConfig.rampUp || 10,
-          stages: perfConfig.stages || null,
-        });
-      } else {
-        toast.error("No se pudo extraer la configuración de esta ejecución.");
-      }
-    } catch (error) {
-      console.error("Failed to rerun:", error);
-      toast.error("Error al procesar la configuración.");
+    const metricsData = extractMetricsFromRun(run);
+    const perfConfig =
+      metricsData?.runConfig || metricsData?.performanceConfig || null;
+    if (perfConfig) {
+      onReRun({
+        vus: perfConfig.totalVUs || perfConfig.virtualUsers || 5,
+        duration: perfConfig.durationSec || perfConfig.duration || 30,
+        profile: perfConfig.profile || "constant",
+        rampUp: perfConfig.rampUp || 10,
+        stages: perfConfig.stages || null,
+      });
+    } else {
+      toast.error("No se pudo extraer la configuración de esta ejecución.");
     }
   };
 
   const toggleCompareSelect = (run) => {
-    try {
-      const parsed = run.flow_snapshot ? JSON.parse(run.flow_snapshot) : null;
-      const metricsData = parsed?.data || parsed;
-      if (!metricsData) return;
+    const metricsData = extractMetricsFromRun(run);
+    if (!metricsData) return;
 
       if (compareLeft?.id === run.id) {
         setCompareLeft(null);
@@ -347,9 +338,7 @@ const PerfHistoryView = ({ flowId, onReRun }) => {
                         : null;
                     } catch {
                       // ignore parsing errors
-                    }
-
-                    const metricsData = summary?.data || summary;
+                    const metricsData = extractMetricsFromRun(run);
                     const success =
                       metricsData?.errorCount === 0 && run.status !== "failed";
                     const selectedForCompare =
