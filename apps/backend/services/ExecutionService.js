@@ -500,7 +500,9 @@ export class ExecutionService {
             }
 
             // 5. Identify Next Paths
-            let allNextEdges = allEdges.filter((e) => e.source === node.nodeId);
+            let allNextEdges = allEdges.filter(
+                (e) => e.source === node.nodeId || e.source === node.id,
+            );
             const winnerPath = result?.data?.path || result?.path;
 
             // 6. DEAD PATH ELIMINATION (DPE)
@@ -576,7 +578,7 @@ export class ExecutionService {
 
             // 7. Recursive execution of next nodes
             const nextNodes = activeEdges
-                .map((e) => allNodes.find((n) => n.nodeId === e.target))
+                .map((e) => allNodes.find((n) => n.nodeId === e.target || n.id === e.target))
                 .filter(Boolean);
 
             if (nextNodes.length > 0) {
@@ -894,6 +896,7 @@ export class ExecutionService {
             const continueOnFailure =
                 node.data?.configuration?.continueOnFailure ||
                 node.data?.continueOnFailure ||
+                isPerformanceMode ||
                 false;
 
             if (continueOnFailure) {
@@ -1005,10 +1008,26 @@ export class ExecutionService {
         });
 
         if (state.nodeMetrics) {
+            const FRIENDLY_TYPES = {
+                launch_browser: 'Lanzar Navegador',
+                open_url: 'Navegar URL',
+                click: 'Hacer Clic',
+                type_text: 'Escribir Texto',
+                wait: 'Esperar',
+                close_browser: 'Cerrar Navegador',
+                screenshot: 'Captura de Pantalla',
+                select_option: 'Seleccionar Opción',
+                assert_element: 'Validar Elemento',
+                extract_data: 'Extraer Datos',
+            };
+            const rawType = node.type || node.data?.type;
+            const fallbackLabel = FRIENDLY_TYPES[rawType] || rawType || node.nodeId;
+            const nodeLabel = finalResult?.label || node.data?.label || fallbackLabel;
+
             const metricObj = {
                 nodeId: node.nodeId,
                 durationMs: Number(process.hrtime.bigint() - nodeStartTime) / 1e6,
-                label: finalResult.label || node.data?.label || node.type,
+                label: nodeLabel,
                 success: finalResult?.status !== 'failed' && finalResult?.status !== 'error',
             };
             state.nodeMetrics.push(metricObj);

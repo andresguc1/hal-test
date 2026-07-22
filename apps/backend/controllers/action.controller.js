@@ -675,7 +675,18 @@ async function getOrCreateContext(req, browser, browserId) {
  * Validates and retrieves the active page, context, and browser ID.
  */
 async function getActivePage(req, browserId) {
-    const validation = validateBrowser(req, browserId);
+    let validation = validateBrowser(req, browserId);
+    if (validation.error) {
+        try {
+            console.log('[getActivePage] No active browser session. Auto-launching browser...');
+            const launchOpts = { headless: req.body?.headless !== false };
+            const { browserId: newId } = await browserService.launchBrowser(launchOpts);
+            validation = validateBrowser(req, newId);
+        } catch (e) {
+            console.error('[getActivePage] Auto-launch failed:', e.message);
+        }
+    }
+
     if (validation.error) {
         const error = new Error(validation.message);
         error.status = validation.status;
@@ -1942,7 +1953,17 @@ export const openUrlAction = async (req, res) => {
                 .json({ success: false, message: req.t('actions.open_url.url_required') });
         }
 
-        const validation = validateBrowser(req, req.body.browserId);
+        let validation = validateBrowser(req, req.body.browserId);
+        if (validation.error) {
+            try {
+                console.log('[openUrlAction] No active browser session. Auto-launching browser...');
+                const launchOpts = { headless: req.body?.headless !== false };
+                const { browserId: newId } = await browserService.launchBrowser(launchOpts);
+                validation = validateBrowser(req, newId);
+            } catch (e) {
+                console.error('[openUrlAction] Auto-launch failed:', e.message);
+            }
+        }
         if (validation.error) {
             return res
                 .status(validation.status)
