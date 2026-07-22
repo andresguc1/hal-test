@@ -18,19 +18,12 @@ import { TelemetryDataNormalizer } from "../telemetry/telemetryTypes";
  * PerfLiveView — Real-time execution dashboard with KPIs, bottlenecks, and TradingView telemetry chart
  */
 const PerfLiveView = ({
-  metrics,
-  vuStatus,
-  runConfig,
-  resourceWarning,
-  timeline = [],
-  status: _status,
-  progressPercent: _progressPercent,
-}) => {
+const PerfLiveView = ({ metrics, vuStatus, resourceWarning }) => {
   const chartRef = useRef(null);
   const normalizerRef = useRef(new TelemetryDataNormalizer());
 
   useEffect(() => {
-    if (!metrics && (!timeline || timeline.length === 0)) return;
+    if (!metrics) return;
 
     let isMounted = true;
     let timerId = null;
@@ -43,7 +36,8 @@ const PerfLiveView = ({
         return;
       }
 
-      const nodeStats = metrics?.nodeStats || [];
+      const nodeStats = metrics.nodeStats || [];
+      const timeline = metrics.timeline || [];
       const bars = [];
 
       if (nodeStats.length > 0) {
@@ -70,7 +64,6 @@ const PerfLiveView = ({
             time,
             value: latencyMs,
             color: latencyMs > 2000 ? "#ef4444" : latencyMs > 800 ? "#f59e0b" : "#10b981",
-            label: `Muestreo #${idx + 1}`,
           });
         });
       }
@@ -86,23 +79,20 @@ const PerfLiveView = ({
       isMounted = false;
       if (timerId) clearTimeout(timerId);
     };
-  }, [timeline, metrics]);
+  }, [metrics]);
+
   if (!metrics) {
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex-1 flex flex-col items-center justify-center p-12 text-slate-500 italic space-y-4">
         <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="flex flex-col items-center"
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-center space-y-3"
         >
-          <div className="relative mb-8">
-            <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full" />
-            <Activity
-              size={64}
-              className="text-blue-400 animate-pulse relative z-10"
-            />
+          <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mx-auto text-blue-400">
+            <Activity size={32} className="animate-pulse" />
           </div>
-          <h2 className="text-3xl font-light tracking-wide mb-2 text-slate-200">
+          <h2 className="text-xl font-semibold text-slate-300">
             Esperando Métricas...
           </h2>
           <p className="text-slate-400 text-lg">
@@ -114,8 +104,33 @@ const PerfLiveView = ({
     );
   }
 
+  const profileKey = metrics?.runConfig?.profile || metrics?.profile || "constant";
+  const { label: profileLabel, color: profileColor } = getProfileInfo(profileKey);
+
   return (
     <div className="flex-1 overflow-auto p-6 space-y-6">
+      {/* Top Header Live Status & Load Profile Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/80 border border-slate-800 p-4 rounded-2xl">
+        <div className="flex items-center gap-3">
+          <span className="relative flex h-3 w-3">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+          </span>
+          <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">
+            PRUEBA EN VIVO (TELEMETRÍA)
+          </span>
+        </div>
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="text-xs text-slate-400 font-medium">Perfil de Carga:</span>
+          <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${profileColor}`}>
+            {profileLabel}
+          </span>
+          <span className="text-xs text-slate-400 font-mono bg-slate-800/80 px-2.5 py-1 rounded-full border border-slate-700">
+            {metrics?.runConfig?.totalVUs || vuStatus?.activeVUs || 1} VUs | {metrics?.runConfig?.durationSec || 30}s
+          </span>
+        </div>
+      </div>
+
       {/* Resource Warning */}
       {resourceWarning && resourceWarning.health !== "continue" && (
         <div

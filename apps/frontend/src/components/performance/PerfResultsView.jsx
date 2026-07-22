@@ -30,7 +30,7 @@ import {
   PieChart,
 } from "lucide-react";
 import { RealTimeTelemetryChart } from "../telemetry/RealTimeTelemetryChart";
-import { TelemetryDataNormalizer } from "../telemetry/telemetryTypes";
+import { TelemetryDataNormalizer, getProfileInfo } from "../telemetry/telemetryTypes";
 import { useExecutionStore } from "../../stores/useExecutionStore";
 
 /**
@@ -149,7 +149,6 @@ const PerfResultsView = ({ metrics: rawMetrics, runConfig: _runConfig }) => {
         });
       } else {
         const now = Date.now();
-        const metricNames = ["Mínima", "Mediana", "Promedio", "P95", "P99", "Máxima"];
         const points = [
           metrics.latency?.min,
           metrics.latency?.median,
@@ -166,7 +165,6 @@ const PerfResultsView = ({ metrics: rawMetrics, runConfig: _runConfig }) => {
             time,
             value: val,
             color: "#10b981",
-            label: metricNames[idx] || `Punto #${idx + 1}`,
           });
         });
       }
@@ -374,6 +372,13 @@ const PerfResultsView = ({ metrics: rawMetrics, runConfig: _runConfig }) => {
     });
   };
 
+  const activeProfile =
+    metrics?.runConfig?.profile ||
+    _runConfig?.profile ||
+    metrics?.profile ||
+    (isProfilingMode ? "profiling" : "constant");
+  const { label: profileLabel, color: profileColor } = getProfileInfo(activeProfile);
+
   return (
     <div className="flex-1 overflow-auto p-6 space-y-6 bg-slate-950/40">
       {/* 1. Header Mode Delineation Banner */}
@@ -384,9 +389,12 @@ const PerfResultsView = ({ metrics: rawMetrics, runConfig: _runConfig }) => {
               <Gauge size={26} />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[11px] font-mono font-bold text-blue-400 uppercase tracking-widest bg-blue-500/10 px-2.5 py-0.5 rounded-full border border-blue-500/20">
                   {isProfilingMode ? "LATENCY PROFILING (1 VU)" : "LOAD TESTING REPORT"}
+                </span>
+                <span className={`text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full border ${profileColor}`}>
+                  {profileLabel}
                 </span>
                 {p95Diff !== null && (
                   <span

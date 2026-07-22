@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { api } from "../../utils/api";
 import { useToast } from "../../hooks/useToast";
+import { getProfileInfo } from "../telemetry/telemetryTypes";
 import PerfResultsView from "./PerfResultsView";
 
 const extractMetricsFromRun = (run) => {
@@ -324,6 +325,7 @@ const PerfHistoryView = ({ flowId, onReRun }) => {
                     <th className="p-4">Comparar</th>
                     <th className="p-4">ID Ejecución</th>
                     <th className="p-4">Fecha</th>
+                    <th className="p-4">Perfil de Carga</th>
                     <th className="p-4">Configuración</th>
                     <th className="p-4 text-center">Throughput</th>
                     <th className="p-4 text-center">P95 Latencia</th>
@@ -340,7 +342,16 @@ const PerfHistoryView = ({ flowId, onReRun }) => {
                         : null;
                     } catch {
                       // ignore parsing errors
+                    }
                     const metricsData = extractMetricsFromRun(run);
+                    const profileKey =
+                      metricsData?.runConfig?.profile ||
+                      metricsData?.performanceConfig?.profile ||
+                      metricsData?.profile ||
+                      "constant";
+                    const { label: profileLabel, color: profileColor } =
+                      getProfileInfo(profileKey);
+
                     const success =
                       metricsData?.errorCount === 0 && run.status !== "failed";
                     const selectedForCompare =
@@ -371,6 +382,13 @@ const PerfHistoryView = ({ flowId, onReRun }) => {
                             <Calendar size={12} className="text-slate-600" />
                             {new Date(run.started_at).toLocaleString()}
                           </div>
+                        </td>
+                        <td className="p-4">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${profileColor}`}
+                          >
+                            {profileLabel}
+                          </span>
                         </td>
                         <td className="p-4 text-slate-400">
                           <div className="flex items-center gap-2">
