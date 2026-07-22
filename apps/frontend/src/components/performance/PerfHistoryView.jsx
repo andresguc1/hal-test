@@ -123,8 +123,9 @@ const PerfHistoryView = ({ flowId, onReRun }) => {
   };
 
   const toggleCompareSelect = (run) => {
-    const metricsData = extractMetricsFromRun(run);
-    if (!metricsData) return;
+    try {
+      const metricsData = extractMetricsFromRun(run);
+      if (!metricsData) return;
 
       if (compareLeft?.id === run.id) {
         setCompareLeft(null);
@@ -150,7 +151,8 @@ const PerfHistoryView = ({ flowId, onReRun }) => {
           metrics: metricsData,
         });
       }
-    } catch {
+    } catch (e) {
+      console.error("Comparison error:", e);
       toast.error("Datos incompatibles para comparación.");
     }
   };
