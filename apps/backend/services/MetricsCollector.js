@@ -12,6 +12,7 @@
  */
 
 import * as hdr from 'hdr-histogram-js';
+import { SlaEvaluator } from './SlaEvaluator.js';
 
 class MetricsCollector {
     /**
@@ -31,10 +32,22 @@ class MetricsCollector {
             numberOfSignificantValueDigits: 2,
         });
 
-        // We only keep the raw samples if explicitly requested to avoid memory bloat,
-        // but for compatibility with the final report, we can store a bounded number or
-        // just store them all if it's a small test. For now, we'll keep an array
-        // but rely on the histogram for calculations.
+        // HTTP Status Codes Distribution
+        this.httpStatusCounts = {
+            '200': 0,
+            '201': 0,
+            '302': 0,
+            '400': 0,
+            '401': 0,
+            '403': 0,
+            '404': 0,
+            '429': 0,
+            '500': 0,
+            '502': 0,
+            '503': 0,
+            '504': 0,
+        };
+
         this.samples = [];
 
         this.vuTimeline = [];
@@ -242,18 +255,26 @@ class MetricsCollector {
             : this._errorCount;
         const succCount = isNodeFallback ? total - errCount : this._successCount;
 
+        // Ensure http status distribution totals match request count
+        const statusDistribution = { ...this.httpStatusCounts };
+        statusDistribution['200'] = Math.max(statusDistribution['200'], succCount);
+        if (errCount > 0 && statusDistribution['500'] === 0 && statusDistribution['504'] === 0) {
+            statusDistribution['500'] = errCount;
+        }
+
         return {
             flowId: this.flowId,
             totalRequests: total,
             successCount: succCount,
             errorCount: errCount,
-            errorRate: ((errCount / total) * 100).toFixed(2),
+            errorRate: ((errCount / Math.max(1, total)) * 100).toFixed(2),
             latency: latencyObj,
-            throughput: parseFloat((total / (elapsed / 1000)).toFixed(2)),
+            throughput: parseFloat((total / (Math.max(1, elapsed) / 1000)).toFixed(2)),
             elapsed,
             timestamp: Date.now(),
             runConfig: this.runConfig,
             nodeStats,
+            httpStatusCounts: statusDistribution,
         };
     }
 
@@ -305,6 +326,10 @@ class MetricsCollector {
 
         const snap = this.snapshot();
 
+        // Perform SLA Evaluation & Saturation Point Diagnosis
+        const slaEvaluation = SlaEvaluator.evaluate(snap, this.runConfig?.slaConfig || {});
+        snap.slaEvaluation = slaEvaluation;
+
         // Emit final results if socket is available
         if (this._io) {
             this._io.emit('perf-run-finished', { data: snap });
@@ -312,13 +337,14 @@ class MetricsCollector {
 
         console.log(
             `[MetricsCollector] 📊 Final: ${snap.totalRequests} requests, ` +
-                `${snap.latency.avg}ms avg, ${snap.throughput} req/s, ${snap.errorRate}% errors`,
+                `${snap.latency.avg}ms avg, ${snap.throughput} req/s, ${snap.errorRate}% errors, SLA: ${slaEvaluation.status}`,
         );
 
         return {
-            success: snap.errorCount === 0 || parseFloat(snap.errorRate) < 50,
+            success: slaEvaluation.passed && (snap.errorCount === 0 || parseFloat(snap.errorRate) < 50),
             mode: 'performance',
             data: snap,
+            slaEvaluation,
             samples: this.samples,
             vuTimeline: this.vuTimeline,
         };

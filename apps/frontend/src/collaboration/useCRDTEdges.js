@@ -7,6 +7,7 @@
  */
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { applyEdgeChanges } from "@xyflow/react";
 import * as Y from "yjs";
 import { useCollaboration } from "./CollaborationProvider";
 
@@ -103,6 +104,9 @@ export function useCRDTEdges({ enabled = false } = {}) {
   const onEdgesChange = useCallback(
     (changes) => {
       if (!isActive) return;
+
+      // 🚀 Optimistic local update for smooth edge manipulation
+      setLocalEdges((prev) => applyEdgeChanges(changes, prev));
 
       const yEdges = ydoc.getMap("edges");
 

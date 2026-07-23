@@ -12,13 +12,20 @@ import {
   Gauge,
 } from "lucide-react";
 import { RealTimeTelemetryChart } from "../telemetry/RealTimeTelemetryChart";
-import { TelemetryDataNormalizer } from "../telemetry/telemetryTypes";
+import { TelemetryDataNormalizer, getProfileInfo } from "../telemetry/telemetryTypes";
 
 /**
  * PerfLiveView — Real-time execution dashboard with KPIs, bottlenecks, and TradingView telemetry chart
  */
 const PerfLiveView = ({
-const PerfLiveView = ({ metrics, vuStatus, resourceWarning }) => {
+  metrics,
+  vuStatus,
+  runConfig,
+  resourceWarning,
+  timeline = [],
+  status: _status,
+  progressPercent = 0,
+}) => {
   const chartRef = useRef(null);
   const normalizerRef = useRef(new TelemetryDataNormalizer());
 
@@ -104,8 +111,33 @@ const PerfLiveView = ({ metrics, vuStatus, resourceWarning }) => {
     );
   }
 
-  const profileKey = metrics?.runConfig?.profile || metrics?.profile || "constant";
+  const profileKey =
+    metrics?.runConfig?.profile ||
+    runConfig?.profile ||
+    metrics?.profile ||
+    "constant";
   const { label: profileLabel, color: profileColor } = getProfileInfo(profileKey);
+
+  const totalVUs =
+    metrics?.runConfig?.totalVUs ||
+    metrics?.runConfig?.virtualUsers ||
+    runConfig?.virtualUsers ||
+    runConfig?.vus ||
+    vuStatus?.activeVUs ||
+    1;
+
+  const durationSec =
+    metrics?.runConfig?.durationSec ||
+    metrics?.runConfig?.duration ||
+    runConfig?.durationSec ||
+    runConfig?.duration ||
+    30;
+
+  const elapsedSec = Math.round((metrics?.elapsed || 0) / 1000);
+  const currentProgress = Math.min(
+    100,
+    Math.max(0, Math.round(progressPercent || (durationSec > 0 ? (elapsedSec / durationSec) * 100 : 0)))
+  );
 
   return (
     <div className="flex-1 overflow-auto p-6 space-y-6">
@@ -126,8 +158,31 @@ const PerfLiveView = ({ metrics, vuStatus, resourceWarning }) => {
             {profileLabel}
           </span>
           <span className="text-xs text-slate-400 font-mono bg-slate-800/80 px-2.5 py-1 rounded-full border border-slate-700">
-            {metrics?.runConfig?.totalVUs || vuStatus?.activeVUs || 1} VUs | {metrics?.runConfig?.durationSec || 30}s
+            {totalVUs} VUs | {durationSec}s
           </span>
+        </div>
+      </div>
+
+      {/* Dynamic Progress Bar for Test Execution */}
+      <div className="bg-slate-900/90 border border-slate-800/90 p-4 rounded-2xl space-y-2 shadow-lg">
+        <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center gap-2 font-medium text-slate-300">
+            <Clock size={14} className="text-emerald-400 animate-spin" />
+            <span>Progreso de Prueba ({profileLabel}):</span>
+            <span className="font-mono text-emerald-400 font-bold">{currentProgress}%</span>
+          </div>
+          <div className="text-slate-400 font-mono">
+            {elapsedSec}s / {durationSec}s
+          </div>
+        </div>
+
+        {/* Progress Bar Track */}
+        <div className="w-full bg-slate-950 rounded-full h-3 border border-slate-800 overflow-hidden relative">
+          <motion.div
+            className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-sky-400 rounded-full relative"
+            style={{ width: `${currentProgress}%` }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+          />
         </div>
       </div>
 
@@ -286,6 +341,7 @@ const PerfLiveView = ({ metrics, vuStatus, resourceWarning }) => {
             ref={chartRef}
             height={360}
             domain="performance"
+            defaultChartMode="line"
             barTitle="Latencia (ms)"
             title="Línea de Tiempo de Latencia por Nodo"
           />

@@ -55,7 +55,7 @@ export default function SecurityRunModal({
         toast.dismiss(toastId);
         toast.success(t("common.flow_exec_success", "Auditoría pasiva de seguridad lanzada con éxito!"));
         onClose();
-        navigate("/dashboard", { state: { activePage: "security" } });
+        navigate("/dashboard", { state: { activePage: "security", activeTab: "live" } });
       } else {
         console.warn("[SecurityRunModal] Falling back to standard execution");
         if (onRunSecurity) onRunSecurity({ executionMode: "seguridad" });

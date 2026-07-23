@@ -14,6 +14,7 @@ import {
   BarChart2,
   Folder,
   FileText,
+  Download,
   TrendingUp,
   TrendingDown,
   Layers,
@@ -190,11 +191,12 @@ const PerfResultsView = ({ metrics: rawMetrics, runConfig: _runConfig }) => {
   }
 
   const nodeStats = [...(metrics.nodeStats || [])];
-  const isProfilingMode =
-    _runConfig?.profile === "profiling" ||
-    _runConfig?.virtualUsers === 1 ||
-    metrics.virtualUsers === 1 ||
-    !metrics.virtualUsers;
+  const detectedProfile =
+    metrics?.runConfig?.profile ||
+    _runConfig?.profile ||
+    metrics?.profile ||
+    "constant";
+  const isProfilingMode = detectedProfile === "profiling";
 
   // Derive Network Timing Waterfall (DNS, TCP, TLS, TTFB, Download)
   const totalAvgLatency = metrics.latency?.avg || 320;
@@ -372,11 +374,7 @@ const PerfResultsView = ({ metrics: rawMetrics, runConfig: _runConfig }) => {
     });
   };
 
-  const activeProfile =
-    metrics?.runConfig?.profile ||
-    _runConfig?.profile ||
-    metrics?.profile ||
-    (isProfilingMode ? "profiling" : "constant");
+  const activeProfile = detectedProfile;
   const { label: profileLabel, color: profileColor } = getProfileInfo(activeProfile);
 
   return (
@@ -417,12 +415,59 @@ const PerfResultsView = ({ metrics: rawMetrics, runConfig: _runConfig }) => {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                const runId = metrics.runId || metrics.data?.runId;
+                if (runId) window.open(`/api/runs/${runId}/export?format=html`, '_blank');
+              }}
+              className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow transition-colors flex items-center gap-1.5"
+            >
+              <Download size={14} /> Exportar HTML
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const runId = metrics.runId || metrics.data?.runId;
+                if (runId) window.open(`/api/runs/${runId}/export?format=pdf`, '_blank');
+              }}
+              className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold transition-colors flex items-center gap-1.5"
+            >
+              <FileText size={14} /> Exportar PDF
+            </button>
             <div className="text-right text-xs font-mono text-slate-400 hidden sm:block">
               <div>Modo: <span className="text-blue-300 font-semibold">{isProfilingMode ? "Diagnóstico '¿Por qué es lento?'" : "Estrés '¿Cuánto soporta?'"}</span></div>
               <div className="text-[10px] text-slate-500">Muestreo paso a paso de alto detalle</div>
             </div>
           </div>
         </div>
+
+        {/* Cloud SLA Verdict & Saturation Diagnosis Card */}
+        {metrics.slaEvaluation && (
+          <div className={`p-4 rounded-xl border flex items-center justify-between ${
+            metrics.slaEvaluation.passed ? "bg-emerald-950/20 border-emerald-500/40 text-emerald-200" : "bg-red-950/20 border-red-500/40 text-red-200"
+          }`}>
+            <div className="flex items-center gap-3">
+              <div className={`p-2.5 rounded-xl ${metrics.slaEvaluation.passed ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400"}`}>
+                {metrics.slaEvaluation.passed ? <CheckCircle2 size={24} /> : <AlertTriangle size={24} />}
+              </div>
+              <div>
+                <div className="text-sm font-bold tracking-wide uppercase">
+                  Veredicto Cloud SLA: {metrics.slaEvaluation.status}
+                </div>
+                <div className="text-xs opacity-80 mt-0.5">
+                  Índice APDEX: <strong>{metrics.slaEvaluation.apdexScore} / 1.00</strong> &bull; Capacidad Máxima Estable: <strong>{metrics.slaEvaluation.saturationPoint?.maxStableVUs || metrics.runConfig?.totalVUs || 10} VUs Concurrentes</strong>
+                </div>
+              </div>
+            </div>
+            {metrics.slaEvaluation.saturationPoint?.bottleneckNodeLabel && (
+              <div className="text-right text-xs font-mono bg-slate-950/60 p-2.5 rounded-lg border border-slate-800">
+                <span className="text-slate-400">Cuello de Botella:</span>{" "}
+                <strong className="text-amber-400">{metrics.slaEvaluation.saturationPoint.bottleneckNodeLabel}</strong>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Diagnostic Mandate Explanation */}
         <p className="text-xs text-slate-400 leading-relaxed bg-slate-950/50 p-3 rounded-xl border border-slate-800/80">
@@ -671,6 +716,7 @@ const PerfResultsView = ({ metrics: rawMetrics, runConfig: _runConfig }) => {
         ref={chartRef}
         height={300}
         domain="performance"
+        defaultChartMode="line"
         barTitle="Latencia (ms)"
         title="Línea de Tiempo de Latencia por Nodo"
       />

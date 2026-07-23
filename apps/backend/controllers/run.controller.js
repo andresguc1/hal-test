@@ -1,6 +1,6 @@
 import { executionService } from '../services/ExecutionService.js';
 import { executionLogger } from '../services/ExecutionLogger.js';
-import { Run, StepResult, Flow, Project, CollaboratorRole } from '../database/init.js';
+import { Run, StepResult, Flow, Project, CollaboratorRole, Node, Edge } from '../database/init.js';
 import { reportExporter } from '../services/exporter/ReportExporter.js';
 import { testRunnerService } from '../services/TestRunnerService.js';
 import { activeRunManager } from '../services/ActiveRunManager.js';
@@ -478,7 +478,7 @@ export const startDatasetBatchRunAction = async (req, res) => {
  */
 export const startPerformanceRunAction = async (req, res) => {
     try {
-        const { flowId, projectId, performanceConfig = {} } = req.body;
+        const { flowId, projectId, performanceConfig = {}, nodes, edges } = req.body;
         const userId = req.user?.id || 'anonymous';
         const userName = req.user?.email || req.user?.name || 'Anonymous';
 
@@ -496,8 +496,44 @@ export const startPerformanceRunAction = async (req, res) => {
             });
         }
 
-        // Fetch flow for the runner
-        const flow = await Flow.findByPk(flowId);
+        // Sync nodes and edges if provided by frontend canvas
+        if (nodes && Array.isArray(nodes) && nodes.length > 0) {
+            await Node.destroy({ where: { flowId } });
+            await Node.bulkCreate(
+                nodes.map((n, idx) => ({
+                    nodeId: String(n.id || n.nodeId || `node_${idx + 1}`),
+                    type: String(n.data?.type || n.type || 'action'),
+                    data: n.data || {},
+                    position: n.position || { x: 0, y: 0 },
+                    flowId,
+                    parentId: n.parentId || null,
+                })),
+            );
+            if (edges && Array.isArray(edges)) {
+                await Edge.destroy({ where: { flowId } });
+                const validEdges = edges
+                    .filter((e) => e && (e.source || e.sourceHandle) && (e.target || e.targetHandle))
+                    .map((e, idx) => ({
+                        edgeId: String(e.id || e.edgeId || `edge_${idx + 1}`),
+                        source: String(e.source),
+                        target: String(e.target),
+                        sourceHandle: e.sourceHandle || null,
+                        targetHandle: e.targetHandle || null,
+                        flowId,
+                    }));
+                if (validEdges.length > 0) {
+                    await Edge.bulkCreate(validEdges);
+                }
+            }
+        }
+
+        // Fetch flow with updated nodes and edges for the runner
+        const flow = await Flow.findByPk(flowId, {
+            include: [
+                { model: Node, as: 'nodes' },
+                { model: Edge, as: 'edges' },
+            ],
+        });
         if (!flow) {
             return res.status(404).json({ success: false, message: 'Flow not found.' });
         }
@@ -671,6 +707,38 @@ export const startSecurityRunAction = async (req, res) => {
         });
     } catch (error) {
         console.error('[RunController] startSecurityRunAction Error:', error);
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+export const exportPerformanceReportAction = async (req, res) => {
+    try {
+        const { runId } = req.params;
+        const { format = 'html' } = req.query;
+
+        const run = await Run.findByPk(runId);
+        if (!run) {
+            return res.status(404).json({ success: false, message: 'Run execution not found' });
+        }
+
+        const summary = typeof run.summary === 'string' ? JSON.parse(run.summary) : run.summary || {};
+        const { ReportExporter } = await import('../services/ReportExporter.js');
+        const htmlContent = ReportExporter.generateHTML({
+            ...run.toJSON(),
+            summary,
+        });
+
+        if (format === 'pdf') {
+            res.setHeader('Content-Type', 'text/html; charset=utf-8');
+            res.setHeader('Content-Disposition', `inline; filename="haltest_report_${runId}.html"`);
+            return res.send(htmlContent);
+        }
+
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="haltest_report_${runId}.html"`);
+        return res.send(htmlContent);
+    } catch (error) {
+        console.error('[RunController] exportPerformanceReportAction Error:', error);
         return res.status(500).json({ success: false, error: error.message });
     }
 };

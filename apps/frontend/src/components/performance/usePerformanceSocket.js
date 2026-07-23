@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useLocation } from "react-router-dom";
 import { io } from "socket.io-client";
 import { api } from "../../utils/api";
 import { useExecutionStore } from "../../stores/useExecutionStore";
@@ -8,13 +9,21 @@ import { useExecutionStore } from "../../stores/useExecutionStore";
  * Centralizes the real-time telemetry pipeline for the Performance module.
  */
 export function usePerformanceSocket(flowId) {
+  const location = useLocation();
   const [socket, setSocket] = useState(null);
   const [status, setStatus] = useState("connecting");
-  const [runConfig, setRunConfig] = useState(null);
+  const [runConfig, setRunConfig] = useState(location.state?.perfConfig || null);
   const [metrics, setMetrics] = useState(null);
   const [vuStatus, setVuStatus] = useState(null);
   const [resourceWarning, setResourceWarning] = useState(null);
   const [timeline, setTimeline] = useState([]);
+
+  // Sync runConfig if location state updates
+  useEffect(() => {
+    if (location.state?.perfConfig) {
+      setRunConfig((prev) => ({ ...prev, ...location.state.perfConfig }));
+    }
+  }, [location.state?.perfConfig]);
 
   // Socket initialization
   useEffect(() => {

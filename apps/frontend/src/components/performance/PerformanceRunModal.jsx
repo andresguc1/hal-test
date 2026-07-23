@@ -20,6 +20,8 @@ import { api } from "@/utils/api";
 import { useToast } from "@/hooks/useToast";
 import { useNavigate } from "react-router-dom";
 
+import { useProjectManager } from "@/components/hooks/useProjectManager";
+
 export default function PerformanceRunModal({
   isOpen,
   onClose,
@@ -31,15 +33,22 @@ export default function PerformanceRunModal({
   const { t } = useTranslation();
   const toast = useToast();
   const navigate = useNavigate();
+  const { currentProject } = useProjectManager();
 
   // Run Type: "profiling" (single user latency) or "load_test" (concurrent)
   const [runType, setRunType] = useState("profiling");
 
   // Load Test Config
-  const [profile, setProfile] = useState("constant");
-  const [vus, setVus] = useState(10);
-  const [duration, setDuration] = useState(30);
-  const [rampUp, setRampUp] = useState(5);
+  const [profile, setProfile] = useState("ramp");
+  const [vus, setVus] = useState(25);
+  const [duration, setDuration] = useState(60);
+  const [rampUp, setRampUp] = useState(15);
+  const [startVUs, setStartVUs] = useState(1);
+  const [holdTime, setHoldTime] = useState(30);
+  const [rampDown, setRampDown] = useState(15);
+  const [stepCount, setStepCount] = useState(4);
+  const [maxP95Ms, setMaxP95Ms] = useState(500);
+  const [maxErrorRatePct, setMaxErrorRatePct] = useState(1.0);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // CPU/RAM Resource calculation
@@ -66,15 +75,33 @@ export default function PerformanceRunModal({
     setIsSubmitting(true);
     const toastId = toast.loading("Lanzando motor de pruebas de carga...");
 
+    const activeFlowObj = currentProject?.flows?.find((f) => f.id === flowId);
+
     try {
+      const effectiveDuration = profile === "soak" ? duration * 60 : duration;
+      const effectiveStopAt = profile === "stress" ? rampUp : undefined;
+
       const response = await api.post("/runs/performance", {
         flowId,
         projectId,
+        nodes: activeFlowObj?.nodes || [],
+        edges: activeFlowObj?.edges || [],
         performanceConfig: {
           virtualUsers: vus,
-          duration,
+          duration: effectiveDuration,
           profile,
-          rampUp,
+          rampUp: profile === "ramp" || profile === "stepped" ? rampUp : 0,
+          rampDown: profile === "ramp" || profile === "stepped" ? rampDown : 10,
+          holdTime: profile === "ramp" || profile === "stepped" ? holdTime : 0,
+          startVUs,
+          stepCount,
+          slaConfig: {
+            maxP95Ms,
+            maxErrorRatePct,
+            targetApdex: 0.85,
+          },
+          ...(profile === "stress" && { stopAtErrorRate: effectiveStopAt }),
+          ...(profile === "spike" && { spikeBaseVUs: rampUp }),
           headless: true,
         },
       });
@@ -84,7 +111,23 @@ export default function PerformanceRunModal({
         toast.success("Prueba de carga concurrente lanzada con éxito!");
         onClose();
         // Redirect to performance live view on the dashboard
-        navigate("/dashboard", { state: { activePage: "performance" } });
+        navigate("/dashboard", {
+          state: {
+            activePage: "performance",
+            activeTab: "live",
+            perfConfig: {
+              virtualUsers: vus,
+              duration: effectiveDuration,
+              profile,
+              rampUp: profile === "ramp" || profile === "stepped" ? rampUp : 0,
+              rampDown: profile === "ramp" || profile === "stepped" ? rampDown : 10,
+              holdTime: profile === "ramp" || profile === "stepped" ? holdTime : 0,
+              startVUs,
+              stepCount,
+              slaConfig: { maxP95Ms, maxErrorRatePct },
+            },
+          },
+        });
       } else {
         toast.dismiss(toastId);
         toast.error(response.message || response.data?.message || "Error al lanzar la prueba de carga");
@@ -198,81 +241,157 @@ export default function PerformanceRunModal({
               {/* CONCURRENT LOAD TEST CONFIGURATION */}
               {runType === "load_test" && (
                 <div className="space-y-4 pt-2 border-t border-slate-800/60">
-                  {/* Load profile selector */}
+                  {/* ── Profile cards ── */}
                   <div className="space-y-2">
                     <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-                      {t("performance_modal.load_profile", "Perfil de Carga")}
+                      Tipo de Prueba
                     </label>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
                       {[
-                        { id: "constant", icon: BarChart2, label: "Constant" },
-                        { id: "ramp", icon: TrendingUp, label: "Ramp-Up" },
-                        { id: "stress", icon: AlertTriangle, label: "Stress Test" },
-                        { id: "spike", icon: Zap, label: "Spike Test" },
-                        { id: "endurance", icon: Clock, label: "Endurance" },
-                        { id: "capacity", icon: Users, label: "Capacity" },
-                      ].map((p) => (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onClick={() => setProfile(p.id)}
-                          className={cn(
-                            "flex items-center gap-2 px-3 py-2 rounded-lg border text-left transition-all",
-                            profile === p.id
-                              ? "bg-purple-500/10 border-purple-500/40 text-purple-400 font-medium"
-                              : "bg-slate-900/40 border-slate-800 text-slate-400 hover:bg-slate-800/40 hover:border-slate-700"
+                        { id: "ramp",     icon: TrendingUp,    label: "Ramp-Up",   desc: "Incremento gradual.", active: "border-emerald-500/70 bg-emerald-500/10 text-emerald-400" },
+                        { id: "stepped",  icon: TrendingUp,    label: "Escalonado",desc: "Pasos progresivos.", active: "border-teal-500/70 bg-teal-500/10 text-teal-400" },
+                        { id: "constant", icon: BarChart2,      label: "Constant",  desc: "Carga fija.",   active: "border-blue-500/70 bg-blue-500/10 text-blue-400" },
+                        { id: "stress",   icon: AlertTriangle,  label: "Stress",    desc: "Escala hasta colapso.", active: "border-orange-500/70 bg-orange-500/10 text-orange-400" },
+                        { id: "spike",    icon: Zap,            label: "Spike",     desc: "Pico súbito.",     active: "border-yellow-500/70 bg-yellow-500/10 text-yellow-400" },
+                        { id: "soak",     icon: Clock,          label: "Soak",      desc: "Carga sostenida.", active: "border-purple-500/70 bg-purple-500/10 text-purple-400" },
+                      ].map((p) => {
+                        const Icon = p.icon;
+                        const isActive = profile === p.id;
+                        return (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => setProfile(p.id)}
+                            className={cn(
+                              "flex flex-col items-center gap-1 p-2.5 rounded-xl border text-center transition-all",
+                              isActive
+                                ? p.active
+                                : "border-slate-800 bg-slate-900/40 text-slate-500 hover:border-slate-700 hover:text-slate-300"
+                            )}
+                          >
+                            <Icon size={14} />
+                            <span className="text-[10px] font-semibold">{p.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* SVG Load Profile Preview */}
+                    <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1.5">
+                      <div className="flex justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        <span>Vista Previa de la Curva de Carga</span>
+                        <span className="text-emerald-400 font-mono">{vus} VUs Max | {duration}s Total</span>
+                      </div>
+                      <div className="h-14 w-full bg-slate-900/60 rounded-lg p-1.5 flex items-center justify-center border border-slate-800/80">
+                        <svg viewBox="0 0 300 60" className="w-full h-full stroke-emerald-400 fill-none stroke-2">
+                          {profile === "stepped" && (
+                            <path d="M 10 50 L 50 50 L 50 38 L 90 38 L 90 26 L 130 26 L 130 14 L 230 14 L 280 50" />
                           )}
-                        >
-                          <p.icon size={13} />
-                          <span className="text-[11px] font-medium">{p.label}</span>
-                        </button>
-                      ))}
+                          {profile === "ramp" && (
+                            <path d="M 10 50 L 80 14 L 220 14 L 280 50" />
+                          )}
+                          {profile === "constant" && (
+                            <path d="M 10 14 L 240 14 L 280 50" />
+                          )}
+                          {profile === "stress" && (
+                            <path d="M 10 50 L 60 40 L 110 30 L 160 20 L 210 10 L 280 50" />
+                          )}
+                          {profile === "spike" && (
+                            <path d="M 10 45 L 80 45 L 90 10 L 160 10 L 170 45 L 280 45" />
+                          )}
+                          {profile === "soak" && (
+                            <path d="M 10 20 L 280 20" />
+                          )}
+                        </svg>
+                      </div>
                     </div>
                   </div>
 
-                  {/* VUs and Duration Inputs */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5 bg-slate-900/30 p-4 rounded-xl border border-slate-850">
+                  {/* ── Adaptive parameters per profile ── */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* VUs */}
+                    {profile !== "soak" && (
+                      <div className="space-y-1 bg-slate-900/30 p-3 rounded-xl border border-slate-800/80">
+                        <div className="flex justify-between text-xs font-semibold text-slate-400">
+                          <span className="flex items-center gap-1.5"><Users size={12} className="text-purple-400" /> VUs Objetivo</span>
+                          <span className="text-purple-400 font-mono">{vus} VUs</span>
+                        </div>
+                        <input type="range" min="1" max="100" value={vus}
+                          onChange={(e) => setVus(Number(e.target.value))}
+                          className="w-full accent-purple-500 cursor-pointer" />
+                      </div>
+                    )}
+
+                    {/* Duration */}
+                    <div className={cn("space-y-1 bg-slate-900/30 p-3 rounded-xl border border-slate-800/80", profile === "soak" && "col-span-2")}>
                       <div className="flex justify-between text-xs font-semibold text-slate-400">
-                        <span className="flex items-center gap-1.5">
-                          <Users size={14} className="text-purple-400" /> {t("performance_modal.max_vus", "VUs Máximos")}
-                        </span>
+                        <span className="flex items-center gap-1.5"><Clock size={12} className="text-purple-400" /> Duración Total</span>
+                        <span className="text-purple-400 font-mono">{profile === "soak" ? `${duration} min` : `${duration}s`}</span>
+                      </div>
+                      <input type="range" min={profile === "soak" ? 5 : 10} max={profile === "soak" ? 60 : 300} step={profile === "soak" ? 5 : 10}
+                        value={duration} onChange={(e) => setDuration(Number(e.target.value))}
+                        className="w-full accent-purple-500 cursor-pointer" />
+                    </div>
+
+                    {/* Stepped Options */}
+                    {profile === "stepped" && (
+                      <>
+                        <div className="space-y-1 bg-slate-900/30 p-3 rounded-xl border border-slate-800/80">
+                          <div className="flex justify-between text-xs font-semibold text-slate-400">
+                            <span className="flex items-center gap-1.5"><TrendingUp size={12} className="text-teal-400" /> N° de Escalones</span>
+                            <span className="text-teal-400 font-mono">{stepCount}</span>
+                          </div>
+                          <input type="range" min="2" max="10" value={stepCount}
+                            onChange={(e) => setStepCount(Number(e.target.value))}
+                            className="w-full accent-teal-500 cursor-pointer" />
+                        </div>
+                        <div className="space-y-1 bg-slate-900/30 p-3 rounded-xl border border-slate-800/80">
+                          <div className="flex justify-between text-xs font-semibold text-slate-400">
+                            <span className="flex items-center gap-1.5"><Clock size={12} className="text-teal-400" /> Descenso (Ramp-Down)</span>
+                            <span className="text-teal-400 font-mono">{rampDown}s</span>
+                          </div>
+                          <input type="range" min="5" max="60" step="5" value={rampDown}
+                            onChange={(e) => setRampDown(Number(e.target.value))}
+                            className="w-full accent-teal-500 cursor-pointer" />
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Cloud SLA Threshold Rules */}
+                  <div className="p-3 bg-slate-900/50 border border-slate-800 rounded-xl space-y-2">
+                    <div className="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
+                      <span>Criterios de Aceptación Cloud (SLA / Thresholds)</span>
+                      <span className="text-emerald-400 text-[10px] font-mono">Auto Evaluado</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[10px] text-slate-400">Max P95 Latencia (ms)</label>
+                        <input type="number" min="50" max="10000" value={maxP95Ms}
+                          onChange={(e) => setMaxP95Ms(Number(e.target.value))}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-200 font-mono" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-400">Max Error Rate (%)</label>
+                        <input type="number" min="0.1" max="50" step="0.5" value={maxErrorRatePct}
+                          onChange={(e) => setMaxErrorRatePct(Number(e.target.value))}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-200 font-mono" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Soak VUs (separate row for soak) */}
+                  {profile === "soak" && (
+                    <div className="space-y-1 bg-slate-900/30 p-3 rounded-xl border border-slate-800/80">
+                      <div className="flex justify-between text-xs font-semibold text-slate-400">
+                        <span className="flex items-center gap-1.5"><Users size={12} className="text-purple-400" /> Usuarios Virtuales</span>
                         <span className="text-purple-400 font-mono">{vus} VUs</span>
                       </div>
-                      <input
-                        type="range"
-                        min="1"
-                        max="100"
-                        value={vus}
+                      <input type="range" min="1" max="50" value={vus}
                         onChange={(e) => setVus(Number(e.target.value))}
-                        className="w-full accent-purple-500 mt-2 cursor-pointer"
-                      />
-                      <span className="text-[9px] text-slate-500 block mt-1">
-                        Número de instancias paralelas concurrentes a simular.
-                      </span>
+                        className="w-full accent-purple-500 cursor-pointer" />
                     </div>
-
-                    <div className="space-y-1.5 bg-slate-900/30 p-4 rounded-xl border border-slate-850">
-                      <div className="flex justify-between text-xs font-semibold text-slate-400">
-                        <span className="flex items-center gap-1.5">
-                          <Clock size={14} className="text-purple-400" /> {t("performance_modal.total_duration", "Duración Total")}
-                        </span>
-                        <span className="text-purple-400 font-mono">{duration}s</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="10"
-                        max="300"
-                        step="10"
-                        value={duration}
-                        onChange={(e) => setDuration(Number(e.target.value))}
-                        className="w-full accent-purple-500 mt-2 cursor-pointer"
-                      />
-                      <span className="text-[9px] text-slate-500 block mt-1">
-                        Límite máximo de duración del ciclo de carga en segundos.
-                      </span>
-                    </div>
-                  </div>
+                  )}
                 </div>
               )}
 

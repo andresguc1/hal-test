@@ -98,33 +98,43 @@ export class TelemetryDataNormalizer {
 }
 
 export const PROFILE_LABELS: Record<string, string> = {
-  constant: 'Constante (Baseline)',
-  baseline: 'Línea Base (Baseline)',
-  ramp: 'Rampa de Carga (Ramp-Up)',
-  stress: 'Prueba de Estrés (Stress)',
-  spike: 'Prueba de Pico (Spike)',
-  endurance: 'Resistencia (Endurance)',
-  capacity: 'Capacidad (Capacity)',
-  custom: 'Personalizado (Custom)',
-  profiling: 'Diagnóstico (1 VU)',
+  // ── 5 standard profiles ─────────────────────────────────────────────
+  ramp:     '📈 Ramp-Up (Incremento Gradual)',
+  constant: '📊 Constant Load (Carga Constante)',
+  stress:   '⚡ Stress Test (Prueba de Estrés)',
+  spike:    '⚡ Spike Test (Prueba de Pico)',
+  soak:     '⏱ Soak / Endurance (Resistencia)',
+  // ── Advanced ────────────────────────────────────────────────────────
+  baseline: '🔵 Baseline (1 VU)',
+  custom:   '🛠 Personalizado (Stages)',
+  // ── Legacy / compatibility ───────────────────────────────────────────
+  load:      '📈 Ramp-Up (Incremento Gradual)',
+  endurance: '⏱ Soak / Endurance (Resistencia)',
+  capacity:  '📈 Capacity (Capacidad Máxima)',
+  profiling: '🔍 Diagnóstico (1 VU)',
 };
 
 export const PROFILE_COLORS: Record<string, string> = {
+  // ── 5 standard profiles (matches ScenarioBuilder colors) ────────────
+  ramp:     'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
   constant: 'bg-blue-500/10 text-blue-400 border-blue-500/30',
-  baseline: 'bg-blue-500/10 text-blue-400 border-blue-500/30',
-  ramp: 'bg-purple-500/10 text-purple-400 border-purple-500/30',
-  stress: 'bg-red-500/10 text-red-400 border-red-500/30',
-  spike: 'bg-amber-500/10 text-amber-400 border-amber-500/30',
-  endurance: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
-  capacity: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30',
-  custom: 'bg-slate-500/10 text-slate-300 border-slate-500/30',
+  stress:   'bg-orange-500/10 text-orange-400 border-orange-500/30',
+  spike:    'bg-yellow-500/10 text-yellow-400 border-yellow-500/30',
+  soak:     'bg-purple-500/10 text-purple-400 border-purple-500/30',
+  // ── Advanced ────────────────────────────────────────────────────────
+  baseline: 'bg-slate-500/10 text-slate-400 border-slate-500/30',
+  custom:   'bg-slate-500/10 text-slate-300 border-slate-500/30',
+  // ── Legacy / compatibility ───────────────────────────────────────────
+  load:      'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
+  endurance: 'bg-purple-500/10 text-purple-400 border-purple-500/30',
+  capacity:  'bg-cyan-500/10 text-cyan-400 border-cyan-500/30',
   profiling: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30',
 };
 
 export const getProfileInfo = (rawProfile?: string) => {
   const key = String(rawProfile || 'constant').toLowerCase();
-  const label = PROFILE_LABELS[key] || PROFILE_LABELS.constant;
-  const color = PROFILE_COLORS[key] || PROFILE_COLORS.constant;
+  const label = PROFILE_LABELS[key] ?? PROFILE_LABELS.constant;
+  const color = PROFILE_COLORS[key] ?? PROFILE_COLORS.constant;
   return { key, label, color };
 };
 

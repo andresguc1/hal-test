@@ -9,6 +9,7 @@
  */
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { applyNodeChanges } from "@xyflow/react";
 import * as Y from "yjs";
 import { useCollaboration } from "./CollaborationProvider";
 
@@ -112,6 +113,9 @@ export function useCRDTNodes({ enabled = false } = {}) {
   const onNodesChange = useCallback(
     (changes) => {
       if (!isActive) return;
+
+      // 🚀 Optimistic local update for fluid 60fps ReactFlow drag & drop
+      setLocalNodes((prev) => applyNodeChanges(changes, prev));
 
       const yNodes = ydoc.getMap("nodes");
 

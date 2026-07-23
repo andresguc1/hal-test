@@ -15,6 +15,7 @@ import {
     startPerformanceRunAction,
     estimatePerformanceAction,
     startSecurityRunAction,
+    exportPerformanceReportAction,
 } from '../controllers/run.controller.js';
 
 const router = Router();
@@ -32,6 +33,7 @@ router.post('/:id/end', endRunAction);
 router.post('/:id/cancel', cancelRunAction);
 router.get('/analytics', getReportAnalyticsAction);
 router.get('/flow/:flowId/history', getFlowHistoryAction);
+router.get('/:runId/export', exportPerformanceReportAction);
 router.get('/', getRunsAction);
 router.get('/:id', getRunDetailsAction);
 

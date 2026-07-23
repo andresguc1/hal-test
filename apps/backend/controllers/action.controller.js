@@ -5923,9 +5923,13 @@ export const componentAction = async (req, res) => {
             sourceHandle: e.sourceHandle,
         }));
 
-        const entryNodes = allNodes.filter((n) => n.type === 'entry' || n.type === 'input');
+        let entryNodes = allNodes.filter((n) => n.type === 'entry' || n.type === 'input');
         if (entryNodes.length === 0) {
-            throw new Error(`Subflow ${flowId} has no Entry node`);
+            const incomingTargets = new Set(allEdges.map((e) => e.target));
+            entryNodes = allNodes.filter((n) => !incomingTargets.has(n.nodeId) && !incomingTargets.has(n.id));
+            if (entryNodes.length === 0 && allNodes.length > 0) {
+                entryNodes = [allNodes[0]];
+            }
         }
 
         // 3. Run subflow
@@ -5934,7 +5938,7 @@ export const componentAction = async (req, res) => {
             runId: runId || `subrun_${Date.now()}`,
             browserId: req.body.browserId,
             executedNodeIds: new Set(),
-            activatedNodeIds: new Set(entryNodes.map((n) => n.nodeId)),
+            activatedNodeIds: new Set(entryNodes.flatMap((n) => [n.nodeId, n.id]).filter(Boolean)),
             edgeStates: {},
             variables: {},
             overrides: {},

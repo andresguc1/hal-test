@@ -348,7 +348,10 @@ export class ExecutionService {
 
         // Ensure all entry points for this sequence are activated
         currentNodes.forEach((n) => {
-            if (n && n.nodeId) state.activatedNodeIds.add(n.nodeId);
+            if (n) {
+                if (n.nodeId) state.activatedNodeIds.add(n.nodeId);
+                if (n.id) state.activatedNodeIds.add(n.id);
+            }
         });
 
         // Filter nodes to only process those at the same level (same parentId)
@@ -367,11 +370,20 @@ export class ExecutionService {
 
             // Check if node is explicitly disabled or already executed
             if (node.data?.disabled) continue;
-            if (state.executedNodeIds && state.executedNodeIds.has(node.nodeId)) continue;
+            if (
+                state.executedNodeIds &&
+                (state.executedNodeIds.has(node.nodeId) || state.executedNodeIds.has(node.id))
+            ) {
+                continue;
+            }
 
             // 1. Activation Check (Execution Token)
             // Only execute if node was explicitly activated by an incoming successful signal
-            if (state.activatedNodeIds && !state.activatedNodeIds.has(node.nodeId)) {
+            if (
+                state.activatedNodeIds &&
+                !state.activatedNodeIds.has(node.nodeId) &&
+                !state.activatedNodeIds.has(node.id)
+            ) {
                 console.log(`[DPE] Node ${node.nodeId} is in Standby (no signal received yet).`);
                 continue;
             }
@@ -574,6 +586,11 @@ export class ExecutionService {
                 const edgeId = edge.edgeId || edge.id;
                 emitEdgeStatus({ edgeId, status: 'success' });
                 state.activatedNodeIds.add(edge.target);
+                const targetNode = allNodes.find((n) => n.nodeId === edge.target || n.id === edge.target);
+                if (targetNode) {
+                    if (targetNode.nodeId) state.activatedNodeIds.add(targetNode.nodeId);
+                    if (targetNode.id) state.activatedNodeIds.add(targetNode.id);
+                }
             });
 
             // 7. Recursive execution of next nodes
@@ -663,17 +680,23 @@ export class ExecutionService {
         const edge = allEdges.find((e) => (e.edgeId || e.id) === edgeId);
         if (!edge) return;
 
-        const targetNode = allNodes.find((n) => n.nodeId === edge.target);
+        const targetNode = allNodes.find((n) => n.nodeId === edge.target || n.id === edge.target);
         if (!targetNode) return;
 
         // 3. Check if node should be skipped
         // A node is skipped if ALL its incoming edges are skipped
-        const incomingEdges = allEdges.filter((e) => e.target === targetNode.nodeId);
-        const allSkipped = incomingEdges.every(
-            (e) => state.edgeStates[e.edgeId || e.id] === 'skipped',
+        const incomingEdges = allEdges.filter(
+            (e) => e.target === targetNode.nodeId || e.target === targetNode.id,
         );
+        const allSkipped =
+            incomingEdges.length > 0 &&
+            incomingEdges.every((e) => state.edgeStates[e.edgeId || e.id] === 'skipped');
 
-        if (allSkipped && !state.executedNodeIds.has(targetNode.nodeId)) {
+        if (
+            allSkipped &&
+            !state.executedNodeIds.has(targetNode.nodeId) &&
+            !state.executedNodeIds.has(targetNode.id)
+        ) {
             console.log(`[DPE] Eliminating Dead Path: Node ${targetNode.nodeId} is now SKIPPED.`);
             emitExecutionStatus({
                 stepId: targetNode.nodeId,
@@ -681,10 +704,13 @@ export class ExecutionService {
                 runId: state.runId,
                 batchId: state.batchId,
             });
-            state.executedNodeIds.add(targetNode.nodeId); // Prevents it from being executed later
+            state.executedNodeIds.add(targetNode.nodeId);
+            if (targetNode.id) state.executedNodeIds.add(targetNode.id);
 
             // 4. Recursively skip all outgoing edges
-            const outgoingEdges = allEdges.filter((e) => e.source === targetNode.nodeId);
+            const outgoingEdges = allEdges.filter(
+                (e) => e.source === targetNode.nodeId || e.source === targetNode.id,
+            );
             outgoingEdges.forEach((e) =>
                 this.propagateSkip(e.edgeId || e.id, allNodes, allEdges, state),
             );
@@ -695,7 +721,7 @@ export class ExecutionService {
      * Executes a single node action
      */
     async executeNode(node, allNodes, allEdges, state) {
-        const actionType = node.type;
+        const actionType = node.data?.type || node.type;
         const ignoredTypes = [
             'guide',
             'note',
@@ -874,13 +900,27 @@ export class ExecutionService {
                 const durationUs = durationMs * 1000;
                 const cpuPercent = durationUs > 0 ? (totalCpuUs / durationUs) * 100 : 0;
                 const memUsedMB = (endMem.rss - startMem.rss) / (1024 * 1024);
+                const FRIENDLY_TYPES = {
+                    launch_browser: 'Lanzar Navegador',
+                    open_url: 'Navegar URL',
+                    click: 'Hacer Clic',
+                    type_text: 'Escribir Texto',
+                    wait: 'Esperar',
+                    close_browser: 'Cerrar Navegador',
+                    screenshot: 'Captura de Pantalla',
+                    select_option: 'Seleccionar Opción',
+                    assert_element: 'Validar Elemento',
+                    extract_data: 'Extraer Datos',
+                };
+                const errDefaultLabel = FRIENDLY_TYPES[actionType] || actionType;
+
                 if (process.send) {
                     process.send({
                         type: 'node-metric',
                         payload: {
                             nodeId: node.nodeId,
                             type: actionType,
-                            label: node.data?.customLabel || node.data?.label || actionType,
+                            label: node.data?.customLabel || node.data?.label || errDefaultLabel,
                             durationMs,
                             cpuPercent,
                             memUsedMB,
@@ -930,6 +970,20 @@ export class ExecutionService {
 
             const memUsedMB = (endMem.rss - startMem.rss) / (1024 * 1024);
 
+            const FRIENDLY_TYPES = {
+                launch_browser: 'Lanzar Navegador',
+                open_url: 'Navegar URL',
+                click: 'Hacer Clic',
+                type_text: 'Escribir Texto',
+                wait: 'Esperar',
+                close_browser: 'Cerrar Navegador',
+                screenshot: 'Captura de Pantalla',
+                select_option: 'Seleccionar Opción',
+                assert_element: 'Validar Elemento',
+                extract_data: 'Extraer Datos',
+            };
+            const defaultLabel = FRIENDLY_TYPES[actionType] || actionType;
+
             // Emit via IPC if we are in a worker process
             if (process.send) {
                 process.send({
@@ -937,7 +991,7 @@ export class ExecutionService {
                     payload: {
                         nodeId: node.nodeId,
                         type: actionType,
-                        label: node.data?.customLabel || node.data?.label || actionType,
+                        label: node.data?.customLabel || node.data?.label || defaultLabel,
                         durationMs,
                         cpuPercent,
                         memUsedMB,
@@ -1025,7 +1079,7 @@ export class ExecutionService {
             const nodeLabel = finalResult?.label || node.data?.label || fallbackLabel;
 
             const metricObj = {
-                nodeId: node.nodeId,
+                nodeId: node.nodeId || node.id,
                 durationMs: Number(process.hrtime.bigint() - nodeStartTime) / 1e6,
                 label: nodeLabel,
                 success: finalResult?.status !== 'failed' && finalResult?.status !== 'error',

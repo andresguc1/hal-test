@@ -70,11 +70,13 @@ const PerformanceDashboard = () => {
   } = usePerformanceSocket(flowId);
 
   // Tab control: 'config' | 'live' | 'results' | 'history'
-  const [activeTab, setActiveTab] = useState("config");
+  const [activeTab, setActiveTab] = useState(
+    location.state?.activeTab || (status === "running" ? "live" : "config")
+  );
 
   // Sync tab with execution state changes
   useEffect(() => {
-    if (status === "running") {
+    if (status === "running" || status === "preparing") {
       setActiveTab("live");
     } else if (status === "completed") {
       setActiveTab("results");
@@ -86,7 +88,7 @@ const PerformanceDashboard = () => {
     if (location.state?.activeTab) {
       setActiveTab(location.state.activeTab);
     }
-  }, [location.state?.activeTab]);
+  }, [location.state?.activeTab, location.state]);
 
   const handleStartTest = async (config) => {
     if (!flowId) {
@@ -96,16 +98,22 @@ const PerformanceDashboard = () => {
 
     const toastId = toast.loading("Inicializando motor de performance...");
 
+    const activeFlowObj = currentProject?.flows?.find((f) => f.id === flowId);
+
     try {
       const result = await api.post("/runs/performance", {
         flowId: flowId,
         projectId: currentProject?.id,
+        nodes: activeFlowObj?.nodes || [],
+        edges: activeFlowObj?.edges || [],
         performanceConfig: {
           virtualUsers: config.vus,
           duration: config.duration,
           profile: config.profile,
           rampUp: config.rampUp,
           stages: config.stages,
+          stopAtErrorRate: config.stopAtErrorRate,
+          spikeBaseVUs: config.spikeBaseVUs,
           headless: true,
         },
       });
@@ -266,6 +274,7 @@ const PerformanceDashboard = () => {
                   <ScenarioBuilder
                     onRun={handleStartTest}
                     flowName={flowName}
+                    initialConfig={runConfig || location.state?.perfConfig}
                   />
                 </div>
 

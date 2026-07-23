@@ -47,6 +47,13 @@ export default function HalDashboard() {
   const [activePage, setActivePage] = useState(
     location.state?.activePage || "overview",
   );
+
+  // Sync activePage with navigation location state
+  React.useEffect(() => {
+    if (location.state?.activePage) {
+      setActivePage(location.state.activePage);
+    }
+  }, [location.state?.activePage, location.state]);
   const [search, setSearch] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [creationModal, setCreationModal] = useState({ isOpen: false });

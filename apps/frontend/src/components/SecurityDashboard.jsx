@@ -23,7 +23,7 @@ import {
   Clock,
   Play,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useExecutionStore } from "../stores/useExecutionStore";
 import { useProjectManager } from "./hooks/useProjectManager";
@@ -134,8 +134,18 @@ export default function SecurityDashboard() {
   const toast = useToast();
   const navigate = useNavigate();
 
+  const location = useLocation();
+
   // Navigation tab state: 'config' | 'live' | 'results' | 'history'
-  const [activeTab, setActiveTab] = useState("results");
+  const [activeTab, setActiveTab] = useState(
+    location.state?.activeTab || "results"
+  );
+
+  useEffect(() => {
+    if (location.state?.activeTab) {
+      setActiveTab(location.state.activeTab);
+    }
+  }, [location.state?.activeTab, location.state]);
 
   // Telemetry & Run State
   const [status, setStatus] = useState("idle"); // 'idle' | 'preparing' | 'running' | 'completed' | 'failed'

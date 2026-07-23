@@ -62,11 +62,19 @@ class PerformanceRunner extends Runner {
             virtualUsers = 1,
             duration = 30,
             rampUp = 0,
+            rampDown = 0,
+            holdTime = 0,
+            startVUs = 1,
+            stepCount = 4,
+            growthType = 'linear',
             profile = 'constant',
             stages = null,
             throttleStrategy = 'auto',
             maxConcurrentBrowsers = 3,
             headless = true,
+            stopAtErrorRate = null,  // % threshold for auto-stop (Stress Test)
+            spikeBaseVUs = 1,        // base VU count before/after spike peak
+            slaConfig = {},
         } = config;
 
         // If custom stages are provided, derive duration and max VUs
@@ -91,20 +99,13 @@ class PerformanceRunner extends Runner {
                 `${estimate.freeGB}GB free, safe VUs: ${estimate.safeVUs}`,
         );
 
-        if (estimate.exceeds && throttleStrategy !== 'aggressive') {
-            const error = new Error(
-                `Estimated ${estimate.ramGB}GB RAM exceeds available ${estimate.freeGB}GB. ` +
-                    `Reduce VUs to ${estimate.safeVUs} or set throttle strategy to "aggressive".`,
-            );
-            error.code = 'RESOURCE_LIMIT';
-            error.suggestion = { safeVUs: estimate.safeVUs };
-            throw error;
-        }
-
-        // 2. Determine effective VU count (auto-throttle may reduce it)
+        // Determine effective VU count (auto-throttle may reduce it)
         let effectiveVUs = virtualUsers;
         if (throttleStrategy === 'auto' && estimate.exceeds) {
             effectiveVUs = estimate.safeVUs;
+        }
+
+        if (estimate.exceeds && throttleStrategy !== 'aggressive') {
             emitLog({
                 message: `[Performance] Auto-throttled from ${virtualUsers} to ${effectiveVUs} max VUs (memory constraint)`,
                 type: 'warning',
@@ -115,13 +116,34 @@ class PerformanceRunner extends Runner {
             }
         }
 
+        console.log(`[PerformanceRunner] ⚡ Starting performance run for flow: ${flowId}`);
+        console.log(
+            `[PerformanceRunner] Config: ${effectiveVUs} max VUs, ${duration}s, ` +
+                `profile=${stages ? 'custom' : profile}`,
+        );
+
+        // Determine stages (use custom stages or build from profile)
+        const finalStages =
+            stages && stages.length > 0
+                ? stages
+                : this._buildStages(profile, effectiveVUs, duration, rampUp, spikeBaseVUs, {
+                      rampDown,
+                      holdTime,
+                      startVUs,
+                      stepCount,
+                      growthType,
+                  });
+
         // 3. Initialize metrics collector
         const metrics = new MetricsCollector(flowId, {
             runConfig: {
                 flowId,
                 totalVUs: effectiveVUs,
                 durationSec: duration,
-                flowName: 'Load Test', // Ideally fetched from DB
+                profile,
+                stages: finalStages,
+                flowName: flow.name || 'Load Test',
+                slaConfig,
             },
         });
 
@@ -178,7 +200,9 @@ class PerformanceRunner extends Runner {
                     flowId,
                     totalVUs: effectiveVUs,
                     durationSec: duration,
-                    flowName: 'Load Test', // Could fetch actual flow name if passed
+                    profile,
+                    stages: finalStages,
+                    flowName: flow.name || 'Load Test',
                 });
             } catch {
                 // Ignore
@@ -219,12 +243,6 @@ class PerformanceRunner extends Runner {
         }, 5000);
 
         try {
-            // Translate profile to stages if custom stages are not provided
-            const finalStages =
-                stages && stages.length > 0
-                    ? stages
-                    : this._buildStages(profile, effectiveVUs, duration, rampUp);
-
             await new Promise((resolve) => {
                 let activeVUs = 0;
                 let nextVuId = 1;
@@ -319,9 +337,26 @@ class PerformanceRunner extends Runner {
                     if (elapsedSec >= duration) {
                         isFinished = true;
                         clearInterval(ticker);
-                        // Wait for active VUs to drain (simplified: we just resolve immediately for hard-stop)
                         resolve();
                         return;
+                    }
+
+                    // ── Stress Test: Auto-Stop on error rate threshold ──────────
+                    if (stopAtErrorRate !== null && totalIterations > 5) {
+                        const snap = metrics.summarize();
+                        const currentErrorRate = parseFloat(snap?.data?.errorRate || 0);
+                        if (currentErrorRate >= stopAtErrorRate) {
+                            isFinished = true;
+                            clearInterval(ticker);
+                            aborted = true;
+                            pool.abort();
+                            emitLog({
+                                message: `[Performance] 🛑 Stress Test auto-stopped: error rate ${currentErrorRate.toFixed(1)}% ≥ threshold ${stopAtErrorRate}%`,
+                                type: 'warning',
+                            });
+                            resolve();
+                            return;
+                        }
                     }
 
                     const target = getTargetVUs(elapsedSec);
@@ -360,63 +395,115 @@ class PerformanceRunner extends Runner {
      * Translates the load profile into a series of temporal stages.
      * @private
      */
-    _buildStages(profile, totalVUs, durationSec, rampUpSec = 0) {
+    /**
+     * Translates the load profile into a series of temporal stages.
+     * Each stage defines { durationSec, target } where target is the VU count
+     * at the END of that stage (linear interpolation from previous target).
+     *
+     * @param {string} profile      - Load profile ID
+     * @param {number} totalVUs     - Maximum VU count
+     * @param {number} durationSec  - Total test duration in seconds
+     * @param {number} rampUpSec    - Ramp-up duration (for ramp profile)
+     * @param {number} spikeBaseVUs - Base VUs for spike profile (before/after peak)
+     */
+    _buildStages(profile, totalVUs, durationSec, rampUpSec = 0, spikeBaseVUs = 1, opts = {}) {
         const stages = [];
+        const {
+            rampDown = 0,
+            holdTime = 0,
+            startVUs = 1,
+            stepCount = 4,
+            growthType = 'linear',
+        } = opts;
+
+        const effectiveRampDown = rampDown > 0 ? rampDown : Math.max(5, Math.floor(durationSec * 0.15));
 
         switch (profile) {
             case 'baseline':
-                // Single user running normally to establish baseline metrics
                 stages.push({ durationSec, target: 1 });
                 break;
 
-            case 'spike': {
-                // 30% low, 20% max spike, 50% low
-                const lowVUs = Math.max(1, Math.floor(totalVUs * 0.1));
-                const t1 = Math.floor(durationSec * 0.3);
-                const t2 = Math.floor(durationSec * 0.2);
-                const t3 = Math.max(0, durationSec - t1 - t2);
-                stages.push({ durationSec: t1, target: lowVUs });
-                stages.push({ durationSec: t2, target: totalVUs });
-                if (t3 > 0) stages.push({ durationSec: t3, target: lowVUs });
+            case 'stepped': {
+                // Stepped Ramp-Up (Escalonado)
+                const numSteps = Math.max(2, stepCount);
+                const totalRampTime = rampUpSec > 0 ? rampUpSec : Math.floor(durationSec * 0.5);
+                const stepTime = Math.max(1, Math.floor(totalRampTime / numSteps));
+                const vuStep = Math.max(1, Math.floor((totalVUs - startVUs) / numSteps));
+
+                let currentVUs = startVUs;
+                for (let i = 1; i <= numSteps; i++) {
+                    currentVUs = i === numSteps ? totalVUs : startVUs + i * vuStep;
+                    stages.push({ durationSec: stepTime, target: currentVUs });
+                }
+
+                // Hold time at max target
+                const sustainTime = holdTime > 0 ? holdTime : Math.max(5, durationSec - totalRampTime - effectiveRampDown);
+                if (sustainTime > 0) {
+                    stages.push({ durationSec: sustainTime, target: totalVUs });
+                }
+
+                // Ramp-Down to 0
+                stages.push({ durationSec: effectiveRampDown, target: 0 });
                 break;
             }
 
+            case 'ramp':
+            case 'load': {
+                // Multi-stage Ramp: [RampUp] -> [Hold] -> [RampDown]
+                const actualRamp = rampUpSec > 0 ? rampUpSec : Math.floor(durationSec * 0.3);
+                const sustain = holdTime > 0 ? holdTime : Math.max(5, durationSec - actualRamp - effectiveRampDown);
+
+                stages.push({ durationSec: actualRamp, target: totalVUs });
+                if (sustain > 0) {
+                    stages.push({ durationSec: sustain, target: totalVUs });
+                }
+                stages.push({ durationSec: effectiveRampDown, target: 0 });
+                break;
+            }
+
+            case 'constant':
+            case 'endurance':
+            default:
+                // Flat constant load with optional ramp down
+                stages.push({ durationSec: Math.max(5, durationSec - effectiveRampDown), target: totalVUs });
+                stages.push({ durationSec: effectiveRampDown, target: 0 });
+                break;
+
             case 'stress': {
-                // Stepped increments (4 steps)
-                const steps = 4;
+                // Stepped increments — equal steps escalating to totalVUs
+                const steps = Math.max(3, stepCount);
                 const stepDuration = Math.floor(durationSec / steps);
                 for (let i = 1; i <= steps; i++) {
                     const targetAtStep = Math.ceil((totalVUs / steps) * i);
-                    const dur =
-                        i === steps ? durationSec - stepDuration * (steps - 1) : stepDuration;
+                    const dur = i === steps ? durationSec - stepDuration * (steps - 1) : stepDuration;
                     stages.push({ durationSec: dur, target: targetAtStep });
                 }
+                stages.push({ durationSec: effectiveRampDown, target: 0 });
+                break;
+            }
+
+            case 'spike': {
+                // base → spike → sustain → cooldown → 0
+                const base = Math.max(1, spikeBaseVUs);
+                const rampToSpike = Math.max(2, Math.floor(durationSec * 0.1));
+                const sustainSpike = Math.max(5, Math.floor(durationSec * 0.3));
+                const cooldown = Math.max(5, Math.floor(durationSec * 0.2));
+                const baseHold = Math.max(1, durationSec - rampToSpike - sustainSpike - cooldown);
+                stages.push({ durationSec: baseHold, target: base });
+                stages.push({ durationSec: rampToSpike, target: totalVUs });
+                stages.push({ durationSec: sustainSpike, target: totalVUs });
+                stages.push({ durationSec: cooldown, target: 0 });
+                break;
+            }
+
+            case 'soak': {
+                // Flat constant load — durationSec already converted to seconds in frontend
+                stages.push({ durationSec, target: totalVUs });
                 break;
             }
 
             case 'capacity':
-                // Continuous ramp up from 1 to totalVUs over the entire duration
-                stages.push({ durationSec, target: totalVUs });
-                break;
-
-            case 'load':
-            case 'ramp': {
-                // Ramp up for rampUpSec (or 20% of duration), then sustain
-                const actualRamp = rampUpSec > 0 ? rampUpSec : Math.floor(durationSec * 0.2);
-                if (actualRamp > 0) {
-                    stages.push({ durationSec: actualRamp, target: totalVUs });
-                }
-                const sustain = durationSec - actualRamp;
-                if (sustain > 0) {
-                    stages.push({ durationSec: sustain, target: totalVUs });
-                }
-                break;
-            }
-
-            case 'endurance':
-            case 'constant':
-            default:
-                // Constant profile
+                // Linear ramp across full duration (find breaking point)
                 stages.push({ durationSec, target: totalVUs });
                 break;
         }
