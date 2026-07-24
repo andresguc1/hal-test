@@ -4,7 +4,7 @@ services:
     runtime: node
     region: oregon
     plan: free
-    buildCommand: pnpm install && pnpm build:monolith && npx playwright install chromium
+    buildCommand: pnpm install --no-frozen-lockfile && pnpm build:monolith && npx playwright install chromium
     startCommand: pnpm start
     envVars:
       - key: NODE_ENV
