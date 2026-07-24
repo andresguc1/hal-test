@@ -25,7 +25,7 @@ export default function SecurityHistoryView({ flowId, onSelectRun }) {
           (r) =>
             r.trigger === "seguridad" ||
             r.trigger === "security" ||
-            (flowId && r.flow_id === flowId)
+            (flowId && r.flow_id === flowId),
         );
         setRuns(securityRuns);
       }
@@ -60,13 +60,17 @@ export default function SecurityHistoryView({ flowId, onSelectRun }) {
             <span>Historial de Auditorías de Seguridad</span>
           </h3>
           <p className="text-xs text-slate-400 mt-0.5">
-            Registro cronológico de evaluaciones de vulnerabilidades y escaneos DAST.
+            Registro cronológico de evaluaciones de vulnerabilidades y escaneos
+            DAST.
           </p>
         </div>
 
         <div className="flex items-center space-x-3">
           <div className="relative">
-            <Search className="absolute left-3 top-2.5 text-slate-500" size={16} />
+            <Search
+              className="absolute left-3 top-2.5 text-slate-500"
+              size={16}
+            />
             <input
               type="text"
               placeholder="Buscar por ID o Flujo..."
@@ -132,14 +136,18 @@ export default function SecurityHistoryView({ flowId, onSelectRun }) {
                       </span>
                     </td>
                     <td className="py-3 px-4 text-slate-400 font-mono text-[11px]">
-                      {new Date(run.created_at || run.start_time || Date.now()).toLocaleString()}
+                      {new Date(
+                        run.created_at || run.start_time || Date.now(),
+                      ).toLocaleString()}
                     </td>
                     <td className="py-3 px-4">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase ${
-                        run.status === "completed" || run.status === "success"
-                          ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                          : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
-                      }`}>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase ${
+                          run.status === "completed" || run.status === "success"
+                            ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                            : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                        }`}
+                      >
                         {run.status}
                       </span>
                     </td>

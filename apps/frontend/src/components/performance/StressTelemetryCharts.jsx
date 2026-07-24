@@ -5,7 +5,7 @@ import { Activity, Zap, TrendingUp, Cpu } from "lucide-react";
 /**
  * StressTelemetryCharts — X-Y Visualizer mapping Latency P95 & Throughput vs Active VUs
  */
-export const StressTelemetryCharts = ({ timeline = [], metrics }) => {
+export const StressTelemetryCharts = ({ timeline = [], _metrics }) => {
   if (!timeline || timeline.length === 0) return null;
 
   // Process data points for X-Y plotting (X = VUs, Y = Latency / Throughput)
@@ -25,7 +25,8 @@ export const StressTelemetryCharts = ({ timeline = [], metrics }) => {
       <div className="bg-slate-900/80 border border-slate-800/80 rounded-2xl p-4 space-y-3">
         <div className="flex items-center justify-between">
           <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-            <TrendingUp size={14} className="text-amber-400" /> Latencia P95 vs Usuarios Concurrentes
+            <TrendingUp size={14} className="text-amber-400" /> Latencia P95 vs
+            Usuarios Concurrentes
           </h4>
           <span className="text-[10px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded-full border border-amber-500/20 font-mono">
             Eje X = VUs
@@ -36,7 +37,10 @@ export const StressTelemetryCharts = ({ timeline = [], metrics }) => {
           {/* Scatter / Line Visualization */}
           <div className="flex-1 flex items-end justify-between gap-1 pt-2">
             {dataPoints.map((pt, idx) => {
-              const heightPct = Math.min(100, Math.max(5, (pt.latency / maxLatency) * 100));
+              const heightPct = Math.min(
+                100,
+                Math.max(5, (pt.latency / maxLatency) * 100),
+              );
               const isHigh = pt.latency > 2000;
               return (
                 <div
@@ -47,7 +51,11 @@ export const StressTelemetryCharts = ({ timeline = [], metrics }) => {
                     initial={{ height: 0 }}
                     animate={{ height: `${heightPct}%` }}
                     className={`w-full rounded-t transition-all ${
-                      isHigh ? "bg-red-500/80" : pt.latency > 800 ? "bg-amber-500/80" : "bg-emerald-500/80"
+                      isHigh
+                        ? "bg-red-500/80"
+                        : pt.latency > 800
+                          ? "bg-amber-500/80"
+                          : "bg-emerald-500/80"
                     }`}
                   />
                   {/* Hover tooltip */}
@@ -72,7 +80,8 @@ export const StressTelemetryCharts = ({ timeline = [], metrics }) => {
       <div className="bg-slate-900/80 border border-slate-800/80 rounded-2xl p-4 space-y-3">
         <div className="flex items-center justify-between">
           <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-            <Zap size={14} className="text-sky-400" /> Throughput (req/s) vs Usuarios Concurrentes
+            <Zap size={14} className="text-sky-400" /> Throughput (req/s) vs
+            Usuarios Concurrentes
           </h4>
           <span className="text-[10px] bg-sky-500/10 text-sky-400 px-2 py-0.5 rounded-full border border-sky-500/20 font-mono">
             Plateau de Saturación
@@ -82,7 +91,10 @@ export const StressTelemetryCharts = ({ timeline = [], metrics }) => {
         <div className="h-44 w-full bg-slate-950/60 rounded-xl border border-slate-800/60 p-3 flex flex-col justify-between relative overflow-hidden">
           <div className="flex-1 flex items-end justify-between gap-1 pt-2">
             {dataPoints.map((pt, idx) => {
-              const heightPct = Math.min(100, Math.max(5, (pt.throughput / maxThroughput) * 100));
+              const heightPct = Math.min(
+                100,
+                Math.max(5, (pt.throughput / maxThroughput) * 100),
+              );
               return (
                 <div
                   key={idx}

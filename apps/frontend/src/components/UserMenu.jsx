@@ -132,6 +132,7 @@ export default function UserMenu({
             { label: "English", value: "en" },
             { label: "Español", value: "es" },
             { label: "Français", value: "fr" },
+            { label: "Português", value: "pt" },
           ]}
         />
       </DropdownMenuContent>

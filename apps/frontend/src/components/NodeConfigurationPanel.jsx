@@ -518,7 +518,9 @@ const NodeConfigurationPanel = ({
     const dataKey = field.key;
     const reactKey = `input-${field.key}`;
     const fieldLabel = t("nodes.fields." + field.key, field.label);
-    const fieldPlaceholder = field.placeholder ? t("nodes.placeholders." + field.key, field.placeholder) : "";
+    const fieldPlaceholder = field.placeholder
+      ? t("nodes.placeholders." + field.key, field.placeholder)
+      : "";
 
     switch (field.type) {
       case "conditional_branches":
@@ -640,7 +642,10 @@ const NodeConfigurationPanel = ({
                         value={opt.value}
                         className="bg-slate-800 text-slate-200"
                       >
-                        {t("nodes.options." + field.key + "." + opt.value, opt.label)}
+                        {t(
+                          "nodes.options." + field.key + "." + opt.value,
+                          opt.label,
+                        )}
                       </option>
                     ))}
                   </select>
@@ -706,7 +711,9 @@ const NodeConfigurationPanel = ({
                 }
                 className="text-[10px] text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded"
               >
-                {activeNode.data?.state === "picking" ? t("common.cancel", "Cancel") : t("common.pick", "Pick")}
+                {activeNode.data?.state === "picking"
+                  ? t("common.cancel", "Cancel")
+                  : t("common.pick", "Pick")}
               </button>
             </div>
             <Controller
@@ -1016,7 +1023,14 @@ const NodeConfigurationPanel = ({
               )}
               <button
                 onClick={() => {
-                  if (confirm(t("common.delete_confirm", "Are you sure you want to delete this node?"))) {
+                  if (
+                    confirm(
+                      t(
+                        "common.delete_confirm",
+                        "Are you sure you want to delete this node?",
+                      ),
+                    )
+                  ) {
                     onDeleteNode?.(activeNode.id);
                     onClose();
                   }

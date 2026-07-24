@@ -206,6 +206,7 @@ export default function SettingsModal({
                       { id: "en", label: "English", flag: "🇺🇸" },
                       { id: "es", label: "Español", flag: "🇪🇸" },
                       { id: "fr", label: "Français", flag: "🇫🇷" },
+                      { id: "pt", label: "Português", flag: "🇧🇷" },
                     ].map((lang) => {
                       const isSelected = i18n.language.startsWith(lang.id);
                       return (

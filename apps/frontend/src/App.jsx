@@ -229,8 +229,6 @@ function Dashboard({
   const isWorkspaceReadOnly =
     isReadOnly || (isCollaborative && role === "viewer");
 
-
-
   // Collaboration toggle handler
   const handleToggleCollaboration = useCallback(async () => {
     if (!currentProject) return;
@@ -277,7 +275,7 @@ function Dashboard({
         nds.map((n) => ({
           ...n,
           selected: n.id === nodeId,
-        }))
+        })),
       );
       // Small delay so the panel re-renders with the new node first
       setTimeout(() => {
@@ -340,182 +338,217 @@ function Dashboard({
     [currentFlowId, currentProject?.id, toast, t],
   );
 
-  const handleExecuteFlow = useCallback(async (options = {}) => {
-    const targetMode = options?.executionMode || canvasViewMode;
-    // --- COLLABORATION LOCK CHECKS ---
-    if (isCollaborative) {
-      if (role !== "owner") {
-        toast.error(
-          t(
-            "common.owner_execute_only",
-            "🔒 Solo el propietario (owner) puede ejecutar el flujo.",
-          ),
-        );
-        return;
-      }
-      if (isRemoteExecuting) {
-        toast.error(
-          t(
-            "common.remote_executing",
-            "🔒 {{user}} está ejecutando este flujo actualmente...",
-            {
-              user: remoteExecution?.user?.name || "Otro colaborador",
-            },
-          ),
-        );
-        return;
-      }
-    }
-
-    // --- UNIVERSAL EXECUTION CONTEXT ---
-    // We stay in the current view context (sub-flow or root) to allow local monitoring.
-    // The engine handles global initialization automatically.
-    // ------------------------------------------
-
-    // 0. DRY RUN VALIDATION (Clean UX: No loading toast for instant validation)
-    const validationErrors = validateFlowStructure(nodes, edges);
-    if (validationErrors.length > 0) {
-      const firstError = validationErrors[0];
-      const errorMsg =
-        typeof firstError === "string" ? firstError : firstError.message;
-      const errorNodeId =
-        typeof firstError === "string" ? null : firstError.nodeId;
-
-      toast.error(errorMsg, {
-        duration: 5000,
-        style: { border: "1px solid #ef4444", color: "#ef4444" },
-      });
-
-      if (errorNodeId) {
-        addLog(
-          `[ValidationError] NodeId=${errorNodeId} Error="${errorMsg}"`,
-          "error",
-          errorNodeId,
-        );
-        handleNavigateToNode(errorNodeId);
-      } else {
-        addLog(`[ValidationError] Error="${errorMsg}"`, "error");
-      }
-      return; // Stop here, no processing toast shown.
-    }
-
-    if (!currentFlowId) {
-      toast.info(
-        t(
-          "common.save_before_execute",
-          "Debes guardar el flujo antes de ejecutarlo.",
-        ),
-      );
-      setCreationModal({ isOpen: true, type: "flow" });
-      return;
-    }
-
-    // Log execution start indicating active view mode
-    const modeLabel = targetMode === "performance"
-      ? "PERFORMANCE"
-      : targetMode === "seguridad"
-        ? "SECURITY"
-        : "QUALITY AUTOMATION";
-    addLog(`[System] 🚀 Starting ${modeLabel} flow execution...`, "info");
-    useExecutionStore.getState().startExecution({
-      mode: targetMode,
-      flowId: currentFlowId,
-    });
-
-    // 1. Show Loading Toast immediately (Duration 0 = indefinite until dismissed)
-    const toastId = toast.loading(t("common.processing"));
-
-    let executionSuccess = false;
-    try {
-      // --- EXECUTION ISOLATION (Debug vs E2E) ---
-      if (activeBrowserId) {
-        if (
-          confirm(
+  const handleExecuteFlow = useCallback(
+    async (options = {}) => {
+      const targetMode = options?.executionMode || canvasViewMode;
+      // --- COLLABORATION LOCK CHECKS ---
+      if (isCollaborative) {
+        if (role !== "owner") {
+          toast.error(
             t(
-              "common.confirm_close_debug",
-              "Active debug session detected. Close it to ensure a clean E2E run?",
+              "common.owner_execute_only",
+              "🔒 Solo el propietario (owner) puede ejecutar el flujo.",
             ),
-          )
-        ) {
-          toast.loading("Closing debug session...", { id: toastId });
-          await stopSession();
-        } else {
-          // If user refuses to close, we abort to prevent collisions
-          toast.dismiss(toastId);
-          toast.info("Execution cancelled to preserve debug session.");
-          useExecutionStore.getState().finishExecution({ status: "cancelled" });
+          );
+          return;
+        }
+        if (isRemoteExecuting) {
+          toast.error(
+            t(
+              "common.remote_executing",
+              "🔒 {{user}} está ejecutando este flujo actualmente...",
+              {
+                user: remoteExecution?.user?.name || "Otro colaborador",
+              },
+            ),
+          );
           return;
         }
       }
+
+      // --- UNIVERSAL EXECUTION CONTEXT ---
+      // We stay in the current view context (sub-flow or root) to allow local monitoring.
+      // The engine handles global initialization automatically.
       // ------------------------------------------
 
-      const result = await executeFlow({ executionMode: targetMode }); // Returns { success, stats, failedNodeId, divePath, healedNodes }
-      executionSuccess = result?.success === true;
+      // 0. DRY RUN VALIDATION (Clean UX: No loading toast for instant validation)
+      const validationErrors = validateFlowStructure(nodes, edges);
+      if (validationErrors.length > 0) {
+        const firstError = validationErrors[0];
+        const errorMsg =
+          typeof firstError === "string" ? firstError : firstError.message;
+        const errorNodeId =
+          typeof firstError === "string" ? null : firstError.nodeId;
 
-      // 2. Clear loading
-      toast.dismiss(toastId);
-
-      // --- AUTO-APPLY AI HEALING ---
-      if (result.healedNodes?.length > 0) {
-        console.log("[App] AI Healed nodes detected:", result.healedNodes);
-        result.healedNodes.forEach((repair) => {
-          updateNodeConfiguration(repair.nodeId, {
-            selector: repair.newSelector,
-          });
+        toast.error(errorMsg, {
+          duration: 5000,
+          style: { border: "1px solid #ef4444", color: "#ef4444" },
         });
-        toast.success(
-          t("common.ai_repair_applied", {
-            defaultValue: `AI automatically repaired ${result.healedNodes.length} selector(s).`,
-            count: result.healedNodes.length,
-          }),
-        );
+
+        if (errorNodeId) {
+          addLog(
+            `[ValidationError] NodeId=${errorNodeId} Error="${errorMsg}"`,
+            "error",
+            errorNodeId,
+          );
+          handleNavigateToNode(errorNodeId);
+        } else {
+          addLog(`[ValidationError] Error="${errorMsg}"`, "error");
+        }
+        return; // Stop here, no processing toast shown.
       }
 
-      // --- DEEP DIVE LOGIC (If execution failed inside a composite) ---
-      if (result.success) {
-        addLog(
-          `[System] ✓ Flow execution completed successfully in ${
-            targetMode === "performance"
-              ? "performance"
-              : targetMode === "seguridad"
-                ? "security"
-                : "quality"
-          } mode.`,
-          "success",
+      if (!currentFlowId) {
+        toast.info(
+          t(
+            "common.save_before_execute",
+            "Debes guardar el flujo antes de ejecutarlo.",
+          ),
         );
-        toast.success(
-          t("common.flow_exec_success", "Flow executed successfully"),
-        );
-        
-        // Redirect to dashboard tab after 1.5 seconds
-        setTimeout(() => {
-          if (targetMode === "performance") {
-            navigate("/dashboard", { state: { activePage: "performance", activeTab: "results" } });
-          } else if (targetMode === "seguridad") {
-            navigate("/dashboard", { state: { activePage: "security", activeTab: "results" } });
-          }
-        }, 1500);
+        setCreationModal({ isOpen: true, type: "flow" });
         return;
       }
 
-      if (!result.success && result.failedNodeId) {
-        try {
-          // Show error toast for immediate feedback
-          const errorMsg = result.error || t("common.flow_exec_error");
-          toast.error(`✗ ${errorMsg}`, {
-            duration: 5000,
-            style: { border: "1px solid #ef4444", color: "#ef4444" },
-          });
+      // Log execution start indicating active view mode
+      const modeLabel =
+        targetMode === "performance"
+          ? "PERFORMANCE"
+          : targetMode === "seguridad"
+            ? "SECURITY"
+            : "QUALITY AUTOMATION";
+      addLog(`[System] 🚀 Starting ${modeLabel} flow execution...`, "info");
+      useExecutionStore.getState().startExecution({
+        mode: targetMode,
+        flowId: currentFlowId,
+      });
 
-          // Explicit console log for the user
-          console.error(
-            `%c[ExecutionError] NodeId=${result.failedNodeId} Error="${errorMsg}"`,
-            "color: #ef4444; font-weight: bold; font-size: 12px;",
+      // 1. Show Loading Toast immediately (Duration 0 = indefinite until dismissed)
+      const toastId = toast.loading(t("common.processing"));
+
+      let executionSuccess = false;
+      try {
+        // --- EXECUTION ISOLATION (Debug vs E2E) ---
+        if (activeBrowserId) {
+          if (
+            confirm(
+              t(
+                "common.confirm_close_debug",
+                "Active debug session detected. Close it to ensure a clean E2E run?",
+              ),
+            )
+          ) {
+            toast.loading("Closing debug session...", { id: toastId });
+            await stopSession();
+          } else {
+            // If user refuses to close, we abort to prevent collisions
+            toast.dismiss(toastId);
+            toast.info("Execution cancelled to preserve debug session.");
+            useExecutionStore
+              .getState()
+              .finishExecution({ status: "cancelled" });
+            return;
+          }
+        }
+        // ------------------------------------------
+
+        const result = await executeFlow({ executionMode: targetMode }); // Returns { success, stats, failedNodeId, divePath, healedNodes }
+        executionSuccess = result?.success === true;
+
+        // 2. Clear loading
+        toast.dismiss(toastId);
+
+        // --- AUTO-APPLY AI HEALING ---
+        if (result.healedNodes?.length > 0) {
+          console.log("[App] AI Healed nodes detected:", result.healedNodes);
+          result.healedNodes.forEach((repair) => {
+            updateNodeConfiguration(repair.nodeId, {
+              selector: repair.newSelector,
+            });
+          });
+          toast.success(
+            t("common.ai_repair_applied", {
+              defaultValue: `AI automatically repaired ${result.healedNodes.length} selector(s).`,
+              count: result.healedNodes.length,
+            }),
+          );
+        }
+
+        // --- DEEP DIVE LOGIC (If execution failed inside a composite) ---
+        if (result.success) {
+          addLog(
+            `[System] ✓ Flow execution completed successfully in ${
+              targetMode === "performance"
+                ? "performance"
+                : targetMode === "seguridad"
+                  ? "security"
+                  : "quality"
+            } mode.`,
+            "success",
+          );
+          toast.success(
+            t("common.flow_exec_success", "Flow executed successfully"),
           );
 
-          // Synchronize with Internal Execution Log
+          // Redirect to dashboard tab after 1.5 seconds
+          setTimeout(() => {
+            if (targetMode === "performance") {
+              navigate("/dashboard", {
+                state: { activePage: "performance", activeTab: "results" },
+              });
+            } else if (targetMode === "seguridad") {
+              navigate("/dashboard", {
+                state: { activePage: "security", activeTab: "results" },
+              });
+            }
+          }, 1500);
+          return;
+        }
+
+        if (!result.success && result.failedNodeId) {
+          try {
+            // Show error toast for immediate feedback
+            const errorMsg = result.error || t("common.flow_exec_error");
+            toast.error(`✗ ${errorMsg}`, {
+              duration: 5000,
+              style: { border: "1px solid #ef4444", color: "#ef4444" },
+            });
+
+            // Explicit console log for the user
+            console.error(
+              `%c[ExecutionError] NodeId=${result.failedNodeId} Error="${errorMsg}"`,
+              "color: #ef4444; font-weight: bold; font-size: 12px;",
+            );
+
+            // Synchronize with Internal Execution Log
+            addLog(
+              `[System] ✗ Execution failed on node ${result.failedNodeId} during ${
+                canvasViewMode === "performance"
+                  ? "performance"
+                  : canvasViewMode === "seguridad"
+                    ? "security"
+                    : "quality"
+              } run.`,
+              "error",
+              result.failedNodeId,
+            );
+            addLog(
+              `[NodeError] NodeId=${result.failedNodeId} Error="${errorMsg}"`,
+              "error",
+              result.failedNodeId,
+            );
+
+            // Use deepNavigate to handle multi-level sub-flow traversal and node focus
+            await deepNavigate(result.divePath || [], result.failedNodeId);
+          } catch (navError) {
+            console.error("[App] Failed auto-focus navigation:", navError);
+          }
+        } else if (result.error && !result.stats) {
+          // General Failure
+          if (result.error !== "Max reintentos alcanzados") {
+            toast.error(result.error);
+          }
           addLog(
-            `[System] ✗ Execution failed on node ${result.failedNodeId} during ${
+            `[System] ✗ Execution failed: ${result.error} during ${
               canvasViewMode === "performance"
                 ? "performance"
                 : canvasViewMode === "seguridad"
@@ -523,91 +556,69 @@ function Dashboard({
                   : "quality"
             } run.`,
             "error",
-            result.failedNodeId,
           );
+        } else {
+          // Failure with Count (Run happened but no specific node tracked)
+          const failedCount = result.stats?.failed || 0;
+          toast.error(`${t("common.flow_exec_error")} (${failedCount} failed)`);
           addLog(
-            `[NodeError] NodeId=${result.failedNodeId} Error="${errorMsg}"`,
+            `[System] ✗ Execution completed with ${failedCount} failures during ${
+              canvasViewMode === "performance"
+                ? "performance"
+                : canvasViewMode === "seguridad"
+                  ? "security"
+                  : "quality"
+            } run.`,
             "error",
-            result.failedNodeId,
           );
-
-          // Use deepNavigate to handle multi-level sub-flow traversal and node focus
-          await deepNavigate(result.divePath || [], result.failedNodeId);
-        } catch (navError) {
-          console.error("[App] Failed auto-focus navigation:", navError);
         }
-      } else if (result.error && !result.stats) {
-        // General Failure
-        if (result.error !== "Max reintentos alcanzados") {
-          toast.error(result.error);
-        }
-        addLog(
-          `[System] ✗ Execution failed: ${result.error} during ${
-            canvasViewMode === "performance"
-              ? "performance"
-              : canvasViewMode === "seguridad"
-                ? "security"
-                : "quality"
-          } run.`,
-          "error",
-        );
-      } else {
-        // Failure with Count (Run happened but no specific node tracked)
-        const failedCount = result.stats?.failed || 0;
-        toast.error(`${t("common.flow_exec_error")} (${failedCount} failed)`);
-        addLog(
-          `[System] ✗ Execution completed with ${failedCount} failures during ${
-            canvasViewMode === "performance"
-              ? "performance"
-              : canvasViewMode === "seguridad"
-                ? "security"
-                : "quality"
-          } run.`,
-          "error",
-        );
-      }
-    } catch (error) {
-      // 3. Unexpected Error
-      toast.dismiss(toastId);
-      console.error("Error ejecutando flujo:", error);
-      toast.error(t("common.flow_exec_error") + ": " + error.message);
-    } finally {
-      let runDetails = null;
-      const activeRunId = useExecutionStore.getState().activeRunId;
-      if (activeRunId && targetMode === "performance") {
-        try {
-          const runRes = await api.get(`/runs/${activeRunId}`);
-          if (runRes.success && runRes.data) {
-            runDetails = runRes.data;
+      } catch (error) {
+        // 3. Unexpected Error
+        toast.dismiss(toastId);
+        console.error("Error ejecutando flujo:", error);
+        toast.error(t("common.flow_exec_error") + ": " + error.message);
+      } finally {
+        let runDetails = null;
+        const activeRunId = useExecutionStore.getState().activeRunId;
+        if (activeRunId && targetMode === "performance") {
+          try {
+            const runRes = await api.get(`/runs/${activeRunId}`);
+            if (runRes.success && runRes.data) {
+              runDetails = runRes.data;
+            }
+          } catch (e) {
+            console.error(
+              "Failed to fetch run details for profiling dashboard:",
+              e,
+            );
           }
-        } catch (e) {
-          console.error("Failed to fetch run details for profiling dashboard:", e);
         }
+        useExecutionStore.getState().finishExecution({
+          status: executionSuccess ? "completed" : "failed",
+          perfReport: runDetails,
+        });
       }
-      useExecutionStore.getState().finishExecution({
-        status: executionSuccess ? "completed" : "failed",
-        perfReport: runDetails,
-      });
-    }
-  }, [
-    executeFlow,
-    validateFlowStructure,
-    toast,
-    t,
-    nodes,
-    edges,
-    activeBrowserId,
-    stopSession,
-    currentFlowId,
-    updateNodeConfiguration,
-    deepNavigate,
-    addLog,
-    handleNavigateToNode,
-    isCollaborative,
-    role,
-    isRemoteExecuting,
-    remoteExecution,
-  ]);
+    },
+    [
+      executeFlow,
+      validateFlowStructure,
+      toast,
+      t,
+      nodes,
+      edges,
+      activeBrowserId,
+      stopSession,
+      currentFlowId,
+      updateNodeConfiguration,
+      deepNavigate,
+      addLog,
+      handleNavigateToNode,
+      isCollaborative,
+      role,
+      isRemoteExecuting,
+      remoteExecution,
+    ],
+  );
 
   // 4. Local UI State
   const [pendingExecution, setPendingExecution] = useState(false);
@@ -2004,14 +2015,14 @@ function Dashboard({
                             : mode === "performance"
                               ? "bg-blue-500/20 text-blue-400 border border-blue-500/30 font-bold"
                               : "bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 font-bold"
-                          : "text-slate-400 hover:text-slate-200 border border-transparent hover:bg-white/5"
+                          : "text-slate-400 hover:text-slate-200 border border-transparent hover:bg-white/5",
                       )}
                     >
                       {mode === "calidad"
                         ? t("canvas.view_mode.quality", "Quality")
                         : mode === "performance"
-                        ? t("canvas.view_mode.performance", "Performance")
-                        : t("canvas.view_mode.security", "Security")}
+                          ? t("canvas.view_mode.performance", "Performance")
+                          : t("canvas.view_mode.security", "Security")}
                     </button>
                   ))}
                 </div>

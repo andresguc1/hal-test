@@ -57,7 +57,13 @@ export const useExecutionStore = create((set, get) => ({
       currentNode: currentNode || state.currentNode,
     })),
 
-  finishExecution: ({ status = "completed", error = null, summary = null, perfReport = null, securityReport = null } = {}) =>
+  finishExecution: ({
+    status = "completed",
+    error = null,
+    summary = null,
+    perfReport = null,
+    securityReport = null,
+  } = {}) =>
     set((state) => ({
       status,
       progressPercent: 100,
@@ -65,7 +71,8 @@ export const useExecutionStore = create((set, get) => ({
       error: error || null,
       lastRunSummary: summary !== null ? summary : state.lastRunSummary,
       lastPerfReport: perfReport !== null ? perfReport : state.lastPerfReport,
-      lastSecurityReport: securityReport !== null ? securityReport : state.lastSecurityReport,
+      lastSecurityReport:
+        securityReport !== null ? securityReport : state.lastSecurityReport,
     })),
 
   resetExecution: () =>

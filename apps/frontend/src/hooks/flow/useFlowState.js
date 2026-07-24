@@ -318,7 +318,6 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
     execSync.executionStates,
   ]);
 
-
   const [history, setHistory] = useState({ past: [], future: [] });
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);

@@ -220,7 +220,10 @@
       "discussion": "Discussion",
       "csp_validator": "Validateur CSP",
       "header_auditor": "Auditeur d'En-têtes",
-      "dom_sanitizer": "Désinfecteur DOM"
+      "dom_sanitizer": "Désinfecteur DOM",
+      "audit_policy": "Audit des Politiques de Sécurité",
+      "sensitive_data_monitor": "Moniteur de Données Sensibles",
+      "fuzz_input": "Fuzzing d'Entrées (XSS/SQLi)"
     },
     "categories": {
       "security_audit": "Sécurité",
