@@ -100,6 +100,10 @@ export class TelemetryDataNormalizer {
 export const PROFILE_LABELS: Record<string, string> = {
   // ── 5 standard profiles ─────────────────────────────────────────────
   ramp:     '📈 Ramp-Up (Incremento Gradual)',
+  'ramp-up': '📈 Ramp-Up (Incremento Gradual)',
+  ramp_up:  '📈 Ramp-Up (Incremento Gradual)',
+  stepped:  '📶 Stepping / Escalonado (Stepped Ramp-Up)',
+  step:     '📶 Stepping / Escalonado (Stepped Ramp-Up)',
   constant: '📊 Constant Load (Carga Constante)',
   stress:   '⚡ Stress Test (Prueba de Estrés)',
   spike:    '⚡ Spike Test (Prueba de Pico)',
@@ -117,6 +121,10 @@ export const PROFILE_LABELS: Record<string, string> = {
 export const PROFILE_COLORS: Record<string, string> = {
   // ── 5 standard profiles (matches ScenarioBuilder colors) ────────────
   ramp:     'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
+  'ramp-up': 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
+  ramp_up:  'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
+  stepped:  'bg-teal-500/10 text-teal-400 border-teal-500/30',
+  step:     'bg-teal-500/10 text-teal-400 border-teal-500/30',
   constant: 'bg-blue-500/10 text-blue-400 border-blue-500/30',
   stress:   'bg-orange-500/10 text-orange-400 border-orange-500/30',
   spike:    'bg-yellow-500/10 text-yellow-400 border-yellow-500/30',
@@ -135,6 +143,6 @@ export const getProfileInfo = (rawProfile?: string) => {
   const key = String(rawProfile || 'constant').toLowerCase();
   const label = PROFILE_LABELS[key] ?? PROFILE_LABELS.constant;
   const color = PROFILE_COLORS[key] ?? PROFILE_COLORS.constant;
-  return { key, label, color };
+  return { key, label, color, colorClass: color };
 };
 

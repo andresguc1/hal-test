@@ -129,14 +129,30 @@ export function usePerformanceSocket(flowId) {
     duration > 0 ? Math.min(100, (elapsed / duration) * 100) : 0;
 
   const cancelTest = useCallback(async () => {
-    const runId = runConfig?.runId;
-    if (!runId) return;
+    const runId =
+      runConfig?.runId ||
+      metrics?.runId ||
+      metrics?.data?.runId ||
+      useExecutionStore.getState().activeRun?.runId;
+
     try {
-      await api.post(`/runs/${runId}/cancel`);
+      if (runId) {
+        await api.post(`/runs/${runId}/cancel`);
+      } else if (flowId) {
+        // Fallback: look up active run for this flow
+        const activeRunsRes = await api.get("/runs?status=running&limit=10");
+        const activeRun = activeRunsRes.data?.find(
+          (r) => String(r.flowId || r.flow_id) === String(flowId)
+        );
+        if (activeRun?.id) {
+          await api.post(`/runs/${activeRun.id}/cancel`);
+        }
+      }
+      setStatus("completed");
     } catch (err) {
       console.error("Failed to cancel performance run:", err);
     }
-  }, [runConfig]);
+  }, [runConfig, metrics, flowId]);
 
   return {
     socket,

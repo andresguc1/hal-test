@@ -47,6 +47,8 @@ export default function PerformanceRunModal({
   const [holdTime, setHoldTime] = useState(30);
   const [rampDown, setRampDown] = useState(15);
   const [stepCount, setStepCount] = useState(4);
+  const [spikeBaseVUs, setSpikeBaseVUs] = useState(5);
+  const [spikeCount, setSpikeCount] = useState(1);
   const [maxP95Ms, setMaxP95Ms] = useState(500);
   const [maxErrorRatePct, setMaxErrorRatePct] = useState(1.0);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -79,7 +81,6 @@ export default function PerformanceRunModal({
 
     try {
       const effectiveDuration = profile === "soak" ? duration * 60 : duration;
-      const effectiveStopAt = profile === "stress" ? rampUp : undefined;
 
       const response = await api.post("/runs/performance", {
         flowId,
@@ -95,13 +96,15 @@ export default function PerformanceRunModal({
           holdTime: profile === "ramp" || profile === "stepped" ? holdTime : 0,
           startVUs,
           stepCount,
+          spikeBaseVUs,
+          spikeCount,
+          stopAtErrorRate: maxErrorRatePct,
+          maxLatencyMs: maxP95Ms,
           slaConfig: {
             maxP95Ms,
             maxErrorRatePct,
             targetApdex: 0.85,
           },
-          ...(profile === "stress" && { stopAtErrorRate: effectiveStopAt }),
-          ...(profile === "spike" && { spikeBaseVUs: rampUp }),
           headless: true,
         },
       });
@@ -244,14 +247,14 @@ export default function PerformanceRunModal({
                   {/* ── Profile cards ── */}
                   <div className="space-y-2">
                     <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-                      Tipo de Prueba
+                      {t("performance_modal.test_type", "Tipo de Prueba")}
                     </label>
                     <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
                       {[
                         { id: "ramp",     icon: TrendingUp,    label: "Ramp-Up",   desc: "Incremento gradual.", active: "border-emerald-500/70 bg-emerald-500/10 text-emerald-400" },
                         { id: "stepped",  icon: TrendingUp,    label: "Escalonado",desc: "Pasos progresivos.", active: "border-teal-500/70 bg-teal-500/10 text-teal-400" },
-                        { id: "constant", icon: BarChart2,      label: "Constant",  desc: "Carga fija.",   active: "border-blue-500/70 bg-blue-500/10 text-blue-400" },
-                        { id: "stress",   icon: AlertTriangle,  label: "Stress",    desc: "Escala hasta colapso.", active: "border-orange-500/70 bg-orange-500/10 text-orange-400" },
+                        { id: "constant", icon: BarChart2,      label: "Constante", desc: "Carga fija.",   active: "border-blue-500/70 bg-blue-500/10 text-blue-400" },
+                        { id: "stress",   icon: AlertTriangle,  label: "Estrés",    desc: "Escala hasta colapso.", active: "border-orange-500/70 bg-orange-500/10 text-orange-400" },
                         { id: "spike",    icon: Zap,            label: "Spike",     desc: "Pico súbito.",     active: "border-yellow-500/70 bg-yellow-500/10 text-yellow-400" },
                         { id: "soak",     icon: Clock,          label: "Soak",      desc: "Carga sostenida.", active: "border-purple-500/70 bg-purple-500/10 text-purple-400" },
                       ].map((p) => {
@@ -270,7 +273,9 @@ export default function PerformanceRunModal({
                             )}
                           >
                             <Icon size={14} />
-                            <span className="text-[10px] font-semibold">{p.label}</span>
+                            <span className="text-[10px] font-semibold">
+                              {t("performance_modal.profile_" + p.id, p.label)}
+                            </span>
                           </button>
                         );
                       })}
@@ -279,7 +284,7 @@ export default function PerformanceRunModal({
                     {/* SVG Load Profile Preview */}
                     <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1.5">
                       <div className="flex justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                        <span>Vista Previa de la Curva de Carga</span>
+                        <span>{t("performance_modal.curve_preview", "Vista Previa de la Curva de Carga")}</span>
                         <span className="text-emerald-400 font-mono">{vus} VUs Max | {duration}s Total</span>
                       </div>
                       <div className="h-14 w-full bg-slate-900/60 rounded-lg p-1.5 flex items-center justify-center border border-slate-800/80">
@@ -313,7 +318,9 @@ export default function PerformanceRunModal({
                     {profile !== "soak" && (
                       <div className="space-y-1 bg-slate-900/30 p-3 rounded-xl border border-slate-800/80">
                         <div className="flex justify-between text-xs font-semibold text-slate-400">
-                          <span className="flex items-center gap-1.5"><Users size={12} className="text-purple-400" /> VUs Objetivo</span>
+                          <span className="flex items-center gap-1.5">
+                            <Users size={12} className="text-purple-400" /> {t("performance_modal.target_vus", "VUs Objetivo")}
+                          </span>
                           <span className="text-purple-400 font-mono">{vus} VUs</span>
                         </div>
                         <input type="range" min="1" max="100" value={vus}
@@ -325,7 +332,9 @@ export default function PerformanceRunModal({
                     {/* Duration */}
                     <div className={cn("space-y-1 bg-slate-900/30 p-3 rounded-xl border border-slate-800/80", profile === "soak" && "col-span-2")}>
                       <div className="flex justify-between text-xs font-semibold text-slate-400">
-                        <span className="flex items-center gap-1.5"><Clock size={12} className="text-purple-400" /> Duración Total</span>
+                        <span className="flex items-center gap-1.5">
+                          <Clock size={12} className="text-purple-400" /> {t("performance_modal.total_duration", "Duración Total")}
+                        </span>
                         <span className="text-purple-400 font-mono">{profile === "soak" ? `${duration} min` : `${duration}s`}</span>
                       </div>
                       <input type="range" min={profile === "soak" ? 5 : 10} max={profile === "soak" ? 60 : 300} step={profile === "soak" ? 5 : 10}
@@ -338,7 +347,9 @@ export default function PerformanceRunModal({
                       <>
                         <div className="space-y-1 bg-slate-900/30 p-3 rounded-xl border border-slate-800/80">
                           <div className="flex justify-between text-xs font-semibold text-slate-400">
-                            <span className="flex items-center gap-1.5"><TrendingUp size={12} className="text-teal-400" /> N° de Escalones</span>
+                            <span className="flex items-center gap-1.5">
+                              <TrendingUp size={12} className="text-teal-400" /> {t("performance_modal.steps_count", "N° de Escalones")}
+                            </span>
                             <span className="text-teal-400 font-mono">{stepCount}</span>
                           </div>
                           <input type="range" min="2" max="10" value={stepCount}
@@ -347,7 +358,9 @@ export default function PerformanceRunModal({
                         </div>
                         <div className="space-y-1 bg-slate-900/30 p-3 rounded-xl border border-slate-800/80">
                           <div className="flex justify-between text-xs font-semibold text-slate-400">
-                            <span className="flex items-center gap-1.5"><Clock size={12} className="text-teal-400" /> Descenso (Ramp-Down)</span>
+                            <span className="flex items-center gap-1.5">
+                              <Clock size={12} className="text-teal-400" /> {t("performance_modal.ramp_down", "Descenso (Ramp-Down)")}
+                            </span>
                             <span className="text-teal-400 font-mono">{rampDown}s</span>
                           </div>
                           <input type="range" min="5" max="60" step="5" value={rampDown}
@@ -356,13 +369,39 @@ export default function PerformanceRunModal({
                         </div>
                       </>
                     )}
+                    {profile === "spike" && (
+                      <>
+                        <div className="space-y-1 bg-slate-900/30 p-3 rounded-xl border border-slate-800/80">
+                          <div className="flex justify-between text-xs font-semibold text-slate-400">
+                            <span className="flex items-center gap-1.5">
+                              <Users size={12} className="text-yellow-400" /> {t("performance_modal.base_vus", "Carga Base (VUs)")}
+                            </span>
+                            <span className="text-yellow-400 font-mono">{spikeBaseVUs} VUs</span>
+                          </div>
+                          <input type="range" min="1" max="50" value={spikeBaseVUs}
+                            onChange={(e) => setSpikeBaseVUs(Number(e.target.value))}
+                            className="w-full accent-yellow-500 cursor-pointer" />
+                        </div>
+                        <div className="space-y-1 bg-slate-900/30 p-3 rounded-xl border border-slate-800/80">
+                          <div className="flex justify-between text-xs font-semibold text-slate-400">
+                            <span className="flex items-center gap-1.5">
+                              <Zap size={12} className="text-yellow-400" /> {t("performance_modal.spike_count", "Cantidad de Picos")}
+                            </span>
+                            <span className="text-yellow-400 font-mono">{spikeCount} Pico(s)</span>
+                          </div>
+                          <input type="range" min="1" max="5" value={spikeCount}
+                            onChange={(e) => setSpikeCount(Number(e.target.value))}
+                            className="w-full accent-yellow-500 cursor-pointer" />
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   {/* Cloud SLA Threshold Rules */}
                   <div className="p-3 bg-slate-900/50 border border-slate-800 rounded-xl space-y-2">
                     <div className="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
-                      <span>Criterios de Aceptación Cloud (SLA / Thresholds)</span>
-                      <span className="text-emerald-400 text-[10px] font-mono">Auto Evaluado</span>
+                      <span>{t("performance_modal.sla_thresholds", "Criterios de Aceptación Cloud (SLA / Thresholds)")}</span>
+                      <span className="text-emerald-400 text-[10px] font-mono">{t("performance_modal.auto_evaluated", "Auto Evaluado")}</span>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
@@ -384,7 +423,9 @@ export default function PerformanceRunModal({
                   {profile === "soak" && (
                     <div className="space-y-1 bg-slate-900/30 p-3 rounded-xl border border-slate-800/80">
                       <div className="flex justify-between text-xs font-semibold text-slate-400">
-                        <span className="flex items-center gap-1.5"><Users size={12} className="text-purple-400" /> Usuarios Virtuales</span>
+                        <span className="flex items-center gap-1.5">
+                          <Users size={12} className="text-purple-400" /> {t("performance_modal.target_vus", "Usuarios Virtuales")}
+                        </span>
                         <span className="text-purple-400 font-mono">{vus} VUs</span>
                       </div>
                       <input type="range" min="1" max="50" value={vus}
@@ -413,12 +454,12 @@ export default function PerformanceRunModal({
                     {t("performance_modal.estimated_resources", "Uso Estimado de Recursos Locales")}
                   </h4>
                   <p className="text-[11px] leading-relaxed">
-                    Se ejecutarán instancias de navegador en modo headless para capturar telemetría. Consumo de RAM estimado:{" "}
+                    {t("performance_modal.estimated_resources_desc", "Se ejecutarán instancias de navegador en modo headless para capturar telemetría. Consumo de RAM estimado:")}{" "}
                     <strong className="font-mono text-blue-400">{estimatedRamGb} GB</strong>.
                   </p>
                   {isDangerous && (
                     <p className="text-[10px] text-red-400 font-semibold mt-1">
-                      ⚠️ Advertencia: Alto consumo de recursos. Podría colapsar la memoria local (OOM). Se aconseja reducir los VUs.
+                      {t("performance_modal.oom_warning", "⚠️ Advertencia: Alto consumo de recursos. Podría colapsar la memoria local (OOM). Se aconseja reducir los VUs.")}
                     </p>
                   )}
                 </div>

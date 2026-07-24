@@ -5,7 +5,7 @@
 export class ReportExporter {
     /**
      * Generates a fully self-contained HTML report with embedded styles, dark theme, and metrics.
-     * 
+     *
      * @param {Object} runData - Data from Run instance & Metrics summary
      * @returns {string} Standalone HTML content
      */
@@ -13,7 +13,7 @@ export class ReportExporter {
         const summary = runData.summary?.data || runData.summary || {};
         const sla = summary.slaEvaluation || {};
         const nodeStats = summary.nodeStats || [];
-        const httpCounts = summary.httpStatusCounts || {};
+        const _httpCounts = summary.httpStatusCounts || {};
         const flowName = runData.flow_name || summary.runConfig?.flowName || 'Performance Test';
         const timestamp = new Date(runData.created_at || Date.now()).toLocaleString();
         const durationSec = summary.elapsed ? Math.round(summary.elapsed / 1000) : 30;
@@ -185,7 +185,9 @@ export class ReportExporter {
                     </tr>
                 </thead>
                 <tbody>
-                    ${nodeStats.map((n) => `
+                    ${nodeStats
+                        .map(
+                            (n) => `
                         <tr>
                             <td><strong>${n.label}</strong></td>
                             <td>${n.count}</td>
@@ -194,7 +196,9 @@ export class ReportExporter {
                             <td>${n.memMax} MB</td>
                             <td style="color:${n.errors > 0 ? 'var(--accent-red)' : 'inherit'}">${n.errors} (${n.errorRate}%)</td>
                         </tr>
-                    `).join('')}
+                    `,
+                        )
+                        .join('')}
                 </tbody>
             </table>
         </div>

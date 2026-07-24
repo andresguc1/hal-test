@@ -5926,7 +5926,9 @@ export const componentAction = async (req, res) => {
         let entryNodes = allNodes.filter((n) => n.type === 'entry' || n.type === 'input');
         if (entryNodes.length === 0) {
             const incomingTargets = new Set(allEdges.map((e) => e.target));
-            entryNodes = allNodes.filter((n) => !incomingTargets.has(n.nodeId) && !incomingTargets.has(n.id));
+            entryNodes = allNodes.filter(
+                (n) => !incomingTargets.has(n.nodeId) && !incomingTargets.has(n.id),
+            );
             if (entryNodes.length === 0 && allNodes.length > 0) {
                 entryNodes = [allNodes[0]];
             }

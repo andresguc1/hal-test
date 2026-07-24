@@ -36,9 +36,24 @@ function computeStages(profile, params) {
       if (sustain > 0) stages.push({ durationSec: sustain, target: maxVUs });
       return stages;
     }
+    case "stepped": {
+      const { maxVUs = 30, durationSec = 60, stepCount = 4 } = p;
+      const steps = Math.max(2, stepCount);
+      const stepDur = Math.floor(durationSec / steps);
+      const stages = [];
+      for (let i = 1; i <= steps; i++) {
+        const target = Math.ceil((maxVUs / steps) * i);
+        const dur = i === steps ? durationSec - stepDur * (steps - 1) : stepDur;
+        stages.push({ durationSec: dur, target });
+      }
+      return stages;
+    }
     case "constant": {
       const { vus = 10, durationSec = 60 } = p;
-      return [{ durationSec, target: vus }];
+      return [
+        { durationSec: 0, target: vus },
+        { durationSec, target: vus },
+      ];
     }
     case "stress": {
       const { maxVUs = 50, durationSec = 120, stepCount = 4 } = p;
@@ -69,7 +84,10 @@ function computeStages(profile, params) {
     }
     case "soak": {
       const { vus = 10, durationMinutes = 30 } = p;
-      return [{ durationSec: durationMinutes * 60, target: vus }];
+      return [
+        { durationSec: 0, target: vus },
+        { durationSec: durationMinutes * 60, target: vus },
+      ];
     }
     case "baseline":
       return [{ durationSec: p.durationSec || 60, target: 1 }];
@@ -136,18 +154,28 @@ const PROFILES = [
     goal: "Detectar el punto de degradación",
   },
   {
+    id: "stepped",
+    label: "Escalonado",
+    icon: TrendingUp,
+    color: "teal",
+    tailwindActive: "bg-teal-500/10 border-teal-500 text-teal-400",
+    tailwindInactive: "bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-700 hover:bg-slate-900",
+    description: "Pasos progresivos de incremento de carga.",
+    goal: "Evaluar comportamiento en cada nivel de carga",
+  },
+  {
     id: "constant",
-    label: "Constant Load",
+    label: "Constante",
     icon: BarChart2,
     color: "blue",
     tailwindActive: "bg-blue-500/10 border-blue-500 text-blue-400",
     tailwindInactive: "bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-700 hover:bg-slate-900",
     description: "Mantiene VUs fijos durante el periodo completo.",
-    goal: "Validar estabilidad y memory leaks",
+    goal: "Validar estabilidad y fugas de memoria",
   },
   {
     id: "stress",
-    label: "Stress Test",
+    label: "Estrés",
     icon: AlertTriangle,
     color: "orange",
     tailwindActive: "bg-orange-500/10 border-orange-500 text-orange-400",
@@ -157,7 +185,7 @@ const PROFILES = [
   },
   {
     id: "spike",
-    label: "Spike Test",
+    label: "Spike",
     icon: Zap,
     color: "yellow",
     tailwindActive: "bg-yellow-500/10 border-yellow-500 text-yellow-400",
@@ -167,7 +195,7 @@ const PROFILES = [
   },
   {
     id: "soak",
-    label: "Soak / Endurance",
+    label: "Soak / Resistencia",
     icon: Clock,
     color: "purple",
     tailwindActive: "bg-purple-500/10 border-purple-500 text-purple-400",
@@ -264,6 +292,14 @@ const RampControls = ({ params, setParam, accent }) => (
     <SliderInput label="VUs Máximos" value={params.maxVUs} min={1} max={100} unit=" VUs" accent={accent} onChange={(v) => setParam("maxVUs", Math.max(v, params.initialVUs + 1))} />
     <SliderInput label="Tiempo de Rampa" value={params.rampTimeSec} min={5} max={params.totalDurationSec - 5} unit="s" accent={accent} onChange={(v) => setParam("rampTimeSec", v)} hint="Segundos para subir de inicial → máximo" />
     <SliderInput label="Duración Total" value={params.totalDurationSec} min={params.rampTimeSec + 5} max={300} step={5} unit="s" accent={accent} onChange={(v) => setParam("totalDurationSec", v)} />
+  </div>
+);
+
+const SteppedControls = ({ params, setParam, accent }) => (
+  <div className="grid grid-cols-2 gap-4">
+    <SliderInput label="VUs Máximos" value={params.maxVUs} min={5} max={100} unit=" VUs" accent={accent} onChange={(v) => setParam("maxVUs", v)} hint="Límite máximo del escalado" />
+    <SliderInput label="Duración Total" value={params.durationSec} min={20} max={300} step={10} unit="s" accent={accent} onChange={(v) => setParam("durationSec", v)} />
+    <SliderInput label="Número de Pasos" value={params.stepCount} min={2} max={10} unit="" accent={accent} onChange={(v) => setParam("stepCount", v)} hint="Escalones progresivos" />
   </div>
 );
 
@@ -395,6 +431,7 @@ const CustomStageEditor = ({ stages, onChange }) => {
 
 const DEFAULT_PARAMS = {
   ramp:     { initialVUs: 0, maxVUs: 20, rampTimeSec: 30, totalDurationSec: 90 },
+  stepped:  { maxVUs: 30, durationSec: 60, stepCount: 4 },
   constant: { vus: 10, durationSec: 60 },
   stress:   { maxVUs: 50, durationSec: 120, stepCount: 4, stopAtErrorRate: 15 },
   spike:    { baseVUs: 5, peakVUs: 50, rampUpSec: 10, sustainSec: 20, cooldownSec: 20 },
@@ -407,6 +444,8 @@ const ScenarioBuilder = ({ onRun, flowName: _flowName, initialConfig }) => {
   const [activeProfile, setActiveProfile] = useState(
     initialConfig?.profile || "constant"
   );
+  const [maxP95Ms, setMaxP95Ms] = useState(500);
+  const [maxErrorRatePct, setMaxErrorRatePct] = useState(1.0);
   const [profileParams, setProfileParams] = useState(() => {
     const defaults = { ...DEFAULT_PARAMS };
     // Seed from initialConfig if provided
@@ -486,9 +525,22 @@ const ScenarioBuilder = ({ onRun, flowName: _flowName, initialConfig }) => {
         stages,
         vus: maxVUs,
         duration: totalDuration,
+        virtualUsers: maxVUs,
+        stopAtErrorRate: profileParams[activeProfile]?.stopAtErrorRate || profileParams.stress?.stopAtErrorRate || 15,
+        maxLatencyMs: maxP95Ms,
+        maxErrorRatePct,
+        slaConfig: {
+          maxP95Ms,
+          maxErrorRatePct,
+          targetApdex: 0.85,
+        },
       };
-      if (activeProfile === "stress") {
-        config.stopAtErrorRate = profileParams.stress.stopAtErrorRate;
+      if (activeProfile === "spike") {
+        config.spikeBaseVUs = profileParams.spike.baseVUs;
+        config.spikeCount = 1;
+      }
+      if (activeProfile === "stepped") {
+        config.stepCount = profileParams.stepped.stepCount;
       }
       onRun(config);
     }
@@ -503,7 +555,7 @@ const ScenarioBuilder = ({ onRun, flowName: _flowName, initialConfig }) => {
           <div className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-3">
             Tipo de Prueba
           </div>
-          <div className="grid grid-cols-5 gap-2">
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
             {PROFILES.map((p) => {
               const Icon = p.icon;
               const isActive = activeProfile === p.id;
@@ -556,6 +608,13 @@ const ScenarioBuilder = ({ onRun, flowName: _flowName, initialConfig }) => {
                 params={profileParams.ramp}
                 setParam={(k, v) => setParam("ramp", k, v)}
                 accent="emerald"
+              />
+            )}
+            {activeProfile === "stepped" && (
+              <SteppedControls
+                params={profileParams.stepped}
+                setParam={(k, v) => setParam("stepped", k, v)}
+                accent="teal"
               />
             )}
             {activeProfile === "constant" && (

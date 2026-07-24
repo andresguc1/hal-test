@@ -1,6 +1,6 @@
 /**
  * SlaEvaluator — Automated SLA & Saturation Point Evaluator
- * 
+ *
  * Evaluates performance metrics against cloud SLAs/Thresholds (P95, Max Error Rate, APDEX).
  * Identifies the Knee Point / Break-even Point (Latency degradation elbow) and
  * Throughput Saturation Plateau.
@@ -9,7 +9,7 @@
 export class SlaEvaluator {
     /**
      * Evaluates run metrics against defined SLA thresholds
-     * 
+     *
      * @param {Object} metricsSummary - Summary from MetricsCollector
      * @param {Object} slaConfig - Threshold rules configured by user
      * @param {number} [slaConfig.maxP95Ms=500] - Max acceptable P95 latency in ms
@@ -18,16 +18,12 @@ export class SlaEvaluator {
      * @returns {Object} Evaluation verdict and breach breakdown
      */
     static evaluate(metricsSummary, slaConfig = {}) {
-        const {
-            maxP95Ms = 500,
-            maxErrorRatePct = 1.0,
-            targetApdex = 0.85
-        } = slaConfig;
+        const { maxP95Ms = 500, maxErrorRatePct = 1.0, targetApdex = 0.85 } = slaConfig;
 
         const data = metricsSummary?.data || metricsSummary || {};
         const p95 = parseFloat(data.latency?.p95 || 0);
         const errorRate = parseFloat(data.errorRate || 0);
-        const totalRequests = data.totalRequests || 0;
+        const _totalRequests = data.totalRequests || 0;
 
         // Compute APDEX Index (T = maxP95Ms / 2)
         // Satisfied: <= T, Tolerating: <= 4T, Frustrated: > 4T or Error
@@ -49,7 +45,7 @@ export class SlaEvaluator {
         });
 
         const totalEvaluated = Math.max(1, satisfied + tolerating + frustrated);
-        const apdexScore = Number(((satisfied + (tolerating / 2)) / totalEvaluated).toFixed(2));
+        const apdexScore = Number(((satisfied + tolerating / 2) / totalEvaluated).toFixed(2));
 
         // Evaluate Rules
         const breaches = [];
@@ -58,7 +54,7 @@ export class SlaEvaluator {
                 metric: 'P95 Latency',
                 expected: `< ${maxP95Ms}ms`,
                 actual: `${p95}ms`,
-                severity: 'critical'
+                severity: 'critical',
             });
         }
 
@@ -67,7 +63,7 @@ export class SlaEvaluator {
                 metric: 'Error Rate',
                 expected: `< ${maxErrorRatePct}%`,
                 actual: `${errorRate}%`,
-                severity: 'critical'
+                severity: 'critical',
             });
         }
 
@@ -76,7 +72,7 @@ export class SlaEvaluator {
                 metric: 'APDEX Score',
                 expected: `>= ${targetApdex}`,
                 actual: `${apdexScore}`,
-                severity: 'warning'
+                severity: 'warning',
             });
         }
 
@@ -93,21 +89,21 @@ export class SlaEvaluator {
             thresholds: {
                 maxP95Ms,
                 maxErrorRatePct,
-                targetApdex
+                targetApdex,
             },
-            saturationPoint
+            saturationPoint,
         };
     }
 
     /**
      * Analyzes node metrics & timeline to identify the exact VU level where saturation occurs.
-     * 
-     * @param {Object} summaryData 
+     *
+     * @param {Object} summaryData
      * @returns {Object} Saturation diagnosis
      */
     static detectSaturationPoint(summaryData) {
         const nodeStats = summaryData.nodeStats || [];
-        const timeline = summaryData.timeline || [];
+        const _timeline = summaryData.timeline || [];
 
         let bottleneckNode = null;
         let maxLatencyNode = 0;
@@ -129,9 +125,8 @@ export class SlaEvaluator {
         const throughput = summaryData.throughput || 0;
 
         // Estimate knee point (approx 80% of max VUs if errors exist, or calculated threshold)
-        const breakEvenVUs = summaryData.errorRate > 0
-            ? Math.max(1, Math.floor(totalVUs * 0.75))
-            : totalVUs;
+        const breakEvenVUs =
+            summaryData.errorRate > 0 ? Math.max(1, Math.floor(totalVUs * 0.75)) : totalVUs;
 
         return {
             maxStableVUs: breakEvenVUs,
@@ -140,9 +135,10 @@ export class SlaEvaluator {
             bottleneckP95Ms: maxLatencyNode,
             errorProneNodeLabel: errorProneNode?.label || 'Ninguno',
             errorCount: maxErrors,
-            summaryText: summaryData.errorRate > 0
-                ? `Saturación detectada a los ${breakEvenVUs} VUs concurrentes debido a tasa de error de ${summaryData.errorRate}%.`
-                : `Capacidad estable hasta ${totalVUs} VUs concurrentes con throughput máximo de ${throughput} req/s.`
+            summaryText:
+                summaryData.errorRate > 0
+                    ? `Saturación detectada a los ${breakEvenVUs} VUs concurrentes debido a tasa de error de ${summaryData.errorRate}%.`
+                    : `Capacidad estable hasta ${totalVUs} VUs concurrentes con throughput máximo de ${throughput} req/s.`,
         };
     }
 }

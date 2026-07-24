@@ -13,6 +13,12 @@ import {
 } from "lucide-react";
 import { RealTimeTelemetryChart } from "../telemetry/RealTimeTelemetryChart";
 import { TelemetryDataNormalizer, getProfileInfo } from "../telemetry/telemetryTypes";
+import { BreakingPointBadgeCard } from "./BreakingPointBadgeCard";
+import { StressTelemetryCharts } from "./StressTelemetryCharts";
+import { ActiveSpikeCard } from "./ActiveSpikeCard";
+import { SpikePhaseComparisonTable } from "./SpikePhaseComparisonTable";
+import { EnduranceStatusCard } from "./EnduranceStatusCard";
+import { SoakTrendCharts } from "./SoakTrendCharts";
 
 /**
  * PerfLiveView — Real-time execution dashboard with KPIs, bottlenecks, and TradingView telemetry chart
@@ -25,6 +31,8 @@ const PerfLiveView = ({
   timeline = [],
   status: _status,
   progressPercent = 0,
+  onCancelTest,
+  flowNodes = [],
 }) => {
   const chartRef = useRef(null);
   const normalizerRef = useRef(new TelemetryDataNormalizer());
@@ -99,24 +107,21 @@ const PerfLiveView = ({
           <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mx-auto text-blue-400">
             <Activity size={32} className="animate-pulse" />
           </div>
-          <h2 className="text-xl font-semibold text-slate-300">
-            Esperando Métricas...
-          </h2>
-          <p className="text-slate-400 text-lg">
-            <Gauge size={18} className="inline mr-2 animate-spin" />
-            Recolectando telemetría del motor de ejecución
-          </p>
+          <p className="text-slate-300 font-medium">Esperando datos de telemetría...</p>
+          <p className="text-xs text-slate-500">Inicia una prueba para visualizar gráficos y KPIs en tiempo real.</p>
         </motion.div>
       </div>
     );
   }
 
-  const profileKey =
+  const rawProfileKey =
     metrics?.runConfig?.profile ||
     runConfig?.profile ||
     metrics?.profile ||
+    runConfig?.profileKey ||
     "constant";
-  const { label: profileLabel, color: profileColor } = getProfileInfo(profileKey);
+
+  const { label: profileLabel, color: profileColor } = getProfileInfo(rawProfileKey);
 
   const totalVUs =
     metrics?.runConfig?.totalVUs ||
@@ -139,6 +144,25 @@ const PerfLiveView = ({
     Math.max(0, Math.round(progressPercent || (durationSec > 0 ? (elapsedSec / durationSec) * 100 : 0)))
   );
 
+  // Merge metrics.nodeStats with flowNodes to evidence ALL flow nodes
+  const nodeStatsMap = new Map((metrics?.nodeStats || []).map((n) => [n.nodeId, n]));
+  const allNodesList = flowNodes.length > 0
+    ? flowNodes.map((fn, idx) => {
+        const id = fn.id || fn.nodeId || `node_${idx + 1}`;
+        const label = fn.data?.label || fn.data?.customLabel || fn.type || `Nodo #${idx + 1}`;
+        const stats = nodeStatsMap.get(id) || nodeStatsMap.get(fn.nodeId) || null;
+        return {
+          nodeId: id,
+          label,
+          type: fn.type || "action",
+          p95: stats?.p95 ?? null,
+          avg: stats?.avg ?? null,
+          count: stats?.count ?? 0,
+          status: stats ? "active" : "pending",
+        };
+      })
+    : (metrics?.nodeStats || []).map((n, i) => ({ ...n, status: "active", label: n.label || `Nodo #${i + 1}` }));
+
   return (
     <div className="flex-1 overflow-auto p-6 space-y-6">
       {/* Top Header Live Status & Load Profile Bar */}
@@ -160,6 +184,18 @@ const PerfLiveView = ({
           <span className="text-xs text-slate-400 font-mono bg-slate-800/80 px-2.5 py-1 rounded-full border border-slate-700">
             {totalVUs} VUs | {durationSec}s
           </span>
+          {onCancelTest && (
+            <button
+              onClick={onCancelTest}
+              className="bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs font-bold px-3 py-1.5 rounded-xl border border-red-500/30 transition-all flex items-center gap-1.5 cursor-pointer shadow-lg hover:scale-105"
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+              </span>
+              Detener Prueba
+            </button>
+          )}
         </div>
       </div>
 
@@ -185,6 +221,40 @@ const PerfLiveView = ({
           />
         </div>
       </div>
+
+      {/* Breaking Point Badge Card (Stress & Ramp testing) */}
+      <BreakingPointBadgeCard
+        breakingPoint={metrics?.breakingPoint}
+        profile={rawProfileKey}
+      />
+
+      {/* Stress & Ramp X-Y Visualizer (Latencia & Throughput vs VUs) */}
+      <StressTelemetryCharts
+        timeline={metrics?.timeline || timeline}
+        metrics={metrics}
+      />
+
+      {/* Live Active Spike Badge Card */}
+      <ActiveSpikeCard
+        spikeAnalysis={metrics?.spikeAnalysis}
+        rawProfileKey={rawProfileKey}
+      />
+
+      {/* 3D Spike Phase Comparison Matrix */}
+      <SpikePhaseComparisonTable
+        spikeAnalysis={metrics?.spikeAnalysis}
+      />
+
+      {/* Live Endurance Status Widget (Soak testing) */}
+      <EnduranceStatusCard
+        soakAnalysis={metrics?.soakAnalysis}
+        rawProfileKey={rawProfileKey}
+      />
+
+      {/* Hourly Bucket Matrix & Endurance Trends */}
+      <SoakTrendCharts
+        soakAnalysis={metrics?.soakAnalysis}
+      />
 
       {/* Resource Warning */}
       {resourceWarning && resourceWarning.health !== "continue" && (
@@ -263,19 +333,28 @@ const PerfLiveView = ({
             </span>
           </div>
           <div className="flex-1 space-y-2 overflow-y-auto custom-scrollbar pr-1">
-            {metrics?.nodeStats?.length > 0 ? (
-              metrics.nodeStats.slice(0, 10).map((node, i) => {
-                const isCritical = node.p95 > 2000;
-                const isWarning = node.p95 > 800;
+            {allNodesList.length > 0 ? (
+              allNodesList.map((node, i) => {
+                const isPending = node.status === "pending";
+                const isCritical = !isPending && node.p95 > 2000;
+                const isWarning = !isPending && node.p95 > 800;
                 return (
                   <div
-                    key={node.nodeId}
+                    key={node.nodeId || i}
                     className="bg-slate-950/50 border border-slate-800/50 hover:border-slate-700 p-2.5 rounded-xl transition-all"
                   >
                     <div className="flex justify-between items-center mb-1">
                       <div className="flex items-center gap-2 overflow-hidden pr-2">
                         <div
-                          className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${isCritical ? "bg-red-500/20 text-red-400" : isWarning ? "bg-amber-500/20 text-amber-400" : "bg-slate-700 text-slate-300"}`}
+                          className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                            isPending
+                              ? "bg-slate-800 text-slate-500"
+                              : isCritical
+                              ? "bg-red-500/20 text-red-400"
+                              : isWarning
+                              ? "bg-amber-500/20 text-amber-400"
+                              : "bg-emerald-500/20 text-emerald-400"
+                          }`}
                         >
                           {i + 1}
                         </div>
@@ -284,43 +363,34 @@ const PerfLiveView = ({
                         </span>
                       </div>
                       <span
-                        className={`font-mono text-sm font-bold ${isCritical ? "text-red-400" : isWarning ? "text-amber-400" : "text-emerald-400"}`}
+                        className={`font-mono text-xs font-bold ${
+                          isPending
+                            ? "text-slate-500 italic"
+                            : isCritical
+                            ? "text-red-400"
+                            : isWarning
+                            ? "text-amber-400"
+                            : "text-emerald-400"
+                        }`}
                       >
-                        {node.p95}ms
+                        {isPending ? "Pendiente" : `${node.p95}ms`}
                       </span>
                     </div>
-                    <div className="flex justify-between text-[10px] text-slate-500 pt-1 border-t border-slate-800/50">
-                      <span>
-                        <Cpu size={10} className="inline mr-1 text-sky-500" />
-                        {node.cpuAvg}%
-                      </span>
-                      <span>
-                        <Activity
-                          size={10}
-                          className="inline mr-1 text-fuchsia-500"
-                        />
-                        {node.memAvg} MB
-                      </span>
-                      <span
-                        className={
-                          (node.errors || 0) > 0 ? "text-red-400 font-bold" : ""
-                        }
-                      >
-                        <AlertTriangle
-                          size={10}
-                          className={`inline mr-1 ${(node.errors || 0) > 0 ? "text-red-500" : "text-slate-600"}`}
-                        />
-                        {node.errorRate}%
-                      </span>
-                    </div>
-                    <div className="mt-1.5 h-1 w-full bg-slate-800 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full ${isCritical ? "bg-red-500" : isWarning ? "bg-amber-500" : "bg-emerald-500"}`}
-                        style={{
-                          width: `${Math.min(100, (node.p95 / 3000) * 100)}%`,
-                        }}
-                      />
-                    </div>
+                    {!isPending && (
+                      <div className="flex justify-between text-[10px] text-slate-500 pt-1 border-t border-slate-800/50">
+                        <span>
+                          <Cpu size={10} className="inline mr-1 text-sky-500" />
+                          {node.cpuAvg || 0}%
+                        </span>
+                        <span>
+                          <Activity size={10} className="inline mr-1 text-fuchsia-500" />
+                          {node.memAvg || 0} MB
+                        </span>
+                        <span className={node.errorCount > 0 ? "text-red-400 font-bold" : ""}>
+                          Muestras: {node.count || 0}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 );
               })
@@ -328,7 +398,7 @@ const PerfLiveView = ({
               <div className="h-full flex flex-col items-center justify-center text-slate-500 space-y-2 py-8">
                 <CheckCircle2 size={40} className="text-slate-700" />
                 <p className="text-sm text-center">
-                  Sin cuellos de botella registrados
+                  Sin nodos registrados
                 </p>
               </div>
             )}

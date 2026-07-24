@@ -13,6 +13,10 @@
 
 import * as hdr from 'hdr-histogram-js';
 import { SlaEvaluator } from './SlaEvaluator.js';
+import { BreakingPointDetector } from './BreakingPointDetector.js';
+import { SpikeRecoveryAnalyzer } from './SpikeRecoveryAnalyzer.js';
+import { SoakLeakDetector } from './SoakLeakDetector.js';
+import { SoakTrendAnalyzer } from './SoakTrendAnalyzer.js';
 
 class MetricsCollector {
     /**
@@ -34,18 +38,18 @@ class MetricsCollector {
 
         // HTTP Status Codes Distribution
         this.httpStatusCounts = {
-            '200': 0,
-            '201': 0,
-            '302': 0,
-            '400': 0,
-            '401': 0,
-            '403': 0,
-            '404': 0,
-            '429': 0,
-            '500': 0,
-            '502': 0,
-            '503': 0,
-            '504': 0,
+            200: 0,
+            201: 0,
+            302: 0,
+            400: 0,
+            401: 0,
+            403: 0,
+            404: 0,
+            429: 0,
+            500: 0,
+            502: 0,
+            503: 0,
+            504: 0,
         };
 
         this.samples = [];
@@ -262,7 +266,7 @@ class MetricsCollector {
             statusDistribution['500'] = errCount;
         }
 
-        return {
+        const currentSnap = {
             flowId: this.flowId,
             totalRequests: total,
             successCount: succCount,
@@ -276,6 +280,38 @@ class MetricsCollector {
             nodeStats,
             httpStatusCounts: statusDistribution,
         };
+
+        // Compute live breaking point analysis
+        currentSnap.breakingPoint = BreakingPointDetector.detect(
+            this.samples && this.samples.length > 0 ? this.samples : [currentSnap],
+            {
+                errorRateThreshold: parseFloat(this.runConfig?.stopAtErrorRate || 10),
+                latencyThresholdMs: parseFloat(this.runConfig?.maxLatencyMs || 3000),
+            },
+        );
+
+        // Compute live spike resilience & auto-recovery analysis
+        if (this.runConfig?.profile === 'spike') {
+            currentSnap.spikeAnalysis = SpikeRecoveryAnalyzer.analyze(
+                this.samples && this.samples.length > 0 ? this.samples : [currentSnap],
+                this.runConfig,
+            );
+        }
+
+        // Compute live soak (endurance) & memory leak analysis
+        if (this.runConfig?.profile === 'soak') {
+            currentSnap.soakAnalysis = {
+                leakReport: SoakLeakDetector.analyze(
+                    this.samples && this.samples.length > 0 ? this.samples : [currentSnap],
+                    this.runConfig,
+                ),
+                hourlyBuckets: SoakTrendAnalyzer.getHourlyBuckets(
+                    this.samples && this.samples.length > 0 ? this.samples : [currentSnap],
+                ),
+            };
+        }
+
+        return currentSnap;
     }
 
     /**
@@ -341,7 +377,8 @@ class MetricsCollector {
         );
 
         return {
-            success: slaEvaluation.passed && (snap.errorCount === 0 || parseFloat(snap.errorRate) < 50),
+            success:
+                slaEvaluation.passed && (snap.errorCount === 0 || parseFloat(snap.errorRate) < 50),
             mode: 'performance',
             data: snap,
             slaEvaluation,

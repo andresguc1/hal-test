@@ -194,10 +194,12 @@ const PerformanceDashboard = () => {
 
         {/* Quick Status Info */}
         <div className="flex items-center space-x-3">
-          {status === "running" && runConfig && (
+          {(status === "running" || status === "preparing") && (
             <>
               <div className="text-xs text-blue-400 font-mono bg-blue-500/10 px-3 py-1.5 rounded-lg border border-blue-500/20 animate-pulse">
-                Ejecutando: {runConfig.totalVUs} VUs
+                {status === "preparing"
+                  ? "Inicializando motores..."
+                  : `Ejecutando: ${runConfig?.totalVUs || runConfig?.virtualUsers || 1} VUs`}
               </div>
               <button
                 onClick={async () => {
@@ -208,7 +210,7 @@ const PerformanceDashboard = () => {
                     toast.error("Error al cancelar la prueba: " + err.message);
                   }
                 }}
-                className="bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-semibold px-3 py-1.5 rounded-lg border border-red-500/20 transition-colors flex items-center gap-1.5"
+                className="bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-semibold px-3 py-1.5 rounded-lg border border-red-500/20 transition-colors flex items-center gap-1.5 cursor-pointer"
               >
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
@@ -295,7 +297,7 @@ const PerformanceDashboard = () => {
                       <div className="flex justify-between">
                         <span>Total Nodos:</span>
                         <span className="font-semibold text-slate-200">
-                          {currentProject?.flows?.find((f) => f.id === flowId)
+                          {currentProject?.flows?.find((f) => f.id === (selectedFlowId || flowId))
                             ?.nodes?.length || 0}
                         </span>
                       </div>
@@ -328,6 +330,8 @@ const PerformanceDashboard = () => {
                 timeline={timeline}
                 status={status}
                 progressPercent={progressPercent}
+                onCancelTest={cancelTest}
+                flowNodes={currentProject?.flows?.find((f) => f.id === flowId)?.nodes || []}
               />
             </motion.div>
           )}
@@ -343,6 +347,7 @@ const PerformanceDashboard = () => {
               <PerfResultsView
                 metrics={metrics || useExecutionStore.getState().lastPerfReport}
                 runConfig={runConfig}
+                flowNodes={currentProject?.flows?.find((f) => f.id === flowId)?.nodes || []}
               />
             </motion.div>
           )}

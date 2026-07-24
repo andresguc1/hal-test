@@ -47,18 +47,29 @@ export class ExecutionService {
 
         const nodes = flow.nodes.map((n) => {
             const nodeObj = n.toJSON();
+            const nodeIdVal = String(nodeObj.nodeId || nodeObj.id);
             return {
                 ...nodeObj,
-                id: nodeObj.nodeId, // Map to React Flow id format
+                id: nodeIdVal,
+                nodeId: nodeIdVal,
             };
         });
-        const nodeIds = new Set(nodes.map((n) => n.id));
+        const nodeIds = new Set(
+            flow.nodes
+                .flatMap((n) => {
+                    const o = n.toJSON();
+                    return [o.nodeId, o.id, String(o.nodeId), String(o.id)];
+                })
+                .filter(Boolean),
+        );
         const edges = flow.edges
             .map((e) => {
                 const edgeObj = e.toJSON();
                 return {
                     ...edgeObj,
-                    id: edgeObj.edgeId, // Map to React Flow id format
+                    id: String(edgeObj.edgeId || edgeObj.id),
+                    source: String(edgeObj.source),
+                    target: String(edgeObj.target),
                 };
             })
             .filter((e) => nodeIds.has(e.source) && nodeIds.has(e.target));
@@ -122,14 +133,21 @@ export class ExecutionService {
         // 3. Execution logic (BFS/DFS traversal)
         // Find start nodes: Nodes with no incoming edges
         const incomingEdgesCount = new Map();
-        nodes.forEach((n) => incomingEdgesCount.set(n.nodeId, 0));
+        nodes.forEach((n) => {
+            if (n.nodeId) incomingEdgesCount.set(String(n.nodeId), 0);
+            if (n.id) incomingEdgesCount.set(String(n.id), 0);
+        });
         edges.forEach((e) => {
-            const count = incomingEdgesCount.get(e.target) || 0;
-            incomingEdgesCount.set(e.target, count + 1);
+            const targetStr = String(e.target);
+            const count = incomingEdgesCount.get(targetStr) || 0;
+            incomingEdgesCount.set(targetStr, count + 1);
         });
 
         let currentNodes = nodes.filter(
-            (n) => incomingEdgesCount.get(n.nodeId) === 0 && !n.data?.disabled,
+            (n) =>
+                (incomingEdgesCount.get(String(n.nodeId)) || 0) === 0 &&
+                (incomingEdgesCount.get(String(n.id)) || 0) === 0 &&
+                !n.data?.disabled,
         );
 
         if (currentNodes.length === 0 && nodes.length > 0) {
@@ -586,7 +604,9 @@ export class ExecutionService {
                 const edgeId = edge.edgeId || edge.id;
                 emitEdgeStatus({ edgeId, status: 'success' });
                 state.activatedNodeIds.add(edge.target);
-                const targetNode = allNodes.find((n) => n.nodeId === edge.target || n.id === edge.target);
+                const targetNode = allNodes.find(
+                    (n) => n.nodeId === edge.target || n.id === edge.target,
+                );
                 if (targetNode) {
                     if (targetNode.nodeId) state.activatedNodeIds.add(targetNode.nodeId);
                     if (targetNode.id) state.activatedNodeIds.add(targetNode.id);

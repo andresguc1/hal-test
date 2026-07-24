@@ -4,6 +4,8 @@ import { MetricsCollector } from './MetricsCollector.js';
 import { WorkerPool } from './WorkerPool.js';
 import { activeRunManager } from './ActiveRunManager.js';
 import { executionService } from './ExecutionService.js';
+import { CircuitBreakerGuard } from './CircuitBreakerGuard.js';
+import { SpikePatternEngine } from './SpikePatternEngine.js';
 
 /**
  * @typedef {Object} RunOptions
@@ -72,8 +74,8 @@ class PerformanceRunner extends Runner {
             throttleStrategy = 'auto',
             maxConcurrentBrowsers = 3,
             headless = true,
-            stopAtErrorRate = null,  // % threshold for auto-stop (Stress Test)
-            spikeBaseVUs = 1,        // base VU count before/after spike peak
+            stopAtErrorRate = null, // % threshold for auto-stop (Stress Test)
+            spikeBaseVUs = 1, // base VU count before/after spike peak
             slaConfig = {},
         } = config;
 
@@ -132,6 +134,9 @@ class PerformanceRunner extends Runner {
                       startVUs,
                       stepCount,
                       growthType,
+                      spikeCount: config.spikeCount,
+                      spikeIntervalSec: config.spikeIntervalSec,
+                      spikeBaseVUs: config.spikeBaseVUs,
                   });
 
         // 3. Initialize metrics collector
@@ -209,9 +214,31 @@ class PerformanceRunner extends Runner {
             }
         }
 
-        // Health check interval (dynamic throttling during execution)
+        const perfConfig = options.performanceConfig || {};
+        const circuitBreaker = new CircuitBreakerGuard({
+            stopAtErrorRate: perfConfig.stopAtErrorRate
+                ? parseFloat(perfConfig.stopAtErrorRate)
+                : null,
+            maxLatencyMs: perfConfig.maxLatencyMs ? parseFloat(perfConfig.maxLatencyMs) : null,
+        });
+
+        // Health check interval (dynamic throttling & circuit breaker evaluation during execution)
         const healthInterval = setInterval(() => {
             const health = ThrottlePolicy.checkHealth();
+
+            // Evaluate Safety Circuit Breaker
+            const currentMetricsSnap = metrics.snapshot();
+            const cbStatus = circuitBreaker.evaluate(currentMetricsSnap);
+            if (cbStatus.tripped && !aborted) {
+                console.error(`[PerformanceRunner] 🛑 CIRCUIT BREAKER TRIPPED: ${cbStatus.reason}`);
+                emitLog({
+                    message: `[Performance] 🛑 DISYUNTOR DE SEGURIDAD: ${cbStatus.reason}. Abortando prueba.`,
+                    type: 'error',
+                });
+                aborted = true;
+                pool.abort();
+            }
+
             if (health.action === 'abort') {
                 console.error(
                     `[PerformanceRunner] 🛑 CRITICAL: Free memory at ${health.freePercent}%. Aborting.`,
@@ -408,15 +435,10 @@ class PerformanceRunner extends Runner {
      */
     _buildStages(profile, totalVUs, durationSec, rampUpSec = 0, spikeBaseVUs = 1, opts = {}) {
         const stages = [];
-        const {
-            rampDown = 0,
-            holdTime = 0,
-            startVUs = 1,
-            stepCount = 4,
-            growthType = 'linear',
-        } = opts;
+        const { rampDown = 0, holdTime = 0, startVUs = 1, stepCount = 4 } = opts;
 
-        const effectiveRampDown = rampDown > 0 ? rampDown : Math.max(5, Math.floor(durationSec * 0.15));
+        const effectiveRampDown =
+            rampDown > 0 ? rampDown : Math.max(5, Math.floor(durationSec * 0.15));
 
         switch (profile) {
             case 'baseline':
@@ -437,7 +459,10 @@ class PerformanceRunner extends Runner {
                 }
 
                 // Hold time at max target
-                const sustainTime = holdTime > 0 ? holdTime : Math.max(5, durationSec - totalRampTime - effectiveRampDown);
+                const sustainTime =
+                    holdTime > 0
+                        ? holdTime
+                        : Math.max(5, durationSec - totalRampTime - effectiveRampDown);
                 if (sustainTime > 0) {
                     stages.push({ durationSec: sustainTime, target: totalVUs });
                 }
@@ -451,7 +476,10 @@ class PerformanceRunner extends Runner {
             case 'load': {
                 // Multi-stage Ramp: [RampUp] -> [Hold] -> [RampDown]
                 const actualRamp = rampUpSec > 0 ? rampUpSec : Math.floor(durationSec * 0.3);
-                const sustain = holdTime > 0 ? holdTime : Math.max(5, durationSec - actualRamp - effectiveRampDown);
+                const sustain =
+                    holdTime > 0
+                        ? holdTime
+                        : Math.max(5, durationSec - actualRamp - effectiveRampDown);
 
                 stages.push({ durationSec: actualRamp, target: totalVUs });
                 if (sustain > 0) {
@@ -465,7 +493,10 @@ class PerformanceRunner extends Runner {
             case 'endurance':
             default:
                 // Flat constant load with optional ramp down
-                stages.push({ durationSec: Math.max(5, durationSec - effectiveRampDown), target: totalVUs });
+                stages.push({
+                    durationSec: Math.max(5, durationSec - effectiveRampDown),
+                    target: totalVUs,
+                });
                 stages.push({ durationSec: effectiveRampDown, target: 0 });
                 break;
 
@@ -475,7 +506,8 @@ class PerformanceRunner extends Runner {
                 const stepDuration = Math.floor(durationSec / steps);
                 for (let i = 1; i <= steps; i++) {
                     const targetAtStep = Math.ceil((totalVUs / steps) * i);
-                    const dur = i === steps ? durationSec - stepDuration * (steps - 1) : stepDuration;
+                    const dur =
+                        i === steps ? durationSec - stepDuration * (steps - 1) : stepDuration;
                     stages.push({ durationSec: dur, target: targetAtStep });
                 }
                 stages.push({ durationSec: effectiveRampDown, target: 0 });
@@ -483,16 +515,17 @@ class PerformanceRunner extends Runner {
             }
 
             case 'spike': {
-                // base → spike → sustain → cooldown → 0
-                const base = Math.max(1, spikeBaseVUs);
-                const rampToSpike = Math.max(2, Math.floor(durationSec * 0.1));
-                const sustainSpike = Math.max(5, Math.floor(durationSec * 0.3));
-                const cooldown = Math.max(5, Math.floor(durationSec * 0.2));
-                const baseHold = Math.max(1, durationSec - rampToSpike - sustainSpike - cooldown);
-                stages.push({ durationSec: baseHold, target: base });
-                stages.push({ durationSec: rampToSpike, target: totalVUs });
-                stages.push({ durationSec: sustainSpike, target: totalVUs });
-                stages.push({ durationSec: cooldown, target: 0 });
+                const generated = SpikePatternEngine.generateStages({
+                    virtualUsers: totalVUs,
+                    spikeBaseVUs: opts.spikeBaseVUs || spikeBaseVUs || 10,
+                    duration: durationSec,
+                    spikeCount: opts.spikeCount || 1,
+                    spikeIntervalSec: opts.spikeIntervalSec || 30,
+                });
+                generated.stages.forEach((stg) => {
+                    const durationSec = parseInt(stg.duration, 10) || 5;
+                    stages.push({ durationSec, target: stg.target });
+                });
                 break;
             }
 

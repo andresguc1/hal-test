@@ -33,13 +33,18 @@ import {
 import { RealTimeTelemetryChart } from "../telemetry/RealTimeTelemetryChart";
 import { TelemetryDataNormalizer, getProfileInfo } from "../telemetry/telemetryTypes";
 import { useExecutionStore } from "../../stores/useExecutionStore";
+import { NodePerformanceTable } from "./NodePerformanceTable";
+import { ActiveSpikeCard } from "./ActiveSpikeCard";
+import { SpikePhaseComparisonTable } from "./SpikePhaseComparisonTable";
+import { EnduranceStatusCard } from "./EnduranceStatusCard";
+import { SoakTrendCharts } from "./SoakTrendCharts";
 
 /**
  * PerfResultsView — Advanced QA-Focused Latency Profiling & Performance Report
  * Inspired by k6, Datadog, LoadRunner, and Dynatrace.
  * Distinguishes Latency Profiling ("Why is it slow?") from Load Testing ("How much can it handle?").
  */
-const PerfResultsView = ({ metrics: rawMetrics, runConfig: _runConfig }) => {
+const PerfResultsView = ({ metrics: rawMetrics, runConfig: _runConfig, flowNodes = [] }) => {
   const [expandedGroups, setExpandedGroups] = useState(new Set(["main-flow"]));
   const [expandedNodes, setExpandedNodes] = useState(new Set());
   const [sortBy, setSortBy] = useState("p95"); // p95 | cpuAvg | memAvg | errors
@@ -523,6 +528,26 @@ const PerfResultsView = ({ metrics: rawMetrics, runConfig: _runConfig }) => {
         </div>
       </div>
 
+      {/* Spike Test Resilience & Recovery Dashboard */}
+      <ActiveSpikeCard
+        spikeAnalysis={metrics?.spikeAnalysis}
+        rawProfileKey={detectedProfile}
+      />
+
+      <SpikePhaseComparisonTable
+        spikeAnalysis={metrics?.spikeAnalysis}
+      />
+
+      {/* Endurance Test Stability & Memory Leak Dashboard */}
+      <EnduranceStatusCard
+        soakAnalysis={metrics?.soakAnalysis}
+        rawProfileKey={detectedProfile}
+      />
+
+      <SoakTrendCharts
+        soakAnalysis={metrics?.soakAnalysis}
+      />
+
       {/* 3. Global Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <SummaryCard label="Total Solicitudes" value={metrics.totalRequests || 0} icon={Zap} />
@@ -721,7 +746,14 @@ const PerfResultsView = ({ metrics: rawMetrics, runConfig: _runConfig }) => {
         title="Línea de Tiempo de Latencia por Nodo"
       />
 
-      {/* 9. Hierarchical Flow & Subflow Inspector */}
+      {/* 9. Complete Per-Node Performance Metrics Table */}
+      <NodePerformanceTable
+        nodeStats={nodeStats}
+        flowNodes={flowNodes}
+        totalDuration={totalDuration}
+      />
+
+      {/* 10. Hierarchical Flow & Subflow Inspector */}
       <div className="bg-slate-900/80 border border-slate-800/80 rounded-2xl p-5 shadow-xl space-y-4">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-base font-semibold text-slate-100 flex items-center gap-2">

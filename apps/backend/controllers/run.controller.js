@@ -399,25 +399,30 @@ export const getFlowHistoryAction = async (req, res) => {
 export const cancelRunAction = async (req, res) => {
     try {
         const { id } = req.params;
-        console.log(`[RunController] Request to cancel run ID: ${id}`);
+        console.log(`[RunController] 🛑 Request to cancel run ID or Flow ID: ${id}`);
 
-        // Release execution lock if it exists
+        // 1. Release execution lock if it exists for run or flow
+        executionLock.release(id);
         const run = await Run.findByPk(id);
         if (run) {
             executionLock.release(run.flow_id || run.flowId);
         }
 
+        // 2. Abort in ActiveRunManager
         const aborted = activeRunManager.abort(id);
-        if (aborted) {
-            return res.status(200).json({
-                success: true,
-                message: `Run ${id} cancelled successfully.`,
-            });
+
+        // 3. Force abort worker pool processes
+        try {
+            const { abortAllPools } = await import('../services/WorkerPool.js');
+            abortAllPools();
+        } catch (poolErr) {
+            console.warn('[RunController] Warning aborting worker pools:', poolErr.message);
         }
 
         return res.status(200).json({
             success: true,
-            message: `Active run ID ${id} not found or already finished.`,
+            aborted,
+            message: `Run ${id} cancelled successfully.`,
         });
     } catch (error) {
         console.error('[RunController] cancelRunAction Error:', error);
@@ -512,7 +517,9 @@ export const startPerformanceRunAction = async (req, res) => {
             if (edges && Array.isArray(edges)) {
                 await Edge.destroy({ where: { flowId } });
                 const validEdges = edges
-                    .filter((e) => e && (e.source || e.sourceHandle) && (e.target || e.targetHandle))
+                    .filter(
+                        (e) => e && (e.source || e.sourceHandle) && (e.target || e.targetHandle),
+                    )
                     .map((e, idx) => ({
                         edgeId: String(e.id || e.edgeId || `edge_${idx + 1}`),
                         source: String(e.source),
@@ -721,7 +728,8 @@ export const exportPerformanceReportAction = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Run execution not found' });
         }
 
-        const summary = typeof run.summary === 'string' ? JSON.parse(run.summary) : run.summary || {};
+        const summary =
+            typeof run.summary === 'string' ? JSON.parse(run.summary) : run.summary || {};
         const { ReportExporter } = await import('../services/ReportExporter.js');
         const htmlContent = ReportExporter.generateHTML({
             ...run.toJSON(),
