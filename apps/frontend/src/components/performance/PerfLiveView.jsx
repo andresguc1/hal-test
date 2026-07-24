@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import {
   Zap,
@@ -34,6 +35,7 @@ const PerfLiveView = ({
   onCancelTest,
   flowNodes = [],
 }) => {
+  const { t } = useTranslation();
   const chartRef = useRef(null);
   const normalizerRef = useRef(new TelemetryDataNormalizer());
 
@@ -65,7 +67,7 @@ const PerfLiveView = ({
             time,
             value: val,
             color: val > 2000 ? "#ef4444" : val > 800 ? "#f59e0b" : "#10b981",
-            label: node.label ? `#${idx + 1} ${node.label}` : `Nodo #${idx + 1}`,
+            label: node.label ? `#${idx + 1} ${node.label}` : `Node #${idx + 1}`,
             nodeId: node.nodeId || `node_${idx + 1}`,
           });
         });
@@ -107,8 +109,8 @@ const PerfLiveView = ({
           <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mx-auto text-blue-400">
             <Activity size={32} className="animate-pulse" />
           </div>
-          <p className="text-slate-300 font-medium">Esperando datos de telemetría...</p>
-          <p className="text-xs text-slate-500">Inicia una prueba para visualizar gráficos y KPIs en tiempo real.</p>
+          <p className="text-slate-300 font-medium">{t("performance_dashboard.waiting_telemetry", "Waiting for telemetry data...")}</p>
+          <p className="text-xs text-slate-500">{t("performance_dashboard.waiting_telemetry_sub", "Launch a test to visualize real-time charts and KPIs.")}</p>
         </motion.div>
       </div>
     );
@@ -149,7 +151,7 @@ const PerfLiveView = ({
   const allNodesList = flowNodes.length > 0
     ? flowNodes.map((fn, idx) => {
         const id = fn.id || fn.nodeId || `node_${idx + 1}`;
-        const label = fn.data?.label || fn.data?.customLabel || fn.type || `Nodo #${idx + 1}`;
+        const label = fn.data?.label || fn.data?.customLabel || fn.type || `Node #${idx + 1}`;
         const stats = nodeStatsMap.get(id) || nodeStatsMap.get(fn.nodeId) || null;
         return {
           nodeId: id,
@@ -161,7 +163,7 @@ const PerfLiveView = ({
           status: stats ? "active" : "pending",
         };
       })
-    : (metrics?.nodeStats || []).map((n, i) => ({ ...n, status: "active", label: n.label || `Nodo #${i + 1}` }));
+    : (metrics?.nodeStats || []).map((n, i) => ({ ...n, status: "active", label: n.label || `Node #${i + 1}` }));
 
   return (
     <div className="flex-1 overflow-auto p-6 space-y-6">
@@ -173,11 +175,11 @@ const PerfLiveView = ({
             <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
           </span>
           <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">
-            PRUEBA EN VIVO (TELEMETRÍA)
+            {t("performance_dashboard.live_test_title", "LIVE TEST (TELEMETRY)")}
           </span>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-xs text-slate-400 font-medium">Perfil de Carga:</span>
+          <span className="text-xs text-slate-400 font-medium">{t("performance_dashboard.load_profile_label", "Load Profile:")}</span>
           <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${profileColor}`}>
             {profileLabel}
           </span>
@@ -193,7 +195,7 @@ const PerfLiveView = ({
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
               </span>
-              Detener Prueba
+              {t("performance_dashboard.stop_test", "Stop Test")}
             </button>
           )}
         </div>
@@ -204,7 +206,7 @@ const PerfLiveView = ({
         <div className="flex items-center justify-between text-xs">
           <div className="flex items-center gap-2 font-medium text-slate-300">
             <Clock size={14} className="text-emerald-400 animate-spin" />
-            <span>Progreso de Prueba ({profileLabel}):</span>
+            <span>{t("performance_dashboard.test_progress", "Test Progress ({{profile}}):", { profile: profileLabel })}</span>
             <span className="font-mono text-emerald-400 font-bold">{currentProgress}%</span>
           </div>
           <div className="text-slate-400 font-mono">
@@ -272,12 +274,12 @@ const PerfLiveView = ({
           <div>
             <h4 className="font-semibold text-lg">
               {resourceWarning.health === "abort"
-                ? "Estrés de Memoria Crítico"
-                : "Advertencia de Recursos"}
+                ? t("performance_dashboard.critical_memory_stress", "Critical Memory Stress")
+                : t("performance_dashboard.resource_warning", "Resource Warning")}
             </h4>
             <p className="text-sm opacity-80">
               RAM: {resourceWarning.usedPercent}%
-              {resourceWarning.health === "abort" && " — Prueba abortada."}
+              {resourceWarning.health === "abort" && ` — ${t("performance_dashboard.test_aborted", "Test aborted.")}`}
             </p>
           </div>
         </div>
@@ -287,34 +289,34 @@ const PerfLiveView = ({
       <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
         <KPICard
           icon={Zap}
-          label="Throughput"
+          label={t("performance_dashboard.throughput", "Throughput")}
           value={metrics?.throughput || 0}
           unit="req/s"
-          sub={`Total: ${metrics?.totalRequests || 0}`}
+          sub={`${t("performance_dashboard.total", "Total")}: ${metrics?.totalRequests || 0}`}
           color="blue"
         />
         <KPICard
           icon={Clock}
-          label="Latencia (P95)"
+          label={t("performance_dashboard.p95_latency", "Latency (P95)")}
           value={metrics?.latency?.p95 || 0}
           unit="ms"
-          sub={`Mediana: ${metrics?.latency?.median || 0}ms`}
+          sub={`${t("performance_dashboard.median", "Median")}: ${metrics?.latency?.median || 0}ms`}
           color="indigo"
         />
         <KPICard
           icon={Target}
-          label="Tasa de Error"
+          label={t("performance_dashboard.error_rate", "Error Rate")}
           value={metrics?.errorRate || "0.00"}
           unit="%"
-          sub={`Fallos: ${metrics?.errorCount || 0}`}
+          sub={`${t("performance_dashboard.failures", "Failures")}: ${metrics?.errorCount || 0}`}
           color={(metrics?.errorCount || 0) > 0 ? "red" : "emerald"}
         />
         <KPICard
           icon={Server}
-          label="VUs Activos"
+          label={t("performance_dashboard.active_vus", "Active VUs")}
           value={vuStatus?.activeVUs || 0}
           unit="Nav."
-          sub={`Completados: ${vuStatus?.completedVUs || 0}`}
+          sub={`${t("performance_dashboard.completed", "Completed")}: ${vuStatus?.completedVUs || 0}`}
           color="sky"
         />
       </div>
@@ -326,7 +328,7 @@ const PerfLiveView = ({
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-base font-medium text-slate-200 flex items-center gap-2">
               <Gauge className="text-amber-400" size={18} />
-              Cuellos de Botella
+              {t("performance_dashboard.bottlenecks", "Bottlenecks")}
             </h3>
             <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700">
               P95
@@ -373,7 +375,7 @@ const PerfLiveView = ({
                             : "text-emerald-400"
                         }`}
                       >
-                        {isPending ? "Pendiente" : `${node.p95}ms`}
+                        {isPending ? t("performance_dashboard.pending", "Pending") : `${node.p95}ms`}
                       </span>
                     </div>
                     {!isPending && (
@@ -387,7 +389,7 @@ const PerfLiveView = ({
                           {node.memAvg || 0} MB
                         </span>
                         <span className={node.errorCount > 0 ? "text-red-400 font-bold" : ""}>
-                          Muestras: {node.count || 0}
+                          {t("performance_dashboard.samples", "Samples")}: {node.count || 0}
                         </span>
                       </div>
                     )}
@@ -398,7 +400,7 @@ const PerfLiveView = ({
               <div className="h-full flex flex-col items-center justify-center text-slate-500 space-y-2 py-8">
                 <CheckCircle2 size={40} className="text-slate-700" />
                 <p className="text-sm text-center">
-                  Sin nodos registrados
+                  {t("performance_dashboard.no_nodes", "No registered nodes")}
                 </p>
               </div>
             )}
@@ -412,8 +414,8 @@ const PerfLiveView = ({
             height={360}
             domain="performance"
             defaultChartMode="line"
-            barTitle="Latencia (ms)"
-            title="Línea de Tiempo de Latencia por Nodo"
+            barTitle={t("performance_dashboard.latency_ms", "Latency (ms)")}
+            title={t("performance_dashboard.latency_timeline_title", "Latency Timeline per Node")}
           />
         </div>
       </div>

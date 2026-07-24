@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Activity,
@@ -28,6 +29,7 @@ import { useExecutionStore } from "../stores/useExecutionStore";
  * PerformanceDashboard — Evolved Load Testing Control Center
  */
 const PerformanceDashboard = () => {
+  const { t } = useTranslation();
   const location = useLocation();
   const lastPerfReport = useExecutionStore((s) => s.lastPerfReport);
   const { projects, currentProject, currentFlowId, loadProject } =
@@ -52,7 +54,7 @@ const PerformanceDashboard = () => {
   const flowId = selectedFlowId || currentProject?.flows?.[0]?.id;
   const flowName =
     currentProject?.flows?.find((f) => f.id === flowId)?.name ||
-    "Ningún Flujo Seleccionado";
+    t("performance_dashboard.no_flow_selected", "No Flow Selected");
   const flows = currentProject?.flows || [];
 
   // Telemetry and state hooks
@@ -92,11 +94,11 @@ const PerformanceDashboard = () => {
 
   const handleStartTest = async (config) => {
     if (!flowId) {
-      toast.info("Selecciona un flujo antes de iniciar la prueba de carga.");
+      toast.info(t("performance_dashboard.toast_select_flow", "Select a flow before launching the load test."));
       return;
     }
 
-    const toastId = toast.loading("Inicializando motor de performance...");
+    const toastId = toast.loading(t("performance_dashboard.toast_initializing", "Initializing performance engine..."));
 
     const activeFlowObj = currentProject?.flows?.find((f) => f.id === flowId);
 
@@ -120,17 +122,17 @@ const PerformanceDashboard = () => {
 
       if (result.success) {
         toast.dismiss(toastId);
-        toast.success("Prueba de carga lanzada con éxito!");
+        toast.success(t("performance_dashboard.toast_launched_success", "Load test launched successfully!"));
         setStatus("preparing");
         setActiveTab("live");
       } else {
         toast.dismiss(toastId);
-        toast.error(result.message || "Error al lanzar la prueba");
+        toast.error(result.message || t("performance_dashboard.toast_launch_error", "Failed to launch test"));
       }
     } catch (error) {
       toast.dismiss(toastId);
       console.error("[PerformanceDashboard] Performance run failed:", error);
-      toast.error("Error del motor: " + error.message);
+      toast.error(t("performance_dashboard.toast_engine_error", "Engine error: ") + error.message);
     }
   };
 
@@ -150,7 +152,7 @@ const PerformanceDashboard = () => {
           </div>
           <div>
             <div className="text-xs text-slate-500 uppercase tracking-widest font-semibold">
-              Pruebas de Performance
+              {t("performance_dashboard.sub_title", "Performance Testing")}
             </div>
             <div className="text-slate-200 font-medium text-base truncate max-w-xs">
               {flowName}
@@ -164,14 +166,14 @@ const PerformanceDashboard = () => {
             id="config"
             active={activeTab === "config"}
             onClick={() => setActiveTab("config")}
-            label="Configuración"
+            label={t("performance_dashboard.tab_config", "Configuration")}
             icon={Settings}
           />
           <TabButton
             id="live"
             active={activeTab === "live"}
             onClick={() => setActiveTab("live")}
-            label="En Vivo"
+            label={t("performance_dashboard.tab_live", "Live View")}
             icon={Play}
             disabled={status === "waiting" || status === "connecting"}
           />
@@ -179,7 +181,7 @@ const PerformanceDashboard = () => {
             id="results"
             active={activeTab === "results"}
             onClick={() => setActiveTab("results")}
-            label="Resultados"
+            label={t("performance_dashboard.tab_results", "Results")}
             icon={BarChart2}
             disabled={!metrics && !lastPerfReport && status !== "completed"}
           />
@@ -187,7 +189,7 @@ const PerformanceDashboard = () => {
             id="history"
             active={activeTab === "history"}
             onClick={() => setActiveTab("history")}
-            label="Historial"
+            label={t("performance_dashboard.tab_history", "History")}
             icon={Clock}
           />
         </div>
@@ -198,16 +200,16 @@ const PerformanceDashboard = () => {
             <>
               <div className="text-xs text-blue-400 font-mono bg-blue-500/10 px-3 py-1.5 rounded-lg border border-blue-500/20 animate-pulse">
                 {status === "preparing"
-                  ? "Inicializando motores..."
-                  : `Ejecutando: ${runConfig?.totalVUs || runConfig?.virtualUsers || 1} VUs`}
+                  ? t("performance_dashboard.initializing_engines", "Initializing engines...")
+                  : t("performance_dashboard.running_vus", "Running: {{count}} VUs", { count: runConfig?.totalVUs || runConfig?.virtualUsers || 1 })}
               </div>
               <button
                 onClick={async () => {
                   try {
                     await cancelTest();
-                    toast.success("Cancelación solicitada con éxito.");
+                    toast.success(t("performance_dashboard.toast_cancel_success", "Cancellation requested successfully."));
                   } catch (err) {
-                    toast.error("Error al cancelar la prueba: " + err.message);
+                    toast.error(t("performance_dashboard.toast_cancel_error", "Error canceling test: ") + err.message);
                   }
                 }}
                 className="bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-semibold px-3 py-1.5 rounded-lg border border-red-500/20 transition-colors flex items-center gap-1.5 cursor-pointer"
@@ -216,7 +218,7 @@ const PerformanceDashboard = () => {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
                 </span>
-                Detener
+                {t("performance_dashboard.stop", "Stop")}
               </button>
             </>
           )}
@@ -225,7 +227,7 @@ const PerformanceDashboard = () => {
               onClick={resetRun}
               className="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700 transition-colors"
             >
-              Nueva Prueba
+              {t("performance_dashboard.new_test", "New Test")}
             </button>
           )}
         </div>
@@ -257,7 +259,7 @@ const PerformanceDashboard = () => {
                 <div className="md:col-span-2 bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 space-y-4">
                   <div className="border-b border-slate-800 pb-3 flex justify-between items-center">
                     <h2 className="text-lg font-medium text-slate-200">
-                      Parámetros del Escenario
+                      {t("performance_dashboard.scenario_parameters", "Scenario Parameters")}
                     </h2>
                     {flows.length > 0 && (
                       <select
@@ -283,28 +285,24 @@ const PerformanceDashboard = () => {
                 {/* Flow Outline / Information */}
                 <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 space-y-4">
                   <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-widest">
-                    Información del Flujo
+                    {t("performance_dashboard.flow_info", "Flow Information")}
                   </h3>
                   <div className="space-y-3 text-xs text-slate-400">
                     <p>
-                      Selecciona un flujo de la lista para configurar la prueba
-                      de carga. El perfil constante es ideal para pruebas
-                      básicas, mientras que los perfiles stress y spike son
-                      recomendados para pruebas avanzadas de límites y
-                      capacidad.
+                      {t("performance_dashboard.flow_info_desc", "Select a flow from the list to configure the load test. The constant profile is ideal for basic tests, while stress and spike profiles are recommended for advanced limit and capacity testing.")}
                     </p>
                     <div className="bg-slate-950/40 p-3 rounded-xl border border-slate-800/50 space-y-2">
                       <div className="flex justify-between">
-                        <span>Total Nodos:</span>
+                        <span>{t("performance_dashboard.total_nodes", "Total Nodes:")}</span>
                         <span className="font-semibold text-slate-200">
                           {currentProject?.flows?.find((f) => f.id === (selectedFlowId || flowId))
                             ?.nodes?.length || 0}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span>Última Ejecución:</span>
+                        <span>{t("performance_dashboard.last_execution", "Last Execution:")}</span>
                         <span className="font-semibold text-slate-200">
-                          Hace unos momentos
+                          {t("performance_dashboard.moments_ago", "A few moments ago")}
                         </span>
                       </div>
                     </div>
