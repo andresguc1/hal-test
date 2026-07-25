@@ -34,15 +34,9 @@ describe("Execution Log Stream Filtering & Isolation Rules", () => {
       useExecutionStore.getState().setMode("calidad");
 
       // Add logs for all 3 streams
-      useLogStore
-        .getState()
-        .addLog("Automation step 1", "info", null, "calidad");
-      useLogStore
-        .getState()
-        .addLog("Performance CPU high", "warning", null, "performance");
-      useLogStore
-        .getState()
-        .addLog("Security SQL injection attempt", "error", null, "seguridad");
+      useLogStore.getState().addLog("Automation step 1", "info", null, "calidad");
+      useLogStore.getState().addLog("Performance CPU high", "warning", null, "performance");
+      useLogStore.getState().addLog("Security SQL injection attempt", "error", null, "seguridad");
 
       const state = useLogStore.getState();
 
@@ -61,15 +55,9 @@ describe("Execution Log Stream Filtering & Isolation Rules", () => {
     it("Rule 2: If Performance is running, ONLY performance logs are shown and security/automatización are hidden", () => {
       useExecutionStore.getState().setMode("performance");
 
-      useLogStore
-        .getState()
-        .addLog("Automation step 1", "info", null, "calidad");
-      useLogStore
-        .getState()
-        .addLog("VUs scale to 100", "info", null, "performance");
-      useLogStore
-        .getState()
-        .addLog("Security XSS detected", "error", null, "seguridad");
+      useLogStore.getState().addLog("Automation step 1", "info", null, "calidad");
+      useLogStore.getState().addLog("VUs scale to 100", "info", null, "performance");
+      useLogStore.getState().addLog("Security XSS detected", "error", null, "seguridad");
 
       // Sync active mode logs
       useLogStore.getState().syncActiveModeLogs("performance");
@@ -84,15 +72,9 @@ describe("Execution Log Stream Filtering & Isolation Rules", () => {
     it("Rule 3: If Seguridad is running, ONLY security logs are shown and performance/automatización are hidden", () => {
       useExecutionStore.getState().setMode("seguridad");
 
-      useLogStore
-        .getState()
-        .addLog("Automation step 1", "info", null, "calidad");
-      useLogStore
-        .getState()
-        .addLog("P95 latency 120ms", "info", null, "performance");
-      useLogStore
-        .getState()
-        .addLog("CVSS 9.8 Critical Vulnerability", "error", null, "seguridad");
+      useLogStore.getState().addLog("Automation step 1", "info", null, "calidad");
+      useLogStore.getState().addLog("P95 latency 120ms", "info", null, "performance");
+      useLogStore.getState().addLog("CVSS 9.8 Critical Vulnerability", "error", null, "seguridad");
 
       useLogStore.getState().syncActiveModeLogs("seguridad");
       const state = useLogStore.getState();
@@ -108,9 +90,7 @@ describe("Execution Log Stream Filtering & Isolation Rules", () => {
 
       for (let i = 0; i < 150; i++) {
         useLogStore.getState().addLog(`Auto Log ${i}`, "info", null, "calidad");
-        useLogStore
-          .getState()
-          .addLog(`Perf Log ${i}`, "info", null, "performance");
+        useLogStore.getState().addLog(`Perf Log ${i}`, "info", null, "performance");
       }
 
       const state = useLogStore.getState();

@@ -23,10 +23,7 @@ import PerfResultsView from "./PerfResultsView";
 const extractMetricsFromRun = (run) => {
   if (!run || !run.flow_snapshot) return null;
   try {
-    let parsed =
-      typeof run.flow_snapshot === "string"
-        ? JSON.parse(run.flow_snapshot)
-        : run.flow_snapshot;
+    let parsed = typeof run.flow_snapshot === "string" ? JSON.parse(run.flow_snapshot) : run.flow_snapshot;
     if (typeof parsed === "string") {
       parsed = JSON.parse(parsed);
     }
@@ -338,7 +335,14 @@ const PerfHistoryView = ({ flowId, onReRun }) => {
                 </thead>
                 <tbody className="divide-y divide-slate-800/50">
                   {history.map((run) => {
-                    // summary variable removed since it is unused
+                    let summary = null;
+                    try {
+                      summary = run.flow_snapshot
+                        ? JSON.parse(run.flow_snapshot)
+                        : null;
+                    } catch {
+                      // ignore parsing errors
+                    }
                     const metricsData = extractMetricsFromRun(run);
                     const profileKey =
                       metricsData?.runConfig?.profile ||

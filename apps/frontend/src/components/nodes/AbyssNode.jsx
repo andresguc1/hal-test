@@ -141,25 +141,16 @@ const AbyssNode = ({ id, data, selected, type }) => {
   const { color: statusColor, shadow: statusShadow } = isSecurityMode
     ? (() => {
         const hasCriticalHigh = nodeAlerts.some(
-          (a) => a.severity === "critical" || a.severity === "high",
+          (a) => a.severity === "critical" || a.severity === "high"
         );
         const hasMedium = nodeAlerts.some((a) => a.severity === "medium");
 
         if (hasCriticalHigh) {
-          return {
-            color: "#ef4444",
-            shadow: "0 0 25px rgba(239, 68, 68, 0.6)",
-          };
+          return { color: "#ef4444", shadow: "0 0 25px rgba(239, 68, 68, 0.6)" };
         } else if (hasMedium) {
-          return {
-            color: "#f97316",
-            shadow: "0 0 25px rgba(249, 115, 22, 0.6)",
-          };
+          return { color: "#f97316", shadow: "0 0 25px rgba(249, 115, 22, 0.6)" };
         } else {
-          return {
-            color: "#10b981",
-            shadow: "0 0 20px rgba(16, 185, 129, 0.4)",
-          };
+          return { color: "#10b981", shadow: "0 0 20px rgba(16, 185, 129, 0.4)" };
         }
       })()
     : data.state === "success" || data.state === "error"

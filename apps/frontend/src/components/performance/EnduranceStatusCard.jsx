@@ -1,22 +1,12 @@
 import React from "react";
 import { motion } from "framer-motion";
-import {
-  ShieldCheck,
-  AlertOctagon,
-  Activity,
-  Clock,
-  Cpu,
-  TrendingUp,
-} from "lucide-react";
+import { ShieldCheck, AlertOctagon, Activity, Clock, Cpu, TrendingUp } from "lucide-react";
 
 /**
  * EnduranceStatusCard — Live Soak/Endurance Diagnostic & Memory Leak Widget
  */
 export const EnduranceStatusCard = ({ soakAnalysis, rawProfileKey }) => {
-  if (
-    !soakAnalysis &&
-    !["soak", "endurance"].includes(String(rawProfileKey || "").toLowerCase())
-  ) {
+  if (!soakAnalysis && !["soak", "endurance"].includes(String(rawProfileKey || "").toLowerCase())) {
     return null;
   }
 
@@ -36,8 +26,8 @@ export const EnduranceStatusCard = ({ soakAnalysis, rawProfileKey }) => {
         score >= 85
           ? "bg-gradient-to-r from-emerald-950/70 via-slate-900 to-slate-900 border-emerald-500/40 shadow-emerald-950/20"
           : score >= 60
-            ? "bg-gradient-to-r from-amber-950/70 via-slate-900 to-slate-900 border-amber-500/40 shadow-amber-950/20"
-            : "bg-gradient-to-r from-red-950/70 via-slate-900 to-slate-900 border-red-500/40 shadow-red-950/20"
+          ? "bg-gradient-to-r from-amber-950/70 via-slate-900 to-slate-900 border-amber-500/40 shadow-amber-950/20"
+          : "bg-gradient-to-r from-red-950/70 via-slate-900 to-slate-900 border-red-500/40 shadow-red-950/20"
       }`}
     >
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -48,15 +38,11 @@ export const EnduranceStatusCard = ({ soakAnalysis, rawProfileKey }) => {
               score >= 85
                 ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
                 : score >= 60
-                  ? "bg-amber-500/20 text-amber-400 border-amber-500/30 animate-pulse"
-                  : "bg-red-500/20 text-red-400 border-red-500/30 animate-ping"
+                ? "bg-amber-500/20 text-amber-400 border-amber-500/30 animate-pulse"
+                : "bg-red-500/20 text-red-400 border-red-500/30 animate-ping"
             }`}
           >
-            {score >= 85 ? (
-              <ShieldCheck size={26} />
-            ) : (
-              <AlertOctagon size={26} />
-            )}
+            {score >= 85 ? <ShieldCheck size={26} /> : <AlertOctagon size={26} />}
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -68,8 +54,8 @@ export const EnduranceStatusCard = ({ soakAnalysis, rawProfileKey }) => {
                   score >= 85
                     ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
                     : score >= 60
-                      ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
-                      : "bg-red-500/20 text-red-300 border-red-500/40"
+                    ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
+                    : "bg-red-500/20 text-red-300 border-red-500/40"
                 }`}
               >
                 {leakReport.verdict || "ESTABILIDAD EN EVALUACIÓN"}
@@ -79,8 +65,8 @@ export const EnduranceStatusCard = ({ soakAnalysis, rawProfileKey }) => {
               {isLeak
                 ? `ALERTA: Se detectó un incremento de RAM a razón de +${memSlope} MB/hora. Posible Memory Leak.`
                 : isDrift
-                  ? `ADVERTENCIA: La latencia P95 aumenta a razón de +${latSlope} ms/hora.`
-                  : `Monitoreo continuo de estabilidad durante ${hours}h de carga constante.`}
+                ? `ADVERTENCIA: La latencia P95 aumenta a razón de +${latSlope} ms/hora.`
+                : `Monitoreo continuo de estabilidad durante ${hours}h de carga constante.`}
             </p>
           </div>
         </div>
@@ -119,11 +105,7 @@ export const EnduranceStatusCard = ({ soakAnalysis, rawProfileKey }) => {
             </span>
             <span
               className={`text-lg font-black ${
-                score >= 85
-                  ? "text-emerald-400"
-                  : score >= 60
-                    ? "text-amber-400"
-                    : "text-red-400"
+                score >= 85 ? "text-emerald-400" : score >= 60 ? "text-amber-400" : "text-red-400"
               }`}
             >
               {score}%

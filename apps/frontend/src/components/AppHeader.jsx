@@ -400,20 +400,12 @@ function AppHeader({
         <HeaderButton
           onClick={onToggleToolbox}
           title={isToolboxVisible ? "Hide Toolbox" : "Show Toolbox"}
-          className={cn(
-            isToolboxVisible
-              ? "text-slate-200 bg-slate-800/80 border border-slate-700"
-              : "text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10",
-          )}
+          className={cn(isToolboxVisible ? "text-slate-200 bg-slate-800/80 border border-slate-700" : "text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10")}
         >
           <Layout size={18} />
         </HeaderButton>
 
-        <HeaderButton
-          onClick={onToggleHistory}
-          title="Execution History"
-          className="text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10"
-        >
+        <HeaderButton onClick={onToggleHistory} title="Execution History" className="text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10">
           <History size={18} />
         </HeaderButton>
 
@@ -441,9 +433,7 @@ function AppHeader({
           onClick={onToggleVariables}
           title="Variable Explorer"
           className={cn(
-            isVariablesVisible
-              ? "text-slate-200 bg-slate-800/80 border border-slate-700"
-              : "text-slate-400 hover:text-emerald-400 hover:bg-emerald-500/10",
+            isVariablesVisible ? "text-slate-200 bg-slate-800/80 border border-slate-700" : "text-slate-400 hover:text-emerald-400 hover:bg-emerald-500/10",
           )}
         >
           <Database size={18} />
@@ -517,11 +507,7 @@ function AppHeader({
         <HeaderButton
           onClick={onToggleAskAI}
           title="Ask AI (Debug Console)"
-          className={cn(
-            isAskAIVisible
-              ? "text-indigo-400 bg-indigo-500/10"
-              : "text-slate-400 hover:text-indigo-450",
-          )}
+          className={cn(isAskAIVisible ? "text-indigo-400 bg-indigo-500/10" : "text-slate-400 hover:text-indigo-450")}
         >
           <Sparkles size={18} />
         </HeaderButton>
@@ -545,15 +531,9 @@ function AppHeader({
             className="flex items-center justify-center font-normal"
           >
             {theme === "dark" ? (
-              <Sun
-                size={18}
-                className="text-slate-400 group-hover:text-orange-400 group-hover:fill-orange-400/10 transition-colors duration-300"
-              />
+              <Sun size={18} className="text-slate-400 group-hover:text-orange-400 group-hover:fill-orange-400/10 transition-colors duration-300" />
             ) : (
-              <Moon
-                size={18}
-                className="text-slate-400 group-hover:text-blue-500 group-hover:fill-blue-500/10 transition-colors duration-300"
-              />
+              <Moon size={18} className="text-slate-400 group-hover:text-blue-500 group-hover:fill-blue-500/10 transition-colors duration-300" />
             )}
           </Motion.div>
         </HeaderButton>

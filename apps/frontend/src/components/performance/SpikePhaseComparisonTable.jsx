@@ -1,13 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import {
-  Layers,
-  Clock,
-  Zap,
-  AlertTriangle,
-  ArrowRight,
-  ShieldCheck,
-} from "lucide-react";
+import { Layers, Clock, Zap, AlertTriangle, ArrowRight, ShieldCheck } from "lucide-react";
 
 /**
  * SpikePhaseComparisonTable — 3D Executive Comparative Matrix
@@ -33,8 +26,7 @@ export const SpikePhaseComparisonTable = ({ spikeAnalysis }) => {
       desc: "Sobrecarga instantánea de máxima concurrencia",
       stats: peak,
       badge: "PICO SÚBITO",
-      badgeColor:
-        "bg-orange-500/20 text-orange-300 border-orange-500/30 animate-pulse",
+      badgeColor: "bg-orange-500/20 text-orange-300 border-orange-500/30 animate-pulse",
     },
     {
       title: "3. Post-Spike (Auto-Recuperación)",
@@ -56,8 +48,7 @@ export const SpikePhaseComparisonTable = ({ spikeAnalysis }) => {
             Matriz Comparativa por Fases del Pico Súbito
           </h3>
           <p className="text-xs text-slate-400 mt-0.5">
-            Comparación tri-fásica para evaluar el grado de impacto y la
-            capacidad de auto-recuperación del sistema.
+            Comparación tri-fásica para evaluar el grado de impacto y la capacidad de auto-recuperación del sistema.
           </p>
         </div>
 
@@ -79,9 +70,7 @@ export const SpikePhaseComparisonTable = ({ spikeAnalysis }) => {
                 <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">
                   {ph.title}
                 </span>
-                <span
-                  className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${ph.badgeColor}`}
-                >
+                <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${ph.badgeColor}`}>
                   {ph.badge}
                 </span>
               </div>
@@ -96,8 +85,8 @@ export const SpikePhaseComparisonTable = ({ spikeAnalysis }) => {
                     ph.stats.p95Latency > 2000
                       ? "text-red-400"
                       : ph.stats.p95Latency > 800
-                        ? "text-amber-400"
-                        : "text-emerald-400"
+                      ? "text-amber-400"
+                      : "text-emerald-400"
                   }`}
                 >
                   {ph.stats.p95Latency || 0} ms
@@ -106,25 +95,19 @@ export const SpikePhaseComparisonTable = ({ spikeAnalysis }) => {
 
               <div className="flex justify-between items-center">
                 <span className="text-slate-500">Latencia Promedio:</span>
-                <span className="text-slate-300">
-                  {ph.stats.avgLatency || 0} ms
-                </span>
+                <span className="text-slate-300">{ph.stats.avgLatency || 0} ms</span>
               </div>
 
               <div className="flex justify-between items-center">
                 <span className="text-slate-500">Throughput:</span>
-                <span className="text-sky-400 font-bold">
-                  {ph.stats.avgThroughput || 0} req/s
-                </span>
+                <span className="text-sky-400 font-bold">{ph.stats.avgThroughput || 0} req/s</span>
               </div>
 
               <div className="flex justify-between items-center">
                 <span className="text-slate-500">Tasa de Error:</span>
                 <span
                   className={`font-bold ${
-                    ph.stats.avgErrorRate > 0
-                      ? "text-red-400"
-                      : "text-emerald-400"
+                    ph.stats.avgErrorRate > 0 ? "text-red-400" : "text-emerald-400"
                   }`}
                 >
                   {ph.stats.avgErrorRate || 0}%

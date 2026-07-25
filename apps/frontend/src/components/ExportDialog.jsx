@@ -49,17 +49,9 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges, projectId }) => {
 
   // Auto-reset language based on framework selection
   useEffect(() => {
-    if (
-      framework === "cypress" &&
-      language !== "javascript" &&
-      language !== "typescript"
-    ) {
+    if (framework === "cypress" && language !== "javascript" && language !== "typescript") {
       setLanguage("javascript");
-    } else if (
-      framework === "selenium" &&
-      language !== "python" &&
-      language !== "java"
-    ) {
+    } else if (framework === "selenium" && language !== "python" && language !== "java") {
       setLanguage("python");
     }
   }, [framework, language]);

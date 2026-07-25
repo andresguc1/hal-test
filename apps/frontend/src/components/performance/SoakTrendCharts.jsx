@@ -9,6 +9,7 @@ export const SoakTrendCharts = ({ soakAnalysis }) => {
   if (!soakAnalysis) return null;
 
   const buckets = soakAnalysis.hourlyBuckets || [];
+  const leak = soakAnalysis.leakReport || {};
 
   return (
     <div className="space-y-5">
@@ -22,8 +23,7 @@ export const SoakTrendCharts = ({ soakAnalysis }) => {
                 Matriz de Descomposición Horaria (Evolución H1 ... Hn)
               </h3>
               <p className="text-xs text-slate-400 mt-0.5">
-                Seguimiento por bloques de hora para identificar en qué momento
-                específico comenzó la degradación.
+                Seguimiento por bloques de hora para identificar en qué momento específico comenzó la degradación.
               </p>
             </div>
 
@@ -47,49 +47,22 @@ export const SoakTrendCharts = ({ soakAnalysis }) => {
               </thead>
               <tbody className="divide-y divide-slate-800/60">
                 {buckets.map((b) => (
-                  <tr
-                    key={b.key}
-                    className="hover:bg-slate-900/60 transition-colors"
-                  >
-                    <td className="py-3 px-4 font-sans font-bold text-slate-200">
-                      {b.hourLabel}
-                    </td>
-                    <td className="py-3 px-3 text-right text-slate-400">
-                      {b.samplesCount}
-                    </td>
+                  <tr key={b.key} className="hover:bg-slate-900/60 transition-colors">
+                    <td className="py-3 px-4 font-sans font-bold text-slate-200">{b.hourLabel}</td>
+                    <td className="py-3 px-3 text-right text-slate-400">{b.samplesCount}</td>
                     <td className="py-3 px-3 text-right font-bold">
-                      <span
-                        className={
-                          b.p95Latency > 1500
-                            ? "text-red-400"
-                            : b.p95Latency > 600
-                              ? "text-amber-400"
-                              : "text-emerald-400"
-                        }
-                      >
+                      <span className={b.p95Latency > 1500 ? "text-red-400" : b.p95Latency > 600 ? "text-amber-400" : "text-emerald-400"}>
                         {b.p95Latency} ms
                       </span>
                     </td>
-                    <td className="py-3 px-3 text-right text-sky-400">
-                      {b.avgThroughput} req/s
-                    </td>
+                    <td className="py-3 px-3 text-right text-sky-400">{b.avgThroughput} req/s</td>
                     <td className="py-3 px-3 text-right font-bold">
-                      <span
-                        className={
-                          b.avgErrorRate > 0
-                            ? "text-red-400"
-                            : "text-emerald-400"
-                        }
-                      >
+                      <span className={b.avgErrorRate > 0 ? "text-red-400" : "text-emerald-400"}>
                         {b.avgErrorRate}%
                       </span>
                     </td>
-                    <td className="py-3 px-3 text-right text-fuchsia-400">
-                      {b.avgMem} MB
-                    </td>
-                    <td className="py-3 px-3 text-right text-sky-400">
-                      {b.avgCpu}%
-                    </td>
+                    <td className="py-3 px-3 text-right text-fuchsia-400">{b.avgMem} MB</td>
+                    <td className="py-3 px-3 text-right text-sky-400">{b.avgCpu}%</td>
                   </tr>
                 ))}
               </tbody>

@@ -498,8 +498,7 @@ function AppFooter({
   };
 
   const globalExecutionStatus = useExecutionStore((s) => s.status);
-  const isRunning =
-    apiStatus.state === "running" || globalExecutionStatus === "running";
+  const isRunning = apiStatus.state === "running" || globalExecutionStatus === "running";
 
   const handleCancelOrResetRun = async () => {
     const activeRunId = useExecutionStore.getState().activeRunId;
@@ -521,10 +520,9 @@ function AppFooter({
         icon: Lock,
         label: isCollaborative && role !== "owner" ? "OWNER ONLY" : "LOCKED",
         variant: "outline",
-        tooltip:
-          isCollaborative && role !== "owner"
-            ? "Only the flow owner can execute it."
-            : `Locked: ${remoteExecution?.user?.name || "Another user"} is executing...`,
+        tooltip: isCollaborative && role !== "owner"
+          ? "Only the flow owner can execute it."
+          : `Locked: ${remoteExecution?.user?.name || "Another user"} is executing...`,
         className: "border-amber-500/30 text-amber-500 hover:bg-transparent",
       };
     }
@@ -534,10 +532,8 @@ function AppFooter({
         icon: RefreshCw,
         label: t("canvas.running", "RUNNING... (CANCELAR)"),
         variant: "outline",
-        tooltip:
-          "Haz clic para cancelar la ejecución y desbloquear la interfaz.",
-        className:
-          "border-amber-500/50 text-amber-400 hover:bg-amber-500/20 cursor-pointer animate-pulse",
+        tooltip: "Haz clic para cancelar la ejecución y desbloquear la interfaz.",
+        className: "border-amber-500/50 text-amber-400 hover:bg-amber-500/20 cursor-pointer animate-pulse",
       };
     }
 
@@ -547,10 +543,7 @@ function AppFooter({
           icon: Activity,
           label: t("canvas.run_performance", "Run Performance"),
           variant: "primary_performance",
-          tooltip: t(
-            "canvas.tooltip_run_performance",
-            "Run performance latency test flow",
-          ),
+          tooltip: t("canvas.tooltip_run_performance", "Run performance latency test flow"),
           className: "",
         };
       case "seguridad":
@@ -558,10 +551,7 @@ function AppFooter({
           icon: Shield,
           label: t("canvas.run_security", "Run Security"),
           variant: "primary_security",
-          tooltip: t(
-            "canvas.tooltip_run_security",
-            "Run security auditor scanner flow",
-          ),
+          tooltip: t("canvas.tooltip_run_security", "Run security auditor scanner flow"),
           className: "",
         };
       case "calidad":
@@ -570,10 +560,7 @@ function AppFooter({
           icon: Play,
           label: t("canvas.run_automation", "Run Automation"),
           variant: "primary",
-          tooltip: t(
-            "canvas.tooltip_run_automation",
-            "Run automation quality test flow",
-          ),
+          tooltip: t("canvas.tooltip_run_automation", "Run automation quality test flow"),
           className: "",
         };
     }
@@ -706,8 +693,7 @@ function AppFooter({
           title={btnConfig.tooltip}
           className={cn(
             "pl-4 pr-5 py-2",
-            isLocked &&
-              "opacity-75 cursor-not-allowed grayscale pointer-events-none",
+            isLocked && "opacity-75 cursor-not-allowed grayscale pointer-events-none",
             btnConfig.className,
           )}
         />

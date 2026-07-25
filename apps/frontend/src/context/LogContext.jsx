@@ -7,7 +7,6 @@ import { useExecutionStore } from "../stores/useExecutionStore";
  * - 'performance' (Performance)
  * - 'seguridad' (Seguridad)
  */
-// eslint-disable-next-line react-refresh/only-export-components
 export const normalizeMode = (mode) => {
   if (!mode) return "calidad";
   const m = String(mode).toLowerCase().trim();
@@ -51,7 +50,7 @@ export const useLogStore = create((set) => ({
       };
 
       const activeMode = normalizeMode(
-        useExecutionStore.getState().mode || "calidad",
+        useExecutionStore.getState().mode || "calidad"
       );
       const activeLogs = newLogsByMode[activeMode] || [];
       const shouldShowPanel = type === "error" || type === "warning";
@@ -80,7 +79,7 @@ export const useLogStore = create((set) => ({
           [targetMode]: [],
         };
         const activeMode = normalizeMode(
-          useExecutionStore.getState().mode || "calidad",
+          useExecutionStore.getState().mode || "calidad"
         );
         return {
           logsByMode: newLogsByMode,
@@ -106,3 +105,4 @@ export const useLogs = () => useLogStore();
 export const LogProvider = ({ children }) => {
   return children;
 };
+

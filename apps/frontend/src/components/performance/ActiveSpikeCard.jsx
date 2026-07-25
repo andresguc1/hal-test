@@ -1,23 +1,13 @@
 import React from "react";
 import { motion } from "framer-motion";
-import {
-  Zap,
-  Clock,
-  ShieldCheck,
-  AlertOctagon,
-  RefreshCw,
-  Activity,
-} from "lucide-react";
+import { Zap, Clock, ShieldCheck, AlertOctagon, RefreshCw, Activity } from "lucide-react";
 
 /**
  * ActiveSpikeCard — Live Spike Status Badge & Recovery Indicator
  * Renders real-time status during Spike testing (Baseline, Active Peak, Auto-Recovery).
  */
 export const ActiveSpikeCard = ({ spikeAnalysis, rawProfileKey }) => {
-  if (
-    !spikeAnalysis &&
-    !["spike", "spikes"].includes(String(rawProfileKey || "").toLowerCase())
-  ) {
+  if (!spikeAnalysis && !["spike", "spikes"].includes(String(rawProfileKey || "").toLowerCase())) {
     return null;
   }
 
@@ -26,6 +16,7 @@ export const ActiveSpikeCard = ({ spikeAnalysis, rawProfileKey }) => {
   const recTime = analysis.recoveryTimeSec || 0;
   const score = analysis.resilienceScore ?? 100;
   const peakStats = analysis.peak || {};
+  const preStats = analysis.preSpike || {};
 
   return (
     <motion.div
@@ -35,8 +26,8 @@ export const ActiveSpikeCard = ({ spikeAnalysis, rawProfileKey }) => {
         score >= 80
           ? "bg-gradient-to-r from-emerald-950/70 via-slate-900 to-slate-900 border-emerald-500/40 shadow-emerald-950/20"
           : score >= 50
-            ? "bg-gradient-to-r from-amber-950/70 via-slate-900 to-slate-900 border-amber-500/40 shadow-amber-950/20"
-            : "bg-gradient-to-r from-red-950/70 via-slate-900 to-slate-900 border-red-500/40 shadow-red-950/20"
+          ? "bg-gradient-to-r from-amber-950/70 via-slate-900 to-slate-900 border-amber-500/40 shadow-amber-950/20"
+          : "bg-gradient-to-r from-red-950/70 via-slate-900 to-slate-900 border-red-500/40 shadow-red-950/20"
       }`}
     >
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -47,15 +38,11 @@ export const ActiveSpikeCard = ({ spikeAnalysis, rawProfileKey }) => {
               score >= 80
                 ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
                 : score >= 50
-                  ? "bg-amber-500/20 text-amber-400 border-amber-500/30 animate-pulse"
-                  : "bg-red-500/20 text-red-400 border-red-500/30 animate-ping"
+                ? "bg-amber-500/20 text-amber-400 border-amber-500/30 animate-pulse"
+                : "bg-red-500/20 text-red-400 border-red-500/30 animate-ping"
             }`}
           >
-            {score >= 80 ? (
-              <ShieldCheck size={26} />
-            ) : (
-              <AlertOctagon size={26} />
-            )}
+            {score >= 80 ? <ShieldCheck size={26} /> : <AlertOctagon size={26} />}
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -67,8 +54,8 @@ export const ActiveSpikeCard = ({ spikeAnalysis, rawProfileKey }) => {
                   score >= 80
                     ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
                     : score >= 50
-                      ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
-                      : "bg-red-500/20 text-red-300 border-red-500/40"
+                    ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
+                    : "bg-red-500/20 text-red-300 border-red-500/40"
                 }`}
               >
                 {analysis.verdict || "EN PROCESO"}
@@ -78,8 +65,8 @@ export const ActiveSpikeCard = ({ spikeAnalysis, rawProfileKey }) => {
               {isRecovered
                 ? `El sistema se auto-recuperó satisfactoriamente en ${recTime}s tras el impacto.`
                 : recTime > 0
-                  ? `Monitoreando tiempo de estabilización post-pico... (${recTime}s transcurridos)`
-                  : "Evaluando tolerancia y tiempo de auto-recuperación ante sobrecarga súbita."}
+                ? `Monitoreando tiempo de estabilización post-pico... (${recTime}s transcurridos)`
+                : "Evaluando tolerancia y tiempo de auto-recuperación ante sobrecarga súbita."}
             </p>
           </div>
         </div>
@@ -88,8 +75,7 @@ export const ActiveSpikeCard = ({ spikeAnalysis, rawProfileKey }) => {
         <div className="flex items-center gap-4 flex-wrap w-full md:w-auto border-t md:border-t-0 border-slate-800 pt-3 md:pt-0 font-mono">
           <div className="bg-slate-950/60 border border-slate-800/80 px-3.5 py-2 rounded-xl text-center">
             <span className="text-[10px] text-slate-400 uppercase font-semibold block flex items-center justify-center gap-1">
-              <RefreshCw size={10} className="text-emerald-400" /> Tiempo
-              Recuperación
+              <RefreshCw size={10} className="text-emerald-400" /> Tiempo Recuperación
             </span>
             <span className="text-lg font-black text-emerald-400">
               {recTime > 0 ? `${recTime}s` : "—"}
@@ -107,16 +93,11 @@ export const ActiveSpikeCard = ({ spikeAnalysis, rawProfileKey }) => {
 
           <div className="bg-slate-950/60 border border-slate-800/80 px-3.5 py-2 rounded-xl text-center">
             <span className="text-[10px] text-slate-400 uppercase font-semibold block flex items-center justify-center gap-1">
-              <Activity size={10} className="text-indigo-400" /> Índice
-              Resiliencia
+              <Activity size={10} className="text-indigo-400" /> Índice Resiliencia
             </span>
             <span
               className={`text-lg font-black ${
-                score >= 80
-                  ? "text-emerald-400"
-                  : score >= 50
-                    ? "text-amber-400"
-                    : "text-red-400"
+                score >= 80 ? "text-emerald-400" : score >= 50 ? "text-amber-400" : "text-red-400"
               }`}
             >
               {score}%

@@ -216,18 +216,15 @@ function CustomNode({ data, selected }) {
           <div
             className={cn(
               "absolute flex items-center justify-center w-5 h-5 rounded-full bg-red-600 text-white shadow-lg border border-red-400 cursor-pointer hover:bg-red-500 transition-colors z-20 animate-pulse",
-              isHealed ? "top-2 right-9" : "top-2 right-2",
+              isHealed ? "top-2 right-9" : "top-2 right-2"
             )}
             title={`${data.securityAlerts.length} Security Checkpoint Warnings`}
             onClick={(e) => {
               e.stopPropagation();
               window.dispatchEvent(
                 new CustomEvent("hal:focus-node", {
-                  detail: {
-                    nodeId: data.id || data.nodeId || data.key,
-                    autoSwitchToSecurity: true,
-                  },
-                }),
+                  detail: { nodeId: data.id || data.nodeId || data.key, autoSwitchToSecurity: true },
+                })
               );
             }}
           >

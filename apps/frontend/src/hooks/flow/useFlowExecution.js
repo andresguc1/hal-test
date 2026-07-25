@@ -838,12 +838,7 @@ export function useFlowExecution({
                   const action = {
                     nodeId: node.id,
                     type: "loop",
-                    payload: {
-                      ...resolvedConfig,
-                      browserId,
-                      runId,
-                      executionMode,
-                    },
+                    payload: { ...resolvedConfig, browserId, runId, executionMode },
                   };
 
                   const stepResult = await executeStep(action);
@@ -930,12 +925,7 @@ export function useFlowExecution({
                 const action = {
                   nodeId: node.id,
                   type: "for_each",
-                  payload: {
-                    ...resolvedConfig,
-                    browserId,
-                    runId,
-                    executionMode,
-                  },
+                  payload: { ...resolvedConfig, browserId, runId, executionMode },
                 };
 
                 const stepResult = await executeStep(action);
@@ -1174,7 +1164,7 @@ export function useFlowExecution({
         window.dispatchEvent(
           new CustomEvent("hal:run-completed", {
             detail: { runId, status: "completed", executionMode },
-          }),
+          })
         );
         return { ...finalResult, stats: globalStats };
       } finally {

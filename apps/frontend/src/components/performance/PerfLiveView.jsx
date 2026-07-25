@@ -13,10 +13,7 @@ import {
   Gauge,
 } from "lucide-react";
 import { RealTimeTelemetryChart } from "../telemetry/RealTimeTelemetryChart";
-import {
-  TelemetryDataNormalizer,
-  getProfileInfo,
-} from "../telemetry/telemetryTypes";
+import { TelemetryDataNormalizer, getProfileInfo } from "../telemetry/telemetryTypes";
 import { BreakingPointBadgeCard } from "./BreakingPointBadgeCard";
 import { StressTelemetryCharts } from "./StressTelemetryCharts";
 import { ActiveSpikeCard } from "./ActiveSpikeCard";
@@ -70,28 +67,20 @@ const PerfLiveView = ({
             time,
             value: val,
             color: val > 2000 ? "#ef4444" : val > 800 ? "#f59e0b" : "#10b981",
-            label: node.label
-              ? `#${idx + 1} ${node.label}`
-              : `Node #${idx + 1}`,
+            label: node.label ? `#${idx + 1} ${node.label}` : `Node #${idx + 1}`,
             nodeId: node.nodeId || `node_${idx + 1}`,
           });
         });
       } else if (timeline && timeline.length > 0) {
         timeline.forEach((pt, idx) => {
-          const timeMs =
-            pt.timestamp || Date.now() - (timeline.length - idx) * 1000;
+          const timeMs = pt.timestamp || (Date.now() - (timeline.length - idx) * 1000);
           const time = normalizerRef.current.ensureAscendingTimestamp(timeMs);
           const latencyMs = pt.latency || metrics?.latency?.p95 || 10;
 
           bars.push({
             time,
             value: latencyMs,
-            color:
-              latencyMs > 2000
-                ? "#ef4444"
-                : latencyMs > 800
-                  ? "#f59e0b"
-                  : "#10b981",
+            color: latencyMs > 2000 ? "#ef4444" : latencyMs > 800 ? "#f59e0b" : "#10b981",
           });
         });
       }
@@ -120,18 +109,8 @@ const PerfLiveView = ({
           <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mx-auto text-blue-400">
             <Activity size={32} className="animate-pulse" />
           </div>
-          <p className="text-slate-300 font-medium">
-            {t(
-              "performance_dashboard.waiting_telemetry",
-              "Waiting for telemetry data...",
-            )}
-          </p>
-          <p className="text-xs text-slate-500">
-            {t(
-              "performance_dashboard.waiting_telemetry_sub",
-              "Launch a test to visualize real-time charts and KPIs.",
-            )}
-          </p>
+          <p className="text-slate-300 font-medium">{t("performance_dashboard.waiting_telemetry", "Waiting for telemetry data...")}</p>
+          <p className="text-xs text-slate-500">{t("performance_dashboard.waiting_telemetry_sub", "Launch a test to visualize real-time charts and KPIs.")}</p>
         </motion.div>
       </div>
     );
@@ -144,8 +123,7 @@ const PerfLiveView = ({
     runConfig?.profileKey ||
     "constant";
 
-  const { label: profileLabel, color: profileColor } =
-    getProfileInfo(rawProfileKey);
+  const { label: profileLabel, color: profileColor } = getProfileInfo(rawProfileKey);
 
   const totalVUs =
     metrics?.runConfig?.totalVUs ||
@@ -165,45 +143,27 @@ const PerfLiveView = ({
   const elapsedSec = Math.round((metrics?.elapsed || 0) / 1000);
   const currentProgress = Math.min(
     100,
-    Math.max(
-      0,
-      Math.round(
-        progressPercent ||
-          (durationSec > 0 ? (elapsedSec / durationSec) * 100 : 0),
-      ),
-    ),
+    Math.max(0, Math.round(progressPercent || (durationSec > 0 ? (elapsedSec / durationSec) * 100 : 0)))
   );
 
   // Merge metrics.nodeStats with flowNodes to evidence ALL flow nodes
-  const nodeStatsMap = new Map(
-    (metrics?.nodeStats || []).map((n) => [n.nodeId, n]),
-  );
-  const allNodesList =
-    flowNodes.length > 0
-      ? flowNodes.map((fn, idx) => {
-          const id = fn.id || fn.nodeId || `node_${idx + 1}`;
-          const label =
-            fn.data?.label ||
-            fn.data?.customLabel ||
-            fn.type ||
-            `Node #${idx + 1}`;
-          const stats =
-            nodeStatsMap.get(id) || nodeStatsMap.get(fn.nodeId) || null;
-          return {
-            nodeId: id,
-            label,
-            type: fn.type || "action",
-            p95: stats?.p95 ?? null,
-            avg: stats?.avg ?? null,
-            count: stats?.count ?? 0,
-            status: stats ? "active" : "pending",
-          };
-        })
-      : (metrics?.nodeStats || []).map((n, i) => ({
-          ...n,
-          status: "active",
-          label: n.label || `Node #${i + 1}`,
-        }));
+  const nodeStatsMap = new Map((metrics?.nodeStats || []).map((n) => [n.nodeId, n]));
+  const allNodesList = flowNodes.length > 0
+    ? flowNodes.map((fn, idx) => {
+        const id = fn.id || fn.nodeId || `node_${idx + 1}`;
+        const label = fn.data?.label || fn.data?.customLabel || fn.type || `Node #${idx + 1}`;
+        const stats = nodeStatsMap.get(id) || nodeStatsMap.get(fn.nodeId) || null;
+        return {
+          nodeId: id,
+          label,
+          type: fn.type || "action",
+          p95: stats?.p95 ?? null,
+          avg: stats?.avg ?? null,
+          count: stats?.count ?? 0,
+          status: stats ? "active" : "pending",
+        };
+      })
+    : (metrics?.nodeStats || []).map((n, i) => ({ ...n, status: "active", label: n.label || `Node #${i + 1}` }));
 
   return (
     <div className="flex-1 overflow-auto p-6 space-y-6">
@@ -215,19 +175,12 @@ const PerfLiveView = ({
             <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
           </span>
           <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">
-            {t(
-              "performance_dashboard.live_test_title",
-              "LIVE TEST (TELEMETRY)",
-            )}
+            {t("performance_dashboard.live_test_title", "LIVE TEST (TELEMETRY)")}
           </span>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-xs text-slate-400 font-medium">
-            {t("performance_dashboard.load_profile_label", "Load Profile:")}
-          </span>
-          <span
-            className={`px-3 py-1 rounded-full text-xs font-semibold border ${profileColor}`}
-          >
+          <span className="text-xs text-slate-400 font-medium">{t("performance_dashboard.load_profile_label", "Load Profile:")}</span>
+          <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${profileColor}`}>
             {profileLabel}
           </span>
           <span className="text-xs text-slate-400 font-mono bg-slate-800/80 px-2.5 py-1 rounded-full border border-slate-700">
@@ -253,16 +206,8 @@ const PerfLiveView = ({
         <div className="flex items-center justify-between text-xs">
           <div className="flex items-center gap-2 font-medium text-slate-300">
             <Clock size={14} className="text-emerald-400 animate-spin" />
-            <span>
-              {t(
-                "performance_dashboard.test_progress",
-                "Test Progress ({{profile}}):",
-                { profile: profileLabel },
-              )}
-            </span>
-            <span className="font-mono text-emerald-400 font-bold">
-              {currentProgress}%
-            </span>
+            <span>{t("performance_dashboard.test_progress", "Test Progress ({{profile}}):", { profile: profileLabel })}</span>
+            <span className="font-mono text-emerald-400 font-bold">{currentProgress}%</span>
           </div>
           <div className="text-slate-400 font-mono">
             {elapsedSec}s / {durationSec}s
@@ -298,7 +243,9 @@ const PerfLiveView = ({
       />
 
       {/* 3D Spike Phase Comparison Matrix */}
-      <SpikePhaseComparisonTable spikeAnalysis={metrics?.spikeAnalysis} />
+      <SpikePhaseComparisonTable
+        spikeAnalysis={metrics?.spikeAnalysis}
+      />
 
       {/* Live Endurance Status Widget (Soak testing) */}
       <EnduranceStatusCard
@@ -307,7 +254,9 @@ const PerfLiveView = ({
       />
 
       {/* Hourly Bucket Matrix & Endurance Trends */}
-      <SoakTrendCharts soakAnalysis={metrics?.soakAnalysis} />
+      <SoakTrendCharts
+        soakAnalysis={metrics?.soakAnalysis}
+      />
 
       {/* Resource Warning */}
       {resourceWarning && resourceWarning.health !== "continue" && (
@@ -325,19 +274,12 @@ const PerfLiveView = ({
           <div>
             <h4 className="font-semibold text-lg">
               {resourceWarning.health === "abort"
-                ? t(
-                    "performance_dashboard.critical_memory_stress",
-                    "Critical Memory Stress",
-                  )
-                : t(
-                    "performance_dashboard.resource_warning",
-                    "Resource Warning",
-                  )}
+                ? t("performance_dashboard.critical_memory_stress", "Critical Memory Stress")
+                : t("performance_dashboard.resource_warning", "Resource Warning")}
             </h4>
             <p className="text-sm opacity-80">
               RAM: {resourceWarning.usedPercent}%
-              {resourceWarning.health === "abort" &&
-                ` — ${t("performance_dashboard.test_aborted", "Test aborted.")}`}
+              {resourceWarning.health === "abort" && ` — ${t("performance_dashboard.test_aborted", "Test aborted.")}`}
             </p>
           </div>
         </div>
@@ -410,10 +352,10 @@ const PerfLiveView = ({
                             isPending
                               ? "bg-slate-800 text-slate-500"
                               : isCritical
-                                ? "bg-red-500/20 text-red-400"
-                                : isWarning
-                                  ? "bg-amber-500/20 text-amber-400"
-                                  : "bg-emerald-500/20 text-emerald-400"
+                              ? "bg-red-500/20 text-red-400"
+                              : isWarning
+                              ? "bg-amber-500/20 text-amber-400"
+                              : "bg-emerald-500/20 text-emerald-400"
                           }`}
                         >
                           {i + 1}
@@ -427,15 +369,13 @@ const PerfLiveView = ({
                           isPending
                             ? "text-slate-500 italic"
                             : isCritical
-                              ? "text-red-400"
-                              : isWarning
-                                ? "text-amber-400"
-                                : "text-emerald-400"
+                            ? "text-red-400"
+                            : isWarning
+                            ? "text-amber-400"
+                            : "text-emerald-400"
                         }`}
                       >
-                        {isPending
-                          ? t("performance_dashboard.pending", "Pending")
-                          : `${node.p95}ms`}
+                        {isPending ? t("performance_dashboard.pending", "Pending") : `${node.p95}ms`}
                       </span>
                     </div>
                     {!isPending && (
@@ -445,19 +385,11 @@ const PerfLiveView = ({
                           {node.cpuAvg || 0}%
                         </span>
                         <span>
-                          <Activity
-                            size={10}
-                            className="inline mr-1 text-fuchsia-500"
-                          />
+                          <Activity size={10} className="inline mr-1 text-fuchsia-500" />
                           {node.memAvg || 0} MB
                         </span>
-                        <span
-                          className={
-                            node.errorCount > 0 ? "text-red-400 font-bold" : ""
-                          }
-                        >
-                          {t("performance_dashboard.samples", "Samples")}:{" "}
-                          {node.count || 0}
+                        <span className={node.errorCount > 0 ? "text-red-400 font-bold" : ""}>
+                          {t("performance_dashboard.samples", "Samples")}: {node.count || 0}
                         </span>
                       </div>
                     )}
@@ -483,10 +415,7 @@ const PerfLiveView = ({
             domain="performance"
             defaultChartMode="line"
             barTitle={t("performance_dashboard.latency_ms", "Latency (ms)")}
-            title={t(
-              "performance_dashboard.latency_timeline_title",
-              "Latency Timeline per Node",
-            )}
+            title={t("performance_dashboard.latency_timeline_title", "Latency Timeline per Node")}
           />
         </div>
       </div>
