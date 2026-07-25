@@ -6,6 +6,7 @@ import i18n from '../config/i18n.js';
 import { variableManager } from './VariableManager.js';
 import { executionManager } from './ExecutionManager.js';
 import { activeRunManager } from './ActiveRunManager.js';
+import { yjsServer } from './collaboration/YjsServer.js';
 import chalk from 'chalk';
 
 console.log(`[ExecutionService] 🔥 Service File Loaded at ${new Date().toISOString()}`);
@@ -45,34 +46,87 @@ export class ExecutionService {
             throw new Error(`Flow ${flowId} not found in project ${projectId}`);
         }
 
-        const nodes = flow.nodes.map((n) => {
-            const nodeObj = n.toJSON();
-            const nodeIdVal = String(nodeObj.nodeId || nodeObj.id);
-            return {
-                ...nodeObj,
-                id: nodeIdVal,
-                nodeId: nodeIdVal,
-            };
-        });
-        const nodeIds = new Set(
-            flow.nodes
-                .flatMap((n) => {
-                    const o = n.toJSON();
-                    return [o.nodeId, o.id, String(o.nodeId), String(o.id)];
+        // ── CRDT-AWARE NODE/EDGE LOADING ────────────────────────────────────
+        // When a collaborative session is active for this flow, the Y.Doc in
+        // memory is the authoritative source (real-time edits). Fall back to
+        // SQLite when no session exists (solo mode or collab not yet started).
+        let nodes, edges;
+
+        const roomName = `flow-${flowId}`;
+        const ydoc = yjsServer.getDocument(roomName);
+        const yNodes = ydoc ? ydoc.getMap('nodes') : null;
+        const yEdges = ydoc ? ydoc.getMap('edges') : null;
+
+        if (ydoc && yNodes && yNodes.size > 0) {
+            console.log(
+                `[ExecutionService] 🔄 Active collaborative session detected for flow "${flowId}". Using Y.Doc as primary source.`,
+            );
+
+            // Build nodes from CRDT
+            nodes = [];
+            yNodes.forEach((yNode, id) => {
+                const nodeJson =
+                    yNode && typeof yNode.toJSON === 'function' ? yNode.toJSON() : yNode;
+                const nodeIdVal = String(id);
+                nodes.push({ ...nodeJson, id: nodeIdVal, nodeId: nodeIdVal });
+            });
+
+            // Build edges from CRDT
+            edges = [];
+            if (yEdges) {
+                yEdges.forEach((yEdge, id) => {
+                    const edgeJson =
+                        yEdge && typeof yEdge.toJSON === 'function' ? yEdge.toJSON() : yEdge;
+                    edges.push({
+                        ...edgeJson,
+                        id: String(id),
+                        source: String(edgeJson.source),
+                        target: String(edgeJson.target),
+                    });
+                });
+            }
+
+            // Filter orphan edges (safety net)
+            const crdtNodeIds = new Set(nodes.map((n) => n.id));
+            edges = edges.filter((e) => crdtNodeIds.has(e.source) && crdtNodeIds.has(e.target));
+
+            console.log(
+                `[ExecutionService] 📊 CRDT: ${nodes.length} nodes, ${edges.length} edges (SQLite had ${flow.nodes.length} nodes)`,
+            );
+        } else {
+            // No active collaborative session — use SQLite (original behavior)
+            if (ydoc && yNodes && yNodes.size === 0) {
+                console.log(
+                    `[ExecutionService] ⚠️ Y.Doc present but empty for flow "${flowId}". Falling back to SQLite.`,
+                );
+            }
+
+            nodes = flow.nodes.map((n) => {
+                const nodeObj = n.toJSON();
+                const nodeIdVal = String(nodeObj.nodeId || nodeObj.id);
+                return { ...nodeObj, id: nodeIdVal, nodeId: nodeIdVal };
+            });
+            const nodeIds = new Set(
+                flow.nodes
+                    .flatMap((n) => {
+                        const o = n.toJSON();
+                        return [o.nodeId, o.id, String(o.nodeId), String(o.id)];
+                    })
+                    .filter(Boolean),
+            );
+            edges = flow.edges
+                .map((e) => {
+                    const edgeObj = e.toJSON();
+                    return {
+                        ...edgeObj,
+                        id: String(edgeObj.edgeId || edgeObj.id),
+                        source: String(edgeObj.source),
+                        target: String(edgeObj.target),
+                    };
                 })
-                .filter(Boolean),
-        );
-        const edges = flow.edges
-            .map((e) => {
-                const edgeObj = e.toJSON();
-                return {
-                    ...edgeObj,
-                    id: String(edgeObj.edgeId || edgeObj.id),
-                    source: String(edgeObj.source),
-                    target: String(edgeObj.target),
-                };
-            })
-            .filter((e) => nodeIds.has(e.source) && nodeIds.has(e.target));
+                .filter((e) => nodeIds.has(e.source) && nodeIds.has(e.target));
+        }
+        // ────────────────────────────────────────────────────────────────────
 
         console.log(`[ExecutionService] 📊 Loaded ${nodes.length} nodes for execution:`);
         nodes.forEach((n) => {

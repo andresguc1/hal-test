@@ -272,6 +272,9 @@ let serverInstance;
 const startServer = async () => {
     await initDb();
 
+    // Load any active execution locks persisted before the last restart
+    await executionLock.loadFromDB();
+
     if (!fs.existsSync(STORAGE_DIR)) {
         fs.mkdirSync(STORAGE_DIR, { recursive: true });
         console.log(`[INIT] Created storage directory: ${STORAGE_DIR}`);
@@ -324,7 +327,7 @@ const gracefulShutdown = async () => {
 
     // 3. Shutdown collaboration server
     try {
-        executionLock.releaseAll();
+        await executionLock.releaseAll();
         await yjsServer.destroy();
     } catch (e) {
         console.error('[INIT] Error shutting down collaboration:', e);

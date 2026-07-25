@@ -10,6 +10,7 @@ import StepResult from './models/StepResult.js';
 import HealingLog from './models/HealingLog.js';
 import ExperienceVault from './models/ExperienceVault.js';
 import CollaboratorRole from './models/CollaboratorRole.js';
+import ExecutionLockModel from './models/ExecutionLockModel.js';
 
 // Define associations
 User.hasMany(Project, { as: 'projects', foreignKey: 'userId', onDelete: 'CASCADE', hooks: true });
@@ -110,6 +111,9 @@ const checkSchemaHealth = async () => {
             logging: false,
         });
         await sequelize.query('SELECT "role" FROM "CollaboratorRoles" LIMIT 1', {
+            logging: false,
+        });
+        await sequelize.query('SELECT "flowId" FROM "execution_locks" LIMIT 1', {
             logging: false,
         });
         console.log(' [DB_INIT] ✅ Schema health check passed.');
@@ -299,6 +303,7 @@ export {
     HealingLog,
     ExperienceVault,
     CollaboratorRole,
+    ExecutionLockModel,
 };
 
 // Allow running directly from CLI

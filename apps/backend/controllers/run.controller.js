@@ -103,7 +103,7 @@ export const startRunAction = async (req, res) => {
             }
 
             // Acquire execution lock
-            executionLock.acquire(flowId, userId, userName, runId);
+            await executionLock.acquire(flowId, userId, userName, runId);
 
             return res.status(200).json({ success: true, runId });
         }
@@ -132,7 +132,7 @@ export const startRunAction = async (req, res) => {
             }
 
             // Acquire execution lock
-            executionLock.acquire(flowId, userId, userName, runId);
+            await executionLock.acquire(flowId, userId, userName, runId);
 
             console.log(`[RemoteRun] Run created with ID: ${runId}. Triggering execution...`);
 
@@ -151,8 +151,8 @@ export const startRunAction = async (req, res) => {
                 .catch((err) =>
                     console.error(`[RemoteExecution] Background task failed: ${err.message}`, err),
                 )
-                .finally(() => {
-                    executionLock.release(flowId);
+                .finally(async () => {
+                    await executionLock.release(flowId);
                 });
 
             return res.status(200).json({
@@ -180,7 +180,7 @@ export const endRunAction = async (req, res) => {
         // Release execution lock if it exists
         const run = await Run.findByPk(id);
         if (run) {
-            executionLock.release(run.flow_id || run.flowId);
+            await executionLock.release(run.flow_id || run.flowId);
         }
 
         await executionLogger.endRun(id, status);
@@ -402,10 +402,10 @@ export const cancelRunAction = async (req, res) => {
         console.log(`[RunController] 🛑 Request to cancel run ID or Flow ID: ${id}`);
 
         // 1. Release execution lock if it exists for run or flow
-        executionLock.release(id);
+        await executionLock.release(id);
         const run = await Run.findByPk(id);
         if (run) {
-            executionLock.release(run.flow_id || run.flowId);
+            await executionLock.release(run.flow_id || run.flowId);
         }
 
         // 2. Abort in ActiveRunManager
@@ -574,7 +574,7 @@ export const startPerformanceRunAction = async (req, res) => {
         });
 
         // Acquire lock
-        executionLock.acquire(flowId, userId, userName, runId);
+        await executionLock.acquire(flowId, userId, userName, runId);
 
         // Fire-and-forget: performance runs are long-lived
         const perfRunPromise = executionManager.execute(
@@ -600,8 +600,8 @@ export const startPerformanceRunAction = async (req, res) => {
                 console.error(`[RunController] Performance run failed: ${err.message}`);
                 await executionLogger.endRun(runId, 'failed');
             })
-            .finally(() => {
-                executionLock.release(flowId);
+            .finally(async () => {
+                await executionLock.release(flowId);
             });
 
         return res.status(200).json({
@@ -679,7 +679,7 @@ export const startSecurityRunAction = async (req, res) => {
         });
 
         // Acquire lock
-        executionLock.acquire(flowId, userId, userName, runId);
+        await executionLock.acquire(flowId, userId, userName, runId);
 
         // Execute in background
         const securityRunPromise = executionManager.execute(
@@ -703,8 +703,8 @@ export const startSecurityRunAction = async (req, res) => {
                 await executionLogger.endRun(runId, 'failed');
                 emitFlowFinished({ runId, status: 'failed', flowId, error: err.message });
             })
-            .finally(() => {
-                executionLock.release(flowId);
+            .finally(async () => {
+                await executionLock.release(flowId);
             });
 
         return res.status(200).json({
