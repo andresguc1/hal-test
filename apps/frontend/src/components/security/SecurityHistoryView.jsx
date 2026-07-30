@@ -60,7 +60,12 @@ export default function SecurityHistoryView({ flowId, onSelectRun }) {
         <div>
           <h3 className="text-lg font-bold text-slate-100 flex items-center space-x-2">
             <Clock className="text-red-400" size={20} />
-            <span>{t("security_history.title", "Historial de Auditorías de Seguridad")}</span>
+            <span>
+              {t(
+                "security_history.title",
+                "Historial de Auditorías de Seguridad",
+              )}
+            </span>
           </h3>
           <p className="text-xs text-slate-400 mt-0.5">
             {t(
@@ -78,7 +83,10 @@ export default function SecurityHistoryView({ flowId, onSelectRun }) {
             />
             <input
               type="text"
-              placeholder={t("security_history.search_placeholder", "Buscar por ID o Flujo...")}
+              placeholder={t(
+                "security_history.search_placeholder",
+                "Buscar por ID o Flujo...",
+              )}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-xs text-slate-200 focus:outline-none focus:border-red-500/50 w-64"
@@ -101,24 +109,46 @@ export default function SecurityHistoryView({ flowId, onSelectRun }) {
         {loading ? (
           <div className="py-16 text-center text-slate-400 text-xs flex flex-col items-center space-y-2">
             <RefreshCw size={24} className="animate-spin text-red-400" />
-            <span>{t("security_history.loading", "Cargando ejecuciones anteriores...")}</span>
+            <span>
+              {t(
+                "security_history.loading",
+                "Cargando ejecuciones anteriores...",
+              )}
+            </span>
           </div>
         ) : filteredRuns.length === 0 ? (
           <div className="py-16 text-center text-slate-400 text-xs space-y-2">
             <ShieldAlert size={32} className="mx-auto text-slate-600" />
-            <p>{t("security_history.empty", "No se encontraron auditorías registradas en este período.")}</p>
+            <p>
+              {t(
+                "security_history.empty",
+                "No se encontraron auditorías registradas en este período.",
+              )}
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-800 bg-slate-950/60 text-[11px] font-mono text-slate-400 uppercase tracking-wider">
-                  <th className="py-3 px-4">{t("security_history.col_run_id", "ID de Ejecución")}</th>
-                  <th className="py-3 px-4">{t("security_history.col_flow", "Flujo")}</th>
-                  <th className="py-3 px-4">{t("security_history.col_mode", "Modo")}</th>
-                  <th className="py-3 px-4">{t("security_history.col_date", "Fecha")}</th>
-                  <th className="py-3 px-4">{t("security_history.col_status", "Estado")}</th>
-                  <th className="py-3 px-4 text-right">{t("security_history.col_action", "Acción")}</th>
+                  <th className="py-3 px-4">
+                    {t("security_history.col_run_id", "ID de Ejecución")}
+                  </th>
+                  <th className="py-3 px-4">
+                    {t("security_history.col_flow", "Flujo")}
+                  </th>
+                  <th className="py-3 px-4">
+                    {t("security_history.col_mode", "Modo")}
+                  </th>
+                  <th className="py-3 px-4">
+                    {t("security_history.col_date", "Fecha")}
+                  </th>
+                  <th className="py-3 px-4">
+                    {t("security_history.col_status", "Estado")}
+                  </th>
+                  <th className="py-3 px-4 text-right">
+                    {t("security_history.col_action", "Acción")}
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60 text-xs">

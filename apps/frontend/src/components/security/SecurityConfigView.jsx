@@ -21,7 +21,7 @@ export default function SecurityConfigView({
   const { t } = useTranslation();
   const [intensity, setIntensity] = useState("standard"); // 'quick' | 'standard' | 'deep'
   const [frameworkCode, setFrameworkCode] = useState("OWASP_ASVS_L2");
-  
+
   // Dynamic Presets Map
   const PROFILE_PRESETS = {
     quick: {

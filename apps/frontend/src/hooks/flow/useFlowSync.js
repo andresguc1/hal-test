@@ -438,16 +438,20 @@ export function useFlowSync({
 
           let finalName = STARTER_TEMPLATE.name;
           let counter = 1;
-          
+
           if (defaultEmptyFlow) {
             console.log(
               "[useFlowSync] Reusing existing empty default flow:",
               defaultEmptyFlow.id,
             );
             targetFlowId = defaultEmptyFlow.id;
-            
-            while (existingFlows.some(f => f.name === finalName && f.id !== targetFlowId)) {
-                finalName = `${STARTER_TEMPLATE.name} (${counter++})`;
+
+            while (
+              existingFlows.some(
+                (f) => f.name === finalName && f.id !== targetFlowId,
+              )
+            ) {
+              finalName = `${STARTER_TEMPLATE.name} (${counter++})`;
             }
 
             // Update/Rename the existing flow to the template name
@@ -458,8 +462,8 @@ export function useFlowSync({
             });
           } else {
             // Create a new flow for the template if there's already work or no empty default flow
-            while (existingFlows.some(f => f.name === finalName)) {
-                finalName = `${STARTER_TEMPLATE.name} (${counter++})`;
+            while (existingFlows.some((f) => f.name === finalName)) {
+              finalName = `${STARTER_TEMPLATE.name} (${counter++})`;
             }
             console.log(
               "[useFlowSync] Creating new flow with name:",

@@ -143,7 +143,11 @@ export const useHaltestSocket = ({
       const currentActiveRunId = activeRunIdRef.current || storeActiveRunId;
 
       if (currentActiveRunId) {
-        if (runId && runId !== currentActiveRunId && runId !== storeActiveRunId) {
+        if (
+          runId &&
+          runId !== currentActiveRunId &&
+          runId !== storeActiveRunId
+        ) {
           console.log(
             `Haltest Socket: 🚫 Ignoring canvas node state for runId ${runId} (Active: ${currentActiveRunId})`,
           );

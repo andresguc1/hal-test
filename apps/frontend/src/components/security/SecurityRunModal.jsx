@@ -22,7 +22,7 @@ export default function SecurityRunModal({
 
   // "policy_compliance", "data_leak_prevention"
   const [scanType, setScanType] = useState("policy_compliance");
-  const [frameworkCode, setFrameworkCode] = useState("OWASP_ASVS_L2");
+  const [frameworkCode] = useState("OWASP_ASVS_L2");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleLaunch = async () => {

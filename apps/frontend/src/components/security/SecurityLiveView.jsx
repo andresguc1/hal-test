@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import {
@@ -19,7 +19,6 @@ import {
   X,
   FileCode,
 } from "lucide-react";
-import { TelemetryDataNormalizer } from "../telemetry/telemetryTypes";
 
 export default function SecurityLiveView({
   status, // 'idle' | 'preparing' | 'running' | 'completed' | 'failed'
@@ -30,7 +29,6 @@ export default function SecurityLiveView({
   onViewResults,
 }) {
   const { t } = useTranslation();
-  const normalizerRef = useRef(new TelemetryDataNormalizer());
   const [filterSeverity, setFilterSeverity] = useState("all");
   const [selectedAlertDetails, setSelectedAlertDetails] = useState(null);
 
@@ -100,12 +98,28 @@ export default function SecurityLiveView({
             <div>
               <div className="flex items-center space-x-2">
                 <h3 className="text-lg font-bold text-slate-100">
-                  {status === "preparing" && t("security_live.status_preparing", "Inicializando Escaneo DAST...")}
-                  {status === "running" && t("security_live.status_running", "Auditoría de Seguridad en Curso")}
+                  {status === "preparing" &&
+                    t(
+                      "security_live.status_preparing",
+                      "Inicializando Escaneo DAST...",
+                    )}
+                  {status === "running" &&
+                    t(
+                      "security_live.status_running",
+                      "Auditoría de Seguridad en Curso",
+                    )}
                   {status === "completed" &&
-                    t("security_live.status_completed", "Auditoría Completada Exitosamente")}
-                  {status === "failed" && t("security_live.status_failed", "Auditoría Interrumpida")}
-                  {status === "idle" && t("security_live.status_idle", "Esperando Ejecución de Auditoría")}
+                    t(
+                      "security_live.status_completed",
+                      "Auditoría Completada Exitosamente",
+                    )}
+                  {status === "failed" &&
+                    t("security_live.status_failed", "Auditoría Interrumpida")}
+                  {status === "idle" &&
+                    t(
+                      "security_live.status_idle",
+                      "Esperando Ejecución de Auditoría",
+                    )}
                 </h3>
                 <span
                   className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 ${
@@ -129,7 +143,10 @@ export default function SecurityLiveView({
                 <span>
                   {currentNode
                     ? `${t("security_live.analyzing", "Analizando")}: "${currentNode.name || currentNode.id}"`
-                    : t("security_live.monitoring_desc", "Monitoreando peticiones HTTP, cabeceras del servidor y sanitización DOM...")}
+                    : t(
+                        "security_live.monitoring_desc",
+                        "Monitoreando peticiones HTTP, cabeceras del servidor y sanitización DOM...",
+                      )}
                 </span>
                 {isRunning && (
                   <span className="inline-flex items-center gap-1 text-[11px] text-amber-400 font-mono font-semibold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
@@ -149,7 +166,9 @@ export default function SecurityLiveView({
                 className="px-4 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-semibold flex items-center space-x-1.5 transition-all"
               >
                 <Square size={14} />
-                <span>{t("security_live.stop_audit", "Detener Auditoría")}</span>
+                <span>
+                  {t("security_live.stop_audit", "Detener Auditoría")}
+                </span>
               </button>
             )}
 
@@ -159,7 +178,9 @@ export default function SecurityLiveView({
                 onClick={onViewResults}
                 className="px-4 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-semibold flex items-center space-x-1.5 transition-all"
               >
-                <span>{t("security_live.view_full_report", "Ver Informe Completo")}</span>
+                <span>
+                  {t("security_live.view_full_report", "Ver Informe Completo")}
+                </span>
                 <ArrowRight size={14} />
               </button>
             )}
@@ -169,7 +190,12 @@ export default function SecurityLiveView({
         {/* Progress Bar Container */}
         <div className="space-y-1.5">
           <div className="flex justify-between text-xs font-mono text-slate-400">
-            <span>{t("security_live.graph_progress", "Progreso del Grafo de Pruebas")}</span>
+            <span>
+              {t(
+                "security_live.graph_progress",
+                "Progreso del Grafo de Pruebas",
+              )}
+            </span>
             <span className="text-slate-200 font-bold">
               {Math.round(progressPercent)}%
             </span>
@@ -243,7 +269,10 @@ export default function SecurityLiveView({
           <div className="flex items-center space-x-2">
             <CheckCircle2 size={18} className="text-red-400" />
             <h4 className="text-sm font-bold text-slate-100">
-              {t("security_live.matrix_title", "Matriz de Control de Seguridad y Escaneo de Vectores DAST")}
+              {t(
+                "security_live.matrix_title",
+                "Matriz de Control de Seguridad y Escaneo de Vectores DAST",
+              )}
             </h4>
           </div>
           <div className="flex items-center space-x-2">
@@ -260,18 +289,27 @@ export default function SecurityLiveView({
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Shield size={15} className="text-red-400" />
-                <span className="text-xs font-semibold text-slate-200">{t("security_live.vector_headers", "HTTP Security Headers")}</span>
+                <span className="text-xs font-semibold text-slate-200">
+                  {t("security_live.vector_headers", "HTTP Security Headers")}
+                </span>
               </div>
-              <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
-                headerAlerts.length > 0
-                  ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
-                  : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
-              }`}>
-                {headerAlerts.length > 0 ? `${headerAlerts.length} ${t("security_live.observations", "Observaciones")}` : t("security_live.protected", "Protegido")}
+              <span
+                className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                  headerAlerts.length > 0
+                    ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
+                    : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                }`}
+              >
+                {headerAlerts.length > 0
+                  ? `${headerAlerts.length} ${t("security_live.observations", "Observaciones")}`
+                  : t("security_live.protected", "Protegido")}
               </span>
             </div>
             <p className="text-[11px] text-slate-400">
-              {t("security_live.vector_headers_desc", "Inspección pasiva de Strict-Transport-Security, CSP, X-Frame-Options y X-Content-Type.")}
+              {t(
+                "security_live.vector_headers_desc",
+                "Inspección pasiva de Strict-Transport-Security, CSP, X-Frame-Options y X-Content-Type.",
+              )}
             </p>
             <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 pt-1 border-t border-slate-900">
               <span>HSTS / CSP / XFO / XCTO</span>
@@ -284,14 +322,22 @@ export default function SecurityLiveView({
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Shield size={15} className="text-emerald-400" />
-                <span className="text-xs font-semibold text-slate-200">{t("security_live.vector_tls", "Transporte TLS / Criptografía")}</span>
+                <span className="text-xs font-semibold text-slate-200">
+                  {t(
+                    "security_live.vector_tls",
+                    "Transporte TLS / Criptografía",
+                  )}
+                </span>
               </div>
               <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
                 {t("security_live.https_secure", "HTTPS Seguro")}
               </span>
             </div>
             <p className="text-[11px] text-slate-400">
-              {t("security_live.vector_tls_desc", "Verificación de cifrado HTTPS en tránsito, validez de certificados TLS y cipher suites.")}
+              {t(
+                "security_live.vector_tls_desc",
+                "Verificación de cifrado HTTPS en tránsito, validez de certificados TLS y cipher suites.",
+              )}
             </p>
             <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 pt-1 border-t border-slate-900">
               <span>TLS 1.2 / 1.3 Strong Ciphers</span>
@@ -304,18 +350,30 @@ export default function SecurityLiveView({
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <FileCode size={15} className="text-amber-400" />
-                <span className="text-xs font-semibold text-slate-200">{t("security_live.vector_cookies", "Seguridad de Cookies & Sesión")}</span>
+                <span className="text-xs font-semibold text-slate-200">
+                  {t(
+                    "security_live.vector_cookies",
+                    "Seguridad de Cookies & Sesión",
+                  )}
+                </span>
               </div>
-              <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
-                cookieAlerts.length > 0
-                  ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
-                  : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
-              }`}>
-                {cookieAlerts.length > 0 ? `${cookieAlerts.length} ${t("security_live.observations", "Observaciones")}` : t("security_live.validated", "Validado")}
+              <span
+                className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                  cookieAlerts.length > 0
+                    ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
+                    : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                }`}
+              >
+                {cookieAlerts.length > 0
+                  ? `${cookieAlerts.length} ${t("security_live.observations", "Observaciones")}`
+                  : t("security_live.validated", "Validado")}
               </span>
             </div>
             <p className="text-[11px] text-slate-400">
-              {t("security_live.vector_cookies_desc", "Auditoría de atributos HttpOnly, Secure y SameSite en cookies de autenticación de usuario.")}
+              {t(
+                "security_live.vector_cookies_desc",
+                "Auditoría de atributos HttpOnly, Secure y SameSite en cookies de autenticación de usuario.",
+              )}
             </p>
             <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 pt-1 border-t border-slate-900">
               <span>HttpOnly / Secure / SameSite</span>
@@ -328,18 +386,30 @@ export default function SecurityLiveView({
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <AlertTriangle size={15} className="text-blue-400" />
-                <span className="text-xs font-semibold text-slate-200">{t("security_live.vector_storage", "Almacenamiento Local & Tokens")}</span>
+                <span className="text-xs font-semibold text-slate-200">
+                  {t(
+                    "security_live.vector_storage",
+                    "Almacenamiento Local & Tokens",
+                  )}
+                </span>
               </div>
-              <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
-                storageAlerts.length > 0
-                  ? "bg-red-500/20 text-red-300 border border-red-500/40"
-                  : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
-              }`}>
-                {storageAlerts.length > 0 ? t("security_live.leak_detected", "Fuga Detectada") : t("security_live.clean", "Limpio")}
+              <span
+                className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                  storageAlerts.length > 0
+                    ? "bg-red-500/20 text-red-300 border border-red-500/40"
+                    : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                }`}
+              >
+                {storageAlerts.length > 0
+                  ? t("security_live.leak_detected", "Fuga Detectada")
+                  : t("security_live.clean", "Limpio")}
               </span>
             </div>
             <p className="text-[11px] text-slate-400">
-              {t("security_live.vector_storage_desc", "Monitoreo contra almacenamiento de tokens JWT o credenciales sensibles en LocalStorage en texto plano.")}
+              {t(
+                "security_live.vector_storage_desc",
+                "Monitoreo contra almacenamiento de tokens JWT o credenciales sensibles en LocalStorage en texto plano.",
+              )}
             </p>
             <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 pt-1 border-t border-slate-900">
               <span>LocalStorage & SessionStorage</span>
@@ -352,14 +422,22 @@ export default function SecurityLiveView({
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Zap size={15} className="text-red-400" />
-                <span className="text-xs font-semibold text-slate-200">{t("security_live.vector_sanitizing", "Sanitización & Inyecciones")}</span>
+                <span className="text-xs font-semibold text-slate-200">
+                  {t(
+                    "security_live.vector_sanitizing",
+                    "Sanitización & Inyecciones",
+                  )}
+                </span>
               </div>
               <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
                 {t("security_live.active_filters", "Filtros Activos")}
               </span>
             </div>
             <p className="text-[11px] text-slate-400">
-              {t("security_live.vector_sanitizing_desc", "Inspección contra inyección XSS Reflejado/Persistente y enlaces vulnerables a javascript: URIs.")}
+              {t(
+                "security_live.vector_sanitizing_desc",
+                "Inspección contra inyección XSS Reflejado/Persistente y enlaces vulnerables a javascript: URIs.",
+              )}
             </p>
             <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 pt-1 border-t border-slate-900">
               <span>DOM XSS / Injection Vectors</span>
@@ -372,14 +450,22 @@ export default function SecurityLiveView({
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Activity size={15} className="text-purple-400" />
-                <span className="text-xs font-semibold text-slate-200">{t("security_live.vector_disclosure", "Fuga de Información Server")}</span>
+                <span className="text-xs font-semibold text-slate-200">
+                  {t(
+                    "security_live.vector_disclosure",
+                    "Fuga de Información Server",
+                  )}
+                </span>
               </div>
               <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
                 {t("security_live.no_leaks", "Sin Fugas")}
               </span>
             </div>
             <p className="text-[11px] text-slate-400">
-              {t("security_live.vector_disclosure_desc", "Verificación de cabeceras Server / X-Powered-By para prevenir la divulgación de tecnologías del servidor.")}
+              {t(
+                "security_live.vector_disclosure_desc",
+                "Verificación de cabeceras Server / X-Powered-By para prevenir la divulgación de tecnologías del servidor.",
+              )}
             </p>
             <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 pt-1 border-t border-slate-900">
               <span>Fingerprinting Disclosure</span>
@@ -395,7 +481,11 @@ export default function SecurityLiveView({
           <div className="flex items-center space-x-2">
             <Sparkles size={16} className="text-red-400 animate-pulse" />
             <h4 className="text-sm font-bold text-slate-200">
-              {t("security_live.feed_title", "Feed de Alertas Detectadas en Tiempo Real")} ({liveAlerts.length})
+              {t(
+                "security_live.feed_title",
+                "Feed de Alertas Detectadas en Tiempo Real",
+              )}{" "}
+              ({liveAlerts.length})
             </h4>
           </div>
 
@@ -403,9 +493,18 @@ export default function SecurityLiveView({
           <div className="flex items-center space-x-1.5 bg-slate-950/80 p-1 rounded-xl border border-slate-800">
             {[
               { id: "all", label: t("security_live.all", "Todas") },
-              { id: "critical", label: `${t("security_live.high_short", "Altas")} (${criticalCount})` },
-              { id: "medium", label: `${t("security_live.medium_short", "Medias")} (${mediumCount})` },
-              { id: "low", label: `${t("security_live.low_short", "Bajas")} (${lowCount})` },
+              {
+                id: "critical",
+                label: `${t("security_live.high_short", "Altas")} (${criticalCount})`,
+              },
+              {
+                id: "medium",
+                label: `${t("security_live.medium_short", "Medias")} (${mediumCount})`,
+              },
+              {
+                id: "low",
+                label: `${t("security_live.low_short", "Bajas")} (${lowCount})`,
+              },
             ].map((f) => (
               <button
                 key={f.id}
@@ -430,8 +529,14 @@ export default function SecurityLiveView({
             </div>
             <p className="text-xs text-slate-400 max-w-sm mx-auto">
               {isRunning
-                ? t("security_live.scan_idle_msg", "El motor de escaneo está analizando los nodos. Las vulnerabilidades detectadas aparecerán aquí al instante.")
-                : t("security_live.scan_start_hint", "Inicia la auditoría para comenzar la inspección pasiva en tiempo real.")}
+                ? t(
+                    "security_live.scan_idle_msg",
+                    "El motor de escaneo está analizando los nodos. Las vulnerabilidades detectadas aparecerán aquí al instante.",
+                  )
+                : t(
+                    "security_live.scan_start_hint",
+                    "Inicia la auditoría para comenzar la inspección pasiva en tiempo real.",
+                  )}
             </p>
           </div>
         ) : (
@@ -464,7 +569,9 @@ export default function SecurityLiveView({
                         {alert.ruleId}
                       </span>
                     </div>
-                    <p className="text-slate-300">{alert.message || alert.description || alert.title}</p>
+                    <p className="text-slate-300">
+                      {alert.message || alert.description || alert.title}
+                    </p>
                   </div>
                   <div className="flex items-center space-x-2">
                     <span className="text-[10px] font-mono text-slate-500 whitespace-nowrap">
@@ -472,7 +579,10 @@ export default function SecurityLiveView({
                         alert.timestamp || Date.now(),
                       ).toLocaleTimeString()}
                     </span>
-                    <FileCode size={14} className="text-slate-600 group-hover:text-slate-300" />
+                    <FileCode
+                      size={14}
+                      className="text-slate-600 group-hover:text-slate-300"
+                    />
                   </div>
                 </motion.div>
               ))}

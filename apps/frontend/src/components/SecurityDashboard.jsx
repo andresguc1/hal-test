@@ -322,7 +322,10 @@ export default function SecurityDashboard() {
         }
       } else if (data.status === "success" && data.nodeId) {
         executedNodesRef.current.add(data.nodeId);
-        const newProgress = Math.min(95, 5 + (executedNodesRef.current.size / totalNodesCount) * 90);
+        const newProgress = Math.min(
+          95,
+          5 + (executedNodesRef.current.size / totalNodesCount) * 90,
+        );
         setProgressPercent(newProgress);
       }
     };
@@ -444,16 +447,31 @@ export default function SecurityDashboard() {
               parsed.alerts ||
               parsed.security_alerts ||
               parsed.findings ||
-              (parsed.data && (parsed.data.securityAlerts || parsed.data.alerts || parsed.data.findings)) ||
-              (parsed.results && (parsed.results.securityAlerts || parsed.results.alerts || parsed.results.findings));
+              (parsed.data &&
+                (parsed.data.securityAlerts ||
+                  parsed.data.alerts ||
+                  parsed.data.findings)) ||
+              (parsed.results &&
+                (parsed.results.securityAlerts ||
+                  parsed.results.alerts ||
+                  parsed.results.findings));
 
             if (Array.isArray(stepAlerts)) {
               stepAlerts.forEach((alert) => {
                 alerts.push({
                   ...alert,
                   nodeId: alert.nodeId || step.node_id || step.nodeId,
-                  nodeName: alert.nodeName || step.node_name || step.nodeName || step.node_id || step.nodeId,
-                  timestamp: alert.timestamp || step.created_at || step.createdAt || new Date().toISOString(),
+                  nodeName:
+                    alert.nodeName ||
+                    step.node_name ||
+                    step.nodeName ||
+                    step.node_id ||
+                    step.nodeId,
+                  timestamp:
+                    alert.timestamp ||
+                    step.created_at ||
+                    step.createdAt ||
+                    new Date().toISOString(),
                 });
               });
             }
@@ -543,7 +561,7 @@ export default function SecurityDashboard() {
     } else {
       setSelectedAlert(null);
     }
-  }, [selectedRunId, filteredAlerts.length]);
+  }, [selectedRunId, filteredAlerts, selectedAlert]);
 
   // Metrics calculations
   const totalFindingsCount = groupedAlerts.length;
@@ -620,7 +638,9 @@ export default function SecurityDashboard() {
               HalTest Security Observatory
             </div>
             <div className="text-slate-300 font-semibold text-sm truncate max-w-xs flex items-center gap-2">
-              <span className="text-slate-500">{t("security_dashboard.target_label", "OBJETIVO:")}</span>
+              <span className="text-slate-500">
+                {t("security_dashboard.target_label", "OBJETIVO:")}
+              </span>
               <span className="text-slate-200">
                 {currentProject?.name || "N/A"}
               </span>
@@ -691,7 +711,9 @@ export default function SecurityDashboard() {
             className="px-3.5 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-semibold text-xs flex items-center space-x-1.5 shadow-[0_0_12px_rgba(239,68,68,0.3)] disabled:opacity-50 transition-all"
           >
             <Play size={14} fill="currentColor" />
-            <span>{t("security_dashboard.run_audit", "Ejecutar Auditoría")}</span>
+            <span>
+              {t("security_dashboard.run_audit", "Ejecutar Auditoría")}
+            </span>
           </button>
         </div>
       </div>
@@ -734,21 +756,37 @@ export default function SecurityDashboard() {
               <div className="space-y-2 flex-1">
                 <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono font-semibold uppercase tracking-wider">
                   <ShieldCheck size={14} />
-                  <span>{t("security_dashboard.compliance.scorecard_title", "Executive Policy Compliance Scorecard")}</span>
+                  <span>
+                    {t(
+                      "security_dashboard.compliance.scorecard_title",
+                      "Executive Policy Compliance Scorecard",
+                    )}
+                  </span>
                 </div>
                 <h2 className="text-xl font-bold text-slate-100 flex items-center gap-2">
-                  <span>{t("security_dashboard.compliance.standard_target", "Standard Target:")}</span>
+                  <span>
+                    {t(
+                      "security_dashboard.compliance.standard_target",
+                      "Standard Target:",
+                    )}
+                  </span>
                   <span className="text-red-400">OWASP ASVS Level 2</span>
                 </h2>
                 <p className="text-slate-400 text-sm max-w-2xl">
-                  {t("security_dashboard.compliance.scorecard_desc", "Active security policy compliance audit for web application. Validates HTTP headers, TLS transport, cookie security, and token storage.")}
+                  {t(
+                    "security_dashboard.compliance.scorecard_desc",
+                    "Active security policy compliance audit for web application. Validates HTTP headers, TLS transport, cookie security, and token storage.",
+                  )}
                 </p>
               </div>
 
               {/* Score Meter Ring */}
               <div className="flex items-center gap-6 bg-slate-950/60 p-4 rounded-xl border border-slate-800">
                 <div className="relative flex items-center justify-center w-24 h-24">
-                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                  <svg
+                    className="w-full h-full transform -rotate-90"
+                    viewBox="0 0 36 36"
+                  >
                     <path
                       className="text-slate-800"
                       strokeWidth="3.5"
@@ -774,13 +812,23 @@ export default function SecurityDashboard() {
                 <div className="space-y-1 text-xs font-mono">
                   <div className="text-emerald-400 font-bold flex items-center gap-1.5">
                     <CheckCircle2 size={14} />
-                    <span>8 {t("security_dashboard.compliance.passed", "PASSED")}</span>
+                    <span>
+                      8 {t("security_dashboard.compliance.passed", "PASSED")}
+                    </span>
                   </div>
                   <div className="text-red-400 font-bold flex items-center gap-1.5">
                     <AlertTriangle size={14} />
-                    <span>1 {t("security_dashboard.compliance.failed", "FAILED")}</span>
+                    <span>
+                      1 {t("security_dashboard.compliance.failed", "FAILED")}
+                    </span>
                   </div>
-                  <div className="text-slate-400">9 {t("security_dashboard.compliance.audited_rules", "Audited Rules")}</div>
+                  <div className="text-slate-400">
+                    9{" "}
+                    {t(
+                      "security_dashboard.compliance.audited_rules",
+                      "Audited Rules",
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -789,7 +837,12 @@ export default function SecurityDashboard() {
             <div className="space-y-4">
               <h3 className="text-sm font-mono uppercase tracking-widest text-slate-400 font-bold flex items-center gap-2">
                 <Lock size={14} className="text-red-400" />
-                <span>{t("security_dashboard.compliance.matrix_title", "Compliance Rules & Controls Matrix")}</span>
+                <span>
+                  {t(
+                    "security_dashboard.compliance.matrix_title",
+                    "Compliance Rules & Controls Matrix",
+                  )}
+                </span>
               </h3>
 
               <div className="space-y-3">
@@ -801,8 +854,14 @@ export default function SecurityDashboard() {
                     status: "FAIL",
                     severity: "HIGH",
                     ref: "ASVS 14.4.1 / PCI-DSS 6.4.3",
-                    desc: t("security_dashboard.compliance.rules.SEC-HDR-CSP.desc", "The Content-Security-Policy header is not configured on the served application."),
-                    rec: t("security_dashboard.compliance.rules.SEC-HDR-CSP.rec", "Configure the 'Content-Security-Policy: default-src 'self'' header on your server."),
+                    desc: t(
+                      "security_dashboard.compliance.rules.SEC-HDR-CSP.desc",
+                      "The Content-Security-Policy header is not configured on the served application.",
+                    ),
+                    rec: t(
+                      "security_dashboard.compliance.rules.SEC-HDR-CSP.rec",
+                      "Configure the 'Content-Security-Policy: default-src 'self'' header on your server.",
+                    ),
                   },
                   {
                     ruleId: "SEC-HDR-HSTS",
@@ -811,8 +870,14 @@ export default function SecurityDashboard() {
                     status: "PASS",
                     severity: "MEDIUM",
                     ref: "ASVS 14.4.2 / PCI-DSS 4.2.1",
-                    desc: t("security_dashboard.compliance.rules.SEC-HDR-HSTS.desc", "HSTS header verified successfully (max-age=31536000)."),
-                    rec: t("security_dashboard.compliance.rules.SEC-HDR-HSTS.rec", "Maintain max-age value greater than 31536000 seconds."),
+                    desc: t(
+                      "security_dashboard.compliance.rules.SEC-HDR-HSTS.desc",
+                      "HSTS header verified successfully (max-age=31536000).",
+                    ),
+                    rec: t(
+                      "security_dashboard.compliance.rules.SEC-HDR-HSTS.rec",
+                      "Maintain max-age value greater than 31536000 seconds.",
+                    ),
                   },
                   {
                     ruleId: "SEC-HDR-XFO",
@@ -821,8 +886,14 @@ export default function SecurityDashboard() {
                     status: "PASS",
                     severity: "MEDIUM",
                     ref: "ASVS 14.4.3 / PCI-DSS 6.4.1",
-                    desc: t("security_dashboard.compliance.rules.SEC-HDR-XFO.desc", "X-Frame-Options header present with value SAMEORIGIN."),
-                    rec: t("security_dashboard.compliance.rules.SEC-HDR-XFO.rec", "Maintain protection against malicious framing."),
+                    desc: t(
+                      "security_dashboard.compliance.rules.SEC-HDR-XFO.desc",
+                      "X-Frame-Options header present with value SAMEORIGIN.",
+                    ),
+                    rec: t(
+                      "security_dashboard.compliance.rules.SEC-HDR-XFO.rec",
+                      "Maintain protection against malicious framing.",
+                    ),
                   },
                   {
                     ruleId: "SEC-HDR-XCTO",
@@ -831,8 +902,14 @@ export default function SecurityDashboard() {
                     status: "PASS",
                     severity: "LOW",
                     ref: "ASVS 14.4.4 / ISO 27001 A.8.26",
-                    desc: t("security_dashboard.compliance.rules.SEC-HDR-XCTO.desc", "X-Content-Type-Options header configured as nosniff."),
-                    rec: t("security_dashboard.compliance.rules.SEC-HDR-XCTO.rec", "Prevent browsers from MIME-sniffing static resources."),
+                    desc: t(
+                      "security_dashboard.compliance.rules.SEC-HDR-XCTO.desc",
+                      "X-Content-Type-Options header configured as nosniff.",
+                    ),
+                    rec: t(
+                      "security_dashboard.compliance.rules.SEC-HDR-XCTO.rec",
+                      "Prevent browsers from MIME-sniffing static resources.",
+                    ),
                   },
                   {
                     ruleId: "SEC-CK-HTTPONLY",
@@ -841,8 +918,14 @@ export default function SecurityDashboard() {
                     status: "PASS",
                     severity: "HIGH",
                     ref: "ASVS 3.4.1 / PCI-DSS 6.4.2",
-                    desc: t("security_dashboard.compliance.rules.SEC-CK-HTTPONLY.desc", "All session cookies include the HttpOnly flag."),
-                    rec: t("security_dashboard.compliance.rules.SEC-CK-HTTPONLY.rec", "Prevents client-side malicious scripts (XSS) from accessing session cookies."),
+                    desc: t(
+                      "security_dashboard.compliance.rules.SEC-CK-HTTPONLY.desc",
+                      "All session cookies include the HttpOnly flag.",
+                    ),
+                    rec: t(
+                      "security_dashboard.compliance.rules.SEC-CK-HTTPONLY.rec",
+                      "Prevents client-side malicious scripts (XSS) from accessing session cookies.",
+                    ),
                   },
                   {
                     ruleId: "SEC-CK-SECURE",
@@ -851,8 +934,14 @@ export default function SecurityDashboard() {
                     status: "PASS",
                     severity: "HIGH",
                     ref: "ASVS 3.4.2 / ISO 27001 A.8.24",
-                    desc: t("security_dashboard.compliance.rules.SEC-CK-SECURE.desc", "All cookies require encrypted transport under HTTPS."),
-                    rec: t("security_dashboard.compliance.rules.SEC-CK-SECURE.rec", "Maintain the Secure attribute on all authentication cookies."),
+                    desc: t(
+                      "security_dashboard.compliance.rules.SEC-CK-SECURE.desc",
+                      "All cookies require encrypted transport under HTTPS.",
+                    ),
+                    rec: t(
+                      "security_dashboard.compliance.rules.SEC-CK-SECURE.rec",
+                      "Maintain the Secure attribute on all authentication cookies.",
+                    ),
                   },
                   {
                     ruleId: "SEC-CRY-TLS-VERSION",
@@ -861,8 +950,14 @@ export default function SecurityDashboard() {
                     status: "PASS",
                     severity: "HIGH",
                     ref: "ASVS 9.1.1 / PCI-DSS 4.1",
-                    desc: t("security_dashboard.compliance.rules.SEC-CRY-TLS-VERSION.desc", "TLS 1.3 connection negotiated with modern cipher algorithms."),
-                    rec: t("security_dashboard.compliance.rules.SEC-CRY-TLS-VERSION.rec", "Keep legacy SSLv3, TLS 1.0, and TLS 1.1 protocols disabled."),
+                    desc: t(
+                      "security_dashboard.compliance.rules.SEC-CRY-TLS-VERSION.desc",
+                      "TLS 1.3 connection negotiated with modern cipher algorithms.",
+                    ),
+                    rec: t(
+                      "security_dashboard.compliance.rules.SEC-CRY-TLS-VERSION.rec",
+                      "Keep legacy SSLv3, TLS 1.0, and TLS 1.1 protocols disabled.",
+                    ),
                   },
                   {
                     ruleId: "SEC-DAT-TOKEN-STORAGE",
@@ -871,8 +966,14 @@ export default function SecurityDashboard() {
                     status: "PASS",
                     severity: "MEDIUM",
                     ref: "ASVS 3.5.1 / GDPR Art. 32",
-                    desc: t("security_dashboard.compliance.rules.SEC-DAT-TOKEN-STORAGE.desc", "No plaintext JWT tokens found exposed in LocalStorage."),
-                    rec: t("security_dashboard.compliance.rules.SEC-DAT-TOKEN-STORAGE.rec", "Continue storing session tokens in HttpOnly cookies."),
+                    desc: t(
+                      "security_dashboard.compliance.rules.SEC-DAT-TOKEN-STORAGE.desc",
+                      "No plaintext JWT tokens found exposed in LocalStorage.",
+                    ),
+                    rec: t(
+                      "security_dashboard.compliance.rules.SEC-DAT-TOKEN-STORAGE.rec",
+                      "Continue storing session tokens in HttpOnly cookies.",
+                    ),
                   },
                 ].map((item) => (
                   <div
@@ -906,7 +1007,11 @@ export default function SecurityDashboard() {
                       </h4>
                       <p className="text-xs text-slate-400">{item.desc}</p>
                       <p className="text-[11px] text-slate-500 font-mono italic">
-                        {t("security_dashboard.compliance.remediation_prefix", "💡 Remediation:")} {item.rec}
+                        {t(
+                          "security_dashboard.compliance.remediation_prefix",
+                          "💡 Remediation:",
+                        )}{" "}
+                        {item.rec}
                       </p>
                     </div>
 
@@ -921,7 +1026,12 @@ export default function SecurityDashboard() {
                         className="px-3 py-1.5 rounded-lg bg-red-600/20 border border-red-500/40 text-red-300 hover:bg-red-600/30 text-xs font-semibold flex items-center space-x-1.5 self-start md:self-center transition-all"
                       >
                         <Sparkles size={14} />
-                        <span>{t("security_dashboard.compliance.remediate_ai", "Remediar con IA")}</span>
+                        <span>
+                          {t(
+                            "security_dashboard.compliance.remediate_ai",
+                            "Remediar con IA",
+                          )}
+                        </span>
                       </button>
                     )}
                   </div>
@@ -964,21 +1074,36 @@ export default function SecurityDashboard() {
                     <div className="text-base font-extrabold flex items-center space-x-2">
                       <span>
                         {criticalCount === 0 && healthScore >= 80
-                          ? t("security_dashboard.results.qg_passed", "QUALITY GATE: PASSED (APROBADO)")
-                          : t("security_dashboard.results.qg_failed", "QUALITY GATE: FAILED (RECHAZADO)")}
+                          ? t(
+                              "security_dashboard.results.qg_passed",
+                              "QUALITY GATE: PASSED (APROBADO)",
+                            )
+                          : t(
+                              "security_dashboard.results.qg_failed",
+                              "QUALITY GATE: FAILED (RECHAZADO)",
+                            )}
                       </span>
                     </div>
                     <p className="text-xs text-slate-300 mt-0.5">
                       {criticalCount === 0 && healthScore >= 80
-                        ? t("security_dashboard.results.qg_passed_desc", "El flujo cumple con los criterios de aceptación de seguridad y políticas DAST.")
-                        : t("security_dashboard.results.qg_failed_desc", `Se detectaron ${criticalCount} hallazgos críticos/altos o el Security Score es inferior al 80%.`)}
+                        ? t(
+                            "security_dashboard.results.qg_passed_desc",
+                            "El flujo cumple con los criterios de aceptación de seguridad y políticas DAST.",
+                          )
+                        : t(
+                            "security_dashboard.results.qg_failed_desc",
+                            `Se detectaron ${criticalCount} hallazgos críticos/altos o el Security Score es inferior al 80%.`,
+                          )}
                     </p>
                   </div>
                 </div>
 
                 <div className="text-right font-mono hidden sm:block">
                   <div className="text-[10px] text-slate-400 uppercase">
-                    {t("security_dashboard.results.global_score", "Puntuación Global")}
+                    {t(
+                      "security_dashboard.results.global_score",
+                      "Puntuación Global",
+                    )}
                   </div>
                   <div className="text-xl font-bold">{healthScore}/100</div>
                 </div>
@@ -1019,17 +1144,32 @@ export default function SecurityDashboard() {
 
                   <div className="space-y-1">
                     <div className="text-[10px] font-mono font-bold text-slate-500 uppercase tracking-wider">
-                      {t("security_dashboard.results.health_index", "Health Index")}
+                      {t(
+                        "security_dashboard.results.health_index",
+                        "Health Index",
+                      )}
                     </div>
                     <div className={`text-sm font-bold ${scoreTheme.text}`}>
                       {healthScore >= 90
-                        ? t("security_dashboard.results.excellent_safe", "Excelente (Seguro)")
+                        ? t(
+                            "security_dashboard.results.excellent_safe",
+                            "Excelente (Seguro)",
+                          )
                         : healthScore >= 70
-                          ? t("security_dashboard.results.moderate_risk", "Riesgo Moderado")
-                          : t("security_dashboard.results.attention_required", "Atención Requerida")}
+                          ? t(
+                              "security_dashboard.results.moderate_risk",
+                              "Riesgo Moderado",
+                            )
+                          : t(
+                              "security_dashboard.results.attention_required",
+                              "Atención Requerida",
+                            )}
                     </div>
                     <p className="text-[11px] text-slate-400 line-clamp-2">
-                      {t("security_dashboard.results.health_desc", "Puntuación basada en hallazgos activos y peso de severidad OWASP.")}
+                      {t(
+                        "security_dashboard.results.health_desc",
+                        "Puntuación basada en hallazgos activos y peso de severidad OWASP.",
+                      )}
                     </p>
                   </div>
                 </div>
@@ -1038,7 +1178,10 @@ export default function SecurityDashboard() {
                 <div className="bg-[#0e1321]/90 border border-slate-800/80 rounded-2xl p-4 flex flex-col justify-between shadow-xl">
                   <div className="flex items-center justify-between text-slate-400">
                     <span className="text-xs font-mono uppercase tracking-wider font-semibold">
-                      {t("security_dashboard.results.data_leaks_title", "Data Leaks & Privacy")}
+                      {t(
+                        "security_dashboard.results.data_leaks_title",
+                        "Data Leaks & Privacy",
+                      )}
                     </span>
                     <Lock className="text-red-400" size={16} />
                   </div>
@@ -1046,14 +1189,20 @@ export default function SecurityDashboard() {
                     {dataLeakCount}
                   </div>
                   <p className="text-[10px] text-slate-500 mt-1">
-                    {t("security_dashboard.results.data_leaks_desc", "Transmisión plana, cookies o contraseñas")}
+                    {t(
+                      "security_dashboard.results.data_leaks_desc",
+                      "Transmisión plana, cookies o contraseñas",
+                    )}
                   </p>
                 </div>
 
                 <div className="bg-[#0e1321]/90 border border-slate-800/80 rounded-2xl p-4 flex flex-col justify-between shadow-xl">
                   <div className="flex items-center justify-between text-slate-400">
                     <span className="text-xs font-mono uppercase tracking-wider font-semibold">
-                      {t("security_dashboard.results.input_vuln_title", "Input Vulnerabilities")}
+                      {t(
+                        "security_dashboard.results.input_vuln_title",
+                        "Input Vulnerabilities",
+                      )}
                     </span>
                     <AlertTriangle className="text-amber-400" size={16} />
                   </div>
@@ -1061,14 +1210,20 @@ export default function SecurityDashboard() {
                     {inputVulnCount}
                   </div>
                   <p className="text-[10px] text-slate-500 mt-1">
-                    {t("security_dashboard.results.input_vuln_desc", "Riesgos XSS, trampas DOM & inline JS")}
+                    {t(
+                      "security_dashboard.results.input_vuln_desc",
+                      "Riesgos XSS, trampas DOM & inline JS",
+                    )}
                   </p>
                 </div>
 
                 <div className="bg-[#0e1321]/90 border border-slate-800/80 rounded-2xl p-4 flex flex-col justify-between shadow-xl">
                   <div className="flex items-center justify-between text-slate-400">
                     <span className="text-xs font-mono uppercase tracking-wider font-semibold">
-                      {t("security_dashboard.results.policy_title", "Policy Compliance")}
+                      {t(
+                        "security_dashboard.results.policy_title",
+                        "Policy Compliance",
+                      )}
                     </span>
                     <ShieldCheck className="text-blue-400" size={16} />
                   </div>
@@ -1076,7 +1231,10 @@ export default function SecurityDashboard() {
                     {policyComplianceCount}
                   </div>
                   <p className="text-[10px] text-slate-500 mt-1">
-                    {t("security_dashboard.results.policy_desc", "Cabeceras HTTP (CSP, HSTS, XFO)")}
+                    {t(
+                      "security_dashboard.results.policy_desc",
+                      "Cabeceras HTTP (CSP, HSTS, XFO)",
+                    )}
                   </p>
                 </div>
               </div>
@@ -1091,7 +1249,10 @@ export default function SecurityDashboard() {
                     />
                     <input
                       type="text"
-                      placeholder={t("security_dashboard.results.search_placeholder", "Filtrar por mensaje, regla o nodo...")}
+                      placeholder={t(
+                        "security_dashboard.results.search_placeholder",
+                        "Filtrar por mensaje, regla o nodo...",
+                      )}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-4 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-red-500/50 w-64"
@@ -1103,10 +1264,27 @@ export default function SecurityDashboard() {
                     onChange={(e) => setSeverityFilter(e.target.value)}
                     className="bg-slate-950 border border-slate-800 text-xs text-slate-300 rounded-xl px-3 py-1.5 focus:outline-none focus:border-red-500/50"
                   >
-                    <option value="all">{t("security_dashboard.results.all_severities", "Todas las Severidades")}</option>
-                    <option value="critical">{t("security_dashboard.results.critical_high", "Críticas & Altas")}</option>
-                    <option value="medium">{t("security_dashboard.results.medium", "Medias")}</option>
-                    <option value="low">{t("security_dashboard.results.low_info", "Bajas e Informativas")}</option>
+                    <option value="all">
+                      {t(
+                        "security_dashboard.results.all_severities",
+                        "Todas las Severidades",
+                      )}
+                    </option>
+                    <option value="critical">
+                      {t(
+                        "security_dashboard.results.critical_high",
+                        "Críticas & Altas",
+                      )}
+                    </option>
+                    <option value="medium">
+                      {t("security_dashboard.results.medium", "Medias")}
+                    </option>
+                    <option value="low">
+                      {t(
+                        "security_dashboard.results.low_info",
+                        "Bajas e Informativas",
+                      )}
+                    </option>
                   </select>
 
                   <select
@@ -1114,13 +1292,29 @@ export default function SecurityDashboard() {
                     onChange={(e) => setCategoryFilter(e.target.value)}
                     className="bg-slate-950 border border-slate-800 text-xs text-slate-300 rounded-xl px-3 py-1.5 focus:outline-none focus:border-red-500/50"
                   >
-                    <option value="all">{t("security_dashboard.results.all_categories", "Todas las Categorías")}</option>
-                    <option value="data_leak">{t("security_dashboard.results.cat_data_leak", "Fuga de Datos")}</option>
+                    <option value="all">
+                      {t(
+                        "security_dashboard.results.all_categories",
+                        "Todas las Categorías",
+                      )}
+                    </option>
+                    <option value="data_leak">
+                      {t(
+                        "security_dashboard.results.cat_data_leak",
+                        "Fuga de Datos",
+                      )}
+                    </option>
                     <option value="input_vulnerability">
-                      {t("security_dashboard.results.cat_input_vuln", "Vulnerabilidades de Input")}
+                      {t(
+                        "security_dashboard.results.cat_input_vuln",
+                        "Vulnerabilidades de Input",
+                      )}
                     </option>
                     <option value="policy_compliance">
-                      {t("security_dashboard.results.cat_policy", "Cumplimiento de Políticas")}
+                      {t(
+                        "security_dashboard.results.cat_policy",
+                        "Cumplimiento de Políticas",
+                      )}
                     </option>
                   </select>
                 </div>
@@ -1159,10 +1353,16 @@ export default function SecurityDashboard() {
                       className="mx-auto text-emerald-500/60"
                     />
                     <p className="font-semibold text-slate-300">
-                      {t("security_dashboard.results.no_vulnerabilities", "¡No se detectaron hallazgos de seguridad vulnerables!")}
+                      {t(
+                        "security_dashboard.results.no_vulnerabilities",
+                        "¡No se detectaron hallazgos de seguridad vulnerables!",
+                      )}
                     </p>
                     <p className="text-slate-500 max-w-sm mx-auto">
-                      {t("security_dashboard.results.no_vulnerabilities_desc", "Las ejecuciones registradas cumplen con los lineamientos OWASP y políticas de cabecera configuradas.")}
+                      {t(
+                        "security_dashboard.results.no_vulnerabilities_desc",
+                        "Las ejecuciones registradas cumplen con los lineamientos OWASP y políticas de cabecera configuradas.",
+                      )}
                     </p>
                   </div>
                 ) : (
@@ -1212,7 +1412,10 @@ export default function SecurityDashboard() {
                               </p>
                               <div className="flex items-center space-x-3 text-[11px] font-mono text-slate-500">
                                 <span>
-                                  {t("security_dashboard.results.node_label", "Nodo:")}{" "}
+                                  {t(
+                                    "security_dashboard.results.node_label",
+                                    "Nodo:",
+                                  )}{" "}
                                   <strong className="text-slate-400">
                                     {alert.nodeName || alert.nodeId}
                                   </strong>
@@ -1235,7 +1438,10 @@ export default function SecurityDashboard() {
                               }}
                               className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-semibold transition-colors"
                             >
-                              {t("security_dashboard.results.locate_btn", "Localizar")}
+                              {t(
+                                "security_dashboard.results.locate_btn",
+                                "Localizar",
+                              )}
                             </button>
                             <ChevronRight
                               size={16}
@@ -1254,7 +1460,10 @@ export default function SecurityDashboard() {
             <div className="w-96 border-l border-slate-800 bg-[#0c101a] p-5 overflow-y-auto space-y-5">
               <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                 <h3 className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wider">
-                  {t("security_dashboard.results.diag_details", "Detalles de Diagnóstico")}
+                  {t(
+                    "security_dashboard.results.diag_details",
+                    "Detalles de Diagnóstico",
+                  )}
                 </h3>
                 {selectedAlert && (
                   <span className="text-[10px] font-mono text-red-400 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">
@@ -1267,7 +1476,10 @@ export default function SecurityDashboard() {
                 <div className="space-y-4">
                   <div>
                     <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">
-                      {t("security_dashboard.results.description", "Descripción")}
+                      {t(
+                        "security_dashboard.results.description",
+                        "Descripción",
+                      )}
                     </h4>
                     <p className="text-xs text-slate-300 leading-relaxed mt-1">
                       {selectedAlert.message}
@@ -1278,7 +1490,12 @@ export default function SecurityDashboard() {
                   <div className="bg-emerald-950/20 border border-emerald-900/30 p-3.5 rounded-xl space-y-1.5">
                     <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                      <span>{t("security_dashboard.results.ai_rec_title", "💡 Recomendación de Remedación por IA")}</span>
+                      <span>
+                        {t(
+                          "security_dashboard.results.ai_rec_title",
+                          "💡 Recomendación de Remedación por IA",
+                        )}
+                      </span>
                     </div>
                     <p className="text-xs text-emerald-300/90 leading-relaxed font-medium">
                       {getAiSuggestion(selectedAlert.ruleId, t)}
@@ -1317,7 +1534,10 @@ export default function SecurityDashboard() {
                   {selectedAlert.evidence && (
                     <div>
                       <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">
-                        {t("security_dashboard.results.tech_evidence", "Evidencia Técnica")}
+                        {t(
+                          "security_dashboard.results.tech_evidence",
+                          "Evidencia Técnica",
+                        )}
                       </h4>
                       <pre className="text-[10px] text-slate-300 font-mono bg-slate-950 border border-slate-800 p-3 rounded-xl mt-1.5 overflow-x-auto whitespace-pre-wrap break-all max-h-[160px] custom-scrollbar">
                         {typeof selectedAlert.evidence === "object"
@@ -1330,7 +1550,10 @@ export default function SecurityDashboard() {
                   {selectedAlert.url && (
                     <div>
                       <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">
-                        {t("security_dashboard.results.target_url", "URL Objetivo")}
+                        {t(
+                          "security_dashboard.results.target_url",
+                          "URL Objetivo",
+                        )}
                       </h4>
                       <a
                         href={selectedAlert.url}
@@ -1347,7 +1570,10 @@ export default function SecurityDashboard() {
                   <div className="pt-2 border-t border-slate-800 flex justify-between gap-4">
                     <div>
                       <span className="text-[9px] text-slate-500 uppercase font-bold">
-                        {t("security_dashboard.results.analysis_node", "Nodo de Análisis")}
+                        {t(
+                          "security_dashboard.results.analysis_node",
+                          "Nodo de Análisis",
+                        )}
                       </span>
                       <p className="text-xs text-slate-300 font-semibold mt-0.5">
                         {selectedAlert.nodeName}
@@ -1369,7 +1595,10 @@ export default function SecurityDashboard() {
                     className="text-slate-800 mb-3 animate-pulse"
                   />
                   <p className="text-xs text-slate-500 max-w-[200px] leading-relaxed">
-                    {t("security_dashboard.results.select_finding_hint", "Selecciona cualquier hallazgo de seguridad para ver la evidencia técnica y remediación sugerida por IA.")}
+                    {t(
+                      "security_dashboard.results.select_finding_hint",
+                      "Selecciona cualquier hallazgo de seguridad para ver la evidencia técnica y remediación sugerida por IA.",
+                    )}
                   </p>
                 </div>
               )}

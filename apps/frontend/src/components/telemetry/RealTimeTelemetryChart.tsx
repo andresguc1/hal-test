@@ -492,8 +492,10 @@ export const RealTimeTelemetryChart = forwardRef<
                 ({hoverInfo.nodeId})
               </span>
             )}
-            <span className={`font-bold ml-1 font-mono ${isSecurity ? 'text-red-400' : 'text-emerald-400'}`}>
-              {hoverInfo.value} {isSecurity ? 'alertas' : 'ms'}
+            <span
+              className={`font-bold ml-1 font-mono ${isSecurity ? "text-red-400" : "text-emerald-400"}`}
+            >
+              {hoverInfo.value} {isSecurity ? "alertas" : "ms"}
             </span>
           </div>
         )}
