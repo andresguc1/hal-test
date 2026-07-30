@@ -12,7 +12,9 @@ export function usePerformanceSocket(flowId) {
   const location = useLocation();
   const [socket, setSocket] = useState(null);
   const [status, setStatus] = useState("connecting");
-  const [runConfig, setRunConfig] = useState(location.state?.perfConfig || null);
+  const [runConfig, setRunConfig] = useState(
+    location.state?.perfConfig || null,
+  );
   const [metrics, setMetrics] = useState(null);
   const [vuStatus, setVuStatus] = useState(null);
   const [resourceWarning, setResourceWarning] = useState(null);
@@ -93,13 +95,16 @@ export function usePerformanceSocket(flowId) {
 
     socket.on("perf-run-finished", (summary) => {
       const metricsData = summary?.data || summary;
-      const eventFlowId = summary?.flowId || summary?.data?.flowId || metricsData?.flowId;
+      const eventFlowId =
+        summary?.flowId || summary?.data?.flowId || metricsData?.flowId;
       if (!flowId || !eventFlowId || String(eventFlowId) === String(flowId)) {
         setMetrics(metricsData);
         setStatus("completed");
         useExecutionStore.getState().finishExecution({ status: "completed" });
         window.dispatchEvent(
-          new CustomEvent("hal:run-completed", { detail: { summary: metricsData } })
+          new CustomEvent("hal:run-completed", {
+            detail: { summary: metricsData },
+          }),
         );
       }
     });
@@ -142,7 +147,7 @@ export function usePerformanceSocket(flowId) {
         // Fallback: look up active run for this flow
         const activeRunsRes = await api.get("/runs?status=running&limit=10");
         const activeRun = activeRunsRes.data?.find(
-          (r) => String(r.flowId || r.flow_id) === String(flowId)
+          (r) => String(r.flowId || r.flow_id) === String(flowId),
         );
         if (activeRun?.id) {
           await api.post(`/runs/${activeRun.id}/cancel`);

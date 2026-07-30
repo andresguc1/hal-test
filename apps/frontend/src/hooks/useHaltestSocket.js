@@ -122,28 +122,37 @@ export const useHaltestSocket = ({
       if (status === "running") {
         const store = useExecutionStore.getState();
         if (store.status !== "running") store.setStatus("running");
-        store.updateProgress({ currentNode: { id: stepId, name: data.nodeName || stepId } });
+        store.updateProgress({
+          currentNode: { id: stepId, name: data.nodeName || stepId },
+        });
       }
 
       // Always dispatch global event for external telemetry dashboards (e.g., SecurityDashboard, Performance)
       window.dispatchEvent(
         new CustomEvent("hal:execution-status", {
-          detail: { ...data, nodeId: stepId, nodeName: data.nodeName || stepId },
-        })
+          detail: {
+            ...data,
+            nodeId: stepId,
+            nodeName: data.nodeName || stepId,
+          },
+        }),
       );
 
       // Filter canvas React Flow state updates to prevent background parallel runs from causing canvas lag or flickering
-      if (activeRunIdRef.current) {
-        if (runId && runId !== activeRunIdRef.current) {
+      const storeActiveRunId = useExecutionStore.getState().activeRunId;
+      const currentActiveRunId = activeRunIdRef.current || storeActiveRunId;
+
+      if (currentActiveRunId) {
+        if (runId && runId !== currentActiveRunId && runId !== storeActiveRunId) {
           console.log(
-            `Haltest Socket: 🚫 Ignoring canvas node state for runId ${runId} (Active: ${activeRunIdRef.current})`,
+            `Haltest Socket: 🚫 Ignoring canvas node state for runId ${runId} (Active: ${currentActiveRunId})`,
           );
           return;
         }
       } else {
-        if (batchId || runId) {
+        if (batchId) {
           console.log(
-            `Haltest Socket: 🚫 Ignoring background batch/run canvas update (runId: ${runId}, batchId: ${batchId})`,
+            `Haltest Socket: 🚫 Ignoring background batch canvas update (batchId: ${batchId})`,
           );
           return;
         }
@@ -333,7 +342,7 @@ export const useHaltestSocket = ({
       });
 
       window.dispatchEvent(
-        new CustomEvent("hal:run-completed", { detail: data })
+        new CustomEvent("hal:run-completed", { detail: data }),
       );
 
       if (status === "failed" && error) {
@@ -433,7 +442,7 @@ export const useHaltestSocket = ({
     socket.on("perf-run-finished", (summary) => {
       useExecutionStore.getState().finishExecution({ status: "completed" });
       window.dispatchEvent(
-        new CustomEvent("hal:run-completed", { detail: summary })
+        new CustomEvent("hal:run-completed", { detail: summary }),
       );
       if (executionModeRef.current === "performance") {
         const stats = summary.data || summary;
@@ -450,14 +459,17 @@ export const useHaltestSocket = ({
 
       // Write to execution log drawer ONLY if active mode is security
       if (executionModeRef.current === "seguridad") {
-        const severityType = (alert.severity === "critical" || alert.severity === "high")
-          ? "error"
-          : (alert.severity === "medium" || alert.severity === "low")
-            ? "warning"
-            : "info";
+        const severityType =
+          alert.severity === "critical" || alert.severity === "high"
+            ? "error"
+            : alert.severity === "medium" || alert.severity === "low"
+              ? "warning"
+              : "info";
 
         const alertMsg = `[SecurityAudit] ⚠️ NodeId=${nodeId || "global"}: ${alert.message || alert.description} (CVSS: ${alert.cvssScore || "N/A"} | OWASP: ${alert.owaspCategory || "N/A"})`;
-        useLogStore.getState().addLog(alertMsg, severityType, nodeId, "seguridad");
+        useLogStore
+          .getState()
+          .addLog(alertMsg, severityType, nodeId, "seguridad");
       }
 
       if (onSecurityAlertRef.current) {
@@ -466,7 +478,7 @@ export const useHaltestSocket = ({
 
       // Dispatch global event for the dashboard or detail view
       window.dispatchEvent(
-        new CustomEvent("hal:security-alert", { detail: alert })
+        new CustomEvent("hal:security-alert", { detail: alert }),
       );
 
       // Update node data with the alert
@@ -477,7 +489,7 @@ export const useHaltestSocket = ({
             if (node.id === nodeId) {
               const currentAlerts = node.data?.securityAlerts || [];
               const alreadyExists = currentAlerts.some(
-                (a) => a.ruleId === alert.ruleId && a.message === alert.message
+                (a) => a.ruleId === alert.ruleId && a.message === alert.message,
               );
               if (alreadyExists) return node;
 

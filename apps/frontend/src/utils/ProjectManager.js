@@ -1,28 +1,48 @@
 import { api } from "./api";
 import { logger } from "./logger";
 
-class ProjectManager {
-  // ========================================
-  // PROJECTS
-  // ========================================
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 1000;
 
+async function withRetry(fn, operationName, retries = MAX_RETRIES) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      const isLastAttempt = attempt === retries;
+      logger.warn(
+        `[ProjectManager] ${operationName} attempt ${attempt}/${retries} failed: ${err.message}`,
+        { attempt, retries, isLastAttempt },
+        "ProjectManager",
+      );
+      if (isLastAttempt) {
+        throw err;
+      }
+      await new Promise((resolve) =>
+        setTimeout(resolve, RETRY_DELAY_MS * attempt),
+      );
+    }
+  }
+}
+
+class ProjectManager {
   async createProject(name, description = "", options = {}) {
     try {
-      // Backend now creates the project AND the default flow and returns { project, flow }
-      const response = await api.post("/projects", {
-        name,
-        description,
-        ...options,
-      });
-      // Destructure to ensure we have the right shape, although api.post returns the json directly
+      const response = await withRetry(
+        () =>
+          api.post("/projects", {
+            name,
+            description,
+            ...options,
+          }),
+        "createProject",
+      );
       const { project, flow } = response;
-
       logger.info(
         "Project created",
         { id: project?.id, name },
         "ProjectManager",
       );
-
       return { project, flow };
     } catch (err) {
       logger.error("Failed to create project", err, "ProjectManager");
@@ -33,7 +53,10 @@ class ProjectManager {
   async getProject(projectId) {
     try {
       console.log(`[ProjectManager] Fetching project: ${projectId}`);
-      const response = await api.get(`/projects/${projectId}`);
+      const response = await withRetry(
+        () => api.get(`/projects/${projectId}`),
+        "getProject",
+      );
       return response;
     } catch (error) {
       if (error.message?.includes("status: 404")) {
@@ -48,7 +71,10 @@ class ProjectManager {
 
   async updateProject(projectId, updates) {
     try {
-      const project = await api.put(`/projects/${projectId}`, updates);
+      const project = await withRetry(
+        () => api.put(`/projects/${projectId}`, updates),
+        "updateProject",
+      );
       return project;
     } catch (err) {
       logger.error("Failed to update project", err, "ProjectManager");
@@ -75,21 +101,21 @@ class ProjectManager {
     }
   }
 
-  // ========================================
-  // FLOWS
-  // ========================================
-
   async createFlow(projectId, name, options = {}) {
     try {
       const { type, parentId, nodes, edges, canvasId } = options;
-      const flow = await api.post(`/projects/${projectId}/flows`, {
-        name,
-        type,
-        parentId,
-        nodes,
-        edges,
-        canvasId,
-      });
+      const flow = await withRetry(
+        () =>
+          api.post(`/projects/${projectId}/flows`, {
+            name,
+            type,
+            parentId,
+            nodes,
+            edges,
+            canvasId,
+          }),
+        "createFlow",
+      );
       return flow;
     } catch (err) {
       logger.error("Failed to create flow", err, "ProjectManager");
@@ -108,9 +134,9 @@ class ProjectManager {
 
   async updateFlow(projectId, flowId, flowData) {
     try {
-      const updatedFlow = await api.put(
-        `/projects/${projectId}/flows/${flowId}`,
-        flowData,
+      const updatedFlow = await withRetry(
+        () => api.put(`/projects/${projectId}/flows/${flowId}`, flowData),
+        "updateFlow",
       );
       return updatedFlow;
     } catch (err) {
@@ -128,13 +154,7 @@ class ProjectManager {
     }
   }
 
-  // ========================================
-  // VERSIONING (Mocked for now in backend, or skipped)
-  // ========================================
-
   async saveVersion(projectId, message, _auto = false) {
-    // Porting versioning to SQL would require a new model.
-    // For now, let's just log it.
     logger.info(
       "Version save requested (not implemented in backend yet)",
       { projectId, message },
@@ -150,12 +170,12 @@ class ProjectManager {
   async restoreVersion(_projectId, _versionId) {
     throw new Error("Restore version not implemented in backend");
   }
+
   async createRun(projectId, flowId, options = {}) {
     try {
       const { flowName, trigger, nodes, edges } = options;
-      // Backend expects { flowId, flowName, trigger, nodes, edges }
       return await api.post("/runs/start", {
-        projectId, // Optional, context
+        projectId,
         flowId,
         flowName,
         trigger: trigger || "manual",

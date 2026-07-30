@@ -6,7 +6,7 @@ import React, {
   useCallback,
   useState,
   useMemo,
-} from 'react';
+} from "react";
 import {
   createChart,
   IChartApi,
@@ -15,14 +15,14 @@ import {
   CrosshairMode,
   HistogramSeries,
   LineSeries,
-  AreaSeries
-} from 'lightweight-charts';
+  AreaSeries,
+} from "lightweight-charts";
 import type {
   RealTimeTelemetryChartRef,
   TelemetryBarPoint,
   TelemetryLinePoint,
-  LineSeriesConfig
-} from './telemetryTypes';
+  LineSeriesConfig,
+} from "./telemetryTypes";
 
 export interface RealTimeTelemetryChartProps {
   /** Optional custom CSS height (default: 350px) */
@@ -30,7 +30,7 @@ export interface RealTimeTelemetryChartProps {
   /** Title header for the telemetry panel */
   title?: string;
   /** Domain context: 'performance' | 'security' (controls secondary metrics & legends) */
-  domain?: 'performance' | 'security';
+  domain?: "performance" | "security";
   /** Label for the primary bar series (e.g. "Latencia (ms)" or "Alertas") */
   barTitle?: string;
   /** Custom extra line series configurations */
@@ -38,7 +38,7 @@ export interface RealTimeTelemetryChartProps {
   /** Dark mode toggle (default: true) */
   darkMode?: boolean;
   /** Default primary series display mode ('line' | 'area' | 'bar') */
-  defaultChartMode?: 'line' | 'area' | 'bar';
+  defaultChartMode?: "line" | "area" | "bar";
 }
 
 export const RealTimeTelemetryChart = forwardRef<
@@ -48,22 +48,22 @@ export const RealTimeTelemetryChart = forwardRef<
   (
     {
       height = 350,
-      title = 'Telemetría de Ejecución en Tiempo Real',
-      domain = 'performance',
+      title = "Telemetría de Ejecución en Tiempo Real",
+      domain = "performance",
       barTitle,
       lineConfigs = [],
       darkMode = true,
-      defaultChartMode
+      defaultChartMode,
     },
-    ref
+    ref,
   ) => {
-    const [chartMode, setChartMode] = useState<'line' | 'area' | 'bar'>(
-      defaultChartMode || (domain === 'performance' ? 'line' : 'bar')
+    const [chartMode, setChartMode] = useState<"line" | "area" | "bar">(
+      defaultChartMode || (domain === "performance" ? "line" : "bar"),
     );
     const containerRef = useRef<HTMLDivElement | null>(null);
     const chartRef = useRef<IChartApi | null>(null);
     const primarySeriesRef = useRef<ISeriesApi<any> | null>(null);
-    const lineSeriesMapRef = useRef<Map<string, ISeriesApi<'Line'>>>(new Map());
+    const lineSeriesMapRef = useRef<Map<string, ISeriesApi<"Line">>>(new Map());
 
     // Persistent data store so canvas recreation never loses dataset
     const lastBarsRef = useRef<TelemetryBarPoint[]>([]);
@@ -77,28 +77,29 @@ export const RealTimeTelemetryChart = forwardRef<
       nodeId?: string;
     } | null>(null);
 
-    const isSecurity = domain === 'security';
-    const primaryBarTitle = barTitle || (isSecurity ? 'Alertas Detectadas' : 'Latencia (ms)');
+    const isSecurity = domain === "security";
+    const primaryBarTitle =
+      barTitle || (isSecurity ? "Alertas Detectadas" : "Latencia (ms)");
 
     // Theme Palette (Memoized to prevent chart teardown on re-renders)
     const themeColors = useMemo(
       () =>
         darkMode
           ? {
-              bg: '#0b0f19',
-              text: '#94a3b8',
-              grid: '#1e293b',
-              barColor: isSecurity ? '#ef4444' : '#10b981',
-              lineColor: isSecurity ? '#f59e0b' : '#3b82f6',
+              bg: "#0b0f19",
+              text: "#94a3b8",
+              grid: "#1e293b",
+              barColor: isSecurity ? "#ef4444" : "#10b981",
+              lineColor: isSecurity ? "#f59e0b" : "#3b82f6",
             }
           : {
-              bg: '#ffffff',
-              text: '#475569',
-              grid: '#f1f5f9',
-              barColor: isSecurity ? '#dc2626' : '#059669',
-              lineColor: isSecurity ? '#d97706' : '#2563eb',
+              bg: "#ffffff",
+              text: "#475569",
+              grid: "#f1f5f9",
+              barColor: isSecurity ? "#dc2626" : "#059669",
+              lineColor: isSecurity ? "#d97706" : "#2563eb",
             },
-      [darkMode, isSecurity]
+      [darkMode, isSecurity],
     );
 
     // 1. Imperative Ref Handlers for 60FPS Direct Canvas Updates
@@ -109,48 +110,59 @@ export const RealTimeTelemetryChart = forwardRef<
           primarySeriesRef.current.update(point);
           if (
             (point.label || point.nodeId) &&
-            !point.label?.startsWith('Muestreo #') &&
-            !point.label?.startsWith('Punto #')
+            !point.label?.startsWith("Muestreo #") &&
+            !point.label?.startsWith("Punto #")
           ) {
             setNodeBadges((prev) => {
               const filtered = prev.filter(
-                (p) => (p.nodeId && p.nodeId !== point.nodeId) || (p.label && p.label !== point.label)
+                (p) =>
+                  (p.nodeId && p.nodeId !== point.nodeId) ||
+                  (p.label && p.label !== point.label),
               );
               return [...filtered, point];
             });
           }
         } catch (err) {
-          console.warn('[RealTimeTelemetryChart] Bar update error:', err);
+          console.warn("[RealTimeTelemetryChart] Bar update error:", err);
         }
       }
     }, []);
 
-    const updateLineMetric = useCallback((seriesId: string, point: TelemetryLinePoint) => {
-      const currentPoints = lastLinesRef.current[seriesId] || [];
-      lastLinesRef.current[seriesId] = [...currentPoints, point];
-      const lineSeries = lineSeriesMapRef.current.get(seriesId);
-      if (lineSeries) {
-        try {
-          lineSeries.update(point);
-        } catch (err) {
-          console.warn(`[RealTimeTelemetryChart] Line series "${seriesId}" update error:`, err);
+    const updateLineMetric = useCallback(
+      (seriesId: string, point: TelemetryLinePoint) => {
+        const currentPoints = lastLinesRef.current[seriesId] || [];
+        lastLinesRef.current[seriesId] = [...currentPoints, point];
+        const lineSeries = lineSeriesMapRef.current.get(seriesId);
+        if (lineSeries) {
+          try {
+            lineSeries.update(point);
+          } catch (err) {
+            console.warn(
+              `[RealTimeTelemetryChart] Line series "${seriesId}" update error:`,
+              err,
+            );
+          }
         }
-      }
-    }, []);
+      },
+      [],
+    );
 
     const setHistoricalData = useCallback(
-      (bars: TelemetryBarPoint[], lines?: Record<string, TelemetryLinePoint[]>) => {
+      (
+        bars: TelemetryBarPoint[],
+        lines?: Record<string, TelemetryLinePoint[]>,
+      ) => {
         lastBarsRef.current = bars;
         if (lines) lastLinesRef.current = lines;
 
-        if (primarySeriesRef.current && bars.length > 0) {
+        if (primarySeriesRef.current) {
           primarySeriesRef.current.setData(bars);
           const nodeMap = new Map<string, TelemetryBarPoint>();
           bars.forEach((b) => {
             if (
               (b.nodeId || b.label) &&
-              !b.label?.startsWith('Muestreo #') &&
-              !b.label?.startsWith('Punto #')
+              !b.label?.startsWith("Muestreo #") &&
+              !b.label?.startsWith("Punto #")
             ) {
               const key = b.nodeId || b.label;
               if (key) nodeMap.set(key, b);
@@ -161,7 +173,7 @@ export const RealTimeTelemetryChart = forwardRef<
         if (lines) {
           Object.entries(lines).forEach(([seriesId, points]) => {
             const lineSeries = lineSeriesMapRef.current.get(seriesId);
-            if (lineSeries && points.length > 0) {
+            if (lineSeries) {
               lineSeries.setData(points);
             }
           });
@@ -170,7 +182,7 @@ export const RealTimeTelemetryChart = forwardRef<
           chartRef.current.timeScale().fitContent();
         }
       },
-      []
+      [],
     );
 
     const clear = useCallback(() => {
@@ -197,9 +209,9 @@ export const RealTimeTelemetryChart = forwardRef<
         updateLineMetric,
         setHistoricalData,
         clear,
-        fitContent
+        fitContent,
       }),
-      [updateBar, updateLineMetric, setHistoricalData, clear, fitContent]
+      [updateBar, updateLineMetric, setHistoricalData, clear, fitContent],
     );
 
     // 2. Chart Initialization and Canvas Setup
@@ -208,57 +220,62 @@ export const RealTimeTelemetryChart = forwardRef<
 
       const chart = createChart(containerRef.current, {
         width: containerRef.current.clientWidth,
-        height: typeof height === 'number' ? height : containerRef.current.clientHeight || 350,
+        height:
+          typeof height === "number"
+            ? height
+            : containerRef.current.clientHeight || 350,
         layout: {
           background: { type: ColorType.Solid, color: themeColors.bg },
-          textColor: themeColors.text
+          textColor: themeColors.text,
         },
         grid: {
           vertLines: { color: themeColors.grid },
-          horzLines: { color: themeColors.grid }
+          horzLines: { color: themeColors.grid },
         },
         crosshair: {
-          mode: CrosshairMode.Normal
+          mode: CrosshairMode.Normal,
         },
         leftPriceScale: {
           visible: true,
-          borderColor: themeColors.grid
+          borderColor: themeColors.grid,
         },
         rightPriceScale: {
           visible: isSecurity || lineConfigs.length > 0,
-          borderColor: themeColors.grid
+          borderColor: themeColors.grid,
         },
         timeScale: {
           borderColor: themeColors.grid,
           timeVisible: true,
-          secondsVisible: true
-        }
+          secondsVisible: true,
+        },
       });
 
       chartRef.current = chart;
 
       // Add Primary Series based on chartMode (Area, Line, or Bar/Histogram)
       let primarySeries: ISeriesApi<any>;
-      if (chartMode === 'area') {
+      if (chartMode === "area") {
         primarySeries = chart.addSeries(AreaSeries, {
           lineColor: themeColors.barColor,
-          topColor: isSecurity ? 'rgba(239, 68, 68, 0.4)' : 'rgba(16, 185, 129, 0.35)',
-          bottomColor: 'rgba(16, 185, 129, 0.02)',
-          priceScaleId: 'left',
+          topColor: isSecurity
+            ? "rgba(239, 68, 68, 0.4)"
+            : "rgba(16, 185, 129, 0.35)",
+          bottomColor: "rgba(16, 185, 129, 0.02)",
+          priceScaleId: "left",
           title: primaryBarTitle,
           lineWidth: 2,
         });
-      } else if (chartMode === 'line') {
+      } else if (chartMode === "line") {
         primarySeries = chart.addSeries(LineSeries, {
           color: themeColors.barColor,
-          priceScaleId: 'left',
+          priceScaleId: "left",
           title: primaryBarTitle,
           lineWidth: 3,
         });
       } else {
         primarySeries = chart.addSeries(HistogramSeries, {
           color: themeColors.barColor,
-          priceScaleId: 'left',
+          priceScaleId: "left",
           title: primaryBarTitle,
         });
       }
@@ -274,20 +291,20 @@ export const RealTimeTelemetryChart = forwardRef<
         const riskSeries = chart.addSeries(LineSeries, {
           color: themeColors.lineColor,
           lineWidth: 2,
-          priceScaleId: 'right',
-          title: 'Índice de Riesgo CVSS'
+          priceScaleId: "right",
+          title: "Índice de Riesgo CVSS",
         });
-        lineSeriesMapRef.current.set('riskIndex', riskSeries);
-        if (lastLinesRef.current['riskIndex']) {
-          riskSeries.setData(lastLinesRef.current['riskIndex']);
+        lineSeriesMapRef.current.set("riskIndex", riskSeries);
+        if (lastLinesRef.current["riskIndex"]) {
+          riskSeries.setData(lastLinesRef.current["riskIndex"]);
         }
       } else if (lineConfigs.length > 0) {
         lineConfigs.forEach((cfg) => {
           const series = chart.addSeries(LineSeries, {
-            color: cfg.color || '#3b82f6',
+            color: cfg.color || "#3b82f6",
             lineWidth: cfg.lineWidth || 2,
-            priceScaleId: cfg.priceScaleId || 'right',
-            title: cfg.name
+            priceScaleId: cfg.priceScaleId || "right",
+            title: cfg.name,
           });
           lineSeriesMapRef.current.set(cfg.id, series);
           if (lastLinesRef.current[cfg.id]) {
@@ -306,12 +323,14 @@ export const RealTimeTelemetryChart = forwardRef<
           setHoverInfo(null);
           return;
         }
-        const data = param.seriesData.get(primarySeries) as TelemetryBarPoint | undefined;
+        const data = param.seriesData.get(primarySeries) as
+          | TelemetryBarPoint
+          | undefined;
         if (data) {
           setHoverInfo({
-            label: data.label || 'Nodo',
+            label: data.label || "Nodo",
             value: data.value,
-            color: data.color || (isSecurity ? '#ef4444' : '#10b981'),
+            color: data.color || (isSecurity ? "#ef4444" : "#10b981"),
             nodeId: data.nodeId,
           });
         } else {
@@ -322,12 +341,12 @@ export const RealTimeTelemetryChart = forwardRef<
       // Hide TradingView Watermark / Logo Links completely via DOM cleanup
       const hideLogo = () => {
         if (!containerRef.current) return;
-        const logoLinks = containerRef.current.querySelectorAll('a');
+        const logoLinks = containerRef.current.querySelectorAll("a");
         logoLinks.forEach((link) => {
-          link.style.setProperty('display', 'none', 'important');
-          link.style.setProperty('visibility', 'hidden', 'important');
-          link.style.setProperty('opacity', '0', 'important');
-          link.style.setProperty('pointer-events', 'none', 'important');
+          link.style.setProperty("display", "none", "important");
+          link.style.setProperty("visibility", "hidden", "important");
+          link.style.setProperty("opacity", "0", "important");
+          link.style.setProperty("pointer-events", "none", "important");
         });
       };
 
@@ -341,7 +360,7 @@ export const RealTimeTelemetryChart = forwardRef<
         if (width > 0 && chartRef.current) {
           chartRef.current.applyOptions({
             width,
-            height: typeof height === 'number' ? height : containerH || 350
+            height: typeof height === "number" ? height : containerH || 350,
           });
           hideLogo();
         }
@@ -359,7 +378,15 @@ export const RealTimeTelemetryChart = forwardRef<
           lineSeriesMapRef.current.clear();
         }
       };
-    }, [height, domain, primaryBarTitle, isSecurity, lineConfigs, themeColors, chartMode]);
+    }, [
+      height,
+      domain,
+      primaryBarTitle,
+      isSecurity,
+      lineConfigs,
+      themeColors,
+      chartMode,
+    ]);
 
     return (
       <div className="w-full flex flex-col rounded-xl border border-slate-800 bg-[#0b0f19] p-4 shadow-xl text-slate-200 relative overflow-hidden">
@@ -381,7 +408,7 @@ export const RealTimeTelemetryChart = forwardRef<
           <div className="flex items-center gap-2">
             <div
               className={`h-2.5 w-2.5 rounded-full animate-pulse ${
-                isSecurity ? 'bg-red-500' : 'bg-emerald-500'
+                isSecurity ? "bg-red-500" : "bg-emerald-500"
               }`}
             />
             <h3 className="text-sm font-semibold tracking-wide text-slate-200 uppercase">
@@ -394,33 +421,39 @@ export const RealTimeTelemetryChart = forwardRef<
             <div className="flex items-center bg-slate-900 border border-slate-800 p-0.5 rounded-lg text-[10px] font-semibold">
               <button
                 type="button"
-                onClick={() => setChartMode('line')}
+                onClick={() => setChartMode("line")}
                 className={`px-2 py-0.5 rounded transition-all ${
-                  chartMode === 'line'
-                    ? 'bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/40'
-                    : 'text-slate-400 hover:text-slate-200'
+                  chartMode === "line"
+                    ? isSecurity
+                      ? "bg-red-500/20 text-red-400 font-bold border border-red-500/40"
+                      : "bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/40"
+                    : "text-slate-400 hover:text-slate-200"
                 }`}
               >
                 Línea
               </button>
               <button
                 type="button"
-                onClick={() => setChartMode('area')}
+                onClick={() => setChartMode("area")}
                 className={`px-2 py-0.5 rounded transition-all ${
-                  chartMode === 'area'
-                    ? 'bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/40'
-                    : 'text-slate-400 hover:text-slate-200'
+                  chartMode === "area"
+                    ? isSecurity
+                      ? "bg-red-500/20 text-red-400 font-bold border border-red-500/40"
+                      : "bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/40"
+                    : "text-slate-400 hover:text-slate-200"
                 }`}
               >
                 Área
               </button>
               <button
                 type="button"
-                onClick={() => setChartMode('bar')}
+                onClick={() => setChartMode("bar")}
                 className={`px-2 py-0.5 rounded transition-all ${
-                  chartMode === 'bar'
-                    ? 'bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/40'
-                    : 'text-slate-400 hover:text-slate-200'
+                  chartMode === "bar"
+                    ? isSecurity
+                      ? "bg-red-500/20 text-red-400 font-bold border border-red-500/40"
+                      : "bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/40"
+                    : "text-slate-400 hover:text-slate-200"
                 }`}
               >
                 Barras
@@ -432,14 +465,15 @@ export const RealTimeTelemetryChart = forwardRef<
             <span className="flex items-center gap-1.5">
               <span
                 className={`h-2.5 w-2.5 rounded inline-block ${
-                  isSecurity ? 'bg-red-500' : 'bg-emerald-500'
+                  isSecurity ? "bg-red-500" : "bg-emerald-500"
                 }`}
-              />{' '}
+              />{" "}
               {primaryBarTitle}
             </span>
             {isSecurity && (
               <span className="flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded bg-amber-500 inline-block" /> Índice de Riesgo
+                <span className="h-2.5 w-2.5 rounded bg-amber-500 inline-block" />{" "}
+                Índice de Riesgo
               </span>
             )}
           </div>
@@ -450,14 +484,16 @@ export const RealTimeTelemetryChart = forwardRef<
           <div className="absolute top-12 left-6 z-20 bg-slate-900/95 border border-slate-700/80 backdrop-blur-md px-3 py-1.5 rounded-lg shadow-2xl text-xs flex items-center gap-2 font-mono pointer-events-none">
             <span
               className="w-2.5 h-2.5 rounded-full shrink-0"
-              style={{ backgroundColor: hoverInfo.color || '#10b981' }}
+              style={{ backgroundColor: hoverInfo.color || "#10b981" }}
             />
             <span className="font-bold text-slate-100">{hoverInfo.label}</span>
             {hoverInfo.nodeId && (
-              <span className="text-[10px] text-slate-400 font-normal">({hoverInfo.nodeId})</span>
+              <span className="text-[10px] text-slate-400 font-normal">
+                ({hoverInfo.nodeId})
+              </span>
             )}
-            <span className="text-emerald-400 font-bold ml-1 font-mono">
-              {hoverInfo.value} ms
+            <span className={`font-bold ml-1 font-mono ${isSecurity ? 'text-red-400' : 'text-emerald-400'}`}>
+              {hoverInfo.value} {isSecurity ? 'alertas' : 'ms'}
             </span>
           </div>
         )}
@@ -466,7 +502,9 @@ export const RealTimeTelemetryChart = forwardRef<
         <div
           ref={containerRef}
           className="w-full rounded-lg overflow-hidden relative"
-          style={{ height: typeof height === 'number' ? `${height}px` : height }}
+          style={{
+            height: typeof height === "number" ? `${height}px` : height,
+          }}
         />
 
         {/* Node Identification Badges Legend */}
@@ -483,10 +521,14 @@ export const RealTimeTelemetryChart = forwardRef<
                 >
                   <span
                     className="w-2 h-2 rounded-full shrink-0"
-                    style={{ backgroundColor: badge.color || '#10b981' }}
+                    style={{ backgroundColor: badge.color || "#10b981" }}
                   />
-                  <span className="font-semibold text-slate-200">{badge.label}</span>
-                  <span className="text-slate-400 font-bold text-[11px] ml-0.5">{badge.value}ms</span>
+                  <span className="font-semibold text-slate-200">
+                    {badge.label}
+                  </span>
+                  <span className="text-slate-400 font-bold text-[11px] ml-0.5">
+                    {badge.value}ms
+                  </span>
                 </div>
               ))}
             </div>
@@ -494,7 +536,7 @@ export const RealTimeTelemetryChart = forwardRef<
         )}
       </div>
     );
-  }
+  },
 );
 
-RealTimeTelemetryChart.displayName = 'RealTimeTelemetryChart';
+RealTimeTelemetryChart.displayName = "RealTimeTelemetryChart";

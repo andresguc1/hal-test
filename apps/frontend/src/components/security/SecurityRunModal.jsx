@@ -1,13 +1,6 @@
 import React, { useState } from "react";
 import { motion as Motion, AnimatePresence } from "framer-motion";
-import {
-  X,
-  Shield,
-  Play,
-  AlertTriangle,
-  Lock,
-  LockOpen
-} from "lucide-react";
+import { X, Shield, Play, AlertTriangle, Lock, LockOpen } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useExecutionStore } from "@/stores/useExecutionStore";
 import { cn } from "@/lib/utils";
@@ -29,11 +22,17 @@ export default function SecurityRunModal({
 
   // "policy_compliance", "data_leak_prevention"
   const [scanType, setScanType] = useState("policy_compliance");
+  const [frameworkCode, setFrameworkCode] = useState("OWASP_ASVS_L2");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleLaunch = async () => {
     if (!flowId) {
-      toast.info(t("common.select_default", "Selecciona un flujo de automatización válido."));
+      toast.info(
+        t(
+          "common.select_default",
+          "Selecciona un flujo de automatización válido.",
+        ),
+      );
       return;
     }
 
@@ -47,15 +46,23 @@ export default function SecurityRunModal({
         projectId,
         securityConfig: {
           scanType,
+          frameworkCode,
           headless: true,
         },
       });
 
       if (response.success || response.data?.success) {
         toast.dismiss(toastId);
-        toast.success(t("common.flow_exec_success", "Auditoría pasiva de seguridad lanzada con éxito!"));
+        toast.success(
+          t(
+            "common.flow_exec_success",
+            "Auditoría pasiva de seguridad lanzada con éxito!",
+          ),
+        );
         onClose();
-        navigate("/dashboard", { state: { activePage: "security", activeTab: "live" } });
+        navigate("/dashboard", {
+          state: { activePage: "security", activeTab: "live" },
+        });
       } else {
         console.warn("[SecurityRunModal] Falling back to standard execution");
         if (onRunSecurity) onRunSecurity({ executionMode: "seguridad" });
@@ -63,7 +70,10 @@ export default function SecurityRunModal({
         onClose();
       }
     } catch (error) {
-      console.warn("[SecurityRunModal] Error hitting /runs/security, falling back to onRunSecurity", error);
+      console.warn(
+        "[SecurityRunModal] Error hitting /runs/security, falling back to onRunSecurity",
+        error,
+      );
       toast.dismiss(toastId);
       if (onRunSecurity) onRunSecurity({ executionMode: "seguridad" });
       onClose();
@@ -100,10 +110,16 @@ export default function SecurityRunModal({
                 </div>
                 <div>
                   <h3 className="font-semibold text-slate-100 text-sm tracking-wide">
-                    {t("security_modal.title", "Configurar Auditoría de Seguridad (Quality Gate)")}
+                    {t(
+                      "security_modal.title",
+                      "Configurar Auditoría de Seguridad (Quality Gate)",
+                    )}
                   </h3>
                   <p className="text-[11px] text-slate-500">
-                    {t("security_modal.target_flow", "Target Flow:")} <span className="text-slate-300 font-medium">{flowName || "Sin Nombre"}</span>
+                    {t("security_modal.target_flow", "Target Flow:")}{" "}
+                    <span className="text-slate-300 font-medium">
+                      {flowName || "Sin Nombre"}
+                    </span>
                   </p>
                 </div>
               </div>
@@ -120,7 +136,10 @@ export default function SecurityRunModal({
               {/* RUN TYPE SELECTOR */}
               <div className="space-y-3">
                 <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-                  {t("security_modal.subtitle", "Auditorías de Confianza Activas")}
+                  {t(
+                    "security_modal.subtitle",
+                    "Auditorías de Confianza Activas",
+                  )}
                 </label>
                 <div className="grid grid-cols-2 gap-4">
                   {/* Policy Compliance option */}
@@ -131,15 +150,30 @@ export default function SecurityRunModal({
                       "flex flex-col items-start p-4 rounded-xl border text-left transition-all",
                       scanType === "policy_compliance"
                         ? "bg-red-500/10 border-red-500/80 text-slate-200 shadow-[0_0_15px_rgba(239,68,68,0.15)]"
-                        : "bg-slate-900/40 border-slate-800 hover:bg-slate-800/40 hover:border-slate-700 text-slate-400"
+                        : "bg-slate-900/40 border-slate-800 hover:bg-slate-800/40 hover:border-slate-700 text-slate-400",
                     )}
                   >
                     <div className="flex items-center gap-2 mb-1.5">
-                      <Lock size={16} className={scanType === "policy_compliance" ? "text-red-400" : "text-slate-500"} />
-                      <span className="text-xs font-semibold uppercase tracking-wider">{t("security_modal.policy_compliance", "Cumplimiento de Políticas")}</span>
+                      <Lock
+                        size={16}
+                        className={
+                          scanType === "policy_compliance"
+                            ? "text-red-400"
+                            : "text-slate-500"
+                        }
+                      />
+                      <span className="text-xs font-semibold uppercase tracking-wider">
+                        {t(
+                          "security_modal.policy_compliance",
+                          "Cumplimiento de Políticas",
+                        )}
+                      </span>
                     </div>
                     <span className="text-[11px] text-slate-500 leading-relaxed">
-                      {t("security_modal.policy_compliance_desc", "Audita cabeceras de respuesta HTTP (CSP, HSTS, X-Frame-Options) y la seguridad de las cookies de sesión.")}
+                      {t(
+                        "security_modal.policy_compliance_desc",
+                        "Audita cabeceras de respuesta HTTP (CSP, HSTS, X-Frame-Options) y la seguridad de las cookies de sesión.",
+                      )}
                     </span>
                   </button>
 
@@ -151,34 +185,53 @@ export default function SecurityRunModal({
                       "flex flex-col items-start p-4 rounded-xl border text-left transition-all",
                       scanType === "data_leak_prevention"
                         ? "bg-red-500/10 border-red-500/80 text-slate-200 shadow-[0_0_15px_rgba(239,68,68,0.15)]"
-                        : "bg-slate-900/40 border-slate-800 hover:bg-slate-800/40 hover:border-slate-700 text-slate-400"
+                        : "bg-slate-900/40 border-slate-800 hover:bg-slate-800/40 hover:border-slate-700 text-slate-400",
                     )}
                   >
                     <div className="flex items-center gap-2 mb-1.5">
-                      <LockOpen size={16} className={scanType === "data_leak_prevention" ? "text-red-400" : "text-slate-500"} />
-                      <span className="text-xs font-semibold uppercase tracking-wider">{t("security_modal.data_leak", "Fugas y Protección de Datos")}</span>
+                      <LockOpen
+                        size={16}
+                        className={
+                          scanType === "data_leak_prevention"
+                            ? "text-red-400"
+                            : "text-slate-500"
+                        }
+                      />
+                      <span className="text-xs font-semibold uppercase tracking-wider">
+                        {t(
+                          "security_modal.data_leak",
+                          "Fugas y Protección de Datos",
+                        )}
+                      </span>
                     </div>
                     <span className="text-[11px] text-slate-500 leading-relaxed">
-                      {t("security_modal.data_leak_desc", "Monitorea datos sensibles en el DOM, previene la transmisión de texto plano (HTTP) y audita entradas vulnerables.")}
+                      {t(
+                        "security_modal.data_leak_desc",
+                        "Monitorea datos sensibles en el DOM, previene la transmisión de texto plano (HTTP) y audita entradas vulnerables.",
+                      )}
                     </span>
                   </button>
                 </div>
               </div>
 
               {/* WARNING SECTION */}
-              <div
-                className="p-4 rounded-xl border flex items-start gap-3 transition-colors bg-slate-900/40 border-slate-800 text-slate-400 mt-2"
-              >
+              <div className="p-4 rounded-xl border flex items-start gap-3 transition-colors bg-slate-900/40 border-slate-800 text-slate-400 mt-2">
                 <AlertTriangle
                   size={16}
                   className="mt-0.5 shrink-0 text-red-500/80"
                 />
                 <div>
                   <h4 className="text-xs font-semibold mb-0.5 text-slate-300">
-                    {t("security_modal.warning_title", "Aviso de Auditoría No Intrusiva (Quality Gate)")}
+                    {t(
+                      "security_modal.warning_title",
+                      "Aviso de Auditoría No Intrusiva (Quality Gate)",
+                    )}
                   </h4>
                   <p className="text-[11px] leading-relaxed">
-                    {t("security_modal.warning_desc", "La auditoría de seguridad se realiza de forma pasiva y no destructiva durante la ejecución normal del flujo E2E, sirviendo como un Quality Gate que genera alertas de confianza sin bloquear la ejecución ni sobrecargar el servidor objetivo.")}
+                    {t(
+                      "security_modal.warning_desc",
+                      "La auditoría de seguridad se realiza de forma pasiva y no destructiva durante la ejecución normal del flujo E2E, sirviendo como un Quality Gate que genera alertas de confianza sin bloquear la ejecución ni sobrecargar el servidor objetivo.",
+                    )}
                   </p>
                 </div>
               </div>

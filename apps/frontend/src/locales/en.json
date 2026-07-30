@@ -1026,6 +1026,99 @@
   },
   "security_dashboard": {
     "title": "Security Dashboard",
+    "target_label": "TARGET:",
+    "run_audit": "Run Audit",
+    "tabs": {
+      "config": "Configuration",
+      "live": "Live",
+      "results": "Results",
+      "compliance": "Policy Compliance",
+      "history": "History"
+    },
+    "compliance": {
+      "scorecard_title": "Executive Policy Compliance Scorecard",
+      "standard_target": "Standard Target:",
+      "scorecard_desc": "Active security policy compliance audit for web application. Validates HTTP headers, TLS transport, cookie security, and token storage.",
+      "passed": "PASSED",
+      "failed": "FAILED",
+      "audited_rules": "Audited Rules",
+      "matrix_title": "Compliance Rules & Controls Matrix",
+      "remediate_ai": "Remediate with AI",
+      "remediation_prefix": "💡 Remediation:",
+      "rules": {
+        "SEC-HDR-CSP": {
+          "desc": "The Content-Security-Policy header is not configured on the served application.",
+          "rec": "Configure the 'Content-Security-Policy: default-src 'self'' header on your server."
+        },
+        "SEC-HDR-HSTS": {
+          "desc": "HSTS header verified successfully (max-age=31536000).",
+          "rec": "Maintain max-age value greater than 31536000 seconds."
+        },
+        "SEC-HDR-XFO": {
+          "desc": "X-Frame-Options header present with value SAMEORIGIN.",
+          "rec": "Maintain protection against malicious framing."
+        },
+        "SEC-HDR-XCTO": {
+          "desc": "X-Content-Type-Options header configured as nosniff.",
+          "rec": "Prevent browsers from MIME-sniffing static resources."
+        },
+        "SEC-CK-HTTPONLY": {
+          "desc": "All session cookies include the HttpOnly flag.",
+          "rec": "Prevents client-side malicious scripts (XSS) from accessing session cookies."
+        },
+        "SEC-CK-SECURE": {
+          "desc": "All cookies require encrypted transport under HTTPS.",
+          "rec": "Maintain the Secure attribute on all authentication cookies."
+        },
+        "SEC-CRY-TLS-VERSION": {
+          "desc": "TLS 1.3 connection negotiated with modern cipher algorithms.",
+          "rec": "Keep legacy SSLv3, TLS 1.0, and TLS 1.1 protocols disabled."
+        },
+        "SEC-DAT-TOKEN-STORAGE": {
+          "desc": "No plaintext JWT tokens found exposed in LocalStorage.",
+          "rec": "Continue storing session tokens in HttpOnly cookies."
+        }
+      }
+    },
+    "results": {
+      "qg_passed": "QUALITY GATE: PASSED",
+      "qg_failed": "QUALITY GATE: FAILED",
+      "qg_passed_desc": "The flow satisfies security acceptance criteria and DAST policies.",
+      "qg_failed_desc": "Critical/high findings detected or Security Score is below 80%.",
+      "global_score": "Overall Score",
+      "health_index": "Health Index",
+      "excellent_safe": "Excellent (Secure)",
+      "moderate_risk": "Moderate Risk",
+      "attention_required": "Action Required",
+      "health_desc": "Score based on active findings and OWASP severity weight.",
+      "data_leaks_title": "Data Leaks & Privacy",
+      "data_leaks_desc": "Plaintext transmission, cookies, or passwords",
+      "input_vuln_title": "Input Vulnerabilities",
+      "input_vuln_desc": "XSS risks, DOM traps & inline JS",
+      "policy_title": "Policy Compliance",
+      "policy_desc": "HTTP headers (CSP, HSTS, XFO)",
+      "search_placeholder": "Filter by message, rule, or node...",
+      "all_severities": "All Severities",
+      "critical_high": "Critical & High",
+      "medium": "Medium",
+      "low_info": "Low & Info",
+      "all_categories": "All Categories",
+      "cat_data_leak": "Data Leakage",
+      "cat_input_vuln": "Input Vulnerabilities",
+      "cat_policy": "Policy Compliance",
+      "run_label": "Run:",
+      "no_vulnerabilities": "No vulnerable security findings detected!",
+      "no_vulnerabilities_desc": "Recorded executions comply with OWASP guidelines and configured header policies.",
+      "node_label": "Node:",
+      "locate_btn": "Locate",
+      "diag_details": "Diagnostic Details",
+      "description": "Description",
+      "ai_rec_title": "💡 AI Remediation Recommendation",
+      "tech_evidence": "Technical Evidence",
+      "target_url": "Target URL",
+      "analysis_node": "Analysis Node",
+      "select_finding_hint": "Select any security finding to inspect technical evidence and AI remediation."
+    },
     "quality_gate": "Security Quality Gate",
     "policy_compliance": "Policy Compliance",
     "data_leak_protection": "Data Leak Protection",
@@ -1040,5 +1133,66 @@
     "high": "High",
     "medium": "Medium",
     "low": "Low"
+  },
+  "security_live": {
+    "status_preparing": "Initializing DAST Scan...",
+    "status_running": "Security Audit In Progress",
+    "status_completed": "Audit Completed Successfully",
+    "status_failed": "Audit Interrupted",
+    "status_idle": "Waiting for Audit Execution",
+    "stop_audit": "Stop Audit",
+    "view_full_report": "View Full Report",
+    "graph_progress": "Test Graph Progress",
+    "critical_high": "Critical / High",
+    "medium_severity": "Medium Severity",
+    "low_info": "Low / Info",
+    "matrix_title": "Security Control Matrix & DAST Vectors Scan",
+    "standard_target": "OWASP ASVS 14.4 & Top 10",
+    "vector_headers": "HTTP Security Headers",
+    "vector_headers_desc": "Passive inspection of Strict-Transport-Security, CSP, X-Frame-Options, and X-Content-Type.",
+    "vector_tls": "TLS Transport / Cryptography",
+    "vector_tls_desc": "Verification of HTTPS in-transit encryption, TLS certificate validity, and cipher suites.",
+    "vector_cookies": "Cookie & Session Security",
+    "vector_cookies_desc": "Audit of HttpOnly, Secure, and SameSite attributes on user authentication cookies.",
+    "vector_storage": "Local Storage & Token Leakage",
+    "vector_storage_desc": "Monitoring against storing JWT tokens or sensitive credentials in plaintext LocalStorage.",
+    "vector_sanitizing": "Sanitization & Injections",
+    "vector_sanitizing_desc": "Inspection against Reflected/Stored XSS injection and vulnerable javascript: URI links.",
+    "vector_disclosure": "Server Data Disclosure",
+    "vector_disclosure_desc": "Verification of Server / X-Powered-By headers to prevent server technology fingerprinting.",
+    "observations": "Observations",
+    "protected": "Protected",
+    "validated": "Validated",
+    "leak_detected": "Leak Detected",
+    "clean": "Clean",
+    "active_filters": "Active Filters",
+    "no_leaks": "No Leaks",
+    "feed_title": "Real-Time Detected Alerts Feed",
+    "all": "All",
+    "high_short": "High",
+    "medium_short": "Medium",
+    "low_short": "Low",
+    "remediation_recommendation": "Remediation Recommendation:",
+    "close_inspector": "Close Inspector",
+    "analyzing": "Analyzing",
+    "monitoring_desc": "Monitoring HTTP requests, server headers, and DOM sanitization...",
+    "https_secure": "Secure HTTPS",
+    "scan_idle_msg": "The scan engine is analyzing nodes. Detected vulnerabilities will appear here instantly.",
+    "scan_start_hint": "Start the audit to begin real-time passive inspection."
+  },
+  "security_history": {
+    "title": "Security Audit History",
+    "subtitle": "Chronological record of vulnerability assessments and DAST scans.",
+    "search_placeholder": "Search by ID or Flow...",
+    "reload_title": "Reload history",
+    "loading": "Loading previous executions...",
+    "empty": "No registered audit runs found in this period.",
+    "col_run_id": "Execution ID",
+    "col_flow": "Flow",
+    "col_mode": "Mode",
+    "col_date": "Date",
+    "col_status": "Status",
+    "col_action": "Action",
+    "view_report": "View report"
   }
 }

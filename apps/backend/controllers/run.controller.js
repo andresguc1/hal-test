@@ -691,10 +691,12 @@ export const startSecurityRunAction = async (req, res) => {
         securityRunPromise
             .then(async (result) => {
                 console.log(`[RunController] Security run completed for flow ${flowId}`);
-                await executionLogger.endRun(runId, result.success ? 'completed' : 'failed');
+                const isSuccess = result && result.success !== false && result.status !== 'failed';
+                const finalStatus = isSuccess ? 'completed' : 'failed';
+                await executionLogger.endRun(runId, finalStatus);
                 emitFlowFinished({
                     runId,
-                    status: result.success ? 'completed' : 'failed',
+                    status: finalStatus,
                     flowId,
                 });
             })

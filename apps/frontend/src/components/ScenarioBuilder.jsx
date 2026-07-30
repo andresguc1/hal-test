@@ -29,7 +29,12 @@ function computeStages(profile, params) {
 
   switch (profile) {
     case "ramp": {
-      const { initialVUs = 0, maxVUs = 20, rampTimeSec = 30, totalDurationSec = 90 } = p;
+      const {
+        initialVUs = 0,
+        maxVUs = 20,
+        rampTimeSec = 30,
+        totalDurationSec = 90,
+      } = p;
       const sustain = Math.max(1, totalDurationSec - rampTimeSec);
       const stages = [];
       if (initialVUs > 0) stages.push({ durationSec: 1, target: initialVUs });
@@ -77,10 +82,10 @@ function computeStages(profile, params) {
         cooldownSec = 20,
       } = p;
       return [
-        { durationSec: rampUpSec, target: baseVUs },       // base hold → prepare
-        { durationSec: 2, target: peakVUs },                // near-instant spike
-        { durationSec: sustainSec, target: peakVUs },       // sustain at peak
-        { durationSec: cooldownSec, target: baseVUs },      // cool down
+        { durationSec: rampUpSec, target: baseVUs }, // base hold → prepare
+        { durationSec: 2, target: peakVUs }, // near-instant spike
+        { durationSec: sustainSec, target: peakVUs }, // sustain at peak
+        { durationSec: cooldownSec, target: baseVUs }, // cool down
       ];
     }
     case "soak": {
@@ -93,11 +98,13 @@ function computeStages(profile, params) {
     case "baseline":
       return [{ durationSec: p.durationSec || 60, target: 1 }];
     case "custom":
-      return p.stages || [
-        { durationSec: 10, target: 5 },
-        { durationSec: 30, target: 20 },
-        { durationSec: 10, target: 0 },
-      ];
+      return (
+        p.stages || [
+          { durationSec: 10, target: 5 },
+          { durationSec: 30, target: 20 },
+          { durationSec: 10, target: 0 },
+        ]
+      );
     default:
       return [{ durationSec: 60, target: 10 }];
   }
@@ -113,8 +120,8 @@ function stagesToSvgPoints(stages, svgW = 280, svgH = 70, padding = 4) {
   const totalDur = stages.reduce((acc, s) => acc + (s.durationSec || 0), 0);
   const maxVU = Math.max(...stages.map((s) => s.target || 0), 1);
 
-  const toX = (t) => padding + ((t / totalDur) * (svgW - padding * 2));
-  const toY = (v) => padding + ((1 - v / maxVU) * (svgH - padding * 2));
+  const toX = (t) => padding + (t / totalDur) * (svgW - padding * 2);
+  const toY = (v) => padding + (1 - v / maxVU) * (svgH - padding * 2);
 
   const pts = [];
   let elapsed = 0;
@@ -151,7 +158,8 @@ const PROFILES = [
     icon: TrendingUp,
     color: "emerald",
     tailwindActive: "bg-emerald-500/10 border-emerald-500 text-emerald-400",
-    tailwindInactive: "bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-700 hover:bg-slate-900",
+    tailwindInactive:
+      "bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-700 hover:bg-slate-900",
     descKey: "scenario_builder.profiles.ramp.description",
     defaultDesc: "Gradually increases VUs up to target.",
     goalKey: "scenario_builder.profiles.ramp.goal",
@@ -164,7 +172,8 @@ const PROFILES = [
     icon: TrendingUp,
     color: "teal",
     tailwindActive: "bg-teal-500/10 border-teal-500 text-teal-400",
-    tailwindInactive: "bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-700 hover:bg-slate-900",
+    tailwindInactive:
+      "bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-700 hover:bg-slate-900",
     descKey: "scenario_builder.profiles.stepped.description",
     defaultDesc: "Progressive load step increments.",
     goalKey: "scenario_builder.profiles.stepped.goal",
@@ -177,7 +186,8 @@ const PROFILES = [
     icon: BarChart2,
     color: "blue",
     tailwindActive: "bg-blue-500/10 border-blue-500 text-blue-400",
-    tailwindInactive: "bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-700 hover:bg-slate-900",
+    tailwindInactive:
+      "bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-700 hover:bg-slate-900",
     descKey: "scenario_builder.profiles.constant.description",
     defaultDesc: "Maintains fixed VUs over full period.",
     goalKey: "scenario_builder.profiles.constant.goal",
@@ -190,7 +200,8 @@ const PROFILES = [
     icon: AlertTriangle,
     color: "orange",
     tailwindActive: "bg-orange-500/10 border-orange-500 text-orange-400",
-    tailwindInactive: "bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-700 hover:bg-slate-900",
+    tailwindInactive:
+      "bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-700 hover:bg-slate-900",
     descKey: "scenario_builder.profiles.stress.description",
     defaultDesc: "Step-scales until system collapse.",
     goalKey: "scenario_builder.profiles.stress.goal",
@@ -203,7 +214,8 @@ const PROFILES = [
     icon: Zap,
     color: "yellow",
     tailwindActive: "bg-yellow-500/10 border-yellow-500 text-yellow-400",
-    tailwindInactive: "bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-700 hover:bg-slate-900",
+    tailwindInactive:
+      "bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-700 hover:bg-slate-900",
     descKey: "scenario_builder.profiles.spike.description",
     defaultDesc: "Sudden traffic spike and recovery.",
     goalKey: "scenario_builder.profiles.spike.goal",
@@ -216,7 +228,8 @@ const PROFILES = [
     icon: Clock,
     color: "purple",
     tailwindActive: "bg-purple-500/10 border-purple-500 text-purple-400",
-    tailwindInactive: "bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-700 hover:bg-slate-900",
+    tailwindInactive:
+      "bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-700 hover:bg-slate-900",
     descKey: "scenario_builder.profiles.soak.description",
     defaultDesc: "Sustained load for prolonged period.",
     goalKey: "scenario_builder.profiles.soak.goal",
@@ -226,11 +239,24 @@ const PROFILES = [
 
 // ─── Reusable slider input ──────────────────────────────────────────────────
 
-const SliderInput = ({ label, value, min, max, step = 1, unit = "", accent = "blue", onChange, hint }) => (
+const SliderInput = ({
+  label,
+  value,
+  min,
+  max,
+  step = 1,
+  unit = "",
+  accent = "blue",
+  onChange,
+  hint,
+}) => (
   <div className="space-y-1.5">
     <div className="flex justify-between items-center text-xs font-medium text-slate-400">
       <span>{label}</span>
-      <span className={`font-mono text-${accent}-400`}>{value}{unit}</span>
+      <span className={`font-mono text-${accent}-400`}>
+        {value}
+        {unit}
+      </span>
     </div>
     <input
       type="range"
@@ -249,7 +275,10 @@ const SliderInput = ({ label, value, min, max, step = 1, unit = "", accent = "bl
 
 const LoadCurveChart = ({ stages, colorClass = "blue" }) => {
   const { t } = useTranslation();
-  const { line, fill } = useMemo(() => stagesToSvgPoints(stages, 280, 68, 4), [stages]);
+  const { line, fill } = useMemo(
+    () => stagesToSvgPoints(stages, 280, 68, 4),
+    [stages],
+  );
   const totalDur = stages.reduce((acc, s) => acc + s.durationSec, 0);
   const maxVU = Math.max(...stages.map((s) => s.target), 1);
 
@@ -265,10 +294,16 @@ const LoadCurveChart = ({ stages, colorClass = "blue" }) => {
   return (
     <div className="relative bg-slate-950/60 border border-slate-800/80 rounded-xl overflow-hidden">
       <div className="absolute top-2 left-3 flex items-center gap-1.5 text-[10px] font-semibold text-slate-600 uppercase tracking-wider">
-        <Users size={9} /> {t("scenario_builder.vu_projection", "VU Projection")}
+        <Users size={9} />{" "}
+        {t("scenario_builder.vu_projection", "VU Projection")}
       </div>
       <div className="absolute top-2 right-3 text-[10px] font-mono text-slate-600">
-        {maxVU} VUs · {totalDur >= 3600 ? `${(totalDur / 3600).toFixed(1)}h` : totalDur >= 60 ? `${(totalDur / 60).toFixed(0)}m` : `${totalDur}s`}
+        {maxVU} VUs ·{" "}
+        {totalDur >= 3600
+          ? `${(totalDur / 3600).toFixed(1)}h`
+          : totalDur >= 60
+            ? `${(totalDur / 60).toFixed(0)}m`
+            : `${totalDur}s`}
       </div>
       <svg
         viewBox="0 0 288 76"
@@ -310,10 +345,51 @@ const RampControls = ({ params, setParam, accent }) => {
   const { t } = useTranslation();
   return (
     <div className="grid grid-cols-2 gap-4">
-      <SliderInput label={t("scenario_builder.initial_vus", "Initial VUs")} value={params.initialVUs} min={0} max={params.maxVUs - 1} unit=" VUs" accent={accent} onChange={(v) => setParam("initialVUs", v)} hint={t("scenario_builder.initial_vus_hint", "Starting users (0 = from zero)")} />
-      <SliderInput label={t("scenario_builder.max_vus", "Max VUs")} value={params.maxVUs} min={1} max={100} unit=" VUs" accent={accent} onChange={(v) => setParam("maxVUs", Math.max(v, params.initialVUs + 1))} />
-      <SliderInput label={t("scenario_builder.ramp_time", "Ramp-Up Time")} value={params.rampTimeSec} min={5} max={params.totalDurationSec - 5} unit="s" accent={accent} onChange={(v) => setParam("rampTimeSec", v)} hint={t("scenario_builder.ramp_time_hint", "Seconds to ramp from initial to max")} />
-      <SliderInput label={t("scenario_builder.total_duration", "Total Duration")} value={params.totalDurationSec} min={params.rampTimeSec + 5} max={300} step={5} unit="s" accent={accent} onChange={(v) => setParam("totalDurationSec", v)} />
+      <SliderInput
+        label={t("scenario_builder.initial_vus", "Initial VUs")}
+        value={params.initialVUs}
+        min={0}
+        max={params.maxVUs - 1}
+        unit=" VUs"
+        accent={accent}
+        onChange={(v) => setParam("initialVUs", v)}
+        hint={t(
+          "scenario_builder.initial_vus_hint",
+          "Starting users (0 = from zero)",
+        )}
+      />
+      <SliderInput
+        label={t("scenario_builder.max_vus", "Max VUs")}
+        value={params.maxVUs}
+        min={1}
+        max={100}
+        unit=" VUs"
+        accent={accent}
+        onChange={(v) => setParam("maxVUs", Math.max(v, params.initialVUs + 1))}
+      />
+      <SliderInput
+        label={t("scenario_builder.ramp_time", "Ramp-Up Time")}
+        value={params.rampTimeSec}
+        min={5}
+        max={params.totalDurationSec - 5}
+        unit="s"
+        accent={accent}
+        onChange={(v) => setParam("rampTimeSec", v)}
+        hint={t(
+          "scenario_builder.ramp_time_hint",
+          "Seconds to ramp from initial to max",
+        )}
+      />
+      <SliderInput
+        label={t("scenario_builder.total_duration", "Total Duration")}
+        value={params.totalDurationSec}
+        min={params.rampTimeSec + 5}
+        max={300}
+        step={5}
+        unit="s"
+        accent={accent}
+        onChange={(v) => setParam("totalDurationSec", v)}
+      />
     </div>
   );
 };
@@ -322,9 +398,39 @@ const SteppedControls = ({ params, setParam, accent }) => {
   const { t } = useTranslation();
   return (
     <div className="grid grid-cols-2 gap-4">
-      <SliderInput label={t("scenario_builder.max_vus", "Max VUs")} value={params.maxVUs} min={5} max={100} unit=" VUs" accent={accent} onChange={(v) => setParam("maxVUs", v)} hint={t("scenario_builder.max_vus_stepped_hint", "Maximum scaling limit")} />
-      <SliderInput label={t("scenario_builder.total_duration", "Total Duration")} value={params.durationSec} min={20} max={300} step={10} unit="s" accent={accent} onChange={(v) => setParam("durationSec", v)} />
-      <SliderInput label={t("scenario_builder.step_count", "Step Count")} value={params.stepCount} min={2} max={10} unit="" accent={accent} onChange={(v) => setParam("stepCount", v)} hint={t("scenario_builder.step_count_hint", "Progressive steps")} />
+      <SliderInput
+        label={t("scenario_builder.max_vus", "Max VUs")}
+        value={params.maxVUs}
+        min={5}
+        max={100}
+        unit=" VUs"
+        accent={accent}
+        onChange={(v) => setParam("maxVUs", v)}
+        hint={t(
+          "scenario_builder.max_vus_stepped_hint",
+          "Maximum scaling limit",
+        )}
+      />
+      <SliderInput
+        label={t("scenario_builder.total_duration", "Total Duration")}
+        value={params.durationSec}
+        min={20}
+        max={300}
+        step={10}
+        unit="s"
+        accent={accent}
+        onChange={(v) => setParam("durationSec", v)}
+      />
+      <SliderInput
+        label={t("scenario_builder.step_count", "Step Count")}
+        value={params.stepCount}
+        min={2}
+        max={10}
+        unit=""
+        accent={accent}
+        onChange={(v) => setParam("stepCount", v)}
+        hint={t("scenario_builder.step_count_hint", "Progressive steps")}
+      />
     </div>
   );
 };
@@ -333,8 +439,29 @@ const ConstantControls = ({ params, setParam, accent }) => {
   const { t } = useTranslation();
   return (
     <div className="grid grid-cols-2 gap-4">
-      <SliderInput label={t("scenario_builder.virtual_users", "Virtual Users")} value={params.vus} min={1} max={100} unit=" VUs" accent={accent} onChange={(v) => setParam("vus", v)} hint={t("scenario_builder.constant_vus_hint", "Fixed number of VUs during the entire test")} />
-      <SliderInput label={t("scenario_builder.total_duration", "Total Duration")} value={params.durationSec} min={10} max={300} step={10} unit="s" accent={accent} onChange={(v) => setParam("durationSec", v)} />
+      <SliderInput
+        label={t("scenario_builder.virtual_users", "Virtual Users")}
+        value={params.vus}
+        min={1}
+        max={100}
+        unit=" VUs"
+        accent={accent}
+        onChange={(v) => setParam("vus", v)}
+        hint={t(
+          "scenario_builder.constant_vus_hint",
+          "Fixed number of VUs during the entire test",
+        )}
+      />
+      <SliderInput
+        label={t("scenario_builder.total_duration", "Total Duration")}
+        value={params.durationSec}
+        min={10}
+        max={300}
+        step={10}
+        unit="s"
+        accent={accent}
+        onChange={(v) => setParam("durationSec", v)}
+      />
     </div>
   );
 };
@@ -343,13 +470,48 @@ const StressControls = ({ params, setParam, accent }) => {
   const { t } = useTranslation();
   return (
     <div className="grid grid-cols-2 gap-4">
-      <SliderInput label={t("scenario_builder.max_vus", "Max VUs")} value={params.maxVUs} min={5} max={100} unit=" VUs" accent={accent} onChange={(v) => setParam("maxVUs", v)} hint={t("scenario_builder.max_vus_stepped_hint", "Maximum scaling limit")} />
-      <SliderInput label={t("scenario_builder.total_duration", "Total Duration")} value={params.durationSec} min={30} max={300} step={10} unit="s" accent={accent} onChange={(v) => setParam("durationSec", v)} />
-      <SliderInput label={t("scenario_builder.step_count", "Step Count")} value={params.stepCount} min={2} max={8} unit="" accent={accent} onChange={(v) => setParam("stepCount", v)} hint={t("scenario_builder.stress_step_count_hint", "Increment steps")} />
+      <SliderInput
+        label={t("scenario_builder.max_vus", "Max VUs")}
+        value={params.maxVUs}
+        min={5}
+        max={100}
+        unit=" VUs"
+        accent={accent}
+        onChange={(v) => setParam("maxVUs", v)}
+        hint={t(
+          "scenario_builder.max_vus_stepped_hint",
+          "Maximum scaling limit",
+        )}
+      />
+      <SliderInput
+        label={t("scenario_builder.total_duration", "Total Duration")}
+        value={params.durationSec}
+        min={30}
+        max={300}
+        step={10}
+        unit="s"
+        accent={accent}
+        onChange={(v) => setParam("durationSec", v)}
+      />
+      <SliderInput
+        label={t("scenario_builder.step_count", "Step Count")}
+        value={params.stepCount}
+        min={2}
+        max={8}
+        unit=""
+        accent={accent}
+        onChange={(v) => setParam("stepCount", v)}
+        hint={t("scenario_builder.stress_step_count_hint", "Increment steps")}
+      />
       <div className="space-y-1.5">
         <div className="flex justify-between items-center text-xs font-medium text-slate-400">
-          <span className="flex items-center gap-1"><Shield size={12} className="text-orange-400" /> {t("scenario_builder.auto_stop", "Auto-Stop")}</span>
-          <span className="font-mono text-orange-400">{params.stopAtErrorRate}%</span>
+          <span className="flex items-center gap-1">
+            <Shield size={12} className="text-orange-400" />{" "}
+            {t("scenario_builder.auto_stop", "Auto-Stop")}
+          </span>
+          <span className="font-mono text-orange-400">
+            {params.stopAtErrorRate}%
+          </span>
         </div>
         <input
           type="range"
@@ -360,7 +522,12 @@ const StressControls = ({ params, setParam, accent }) => {
           onChange={(e) => setParam("stopAtErrorRate", Number(e.target.value))}
           className="w-full accent-orange-500 cursor-pointer"
         />
-        <p className="text-[10px] text-slate-600">{t("scenario_builder.auto_stop_hint", "Automatically stops when exceeding this error rate")}</p>
+        <p className="text-[10px] text-slate-600">
+          {t(
+            "scenario_builder.auto_stop_hint",
+            "Automatically stops when exceeding this error rate",
+          )}
+        </p>
       </div>
     </div>
   );
@@ -370,11 +537,59 @@ const SpikeControls = ({ params, setParam, accent }) => {
   const { t } = useTranslation();
   return (
     <div className="grid grid-cols-2 gap-4">
-      <SliderInput label={t("scenario_builder.base_load", "Base Load")} value={params.baseVUs} min={1} max={params.peakVUs - 1} unit=" VUs" accent={accent} onChange={(v) => setParam("baseVUs", v)} hint={t("scenario_builder.base_load_hint", "VUs before and after spike")} />
-      <SliderInput label={t("scenario_builder.peak_max", "Peak Max")} value={params.peakVUs} min={params.baseVUs + 1} max={100} unit=" VUs" accent={accent} onChange={(v) => setParam("peakVUs", Math.max(v, params.baseVUs + 1))} />
-      <SliderInput label={t("scenario_builder.rise_time", "Rise Time")} value={params.rampUpSec} min={2} max={60} unit="s" accent={accent} onChange={(v) => setParam("rampUpSec", v)} hint={t("scenario_builder.rise_time_hint", "Base time before spike")} />
-      <SliderInput label={t("scenario_builder.peak_duration", "Peak Duration")} value={params.sustainSec} min={5} max={120} step={5} unit="s" accent={accent} onChange={(v) => setParam("sustainSec", v)} />
-      <SliderInput label={t("scenario_builder.cooldown_time", "Cooldown Time")} value={params.cooldownSec} min={5} max={120} step={5} unit="s" accent={accent} onChange={(v) => setParam("cooldownSec", v)} hint={t("scenario_builder.cooldown_hint", "Recovery after spike")} />
+      <SliderInput
+        label={t("scenario_builder.base_load", "Base Load")}
+        value={params.baseVUs}
+        min={1}
+        max={params.peakVUs - 1}
+        unit=" VUs"
+        accent={accent}
+        onChange={(v) => setParam("baseVUs", v)}
+        hint={t(
+          "scenario_builder.base_load_hint",
+          "VUs before and after spike",
+        )}
+      />
+      <SliderInput
+        label={t("scenario_builder.peak_max", "Peak Max")}
+        value={params.peakVUs}
+        min={params.baseVUs + 1}
+        max={100}
+        unit=" VUs"
+        accent={accent}
+        onChange={(v) => setParam("peakVUs", Math.max(v, params.baseVUs + 1))}
+      />
+      <SliderInput
+        label={t("scenario_builder.rise_time", "Rise Time")}
+        value={params.rampUpSec}
+        min={2}
+        max={60}
+        unit="s"
+        accent={accent}
+        onChange={(v) => setParam("rampUpSec", v)}
+        hint={t("scenario_builder.rise_time_hint", "Base time before spike")}
+      />
+      <SliderInput
+        label={t("scenario_builder.peak_duration", "Peak Duration")}
+        value={params.sustainSec}
+        min={5}
+        max={120}
+        step={5}
+        unit="s"
+        accent={accent}
+        onChange={(v) => setParam("sustainSec", v)}
+      />
+      <SliderInput
+        label={t("scenario_builder.cooldown_time", "Cooldown Time")}
+        value={params.cooldownSec}
+        min={5}
+        max={120}
+        step={5}
+        unit="s"
+        accent={accent}
+        onChange={(v) => setParam("cooldownSec", v)}
+        hint={t("scenario_builder.cooldown_hint", "Recovery after spike")}
+      />
     </div>
   );
 };
@@ -384,13 +599,33 @@ const SoakControls = ({ params, setParam, accent }) => {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
-        <SliderInput label={t("scenario_builder.virtual_users", "Virtual Users")} value={params.vus} min={1} max={50} unit=" VUs" accent={accent} onChange={(v) => setParam("vus", v)} />
-        <SliderInput label={t("scenario_builder.duration", "Duration")} value={params.durationMinutes} min={5} max={60} step={5} unit=" min" accent={accent} onChange={(v) => setParam("durationMinutes", v)} />
+        <SliderInput
+          label={t("scenario_builder.virtual_users", "Virtual Users")}
+          value={params.vus}
+          min={1}
+          max={50}
+          unit=" VUs"
+          accent={accent}
+          onChange={(v) => setParam("vus", v)}
+        />
+        <SliderInput
+          label={t("scenario_builder.duration", "Duration")}
+          value={params.durationMinutes}
+          min={5}
+          max={60}
+          step={5}
+          unit=" min"
+          accent={accent}
+          onChange={(v) => setParam("durationMinutes", v)}
+        />
       </div>
       <div className="flex items-start gap-2.5 bg-purple-500/5 border border-purple-500/20 rounded-xl p-3 text-[11px] text-purple-300/80">
         <Info size={14} className="text-purple-400 shrink-0 mt-0.5" />
         <span>
-          {t("scenario_builder.soak_limit_info", "Free plan limits Soak to 60 minutes to protect shared cloud resources. Long-duration tests (8–24h) are available on On-Premise and Enterprise plans.")}
+          {t(
+            "scenario_builder.soak_limit_info",
+            "Free plan limits Soak to 60 minutes to protect shared cloud resources. Long-duration tests (8–24h) are available on On-Premise and Enterprise plans.",
+          )}
         </span>
       </div>
     </div>
@@ -407,7 +642,8 @@ const CustomStageEditor = ({ stages, onChange }) => {
     next[i] = { ...next[i], [field]: Number(val) || 0 };
     onChange(next);
   };
-  const removeStage = (i) => stages.length > 1 && onChange(stages.filter((_, idx) => idx !== i));
+  const removeStage = (i) =>
+    stages.length > 1 && onChange(stages.filter((_, idx) => idx !== i));
 
   return (
     <div className="space-y-2">
@@ -468,23 +704,35 @@ const CustomStageEditor = ({ stages, onChange }) => {
 // ─── Main ScenarioBuilder ───────────────────────────────────────────────────
 
 const DEFAULT_PARAMS = {
-  ramp:     { initialVUs: 0, maxVUs: 20, rampTimeSec: 30, totalDurationSec: 90 },
-  stepped:  { maxVUs: 30, durationSec: 60, stepCount: 4 },
+  ramp: { initialVUs: 0, maxVUs: 20, rampTimeSec: 30, totalDurationSec: 90 },
+  stepped: { maxVUs: 30, durationSec: 60, stepCount: 4 },
   constant: { vus: 10, durationSec: 60 },
-  stress:   { maxVUs: 50, durationSec: 120, stepCount: 4, stopAtErrorRate: 15 },
-  spike:    { baseVUs: 5, peakVUs: 50, rampUpSec: 10, sustainSec: 20, cooldownSec: 20 },
-  soak:     { vus: 10, durationMinutes: 30 },
+  stress: { maxVUs: 50, durationSec: 120, stepCount: 4, stopAtErrorRate: 15 },
+  spike: {
+    baseVUs: 5,
+    peakVUs: 50,
+    rampUpSec: 10,
+    sustainSec: 20,
+    cooldownSec: 20,
+  },
+  soak: { vus: 10, durationMinutes: 30 },
   baseline: { durationSec: 60 },
-  custom:   { stages: [{ durationSec: 10, target: 5 }, { durationSec: 30, target: 20 }, { durationSec: 10, target: 0 }] },
+  custom: {
+    stages: [
+      { durationSec: 10, target: 5 },
+      { durationSec: 30, target: 20 },
+      { durationSec: 10, target: 0 },
+    ],
+  },
 };
 
 const ScenarioBuilder = ({ onRun, flowName: _flowName, initialConfig }) => {
   const { t } = useTranslation();
   const [activeProfile, setActiveProfile] = useState(
-    initialConfig?.profile || "constant"
+    initialConfig?.profile || "constant",
   );
-  const [maxP95Ms, setMaxP95Ms] = useState(500);
-  const [maxErrorRatePct, setMaxErrorRatePct] = useState(1.0);
+  const [maxP95Ms, _setMaxP95Ms] = useState(500);
+  const [maxErrorRatePct, _setMaxErrorRatePct] = useState(1.0);
   const [profileParams, setProfileParams] = useState(() => {
     const defaults = { ...DEFAULT_PARAMS };
     // Seed from initialConfig if provided
@@ -493,10 +741,12 @@ const ScenarioBuilder = ({ onRun, flowName: _flowName, initialConfig }) => {
       if (profile && defaults[profile]) {
         if (profile === "constant") {
           defaults.constant.vus = virtualUsers || vus || defaults.constant.vus;
-          defaults.constant.durationSec = duration || defaults.constant.durationSec;
+          defaults.constant.durationSec =
+            duration || defaults.constant.durationSec;
         } else if (profile === "ramp") {
           defaults.ramp.maxVUs = virtualUsers || vus || defaults.ramp.maxVUs;
-          defaults.ramp.totalDurationSec = duration || defaults.ramp.totalDurationSec;
+          defaults.ramp.totalDurationSec =
+            duration || defaults.ramp.totalDurationSec;
           defaults.ramp.rampTimeSec = rampUp || defaults.ramp.rampTimeSec;
         }
       }
@@ -514,7 +764,10 @@ const ScenarioBuilder = ({ onRun, flowName: _flowName, initialConfig }) => {
           ...prev,
           constant: {
             ...prev.constant,
-            vus: initialConfig.virtualUsers || initialConfig.vus || prev.constant.vus,
+            vus:
+              initialConfig.virtualUsers ||
+              initialConfig.vus ||
+              prev.constant.vus,
             durationSec: initialConfig.duration || prev.constant.durationSec,
           },
         }));
@@ -531,16 +784,16 @@ const ScenarioBuilder = ({ onRun, flowName: _flowName, initialConfig }) => {
 
   const stages = useMemo(
     () => computeStages(activeProfile, profileParams),
-    [activeProfile, profileParams]
+    [activeProfile, profileParams],
   );
 
   const totalDuration = useMemo(
     () => stages.reduce((acc, s) => acc + s.durationSec, 0),
-    [stages]
+    [stages],
   );
   const maxVUs = useMemo(
     () => Math.max(...stages.map((s) => s.target), 1),
-    [stages]
+    [stages],
   );
 
   const estimatedRamMb = maxVUs * 250;
@@ -554,7 +807,12 @@ const ScenarioBuilder = ({ onRun, flowName: _flowName, initialConfig }) => {
     const p = profileParams[activeProfile];
 
     if (activeProfile === "custom") {
-      onRun({ profile: "custom", stages: p.stages, vus: maxVUs, duration: totalDuration });
+      onRun({
+        profile: "custom",
+        stages: p.stages,
+        vus: maxVUs,
+        duration: totalDuration,
+      });
     } else if (activeProfile === "baseline") {
       onRun({ profile: "baseline", vus: 1, duration: p.durationSec });
     } else {
@@ -565,7 +823,10 @@ const ScenarioBuilder = ({ onRun, flowName: _flowName, initialConfig }) => {
         vus: maxVUs,
         duration: totalDuration,
         virtualUsers: maxVUs,
-        stopAtErrorRate: profileParams[activeProfile]?.stopAtErrorRate || profileParams.stress?.stopAtErrorRate || 15,
+        stopAtErrorRate:
+          profileParams[activeProfile]?.stopAtErrorRate ||
+          profileParams.stress?.stopAtErrorRate ||
+          15,
         maxLatencyMs: maxP95Ms,
         maxErrorRatePct,
         slaConfig: {
@@ -588,7 +849,6 @@ const ScenarioBuilder = ({ onRun, flowName: _flowName, initialConfig }) => {
   return (
     <div className="w-full flex flex-col bg-slate-900/50 rounded-2xl">
       <form onSubmit={handleSubmit} className="space-y-5 flex flex-col">
-
         {/* Profile Selector */}
         <div>
           <div className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-3">
@@ -608,7 +868,9 @@ const ScenarioBuilder = ({ onRun, flowName: _flowName, initialConfig }) => {
                   }`}
                 >
                   <Icon size={18} />
-                  <span className="text-[11px] font-semibold leading-tight">{t(p.labelKey, p.defaultLabel)}</span>
+                  <span className="text-[11px] font-semibold leading-tight">
+                    {t(p.labelKey, p.defaultLabel)}
+                  </span>
                 </button>
               );
             })}
@@ -622,9 +884,16 @@ const ScenarioBuilder = ({ onRun, flowName: _flowName, initialConfig }) => {
               animate={{ opacity: 1, y: 0 }}
               className="mt-2.5 flex items-center gap-2 text-[11px] text-slate-400 bg-slate-950/40 border border-slate-800/60 rounded-xl px-3 py-2"
             >
-              <activeProfileDef.icon size={13} className={`text-${accentColor}-400 shrink-0`} />
-              <span>{t(activeProfileDef.descKey, activeProfileDef.defaultDesc)}</span>
-              <span className={`ml-auto shrink-0 text-${accentColor}-400 font-medium`}>
+              <activeProfileDef.icon
+                size={13}
+                className={`text-${accentColor}-400 shrink-0`}
+              />
+              <span>
+                {t(activeProfileDef.descKey, activeProfileDef.defaultDesc)}
+              </span>
+              <span
+                className={`ml-auto shrink-0 text-${accentColor}-400 font-medium`}
+              >
                 🎯 {t(activeProfileDef.goalKey, activeProfileDef.defaultGoal)}
               </span>
             </motion.div>
@@ -694,8 +963,14 @@ const ScenarioBuilder = ({ onRun, flowName: _flowName, initialConfig }) => {
             onClick={() => setShowAdvanced((v) => !v)}
             className="flex items-center gap-2 text-[11px] text-slate-500 hover:text-slate-300 transition-colors"
           >
-            {showAdvanced ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            <span className="font-semibold uppercase tracking-wider">{t("scenario_builder.advanced_options", "Advanced Options")}</span>
+            {showAdvanced ? (
+              <ChevronDown size={14} />
+            ) : (
+              <ChevronRight size={14} />
+            )}
+            <span className="font-semibold uppercase tracking-wider">
+              {t("scenario_builder.advanced_options", "Advanced Options")}
+            </span>
           </button>
 
           <AnimatePresence>
@@ -718,8 +993,15 @@ const ScenarioBuilder = ({ onRun, flowName: _flowName, initialConfig }) => {
                 >
                   <Activity size={16} />
                   <div>
-                    <p className="text-xs font-semibold">{t("scenario_builder.baseline_title", "Baseline (1 VU)")}</p>
-                    <p className="text-[10px] text-slate-500">{t("scenario_builder.baseline_desc", "Establishes baseline metrics with a single user")}</p>
+                    <p className="text-xs font-semibold">
+                      {t("scenario_builder.baseline_title", "Baseline (1 VU)")}
+                    </p>
+                    <p className="text-[10px] text-slate-500">
+                      {t(
+                        "scenario_builder.baseline_desc",
+                        "Establishes baseline metrics with a single user",
+                      )}
+                    </p>
                   </div>
                 </button>
                 {activeProfile === "baseline" && (
@@ -747,8 +1029,15 @@ const ScenarioBuilder = ({ onRun, flowName: _flowName, initialConfig }) => {
                 >
                   <BarChart2 size={16} />
                   <div>
-                    <p className="text-xs font-semibold">{t("scenario_builder.custom_title", "Custom (Stages)")}</p>
-                    <p className="text-[10px] text-slate-500">{t("scenario_builder.custom_desc", "Manually define each time stage and its target VUs")}</p>
+                    <p className="text-xs font-semibold">
+                      {t("scenario_builder.custom_title", "Custom (Stages)")}
+                    </p>
+                    <p className="text-[10px] text-slate-500">
+                      {t(
+                        "scenario_builder.custom_desc",
+                        "Manually define each time stage and its target VUs",
+                      )}
+                    </p>
                   </div>
                 </button>
                 {activeProfile === "custom" && (
@@ -772,20 +1061,33 @@ const ScenarioBuilder = ({ onRun, flowName: _flowName, initialConfig }) => {
         >
           <AlertTriangle
             size={15}
-            className={isDangerous ? "text-red-400 shrink-0 mt-0.5" : "text-slate-500 shrink-0 mt-0.5"}
+            className={
+              isDangerous
+                ? "text-red-400 shrink-0 mt-0.5"
+                : "text-slate-500 shrink-0 mt-0.5"
+            }
           />
           <div>
-            <strong className={`block mb-0.5 text-xs ${isDangerous ? "text-red-300" : "text-slate-300"}`}>
+            <strong
+              className={`block mb-0.5 text-xs ${isDangerous ? "text-red-300" : "text-slate-300"}`}
+            >
               {t("scenario_builder.resource_estimation", "Resource Estimation")}
             </strong>
-            {t("scenario_builder.resource_estimation_text", "Peak of {{count}} headless browser{{plural}}. RAM ≈ {{ram}} GB", {
-              count: maxVUs,
-              plural: maxVUs !== 1 ? "s" : "",
-              ram: (estimatedRamMb / 1024).toFixed(1)
-            })}
+            {t(
+              "scenario_builder.resource_estimation_text",
+              "Peak of {{count}} headless browser{{plural}}. RAM ≈ {{ram}} GB",
+              {
+                count: maxVUs,
+                plural: maxVUs !== 1 ? "s" : "",
+                ram: (estimatedRamMb / 1024).toFixed(1),
+              },
+            )}
             {isDangerous && (
               <span className="block mt-1 font-semibold text-red-300">
-                {t("scenario_builder.oom_risk", "⚠️ Risk of OOM. Reduce max VUs.")}
+                {t(
+                  "scenario_builder.oom_risk",
+                  "⚠️ Risk of OOM. Reduce max VUs.",
+                )}
               </span>
             )}
           </div>
@@ -796,7 +1098,8 @@ const ScenarioBuilder = ({ onRun, flowName: _flowName, initialConfig }) => {
           type="submit"
           className={`w-full flex items-center justify-center gap-2 px-6 py-4 text-sm font-bold text-white rounded-xl transition-all shadow-lg bg-${accentColor}-600 hover:bg-${accentColor}-500 shadow-${accentColor}-500/20 hover:shadow-${accentColor}-500/40`}
         >
-          <Zap size={16} fill="currentColor" /> {t("scenario_builder.start_load_test", "Launch Load Test")}
+          <Zap size={16} fill="currentColor" />{" "}
+          {t("scenario_builder.start_load_test", "Launch Load Test")}
         </button>
       </form>
     </div>

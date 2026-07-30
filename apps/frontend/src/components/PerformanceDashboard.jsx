@@ -73,7 +73,7 @@ const PerformanceDashboard = () => {
 
   // Tab control: 'config' | 'live' | 'results' | 'history'
   const [activeTab, setActiveTab] = useState(
-    location.state?.activeTab || (status === "running" ? "live" : "config")
+    location.state?.activeTab || (status === "running" ? "live" : "config"),
   );
 
   // Sync tab with execution state changes
@@ -94,11 +94,21 @@ const PerformanceDashboard = () => {
 
   const handleStartTest = async (config) => {
     if (!flowId) {
-      toast.info(t("performance_dashboard.toast_select_flow", "Select a flow before launching the load test."));
+      toast.info(
+        t(
+          "performance_dashboard.toast_select_flow",
+          "Select a flow before launching the load test.",
+        ),
+      );
       return;
     }
 
-    const toastId = toast.loading(t("performance_dashboard.toast_initializing", "Initializing performance engine..."));
+    const toastId = toast.loading(
+      t(
+        "performance_dashboard.toast_initializing",
+        "Initializing performance engine...",
+      ),
+    );
 
     const activeFlowObj = currentProject?.flows?.find((f) => f.id === flowId);
 
@@ -122,17 +132,31 @@ const PerformanceDashboard = () => {
 
       if (result.success) {
         toast.dismiss(toastId);
-        toast.success(t("performance_dashboard.toast_launched_success", "Load test launched successfully!"));
+        toast.success(
+          t(
+            "performance_dashboard.toast_launched_success",
+            "Load test launched successfully!",
+          ),
+        );
         setStatus("preparing");
         setActiveTab("live");
       } else {
         toast.dismiss(toastId);
-        toast.error(result.message || t("performance_dashboard.toast_launch_error", "Failed to launch test"));
+        toast.error(
+          result.message ||
+            t(
+              "performance_dashboard.toast_launch_error",
+              "Failed to launch test",
+            ),
+        );
       }
     } catch (error) {
       toast.dismiss(toastId);
       console.error("[PerformanceDashboard] Performance run failed:", error);
-      toast.error(t("performance_dashboard.toast_engine_error", "Engine error: ") + error.message);
+      toast.error(
+        t("performance_dashboard.toast_engine_error", "Engine error: ") +
+          error.message,
+      );
     }
   };
 
@@ -200,16 +224,36 @@ const PerformanceDashboard = () => {
             <>
               <div className="text-xs text-blue-400 font-mono bg-blue-500/10 px-3 py-1.5 rounded-lg border border-blue-500/20 animate-pulse">
                 {status === "preparing"
-                  ? t("performance_dashboard.initializing_engines", "Initializing engines...")
-                  : t("performance_dashboard.running_vus", "Running: {{count}} VUs", { count: runConfig?.totalVUs || runConfig?.virtualUsers || 1 })}
+                  ? t(
+                      "performance_dashboard.initializing_engines",
+                      "Initializing engines...",
+                    )
+                  : t(
+                      "performance_dashboard.running_vus",
+                      "Running: {{count}} VUs",
+                      {
+                        count:
+                          runConfig?.totalVUs || runConfig?.virtualUsers || 1,
+                      },
+                    )}
               </div>
               <button
                 onClick={async () => {
                   try {
                     await cancelTest();
-                    toast.success(t("performance_dashboard.toast_cancel_success", "Cancellation requested successfully."));
+                    toast.success(
+                      t(
+                        "performance_dashboard.toast_cancel_success",
+                        "Cancellation requested successfully.",
+                      ),
+                    );
                   } catch (err) {
-                    toast.error(t("performance_dashboard.toast_cancel_error", "Error canceling test: ") + err.message);
+                    toast.error(
+                      t(
+                        "performance_dashboard.toast_cancel_error",
+                        "Error canceling test: ",
+                      ) + err.message,
+                    );
                   }
                 }}
                 className="bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-semibold px-3 py-1.5 rounded-lg border border-red-500/20 transition-colors flex items-center gap-1.5 cursor-pointer"
@@ -259,7 +303,10 @@ const PerformanceDashboard = () => {
                 <div className="md:col-span-2 bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 space-y-4">
                   <div className="border-b border-slate-800 pb-3 flex justify-between items-center">
                     <h2 className="text-lg font-medium text-slate-200">
-                      {t("performance_dashboard.scenario_parameters", "Scenario Parameters")}
+                      {t(
+                        "performance_dashboard.scenario_parameters",
+                        "Scenario Parameters",
+                      )}
                     </h2>
                     {flows.length > 0 && (
                       <select
@@ -289,20 +336,37 @@ const PerformanceDashboard = () => {
                   </h3>
                   <div className="space-y-3 text-xs text-slate-400">
                     <p>
-                      {t("performance_dashboard.flow_info_desc", "Select a flow from the list to configure the load test. The constant profile is ideal for basic tests, while stress and spike profiles are recommended for advanced limit and capacity testing.")}
+                      {t(
+                        "performance_dashboard.flow_info_desc",
+                        "Select a flow from the list to configure the load test. The constant profile is ideal for basic tests, while stress and spike profiles are recommended for advanced limit and capacity testing.",
+                      )}
                     </p>
                     <div className="bg-slate-950/40 p-3 rounded-xl border border-slate-800/50 space-y-2">
                       <div className="flex justify-between">
-                        <span>{t("performance_dashboard.total_nodes", "Total Nodes:")}</span>
+                        <span>
+                          {t(
+                            "performance_dashboard.total_nodes",
+                            "Total Nodes:",
+                          )}
+                        </span>
                         <span className="font-semibold text-slate-200">
-                          {currentProject?.flows?.find((f) => f.id === (selectedFlowId || flowId))
-                            ?.nodes?.length || 0}
+                          {currentProject?.flows?.find(
+                            (f) => f.id === (selectedFlowId || flowId),
+                          )?.nodes?.length || 0}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span>{t("performance_dashboard.last_execution", "Last Execution:")}</span>
+                        <span>
+                          {t(
+                            "performance_dashboard.last_execution",
+                            "Last Execution:",
+                          )}
+                        </span>
                         <span className="font-semibold text-slate-200">
-                          {t("performance_dashboard.moments_ago", "A few moments ago")}
+                          {t(
+                            "performance_dashboard.moments_ago",
+                            "A few moments ago",
+                          )}
                         </span>
                       </div>
                     </div>
@@ -329,7 +393,10 @@ const PerformanceDashboard = () => {
                 status={status}
                 progressPercent={progressPercent}
                 onCancelTest={cancelTest}
-                flowNodes={currentProject?.flows?.find((f) => f.id === flowId)?.nodes || []}
+                flowNodes={
+                  currentProject?.flows?.find((f) => f.id === flowId)?.nodes ||
+                  []
+                }
               />
             </motion.div>
           )}
@@ -345,7 +412,10 @@ const PerformanceDashboard = () => {
               <PerfResultsView
                 metrics={metrics || useExecutionStore.getState().lastPerfReport}
                 runConfig={runConfig}
-                flowNodes={currentProject?.flows?.find((f) => f.id === flowId)?.nodes || []}
+                flowNodes={
+                  currentProject?.flows?.find((f) => f.id === flowId)?.nodes ||
+                  []
+                }
               />
             </motion.div>
           )}

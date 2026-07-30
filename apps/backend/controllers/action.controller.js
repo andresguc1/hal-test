@@ -1033,31 +1033,37 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
 
         // --- FLIGHT RECORDER: Log Success ---
         if (runId && nodeId) {
-            await executionLogger.logStep(
-                runId,
-                { id: nodeId, type: actionName },
-                {
-                    status: 'success',
-                    duration,
-                    input: opts,
-                    output: {
-                        ...(typeof result.data === 'object' ? result.data : { value: result.data }),
-                        ...(typeof result.traceDetails === 'object' ? result.traceDetails : {}),
-                        securityAlerts:
-                            page && page._securityAlerts
-                                ? page._securityAlerts.filter(
-                                      (a) => !a.nodeId || a.nodeId === nodeId,
-                                  )
-                                : Array.isArray(result?.data?.alerts)
-                                  ? result.data.alerts
-                                  : [],
+            try {
+                await executionLogger.logStep(
+                    runId,
+                    { id: nodeId, type: actionName },
+                    {
+                        status: 'success',
+                        duration,
+                        input: opts,
+                        output: {
+                            ...(typeof result.data === 'object'
+                                ? result.data
+                                : { value: result.data }),
+                            ...(typeof result.traceDetails === 'object' ? result.traceDetails : {}),
+                            securityAlerts:
+                                page && page._securityAlerts
+                                    ? page._securityAlerts.filter(
+                                          (a) => !a.nodeId || a.nodeId === nodeId,
+                                      )
+                                    : Array.isArray(result?.data?.alerts)
+                                      ? result.data.alerts
+                                      : [],
+                        },
+                        screenshot: screenshotPath,
+                        videoTimestamp: req.body.runStartTime
+                            ? (Date.now() - req.body.runStartTime) / 1000
+                            : null,
                     },
-                    screenshot: screenshotPath,
-                    videoTimestamp: req.body.runStartTime
-                        ? (Date.now() - req.body.runStartTime) / 1000
-                        : null,
-                },
-            );
+                );
+            } catch (logErr) {
+                console.error('[FlightRecorder] Failed to log step result:', logErr.message);
+            }
         }
         // ------------------------------------
 
@@ -1443,28 +1449,35 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
                         });
 
                         if (runId && opts.nodeId) {
-                            await executionLogger.logStep(
-                                runId,
-                                { id: opts.nodeId, type: actionName },
-                                {
-                                    status: 'healed',
-                                    duration: totalDuration,
-                                    input: { ...opts, selector: diagnosis.correctedSelector },
-                                    output: {
-                                        ...(typeof retryResult.data === 'object'
-                                            ? retryResult.data
-                                            : { value: retryResult.data }),
-                                        securityAlerts:
-                                            currentPage && currentPage._securityAlerts
-                                                ? currentPage._securityAlerts.filter(
-                                                      (a) => a.nodeId === opts.nodeId,
-                                                  )
-                                                : [],
+                            try {
+                                await executionLogger.logStep(
+                                    runId,
+                                    { id: opts.nodeId, type: actionName },
+                                    {
+                                        status: 'healed',
+                                        duration: totalDuration,
+                                        input: { ...opts, selector: diagnosis.correctedSelector },
+                                        output: {
+                                            ...(typeof retryResult.data === 'object'
+                                                ? retryResult.data
+                                                : { value: retryResult.data }),
+                                            securityAlerts:
+                                                currentPage && currentPage._securityAlerts
+                                                    ? currentPage._securityAlerts.filter(
+                                                          (a) => a.nodeId === opts.nodeId,
+                                                      )
+                                                    : [],
+                                        },
+                                        memoryHit: diagnosis.source === 'memory',
+                                        aiDiagnosis: diagnosis.reasoning,
                                     },
-                                    memoryHit: diagnosis.source === 'memory',
-                                    aiDiagnosis: diagnosis.reasoning,
-                                },
-                            );
+                                );
+                            } catch (logErr) {
+                                console.error(
+                                    '[FlightRecorder] Failed to log healed step:',
+                                    logErr.message,
+                                );
+                            }
                         }
 
                         // --- JSONL AUDIT LOGGING (HEALED SUCCESS) ---
@@ -1557,25 +1570,29 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
         }
 
         if (runId && nodeId) {
-            await executionLogger.logStep(
-                runId,
-                { id: nodeId, type: actionName },
-                {
-                    status: 'failed',
-                    duration,
-                    input: opts,
-                    error: errorMessage,
-                    output: {
-                        securityAlerts:
-                            page && page._securityAlerts
-                                ? page._securityAlerts.filter((a) => a.nodeId === nodeId)
-                                : [],
+            try {
+                await executionLogger.logStep(
+                    runId,
+                    { id: nodeId, type: actionName },
+                    {
+                        status: 'failed',
+                        duration,
+                        input: opts,
+                        error: errorMessage,
+                        output: {
+                            securityAlerts:
+                                page && page._securityAlerts
+                                    ? page._securityAlerts.filter((a) => a.nodeId === nodeId)
+                                    : [],
+                        },
+                        videoTimestamp: req.body.runStartTime
+                            ? (Date.now() - req.body.runStartTime) / 1000
+                            : null,
                     },
-                    videoTimestamp: req.body.runStartTime
-                        ? (Date.now() - req.body.runStartTime) / 1000
-                        : null,
-                },
-            );
+                );
+            } catch (logErr) {
+                console.error('[FlightRecorder] Failed to log failure step:', logErr.message);
+            }
         }
         // ------------------------------------
 
@@ -1840,17 +1857,21 @@ export const launchBrowserAction = async (req, res) => {
         // --- FLIGHT RECORDER: Log Success ---
         if (runId && nodeId) {
             console.log(`[FlightRecorder] Saving step result for run ${runId}, node ${nodeId}`);
-            await executionLogger.logStep(
-                runId,
-                { id: nodeId, type: 'launch_browser' },
-                {
-                    status: 'success',
-                    duration,
-                    input: resolvedBody,
-                    output: { browserId },
-                },
-            );
-            console.log(`[FlightRecorder] Step result saved successfully`);
+            try {
+                await executionLogger.logStep(
+                    runId,
+                    { id: nodeId, type: 'launch_browser' },
+                    {
+                        status: 'success',
+                        duration,
+                        input: resolvedBody,
+                        output: { browserId },
+                    },
+                );
+                console.log(`[FlightRecorder] Step result saved successfully`);
+            } catch (logErr) {
+                console.error('[FlightRecorder] Failed to log step result:', logErr.message);
+            }
         }
         // ------------------------------------
 
@@ -1881,16 +1902,20 @@ export const launchBrowserAction = async (req, res) => {
 
         // --- FLIGHT RECORDER: Log Failure ---
         if (runId && nodeId) {
-            executionLogger.logStep(
-                runId,
-                { id: nodeId, type: 'launch_browser' },
-                {
-                    status: 'failed',
-                    duration,
-                    input: req.body,
-                    error: error.message,
-                },
-            );
+            try {
+                await executionLogger.logStep(
+                    runId,
+                    { id: nodeId, type: 'launch_browser' },
+                    {
+                        status: 'failed',
+                        duration,
+                        input: req.body,
+                        error: error.message,
+                    },
+                );
+            } catch (logErr) {
+                console.error('[FlightRecorder] Failed to log failure step:', logErr.message);
+            }
         }
         // ------------------------------------
 
@@ -2079,24 +2104,28 @@ export const openUrlAction = async (req, res) => {
 
         // --- FLIGHT RECORDER: Log Success ---
         if (runId && nodeId) {
-            await executionLogger.logStep(
-                runId,
-                { id: nodeId, type: actionName },
-                {
-                    status: 'success',
-                    duration,
-                    input: opts,
-                    output: {
-                        url,
-                        browserId,
-                        securityAlerts:
-                            page && page._securityAlerts
-                                ? page._securityAlerts.filter((a) => a.nodeId === nodeId)
-                                : [],
+            try {
+                await executionLogger.logStep(
+                    runId,
+                    { id: nodeId, type: actionName },
+                    {
+                        status: 'success',
+                        duration,
+                        input: opts,
+                        output: {
+                            url,
+                            browserId,
+                            securityAlerts:
+                                page && page._securityAlerts
+                                    ? page._securityAlerts.filter((a) => a.nodeId === nodeId)
+                                    : [],
+                        },
+                        screenshot: screenshotPath,
                     },
-                    screenshot: screenshotPath,
-                },
-            );
+                );
+            } catch (logErr) {
+                console.error('[FlightRecorder] Failed to log step result:', logErr.message);
+            }
         }
         // ------------------------------------
 
@@ -2140,22 +2169,26 @@ export const openUrlAction = async (req, res) => {
 
         // --- FLIGHT RECORDER: Log Failure ---
         if (runId && nodeId) {
-            await executionLogger.logStep(
-                runId,
-                { id: nodeId, type: actionName },
-                {
-                    status: 'failed',
-                    duration,
-                    input: req.body,
-                    error: error.message,
-                    output: {
-                        securityAlerts:
-                            typeof page !== 'undefined' && page && page._securityAlerts
-                                ? page._securityAlerts.filter((a) => a.nodeId === nodeId)
-                                : [],
+            try {
+                await executionLogger.logStep(
+                    runId,
+                    { id: nodeId, type: actionName },
+                    {
+                        status: 'failed',
+                        duration,
+                        input: req.body,
+                        error: error.message,
+                        output: {
+                            securityAlerts:
+                                typeof page !== 'undefined' && page && page._securityAlerts
+                                    ? page._securityAlerts.filter((a) => a.nodeId === nodeId)
+                                    : [],
+                        },
                     },
-                },
-            );
+                );
+            } catch (logErr) {
+                console.error('[FlightRecorder] Failed to log failure step:', logErr.message);
+            }
         }
         // ------------------------------------
 
@@ -2235,16 +2268,20 @@ export const closeBrowserAction = async (req, res) => {
 
         // --- FLIGHT RECORDER: Log Success ---
         if (runId && nodeId) {
-            await executionLogger.logStep(
-                runId,
-                { id: nodeId, type: 'close_browser' },
-                {
-                    status: 'success',
-                    duration,
-                    input: req.body,
-                    output: { browserId, closed: true },
-                },
-            );
+            try {
+                await executionLogger.logStep(
+                    runId,
+                    { id: nodeId, type: 'close_browser' },
+                    {
+                        status: 'success',
+                        duration,
+                        input: req.body,
+                        output: { browserId, closed: true },
+                    },
+                );
+            } catch (logErr) {
+                console.error('[FlightRecorder] Failed to log step result:', logErr.message);
+            }
         }
         // ------------------------------------
 
@@ -2267,16 +2304,20 @@ export const closeBrowserAction = async (req, res) => {
 
         // --- FLIGHT RECORDER: Log Failure ---
         if (runId && nodeId) {
-            await executionLogger.logStep(
-                runId,
-                { id: nodeId, type: 'close_browser' },
-                {
-                    status: 'failed',
-                    duration,
-                    input: req.body,
-                    error: error.message,
-                },
-            );
+            try {
+                await executionLogger.logStep(
+                    runId,
+                    { id: nodeId, type: 'close_browser' },
+                    {
+                        status: 'failed',
+                        duration,
+                        input: req.body,
+                        error: error.message,
+                    },
+                );
+            } catch (logErr) {
+                console.error('[FlightRecorder] Failed to log failure step:', logErr.message);
+            }
         }
         // ------------------------------------
 

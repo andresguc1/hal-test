@@ -53,17 +53,24 @@ class ExecutionLock {
                     loaded++;
                 } else {
                     // Expired — clean up from DB silently
-                    await ExecutionLockModel.destroy({ where: { flowId: row.flowId } }).catch(() => {});
+                    await ExecutionLockModel.destroy({ where: { flowId: row.flowId } }).catch(
+                        () => {},
+                    );
                 }
             }
 
             this._dbLoaded = true;
             if (loaded > 0) {
-                console.log(`[ExecutionLock] 📂 Recovered ${loaded} active lock(s) from SQLite after restart.`);
+                console.log(
+                    `[ExecutionLock] 📂 Recovered ${loaded} active lock(s) from SQLite after restart.`,
+                );
             }
         } catch (err) {
             // DB not ready yet (e.g. table not created) — non-fatal, in-memory only
-            console.warn('[ExecutionLock] ⚠️ Could not load locks from DB (non-fatal):', err.message);
+            console.warn(
+                '[ExecutionLock] ⚠️ Could not load locks from DB (non-fatal):',
+                err.message,
+            );
         }
     }
 
@@ -105,7 +112,10 @@ class ExecutionLock {
 
         // Persist to SQLite (fire-and-forget — memory is authoritative)
         await this._persistLock(flowId, lockData).catch((err) => {
-            console.warn(`[ExecutionLock] ⚠️ Could not persist lock to DB for flow "${flowId}":`, err.message);
+            console.warn(
+                `[ExecutionLock] ⚠️ Could not persist lock to DB for flow "${flowId}":`,
+                err.message,
+            );
         });
 
         console.log(
@@ -135,7 +145,10 @@ class ExecutionLock {
 
         // Remove from SQLite (fire-and-forget)
         await ExecutionLockModel.destroy({ where: { flowId } }).catch((err) => {
-            console.warn(`[ExecutionLock] ⚠️ Could not remove lock from DB for flow "${flowId}":`, err.message);
+            console.warn(
+                `[ExecutionLock] ⚠️ Could not remove lock from DB for flow "${flowId}":`,
+                err.message,
+            );
         });
 
         console.log(`[ExecutionLock] 🔓 Lock released: flow="${flowId}"`);

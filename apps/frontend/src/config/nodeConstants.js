@@ -21,6 +21,7 @@ import {
   StickyNote,
   MessageSquare,
   Shield,
+  ShieldCheck,
 } from "lucide-react";
 
 // --- GLOBAL ALL-IN-ONE CONFIGURATION ---

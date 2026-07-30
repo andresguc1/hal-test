@@ -1,12 +1,26 @@
 import React, { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, ArrowUpDown, Cpu, Activity, AlertTriangle, CheckCircle2, FileText, Clock, Zap } from "lucide-react";
+import {
+  Search,
+  ArrowUpDown,
+  Cpu,
+  Activity,
+  AlertTriangle,
+  CheckCircle2,
+  FileText,
+  Clock,
+  Zap,
+} from "lucide-react";
 
 /**
  * NodePerformanceTable — Comprehensive Per-Node Performance Metrics Table
  * Renders complete node-by-node telemetry metrics for every node in the configured test flow.
  */
-export const NodePerformanceTable = ({ nodeStats = [], flowNodes = [], totalDuration = 0 }) => {
+export const NodePerformanceTable = ({
+  nodeStats = [],
+  flowNodes = [],
+  totalDuration = 0,
+}) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("p95"); // p95 | avg | cpuAvg | memAvg | errors | count
   const [sortOrder, setSortOrder] = useState("desc");
@@ -22,8 +36,13 @@ export const NodePerformanceTable = ({ nodeStats = [], flowNodes = [], totalDura
     if (flowNodes && flowNodes.length > 0) {
       return flowNodes.map((fn, idx) => {
         const id = String(fn.id || fn.nodeId || `node_${idx + 1}`);
-        const label = fn.data?.label || fn.data?.customLabel || fn.type || `Nodo #${idx + 1}`;
-        const stats = statsMap.get(id) || statsMap.get(String(fn.nodeId)) || null;
+        const label =
+          fn.data?.label ||
+          fn.data?.customLabel ||
+          fn.type ||
+          `Nodo #${idx + 1}`;
+        const stats =
+          statsMap.get(id) || statsMap.get(String(fn.nodeId)) || null;
 
         return {
           nodeId: id,
@@ -39,8 +58,22 @@ export const NodePerformanceTable = ({ nodeStats = [], flowNodes = [], totalDura
           memMax: stats?.memMax ?? 0,
           errors: stats?.errors ?? 0,
           errorRate: stats?.errorRate ?? "0.0",
-          throughput: stats?.count ? parseFloat((stats.count / Math.max(1, (totalDuration || 30000) / 1000)).toFixed(2)) : 0,
-          status: stats ? (stats.errors > 0 ? "error" : stats.p95 > 2000 ? "critical" : stats.p95 > 800 ? "warning" : "success") : "pending",
+          throughput: stats?.count
+            ? parseFloat(
+                (
+                  stats.count / Math.max(1, (totalDuration || 30000) / 1000)
+                ).toFixed(2),
+              )
+            : 0,
+          status: stats
+            ? stats.errors > 0
+              ? "error"
+              : stats.p95 > 2000
+                ? "critical"
+                : stats.p95 > 800
+                  ? "warning"
+                  : "success"
+            : "pending",
         };
       });
     }
@@ -60,8 +93,19 @@ export const NodePerformanceTable = ({ nodeStats = [], flowNodes = [], totalDura
       memMax: n.memMax || 0,
       errors: n.errors || 0,
       errorRate: n.errorRate || "0.0",
-      throughput: n.count ? parseFloat((n.count / Math.max(1, (totalDuration || 30000) / 1000)).toFixed(2)) : 0,
-      status: n.errors > 0 ? "error" : n.p95 > 2000 ? "critical" : n.p95 > 800 ? "warning" : "success",
+      throughput: n.count
+        ? parseFloat(
+            (n.count / Math.max(1, (totalDuration || 30000) / 1000)).toFixed(2),
+          )
+        : 0,
+      status:
+        n.errors > 0
+          ? "error"
+          : n.p95 > 2000
+            ? "critical"
+            : n.p95 > 800
+              ? "warning"
+              : "success",
     }));
   }, [nodeStats, flowNodes, totalDuration]);
 
@@ -100,16 +144,23 @@ export const NodePerformanceTable = ({ nodeStats = [], flowNodes = [], totalDura
         <div>
           <h3 className="text-base font-semibold text-slate-100 flex items-center gap-2">
             <FileText size={18} className="text-sky-400" />
-            Desglose de Rendimiento por Nodo del Flujo ({filteredNodes.length} Nodos)
+            Desglose de Rendimiento por Nodo del Flujo ({
+              filteredNodes.length
+            }{" "}
+            Nodos)
           </h3>
           <p className="text-xs text-slate-400 mt-0.5">
-            Métricas de latencia, throughput, CPU, RAM y tasa de errores para cada nodo configurado.
+            Métricas de latencia, throughput, CPU, RAM y tasa de errores para
+            cada nodo configurado.
           </p>
         </div>
 
         {/* Search Bar */}
         <div className="relative w-full sm:w-64">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+          <Search
+            size={14}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+          />
           <input
             type="text"
             value={searchTerm}
@@ -126,25 +177,46 @@ export const NodePerformanceTable = ({ nodeStats = [], flowNodes = [], totalDura
           <thead>
             <tr className="bg-slate-900/90 text-slate-400 font-semibold border-b border-slate-800 uppercase tracking-wider">
               <th className="py-3 px-4">Nodo / Acción</th>
-              <th className="py-3 px-3 cursor-pointer hover:text-slate-200" onClick={() => handleSort("status")}>
+              <th
+                className="py-3 px-3 cursor-pointer hover:text-slate-200"
+                onClick={() => handleSort("status")}
+              >
                 Estado <ArrowUpDown size={10} className="inline ml-1" />
               </th>
-              <th className="py-3 px-3 cursor-pointer hover:text-slate-200 text-right" onClick={() => handleSort("count")}>
+              <th
+                className="py-3 px-3 cursor-pointer hover:text-slate-200 text-right"
+                onClick={() => handleSort("count")}
+              >
                 Muestras <ArrowUpDown size={10} className="inline ml-1" />
               </th>
-              <th className="py-3 px-3 cursor-pointer hover:text-slate-200 text-right" onClick={() => handleSort("p95")}>
+              <th
+                className="py-3 px-3 cursor-pointer hover:text-slate-200 text-right"
+                onClick={() => handleSort("p95")}
+              >
                 Latencia P95 <ArrowUpDown size={10} className="inline ml-1" />
               </th>
-              <th className="py-3 px-3 cursor-pointer hover:text-slate-200 text-right" onClick={() => handleSort("avg")}>
+              <th
+                className="py-3 px-3 cursor-pointer hover:text-slate-200 text-right"
+                onClick={() => handleSort("avg")}
+              >
                 Avg <ArrowUpDown size={10} className="inline ml-1" />
               </th>
-              <th className="py-3 px-3 cursor-pointer hover:text-slate-200 text-right" onClick={() => handleSort("cpuAvg")}>
+              <th
+                className="py-3 px-3 cursor-pointer hover:text-slate-200 text-right"
+                onClick={() => handleSort("cpuAvg")}
+              >
                 CPU Avg <ArrowUpDown size={10} className="inline ml-1" />
               </th>
-              <th className="py-3 px-3 cursor-pointer hover:text-slate-200 text-right" onClick={() => handleSort("memAvg")}>
+              <th
+                className="py-3 px-3 cursor-pointer hover:text-slate-200 text-right"
+                onClick={() => handleSort("memAvg")}
+              >
                 RAM Avg <ArrowUpDown size={10} className="inline ml-1" />
               </th>
-              <th className="py-3 px-3 cursor-pointer hover:text-slate-200 text-right" onClick={() => handleSort("errors")}>
+              <th
+                className="py-3 px-3 cursor-pointer hover:text-slate-200 text-right"
+                onClick={() => handleSort("errors")}
+              >
                 Errores % <ArrowUpDown size={10} className="inline ml-1" />
               </th>
             </tr>
@@ -156,9 +228,13 @@ export const NodePerformanceTable = ({ nodeStats = [], flowNodes = [], totalDura
                 return (
                   <React.Fragment key={n.nodeId}>
                     <tr
-                      onClick={() => setSelectedNodeId(isSelected ? null : n.nodeId)}
+                      onClick={() =>
+                        setSelectedNodeId(isSelected ? null : n.nodeId)
+                      }
                       className={`hover:bg-slate-900/60 cursor-pointer transition-colors ${
-                        isSelected ? "bg-slate-900/80 border-l-2 border-l-sky-500" : ""
+                        isSelected
+                          ? "bg-slate-900/80 border-l-2 border-l-sky-500"
+                          : ""
                       }`}
                     >
                       <td className="py-3 px-4 font-sans font-medium text-slate-200">
@@ -167,8 +243,12 @@ export const NodePerformanceTable = ({ nodeStats = [], flowNodes = [], totalDura
                             {idx + 1}
                           </span>
                           <div className="truncate">
-                            <div className="font-semibold text-slate-200 truncate">{n.label}</div>
-                            <div className="text-[10px] text-slate-500 font-mono uppercase">{n.type}</div>
+                            <div className="font-semibold text-slate-200 truncate">
+                              {n.label}
+                            </div>
+                            <div className="text-[10px] text-slate-500 font-mono uppercase">
+                              {n.type}
+                            </div>
                           </div>
                         </div>
                       </td>
@@ -205,7 +285,15 @@ export const NodePerformanceTable = ({ nodeStats = [], flowNodes = [], totalDura
                         {n.status === "pending" ? (
                           <span className="text-slate-600 italic">—</span>
                         ) : (
-                          <span className={n.p95 > 2000 ? "text-red-400" : n.p95 > 800 ? "text-amber-400" : "text-emerald-400"}>
+                          <span
+                            className={
+                              n.p95 > 2000
+                                ? "text-red-400"
+                                : n.p95 > 800
+                                  ? "text-amber-400"
+                                  : "text-emerald-400"
+                            }
+                          >
                             {n.p95} ms
                           </span>
                         )}
@@ -227,7 +315,11 @@ export const NodePerformanceTable = ({ nodeStats = [], flowNodes = [], totalDura
                         {n.status === "pending" ? (
                           <span className="text-slate-600">—</span>
                         ) : (
-                          <span className={n.errors > 0 ? "text-red-400" : "text-emerald-400"}>
+                          <span
+                            className={
+                              n.errors > 0 ? "text-red-400" : "text-emerald-400"
+                            }
+                          >
                             {n.errors} ({n.errorRate}%)
                           </span>
                         )}
@@ -240,20 +332,34 @@ export const NodePerformanceTable = ({ nodeStats = [], flowNodes = [], totalDura
                         <td colSpan={8} className="p-4">
                           <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs font-mono">
                             <div>
-                              <span className="text-slate-500 block text-[10px] uppercase">ID de Nodo</span>
+                              <span className="text-slate-500 block text-[10px] uppercase">
+                                ID de Nodo
+                              </span>
                               <span className="text-slate-300">{n.nodeId}</span>
                             </div>
                             <div>
-                              <span className="text-slate-500 block text-[10px] uppercase">P99 Latencia</span>
-                              <span className="text-amber-400 font-bold">{n.p99} ms</span>
+                              <span className="text-slate-500 block text-[10px] uppercase">
+                                P99 Latencia
+                              </span>
+                              <span className="text-amber-400 font-bold">
+                                {n.p99} ms
+                              </span>
                             </div>
                             <div>
-                              <span className="text-slate-500 block text-[10px] uppercase">RAM Máxima</span>
-                              <span className="text-fuchsia-400 font-bold">{n.memMax} MB</span>
+                              <span className="text-slate-500 block text-[10px] uppercase">
+                                RAM Máxima
+                              </span>
+                              <span className="text-fuchsia-400 font-bold">
+                                {n.memMax} MB
+                              </span>
                             </div>
                             <div>
-                              <span className="text-slate-500 block text-[10px] uppercase">Throughput por Nodo</span>
-                              <span className="text-sky-400 font-bold">{n.throughput} req/s</span>
+                              <span className="text-slate-500 block text-[10px] uppercase">
+                                Throughput por Nodo
+                              </span>
+                              <span className="text-sky-400 font-bold">
+                                {n.throughput} req/s
+                              </span>
                             </div>
                           </div>
                         </td>
@@ -264,7 +370,10 @@ export const NodePerformanceTable = ({ nodeStats = [], flowNodes = [], totalDura
               })
             ) : (
               <tr>
-                <td colSpan={8} className="py-8 text-center text-slate-500 italic">
+                <td
+                  colSpan={8}
+                  className="py-8 text-center text-slate-500 italic"
+                >
                   No se encontraron nodos que coincidan con la búsqueda.
                 </td>
               </tr>

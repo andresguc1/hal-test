@@ -11,10 +11,23 @@ import HealingLog from './models/HealingLog.js';
 import ExperienceVault from './models/ExperienceVault.js';
 import CollaboratorRole from './models/CollaboratorRole.js';
 import ExecutionLockModel from './models/ExecutionLockModel.js';
+import SecurityComplianceRun from './models/SecurityComplianceRun.js';
+import SecurityComplianceResult from './models/SecurityComplianceResult.js';
 
 // Define associations
 User.hasMany(Project, { as: 'projects', foreignKey: 'userId', onDelete: 'CASCADE', hooks: true });
 Project.belongsTo(User, { as: 'user', foreignKey: 'userId' });
+
+SecurityComplianceRun.hasMany(SecurityComplianceResult, {
+    as: 'results',
+    foreignKey: 'compliance_run_id',
+    onDelete: 'CASCADE',
+    hooks: true,
+});
+SecurityComplianceResult.belongsTo(SecurityComplianceRun, {
+    as: 'run',
+    foreignKey: 'compliance_run_id',
+});
 
 Project.hasMany(Canvas, {
     as: 'canvases',
@@ -99,6 +112,9 @@ const checkSchemaHealth = async () => {
             logging: false,
         });
         await sequelize.query('SELECT "batch_id" FROM "execution_runs" LIMIT 1', {
+            logging: false,
+        });
+        await sequelize.query('SELECT "project_id" FROM "execution_runs" LIMIT 1', {
             logging: false,
         });
         await sequelize.query('SELECT "nodeId" FROM "ExperienceVaults" LIMIT 1', {
@@ -304,6 +320,8 @@ export {
     ExperienceVault,
     CollaboratorRole,
     ExecutionLockModel,
+    SecurityComplianceRun,
+    SecurityComplianceResult,
 };
 
 // Allow running directly from CLI

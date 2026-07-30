@@ -14,6 +14,7 @@ import Table from 'cli-table3';
 import { browserService } from './browser.service.js';
 import { actionRoutes } from '../routes/api.router.js';
 import * as schemas from '../schemas/index.js';
+import { SecurityComplianceEngine } from './SecurityComplianceEngine.js';
 
 export class ExecutionService {
     constructor() {
@@ -481,6 +482,54 @@ export class ExecutionService {
                 `[ExecutionService] Node ${node.nodeId} execution finished. Result success: ${!!result}`,
             );
             state.executedNodeIds.add(node.nodeId);
+
+            // 🛡️ PASSIVE DAST INTEGRATION 🛡️
+            if (
+                state.options?.mode === 'security' &&
+                (node.type === 'open_url' || node.type === 'launch_browser')
+            ) {
+                const config = node.data?.configuration || {};
+                // Extract URL based on node type
+                let targetUrl = config.url || node.data?.url || node.data?.targetUrl;
+                if (!targetUrl && node.type === 'launch_browser')
+                    targetUrl = config.baseUrl || config.url;
+
+                if (targetUrl) {
+                    // Resolve variables in URL if needed
+                    targetUrl = variableManager.resolveRecursive(targetUrl, state.runId);
+
+                    console.log(`[ExecutionService] 🛡️ Triggering Passive DAST for ${targetUrl}`);
+
+                    // Run non-blocking promise chain
+                    (async () => {
+                        let cookies = [];
+                        if (state.browserId) {
+                            try {
+                                const browserSession = browserService.get(state.browserId);
+                                if (browserSession && browserSession.context) {
+                                    cookies = await browserSession.context.cookies();
+                                }
+                            } catch (e) {
+                                console.warn(
+                                    `[ExecutionService] Could not extract cookies for DAST: ${e.message}`,
+                                );
+                            }
+                        }
+
+                        await SecurityComplianceEngine.runComplianceAudit({
+                            targetUrl,
+                            executionId: state.runId,
+                            projectId: state.options?.projectId || 'default',
+                            frameworkCode:
+                                state.options?.securityConfig?.frameworkCode || 'OWASP_ASVS_L2',
+                            headers: state.options?.headers || {},
+                            cookies: cookies,
+                        });
+                    })().catch((err) => {
+                        console.error(`[ExecutionService] Passive DAST Error: ${err.message}`);
+                    });
+                }
+            }
 
             // 3. Store result for interpolation — even on error, so downstream nodes can inspect it
             const nodeLabel = node.data?.customLabel || node.data?.label || node.nodeId;

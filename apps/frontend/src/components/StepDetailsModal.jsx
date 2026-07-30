@@ -36,7 +36,8 @@ export default function StepDetailsModal({ isOpen, onClose, nodeData }) {
   const isSuccess = state === "success";
 
   // Gather security alerts
-  const alerts = nodeData.securityAlerts || replayData?.output_data?.securityAlerts || [];
+  const alerts =
+    nodeData.securityAlerts || replayData?.output_data?.securityAlerts || [];
 
   // Determine API Base URL
   const apiBase =
@@ -124,7 +125,7 @@ export default function StepDetailsModal({ isOpen, onClose, nodeData }) {
                   "px-4 py-3 text-xs font-semibold uppercase tracking-wider border-b-2 transition-all",
                   activeTab === "general"
                     ? "border-cyan-500 text-cyan-400 font-bold"
-                    : "border-transparent text-slate-400 hover:text-slate-200"
+                    : "border-transparent text-slate-400 hover:text-slate-200",
                 )}
               >
                 General
@@ -135,7 +136,7 @@ export default function StepDetailsModal({ isOpen, onClose, nodeData }) {
                   "px-4 py-3 text-xs font-semibold uppercase tracking-wider border-b-2 transition-all flex items-center gap-1.5",
                   activeTab === "security"
                     ? "border-red-500 text-red-400 font-bold"
-                    : "border-transparent text-slate-400 hover:text-slate-200"
+                    : "border-transparent text-slate-400 hover:text-slate-200",
                 )}
               >
                 <Shield size={12} />
@@ -249,26 +250,41 @@ export default function StepDetailsModal({ isOpen, onClose, nodeData }) {
               ) : (
                 <div className="space-y-4">
                   {alerts.map((alert, idx) => {
-                    const isHigh = alert.severity === "critical" || alert.severity === "high";
+                    const isHigh =
+                      alert.severity === "critical" ||
+                      alert.severity === "high";
                     const isMedium = alert.severity === "medium";
                     return (
                       <div
                         key={idx}
                         className={cn(
                           "p-4 rounded-xl border",
-                          isHigh && "bg-red-500/5 border-red-500/20 text-red-200",
-                          isMedium && "bg-amber-500/5 border-amber-500/20 text-amber-200",
-                          !isHigh && !isMedium && "bg-blue-500/5 border-blue-500/20 text-blue-200"
+                          isHigh &&
+                            "bg-red-500/5 border-red-500/20 text-red-200",
+                          isMedium &&
+                            "bg-amber-500/5 border-amber-500/20 text-amber-200",
+                          !isHigh &&
+                            !isMedium &&
+                            "bg-blue-500/5 border-blue-500/20 text-blue-200",
                         )}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex items-center gap-2">
                             {isHigh ? (
-                              <AlertCircle size={16} className="text-red-400 shrink-0" />
+                              <AlertCircle
+                                size={16}
+                                className="text-red-400 shrink-0"
+                              />
                             ) : isMedium ? (
-                              <AlertTriangle size={16} className="text-amber-400 shrink-0" />
+                              <AlertTriangle
+                                size={16}
+                                className="text-amber-400 shrink-0"
+                              />
                             ) : (
-                              <Shield size={16} className="text-blue-400 shrink-0" />
+                              <Shield
+                                size={16}
+                                className="text-blue-400 shrink-0"
+                              />
                             )}
                             <span className="text-xs font-bold uppercase tracking-wider">
                               {alert.ruleId || "Security Finding"}
@@ -279,7 +295,9 @@ export default function StepDetailsModal({ isOpen, onClose, nodeData }) {
                               "text-[10px] font-bold px-2 py-0.5 rounded-full capitalize",
                               isHigh && "bg-red-500/20 text-red-300",
                               isMedium && "bg-amber-500/20 text-amber-300",
-                              !isHigh && !isMedium && "bg-blue-500/20 text-blue-300"
+                              !isHigh &&
+                                !isMedium &&
+                                "bg-blue-500/20 text-blue-300",
                             )}
                           >
                             {alert.severity}
@@ -291,26 +309,43 @@ export default function StepDetailsModal({ isOpen, onClose, nodeData }) {
                         {/* OWASP & CVSS metadata */}
                         <div className="mt-2.5 grid grid-cols-2 gap-2 p-2 bg-slate-950/50 rounded-lg border border-white/5 text-[10px]">
                           <div>
-                            <span className="text-slate-500 block font-semibold uppercase">OWASP Category</span>
-                            <span className="text-indigo-300 font-medium">{alert.owasp || "A05:2021-Security Misconfiguration"}</span>
+                            <span className="text-slate-500 block font-semibold uppercase">
+                              OWASP Category
+                            </span>
+                            <span className="text-indigo-300 font-medium">
+                              {alert.owasp ||
+                                "A05:2021-Security Misconfiguration"}
+                            </span>
                           </div>
                           <div>
-                            <span className="text-slate-500 block font-semibold uppercase">CVSS rating</span>
+                            <span className="text-slate-500 block font-semibold uppercase">
+                              CVSS rating
+                            </span>
                             <span className="text-orange-400 font-bold">
-                              {alert.cvss != null ? alert.cvss.toFixed(1) : "5.0"}
-                              <span className="text-slate-500 font-normal ml-1">({alert.severity || "medium"})</span>
+                              {alert.cvss != null
+                                ? alert.cvss.toFixed(1)
+                                : "5.0"}
+                              <span className="text-slate-500 font-normal ml-1">
+                                ({alert.severity || "medium"})
+                              </span>
                             </span>
                           </div>
                           {alert.cvssVector && (
                             <div className="col-span-2 border-t border-white/5 pt-1.5 mt-0.5">
-                              <span className="text-slate-500 block font-semibold uppercase font-mono">CVSS Vector</span>
-                              <span className="text-slate-400 font-mono select-all break-all">{alert.cvssVector}</span>
+                              <span className="text-slate-500 block font-semibold uppercase font-mono">
+                                CVSS Vector
+                              </span>
+                              <span className="text-slate-400 font-mono select-all break-all">
+                                {alert.cvssVector}
+                              </span>
                             </div>
                           )}
                         </div>
                         {alert.evidence && (
                           <div className="mt-3">
-                            <span className="text-[10px] text-slate-500 uppercase font-semibold">Evidence</span>
+                            <span className="text-[10px] text-slate-500 uppercase font-semibold">
+                              Evidence
+                            </span>
                             <pre className="text-[10px] text-slate-300 font-mono bg-black/40 border border-white/5 p-2 rounded-lg mt-1 overflow-x-auto whitespace-pre-wrap break-all">
                               {typeof alert.evidence === "object"
                                 ? JSON.stringify(alert.evidence, null, 2)
@@ -324,10 +359,16 @@ export default function StepDetailsModal({ isOpen, onClose, nodeData }) {
 
                   {alerts.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
-                      <ShieldCheck size={48} className="text-emerald-500/20 mb-3" />
-                      <h3 className="text-sm font-bold text-emerald-400">Clean Step</h3>
+                      <ShieldCheck
+                        size={48}
+                        className="text-emerald-500/20 mb-3"
+                      />
+                      <h3 className="text-sm font-bold text-emerald-400">
+                        Clean Step
+                      </h3>
                       <p className="text-xs text-slate-500 max-w-xs mt-1">
-                        No security alerts or vulnerabilities detected during this step's execution.
+                        No security alerts or vulnerabilities detected during
+                        this step's execution.
                       </p>
                     </div>
                   )}

@@ -413,80 +413,112 @@ export function useFlowSync({
         "[useFlowSync] Loading starter template for project:",
         projectId,
       );
-      try {
-        // Fetch latest project flows to check if we can reuse/overwrite the default empty flow
-        const projectData = await projectManager.getProject(projectId);
-        const existingFlows = projectData?.flows || [];
+      const MAX_TEMPLATE_RETRIES = 3;
+      const TEMPLATE_RETRY_DELAY = 1500;
 
-        // Find if there's a default empty "Main Flow" we can reuse
-        const defaultEmptyFlow = existingFlows.find(
-          (f) =>
-            (f.name === "Main Flow" &&
-              (!f.nodeCount || Number(f.nodeCount) === 0)) ||
-            (existingFlows.length === 1 &&
-              (!f.nodeCount || Number(f.nodeCount) === 0)),
-        );
+      for (let attempt = 1; attempt <= MAX_TEMPLATE_RETRIES; attempt++) {
+        try {
+          // Fetch latest project flows to check if we can reuse/overwrite the default empty flow
+          const projectData = await projectManager.getProject(projectId);
+          const existingFlows = projectData?.flows || [];
 
-        let targetFlowId;
-        const processedNodes = migrateNodes
-          ? await migrateNodes(STARTER_TEMPLATE.nodes, projectId)
-          : STARTER_TEMPLATE.nodes;
-
-        if (defaultEmptyFlow) {
-          console.log(
-            "[useFlowSync] Reusing existing empty default flow:",
-            defaultEmptyFlow.id,
+          // Find if there's a default empty "Main Flow" we can reuse
+          const defaultEmptyFlow = existingFlows.find(
+            (f) =>
+              (f.name === "Main Flow" &&
+                (!f.nodeCount || Number(f.nodeCount) === 0)) ||
+              (existingFlows.length === 1 &&
+                (!f.nodeCount || Number(f.nodeCount) === 0)),
           );
-          targetFlowId = defaultEmptyFlow.id;
 
-          // Update/Rename the existing flow to the template name
-          await projectManager.updateFlow(projectId, targetFlowId, {
-            name: STARTER_TEMPLATE.name,
-            nodes: processedNodes,
-            edges: STARTER_TEMPLATE.edges,
-          });
-        } else {
-          // Create a new flow for the template if there's already work or no empty default flow
-          console.log(
-            "[useFlowSync] Creating new flow with name:",
-            STARTER_TEMPLATE.name,
-          );
-          const response = await projectManager.createFlow(
-            projectId,
-            STARTER_TEMPLATE.name,
-          );
-          console.log("[useFlowSync] Flow created response:", response);
-          targetFlowId = response.flow?.id || response.id;
+          let targetFlowId;
+          const processedNodes = migrateNodes
+            ? await migrateNodes(STARTER_TEMPLATE.nodes, projectId)
+            : STARTER_TEMPLATE.nodes;
 
-          // Persist the nodes and edges to the new flow
-          await projectManager.updateFlow(projectId, targetFlowId, {
-            nodes: processedNodes,
-            edges: STARTER_TEMPLATE.edges,
-          });
+          let finalName = STARTER_TEMPLATE.name;
+          let counter = 1;
+          
+          if (defaultEmptyFlow) {
+            console.log(
+              "[useFlowSync] Reusing existing empty default flow:",
+              defaultEmptyFlow.id,
+            );
+            targetFlowId = defaultEmptyFlow.id;
+            
+            while (existingFlows.some(f => f.name === finalName && f.id !== targetFlowId)) {
+                finalName = `${STARTER_TEMPLATE.name} (${counter++})`;
+            }
+
+            // Update/Rename the existing flow to the template name
+            await projectManager.updateFlow(projectId, targetFlowId, {
+              name: finalName,
+              nodes: processedNodes,
+              edges: STARTER_TEMPLATE.edges,
+            });
+          } else {
+            // Create a new flow for the template if there's already work or no empty default flow
+            while (existingFlows.some(f => f.name === finalName)) {
+                finalName = `${STARTER_TEMPLATE.name} (${counter++})`;
+            }
+            console.log(
+              "[useFlowSync] Creating new flow with name:",
+              finalName,
+            );
+            const response = await projectManager.createFlow(
+              projectId,
+              finalName,
+            );
+            console.log("[useFlowSync] Flow created response:", response);
+            targetFlowId = response.flow?.id || response.id;
+
+            // Persist the nodes and edges to the new flow
+            await projectManager.updateFlow(projectId, targetFlowId, {
+              nodes: processedNodes,
+              edges: STARTER_TEMPLATE.edges,
+            });
+          }
+
+          // Set the nodes and edges locally
+          setNodes(processedNodes);
+          setEdges(
+            STARTER_TEMPLATE.edges.map((e) => ({
+              ...e,
+              type: "custom",
+              animated: true,
+            })),
+          );
+
+          // Switch to it
+          switchFlow(targetFlowId);
+          setIsStarterTemplate(true);
+
+          if (toast)
+            toast.success(
+              t("common.template_loaded", "Starter template loaded!"),
+            );
+          return;
+        } catch (err) {
+          const isLastAttempt = attempt === MAX_TEMPLATE_RETRIES;
+          console.error(
+            `[useFlowSync] Template load attempt ${attempt}/${MAX_TEMPLATE_RETRIES} failed:`,
+            err.message,
+          );
+          if (isLastAttempt) {
+            logger.error("Failed to load starter template", err);
+            if (toast)
+              toast.error(
+                t("common.template_error", "Failed to load template"),
+              );
+          } else {
+            console.log(
+              `[useFlowSync] Retrying template load in ${TEMPLATE_RETRY_DELAY}ms...`,
+            );
+            await new Promise((resolve) =>
+              setTimeout(resolve, TEMPLATE_RETRY_DELAY * attempt),
+            );
+          }
         }
-
-        // Set the nodes and edges locally
-        setNodes(processedNodes);
-        setEdges(
-          STARTER_TEMPLATE.edges.map((e) => ({
-            ...e,
-            type: "custom",
-            animated: true,
-          })),
-        );
-
-        // Switch to it
-        switchFlow(targetFlowId);
-        setIsStarterTemplate(true);
-
-        if (toast)
-          toast.success(
-            t("common.template_loaded", "Starter template loaded!"),
-          );
-      } catch (err) {
-        logger.error("Failed to load starter template", err);
-        if (toast)
-          toast.error(t("common.template_error", "Failed to load template"));
       }
     },
     [setNodes, setEdges, switchFlow, toast, t, migrateNodes],

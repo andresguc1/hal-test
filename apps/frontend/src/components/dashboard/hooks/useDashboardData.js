@@ -111,7 +111,8 @@ export function useOverviewMetrics() {
   const runsQuery = useRecentRuns(100);
 
   const projects = projectsQuery.data || [];
-  const runs = runsQuery.data || [];
+  const rawRuns = runsQuery.data || [];
+  const runs = rawRuns.filter(r => r.trigger !== 'security');
 
   const totalFlows = projects.reduce(
     (sum, p) => sum + (p.flows?.length || 0),

@@ -54,15 +54,26 @@ app.set('trust proxy', 1);
 app.use(helmetMiddleware);
 app.use(i18nMiddleware.handle(i18n));
 
-const allowedOrigins = process.env.ALLOWED_ORIGINS
-    ? process.env.ALLOWED_ORIGINS.split(',')
-    : [
-          'http://localhost:3000',
-          'http://localhost:5173',
-          'http://localhost:2001',
-          'https://haltest.com',
-          'https://hal-test-backend.onrender.com',
-      ];
+const getAllowedOrigins = () => {
+    const envOrigins = process.env.ALLOWED_ORIGINS;
+    if (envOrigins) {
+        return envOrigins.split(',');
+    }
+    return [
+        'http://localhost:3000',
+        'http://localhost:5173',
+        'http://localhost:2001',
+        'https://haltest.com',
+        'https://hal-test-backend.onrender.com',
+    ];
+};
+
+const isOriginAllowed = (origin) => {
+    if (!origin) return true;
+    const origins = getAllowedOrigins();
+    if (origins.some((allowed) => origin.startsWith(allowed.trim()))) return true;
+    return isLocalOrPrivateOrigin(origin);
+};
 
 /**
  * Validates if the origin is a local host, local domain, or private LAN IP address.
@@ -95,15 +106,9 @@ const isLocalOrPrivateOrigin = (origin) => {
 app.use(
     cors({
         origin: (origin, callback) => {
-            // Allow requests with no origin (like mobile apps or same-origin)
             if (!origin) return callback(null, true);
 
-            // Check if origin is allowed, is local/private network, or if it's the same origin
-            const isAllowed =
-                allowedOrigins.some((allowed) => origin.startsWith(allowed)) ||
-                isLocalOrPrivateOrigin(origin);
-
-            if (isAllowed || process.env.NODE_ENV !== 'production') {
+            if (isOriginAllowed(origin)) {
                 callback(null, true);
             } else {
                 console.warn(`[CORS Blocked] Origin: ${origin}`);

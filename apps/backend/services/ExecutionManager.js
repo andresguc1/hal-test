@@ -6,6 +6,7 @@ import { activeRunManager } from './ActiveRunManager.js';
 import { executionService } from './ExecutionService.js';
 import { CircuitBreakerGuard } from './CircuitBreakerGuard.js';
 import { SpikePatternEngine } from './SpikePatternEngine.js';
+import { SecurityComplianceEngine } from './SecurityComplianceEngine.js';
 
 /**
  * @typedef {Object} RunOptions
@@ -583,42 +584,65 @@ class SecurityRunner extends Runner {
                 n?.type === 'security_header_audit',
         );
 
-        if (auditNodes.length === 0) {
-            emitLog({
-                message:
-                    'No security checkpoint nodes found in flow. Running non-intrusive Quality Gate audit...',
-                type: 'info',
+        emitLog({
+            message: `[Security] Initiating Synchronized Passive Security Audit (DAST) for flow ${flowId}...`,
+            type: 'info',
+        });
+
+        // Execute Security Compliance audit & score generation
+        let complianceReport = null;
+        try {
+            const targetUrl = options?.securityConfig?.targetUrl || 'http://localhost:3000';
+            const frameworkCode = options?.securityConfig?.framework || 'OWASP_ASVS_L2';
+            complianceReport = await SecurityComplianceEngine.runComplianceAudit({
+                targetUrl,
+                executionId: options?.runId,
+                projectId: flow.projectId || flow.project_id || 'default',
+                frameworkCode,
             });
-        } else {
-            emitLog({
-                message: `Found ${auditNodes.length} security checkpoint node(s) in flow. Initiating Quality Gate...`,
-                type: 'info',
-            });
+        } catch (auditErr) {
+            console.warn(
+                `[SecurityRunner] SecurityComplianceEngine audit warning: ${auditErr.message}`,
+            );
         }
 
-        // 1. Delegate execution to runFn if provided
+        // Delegate execution to runFn if provided (this is the second pass from ExecutionService)
         if (typeof runFn === 'function') {
-            return await runFn(flow, options);
+            const res = await runFn(flow, options);
+            return { ...res, complianceReport };
         }
 
-        // 2. Fallback to executionService if flow is persisted in DB (has projectId)
+        // Fallback to executionService if flow is persisted in DB (has projectId)
+        // ExecutionService will run the nodes and passively dispatch security alerts
         if (executionService && flowId && (flow.projectId || flow.project_id)) {
             try {
                 const projectId = flow.projectId || flow.project_id;
-                return await executionService.executeFlow(flowId, projectId, {
+                const flowExecResult = await executionService.executeFlow(flowId, projectId, {
                     runId: options?.runId,
                     securityConfig: options?.securityConfig,
                     mode: 'security',
                 });
+                return {
+                    success: true,
+                    mode: 'security',
+                    auditNodesCount: auditNodes.length,
+                    complianceReport,
+                    ...(flowExecResult || {}),
+                };
             } catch (err) {
                 console.warn(
-                    `[SecurityRunner] executionService.executeFlow skipped: ${err.message}`,
+                    `[SecurityRunner] executionService.executeFlow skipped or failed: ${err.message}`,
                 );
             }
         }
 
-        emitLog({ message: 'Security Audit completed', type: 'success' });
-        return { success: true, mode: 'security', auditNodesCount: auditNodes.length };
+        emitLog({ message: 'Security Audit completed successfully', type: 'success' });
+        return {
+            success: true,
+            mode: 'security',
+            auditNodesCount: auditNodes.length,
+            complianceReport,
+        };
     }
 }
 

@@ -1,17 +1,21 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { AlertOctagon, CheckCircle2, Zap, Clock, AlertTriangle, ShieldCheck } from "lucide-react";
+import {
+  AlertOctagon,
+  CheckCircle2,
+  Zap,
+  Clock,
+  AlertTriangle,
+  ShieldCheck,
+} from "lucide-react";
 
 /**
  * BreakingPointBadgeCard — High-impact Breaking Point & Resilience Indicator Component
  */
-export const BreakingPointBadgeCard = ({ breakingPoint, profile }) => {
+export const BreakingPointBadgeCard = ({ breakingPoint, _profile }) => {
   if (!breakingPoint) return null;
 
   const isBroken = breakingPoint.broken;
-  const isStressOrRamp = ["stress", "stepped", "ramp", "ramp-up", "spike"].includes(
-    String(profile || "").toLowerCase()
-  );
 
   return (
     <motion.div
@@ -38,7 +42,9 @@ export const BreakingPointBadgeCard = ({ breakingPoint, profile }) => {
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-base font-bold text-slate-100 uppercase tracking-wider">
-                {isBroken ? "PUNTO DE RUPTURA (BREAKING POINT) DETECTADO" : "RESILIENCIA DEL SISTEMA OK"}
+                {isBroken
+                  ? "PUNTO DE RUPTURA (BREAKING POINT) DETECTADO"
+                  : "RESILIENCIA DEL SISTEMA OK"}
               </h3>
               <span
                 className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase border ${
@@ -52,8 +58,10 @@ export const BreakingPointBadgeCard = ({ breakingPoint, profile }) => {
             </div>
             <p className="text-xs text-slate-400 mt-1">
               {isBroken
-                ? breakingPoint.reason || "El sistema alcanzó su límite de capacidad operativa."
-                : breakingPoint.message || "La infraestructura soportó la sobrecarga sin quiebre de servicio."}
+                ? breakingPoint.reason ||
+                  "El sistema alcanzó su límite de capacidad operativa."
+                : breakingPoint.message ||
+                  "La infraestructura soportó la sobrecarga sin quiebre de servicio."}
             </p>
           </div>
         </div>
@@ -69,7 +77,8 @@ export const BreakingPointBadgeCard = ({ breakingPoint, profile }) => {
                 isBroken ? "text-red-400" : "text-emerald-400"
               }`}
             >
-              {isBroken ? breakingPoint.vus : breakingPoint.maxVUsReached || 1} VUs
+              {isBroken ? breakingPoint.vus : breakingPoint.maxVUsReached || 1}{" "}
+              VUs
             </span>
           </div>
 

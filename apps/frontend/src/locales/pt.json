@@ -448,6 +448,99 @@
   },
   "security_dashboard": {
     "title": "Painel de Segurança",
+    "target_label": "ALVO:",
+    "run_audit": "Executar Auditoria",
+    "tabs": {
+      "config": "Configuração",
+      "live": "Em Tempo Real",
+      "results": "Resultados",
+      "compliance": "Policy Compliance",
+      "history": "Histórico"
+    },
+    "compliance": {
+      "scorecard_title": "Scorecard Executivo de Conformidade",
+      "standard_target": "Alvo Padrão:",
+      "scorecard_desc": "Auditoria ativa de conformidade de políticas de segurança para a aplicação web. Valida cabeçalhos HTTP, transporte TLS, segurança de cookies e armazenamento de tokens.",
+      "passed": "APROVADOS",
+      "failed": "FALHADOS",
+      "audited_rules": "Regras Auditadas",
+      "matrix_title": "Matriz de Regras e Controles de Conformidade",
+      "remediate_ai": "Corrigir com IA",
+      "remediation_prefix": "💡 Correção:",
+      "rules": {
+        "SEC-HDR-CSP": {
+          "desc": "O cabeçalho Content-Security-Policy não está configurado na aplicação servida.",
+          "rec": "Configure o cabeçalho 'Content-Security-Policy: default-src 'self'' no seu servidor."
+        },
+        "SEC-HDR-HSTS": {
+          "desc": "Cabeçalho HSTS verificado com sucesso (max-age=31536000).",
+          "rec": "Mantenha o valor max-age superior a 31536000 segundos."
+        },
+        "SEC-HDR-XFO": {
+          "desc": "Cabeçalho X-Frame-Options presente com valor SAMEORIGIN.",
+          "rec": "Mantenha a proteção contra enquadramento malicioso."
+        },
+        "SEC-HDR-XCTO": {
+          "desc": "Cabeçalho X-Content-Type-Options configurado como nosniff.",
+          "rec": "Evite que os navegadores adivinhem o tipo MIME de recursos estáticos."
+        },
+        "SEC-CK-HTTPONLY": {
+          "desc": "Todos os cookies de sessão incluem a flag HttpOnly.",
+          "rec": "Evita que scripts maliciosos de cliente (XSS) acessem cookies de sessão."
+        },
+        "SEC-CK-SECURE": {
+          "desc": "Todos os cookies exigem transporte criptografado sob HTTPS.",
+          "rec": "Mantenha o atributo Secure em todos os cookies de autenticação."
+        },
+        "SEC-CRY-TLS-VERSION": {
+          "desc": "Conexão TLS 1.3 negociada com algoritmos modernos de criptografia.",
+          "rec": "Mantenha os protocolos legados SSLv3, TLS 1.0 e TLS 1.1 desativados."
+        },
+        "SEC-DAT-TOKEN-STORAGE": {
+          "desc": "Nenhum token JWT em texto claro encontrado exposto no LocalStorage.",
+          "rec": "Continue armazenando tokens de sessão em cookies HttpOnly."
+        }
+      }
+    },
+    "results": {
+      "qg_passed": "QUALITY GATE: APROVADO",
+      "qg_failed": "QUALITY GATE: REPROVADO",
+      "qg_passed_desc": "O fluxo atende aos critérios de aceitação de segurança e políticas DAST.",
+      "qg_failed_desc": "Achados críticos/altos detectados ou Score de Segurança abaixo de 80%.",
+      "global_score": "Pontuação Global",
+      "health_index": "Índice de Saúde",
+      "excellent_safe": "Excelente (Seguro)",
+      "moderate_risk": "Risco Moderado",
+      "attention_required": "Ação Necessária",
+      "health_desc": "Pontuação baseada em achados ativos e peso de severidade OWASP.",
+      "data_leaks_title": "Vazamento de Dados & Privacidade",
+      "data_leaks_desc": "Transmissão em texto claro, cookies ou senhas",
+      "input_vuln_title": "Vulnerabilidades de Entrada",
+      "input_vuln_desc": "Riscos XSS, armadilhas DOM & JS inline",
+      "policy_title": "Conformidade de Políticas",
+      "policy_desc": "Cabeçalhos HTTP (CSP, HSTS, XFO)",
+      "search_placeholder": "Filtrar por mensagem, regra ou nó...",
+      "all_severities": "Todas as Severidades",
+      "critical_high": "Críticas & Altas",
+      "medium": "Médias",
+      "low_info": "Baixas & Informativas",
+      "all_categories": "Todas as Categorias",
+      "cat_data_leak": "Vazamento de Dados",
+      "cat_input_vuln": "Vulnerabilidades de Entrada",
+      "cat_policy": "Conformidade de Políticas",
+      "run_label": "Execução:",
+      "no_vulnerabilities": "Nenhum achado de vulnerabilidade detectado!",
+      "no_vulnerabilities_desc": "As execuções registradas cumprem com as diretrizes OWASP e políticas de cabeçalho configuradas.",
+      "node_label": "Nó:",
+      "locate_btn": "Localizar",
+      "diag_details": "Detalhes de Diagnóstico",
+      "description": "Descrição",
+      "ai_rec_title": "💡 Recomendação de Correção por IA",
+      "tech_evidence": "Evidência Técnica",
+      "target_url": "URL Alvo",
+      "analysis_node": "Nó de Análise",
+      "select_finding_hint": "Selecione qualquer achado de segurança para inspecionar a evidência técnica e a correção sugerida pela IA."
+    },
     "quality_gate": "Quality Gate de Segurança",
     "policy_compliance": "Conformidade de Políticas",
     "data_leak_protection": "Proteção Contra Vazamento de Dados",
@@ -462,5 +555,66 @@
     "high": "Alto",
     "medium": "Médio",
     "low": "Baixo"
+  },
+  "security_live": {
+    "status_preparing": "Inicializando Varredura DAST...",
+    "status_running": "Auditoria de Segurança em Andamento",
+    "status_completed": "Auditoria Concluída com Sucesso",
+    "status_failed": "Auditoria Interrompida",
+    "status_idle": "Aguardando Execução da Auditoria",
+    "stop_audit": "Parar Auditoria",
+    "view_full_report": "Ver Relatório Completo",
+    "graph_progress": "Progresso do Grafo de Teste",
+    "critical_high": "Críticas / Altas",
+    "medium_severity": "Severidade Média",
+    "low_info": "Baixas / Informativas",
+    "matrix_title": "Matriz de Controle de Segurança e Varredura de Vetores DAST",
+    "standard_target": "OWASP ASVS 14.4 & Top 10",
+    "vector_headers": "Cabeçalhos de Segurança HTTP",
+    "vector_headers_desc": "Inspeção passiva de Strict-Transport-Security, CSP, X-Frame-Options e X-Content-Type.",
+    "vector_tls": "Transporte TLS / Criptografia",
+    "vector_tls_desc": "Verificação de criptografia HTTPS em trânsito, validade de certificados TLS e ciphers.",
+    "vector_cookies": "Segurança de Cookies & Sessão",
+    "vector_cookies_desc": "Auditoria dos atributos HttpOnly, Secure e SameSite em cookies de autenticação de usuário.",
+    "vector_storage": "Armazenamento Local & Vazamento de Tokens",
+    "vector_storage_desc": "Monitoramento contra armazenamento de tokens JWT ou credenciais sensíveis no LocalStorage em texto claro.",
+    "vector_sanitizing": "Sanitização & Injeções",
+    "vector_sanitizing_desc": "Inspeção contra injeção XSS Refletido/Persistente e links vulneráveis para javascript: URIs.",
+    "vector_disclosure": "Vazamento de Informações do Servidor",
+    "vector_disclosure_desc": "Verificação dos cabeçalhos Server / X-Powered-By para evitar fingerprinting do servidor.",
+    "observations": "Observações",
+    "protected": "Protegido",
+    "validated": "Validado",
+    "leak_detected": "Vazamento Detectado",
+    "clean": "Limpo",
+    "active_filters": "Filtros Ativos",
+    "no_leaks": "Sem Vazamentos",
+    "feed_title": "Feed de Alertas Detectados em Tempo Real",
+    "all": "Todas",
+    "high_short": "Altas",
+    "medium_short": "Médias",
+    "low_short": "Baixas",
+    "remediation_recommendation": "Recomendação de Correção:",
+    "close_inspector": "Fechar Inspetor",
+    "analyzing": "Analisando",
+    "monitoring_desc": "Monitorando requisições HTTP, cabeçalhos do servidor e sanitização DOM...",
+    "https_secure": "HTTPS Seguro",
+    "scan_idle_msg": "O motor de varredura está analisando os nós. As vulnerabilidades detectadas aparecerão aqui instantaneamente.",
+    "scan_start_hint": "Inicie a auditoria para começar a inspeção passiva em tempo real."
+  },
+  "security_history": {
+    "title": "Histórico de Auditorias de Segurança",
+    "subtitle": "Registro cronológico de avaliações de vulnerabilidades e varreduras DAST.",
+    "search_placeholder": "Pesquisar por ID ou Fluxo...",
+    "reload_title": "Recarregar histórico",
+    "loading": "Carregando execuções anteriores...",
+    "empty": "Nenhuma auditoria registrada neste período.",
+    "col_run_id": "ID da Execução",
+    "col_flow": "Fluxo",
+    "col_mode": "Modo",
+    "col_date": "Data",
+    "col_status": "Status",
+    "col_action": "Ação",
+    "view_report": "Ver relatório"
   }
 }
