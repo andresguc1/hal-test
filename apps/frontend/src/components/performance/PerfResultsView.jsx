@@ -30,6 +30,7 @@ import {
   Timer,
   PieChart,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { RealTimeTelemetryChart } from "../telemetry/RealTimeTelemetryChart";
 import {
   TelemetryDataNormalizer,
@@ -52,6 +53,7 @@ const PerfResultsView = ({
   runConfig: _runConfig,
   flowNodes = [],
 }) => {
+  const { t } = useTranslation();
   const [expandedGroups, setExpandedGroups] = useState(new Set(["main-flow"]));
   const [expandedNodes, setExpandedNodes] = useState(new Set());
   const [sortBy, setSortBy] = useState("p95"); // p95 | cpuAvg | memAvg | errors
@@ -220,7 +222,12 @@ const PerfResultsView = ({
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-12 text-slate-500 italic space-y-3">
         <Activity size={32} className="text-slate-600 animate-pulse" />
-        <div>No hay resultados de rendimiento disponibles para este flujo.</div>
+        <div>
+          {t(
+            "perf_results.no_results",
+            "No hay resultados de rendimiento disponibles para este flujo.",
+          )}
+        </div>
       </div>
     );
   }
@@ -253,35 +260,35 @@ const PerfResultsView = ({
   const histogramBuckets = [
     {
       label: "< 200 ms",
-      range: "Óptimo",
+      range: t("perf_results.range_optimal", "Óptimo"),
       color: "bg-emerald-500",
       text: "text-emerald-400",
       count: 0,
     },
     {
       label: "200 - 500 ms",
-      range: "Aceptable",
+      range: t("perf_results.range_acceptable", "Aceptable"),
       color: "bg-blue-500",
       text: "text-blue-400",
       count: 0,
     },
     {
       label: "500 - 1000 ms",
-      range: "Lento",
+      range: t("perf_results.range_slow", "Lento"),
       color: "bg-amber-500",
       text: "text-amber-400",
       count: 0,
     },
     {
       label: "1000 - 2000 ms",
-      range: "Muy Lento",
+      range: t("perf_results.range_very_slow", "Muy Lento"),
       color: "bg-orange-500",
       text: "text-orange-400",
       count: 0,
     },
     {
       label: "> 2000 ms",
-      range: "Crítico",
+      range: t("perf_results.range_critical", "Crítico"),
       color: "bg-red-500",
       text: "text-red-400",
       count: 0,
@@ -349,8 +356,12 @@ const PerfResultsView = ({
         id: groupKey,
         label:
           groupKey === "main-flow"
-            ? "Flujo Principal"
-            : `SubFlow (${groupKey.split("-")[0]})`,
+            ? t("perf_results.main_flow", "Flujo Principal")
+            : t(
+                "perf_results.subflow",
+                { id: groupKey.split("-")[0] },
+                `SubFlow (${groupKey.split("-")[0]})`,
+              ),
         nodes: groupNodes,
         count,
         avg,
@@ -386,10 +397,20 @@ const PerfResultsView = ({
       insights.push({
         type: "bottleneck",
         severity: slowest.p95 > 1500 ? "high" : "medium",
-        title: `Paso Crítico: "${slowest.label}"`,
-        description: `El paso "${slowest.label}" representa el ${stepPct}% del tiempo total del flujo con una latencia P95 de ${slowest.p95}ms.`,
-        recommendation:
+        title: t(
+          "perf_results.critical_step_title",
+          { label: slowest.label },
+          `Paso Crítico: "${slowest.label}"`,
+        ),
+        description: t(
+          "perf_results.critical_step_desc",
+          { label: slowest.label, pct: stepPct, p95: slowest.p95 },
+          `El paso "${slowest.label}" representa el ${stepPct}% del tiempo total del flujo con una latencia P95 de ${slowest.p95}ms.`,
+        ),
+        recommendation: t(
+          "perf_results.critical_step_rec",
           "Optimiza los selectores DOM, reduce llamadas de API bloqueantes o implementa retardo diferido.",
+        ),
       });
     }
 
@@ -398,10 +419,20 @@ const PerfResultsView = ({
       insights.push({
         type: "ttfb",
         severity: waterfall.ttfb > 600 ? "high" : "medium",
-        title: `TTFB Elevado (${waterfall.ttfb}ms)`,
-        description: `El tiempo hasta el primer byte (TTFB) de los servicios del backend representa el ${Math.round((waterfall.ttfb / waterfallTotal) * 100)}% de la respuesta total.`,
-        recommendation:
+        title: t(
+          "perf_results.ttfb_elevated_title",
+          { ttfb: waterfall.ttfb },
+          `TTFB Elevado (${waterfall.ttfb}ms)`,
+        ),
+        description: t(
+          "perf_results.ttfb_elevated_desc",
+          { pct: Math.round((waterfall.ttfb / waterfallTotal) * 100) },
+          `El tiempo hasta el primer byte (TTFB) de los servicios del backend representa el ${Math.round((waterfall.ttfb / waterfallTotal) * 100)}% de la respuesta total.`,
+        ),
+        recommendation: t(
+          "perf_results.ttfb_elevated_rec",
           "Inspecciona consultas pesadas a base de datos, índices faltantes o tiempos de cómputo en controlador backend.",
+        ),
       });
     }
 
@@ -410,10 +441,19 @@ const PerfResultsView = ({
       insights.push({
         type: "variability",
         severity: "warning",
-        title: "Alta Variabilidad de Respuestas (Outliers P99)",
-        description: `La latencia P99 (${p99}ms) es significativamente mayor que P95 (${p95}ms), indicando respuestas erráticas bajo ciertas condiciones.`,
-        recommendation:
+        title: t(
+          "perf_results.variability_title",
+          "Alta Variabilidad de Respuestas (Outliers P99)",
+        ),
+        description: t(
+          "perf_results.variability_desc",
+          { p99, p95 },
+          `La latencia P99 (${p99}ms) es significativamente mayor que P95 (${p95}ms), indicando respuestas erráticas bajo ciertas condiciones.`,
+        ),
+        recommendation: t(
+          "perf_results.variability_rec",
           "Verifica picos de uso de CPU/RAM en servidor, contención de locks en base de datos o latencias de red esporádicas.",
+        ),
       });
     }
 
@@ -422,10 +462,20 @@ const PerfResultsView = ({
       insights.push({
         type: "errors",
         severity: "high",
-        title: `Tasa de Error Detectada: ${metrics.errorRate}%`,
-        description: `Se registraron ${metrics.errorCount} fallos durante la prueba de profiling.`,
-        recommendation:
+        title: t(
+          "perf_results.error_rate_title",
+          { rate: metrics.errorRate },
+          `Tasa de Error Detectada: ${metrics.errorRate}%`,
+        ),
+        description: t(
+          "perf_results.error_rate_desc",
+          { count: metrics.errorCount },
+          `Se registraron ${metrics.errorCount} fallos durante la prueba de profiling.`,
+        ),
+        recommendation: t(
+          "perf_results.error_rate_rec",
           "Revisa los registros de errores en consola y respuestas HTTP 4xx/5xx devueltas.",
+        ),
       });
     }
 
@@ -434,10 +484,19 @@ const PerfResultsView = ({
       insights.push({
         type: "optimal",
         severity: "success",
-        title: "Rendimiento Estable y Consistente",
-        description: `La latencia P95 (${p95}ms) y el TTFB (${waterfall.ttfb}ms) se encuentran dentro de límites óptimos sin cuellos de botella severos.`,
-        recommendation:
+        title: t(
+          "perf_results.optimal_title",
+          "Rendimiento Estable y Consistente",
+        ),
+        description: t(
+          "perf_results.optimal_desc",
+          { p95, ttfb: waterfall.ttfb },
+          `La latencia P95 (${p95}ms) y el TTFB (${waterfall.ttfb}ms) se encuentran dentro de límites óptimos sin cuellos de botella severos.`,
+        ),
+        recommendation: t(
+          "perf_results.optimal_rec",
           "Mantén este benchmark como línea base para futuras regresiones en integración continua.",
+        ),
       });
     }
 
@@ -490,8 +549,14 @@ const PerfResultsView = ({
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[11px] font-mono font-bold text-blue-400 uppercase tracking-widest bg-blue-500/10 px-2.5 py-0.5 rounded-full border border-blue-500/20">
                   {isProfilingMode
-                    ? "LATENCY PROFILING (1 VU)"
-                    : "LOAD TESTING REPORT"}
+                    ? t(
+                        "perf_results.latency_profiling_tag",
+                        "PROFILING DE LATENCIA (1 VU)",
+                      )
+                    : t(
+                        "perf_results.load_testing_tag",
+                        "INFORME DE PRUEBA DE CARGA",
+                      )}
                 </span>
                 <span
                   className={`text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full border ${profileColor}`}
@@ -512,15 +577,29 @@ const PerfResultsView = ({
                       <ArrowDownRight size={14} />
                     )}
                     {p95Diff > 0
-                      ? `+${p95Diff}% Regresión`
-                      : `${p95Diff}% Mejora`}
+                      ? t(
+                          "perf_results.regression",
+                          { pct: p95Diff },
+                          `+${p95Diff}% Regresión`,
+                        )
+                      : t(
+                          "perf_results.improvement",
+                          { pct: p95Diff },
+                          `${p95Diff}% Mejora`,
+                        )}
                   </span>
                 )}
               </div>
               <div className="text-xl font-extrabold text-slate-100 mt-1">
                 {isProfilingMode
-                  ? "Análisis Diagnóstico de Latencia & Cuellos de Botella"
-                  : "Informe de Capacidad y Estrés de Carga"}
+                  ? t(
+                      "perf_results.profiling_title",
+                      "Análisis Diagnóstico de Latencia & Cuellos de Botella",
+                    )
+                  : t(
+                      "perf_results.load_report_title",
+                      "Informe de Capacidad y Estrés de Carga",
+                    )}
               </div>
             </div>
           </div>
@@ -537,7 +616,8 @@ const PerfResultsView = ({
               }}
               className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow transition-colors flex items-center gap-1.5"
             >
-              <Download size={14} /> Exportar HTML
+              <Download size={14} />{" "}
+              {t("perf_results.export_html", "Exportar HTML")}
             </button>
             <button
               type="button"
@@ -548,19 +628,29 @@ const PerfResultsView = ({
               }}
               className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold transition-colors flex items-center gap-1.5"
             >
-              <FileText size={14} /> Exportar PDF
+              <FileText size={14} />{" "}
+              {t("perf_results.export_pdf", "Exportar PDF")}
             </button>
             <div className="text-right text-xs font-mono text-slate-400 hidden sm:block">
               <div>
-                Modo:{" "}
+                {t("perf_results.mode_label", "Modo:")}{" "}
                 <span className="text-blue-300 font-semibold">
                   {isProfilingMode
-                    ? "Diagnóstico '¿Por qué es lento?'"
-                    : "Estrés '¿Cuánto soporta?'"}
+                    ? t(
+                        "perf_results.mode_profiling_desc",
+                        "Diagnóstico '¿Por qué es lento?'",
+                      )
+                    : t(
+                        "perf_results.mode_stress_desc",
+                        "Estrés '¿Cuánto soporta?'",
+                      )}
                 </span>
               </div>
               <div className="text-[10px] text-slate-500">
-                Muestreo paso a paso de alto detalle
+                {t(
+                  "perf_results.high_detail_sampling",
+                  "Muestreo paso a paso de alto detalle",
+                )}
               </div>
             </div>
           </div>
@@ -587,24 +677,34 @@ const PerfResultsView = ({
               </div>
               <div>
                 <div className="text-sm font-bold tracking-wide uppercase">
-                  Veredicto Cloud SLA: {metrics.slaEvaluation.status}
+                  {t(
+                    "perf_results.sla_verdict",
+                    { status: metrics.slaEvaluation.status },
+                    `Veredicto Cloud SLA: ${metrics.slaEvaluation.status}`,
+                  )}
                 </div>
                 <div className="text-xs opacity-80 mt-0.5">
-                  Índice APDEX:{" "}
+                  {t("perf_results.apdex_index", "Índice APDEX:")}{" "}
                   <strong>{metrics.slaEvaluation.apdexScore} / 1.00</strong>{" "}
-                  &bull; Capacidad Máxima Estable:{" "}
+                  &bull;{" "}
+                  {t(
+                    "perf_results.max_stable_capacity",
+                    "Capacidad Máxima Estable:",
+                  )}{" "}
                   <strong>
                     {metrics.slaEvaluation.saturationPoint?.maxStableVUs ||
                       metrics.runConfig?.totalVUs ||
                       10}{" "}
-                    VUs Concurrentes
+                    {t("perf_results.concurrent_vus", "VUs Concurrentes")}
                   </strong>
                 </div>
               </div>
             </div>
             {metrics.slaEvaluation.saturationPoint?.bottleneckNodeLabel && (
               <div className="text-right text-xs font-mono bg-slate-950/60 p-2.5 rounded-lg border border-slate-800">
-                <span className="text-slate-400">Cuello de Botella:</span>{" "}
+                <span className="text-slate-400">
+                  {t("perf_results.bottleneck_node", "Cuello de Botella:")}
+                </span>{" "}
                 <strong className="text-amber-400">
                   {metrics.slaEvaluation.saturationPoint.bottleneckNodeLabel}
                 </strong>
@@ -615,13 +715,13 @@ const PerfResultsView = ({
 
         {/* Diagnostic Mandate Explanation */}
         <p className="text-xs text-slate-400 leading-relaxed bg-slate-950/50 p-3 rounded-xl border border-slate-800/80">
-          <strong className="text-slate-200">¿Qué evalúa esta prueba?</strong> A
-          diferencia de una prueba de carga que busca saturar el sistema con
-          múltiples usuarios, el{" "}
-          <span className="text-blue-400 font-semibold">Latency Profiling</span>{" "}
-          analiza el tiempo que toma cada etapa del sistema (DNS, TCP,
-          Handshake, TTFB del servidor y renderizado) para responder exactamente{" "}
-          <em>por qué una solicitud tarda lo que tarda</em>.
+          <strong className="text-slate-200">
+            {t("perf_results.what_evaluates_title", "¿Qué evalúa esta prueba?")}
+          </strong>{" "}
+          {t(
+            "perf_results.what_evaluates_desc",
+            "A diferencia de una prueba de carga que busca saturar el sistema con múltiples usuarios, el Latency Profiling analiza el tiempo que toma cada etapa del sistema (DNS, TCP, Handshake, TTFB del servidor y renderizado) para responder exactamente por qué una solicitud tarda lo que tarda.",
+          )}
         </p>
       </div>
 
@@ -630,10 +730,17 @@ const PerfResultsView = ({
         <div className="flex items-center justify-between">
           <h3 className="text-base font-semibold text-slate-100 flex items-center gap-2">
             <Sparkles size={18} className="text-amber-400" />
-            Conclusiones Automáticas de Calidad (QA Performance Analyzer)
+            {t(
+              "perf_results.qa_insights_title",
+              "Conclusiones Automáticas de Calidad (QA Performance Analyzer)",
+            )}
           </h3>
           <span className="text-[11px] font-mono text-slate-400 bg-slate-800/60 px-3 py-1 rounded-full border border-slate-700/50">
-            {insights.length} Hallazgos Priorizados
+            {t(
+              "perf_results.prioritized_findings",
+              { count: insights.length },
+              `${insights.length} Hallazgos Priorizados`,
+            )}
           </span>
         </div>
 
@@ -669,7 +776,10 @@ const PerfResultsView = ({
                 <div className="pt-1 text-[11px] font-medium text-slate-300 flex items-center gap-1.5">
                   <ArrowRight size={13} className="text-sky-400 shrink-0" />
                   <span>
-                    <strong>Recomendación QA:</strong> {item.recommendation}
+                    <strong>
+                      {t("perf_results.qa_recommendation", "Recomendación QA:")}
+                    </strong>{" "}
+                    {item.recommendation}
                   </span>
                 </div>
               </div>
@@ -697,23 +807,23 @@ const PerfResultsView = ({
       {/* 3. Global Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <SummaryCard
-          label="Total Solicitudes"
+          label={t("perf_results.total_requests", "Total Solicitudes")}
           value={metrics.totalRequests || 0}
           icon={Zap}
         />
         <SummaryCard
-          label="Throughput Promedio"
+          label={t("perf_results.avg_throughput", "Throughput Promedio")}
           value={`${metrics.throughput || 0} req/s`}
           icon={BarChart2}
         />
         <SummaryCard
-          label="Latencia P95"
+          label={t("perf_results.p95_latency", "Latencia P95")}
           value={`${metrics.latency?.p95 || 0}ms`}
           icon={Clock}
           color="text-blue-400"
         />
         <SummaryCard
-          label="Tasa de Error"
+          label={t("perf_results.error_rate", "Tasa de Error")}
           value={`${metrics.errorRate || "0.00"}%`}
           icon={Target}
           color={
@@ -727,34 +837,58 @@ const PerfResultsView = ({
         <div className="flex items-center justify-between">
           <h3 className="text-base font-medium text-slate-200 flex items-center gap-2">
             <Timer size={18} className="text-sky-400" />
-            Tabla de Percentiles & Distribución Temporal
+            {t(
+              "perf_results.percentiles_table_title",
+              "Tabla de Percentiles & Distribución Temporal",
+            )}
           </h3>
           <span className="text-[10px] text-slate-500 font-mono">
-            Std Dev: {metrics.latency?.stdDev || 45}ms
+            {t("perf_results.std_dev", "Std Dev:")}{" "}
+            {metrics.latency?.stdDev || 45}ms
           </span>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-3">
           {[
-            { label: "Min", val: metrics.latency?.min, desc: "Mínimo" },
-            { label: "Avg", val: metrics.latency?.avg, desc: "Promedio" },
-            { label: "P50", val: metrics.latency?.median, desc: "Mediana" },
-            { label: "P90", val: metrics.latency?.p90, desc: "90% Usuarios" },
             {
-              label: "P95",
+              label: t("perf_results.min", "Min"),
+              val: metrics.latency?.min,
+              desc: t("perf_results.min_desc", "Mínimo"),
+            },
+            {
+              label: t("perf_results.avg", "Avg"),
+              val: metrics.latency?.avg,
+              desc: t("perf_results.avg_desc", "Promedio"),
+            },
+            {
+              label: t("perf_results.p50", "P50"),
+              val: metrics.latency?.median,
+              desc: t("perf_results.p50_desc", "Mediana"),
+            },
+            {
+              label: t("perf_results.p90", "P90"),
+              val: metrics.latency?.p90,
+              desc: t("perf_results.p90_desc", "90% Usuarios"),
+            },
+            {
+              label: t("perf_results.p95", "P95"),
               val: metrics.latency?.p95,
-              desc: "SLA Estándar",
+              desc: t("perf_results.p95_desc", "SLA Estándar"),
               highlight: true,
             },
-            { label: "P99", val: metrics.latency?.p99, desc: "Peores Casos" },
             {
-              label: "Max",
+              label: t("perf_results.p99", "P99"),
+              val: metrics.latency?.p99,
+              desc: t("perf_results.p99_desc", "Peores Casos"),
+            },
+            {
+              label: t("perf_results.max", "Max"),
               val: metrics.latency?.max,
-              desc: "Máximo Excepcional",
+              desc: t("perf_results.max_desc", "Máximo Excepcional"),
             },
             {
               label: "StdDev",
               val: metrics.latency?.stdDev || 45,
-              desc: "Desviación Estándar",
+              desc: t("perf_results.stddev_desc", "Desviación Estándar"),
             },
           ].map((item) => (
             <div
@@ -788,15 +922,20 @@ const PerfResultsView = ({
           <div>
             <h3 className="text-base font-semibold text-slate-100 flex items-center gap-2">
               <Globe size={18} className="text-blue-400" />
-              Desglose Técnico de Etapas de Red (Waterfall Timing)
+              {t(
+                "perf_results.waterfall_title",
+                "Desglose Técnico de Etapas de Red (Waterfall Timing)",
+              )}
             </h3>
             <p className="text-xs text-slate-400 mt-0.5">
-              Tiempo detallado consumido en cada fase desde el cliente hasta el
-              servidor.
+              {t(
+                "perf_results.waterfall_desc",
+                "Tiempo detallado consumido en cada fase desde el cliente hasta el servidor.",
+              )}
             </p>
           </div>
           <div className="text-xs font-mono text-slate-300 bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800">
-            Tiempo Total:{" "}
+            {t("perf_results.total_time", "Tiempo Total:")}{" "}
             <strong className="text-blue-400">{waterfallTotal} ms</strong>
           </div>
         </div>
@@ -831,32 +970,32 @@ const PerfResultsView = ({
           {/* Waterfall Stages Legend Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-2 text-xs">
             <WaterfallStageCard
-              label="DNS Lookup"
+              label={t("perf_results.dns_lookup", "DNS Lookup")}
               val={waterfall.dns}
               total={waterfallTotal}
               color="bg-cyan-500"
             />
             <WaterfallStageCard
-              label="TCP Connection"
+              label={t("perf_results.tcp_connection", "TCP Connection")}
               val={waterfall.tcp}
               total={waterfallTotal}
               color="bg-blue-500"
             />
             <WaterfallStageCard
-              label="TLS Handshake"
+              label={t("perf_results.tls_handshake", "TLS Handshake")}
               val={waterfall.tls}
               total={waterfallTotal}
               color="bg-indigo-500"
             />
             <WaterfallStageCard
-              label="TTFB (Servidor)"
+              label={t("perf_results.ttfb_server", "TTFB (Servidor)")}
               val={waterfall.ttfb}
               total={waterfallTotal}
               color="bg-amber-500"
               highlight
             />
             <WaterfallStageCard
-              label="Descarga / DOM"
+              label={t("perf_results.download_dom", "Descarga / DOM")}
               val={waterfall.download}
               total={waterfallTotal}
               color="bg-emerald-500"
@@ -897,7 +1036,13 @@ const PerfResultsView = ({
                   />
                 </div>
                 <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 pt-1">
-                  <span>{bucket.count} muestras</span>
+                  <span>
+                    {t(
+                      "perf_results.samples_count",
+                      { count: bucket.count },
+                      `${bucket.count} muestras`,
+                    )}
+                  </span>
                   <span className="font-bold text-slate-200">{pct}%</span>
                 </div>
               </div>
@@ -912,9 +1057,14 @@ const PerfResultsView = ({
           <div className="flex items-center justify-between">
             <h3 className="text-base font-semibold text-slate-100 flex items-center gap-2">
               <AlertTriangle size={18} className="text-amber-400" />
-              Ranking de Pasos / Endpoints Más Lentos
+              {t(
+                "perf_results.slowest_ranking_title",
+                "Ranking de Pasos / Endpoints Más Lentos",
+              )}
             </h3>
-            <span className="text-xs text-slate-400">Ordenado por P95</span>
+            <span className="text-xs text-slate-400">
+              {t("perf_results.sorted_by_p95", "Ordenado por P95")}
+            </span>
           </div>
 
           <div className="space-y-2">
@@ -937,7 +1087,11 @@ const PerfResultsView = ({
                         {node.label}
                       </div>
                       <div className="text-[10px] text-slate-500 font-mono">
-                        {node.count} ejecuciones
+                        {t(
+                          "perf_results.executions_count",
+                          { count: node.count },
+                          `${node.count} ejecuciones`,
+                        )}
                       </div>
                     </div>
                   </div>
@@ -945,7 +1099,7 @@ const PerfResultsView = ({
                   <div className="flex items-center space-x-6 shrink-0 font-mono text-xs">
                     <div className="text-right">
                       <span className="text-[10px] text-slate-500 block uppercase">
-                        P95
+                        {t("perf_results.p95", "P95")}
                       </span>
                       <span
                         className={`font-bold ${node.p95 > 1500 ? "text-red-400" : node.p95 > 600 ? "text-amber-400" : "text-emerald-400"}`}
@@ -955,7 +1109,7 @@ const PerfResultsView = ({
                     </div>
                     <div className="text-right hidden sm:block">
                       <span className="text-[10px] text-slate-500 block uppercase">
-                        Impacto Total
+                        {t("perf_results.total_impact", "Impacto Total")}
                       </span>
                       <span className="text-slate-300 font-bold">
                         {nodePct}%
@@ -975,8 +1129,11 @@ const PerfResultsView = ({
         height={300}
         domain="performance"
         defaultChartMode="line"
-        barTitle="Latencia (ms)"
-        title="Línea de Tiempo de Latencia por Nodo"
+        barTitle={t("perf_results.th_p95", "Latencia P95")}
+        title={t(
+          "perf_results.timeline_chart_title",
+          "Línea de Tiempo de Latencia por Nodo",
+        )}
       />
 
       {/* 9. Complete Per-Node Performance Metrics Table */}
@@ -991,7 +1148,10 @@ const PerfResultsView = ({
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-base font-semibold text-slate-100 flex items-center gap-2">
             <Folder className="text-sky-400" size={18} />
-            Inspector Jerárquico de Flujos y SubFlujos
+            {t(
+              "perf_results.hierarchical_inspector_title",
+              "Inspector Jerárquico de Flujos y SubFlujos",
+            )}
           </h3>
           <div className="flex gap-1">
             {["p95", "cpuAvg", "memAvg", "errors"].map((key) => (
@@ -1005,12 +1165,12 @@ const PerfResultsView = ({
                 }`}
               >
                 {key === "p95"
-                  ? "Latencia"
+                  ? t("perf_results.p95_latency", "Latencia")
                   : key === "cpuAvg"
                     ? "CPU"
                     : key === "memAvg"
                       ? "RAM"
-                      : "Errores"}
+                      : t("perf_results.error_rate", "Errores")}
               </button>
             ))}
           </div>
@@ -1054,7 +1214,11 @@ const PerfResultsView = ({
                         {group.label}
                       </span>
                       <span className="text-[10px] text-slate-500 ml-2">
-                        ({group.nodes.length} nodos)
+                        {t(
+                          "perf_results.nodes_count",
+                          { count: group.nodes.length },
+                          `(${group.nodes.length} nodos)`,
+                        )}
                       </span>
                     </div>
                   </div>
@@ -1068,7 +1232,7 @@ const PerfResultsView = ({
                     <span
                       className={`px-2 py-0.5 rounded ${group.errors > 0 ? "bg-red-500/10 text-red-400" : "bg-emerald-500/10 text-emerald-400"}`}
                     >
-                      Errores: {group.errors}
+                      {t("perf_results.th_errors", "Errores")}: {group.errors}
                     </span>
                   </div>
                 </button>
@@ -1108,7 +1272,11 @@ const PerfResultsView = ({
                                   {node.label}
                                 </span>
                                 <span className="text-[10px] text-slate-500 font-mono shrink-0">
-                                  {nodePct}% del total
+                                  {t(
+                                    "perf_results.pct_of_total",
+                                    { pct: nodePct },
+                                    `${nodePct}% del total`,
+                                  )}
                                 </span>
                                 <span
                                   className={`font-mono text-xs font-bold shrink-0 ${isCritical ? "text-red-400" : isWarning ? "text-amber-400" : "text-emerald-400"}`}

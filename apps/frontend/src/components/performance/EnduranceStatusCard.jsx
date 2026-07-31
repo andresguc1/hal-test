@@ -1,5 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import {
   ShieldCheck,
   AlertOctagon,
@@ -13,6 +14,7 @@ import {
  * EnduranceStatusCard — Live Soak/Endurance Diagnostic & Memory Leak Widget
  */
 export const EnduranceStatusCard = ({ soakAnalysis, rawProfileKey }) => {
+  const { t } = useTranslation();
   if (
     !soakAnalysis &&
     !["soak", "endurance"].includes(String(rawProfileKey || "").toLowerCase())
@@ -61,7 +63,10 @@ export const EnduranceStatusCard = ({ soakAnalysis, rawProfileKey }) => {
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-base font-bold text-slate-100 uppercase tracking-wider">
-                PRUEBA DE RESISTENCIA Y LARGA DURACIÓN (SOAK TEST)
+                {t(
+                  "perf_results.soak_test_title",
+                  "PRUEBA DE RESISTENCIA Y LARGA DURACIÓN (SOAK TEST)",
+                )}
               </h3>
               <span
                 className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase border ${
@@ -72,7 +77,11 @@ export const EnduranceStatusCard = ({ soakAnalysis, rawProfileKey }) => {
                       : "bg-red-500/20 text-red-300 border-red-500/40"
                 }`}
               >
-                {leakReport.verdict || "ESTABILIDAD EN EVALUACIÓN"}
+                {leakReport.verdict ||
+                  t(
+                    "performance_dashboard.pending",
+                    "ESTABILIDAD EN EVALUACIÓN",
+                  )}
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-1">
@@ -89,7 +98,7 @@ export const EnduranceStatusCard = ({ soakAnalysis, rawProfileKey }) => {
         <div className="flex items-center gap-4 flex-wrap w-full md:w-auto border-t md:border-t-0 border-slate-800 pt-3 md:pt-0 font-mono">
           <div className="bg-slate-950/60 border border-slate-800/80 px-3.5 py-2 rounded-xl text-center">
             <span className="text-[10px] text-slate-400 uppercase font-semibold block">
-              Tendencia RAM
+              {t("perf_results.ram_trend", "Tendencia RAM")}
             </span>
             <span
               className={`text-lg font-black ${
@@ -102,7 +111,7 @@ export const EnduranceStatusCard = ({ soakAnalysis, rawProfileKey }) => {
 
           <div className="bg-slate-950/60 border border-slate-800/80 px-3.5 py-2 rounded-xl text-center">
             <span className="text-[10px] text-slate-400 uppercase font-semibold block">
-              Desviación Latencia
+              {t("perf_results.std_dev", "Desviación Latencia")}
             </span>
             <span
               className={`text-lg font-black ${

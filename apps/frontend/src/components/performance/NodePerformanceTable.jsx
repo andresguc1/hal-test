@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import {
   Search,
   ArrowUpDown,
@@ -21,6 +22,7 @@ export const NodePerformanceTable = ({
   flowNodes = [],
   totalDuration = 0,
 }) => {
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("p95"); // p95 | avg | cpuAvg | memAvg | errors | count
   const [sortOrder, setSortOrder] = useState("desc");
@@ -80,19 +82,19 @@ export const NodePerformanceTable = ({
 
     // Fallback if flowNodes is empty
     return (nodeStats || []).map((n, idx) => ({
-      nodeId: String(n.nodeId || idx),
-      label: n.label || `Nodo #${idx + 1}`,
+      nodeId: String(n.nodeId || `node_${idx + 1}`),
+      label: n.label || n.nodeId || `Nodo #${idx + 1}`,
       type: n.type || "action",
       subflowId: n.subflowId || null,
-      avg: n.avg || 0,
-      p95: n.p95 || 0,
-      p99: n.p99 || n.p95 || 0,
-      count: n.count || 0,
-      cpuAvg: n.cpuAvg || 0,
-      memAvg: n.memAvg || 0,
-      memMax: n.memMax || 0,
-      errors: n.errors || 0,
-      errorRate: n.errorRate || "0.0",
+      avg: n.avg ?? 0,
+      p95: n.p95 ?? 0,
+      p99: n.p99 ?? n.p95 ?? 0,
+      count: n.count ?? 0,
+      cpuAvg: n.cpuAvg ?? 0,
+      memAvg: n.memAvg ?? 0,
+      memMax: n.memMax ?? 0,
+      errors: n.errors ?? 0,
+      errorRate: n.errorRate ?? "0.0",
       throughput: n.count
         ? parseFloat(
             (n.count / Math.max(1, (totalDuration || 30000) / 1000)).toFixed(2),
@@ -111,10 +113,10 @@ export const NodePerformanceTable = ({
 
   // Filter & Sort logic
   const filteredNodes = useMemo(() => {
+    const term = searchTerm.toLowerCase().trim();
     return mergedNodes
       .filter((n) => {
-        if (!searchTerm) return true;
-        const term = searchTerm.toLowerCase();
+        if (!term) return true;
         return (
           n.label.toLowerCase().includes(term) ||
           n.nodeId.toLowerCase().includes(term) ||
@@ -144,14 +146,17 @@ export const NodePerformanceTable = ({
         <div>
           <h3 className="text-base font-semibold text-slate-100 flex items-center gap-2">
             <FileText size={18} className="text-sky-400" />
-            Desglose de Rendimiento por Nodo del Flujo ({
-              filteredNodes.length
-            }{" "}
-            Nodos)
+            {t(
+              "perf_results.node_performance_title",
+              { count: filteredNodes.length },
+              `Desglose de Rendimiento por Nodo del Flujo (${filteredNodes.length} Nodos)`,
+            )}
           </h3>
           <p className="text-xs text-slate-400 mt-0.5">
-            Métricas de latencia, throughput, CPU, RAM y tasa de errores para
-            cada nodo configurado.
+            {t(
+              "perf_results.node_performance_desc",
+              "Métricas de latencia, throughput, CPU, RAM y tasa de errores para cada nodo configurado.",
+            )}
           </p>
         </div>
 
@@ -165,7 +170,10 @@ export const NodePerformanceTable = ({
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Buscar por nodo o tipo..."
+            placeholder={t(
+              "perf_results.search_nodes_placeholder",
+              "Buscar por nodo o tipo...",
+            )}
             className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500/50"
           />
         </div>
@@ -176,48 +184,57 @@ export const NodePerformanceTable = ({
         <table className="w-full text-left text-xs border-collapse">
           <thead>
             <tr className="bg-slate-900/90 text-slate-400 font-semibold border-b border-slate-800 uppercase tracking-wider">
-              <th className="py-3 px-4">Nodo / Acción</th>
+              <th className="py-3 px-4">
+                {t("perf_results.th_node_action", "Nodo / Acción")}
+              </th>
               <th
                 className="py-3 px-3 cursor-pointer hover:text-slate-200"
                 onClick={() => handleSort("status")}
               >
-                Estado <ArrowUpDown size={10} className="inline ml-1" />
+                {t("perf_results.th_status", "Estado")}{" "}
+                <ArrowUpDown size={10} className="inline ml-1" />
               </th>
               <th
                 className="py-3 px-3 cursor-pointer hover:text-slate-200 text-right"
                 onClick={() => handleSort("count")}
               >
-                Muestras <ArrowUpDown size={10} className="inline ml-1" />
+                {t("perf_results.th_samples", "Muestras")}{" "}
+                <ArrowUpDown size={10} className="inline ml-1" />
               </th>
               <th
                 className="py-3 px-3 cursor-pointer hover:text-slate-200 text-right"
                 onClick={() => handleSort("p95")}
               >
-                Latencia P95 <ArrowUpDown size={10} className="inline ml-1" />
+                {t("perf_results.th_p95", "Latencia P95")}{" "}
+                <ArrowUpDown size={10} className="inline ml-1" />
               </th>
               <th
                 className="py-3 px-3 cursor-pointer hover:text-slate-200 text-right"
                 onClick={() => handleSort("avg")}
               >
-                Avg <ArrowUpDown size={10} className="inline ml-1" />
+                {t("perf_results.th_avg", "Avg")}{" "}
+                <ArrowUpDown size={10} className="inline ml-1" />
               </th>
               <th
                 className="py-3 px-3 cursor-pointer hover:text-slate-200 text-right"
                 onClick={() => handleSort("cpuAvg")}
               >
-                CPU Avg <ArrowUpDown size={10} className="inline ml-1" />
+                {t("perf_results.th_cpu_avg", "CPU Avg")}{" "}
+                <ArrowUpDown size={10} className="inline ml-1" />
               </th>
               <th
                 className="py-3 px-3 cursor-pointer hover:text-slate-200 text-right"
                 onClick={() => handleSort("memAvg")}
               >
-                RAM Avg <ArrowUpDown size={10} className="inline ml-1" />
+                {t("perf_results.th_ram_avg", "RAM Avg")}{" "}
+                <ArrowUpDown size={10} className="inline ml-1" />
               </th>
               <th
                 className="py-3 px-3 cursor-pointer hover:text-slate-200 text-right"
                 onClick={() => handleSort("errors")}
               >
-                Errores % <ArrowUpDown size={10} className="inline ml-1" />
+                {t("perf_results.th_errors", "Errores %")}{" "}
+                <ArrowUpDown size={10} className="inline ml-1" />
               </th>
             </tr>
           </thead>
