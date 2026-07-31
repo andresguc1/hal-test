@@ -132,6 +132,12 @@ const checkSchemaHealth = async () => {
         await sequelize.query('SELECT "flowId" FROM "execution_locks" LIMIT 1', {
             logging: false,
         });
+        await sequelize.query('SELECT "data_leak_score" FROM "security_compliance_runs" LIMIT 1', {
+            logging: false,
+        });
+        await sequelize.query('SELECT "rule_id_code" FROM "security_compliance_results" LIMIT 1', {
+            logging: false,
+        });
         console.log(' [DB_INIT] ✅ Schema health check passed.');
     } catch (error) {
         const isMissingColumn =

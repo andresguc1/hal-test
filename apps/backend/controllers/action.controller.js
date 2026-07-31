@@ -30,6 +30,8 @@ import { STORAGE_RUNS_DIR, STORAGE_DIR } from '../config/paths.js';
 import { isSafePath } from '../utils/security.js';
 import { auditService } from '../services/AuditService.js';
 import { SecurityAuditor } from '../services/SecurityAuditor.js';
+import { DataLeakEngine } from '../services/security/DataLeakEngine.js';
+import { DomProtectionEngine } from '../services/security/DomProtectionEngine.js';
 
 // Create Variable Manager instance
 // Use shared Variable Manager instance
@@ -372,6 +374,11 @@ async function getOrCreateContext(req, browser, browserId) {
             const newContext = await browser.newContext(contextOptions);
             console.log('[SUCCESS] Context created successfully');
 
+            // Inject DOM Protection Instrument Script
+            await newContext
+                .addInitScript(DomProtectionEngine.getInstrumentationScript())
+                .catch((e) => console.warn('[DOM Protection] addInitScript error:', e.message));
+
             // Inject Interaction Visualizer Script
             await newContext
                 .addInitScript(() => {
@@ -602,9 +609,30 @@ async function getOrCreateContext(req, browser, browserId) {
             // Track background network history to avoid race conditions in sequential nodes
             networkHistoryService.track(browserId, newContext);
 
-            // Security Observability Layer: Listen for console events and HTTP responses
-            newContext.on('page', (page) => {
+            // Security Observability Layer: Listen for console events, HTTP requests and responses
+            newContext.on('page', async (page) => {
                 page._securityAlerts = [];
+
+                // Expose function for DOM XSS / Prototype Pollution real-time tracking
+                try {
+                    await page.exposeFunction('onDOMAlert', (alert) => {
+                        const currentRunId = page._currentRunId;
+                        const currentNodeId = page._currentNodeId;
+                        const enriched = {
+                            ...alert,
+                            url: page.url(),
+                            runId: currentRunId || null,
+                            nodeId: currentNodeId || null,
+                            timestamp: Date.now(),
+                        };
+                        page._securityAlerts.push(enriched);
+                        emitSecurityAlert(enriched);
+                    });
+                } catch (err) {
+                    // ignore if already exposed
+                }
+
+                // Real-time Response Scans (DLP & Headers)
                 page.on('response', async (response) => {
                     try {
                         const url = response.url();
@@ -620,6 +648,7 @@ async function getOrCreateContext(req, browser, browserId) {
                         const currentRunId = page._currentRunId;
                         const currentNodeId = page._currentNodeId;
 
+                        // Emit general header/cookie security alerts
                         for (const alert of alerts) {
                             const enriched = {
                                 ...alert,
@@ -629,7 +658,46 @@ async function getOrCreateContext(req, browser, browserId) {
                                 timestamp: Date.now(),
                             };
                             page._securityAlerts.push(enriched);
+                            emitSecurityAlert(enriched);
+                        }
 
+                        // Run new Data Leak Engine Response Audit
+                        const dlpFindings = await DataLeakEngine.auditResponse(response);
+                        for (const finding of dlpFindings) {
+                            const enriched = {
+                                ...finding,
+                                url,
+                                runId: currentRunId || null,
+                                nodeId: currentNodeId || null,
+                                timestamp: Date.now(),
+                            };
+                            page._securityAlerts.push(enriched);
+                            emitSecurityAlert(enriched);
+                        }
+                    } catch (e) {
+                        /* ignore */
+                    }
+                });
+
+                // Real-time Request Scans (DLP Transmission)
+                page.on('request', async (request) => {
+                    try {
+                        const url = request.url();
+                        if (url.startsWith('data:') || url.startsWith('blob:')) return;
+
+                        const currentRunId = page._currentRunId;
+                        const currentNodeId = page._currentNodeId;
+
+                        const dlpFindings = await DataLeakEngine.auditRequest(request);
+                        for (const finding of dlpFindings) {
+                            const enriched = {
+                                ...finding,
+                                url,
+                                runId: currentRunId || null,
+                                nodeId: currentNodeId || null,
+                                timestamp: Date.now(),
+                            };
+                            page._securityAlerts.push(enriched);
                             emitSecurityAlert(enriched);
                         }
                     } catch (e) {

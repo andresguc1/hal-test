@@ -425,6 +425,24 @@ export default function SecurityDashboard() {
   const getRawAlerts = () => {
     const alerts = [];
 
+    // Gather alerts from database-backed security compliance run if available
+    if (runDetails?.security_compliance?.results) {
+      runDetails.security_compliance.results.forEach((res) => {
+        alerts.push({
+          ruleId: res.rule_id_code || res.ruleId,
+          severity: String(res.severity || "medium").toLowerCase(),
+          confidence: res.confidence || "MEDIUM",
+          title: res.title,
+          description: res.description || res.title,
+          affectedResource: res.affected_resource || "",
+          evidence: res.evidence || {},
+          timestamp: res.created_at || runDetails.created_at || new Date().toISOString(),
+          owasp: res.owasp_reference,
+          asvs: res.asvs_reference,
+        });
+      });
+    }
+
     // Gather alerts directly on runDetails if available
     if (Array.isArray(runDetails?.securityAlerts)) {
       alerts.push(...runDetails.securityAlerts);
@@ -579,11 +597,15 @@ export default function SecurityDashboard() {
   ).length;
 
   const calculateHealthScore = () => {
+    if (runDetails?.security_compliance) {
+      return Math.round(runDetails.security_compliance.compliance_score);
+    }
     let score = 100;
     groupedAlerts.forEach((f) => {
-      if (f.severity === "critical" || f.severity === "high") {
+      const sev = String(f.severity || "").toLowerCase();
+      if (sev === "critical" || sev === "high") {
         score -= 15;
-      } else if (f.severity === "medium") {
+      } else if (sev === "medium") {
         score -= 8;
       } else {
         score -= 3;
@@ -1503,7 +1525,7 @@ export default function SecurityDashboard() {
                   </div>
 
                   {/* OWASP & CVSS Ratings */}
-                  <div className="grid grid-cols-2 gap-3 bg-slate-900/40 border border-slate-800 p-3 rounded-xl">
+                  <div className="grid grid-cols-3 gap-3 bg-slate-900/40 border border-slate-800 p-3 rounded-xl">
                     <div>
                       <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
                         OWASP Top 10
@@ -1514,6 +1536,17 @@ export default function SecurityDashboard() {
                       >
                         {selectedAlert.owasp ||
                           "A05:2021-Security Misconfiguration"}
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+                        OWASP ASVS
+                      </h4>
+                      <p
+                        className="text-xs text-red-400 font-semibold mt-1 truncate"
+                        title={selectedAlert.asvs}
+                      >
+                        {selectedAlert.asvs || "V4.0: Script Protections"}
                       </p>
                     </div>
                     <div>

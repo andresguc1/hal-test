@@ -1,6 +1,16 @@
 import { executionService } from '../services/ExecutionService.js';
 import { executionLogger } from '../services/ExecutionLogger.js';
-import { Run, StepResult, Flow, Project, CollaboratorRole, Node, Edge } from '../database/init.js';
+import {
+    Run,
+    StepResult,
+    Flow,
+    Project,
+    CollaboratorRole,
+    Node,
+    Edge,
+    SecurityComplianceRun,
+    SecurityComplianceResult,
+} from '../database/init.js';
 import { reportExporter } from '../services/exporter/ReportExporter.js';
 import { testRunnerService } from '../services/TestRunnerService.js';
 import { activeRunManager } from '../services/ActiveRunManager.js';
@@ -211,7 +221,32 @@ export const getRunsAction = async (req, res) => {
             order: [['started_at', 'DESC']],
             limit: Math.min(parseInt(limit, 10) || 50, 100),
         });
-        return res.status(200).json({ success: true, data: runs || [] });
+
+        const enrichedRuns = await Promise.all(
+            runs.map(async (run) => {
+                const runJson = run.toJSON();
+                let securityRun = null;
+                try {
+                    securityRun = await SecurityComplianceRun.findOne({
+                        where: { execution_id: run.id },
+                        attributes: [
+                            'compliance_score',
+                            'data_leak_score',
+                            'dom_protection_score',
+                            'risk_level',
+                        ],
+                    });
+                } catch (e) {
+                    // Ignore errors
+                }
+                return {
+                    ...runJson,
+                    security_compliance: securityRun ? securityRun.toJSON() : null,
+                };
+            }),
+        );
+
+        return res.status(200).json({ success: true, data: enrichedRuns || [] });
     } catch (error) {
         console.error('[RunController] getRunsAction Error:', error);
         return res.status(200).json({ success: true, data: [] });
@@ -229,6 +264,17 @@ export const getRunDetailsAction = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Run not found' });
         }
 
+        // Fetch security compliance run details if they exist
+        let securityRun = null;
+        try {
+            securityRun = await SecurityComplianceRun.findOne({
+                where: { execution_id: id },
+                include: [{ model: SecurityComplianceResult, as: 'results' }],
+            });
+        } catch (e) {
+            console.warn('[RunController] Failed to fetch security compliance details:', e.message);
+        }
+
         // Normalize steps to use both node_id and nodeId for frontend compatibility
         const runData = run.toJSON();
         const normalizedSteps = (runData.steps || []).map((s) => ({
@@ -238,6 +284,7 @@ export const getRunDetailsAction = async (req, res) => {
         const normalizedRun = {
             ...runData,
             steps: normalizedSteps,
+            security_compliance: securityRun ? securityRun.toJSON() : null,
         };
 
         return res.status(200).json({ success: true, data: normalizedRun });
@@ -540,7 +587,8 @@ export const startPerformanceRunAction = async (req, res) => {
                     await Edge.destroy({ where: { flowId } });
                     const validEdges = edges
                         .filter(
-                            (e) => e && (e.source || e.sourceHandle) && (e.target || e.targetHandle),
+                            (e) =>
+                                e && (e.source || e.sourceHandle) && (e.target || e.targetHandle),
                         )
                         .map((e, idx) => ({
                             edgeId: String(e.id || e.edgeId || `edge_${idx + 1}`),
@@ -567,7 +615,9 @@ export const startPerformanceRunAction = async (req, res) => {
             ],
         });
 
-        const flowObj = fetchedFlow ? fetchedFlow.toJSON() : { id: flowId, name: 'Performance Flow', nodes: nodes || [], edges: edges || [] };
+        const flowObj = fetchedFlow
+            ? fetchedFlow.toJSON()
+            : { id: flowId, name: 'Performance Flow', nodes: nodes || [], edges: edges || [] };
         const flowName = flowObj.name || 'Performance Flow';
 
         // Pre-flight resource check

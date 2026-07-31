@@ -503,15 +503,27 @@ export class ExecutionService {
                     // Run non-blocking promise chain
                     (async () => {
                         let cookies = [];
+                        let pageInstance = null;
                         if (state.browserId) {
                             try {
                                 const browserSession = browserService.get(state.browserId);
-                                if (browserSession && browserSession.context) {
-                                    cookies = await browserSession.context.cookies();
+                                if (browserSession) {
+                                    const browserInstance =
+                                        browserSession.browser || browserSession;
+                                    if (typeof browserInstance.contexts === 'function') {
+                                        const contexts = browserInstance.contexts();
+                                        if (contexts.length > 0) {
+                                            cookies = await contexts[0].cookies();
+                                            const pages = contexts[0].pages();
+                                            if (pages.length > 0) {
+                                                pageInstance = pages[pages.length - 1];
+                                            }
+                                        }
+                                    }
                                 }
                             } catch (e) {
                                 console.warn(
-                                    `[ExecutionService] Could not extract cookies for DAST: ${e.message}`,
+                                    `[ExecutionService] Could not extract cookies or page for DAST: ${e.message}`,
                                 );
                             }
                         }
@@ -524,6 +536,7 @@ export class ExecutionService {
                                 state.options?.securityConfig?.frameworkCode || 'OWASP_ASVS_L2',
                             headers: state.options?.headers || {},
                             cookies: cookies,
+                            page: pageInstance,
                         });
                     })().catch((err) => {
                         console.error(`[ExecutionService] Passive DAST Error: ${err.message}`);

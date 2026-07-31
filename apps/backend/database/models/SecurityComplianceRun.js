@@ -30,6 +30,18 @@ const SecurityComplianceRun = sequelize.define(
             type: DataTypes.FLOAT,
             defaultValue: 0,
         },
+        data_leak_score: {
+            type: DataTypes.FLOAT,
+            defaultValue: 0,
+        },
+        dom_protection_score: {
+            type: DataTypes.FLOAT,
+            defaultValue: 0,
+        },
+        risk_level: {
+            type: DataTypes.STRING,
+            defaultValue: 'LOW',
+        },
         total_rules: {
             type: DataTypes.INTEGER,
             defaultValue: 0,
