@@ -5,8 +5,8 @@ import os from 'os';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Root of the backend application (apps/backend)
-const BACKEND_ROOT = path.resolve(__dirname, '..');
+// Root of the backend application (apps/backend or dist/backend)
+const BACKEND_ROOT = __dirname.endsWith('config') ? path.resolve(__dirname, '..') : __dirname;
 
 // Secure storage directory (outside npx cache)
 const homeDir = os.homedir();

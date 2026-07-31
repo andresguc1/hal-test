@@ -4,6 +4,7 @@ import morgan from 'morgan';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { STORAGE_DIR } from '../config/paths.js';
 
 // -----------------------------------------------------------------
 // Helpers para ESM (__dirname, __filename)
@@ -14,7 +15,7 @@ const __dirname = path.dirname(__filename);
 // -----------------------------------------------------------------
 // Configuración de Logs
 // -----------------------------------------------------------------
-const logDirectory = path.join(__dirname, '../logs');
+const logDirectory = path.join(STORAGE_DIR, 'logs');
 
 // Asegúrate de que el directorio de logs exista
 try {
