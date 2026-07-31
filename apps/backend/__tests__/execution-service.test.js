@@ -44,6 +44,13 @@ vi.mock('../services/browser.service.js', () => ({
     },
 }));
 
+// Mock SecurityComplianceEngine to avoid DB model imports in unit tests
+vi.mock('../services/SecurityComplianceEngine.js', () => ({
+    SecurityComplianceEngine: {
+        runComplianceAudit: vi.fn().mockResolvedValue({ score: 100, findings: [] }),
+    },
+}));
+
 import { variableManager } from '../services/VariableManager.js';
 import { emitEdgeStatus } from '../socket.js';
 import { browserService } from '../services/browser.service.js';

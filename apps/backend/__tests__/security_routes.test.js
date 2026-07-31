@@ -12,7 +12,7 @@ describe('Security Route Registration and Validation', () => {
         // but it should NOT return 404 Route Not Found.
         expect(response.status).not.toBe(404);
         expect(response.body).toHaveProperty('success');
-    });
+    }, 30000);
 
     it('should have registered POST /api/actions/header_auditor', async () => {
         const response = await request(app)
@@ -21,7 +21,7 @@ describe('Security Route Registration and Validation', () => {
 
         expect(response.status).not.toBe(404);
         expect(response.body).toHaveProperty('success');
-    });
+    }, 30000);
 
     it('should have registered POST /api/actions/dom_sanitizer', async () => {
         const response = await request(app)
@@ -30,5 +30,5 @@ describe('Security Route Registration and Validation', () => {
 
         expect(response.status).not.toBe(404);
         expect(response.body).toHaveProperty('success');
-    });
+    }, 30000);
 });

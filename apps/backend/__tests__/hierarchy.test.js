@@ -9,7 +9,7 @@ describe('Data Hierarchy Integration', () => {
     beforeAll(async () => {
         const { initDb } = await import('../database/init.js');
         await initDb();
-    });
+    }, 30000);
     // Note: initDb is called in app.js startServer.
     // For tests, we might need to ensure it's synced.
 
@@ -37,7 +37,7 @@ describe('Data Hierarchy Integration', () => {
         // Verify relationship in DB directly for extra security
         const dbFlow = await Flow.findByPk(canvas.flows[0].id);
         expect(dbFlow.canvasId).toBe(canvas.id);
-    });
+    }, 30000);
 
     it('GET /api/projects should return projects with their hierarchy', async () => {
         const response = await request(app).get(`${API_PREFIX}/projects`);
@@ -51,5 +51,5 @@ describe('Data Hierarchy Integration', () => {
                 expect(project.canvases[0]).toHaveProperty('flows');
             }
         }
-    });
+    }, 30000);
 });

@@ -2212,8 +2212,8 @@ export class ExecutionService {
             if (StepResult && typeof StepResult.findAll === 'function') {
                 const steps = await StepResult.findAll({
                     where: state.runId ? { run_id: state.runId } : { run_id: null },
-                    attributes: ['node_id', 'screenshot_path', 'status', 'created_at'],
-                    order: [['created_at', 'DESC']],
+                    attributes: ['node_id', 'screenshot_path', 'status', 'createdAt'],
+                    order: [['createdAt', 'DESC']],
                     limit: 5, // get the last 5 captures
                 });
                 recentScreenshots = steps
@@ -2222,7 +2222,7 @@ export class ExecutionService {
                         nodeId: s.node_id,
                         screenshotPath: s.screenshot_path,
                         status: s.status,
-                        createdAt: s.created_at,
+                        createdAt: s.createdAt,
                     }));
             }
         } catch (e) {
