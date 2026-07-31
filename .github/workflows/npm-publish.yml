@@ -46,5 +46,15 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Generate CycloneDX SBOM
+        run: npx @cyclonedx/cyclonedx-npm --output-format JSON --output-file bom.json
+        working-directory: apps/cli/dist
+
+      - name: Upload SBOM Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: apps/cli/dist/bom.json
+
       - name: Publish to npm
         run: cd apps/cli/dist && npm publish --provenance --access public

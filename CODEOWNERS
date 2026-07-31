@@ -1,0 +1,10 @@
+# HalTest CODEOWNERS
+
+# The core maintainers own everything by default
+*       @andresguc1
+
+# Specific components (add specific teams or contributors here in the future)
+/apps/backend/    @andresguc1
+/apps/frontend/   @andresguc1
+/apps/cli/        @andresguc1
+/.github/         @andresguc1

@@ -25,7 +25,7 @@ describe('SensitiveDataScanner', () => {
     });
 
     it('should detect Stripe API Keys', () => {
-        const text = 'stripe.key = "sk_live_51MabcXYZ1234567890abcdef"';
+        const text = 'stripe.key = "sk_test_51MabcXYZ1234567890abcdef"';
         const findings = SensitiveDataScanner.scan(text, 'test-resource');
         expect(findings.length).toBe(1);
         expect(findings[0].title).toBe('Exposed Stripe API Key');
@@ -111,7 +111,7 @@ describe('SecurityComplianceEngine with Data Leak scans', () => {
             sessionStorage: {
                 'user-email': 'admin@vulnerable.target',
             },
-            cookies: [{ name: 'session_key', value: 'sk_live_51MabcXYZ1234567890abcdef' }],
+            cookies: [{ name: 'session_key', value: 'sk_test_51MabcXYZ1234567890abcdef' }],
         });
 
         expect(result.dataLeakScore).toBeLessThan(100);

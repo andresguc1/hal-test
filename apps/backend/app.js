@@ -11,6 +11,11 @@ import fs from 'fs';
 import { createServer } from 'http';
 import { storageCleanupService } from './services/StorageCleanupService.js';
 import { STORAGE_DIR, PUBLIC_DIR } from './config/paths.js';
+import { migrateStorageIfNecessary } from './config/migrateStorage.js';
+
+// Migrate legacy storage data before touching DB
+migrateStorageIfNecessary();
+
 import { init as initSocket } from './socket.js';
 import { yjsServer } from './services/collaboration/YjsServer.js';
 

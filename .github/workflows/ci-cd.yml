@@ -47,6 +47,10 @@ jobs:
         run: pnpm exec prettier --check "**/*.{js,jsx,json,md}"
         continue-on-error: true
 
+      - name: 🛡️ Audit Dependencies
+        run: pnpm audit --prod
+        continue-on-error: true # Warning only for now
+
       - name: 🧪 Run backend tests
         run: cd apps/backend && pnpm test
         env:

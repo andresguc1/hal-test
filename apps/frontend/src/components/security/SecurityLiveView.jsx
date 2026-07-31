@@ -620,16 +620,26 @@ export default function SecurityLiveView({
             </div>
 
             <p className="text-sm text-slate-300">
-              {selectedAlertDetails.message || selectedAlertDetails.description}
+              {t(
+                `security_dashboard.compliance.rules.${selectedAlertDetails.ruleId}.desc`,
+                selectedAlertDetails.message ||
+                  selectedAlertDetails.description,
+              )}
             </p>
 
             {selectedAlertDetails.recommendation && (
               <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-1">
                 <div className="text-xs font-mono font-bold text-red-400 uppercase">
-                  Recomendación Remediativa:
+                  {t(
+                    "security_dashboard.remediation_recommendation",
+                    "Recomendación Remediativa:",
+                  )}
                 </div>
                 <p className="text-xs text-slate-300">
-                  {selectedAlertDetails.recommendation}
+                  {t(
+                    `security_dashboard.compliance.rules.${selectedAlertDetails.ruleId}.rec`,
+                    selectedAlertDetails.recommendation,
+                  )}
                 </p>
               </div>
             )}
@@ -640,7 +650,7 @@ export default function SecurityLiveView({
                 onClick={() => setSelectedAlertDetails(null)}
                 className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold"
               >
-                Cerrar Inspector
+                {t("security_dashboard.close_inspector", "Cerrar Inspector")}
               </button>
             </div>
           </div>

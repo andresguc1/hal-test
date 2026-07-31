@@ -1,0 +1,32 @@
+# Source code and internal assets
+src/
+backend/
+scripts/
+tests/
+__tests__/
+
+# Configuration files
+.env
+.env.*
+eslint.config.js
+prettier.config.js
+vite.config.js
+tsconfig.json
+turbo.json
+
+# Development assets
+node_modules/
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
+
+# Git
+.git
+.gitignore
+
+# CI/CD
+.github/
+
+# OS generated files
+.DS_Store
+Thumbs.db

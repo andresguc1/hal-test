@@ -300,6 +300,20 @@ export const POLICY_RULES = [
         recommendation:
             "Configure a Content-Security-Policy header enforcing require-trusted-types-for 'script'.",
     },
+    {
+        id: 'SEC-DOM-COOP',
+        category: 'DOM Protection',
+        title: 'Missing Cross-Origin Opener Policy (COOP)',
+        description:
+            'Cross-Origin-Opener-Policy (COOP) header is missing, failing to isolate browsing contexts from untrusted domains.',
+        severity: 'LOW',
+        mappings: {
+            asvs: 'ASVS 14.4.1',
+            iso: 'ISO 27001 A.8.26',
+        },
+        recommendation:
+            "Configure a Cross-Origin-Opener-Policy header with value 'same-origin' or 'same-origin-allow-popups' to isolate the window context.",
+    },
 ];
 
 export class PolicyRulesEngine {

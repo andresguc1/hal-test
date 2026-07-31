@@ -350,7 +350,7 @@ export class DomProtectionEngine {
 
         if (!coop) {
             findings.push({
-                ruleId: 'SEC-DOM-TRUSTED', // Map to policy rule category
+                ruleId: 'SEC-DOM-COOP', // Map to correct COOP rule
                 status: 'FAIL',
                 title: 'Missing Cross-Origin Opener Policy (COOP)',
                 severity: 'LOW',

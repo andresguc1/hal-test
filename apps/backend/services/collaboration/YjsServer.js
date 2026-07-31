@@ -22,6 +22,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { supabase } from '../supabaseClient.js';
 import { User, Project, Flow, CollaboratorRole } from '../../database/init.js';
+import { STORAGE_DIR } from '../../config/paths.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -63,7 +64,7 @@ class YjsCollaborationServer {
             return;
         }
 
-        const storagePath = options.storagePath || path.join(__dirname, '../../storage/yjs-docs');
+        const storagePath = options.storagePath || path.join(STORAGE_DIR, 'yjs-docs');
 
         // Initialize LevelDB persistence
         try {

@@ -2,6 +2,7 @@ import { Sequelize } from 'sequelize';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import { STORAGE_DIR } from '../config/paths.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -9,10 +10,10 @@ const isProduction = process.env.NODE_ENV === 'production' || process.env.DATABA
 
 let sequelize;
 
-const SQLITE_DB_PATH = path.join(__dirname, '../database.sqlite');
+const SQLITE_DB_PATH = path.join(STORAGE_DIR, 'database.sqlite');
 const SQLITE_WAL_PATH = SQLITE_DB_PATH + '-wal';
 const SQLITE_SHM_PATH = SQLITE_DB_PATH + '-shm';
-const BACKUP_DIR = path.join(__dirname, '../backups');
+const BACKUP_DIR = path.join(STORAGE_DIR, 'backups');
 
 function ensureBackupDir() {
     try {

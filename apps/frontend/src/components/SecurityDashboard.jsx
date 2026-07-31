@@ -436,7 +436,8 @@ export default function SecurityDashboard() {
           description: res.description || res.title,
           affectedResource: res.affected_resource || "",
           evidence: res.evidence || {},
-          timestamp: res.created_at || runDetails.created_at || new Date().toISOString(),
+          timestamp:
+            res.created_at || runDetails.created_at || new Date().toISOString(),
           owasp: res.owasp_reference,
           asvs: res.asvs_reference,
         });
@@ -868,136 +869,291 @@ export default function SecurityDashboard() {
               </h3>
 
               <div className="space-y-3">
-                {[
-                  {
-                    ruleId: "SEC-HDR-CSP",
-                    category: "Application Configuration",
-                    title: "Content Security Policy (CSP)",
-                    status: "FAIL",
-                    severity: "HIGH",
-                    ref: "ASVS 14.4.1 / PCI-DSS 6.4.3",
-                    desc: t(
-                      "security_dashboard.compliance.rules.SEC-HDR-CSP.desc",
-                      "The Content-Security-Policy header is not configured on the served application.",
-                    ),
-                    rec: t(
-                      "security_dashboard.compliance.rules.SEC-HDR-CSP.rec",
-                      "Configure the 'Content-Security-Policy: default-src 'self'' header on your server.",
-                    ),
-                  },
-                  {
-                    ruleId: "SEC-HDR-HSTS",
-                    category: "Application Configuration",
-                    title: "HTTP Strict Transport Security (HSTS)",
-                    status: "PASS",
-                    severity: "MEDIUM",
-                    ref: "ASVS 14.4.2 / PCI-DSS 4.2.1",
-                    desc: t(
-                      "security_dashboard.compliance.rules.SEC-HDR-HSTS.desc",
-                      "HSTS header verified successfully (max-age=31536000).",
-                    ),
-                    rec: t(
-                      "security_dashboard.compliance.rules.SEC-HDR-HSTS.rec",
-                      "Maintain max-age value greater than 31536000 seconds.",
-                    ),
-                  },
-                  {
-                    ruleId: "SEC-HDR-XFO",
-                    category: "Application Configuration",
-                    title: "Clickjacking Protection (X-Frame-Options)",
-                    status: "PASS",
-                    severity: "MEDIUM",
-                    ref: "ASVS 14.4.3 / PCI-DSS 6.4.1",
-                    desc: t(
-                      "security_dashboard.compliance.rules.SEC-HDR-XFO.desc",
-                      "X-Frame-Options header present with value SAMEORIGIN.",
-                    ),
-                    rec: t(
-                      "security_dashboard.compliance.rules.SEC-HDR-XFO.rec",
-                      "Maintain protection against malicious framing.",
-                    ),
-                  },
-                  {
-                    ruleId: "SEC-HDR-XCTO",
-                    category: "Application Configuration",
-                    title: "MIME-Sniffing Protection (nosniff)",
-                    status: "PASS",
-                    severity: "LOW",
-                    ref: "ASVS 14.4.4 / ISO 27001 A.8.26",
-                    desc: t(
-                      "security_dashboard.compliance.rules.SEC-HDR-XCTO.desc",
-                      "X-Content-Type-Options header configured as nosniff.",
-                    ),
-                    rec: t(
-                      "security_dashboard.compliance.rules.SEC-HDR-XCTO.rec",
-                      "Prevent browsers from MIME-sniffing static resources.",
-                    ),
-                  },
-                  {
-                    ruleId: "SEC-CK-HTTPONLY",
-                    category: "Authentication Compliance",
-                    title: "Session Cookie HttpOnly Flag",
-                    status: "PASS",
-                    severity: "HIGH",
-                    ref: "ASVS 3.4.1 / PCI-DSS 6.4.2",
-                    desc: t(
-                      "security_dashboard.compliance.rules.SEC-CK-HTTPONLY.desc",
-                      "All session cookies include the HttpOnly flag.",
-                    ),
-                    rec: t(
-                      "security_dashboard.compliance.rules.SEC-CK-HTTPONLY.rec",
-                      "Prevents client-side malicious scripts (XSS) from accessing session cookies.",
-                    ),
-                  },
-                  {
-                    ruleId: "SEC-CK-SECURE",
-                    category: "Authentication Compliance",
-                    title: "Session Cookie Secure Flag",
-                    status: "PASS",
-                    severity: "HIGH",
-                    ref: "ASVS 3.4.2 / ISO 27001 A.8.24",
-                    desc: t(
-                      "security_dashboard.compliance.rules.SEC-CK-SECURE.desc",
-                      "All cookies require encrypted transport under HTTPS.",
-                    ),
-                    rec: t(
-                      "security_dashboard.compliance.rules.SEC-CK-SECURE.rec",
-                      "Maintain the Secure attribute on all authentication cookies.",
-                    ),
-                  },
-                  {
-                    ruleId: "SEC-CRY-TLS-VERSION",
-                    category: "Cryptography Compliance",
-                    title: "Modern TLS Version Enforcement",
-                    status: "PASS",
-                    severity: "HIGH",
-                    ref: "ASVS 9.1.1 / PCI-DSS 4.1",
-                    desc: t(
-                      "security_dashboard.compliance.rules.SEC-CRY-TLS-VERSION.desc",
-                      "TLS 1.3 connection negotiated with modern cipher algorithms.",
-                    ),
-                    rec: t(
-                      "security_dashboard.compliance.rules.SEC-CRY-TLS-VERSION.rec",
-                      "Keep legacy SSLv3, TLS 1.0, and TLS 1.1 protocols disabled.",
-                    ),
-                  },
-                  {
-                    ruleId: "SEC-DAT-TOKEN-STORAGE",
-                    category: "Data Protection Compliance",
-                    title: "Secure Session Token Storage",
-                    status: "PASS",
-                    severity: "MEDIUM",
-                    ref: "ASVS 3.5.1 / GDPR Art. 32",
-                    desc: t(
-                      "security_dashboard.compliance.rules.SEC-DAT-TOKEN-STORAGE.desc",
-                      "No plaintext JWT tokens found exposed in LocalStorage.",
-                    ),
-                    rec: t(
-                      "security_dashboard.compliance.rules.SEC-DAT-TOKEN-STORAGE.rec",
-                      "Continue storing session tokens in HttpOnly cookies.",
-                    ),
-                  },
-                ].map((item) => (
+                {(() => {
+                  const getRuleStatus = (ruleId) => {
+                    if (!runDetails?.security_compliance?.results)
+                      return "PASS";
+                    const found = runDetails.security_compliance.results.find(
+                      (r) => (r.rule_id_code || r.ruleId) === ruleId,
+                    );
+                    return found ? found.status : "PASS";
+                  };
+
+                  return [
+                    {
+                      ruleId: "SEC-HDR-CSP",
+                      category: "Application Configuration",
+                      title: "Content Security Policy (CSP)",
+                      status: getRuleStatus("SEC-HDR-CSP"),
+                      severity: "HIGH",
+                      ref: "ASVS 14.4.1 / PCI-DSS 6.4.3",
+                      desc: t(
+                        "security_dashboard.compliance.rules.SEC-HDR-CSP.desc",
+                        "The Content-Security-Policy header is not configured on the served application.",
+                      ),
+                      rec: t(
+                        "security_dashboard.compliance.rules.SEC-HDR-CSP.rec",
+                        "Configure the 'Content-Security-Policy: default-src 'self'' header on your server.",
+                      ),
+                    },
+                    {
+                      ruleId: "SEC-HDR-HSTS",
+                      category: "Application Configuration",
+                      title: "HTTP Strict Transport Security (HSTS)",
+                      status: getRuleStatus("SEC-HDR-HSTS"),
+                      severity: "MEDIUM",
+                      ref: "ASVS 14.4.2 / PCI-DSS 4.2.1",
+                      desc: t(
+                        "security_dashboard.compliance.rules.SEC-HDR-HSTS.desc",
+                        "HSTS header verified successfully (max-age=31536000).",
+                      ),
+                      rec: t(
+                        "security_dashboard.compliance.rules.SEC-HDR-HSTS.rec",
+                        "Maintain max-age value greater than 31536000 seconds.",
+                      ),
+                    },
+                    {
+                      ruleId: "SEC-HDR-XFO",
+                      category: "Application Configuration",
+                      title: "Clickjacking Protection (X-Frame-Options)",
+                      status: getRuleStatus("SEC-HDR-XFO"),
+                      severity: "MEDIUM",
+                      ref: "ASVS 14.4.3 / PCI-DSS 6.4.1",
+                      desc: t(
+                        "security_dashboard.compliance.rules.SEC-HDR-XFO.desc",
+                        "X-Frame-Options header present with value SAMEORIGIN.",
+                      ),
+                      rec: t(
+                        "security_dashboard.compliance.rules.SEC-HDR-XFO.rec",
+                        "Maintain protection against malicious framing.",
+                      ),
+                    },
+                    {
+                      ruleId: "SEC-HDR-XCTO",
+                      category: "Application Configuration",
+                      title: "MIME-Sniffing Protection (nosniff)",
+                      status: getRuleStatus("SEC-HDR-XCTO"),
+                      severity: "LOW",
+                      ref: "ASVS 14.4.4 / ISO 27001 A.8.26",
+                      desc: t(
+                        "security_dashboard.compliance.rules.SEC-HDR-XCTO.desc",
+                        "X-Content-Type-Options header configured as nosniff.",
+                      ),
+                      rec: t(
+                        "security_dashboard.compliance.rules.SEC-HDR-XCTO.rec",
+                        "Prevent browsers from MIME-sniffing static resources.",
+                      ),
+                    },
+                    {
+                      ruleId: "SEC-CK-HTTPONLY",
+                      category: "Authentication Compliance",
+                      title: "Session Cookie HttpOnly Flag",
+                      status: getRuleStatus("SEC-CK-HTTPONLY"),
+                      severity: "HIGH",
+                      ref: "ASVS 3.4.1 / PCI-DSS 6.4.2",
+                      desc: t(
+                        "security_dashboard.compliance.rules.SEC-CK-HTTPONLY.desc",
+                        "All session cookies include the HttpOnly flag.",
+                      ),
+                      rec: t(
+                        "security_dashboard.compliance.rules.SEC-CK-HTTPONLY.rec",
+                        "Prevents client-side malicious scripts (XSS) from accessing session cookies.",
+                      ),
+                    },
+                    {
+                      ruleId: "SEC-CK-SECURE",
+                      category: "Authentication Compliance",
+                      title: "Session Cookie Secure Flag",
+                      status: getRuleStatus("SEC-CK-SECURE"),
+                      severity: "HIGH",
+                      ref: "ASVS 3.4.2 / ISO 27001 A.8.24",
+                      desc: t(
+                        "security_dashboard.compliance.rules.SEC-CK-SECURE.desc",
+                        "All cookies require encrypted transport under HTTPS.",
+                      ),
+                      rec: t(
+                        "security_dashboard.compliance.rules.SEC-CK-SECURE.rec",
+                        "Maintain the Secure attribute on all authentication cookies.",
+                      ),
+                    },
+                    {
+                      ruleId: "SEC-CRY-TLS-VERSION",
+                      category: "Cryptography Compliance",
+                      title: "Modern TLS Version Enforcement",
+                      status: getRuleStatus("SEC-CRY-TLS-VERSION"),
+                      severity: "HIGH",
+                      ref: "ASVS 9.1.1 / PCI-DSS 4.1",
+                      desc: t(
+                        "security_dashboard.compliance.rules.SEC-CRY-TLS-VERSION.desc",
+                        "TLS 1.3 connection negotiated with modern cipher algorithms.",
+                      ),
+                      rec: t(
+                        "security_dashboard.compliance.rules.SEC-CRY-TLS-VERSION.rec",
+                        "Keep legacy SSLv3, TLS 1.0, and TLS 1.1 protocols disabled.",
+                      ),
+                    },
+                    {
+                      ruleId: "SEC-DAT-TOKEN-STORAGE",
+                      category: "Data Protection Compliance",
+                      title: "Secure Session Token Storage",
+                      status: getRuleStatus("SEC-DAT-TOKEN-STORAGE"),
+                      severity: "MEDIUM",
+                      ref: "ASVS 3.5.1 / GDPR Art. 32",
+                      desc: t(
+                        "security_dashboard.compliance.rules.SEC-DAT-TOKEN-STORAGE.desc",
+                        "No plaintext JWT tokens found exposed in LocalStorage.",
+                      ),
+                      rec: t(
+                        "security_dashboard.compliance.rules.SEC-DAT-TOKEN-STORAGE.rec",
+                        "Continue storing session tokens in HttpOnly cookies.",
+                      ),
+                    },
+                    {
+                      ruleId: "SEC-LEAK-APIKEY",
+                      category: "Data Leak Protection",
+                      title: "API Keys & Secrets Exposure",
+                      status: getRuleStatus("SEC-LEAK-APIKEY"),
+                      severity: "HIGH",
+                      ref: "ASVS 8.3.1 / PCI-DSS 6.3.2",
+                      desc: t(
+                        "security_dashboard.compliance.rules.SEC-LEAK-APIKEY.desc",
+                        "No exposed API keys or secrets detected in network traffic or storage.",
+                      ),
+                      rec: t(
+                        "security_dashboard.compliance.rules.SEC-LEAK-APIKEY.rec",
+                        "Store credentials in environment variables and restrict browser access.",
+                      ),
+                    },
+                    {
+                      ruleId: "SEC-LEAK-PII",
+                      category: "Data Leak Protection",
+                      title: "Personally Identifiable Information (PII)",
+                      status: getRuleStatus("SEC-LEAK-PII"),
+                      severity: "MEDIUM",
+                      ref: "ASVS 8.3.2 / GDPR Art. 25",
+                      desc: t(
+                        "security_dashboard.compliance.rules.SEC-LEAK-PII.desc",
+                        "No cleartext personal data (emails, phones, credit cards) leaked.",
+                      ),
+                      rec: t(
+                        "security_dashboard.compliance.rules.SEC-LEAK-PII.rec",
+                        "Encrypt or redact personal data before transmitting over network.",
+                      ),
+                    },
+                    {
+                      ruleId: "SEC-LEAK-SYSTEM",
+                      category: "Data Leak Protection",
+                      title: "System Stack Trace & Error Leaks",
+                      status: getRuleStatus("SEC-LEAK-SYSTEM"),
+                      severity: "LOW",
+                      ref: "ASVS 13.2.3 / ISO A.8.26",
+                      desc: t(
+                        "security_dashboard.compliance.rules.SEC-LEAK-SYSTEM.desc",
+                        "No sensitive server error logs or debug stack traces leaked.",
+                      ),
+                      rec: t(
+                        "security_dashboard.compliance.rules.SEC-LEAK-SYSTEM.rec",
+                        "Ensure error handlers return generic messages in production.",
+                      ),
+                    },
+                    {
+                      ruleId: "SEC-DOM-XSS",
+                      category: "DOM Protection",
+                      title: "Dynamic Execution DOM XSS Sinks",
+                      status: getRuleStatus("SEC-DOM-XSS"),
+                      severity: "HIGH",
+                      ref: "ASVS 14.2.1 / PCI-DSS 6.2",
+                      desc: t(
+                        "security_dashboard.compliance.rules.SEC-DOM-XSS.desc",
+                        "No dangerous client-side dynamic evaluation sinks (innerHTML) executed.",
+                      ),
+                      rec: t(
+                        "security_dashboard.compliance.rules.SEC-DOM-XSS.rec",
+                        "Ensure script bindings utilize safe APIs (textContent) or sanitizers.",
+                      ),
+                    },
+                    {
+                      ruleId: "SEC-DOM-PROTOPOL",
+                      category: "DOM Protection",
+                      title: "Prototype Pollution Vulnerability",
+                      status: getRuleStatus("SEC-DOM-PROTOPOL"),
+                      severity: "MEDIUM",
+                      ref: "ASVS 14.2.2 / OWASP A03",
+                      desc: t(
+                        "security_dashboard.compliance.rules.SEC-DOM-PROTOPOL.desc",
+                        "No modifications to the prototype chain (Prototype Pollution) detected.",
+                      ),
+                      rec: t(
+                        "security_dashboard.compliance.rules.SEC-DOM-PROTOPOL.rec",
+                        "Freeze JavaScript base prototypes or use prototype-less Object maps.",
+                      ),
+                    },
+                    {
+                      ruleId: "SEC-DOM-CLOBBER",
+                      category: "DOM Protection",
+                      title: "DOM Clobbering Isolation",
+                      status: getRuleStatus("SEC-DOM-CLOBBER"),
+                      severity: "LOW",
+                      ref: "ASVS 14.2.3 / OWASP A03",
+                      desc: t(
+                        "security_dashboard.compliance.rules.SEC-DOM-CLOBBER.desc",
+                        "No namespace pollution or window variable clobbering detected.",
+                      ),
+                      rec: t(
+                        "security_dashboard.compliance.rules.SEC-DOM-CLOBBER.rec",
+                        "Avoid implicit globals and validate dynamic window properties.",
+                      ),
+                    },
+                    {
+                      ruleId: "SEC-DOM-SRI",
+                      category: "DOM Protection",
+                      title: "Subresource Integrity (SRI) Check",
+                      status: getRuleStatus("SEC-DOM-SRI"),
+                      severity: "MEDIUM",
+                      ref: "ASVS 14.2.4 / PCI-DSS 6.4",
+                      desc: t(
+                        "security_dashboard.compliance.rules.SEC-DOM-SRI.desc",
+                        "External stylesheet and script CDNs verified with integrity hashes.",
+                      ),
+                      rec: t(
+                        "security_dashboard.compliance.rules.SEC-DOM-SRI.rec",
+                        "Add subresource integrity SHA-384 attributes to external loads.",
+                      ),
+                    },
+                    {
+                      ruleId: "SEC-DOM-TRUSTED",
+                      category: "DOM Protection",
+                      title: "Trusted Types Implementation",
+                      status: getRuleStatus("SEC-DOM-TRUSTED"),
+                      severity: "LOW",
+                      ref: "ASVS 14.4.1 / ISO A.8.26",
+                      desc: t(
+                        "security_dashboard.compliance.rules.SEC-DOM-TRUSTED.desc",
+                        "Trusted Types verified or enforced on browser execution environment.",
+                      ),
+                      rec: t(
+                        "security_dashboard.compliance.rules.SEC-DOM-TRUSTED.rec",
+                        "Configure a CSP header require-trusted-types-for directive.",
+                      ),
+                    },
+                    {
+                      ruleId: "SEC-DOM-COOP",
+                      category: "DOM Protection",
+                      title: "Cross-Origin Opener Policy (COOP)",
+                      status: getRuleStatus("SEC-DOM-COOP"),
+                      severity: "LOW",
+                      ref: "ASVS 14.4.1 / ISO A.8.26",
+                      desc: t(
+                        "security_dashboard.compliance.rules.SEC-DOM-COOP.desc",
+                        "Cross-Origin Opener Policy (COOP) header is present and secure.",
+                      ),
+                      rec: t(
+                        "security_dashboard.compliance.rules.SEC-DOM-COOP.rec",
+                        "Configure the COOP header same-origin value on your server.",
+                      ),
+                    },
+                  ];
+                })().map((item) => (
                   <div
                     key={item.ruleId}
                     className={`p-4 rounded-xl border flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all ${
@@ -1504,7 +1660,10 @@ export default function SecurityDashboard() {
                       )}
                     </h4>
                     <p className="text-xs text-slate-300 leading-relaxed mt-1">
-                      {selectedAlert.message}
+                      {t(
+                        `security_dashboard.compliance.rules.${selectedAlert.ruleId}.desc`,
+                        selectedAlert.message || selectedAlert.description,
+                      )}
                     </p>
                   </div>
 

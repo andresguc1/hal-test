@@ -169,48 +169,63 @@ export default function SecurityHistoryView({ flowId, onSelectRun }) {
                       {run.flow_name || run.flow_id || "Flujo de Pruebas"}
                     </td>
                     <td className="py-3 px-4 font-mono text-[11px]">
-                      <span className={`px-2 py-0.5 rounded border font-semibold ${
-                        run.trigger === "seguridad" || run.trigger === "security"
-                          ? "bg-red-500/10 border-red-500/20 text-red-300"
-                          : run.trigger === "performance"
-                          ? "bg-cyan-500/10 border-cyan-500/20 text-cyan-300"
-                          : run.trigger === "batch"
-                          ? "bg-purple-500/10 border-purple-500/20 text-purple-300"
-                          : "bg-slate-500/10 border-slate-500/20 text-slate-300"
-                      }`}>
-                        {run.trigger === "seguridad" || run.trigger === "security"
+                      <span
+                        className={`px-2 py-0.5 rounded border font-semibold ${
+                          run.trigger === "seguridad" ||
+                          run.trigger === "security"
+                            ? "bg-red-500/10 border-red-500/20 text-red-300"
+                            : run.trigger === "performance"
+                              ? "bg-cyan-500/10 border-cyan-500/20 text-cyan-300"
+                              : run.trigger === "batch"
+                                ? "bg-purple-500/10 border-purple-500/20 text-purple-300"
+                                : "bg-slate-500/10 border-slate-500/20 text-slate-300"
+                        }`}
+                      >
+                        {run.trigger === "seguridad" ||
+                        run.trigger === "security"
                           ? "Security DAST"
                           : run.trigger === "performance"
-                          ? "Performance"
-                          : run.trigger === "batch"
-                          ? "Batch Run"
-                          : "Manual Flow"}
+                            ? "Performance"
+                            : run.trigger === "batch"
+                              ? "Batch Run"
+                              : "Manual Flow"}
                       </span>
                     </td>
                     <td className="py-3 px-4">
                       {run.security_compliance ? (
                         <div className="flex items-center space-x-2">
-                          <span className={`px-2 py-0.5 rounded font-mono font-bold text-[10px] ${
-                            run.security_compliance.compliance_score >= 90
-                              ? "bg-emerald-500/25 border border-emerald-500/30 text-emerald-400"
-                              : run.security_compliance.compliance_score >= 70
-                              ? "bg-amber-500/25 border border-amber-500/30 text-amber-400"
-                              : "bg-red-500/25 border border-red-500/30 text-red-400"
-                          }`}>
-                            {Math.round(run.security_compliance.compliance_score)}%
+                          <span
+                            className={`px-2 py-0.5 rounded font-mono font-bold text-[10px] ${
+                              run.security_compliance.compliance_score >= 90
+                                ? "bg-emerald-500/25 border border-emerald-500/30 text-emerald-400"
+                                : run.security_compliance.compliance_score >= 70
+                                  ? "bg-amber-500/25 border border-amber-500/30 text-amber-400"
+                                  : "bg-red-500/25 border border-red-500/30 text-red-400"
+                            }`}
+                          >
+                            {Math.round(
+                              run.security_compliance.compliance_score,
+                            )}
+                            %
                           </span>
-                          <span className={`px-1.5 py-0.25 text-[9px] font-bold font-mono rounded ${
-                            run.security_compliance.risk_level === "HIGH" || run.security_compliance.risk_level === "CRITICAL"
-                              ? "bg-red-950/60 text-red-400 border border-red-800/40"
-                              : run.security_compliance.risk_level === "MEDIUM"
-                              ? "bg-amber-950/60 text-amber-400 border border-amber-800/40"
-                              : "bg-emerald-950/60 text-emerald-400 border border-emerald-800/40"
-                          }`}>
+                          <span
+                            className={`px-1.5 py-0.25 text-[9px] font-bold font-mono rounded ${
+                              run.security_compliance.risk_level === "HIGH" ||
+                              run.security_compliance.risk_level === "CRITICAL"
+                                ? "bg-red-950/60 text-red-400 border border-red-800/40"
+                                : run.security_compliance.risk_level ===
+                                    "MEDIUM"
+                                  ? "bg-amber-950/60 text-amber-400 border border-amber-800/40"
+                                  : "bg-emerald-950/60 text-emerald-400 border border-emerald-800/40"
+                            }`}
+                          >
                             {run.security_compliance.risk_level}
                           </span>
                         </div>
                       ) : (
-                        <span className="text-slate-500 text-xs font-mono">-</span>
+                        <span className="text-slate-500 text-xs font-mono">
+                          -
+                        </span>
                       )}
                     </td>
                     <td className="py-3 px-4 text-slate-400 font-mono text-[11px]">

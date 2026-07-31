@@ -50,17 +50,7 @@ console.log("   📄 Copying launcher files...");
 copyDirSync(path.join(CLI_ROOT, "bin"), path.join(DIST_DIR, "bin"));
 copyDirSync(path.join(CLI_ROOT, "src"), path.join(DIST_DIR, "src"));
 
-// 4. Copy backend directory
-console.log("   🏗️  Copying backend directory...");
-// Ignore node_modules, .env files, storage files.
-const ignorePattern =
-  /^(node_modules|\.env.*|storage|tests?|\.git.*|.*\.config\.js|prettier.*|eslint.*)$/;
-copyDirSync(BACKEND_ROOT, DIST_BACKEND, ignorePattern);
-
-// Create an empty storage folder for the backend
-fs.mkdirSync(path.join(DIST_BACKEND, "storage", "runs"), { recursive: true });
-
-// 5. Generate unified package.json
+// 4. Generate unified package.json and extract externals for esbuild
 console.log("   📝 Generating unified package.json...");
 const cliPkg = JSON.parse(
   fs.readFileSync(path.join(CLI_ROOT, "package.json"), "utf8"),
@@ -74,6 +64,30 @@ const mergedDeps = {
   ...backendPkg.dependencies,
   ...cliPkg.dependencies,
 };
+
+// 5. Bundle backend using esbuild
+console.log("   🏗️  Bundling backend with esbuild...");
+
+// Bundle app.js, marking all dependencies as external
+const externalArgs = Object.keys(mergedDeps)
+  .map((dep) => `--external:${dep}`)
+  .join(" ");
+execSync(
+  `npx esbuild apps/backend/app.js --bundle --platform=node --target=node20 --format=esm --outfile=apps/cli/dist/backend/app.js ${externalArgs}`,
+  { cwd: MONOREPO_ROOT, stdio: "inherit" },
+);
+
+// Copy necessary static backend directories
+const staticDirs = ["locales", "public", "swagger", "scripts"];
+for (const dir of staticDirs) {
+  const srcPath = path.join(BACKEND_ROOT, dir);
+  if (fs.existsSync(srcPath)) {
+    copyDirSync(srcPath, path.join(DIST_BACKEND, dir));
+  }
+}
+
+// Create an empty storage folder for the backend migration compatibility
+fs.mkdirSync(path.join(DIST_BACKEND, "storage", "runs"), { recursive: true });
 
 // Create the standalone package.json
 const distPkg = {
