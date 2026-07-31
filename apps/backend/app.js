@@ -183,7 +183,18 @@ app.use('/api/keys', keysRouter);
 // --- STATIC FILES SERVING (Production) ---
 
 // 1. Serve Frontend App
-app.use('/app', express.static(path.join(PUBLIC_DIR, 'app')));
+app.use(
+    '/app',
+    express.static(path.join(PUBLIC_DIR, 'app'), {
+        setHeaders: (res, filePath) => {
+            if (filePath.endsWith('.html')) {
+                res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+                res.setHeader('Pragma', 'no-cache');
+                res.setHeader('Expires', '0');
+            }
+        },
+    }),
+);
 app.get('/app', (req, res) => {
     res.redirect('/app/');
 });
@@ -220,6 +231,9 @@ app.get(/\/app($|\/.*)/, (req, res, next) => {
         });
     }
 
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     res.sendFile(indexPath, (err) => {
         if (err) {
             console.error(
