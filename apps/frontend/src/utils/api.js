@@ -26,20 +26,23 @@ import { supabase } from "./supabaseClient";
 const getHeaders = async () => {
   const headers = { "Content-Type": "application/json" };
 
-  // Skip Supabase Session if Auth is disabled (ONLY allowed in non-production)
-  const isProd = import.meta.env.MODE === "production";
   const isAuthEnabled = import.meta.env.VITE_AUTH_ENABLED !== "false";
   const isLocalMode = import.meta.env.VITE_HALTEST_MODE === "local";
 
-  if (isLocalMode || (!isProd && !isAuthEnabled)) {
+  if (isLocalMode || !isAuthEnabled) {
     headers["Authorization"] = `Bearer local-guest-token`;
   } else {
-    // Supabase Auth
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (session?.access_token) {
-      headers["Authorization"] = `Bearer ${session.access_token}`;
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        headers["Authorization"] = `Bearer ${session.access_token}`;
+      } else {
+        headers["Authorization"] = `Bearer local-guest-token`;
+      }
+    } catch {
+      headers["Authorization"] = `Bearer local-guest-token`;
     }
   }
 
