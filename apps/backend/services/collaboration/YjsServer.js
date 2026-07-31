@@ -149,17 +149,19 @@ class YjsCollaborationServer {
             return { success: false, message: 'Collaboration server is disabled' };
         }
 
-        const isDev = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
         const isAuthDisabled =
             process.env.AUTH_ENABLED === 'false' || process.env.VITE_AUTH_ENABLED === 'false';
         const isLocalMode =
             process.env.HALTEST_MODE === 'local' || process.env.HAL_CLI_MODE === 'true';
+        const isSupabaseMissing =
+            !process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY;
 
         let resolvedUser = null;
 
         if (
-            (isDev && isAuthDisabled) ||
+            isAuthDisabled ||
             isLocalMode ||
+            isSupabaseMissing ||
             token === 'local-dev-token' ||
             token === 'local-guest-token'
         ) {
@@ -214,7 +216,7 @@ class YjsCollaborationServer {
             }
 
             // If local bypass or if the user is project owner, they are 'owner'
-            if ((isDev && isAuthDisabled) || isLocalMode || project.userId === resolvedUser.id) {
+            if (isAuthDisabled || isLocalMode || project.userId === resolvedUser.id) {
                 return { success: true, role: 'owner', userId: resolvedUser.id };
             }
 

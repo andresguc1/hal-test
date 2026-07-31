@@ -73431,43 +73431,41 @@ function w8e() {
                           {
                               style: { display: 'flex', marginRight: '4px' },
                               children: [
-                                  t
-                                      .slice(0, 4)
-                                      .map((o, i) =>
-                                          u.jsxDEV(
-                                              'div',
-                                              {
-                                                  style: {
-                                                      width: '24px',
-                                                      height: '24px',
-                                                      borderRadius: '50%',
-                                                      background: o.user.color,
-                                                      border: '2px solid var(--hal-surface, #1e1e28)',
-                                                      display: 'flex',
-                                                      alignItems: 'center',
-                                                      justifyContent: 'center',
-                                                      fontSize: '10px',
-                                                      fontWeight: 600,
-                                                      color: 'white',
-                                                      marginLeft: i > 0 ? '-8px' : '0',
-                                                      zIndex: 10 - i,
-                                                      position: 'relative',
-                                                  },
-                                                  title: o.user.name,
-                                                  children:
-                                                      o.user.name?.charAt(0)?.toUpperCase() || '?',
+                                  t.slice(0, 4).map((o, i) =>
+                                      u.jsxDEV(
+                                          'div',
+                                          {
+                                              style: {
+                                                  width: '24px',
+                                                  height: '24px',
+                                                  borderRadius: '50%',
+                                                  background: o.user.color,
+                                                  border: '2px solid var(--hal-surface, #1e1e28)',
+                                                  display: 'flex',
+                                                  alignItems: 'center',
+                                                  justifyContent: 'center',
+                                                  fontSize: '10px',
+                                                  fontWeight: 600,
+                                                  color: 'white',
+                                                  marginLeft: i > 0 ? '-8px' : '0',
+                                                  zIndex: 10 - i,
+                                                  position: 'relative',
                                               },
-                                              o.clientId,
-                                              !1,
-                                              {
-                                                  fileName:
-                                                      '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/collaboration/PresenceIndicator.jsx',
-                                                  lineNumber: 42,
-                                                  columnNumber: 11,
-                                              },
-                                              this,
-                                          ),
+                                              title: o.user.name,
+                                              children:
+                                                  o.user.name?.charAt(0)?.toUpperCase() || '?',
+                                          },
+                                          o.clientId,
+                                          !1,
+                                          {
+                                              fileName:
+                                                  '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/collaboration/PresenceIndicator.jsx',
+                                              lineNumber: 42,
+                                              columnNumber: 11,
+                                          },
+                                          this,
                                       ),
+                                  ),
                                   e > 4 &&
                                       u.jsxDEV(
                                           'div',
@@ -113268,13 +113266,11 @@ var ABe = class extends X_ {
             const n = this.options;
             ((this.options = this.#e.defaultMutationOptions(e)),
                 yw(this.options, n) ||
-                    this.#e
-                        .getMutationCache()
-                        .notify({
-                            type: 'observerOptionsUpdated',
-                            mutation: this.#n,
-                            observer: this,
-                        }),
+                    this.#e.getMutationCache().notify({
+                        type: 'observerOptionsUpdated',
+                        mutation: this.#n,
+                        observer: this,
+                    }),
                 n?.mutationKey &&
                 this.options.mutationKey &&
                 jf(n.mutationKey) !== jf(this.options.mutationKey)

@@ -40,7 +40,6 @@ export const startRunAction = async (req, res) => {
         const userId = req.user?.id || 'anonymous';
         const userName = req.user?.email || req.user?.name || 'Anonymous';
 
-        // Backend Role Validation for Collaborative Projects
         const isDev = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
         const isAuthDisabled =
             process.env.AUTH_ENABLED === 'false' || process.env.VITE_AUTH_ENABLED === 'false';
@@ -57,7 +56,12 @@ export const startRunAction = async (req, res) => {
                 const project = await Project.findByPk(resolvedProjectId);
                 if (project && project.collaborationEnabled) {
                     let role = 'viewer';
-                    if ((isDev && isAuthDisabled) || isLocalMode || project.userId === userId) {
+                    if (
+                        isAuthDisabled ||
+                        isLocalMode ||
+                        (isDev && isAuthDisabled) ||
+                        project.userId === userId
+                    ) {
                         role = 'owner';
                     } else {
                         const collab = await CollaboratorRole.findOne({
