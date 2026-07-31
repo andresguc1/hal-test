@@ -506,51 +506,69 @@ export const startPerformanceRunAction = async (req, res) => {
             });
         }
 
+        const effectiveProjectId = projectId || 'default';
+
+        // Ensure Flow record exists in DB to satisfy foreign key constraints for Nodes and Edges
+        let flow = await Flow.findByPk(flowId);
+        if (!flow) {
+            try {
+                flow = await Flow.create({
+                    id: flowId,
+                    name: 'Performance Flow',
+                    projectId: effectiveProjectId,
+                });
+            } catch (createErr) {
+                console.warn('[RunController] Flow auto-create notice:', createErr.message);
+            }
+        }
+
         // Sync nodes and edges if provided by frontend canvas
         if (nodes && Array.isArray(nodes) && nodes.length > 0) {
-            await Node.destroy({ where: { flowId } });
-            await Node.bulkCreate(
-                nodes.map((n, idx) => ({
-                    nodeId: String(n.id || n.nodeId || `node_${idx + 1}`),
-                    type: String(n.data?.type || n.type || 'action'),
-                    data: n.data || {},
-                    position: n.position || { x: 0, y: 0 },
-                    flowId,
-                    parentId: n.parentId || null,
-                })),
-            );
-            if (edges && Array.isArray(edges)) {
-                await Edge.destroy({ where: { flowId } });
-                const validEdges = edges
-                    .filter(
-                        (e) => e && (e.source || e.sourceHandle) && (e.target || e.targetHandle),
-                    )
-                    .map((e, idx) => ({
-                        edgeId: String(e.id || e.edgeId || `edge_${idx + 1}`),
-                        source: String(e.source),
-                        target: String(e.target),
-                        sourceHandle: e.sourceHandle || null,
-                        targetHandle: e.targetHandle || null,
+            try {
+                await Node.destroy({ where: { flowId } });
+                await Node.bulkCreate(
+                    nodes.map((n, idx) => ({
+                        nodeId: String(n.id || n.nodeId || `node_${idx + 1}`),
+                        type: String(n.data?.type || n.type || 'action'),
+                        data: n.data || {},
+                        position: n.position || { x: 0, y: 0 },
                         flowId,
-                    }));
-                if (validEdges.length > 0) {
-                    await Edge.bulkCreate(validEdges);
+                        parentId: n.parentId || null,
+                    })),
+                );
+                if (edges && Array.isArray(edges)) {
+                    await Edge.destroy({ where: { flowId } });
+                    const validEdges = edges
+                        .filter(
+                            (e) => e && (e.source || e.sourceHandle) && (e.target || e.targetHandle),
+                        )
+                        .map((e, idx) => ({
+                            edgeId: String(e.id || e.edgeId || `edge_${idx + 1}`),
+                            source: String(e.source),
+                            target: String(e.target),
+                            sourceHandle: e.sourceHandle || null,
+                            targetHandle: e.targetHandle || null,
+                            flowId,
+                        }));
+                    if (validEdges.length > 0) {
+                        await Edge.bulkCreate(validEdges);
+                    }
                 }
+            } catch (syncErr) {
+                console.warn('[RunController] Node/Edge sync warning:', syncErr.message);
             }
         }
 
         // Fetch flow with updated nodes and edges for the runner
-        const flow = await Flow.findByPk(flowId, {
+        const fetchedFlow = await Flow.findByPk(flowId, {
             include: [
                 { model: Node, as: 'nodes' },
                 { model: Edge, as: 'edges' },
             ],
         });
-        if (!flow) {
-            return res.status(404).json({ success: false, message: 'Flow not found.' });
-        }
 
-        const effectiveProjectId = projectId || flow.project_id || flow.projectId;
+        const flowObj = fetchedFlow ? fetchedFlow.toJSON() : { id: flowId, name: 'Performance Flow', nodes: nodes || [], edges: edges || [] };
+        const flowName = flowObj.name || 'Performance Flow';
 
         // Pre-flight resource check
         const requestedVUs = performanceConfig.virtualUsers || 1;
@@ -573,7 +591,7 @@ export const startPerformanceRunAction = async (req, res) => {
 
         // Create run record for history
         const runId = await executionLogger.startRun(flowId, {
-            flowName: flow.name,
+            flowName,
             trigger: 'performance',
             flowSnapshot: JSON.stringify({ performanceConfig }),
         });
@@ -582,14 +600,13 @@ export const startPerformanceRunAction = async (req, res) => {
         await executionLock.acquire(flowId, userId, userName, runId);
 
         // Fire-and-forget: performance runs are long-lived
-        const perfRunPromise = executionManager.execute(
-            'performance',
-            { ...flow.toJSON(), projectId: effectiveProjectId },
-            { performanceConfig, runId },
-        );
-
-        perfRunPromise
-            .then(async (result) => {
+        Promise.resolve().then(async () => {
+            try {
+                const result = await executionManager.execute(
+                    'performance',
+                    { ...flowObj, projectId: effectiveProjectId },
+                    { performanceConfig, runId },
+                );
                 console.log(
                     `[RunController] Performance run completed for flow ${flowId}: ` +
                         `${result.data?.totalRequests || 0} requests`,
@@ -600,14 +617,13 @@ export const startPerformanceRunAction = async (req, res) => {
                     await run.save();
                 }
                 await executionLogger.endRun(runId, result.success ? 'completed' : 'failed');
-            })
-            .catch(async (err) => {
+            } catch (err) {
                 console.error(`[RunController] Performance run failed: ${err.message}`);
                 await executionLogger.endRun(runId, 'failed');
-            })
-            .finally(async () => {
+            } finally {
                 await executionLock.release(flowId);
-            });
+            }
+        });
 
         return res.status(200).json({
             success: true,
@@ -679,7 +695,8 @@ export const startSecurityRunAction = async (req, res) => {
                 if (flow) {
                     flowObj = flow.toJSON();
                     flowName = flow.name || flowName;
-                    effectiveProjectId = projectId || flow.project_id || flow.projectId || effectiveProjectId;
+                    effectiveProjectId =
+                        projectId || flow.project_id || flow.projectId || effectiveProjectId;
                 }
             } catch (flowErr) {
                 console.warn('[RunController] Flow lookup warning:', flowErr.message);
@@ -687,7 +704,13 @@ export const startSecurityRunAction = async (req, res) => {
         }
 
         if (!flowObj) {
-            flowObj = { id: flowId, name: flowName, projectId: effectiveProjectId, nodes: [], edges: [] };
+            flowObj = {
+                id: flowId,
+                name: flowName,
+                projectId: effectiveProjectId,
+                nodes: [],
+                edges: [],
+            };
         }
 
         // Create run record for history
