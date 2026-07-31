@@ -409,7 +409,14 @@ router.put('/projects/:id', async (req, res) => {
             return res.status(404).json({ error: 'Project not found' });
         }
 
-        await project.update({ name, description, activeFlowId, collaborationEnabled });
+        // Build partial update — only include fields that were explicitly sent
+        const updates = {};
+        if (name !== undefined) updates.name = name;
+        if (description !== undefined) updates.description = description;
+        if (activeFlowId !== undefined) updates.activeFlowId = activeFlowId;
+        if (collaborationEnabled !== undefined) updates.collaborationEnabled = collaborationEnabled;
+
+        await project.update(updates);
 
         // Return project with flows
         const updatedProject = await getProjectWithFlowStats(project.id);

@@ -1181,8 +1181,75 @@
         "SEC-DAT-TOKEN-STORAGE": {
           "desc": "No plaintext JWT tokens found exposed in LocalStorage.",
           "rec": "Continue storing session tokens in HttpOnly cookies."
+        },
+        "SEC-LEAK-APIKEY": {
+          "desc": "API keys, cloud credentials, or secret tokens detected leaking in network traffic or browser storage.",
+          "rec": "Revoke the exposed credentials and store secrets in secure server-side environment variables."
+        },
+        "SEC-LEAK-PII": {
+          "desc": "Personally Identifiable Information (PII) like emails, phone numbers, or credit cards exposed in plaintext.",
+          "rec": "Filter and obfuscate sensitive data before transmitting or storing on the client side."
+        },
+        "SEC-LEAK-SYSTEM": {
+          "desc": "Detailed system error messages or database stack traces exposed in network responses.",
+          "rec": "Disable debug modes and detailed stack trace logging in production environments."
+        },
+        "SEC-DOM-XSS": {
+          "desc": "Usage of insecure dynamic HTML execution sinks (innerHTML, document.write) enabling DOM XSS injection.",
+          "rec": "Replace dangerous sinks with textContent or secure sanitization libraries (DOMPurify)."
+        },
+        "SEC-DOM-PROTOPOL": {
+          "desc": "Prototype Pollution risk from modifying JavaScript object prototype base properties.",
+          "rec": "Secure the base prototype using Object.freeze(Object.prototype) or prototype-less maps."
+        },
+        "SEC-DOM-CLOBBER": {
+          "desc": "DOM Clobbering risk from overwriting global window context variables via elements with DOM IDs.",
+          "rec": "Use unique naming and explicit variable declarations (let/const) in client scripts."
+        },
+        "SEC-DOM-SRI": {
+          "desc": "External script or link stylesheet resources loaded from CDNs without Subresource Integrity (SRI) attributes.",
+          "rec": "Add robust cryptographic hashes (SHA-384) to CDN script and link tags."
+        },
+        "SEC-DOM-TRUSTED": {
+          "desc": "No Trusted Types directives or policies enabled to enforce sanitization of DOM injections.",
+          "rec": "Configure and enable a Trusted Types policy within your CSP directives."
+        },
+        "SEC-DOM-COOP": {
+          "desc": "Cross-Origin-Opener-Policy (COOP) header is not configured, allowing potential cross-origin context leaks.",
+          "rec": "Configure the COOP header with the value 'same-origin' on your web server."
         }
       }
+    },
+    "ai_suggestions": {
+      "csp-missing-header": "AI Suggestion: Configure the 'Content-Security-Policy' header on your web server. Define 'default-src 'self'' as a base policy to avoid code injections.",
+      "csp-insecure-directive": "AI Suggestion: Avoid using 'unsafe-inline' or 'unsafe-eval' in your CSP policies. Use cryptographic hashes or nonces to validate legitimate scripts.",
+      "hsts-missing-header": "AI Suggestion: Enable HSTS by adding the header 'Strict-Transport-Security: max-age=63072000; includeSubDomains; preload' on your production server.",
+      "xfo-missing-header": "AI Suggestion: Add the header 'X-Frame-Options: SAMEORIGIN' or 'DENY' to prevent Clickjacking (click hijacking) attacks.",
+      "xfo-insecure-value": "AI Suggestion: Modify the 'X-Frame-Options' header to use a secure value like 'SAMEORIGIN' or 'DENY'.",
+      "xcto-missing-header": "AI Suggestion: Add the header 'X-Content-Type-Options: nosniff' to prevent browsers from sniffing MIME types of static assets.",
+      "xcto-insecure-value": "AI Suggestion: Configure 'X-Content-Type-Options' with the exact value 'nosniff'.",
+      "cors-wildcard-credentials": "AI Suggestion: Avoid using '*' in 'Access-Control-Allow-Origin' if you allow credentials. Configure the exact client domain.",
+      "cookie-missing-secure": "AI Suggestion: Add the '; Secure' attribute to your 'Set-Cookie' header to force its transmission exclusively under secure HTTPS.",
+      "cookie-missing-httponly": "AI Suggestion: Add '; HttpOnly' to your session cookies to prevent malicious client-side scripts from accessing them.",
+      "cookie-missing-samesite": "AI Suggestion: Define '; SameSite=Lax' or '; SameSite=Strict' in your cookies to prevent cross-origin CSRF attacks.",
+      "cookie-samesite-none-insecure": "AI Suggestion: If you declare 'SameSite=None', you must accompany it with the '; Secure' attribute so that browsers do not block the cookie.",
+      "csp-console-violation": "AI Suggestion: An unauthorized external script or resource tried to load. Review the script source and add it to your CSP policy if legitimate.",
+      "mixed-content-warning": "AI Suggestion: An insecure HTTP resource was loaded on an HTTPS page. Update the resource URL to HTTPS to maintain end-to-end encryption.",
+      "dom-inline-event": "AI Suggestion: Avoid using event handlers in HTML (e.g. onclick=\"...\"). Declare modern event handlers using 'addEventListener' in clean JS files.",
+      "dom-javascript-uri": "AI Suggestion: The href attribute contains 'javascript:...'. Replace this logic with button click events and avoid direct script execution in links.",
+      "dom-password-autocomplete": "AI Suggestion: Add the attribute 'autocomplete=\"current-password\"' to your password fields to guide browsers securely.",
+      "dom-insecure-form-action": "AI Suggestion: The form points to a plain HTTP endpoint. Change the 'action' to submit data under secure HTTPS.",
+      "dom-plaintext-transmit": "AI Suggestion: You are transmitting sensitive information over plain and unencrypted HTTP. Migrate your server and navigation flow to secure HTTPS.",
+      "SEC-LEAK-APIKEY": "AI Suggestion: Revoke the exposed credential immediately. Store secret keys in secure server-side environment variables and never expose them in client-side code.",
+      "SEC-LEAK-PII": "AI Suggestion: Filter personally identifiable information (PII) before transmitting or saving. Ensure emails, phone numbers, or credit cards are anonymized.",
+      "SEC-LEAK-SYSTEM": "AI Suggestion: Disable detailed error messages and stack traces in production environments. Configure a generic error handler on the server.",
+      "SEC-DOM-XSS": "AI Suggestion: Avoid using dangerous sinks like innerHTML. Use document.textContent, safe template APIs, or sanitization libraries (DOMPurify).",
+      "SEC-DOM-PROTOPOL": "AI Suggestion: Secure the base prototype using Object.freeze(Object.prototype) or prototype-less maps like Object.create(null) to prevent pollution.",
+      "SEC-DOM-CLOBBER": "AI Suggestion: Avoid relying on implicit globals bound to DOM IDs. Use explicit declarations (let, const) and namespaces.",
+      "SEC-DOM-SRI": "AI Suggestion: Integrate robust cryptographic hashes (SHA-384) in the 'integrity' attribute when loading libraries from external CDNs.",
+      "SEC-DOM-TRUSTED": "AI Suggestion: Configure and enable a Trusted Types policy to enforce sanitization of all HTML injected into the DOM.",
+      "SEC-DOM-COOP": "AI Suggestion: Enable the Cross-Origin-Opener-Policy (COOP) header with the value 'same-origin' to mitigate cross-origin browser context leaks.",
+      "default": "AI Suggestion: Evaluate the node context and input/output parameters to ensure proper data sanitization and adherence to security policies."
     },
     "results": {
       "qg_passed": "QUALITY GATE: PASSED",
@@ -1230,7 +1297,9 @@
     "status_completed": "Audit Completed",
     "status_failed": "Audit Failed (Critical Findings)",
     "vulnerabilities": "Detected Vulnerabilities",
-    "compliance": "Compliance Level",
+    "compliance_level": "Compliance Level",
+    "close_inspector": "Close Inspector",
+    "remediation_recommendation": "Remediation Recommendation:",
     "security_score": "Security Score",
     "total_findings": "Total Findings",
     "critical": "Critical",

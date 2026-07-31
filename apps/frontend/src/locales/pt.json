@@ -499,6 +499,42 @@
         "SEC-DAT-TOKEN-STORAGE": {
           "desc": "Nenhum token JWT em texto claro encontrado exposto no LocalStorage.",
           "rec": "Continue armazenando tokens de sessão em cookies HttpOnly."
+        },
+        "SEC-LEAK-APIKEY": {
+          "desc": "Vazamentos de chaves de API, credenciais de nuvem ou tokens secretos detectados no tráfego de rede ou armazenamento.",
+          "rec": "Revogue as credenciais expostas e armazene os segredos em variáveis de ambiente seguras no servidor."
+        },
+        "SEC-LEAK-PII": {
+          "desc": "Exposição de informações pessoalmente identificáveis (PII) como emails, telefones ou números de cartão em texto claro.",
+          "rec": "Filtre e ofusque as informações sensíveis antes de transmiti-las ou armazená-las no cliente."
+        },
+        "SEC-LEAK-SYSTEM": {
+          "desc": "Mensagens de erro detalhadas do sistema ou stack traces de banco de dados expostos nas respostas de rede.",
+          "rec": "Desative o modo debug e os stack traces detalhados em ambientes de produção."
+        },
+        "SEC-DOM-XSS": {
+          "desc": "Uso de sinks de execução HTML inseguros (innerHTML, document.write) que facilitam ataques de injeção DOM XSS.",
+          "rec": "Substitua o uso de sinks dinâmicos por textContent ou APIs seguras de sanitização."
+        },
+        "SEC-DOM-PROTOPOL": {
+          "desc": "Risco de contaminação de protótipo (Prototype Pollution) ao modificar propriedades base de objetos JavaScript.",
+          "rec": "Utilize Object.freeze(Object.prototype) ou mapas sem protótipos no seu código."
+        },
+        "SEC-DOM-CLOBBER": {
+          "desc": "Risco de DOM Clobbering ao sobrescrever variáveis globais do contexto window usando IDs de elementos HTML.",
+          "rec": "Use nomes únicos e variáveis explícitas (let/const) nos seus scripts de cliente."
+        },
+        "SEC-DOM-SRI": {
+          "desc": "Arquivos de scripts ou estilos carregados de CDNs externos sem o atributo de integridade Subresource Integrity (SRI).",
+          "rec": "Configure hashes de integridade SHA-384 nas suas tags script e link externas."
+        },
+        "SEC-DOM-TRUSTED": {
+          "desc": "Ausência de diretivas ou políticas Trusted Types habilitadas para forçar a sanitização de injeções do DOM.",
+          "rec": "Configure e ative uma política Trusted Types nas suas diretivas CSP."
+        },
+        "SEC-DOM-COOP": {
+          "desc": "O cabeçalho Cross-Origin-Opener-Policy (COOP) não está configurado, permitindo vazamentos de origem cruzada.",
+          "rec": "Configure o cabeçalho COOP com o valor 'same-origin' no seu servidor web."
         }
       }
     },
@@ -548,7 +584,9 @@
     "status_completed": "Auditoria Concluída",
     "status_failed": "Auditoria com Falhas Críticas",
     "vulnerabilities": "Vulnerabilidades Detectadas",
-    "compliance": "Nível de Conformidade",
+    "compliance_level": "Nível de Conformidade",
+    "close_inspector": "Fechar Inspetor",
+    "remediation_recommendation": "Recomendação de Remediação:",
     "security_score": "Score de Segurança",
     "total_findings": "Total de Descobertas",
     "critical": "Crítico",

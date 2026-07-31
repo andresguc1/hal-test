@@ -1006,6 +1006,42 @@
         "SEC-DAT-TOKEN-STORAGE": {
           "desc": "Aucun jeton JWT en texte clair trouvé exposé dans LocalStorage.",
           "rec": "Continuez à stocker les jetons de session dans des cookies HttpOnly."
+        },
+        "SEC-LEAK-APIKEY": {
+          "desc": "Des fuites de clés API, de credentials cloud ou de tokens secrets ont été détectées dans le trafic réseau ou le stockage.",
+          "rec": "Révoquez les credentials exposés et stockez les secrets dans des variables d'environnement sécurisées côté serveur."
+        },
+        "SEC-LEAK-PII": {
+          "desc": "Exposition d'informations personnellement identifiables (PII) telles que des emails, numéros de téléphone ou numéros de carte bancaire en clair.",
+          "rec": "Filtrez et masquez les informations sensibles avant de les transmettre ou de les stocker côté client."
+        },
+        "SEC-LEAK-SYSTEM": {
+          "desc": "Des messages d'erreur système détaillés ou des stack traces de base de données sont exposés dans les réponses réseau.",
+          "rec": "Désactivez le mode debug et les stack traces détaillés dans les environnements de production."
+        },
+        "SEC-DOM-XSS": {
+          "desc": "Utilisation de sinks d'exécution HTML non sécurisés (innerHTML, document.write) facilitant les attaques DOM XSS.",
+          "rec": "Remplacez les sinks dynamiques par textContent ou des APIs de sanitisation sécurisées."
+        },
+        "SEC-DOM-PROTOPOL": {
+          "desc": "Risque de contamination de prototype (Prototype Pollution) en modifiant les propriétés de base des objets JavaScript.",
+          "rec": "Utilisez Object.freeze(Object.prototype) ou des maps sans prototype dans votre code."
+        },
+        "SEC-DOM-CLOBBER": {
+          "desc": "Risque de DOM Clobbering en écrasant des variables globales du contexte window avec des IDs d'éléments HTML.",
+          "rec": "Utilisez des noms uniques et des variables explicites (let/const) dans vos scripts clients."
+        },
+        "SEC-DOM-SRI": {
+          "desc": "Des fichiers de scripts ou de styles chargés depuis des CDNs externes sans l'attribut d'intégrité Subresource Integrity (SRI).",
+          "rec": "Configurez des hashes d'intégrité SHA-384 dans vos balises script et link externes."
+        },
+        "SEC-DOM-TRUSTED": {
+          "desc": "Absence de directives ou politiques Trusted Types activées pour forcer la sanitisation des injections DOM.",
+          "rec": "Configurez et activez une politique Trusted Types dans vos directives CSP."
+        },
+        "SEC-DOM-COOP": {
+          "desc": "L'en-tête Cross-Origin-Opener-Policy (COOP) n'est pas configuré, permettant des fuites d'origine croisée.",
+          "rec": "Configurez l'en-tête COOP avec la valeur 'same-origin' sur votre serveur web."
         }
       }
     },
@@ -1055,7 +1091,9 @@
     "status_completed": "Audit Terminé",
     "status_failed": "Audit Échoué (Constats Critiques)",
     "vulnerabilities": "Vulnérabilités Détectées",
-    "compliance": "Niveau de Conformité",
+    "compliance_level": "Niveau de Conformité",
+    "close_inspector": "Fermer l'Inspecteur",
+    "remediation_recommendation": "Recommandation de remédiation :",
     "security_score": "Score de Sécurité",
     "total_findings": "Total des Constats",
     "critical": "Critique",

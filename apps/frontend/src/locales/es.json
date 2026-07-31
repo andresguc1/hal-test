@@ -1177,8 +1177,75 @@
         "SEC-DAT-TOKEN-STORAGE": {
           "desc": "No se encontraron tokens JWT expuestos en texto plano dentro de LocalStorage.",
           "rec": "Continuar almacenando tokens de sesión en cookies HttpOnly."
+        },
+        "SEC-LEAK-APIKEY": {
+          "desc": "Fugas de llaves de API, credenciales de nubes o tokens secretos detectadas en el tráfico de red o almacenamiento.",
+          "rec": "Revoca las credenciales expuestas y almacena los secretos en variables de entorno seguras de servidor."
+        },
+        "SEC-LEAK-PII": {
+          "desc": "Exposición de información de identificación personal (PII) como correos, teléfonos o tarjetas de crédito en texto plano.",
+          "rec": "Filtra y ofusca la información confidencial antes de transmitirla o almacenarla en el cliente."
+        },
+        "SEC-LEAK-SYSTEM": {
+          "desc": "Mensajes de error detallados del sistema o stack traces de base de datos expuestos en las respuestas de red.",
+          "rec": "Deshabilita el modo debug y los volcados de stack traces detallados en entornos de producción."
+        },
+        "SEC-DOM-XSS": {
+          "desc": "Uso de sumideros de ejecución HTML inseguros (innerHTML, document.write) que facilitan ataques de inyección DOM XSS.",
+          "rec": "Reemplaza el uso de sumideros dinámicos por textContent o APIs seguras de sanitización."
+        },
+        "SEC-DOM-PROTOPOL": {
+          "desc": "Riesgo de contaminación de prototipos (Prototype Pollution) al modificar propiedades base de objetos de JavaScript.",
+          "rec": "Utiliza Object.freeze(Object.prototype) o mapas sin prototipos en tu código."
+        },
+        "SEC-DOM-CLOBBER": {
+          "desc": "Riesgo de DOM Clobbering al sobrescribir variables globales del contexto de window usando IDs de elementos HTML.",
+          "rec": "Usa nombres únicos y variables explícitas (let/const) en tus scripts de cliente."
+        },
+        "SEC-DOM-SRI": {
+          "desc": "Archivos de scripts o estilos cargados de CDNs externos sin el atributo de integridad Subresource Integrity (SRI).",
+          "rec": "Configura hashes de integridad SHA-384 en tus etiquetas script y link externas."
+        },
+        "SEC-DOM-TRUSTED": {
+          "desc": "Ausencia de directivas o políticas Trusted Types habilitadas para forzar la sanitización de inyecciones del DOM.",
+          "rec": "Configura y activa una política Trusted Types en tus directivas CSP."
+        },
+        "SEC-DOM-COOP": {
+          "desc": "La cabecera Cross-Origin-Opener-Policy (COOP) no está configurada, permitiendo fugas de origen cruzado.",
+          "rec": "Configura la cabecera COOP con el valor 'same-origin' en tu servidor web."
         }
       }
+    },
+    "ai_suggestions": {
+      "csp-missing-header": "Sugerencia de IA: Configura la cabecera 'Content-Security-Policy' en tu servidor web. Define 'default-src 'self'' como política base para evitar inyecciones de código.",
+      "csp-insecure-directive": "Sugerencia de IA: Evita usar 'unsafe-inline' o 'unsafe-eval' en tus políticas CSP. Utiliza hashes criptográficos o nonces para validar scripts legítimos.",
+      "hsts-missing-header": "Sugerencia de IA: Habilita HSTS agregando la cabecera 'Strict-Transport-Security: max-age=63072000; includeSubDomains; preload' en tu servidor de producción.",
+      "xfo-missing-header": "Sugerencia de IA: Añade la cabecera 'X-Frame-Options: SAMEORIGIN' o 'DENY' para evitar ataques de Clickjacking (secuestro de click).",
+      "xfo-insecure-value": "Sugerencia de IA: Modifica la cabecera 'X-Frame-Options' para utilizar un valor seguro como 'SAMEORIGIN' o 'DENY'.",
+      "xcto-missing-header": "Sugerencia de IA: Agrega la cabecera 'X-Content-Type-Options: nosniff' para evitar que los navegadores adivinen el tipo MIME de recursos estáticos.",
+      "xcto-insecure-value": "Sugerencia de IA: Configura 'X-Content-Type-Options' con el valor exacto 'nosniff'.",
+      "cors-wildcard-credentials": "Sugerencia de IA: Evita usar '*' en 'Access-Control-Allow-Origin' si permites credenciales. Configura el dominio exacto del cliente.",
+      "cookie-missing-secure": "Sugerencia de IA: Añade el atributo '; Secure' a tu cabecera 'Set-Cookie' para forzar su transmisión exclusiva bajo HTTPS cifrado.",
+      "cookie-missing-httponly": "Sugerencia de IA: Agrega '; HttpOnly' a tus cookies de sesión para impedir que scripts maliciosos de cliente accedan a ellas.",
+      "cookie-missing-samesite": "Sugerencia de IA: Define '; SameSite=Lax' o '; SameSite=Strict' en tus cookies para prevenir ataques CSRF de origen cruzado.",
+      "cookie-samesite-none-insecure": "Sugerencia de IA: Si declaras 'SameSite=None', obligatoriamente debes acompañarlo del atributo '; Secure' para que los navegadores no bloqueen la cookie.",
+      "csp-console-violation": "Sugerencia de IA: Un script o recurso de origen externo no autorizado intentó cargarse. Revisa la procedencia del script y agrégalo a tu política CSP si es legítimo.",
+      "mixed-content-warning": "Sugerencia de IA: Se ha cargado un recurso HTTP no seguro en una página HTTPS. Actualiza la URL del recurso a HTTPS para mantener el cifrado de extremo a extremo.",
+      "dom-inline-event": "Sugerencia de IA: Evita el uso de manejadores de eventos en el HTML (ej. onclick=\"...\"). Declara manejadores de eventos modernos usando 'addEventListener' en archivos JS limpios.",
+      "dom-javascript-uri": "Sugerencia de IA: El atributo href contiene 'javascript:...'. Reemplaza esta lógica por botones con eventos y evita la ejecución de scripts directos en enlaces.",
+      "dom-password-autocomplete": "Sugerencia de IA: Añade el atributo 'autocomplete=\"current-password\"' en tus campos de contraseña para guiar a los navegadores de manera segura.",
+      "dom-insecure-form-action": "Sugerencia de IA: El formulario apunta a un endpoint HTTP plano. Cambia el 'action' para que envíe los datos bajo HTTPS seguro.",
+      "dom-plaintext-transmit": "Sugerencia de IA: Estás transmitiendo información confidencial a través de un protocolo HTTP plano y sin cifrar. Migra tu servidor y el flujo de navegación a HTTPS seguro.",
+      "SEC-LEAK-APIKEY": "Sugerencia de IA: Revoca la credencial expuesta inmediatamente. Almacena las llaves secretas en variables de entorno seguras del servidor y nunca las expongas en el código de cliente.",
+      "SEC-LEAK-PII": "Sugerencia de IA: Filtra la información personal identificable (PII) antes de transmitirla o guardarla. Asegúrate de anonimizar correos, teléfonos o tarjetas de crédito.",
+      "SEC-LEAK-SYSTEM": "Sugerencia de IA: Deshabilita los mensajes de error detallados y stack traces en entornos de producción. Configura un manejador de errores genérico en el servidor.",
+      "SEC-DOM-XSS": "Sugerencia de IA: Evita el uso de sumideros peligrosos como innerHTML. Utiliza document.textContent, APIs de plantillas seguras o librerías de sanitización (DOMPurify).",
+      "SEC-DOM-PROTOPOL": "Sugerencia de IA: Protege el prototipo base utilizando Object.freeze(Object.prototype) o esquemas sin prototipo como Object.create(null) para prevenir contaminación.",
+      "SEC-DOM-CLOBBER": "Sugerencia de IA: Evita depender de variables globales implícitas asociadas a IDs del DOM. Utiliza declaraciones explícitas (let, const) y namespaces.",
+      "SEC-DOM-SRI": "Sugerencia de IA: Integra hashes criptográficos robustos (SHA-384) en los atributos 'integrity' al cargar librerías desde CDNs externos.",
+      "SEC-DOM-TRUSTED": "Sugerencia de IA: Configura y habilita una política de Trusted Types para forzar la sanitización de todas las cadenas de texto inyectadas en el DOM.",
+      "SEC-DOM-COOP": "Sugerencia de IA: Habilita la cabecera Cross-Origin-Opener-Policy (COOP) con valor 'same-origin' para mitigar filtraciones de origen cruzado.",
+      "default": "Sugerencia de IA: Evalúa el contexto del nodo y la entrada/salida para asegurar la correcta sanitización de datos y el cumplimiento de las políticas de seguridad."
     },
     "results": {
       "qg_passed": "QUALITY GATE: PASSED (APROBADO)",
@@ -1226,7 +1293,9 @@
     "status_completed": "Auditoría Completada",
     "status_failed": "Auditoría Con Hallazgos Críticos",
     "vulnerabilities": "Vulnerabilidades Detectadas",
-    "compliance": "Nivel de Cumplimiento",
+    "compliance_level": "Nivel de Cumplimiento",
+    "close_inspector": "Cerrar Inspector",
+    "remediation_recommendation": "Recomendación Remediativa:",
     "security_score": "Security Score",
     "total_findings": "Total de Hallazgos",
     "critical": "Crítico",
