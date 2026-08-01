@@ -26,6 +26,12 @@ import { supabase } from "./supabaseClient";
 const getHeaders = async () => {
   const headers = { "Content-Type": "application/json" };
 
+  // Set Accept-Language to the user selected language
+  const selectedLang = localStorage.getItem("i18nextLng");
+  if (selectedLang) {
+    headers["Accept-Language"] = selectedLang;
+  }
+
   const isAuthEnabled = import.meta.env.VITE_AUTH_ENABLED !== "false";
   const isLocalMode = import.meta.env.VITE_HALTEST_MODE === "local";
 

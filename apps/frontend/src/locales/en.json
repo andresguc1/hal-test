@@ -227,7 +227,10 @@
       "discussion": "Discussion",
       "csp_validator": "CSP Validator",
       "header_auditor": "Header Auditor",
-      "dom_sanitizer": "DOM Sanitizer"
+      "dom_sanitizer": "DOM Sanitizer",
+      "audit_policy": "Security Policy Audit",
+      "sensitive_data_monitor": "Sensitive Data Monitor",
+      "fuzz_input": "Fuzzing de Inputs (XSS/SQLi)"
     },
     "categories": {
       "security_audit": "Security",
@@ -243,7 +246,8 @@
       "execution_interface": "Exec",
       "flow_control": "Logic Engine",
       "composition": "Module Composition",
-      "collaboration": "UI Annotation"
+      "collaboration": "UI Annotation",
+      "session_management": "Session"
     },
     "fields": {
       "browserType": "Browser Type",
@@ -448,7 +452,11 @@
       "branch_mode": "Defines how the next nodes will be executed: Parallel (all at once), Sequential (one by one), or Race (first to finish wins).",
       "flow_control_action": "Break exits a loop, Continue skips to the next iteration, and Return stops the entire flow execution.",
       "transform_logic": "Select an operation to manipulate an array of data. Use 'acc' and 'item' variables in expressions for Reduce.",
-      "component_flow_id": "The ID of the flow you want to execute as a reusable component."
+      "component_flow_id": "The ID of the flow you want to execute as a reusable component.",
+      "no_captures": "No catch available",
+      "alt_text": "Execution result",
+      "before": "Before",
+      "after": "After"
     },
     "validation": {
       "width_number": "Width must be a number",
@@ -595,7 +603,10 @@
         "light": "Light",
         "dark": "Dark",
         "system": "System"
-      }
+      },
+      "theme_light": "Of course",
+      "theme_dark": "Dark",
+      "theme_system": "System"
     },
     "ai": {
       "title": "AI & Integrations",
@@ -659,7 +670,16 @@
       "health_connected": "Ollama connected • Model {{model}} loaded",
       "health_not_found": "Ollama running but {{model}} not found. ollama pull {{model}}",
       "models_installed": "{{count}} model installed",
-      "models_installed_plural": "{{count}} models installed"
+      "models_installed_plural": "{{count}} models installed",
+      "select_provider_placeholder": "Select Provider",
+      "providers": {
+        "ollama": "Ollama (Local)",
+        "openai": "OpenAI (Cloud)",
+        "anthropic": "Claude / Anthropic (Cloud)",
+        "google": "Gemini / Google (Cloud)",
+        "openrouter": "OpenRouter (Cloud)"
+      },
+      "api_key_placeholder": "sk-or-..."
     },
     "vault": {
       "title": "Secure Wallet",
@@ -682,7 +702,17 @@
       "key_saved": "Key saved to Vault",
       "key_deleted": "Key deleted",
       "test_success": "Connection Successful!",
-      "test_failed": "Connection Failed"
+      "test_failed": "Connection Failed",
+      "key_placeholder": "sk-..."
+    },
+    "title": "Settings",
+    "close": "To close",
+    "save": "Save",
+    "tabs": {
+      "general": "General",
+      "editor": "Canvas & Editor",
+      "ai": "AI & Integrations",
+      "system": "System"
     }
   },
   "context_menu": {
@@ -1096,7 +1126,9 @@
         "description": "Sustained load for prolonged period.",
         "goal": "Detect progressive degradation"
       }
-    }
+    },
+    "rose_time": "Rise Time",
+    "rose_time_hint": "Time at base before peak"
   },
   "security_config": {
     "dast_header": "DAST Audit Configuration",
@@ -1367,5 +1399,133 @@
     "col_status": "Status",
     "col_action": "Action",
     "view_report": "View report"
+  },
+  "performance": {
+    "toasts": {
+      "load_error": "Error loading history.",
+      "delete_success": "Execution deleted successfully.",
+      "delete_error": "Error deleting execution.",
+      "delete_server_error": "Server error deleting execution.",
+      "config_error": "Could not extract configuration for this run.",
+      "compare_error": "Incompatible data for comparison."
+    },
+    "confirmations": {
+      "delete": "Are you sure you want to delete this history record?"
+    },
+    "navigation": {
+      "history": "History"
+    },
+    "buttons": {
+      "rerun": "Run Again",
+      "close_report": "Close Report"
+    },
+    "compare": {
+      "title": "Performance Comparison",
+      "back": "Back to History",
+      "run_a": "Execution A",
+      "run_b": "Execution B (Target)",
+      "no_change": "No change",
+      "equal": "Equal",
+      "vs_run_a": "vs Execution A"
+    },
+    "history": {
+      "title": "Performance History",
+      "subtitle": "Explore, analyze, and compare previous load runs",
+      "comparing": "Comparing:",
+      "compare_now": "Compare Now",
+      "loading": "Loading history...",
+      "no_runs": "No previous performance runs registered for this flow."
+    },
+    "headers": {
+      "compare": "Compare",
+      "run_id": "Run ID",
+      "date": "Date",
+      "load_profile": "Load Profile",
+      "config": "Config",
+      "throughput": "Throughput",
+      "p95_latency": "P95 Latency",
+      "errors": "Errors",
+      "actions": "Actions",
+      "avg_latency": "Average Latency",
+      "error_rate": "Error Rate"
+    },
+    "actions": {
+      "rerun": "Run again",
+      "delete": "Delete run"
+    },
+    "soak": {
+      "matrix_title": "Hourly Decomposition Matrix (Evolution H1 ... Hn)",
+      "matrix_subtitle": "Hourly blocks tracking to identify specific moment of degradation.",
+      "hour_intervals_val": "Hour Intervals",
+      "interval": "Interval",
+      "samples": "Samples",
+      "errors_percent": "Errors %",
+      "ram_avg": "RAM Avg",
+      "cpu_avg": "CPU Avg"
+    },
+    "spike": {
+      "pre_title": "1. Pre-Spike (Baseline)",
+      "pre_desc": "Stable baseline load before sudden spike",
+      "pre_badge": "Base Load",
+      "peak_title": "2. SUDDEN PIKE (Peak)",
+      "peak_desc": "Instantaneous overload of maximum concurrency",
+      "peak_badge": "SUDDEN SPIKE",
+      "post_title": "3. Post-Spike (Auto-Recovery)",
+      "post_desc": "Cooldown and return to normal parameters",
+      "recovered": "Recovered",
+      "recovering": "Recovering",
+      "matrix_title": "Comparative Matrix by Sudden Spike Phases",
+      "matrix_subtitle": "Tri-phasic comparison to evaluate the degree of impact and self-recovery capacity of the system."
+    },
+    "stress": {
+      "latency_vs_vus": "P95 Latency vs Concurrent Users",
+      "axis_x_vus": "X Axis = VUs",
+      "latency_evolution": "Latency Evolution by Load",
+      "throughput_vs_vus": "Throughput (req/s) vs Concurrent Users",
+      "saturation_plateau": "Saturation Plateau",
+      "capacity_ceiling": "Processing Capacity Ceiling"
+    }
+  },
+  "metrics": {
+    "loading": "Quantifying System Intelligence...",
+    "header": {
+      "subtitle": "ROI & Performance Audit",
+      "title": "Executive Overview",
+      "latest_update": "Latest Update"
+    },
+    "kpi": {
+      "time_saved": "Human Time Saved",
+      "auto_repairs": "Auto-Repairs",
+      "time_saved_trend": "+12% vs last week",
+      "memory_utilization": "Memory Palace Utilization",
+      "fixes_reused": "Historical Fixes Reused",
+      "memories_trend": "+24 New memories",
+      "total_runs": "Total Executions",
+      "all_environments": "Across all environments",
+      "stability_trend": "Stability: 98.2%"
+    },
+    "heatmap": {
+      "title": "Flakiness Heatmap",
+      "no_data": "Insufficient failure data to generate heatmap."
+    },
+    "integrity": {
+      "title": "Execution Integrity",
+      "last_days": "Last 12 Days",
+      "stable_growth": "Stable Growth"
+    }
+  },
+  "report": {
+    "total_duration": "Total Duration",
+    "memory_hits": "Memory Hits",
+    "auto_healed": "Auto-Healed",
+    "ai_diagnosis": "AI Diagnosis",
+    "step_evidence": "Step Evidence",
+    "no_visual_capture": "No visual capture available",
+    "intelligence_insight": "Intelligence Insight",
+    "step_success_desc": "Step completed successfully according to the plan.",
+    "analyzing_failure_desc": "Analyzing failure patterns...",
+    "input": "Input",
+    "output": "Output",
+    "exception": "Exception"
   }
 }

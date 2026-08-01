@@ -187,10 +187,12 @@ export default function App() {
               className="text-5xl md:text-7xl font-bold uppercase tracking-tight mb-4 max-w-4xl"
             >
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-white via-white to-white/50">
-                The Missing Link
+                {t("hero.headline_part1", "The Missing Link")}
               </span>
               <br />
-              <span className="text-hal-primary-400">in Automation</span>
+              <span className="text-hal-primary-400">
+                {t("hero.headline_part2", "in Automation")}
+              </span>
             </Motion.h1>
 
             {/* Main Sub-headline */}
@@ -200,9 +202,9 @@ export default function App() {
               transition={{ duration: 0.6, delay: 0.3 }}
               className="text-lg md:text-xl text-slate-300 max-w-2xl mb-4 leading-relaxed font-bold"
             >
-              No-code flow builder with AI-powered healing
+              {t("hero.desc1", "No-code flow builder with AI-powered healing")}
               <br />
-              and real-time Playwright execution.
+              {t("hero.desc2", "and real-time Playwright execution.")}
             </Motion.p>
 
             {/* Secondary Description */}
@@ -311,7 +313,7 @@ export default function App() {
                 <button
                   onClick={handleCopy}
                   className="p-2 bg-white/5 hover:bg-white/10 rounded-lg transition-colors text-slate-300 hover:text-white group relative border border-white/5"
-                  title="Copy to clipboard"
+                  title={t("common.copy_clipboard", "Copy to clipboard")}
                 >
                   {copied ? (
                     <Check size={18} className="text-emerald-400" />
@@ -322,14 +324,14 @@ export default function App() {
                   {/* Tooltip */}
                   {copied && (
                     <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-emerald-500/20 text-emerald-300 text-[10px] uppercase font-bold px-2 py-1 rounded backdrop-blur-sm whitespace-nowrap">
-                      Copied!
+                      {t("common.copied", "Copied!")}
                     </span>
                   )}
                 </button>
               </div>
               <p className="text-xs text-slate-500 mt-3 flex items-center justify-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
-                Zero config. No cloning required.
+                {t("hero.zero_config", "Zero config. No cloning required.")}
               </p>
             </Motion.div>
 
@@ -343,25 +345,25 @@ export default function App() {
               <div className="flex flex-col items-center">
                 <span className="text-2xl font-bold text-white">2.5k+</span>
                 <span className="text-[10px] uppercase tracking-widest text-slate-500">
-                  Flows Executed
+                  {t("stats.flows", "Flows Executed")}
                 </span>
               </div>
               <div className="flex flex-col items-center">
                 <span className="text-2xl font-bold text-white">45+</span>
                 <span className="text-[10px] uppercase tracking-widest text-slate-500">
-                  Node Types
+                  {t("stats.nodes", "Node Types")}
                 </span>
               </div>
               <div className="flex flex-col items-center">
                 <span className="text-2xl font-bold text-white">99%</span>
                 <span className="text-[10px] uppercase tracking-widest text-slate-500">
-                  Success Rate
+                  {t("stats.success", "Success Rate")}
                 </span>
               </div>
               <div className="flex flex-col items-center">
                 <span className="text-2xl font-bold text-white">Open</span>
                 <span className="text-[10px] uppercase tracking-widest text-slate-500">
-                  Source
+                  {t("stats.source", "Source")}
                 </span>
               </div>
             </Motion.div>
@@ -399,7 +401,7 @@ export default function App() {
                   <path d="m15 18-6-6 6-6" />
                 </svg>
                 <span className="text-sm font-bold uppercase tracking-widest">
-                  Back to Home
+                  {t("common.back_home", "Back to Home")}
                 </span>
               </button>
             </div>

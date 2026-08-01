@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import SettingsPage from "./SettingsPage";
 
@@ -31,8 +32,13 @@ const UserConfigMenu = ({
   user = { name: "User Name", email: "hal-user@example.com" },
   onOpenSettings,
   onLogout = () => {},
+  currentLanguage = "en",
+  onLanguageChange = () => {},
+  languages = [],
   className,
 }) => {
+  const { t } = useTranslation();
+
   return (
     <div
       className={cn(
@@ -59,7 +65,7 @@ const UserConfigMenu = ({
           variant="outline"
           className="mt-2 bg-indigo-500/10 text-indigo-300 border-indigo-500/20 text-[10px] uppercase font-bold tracking-wider px-2 py-0.5"
         >
-          Pro Plan
+          {t("app.pro_plan", "Pro Plan")}
         </Badge>
       </div>
 
@@ -74,8 +80,34 @@ const UserConfigMenu = ({
           <div className="p-1 rounded bg-blue-500/10 text-blue-400">
             <Settings size={14} />
           </div>
-          <span className="text-xs font-medium">Settings</span>
+          <span className="text-xs font-medium">{t("app.settings", "Settings")}</span>
         </Button>
+
+        {/* Language Selector */}
+        {languages.length > 0 && (
+          <div className="flex items-center justify-between h-9 px-3 gap-3">
+            <div className="flex items-center gap-3">
+              <div className="p-1 rounded bg-purple-500/10 text-purple-400">
+                <Globe size={14} />
+              </div>
+              <span className="text-xs font-medium text-slate-300">
+                {t("app.language", "Language")}
+              </span>
+            </div>
+            <Select value={currentLanguage} onValueChange={onLanguageChange}>
+              <SelectTrigger className="w-[100px] h-7 text-xs bg-white/5 border-white/10 text-slate-200">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-slate-900 border-slate-800 text-slate-200">
+                {languages.map((lang) => (
+                  <SelectItem key={lang.value} value={lang.value} className="text-xs hover:bg-slate-800 focus:bg-slate-800">
+                    {lang.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
       <Separator className="bg-white/5 my-2" />
@@ -91,7 +123,7 @@ const UserConfigMenu = ({
             size={16}
             className="group-hover:stroke-rose-400 transition-colors"
           />
-          <span className="text-xs font-medium">Log Out</span>
+          <span className="text-xs font-medium">{t("app.logout", "Log Out")}</span>
         </Button>
       </div>
 

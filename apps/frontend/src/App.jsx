@@ -343,9 +343,9 @@ function Dashboard({
         toast.dismiss(toastId);
         console.error("[App] Dataset run failed:", error);
         toast.error(
-          t("common.dataset_error", "Dataset run failed") +
-            ": " +
-            error.message,
+          t("common.dataset_error_msg", "Dataset run failed: {{message}}", {
+            message: error.message,
+          }),
         );
       }
     },
@@ -592,7 +592,11 @@ function Dashboard({
         // 3. Unexpected Error
         toast.dismiss(toastId);
         console.error("Error ejecutando flujo:", error);
-        toast.error(t("common.flow_exec_error") + ": " + error.message);
+        toast.error(
+          t("common.flow_exec_error_msg", "Flow execution failed: {{message}}", {
+            message: error.message,
+          }),
+        );
       } finally {
         let runDetails = null;
         const activeRunId = useExecutionStore.getState().activeRunId;

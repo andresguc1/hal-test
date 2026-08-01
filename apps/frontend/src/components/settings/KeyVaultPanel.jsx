@@ -190,12 +190,12 @@ export function KeyVaultPanel() {
                 <SelectTrigger className="bg-slate-950 border-slate-800">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ollama">Ollama (Local)</SelectItem>
-                  <SelectItem value="openai">OpenAI</SelectItem>
-                  <SelectItem value="anthropic">Claude / Anthropic</SelectItem>
-                  <SelectItem value="google">Gemini / Google</SelectItem>
-                  <SelectItem value="openrouter">OpenRouter</SelectItem>
+                <SelectContent className="bg-slate-900 border-slate-800 text-slate-200">
+                  <SelectItem value="ollama">{t("settings.ai.providers.ollama", "Ollama (Local)")}</SelectItem>
+                  <SelectItem value="openai">{t("settings.ai.providers.openai", "OpenAI")}</SelectItem>
+                  <SelectItem value="anthropic">{t("settings.ai.providers.anthropic", "Claude / Anthropic")}</SelectItem>
+                  <SelectItem value="google">{t("settings.ai.providers.google", "Gemini / Google")}</SelectItem>
+                  <SelectItem value="openrouter">{t("settings.ai.providers.openrouter", "OpenRouter")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -228,7 +228,7 @@ export function KeyVaultPanel() {
                 value={newKey.key}
                 onChange={(e) => setNewKey({ ...newKey, key: e.target.value })}
                 className="bg-slate-950 border-slate-800 pl-9 font-mono text-sm"
-                placeholder="sk-..."
+                placeholder={t("settings.vault.key_placeholder", "sk-...")}
               />
             </div>
           </div>

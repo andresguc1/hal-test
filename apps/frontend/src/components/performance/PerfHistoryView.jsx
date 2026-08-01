@@ -19,6 +19,7 @@ import { api } from "../../utils/api";
 import { useToast } from "../../hooks/useToast";
 import { getProfileInfo } from "../telemetry/telemetryTypes";
 import PerfResultsView from "./PerfResultsView";
+import { useTranslation } from "react-i18next";
 
 const extractMetricsFromRun = (run) => {
   if (!run || !run.flow_snapshot) return null;
@@ -30,7 +31,7 @@ const extractMetricsFromRun = (run) => {
     if (typeof parsed === "string") {
       parsed = JSON.parse(parsed);
     }
-    return parsed?.data || parsed;
+    return parsed.performanceMetrics || parsed.metrics || parsed;
   } catch (e) {
     console.error("Failed to parse run snapshot:", e);
     return null;
@@ -38,6 +39,7 @@ const extractMetricsFromRun = (run) => {
 };
 
 const PerfHistoryView = ({ flowId, onReRun }) => {
+  const { t } = useTranslation();
   const toast = useToast();
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -58,7 +60,7 @@ const PerfHistoryView = ({ flowId, onReRun }) => {
       }
     } catch (error) {
       console.error("Failed to fetch history:", error);
-      toast.error("Error al cargar el historial.");
+      toast.error(t("performance.toasts.load_error", "Error loading history."));
     } finally {
       setLoading(false);
     }
@@ -86,25 +88,25 @@ const PerfHistoryView = ({ flowId, onReRun }) => {
   const handleDeleteRun = async (runId, e) => {
     e.stopPropagation();
     if (
-      !window.confirm("¿Estás seguro de eliminar este registro del historial?")
+      !window.confirm(t("performance.confirmations.delete", "Are you sure you want to delete this history record?"))
     )
       return;
 
     try {
       const res = await api.delete(`/runs/${runId}`);
       if (res.success) {
-        toast.success("Ejecución eliminada con éxito.");
+        toast.success(t("performance.toasts.delete_success", "Execution deleted successfully."));
         setHistory((prev) => prev.filter((r) => r.id !== runId));
         if (selectedRun?.id === runId) {
           setSelectedRun(null);
           setSelectedRunDetails(null);
         }
       } else {
-        toast.error(res.message || "Error al eliminar la ejecución.");
+        toast.error(res.message || t("performance.toasts.delete_error", "Error deleting execution."));
       }
     } catch (error) {
       console.error("Failed to delete run:", error);
-      toast.error("Error en el servidor al eliminar la ejecución.");
+      toast.error(t("performance.toasts.delete_server_error", "Server error deleting execution."));
     }
   };
 
@@ -122,7 +124,7 @@ const PerfHistoryView = ({ flowId, onReRun }) => {
         stages: perfConfig.stages || null,
       });
     } else {
-      toast.error("No se pudo extraer la configuración de esta ejecución.");
+      toast.error(t("performance.toasts.config_error", "Could not extract configuration for this run."));
     }
   };
 
@@ -157,7 +159,7 @@ const PerfHistoryView = ({ flowId, onReRun }) => {
       }
     } catch (e) {
       console.error("Comparison error:", e);
-      toast.error("Datos incompatibles para comparación.");
+      toast.error(t("performance.toasts.compare_error", "Incompatible data for comparison."));
     }
   };
 
@@ -179,11 +181,11 @@ const PerfHistoryView = ({ flowId, onReRun }) => {
               }}
               className="text-blue-400 hover:text-blue-300 font-medium"
             >
-              Historial
+              {t("performance.navigation.history", "History")}
             </button>
             <ChevronRight size={12} className="text-slate-600" />
             <span className="text-slate-400 font-mono">
-              Reporte {selectedRun.id.split("-")[0]}
+              {t("performance.navigation.report", "Report {{id}}", { id: selectedRun.id.split("-")[0] })}
             </span>
           </div>
           <div className="flex space-x-2">
@@ -191,7 +193,7 @@ const PerfHistoryView = ({ flowId, onReRun }) => {
               onClick={(e) => handleReRunAction(selectedRun, e)}
               className="flex items-center gap-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
             >
-              <RotateCcw size={14} /> Volver a Ejecutar
+              <RotateCcw size={14} /> {t("performance.buttons.rerun", "Run Again")}
             </button>
             <button
               onClick={() => {
@@ -200,7 +202,7 @@ const PerfHistoryView = ({ flowId, onReRun }) => {
               }}
               className="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-3 py-1.5 rounded-lg border border-slate-700 font-medium transition-colors"
             >
-              Cerrar Reporte
+              {t("performance.buttons.close_report", "Close Report")}
             </button>
           </div>
         </div>
@@ -219,13 +221,13 @@ const PerfHistoryView = ({ flowId, onReRun }) => {
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="h-12 border-b border-slate-800 bg-slate-900/50 px-6 flex items-center justify-between">
           <span className="text-sm font-semibold text-slate-200">
-            Comparación de Rendimiento
+            {t("performance.compare.title", "Performance Comparison")}
           </span>
           <button
             onClick={clearComparison}
             className="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-3 py-1.5 rounded-lg border border-slate-700 font-medium transition-colors"
           >
-            Volver al Historial
+            {t("performance.compare.back", "Back to History")}
           </button>
         </div>
         <div className="flex-1 overflow-auto p-6 space-y-6">
@@ -234,7 +236,7 @@ const PerfHistoryView = ({ flowId, onReRun }) => {
             <div className="bg-slate-900/80 border border-slate-800/80 rounded-2xl p-5 space-y-4">
               <div className="border-b border-slate-800 pb-3">
                 <h4 className="text-xs text-blue-400 uppercase font-semibold">
-                  Ejecución A
+                  {t("performance.compare.run_a", "Execution A")}
                 </h4>
                 <p className="text-slate-200 font-mono text-sm">
                   {compareLeft.id.split("-")[0]}
@@ -252,7 +254,7 @@ const PerfHistoryView = ({ flowId, onReRun }) => {
             <div className="bg-slate-900/80 border border-slate-800/80 rounded-2xl p-5 space-y-4">
               <div className="border-b border-slate-800 pb-3">
                 <h4 className="text-xs text-purple-400 uppercase font-semibold">
-                  Ejecución B (Objetivo)
+                  {t("performance.compare.run_b", "Execution B (Target)")}
                 </h4>
                 <p className="text-slate-200 font-mono text-sm">
                   {compareRight.id.split("-")[0]}
@@ -278,16 +280,16 @@ const PerfHistoryView = ({ flowId, onReRun }) => {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl font-semibold text-slate-200">
-              Historial de Rendimiento
+              {t("performance.history.title", "Performance History")}
             </h2>
             <p className="text-xs text-slate-500 mt-1">
-              Explora, analiza y compara ejecuciones de carga previas
+              {t("performance.history.subtitle", "Explore, analyze, and compare previous load runs")}
             </p>
           </div>
           {compareLeft || compareRight ? (
             <div className="flex items-center gap-3 bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl">
               <span className="text-xs text-slate-400">
-                Comparando:{" "}
+                {t("performance.history.comparing", "Comparing:")}{" "}
                 <span className="font-mono text-blue-400">
                   {compareLeft ? compareLeft.id.split("-")[0] : "—"}
                 </span>{" "}
@@ -301,14 +303,14 @@ const PerfHistoryView = ({ flowId, onReRun }) => {
                   onClick={() => setCompareMode(true)}
                   className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
                 >
-                  Comparar Ahora
+                  {t("performance.history.compare_now", "Compare Now")}
                 </button>
               )}
               <button
                 onClick={clearComparison}
                 className="text-xs text-slate-500 hover:text-slate-300"
               >
-                Cancelar
+                {t("common.cancel", "Cancel")}
               </button>
             </div>
           ) : null}
@@ -316,8 +318,7 @@ const PerfHistoryView = ({ flowId, onReRun }) => {
 
         {loading ? (
           <div className="h-64 flex items-center justify-center text-slate-500">
-            <Activity size={24} className="animate-spin mr-2" /> Cargando
-            historial...
+            <Activity size={24} className="animate-spin mr-2" /> {t("performance.history.loading", "Loading history...")}
           </div>
         ) : history.length > 0 ? (
           <div className="bg-slate-900/80 border border-slate-800/80 rounded-2xl overflow-hidden">
@@ -325,15 +326,15 @@ const PerfHistoryView = ({ flowId, onReRun }) => {
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="border-b border-slate-800/80 bg-slate-950/20 text-slate-400 font-semibold uppercase tracking-wider">
-                    <th className="p-4">Comparar</th>
-                    <th className="p-4">ID Ejecución</th>
-                    <th className="p-4">Fecha</th>
-                    <th className="p-4">Perfil de Carga</th>
-                    <th className="p-4">Configuración</th>
-                    <th className="p-4 text-center">Throughput</th>
-                    <th className="p-4 text-center">P95 Latencia</th>
-                    <th className="p-4 text-center">Errores</th>
-                    <th className="p-4 text-right">Acciones</th>
+                    <th className="p-4">{t("performance.headers.compare", "Compare")}</th>
+                    <th className="p-4">{t("performance.headers.run_id", "Run ID")}</th>
+                    <th className="p-4">{t("performance.headers.date", "Date")}</th>
+                    <th className="p-4">{t("performance.headers.load_profile", "Load Profile")}</th>
+                    <th className="p-4">{t("performance.headers.config", "Config")}</th>
+                    <th className="p-4 text-center">{t("performance.headers.throughput", "Throughput")}</th>
+                    <th className="p-4 text-center">{t("performance.headers.p95_latency", "P95 Latency")}</th>
+                    <th className="p-4 text-center">{t("performance.headers.errors", "Errors")}</th>
+                    <th className="p-4 text-right">{t("performance.headers.actions", "Actions")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/50">
@@ -423,14 +424,14 @@ const PerfHistoryView = ({ flowId, onReRun }) => {
                           <div className="flex items-center justify-end gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity">
                             <button
                               onClick={(e) => handleReRunAction(run, e)}
-                              title="Ejecutar de nuevo"
+                              title={t("performance.actions.rerun", "Run again")}
                               className="p-1.5 text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-all"
                             >
                               <RotateCcw size={14} />
                             </button>
                             <button
                               onClick={(e) => handleDeleteRun(run.id, e)}
-                              title="Eliminar registro"
+                              title={t("performance.actions.delete", "Delete run")}
                               className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
                             >
                               <Trash2 size={14} />
@@ -448,8 +449,7 @@ const PerfHistoryView = ({ flowId, onReRun }) => {
           <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-12 text-center text-slate-500">
             <BarChart2 size={48} className="mx-auto mb-3 text-slate-700" />
             <p className="text-sm">
-              No hay ejecuciones de rendimiento previas registradas para este
-              flujo.
+              {t("performance.history.no_runs", "No previous performance runs registered for this flow.")}
             </p>
           </div>
         )}
@@ -465,7 +465,7 @@ const ComparisonMetrics = ({ metrics, other }) => {
     const percent = ((diffVal / otherVal) * 100).toFixed(1);
     if (diffVal > 0) return { text: `+${percent}%`, color: "text-red-400" };
     if (diffVal < 0) return { text: `${percent}%`, color: "text-emerald-400" };
-    return { text: "Sin cambio", color: "text-slate-500" };
+    return { text: t("performance.compare.no_change", "No change"), color: "text-slate-500" };
   };
 
   const throughputDiff = diff(metrics.throughput, other.throughput);
@@ -493,9 +493,9 @@ const ComparisonMetrics = ({ metrics, other }) => {
               className={`block text-xs font-semibold mt-1 ${throughputDiff.color === "text-red-400" ? "text-emerald-400" : "text-red-400"}`}
             >
               {throughputDiff.text === "Sin cambio"
-                ? "Igual"
+                ? t("performance.compare.equal", "Equal")
                 : throughputDiff.text}{" "}
-              vs Ejecución A
+              {t("performance.compare.vs_run_a", "vs Execution A")}
             </span>
           )}
         </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ReactFlow,
   Background,
@@ -84,6 +85,7 @@ function computeEdgeStates(steps, upToIndex, allEdges) {
 }
 
 function ReportDashboardContent({ runId, onClose }) {
+  const { t } = useTranslation();
   const [run, setRun] = useState(null);
   const [loading, setLoading] = useState(true);
   const [nodes, setNodes] = useNodesState([]);
@@ -410,26 +412,26 @@ function ReportDashboardContent({ runId, onClose }) {
           <div className="absolute top-6 left-6 flex flex-col gap-2 pointer-events-none">
             <MetricCard
               icon={<Clock size={14} />}
-              label="Total Duration"
+              label={t("report.total_duration", "Total Duration")}
               value={`${((run?.duration_ms || 0) / 1000).toFixed(2)}s`}
               color="indigo"
             />
             <MetricCard
               icon={<Zap size={14} />}
-              label="Memory Hits"
+              label={t("report.memory_hits", "Memory Hits")}
               value={run?.memory_palace_hits || 0}
               color="amber"
             />
             <MetricCard
               icon={<BrainCircuit size={14} />}
-              label="Auto-Healed"
+              label={t("report.auto_healed", "Auto-Healed")}
               value={run?.total_healed || 0}
               color="emerald"
             />
           </div>
         </div>
 
-        {/* SIDEBAR: AI Diagnosis & Evidence */}
+        {/* SIDEBAR: {t("report.ai_diagnosis", "AI Diagnosis")} & Evidence */}
         <aside className="w-[400px] border-l border-white/5 bg-slate-900/80 backdrop-blur-2xl flex flex-col shrink-0 overflow-hidden">
           <div className="p-4 border-b border-white/5 flex items-center justify-between bg-slate-900/40">
             <div className="flex items-center gap-2">
@@ -498,13 +500,13 @@ function ReportDashboardContent({ runId, onClose }) {
                       <img
                         src={api.getFileUrl(currentStep.screenshot_path)}
                         className="w-full h-full object-contain"
-                        alt="Step Evidence"
+                        alt={t("report.step_evidence", "Step Evidence")}
                       />
                     ) : (
                       <div className="w-full h-full flex flex-col items-center justify-center text-slate-600 gap-2">
                         <AlertCircle size={24} />
                         <span className="text-[10px]">
-                          No visual capture available
+                          {t("report.no_visual_capture", "No visual capture available")}
                         </span>
                       </div>
                     )}
@@ -522,28 +524,28 @@ function ReportDashboardContent({ runId, onClose }) {
                   <div className="p-4 rounded-xl bg-indigo-500/5 border border-indigo-500/10">
                     <h4 className="text-xs font-bold text-indigo-300 mb-2 flex items-center gap-2">
                       <BrainCircuit size={14} />
-                      Intelligence Insight
+                      {t("report.intelligence_insight", "Intelligence Insight")}
                     </h4>
                     <p className="text-[11px] text-slate-400 leading-relaxed italic">
                       {currentStep.ai_diagnosis ||
                         (currentStep.status === "success"
-                          ? "Step completed successfully according to the plan."
-                          : "Analyzing failure patterns...")}
+                          ? t("report.step_success_desc", "Step completed successfully according to the plan.")
+                          : t("report.analyzing_failure_desc", "Analyzing failure patterns..."))}
                     </p>
                   </div>
                 </div>
 
                 {/* DATA INSPECTOR */}
                 <div className="space-y-4">
-                  <DataInspector label="Input" data={currentStep.input_data} />
+                  <DataInspector label={t("report.input", "Input")} data={currentStep.input_data} />
                   <DataInspector
-                    label="Output"
+                    label={t("report.output", "Output")}
                     data={currentStep.output_data}
                   />
                   {currentStep.error && (
                     <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20">
                       <span className="text-[10px] font-bold text-rose-400 block mb-1 uppercase tracking-wider">
-                        Exception
+                        {t("report.exception", "Exception")}
                       </span>
                       <p className="text-[10px] font-mono text-rose-300/80 break-words">
                         {currentStep.error}

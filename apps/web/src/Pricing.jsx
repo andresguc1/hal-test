@@ -1,15 +1,18 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { motion as Motion } from "framer-motion";
 import { Check } from "lucide-react";
 
 const PricingTier = ({
   title,
   price,
+  description,
   features,
   buttonText,
   highlighted,
   color,
 }) => {
+  const { t } = useTranslation();
   return (
     <Motion.div
       whileHover={{ y: -5, scale: 1.02 }}
@@ -23,7 +26,7 @@ const PricingTier = ({
         <div
           className={`absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-${color}-500 text-[10px] font-bold uppercase tracking-widest`}
         >
-          Most Popular
+          {t("pricing.most_popular", "Most Popular")}
         </div>
       )}
 
@@ -36,7 +39,7 @@ const PricingTier = ({
       <div className="flex flex-col mb-2">
         <span className="text-5xl font-extrabold text-white">{price}</span>
         <span className="text-xs text-white/40 mt-1 uppercase tracking-widest">
-          {price === "FREE" ? "For hobbyists & solo devs" : "/ editor / month"}
+          {description}
         </span>
       </div>
 
@@ -66,46 +69,47 @@ const PricingTier = ({
 };
 
 export default function Pricing() {
+  const { t } = useTranslation();
   const tiers = [
     {
-      title: "STARTER",
-      price: "FREE",
-      description: "For hobbyists & solo devs",
+      title: t("pricing.tiers.starter.title", "STARTER"),
+      price: t("pricing.tiers.starter.price", "FREE"),
+      description: t("pricing.tiers.starter.desc", "For hobbyists & solo devs"),
       features: [
-        "3 Active Projects",
-        "100 Runs/month",
-        "Basic Node Types",
-        "Community Support",
+        t("pricing.tiers.starter.features.0", "3 Active Projects"),
+        t("pricing.tiers.starter.features.1", "100 Runs/month"),
+        t("pricing.tiers.starter.features.2", "Basic Node Types"),
+        t("pricing.tiers.starter.features.3", "Community Support"),
       ],
-      buttonText: "Get Started",
+      buttonText: t("pricing.tiers.starter.btn", "Get Started"),
       highlighted: false,
       color: "apple-blue",
     },
     {
-      title: "PRO",
-      price: "$19",
-      description: "/ editor / month",
+      title: t("pricing.tiers.pro.title", "PRO"),
+      price: t("pricing.tiers.pro.price", "$19"),
+      description: t("pricing.tiers.pro.desc", "/ editor / month"),
       features: [
-        "Unlimited Projects",
-        "AI Self-Healing Selectors",
-        "Parallel Execution (x5)",
-        "Email Support",
+        t("pricing.tiers.pro.features.0", "Unlimited Projects"),
+        t("pricing.tiers.pro.features.1", "AI Self-Healing Selectors"),
+        t("pricing.tiers.pro.features.2", "Parallel Execution (x5)"),
+        t("pricing.tiers.pro.features.3", "Email Support"),
       ],
-      buttonText: "Get Started",
+      buttonText: t("pricing.tiers.pro.btn", "Get Started"),
       highlighted: true,
       color: "apple-blue",
     },
     {
-      title: "TEAM",
-      price: "$49",
-      description: "/ editor / month",
+      title: t("pricing.tiers.team.title", "TEAM"),
+      price: t("pricing.tiers.team.price", "$49"),
+      description: t("pricing.tiers.team.desc", "/ editor / month"),
       features: [
-        "Unlimited Runs",
-        "Real-time Log Terminal",
-        "Dedicated Slack Channel",
-        "90-Day Data Retention",
+        t("pricing.tiers.team.features.0", "Unlimited Runs"),
+        t("pricing.tiers.team.features.1", "Real-time Log Terminal"),
+        t("pricing.tiers.team.features.2", "Dedicated Slack Channel"),
+        t("pricing.tiers.team.features.3", "90-Day Data Retention"),
       ],
-      buttonText: "Get Started",
+      buttonText: t("pricing.tiers.team.btn", "Get Started"),
       highlighted: false,
       color: "hal-primary",
     },
@@ -123,8 +127,10 @@ export default function Pricing() {
           viewport={{ once: true }}
           className="text-4xl md:text-5xl font-bold uppercase tracking-tight mb-4"
         >
-          Unlock Your{" "}
-          <span className="text-hal-primary-400">Full Potential</span>
+          {t("pricing.title_part1", "Unlock Your")}{" "}
+          <span className="text-hal-primary-400">
+            {t("pricing.title_part2", "Full Potential")}
+          </span>
         </Motion.h2>
         <Motion.p
           initial={{ opacity: 0, y: 20 }}
@@ -133,7 +139,10 @@ export default function Pricing() {
           transition={{ delay: 0.1 }}
           className="text-slate-400 font-mono text-sm tracking-widest"
         >
-          Simple, scalable pricing for teams of all sizes.
+          {t(
+            "pricing.subtitle",
+            "Simple, scalable pricing for teams of all sizes.",
+          )}
         </Motion.p>
       </div>
 
@@ -159,10 +168,10 @@ export default function Pricing() {
         className="mt-16 text-center"
       >
         <p className="text-slate-500 text-sm font-bold uppercase tracking-widest">
-          Looking for enterprise solutions?
+          {t("pricing.enterprise_title", "Looking for enterprise solutions?")}
         </p>
         <p className="text-slate-600 text-[10px] uppercase tracking-[0.2em] mt-1">
-          Custom deployments & SLAs
+          {t("pricing.enterprise_subtitle", "Custom deployments & SLAs")}
         </p>
       </Motion.div>
     </div>
