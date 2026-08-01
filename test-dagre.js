@@ -1,0 +1,12 @@
+import dagre from "dagre";
+const g = new dagre.graphlib.Graph();
+g.setGraph({ rankdir: "LR" });
+g.setDefaultEdgeLabel(() => ({}));
+g.setNode("A", { width: 100, height: 50 });
+g.setNode("B", { width: 100, height: 50 });
+g.setNode("C", { width: 100, height: 50 });
+g.setEdge("A", "B", { weight: 2 });
+g.setEdge("A", "C", { weight: 1 });
+g.setEdge("B", "C", { weight: 1 });
+dagre.layout(g);
+console.log(g.edge("A", "C").points);

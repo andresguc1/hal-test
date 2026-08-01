@@ -1188,7 +1188,12 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
         direction || "LR",
       );
 
-      setNodes(layoutedNodes);
+      const nodesWithTransition = layoutedNodes.map((n) => ({
+        ...n,
+        style: { ...(n.style || {}), transition: "all 0.5s ease-in-out" },
+      }));
+
+      setNodes(nodesWithTransition);
       setEdges(layoutedEdges);
 
       if (reactFlowFitView) {

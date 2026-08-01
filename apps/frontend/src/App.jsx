@@ -13,6 +13,7 @@ import {
   useStoreApi,
   MarkerType,
   ConnectionMode,
+  useNodesInitialized,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import "./components/styles/App.css";
@@ -228,6 +229,19 @@ function Dashboard({
   const { isRemoteExecuting, remoteExecution } = useAwareness();
   const isWorkspaceReadOnly =
     isReadOnly || (isCollaborative && role === "viewer");
+
+  // Initial Layout Logic (Magic Organizer)
+  const nodesInitialized = useNodesInitialized();
+  const initialLayoutApplied = React.useRef(false);
+
+  useEffect(() => {
+    if (nodesInitialized && !initialLayoutApplied.current) {
+      if (nodes.length > 0) {
+        onLayout("LR", reactFlowFitView);
+      }
+      initialLayoutApplied.current = true;
+    }
+  }, [nodesInitialized, onLayout, reactFlowFitView, nodes.length]);
 
   // Collaboration toggle handler
   const handleToggleCollaboration = useCallback(async () => {
@@ -1669,6 +1683,7 @@ function Dashboard({
       maxZoom: 2.0, // Standard zoom limits
       connectionMode: ConnectionMode.Loose, // Loose connections for smoother flows
       onlyRenderVisibleElements: false, // Critical for performance
+      defaultEdgeOptions: { type: "custom" }, // Force our custom edge (SmoothStep) globally
       translateExtent: [
         [-5000, -5000],
         [5000, 5000],
@@ -1777,7 +1792,7 @@ function Dashboard({
       ...staticFlowProps,
       snapToGrid: enableSnapping, // Controlled by Global Settings
       nodes: enrichedNodes,
-      edges,
+      edges: edges.map(edge => ({ ...edge, type: "custom" })),
       onNodesChange: isWorkspaceReadOnly ? undefined : onNodesChange,
       onEdgesChange: isWorkspaceReadOnly ? undefined : onEdgesChange,
       onConnect: isWorkspaceReadOnly ? undefined : onConnect,
