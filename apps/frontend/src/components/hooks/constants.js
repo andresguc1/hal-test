@@ -25,6 +25,7 @@ export const NODE_LABELS = {
   assert_page_text: "Assert Page Contains Text",
   click: "Click",
   type_text: "Type Text",
+  fill_form: "Fill Form",
   select_option: "Select Options",
   scroll: "Scroll",
   hover: "Hover",
@@ -2918,7 +2919,7 @@ export const NODE_STATE_COLORS = {
  */
 export const REACTFLOW_CONFIG = {
   defaultEdgeOptions: {
-    animated: true,
+    animated: !import.meta.env.DEV,
     style: { stroke: "#1A73E8", strokeWidth: 2 },
   },
   connectionLineStyle: { stroke: "#1A73E8", strokeWidth: 2 },

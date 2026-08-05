@@ -3,6 +3,7 @@ import { logger } from "../../utils/logger";
 import { api } from "../../utils/api";
 import { useExecutionStore } from "../../stores/useExecutionStore";
 import { projectManager } from "../../utils/ProjectManager";
+import { useSettings } from "../../context/SettingsContext";
 import {
   NODE_LABELS,
   NODE_STATES,
@@ -14,7 +15,7 @@ import { validateNodeConfig } from "../../config/validationRules";
 import { GraphValidator } from "../../utils/GraphValidator";
 import { SCREENSHOT_RECOMMENDATIONS } from "../../components/hooks/constants";
 import { updateNodeRecursively } from "./useFlowState";
-import { resolveVariables } from "../../utils/flowUtils";
+import { resolveVariables, deepClone } from "../../utils/flowUtils";
 import { useCollaboration } from "../../collaboration/CollaborationProvider";
 
 const MAX_RETRIES = 3;
@@ -22,25 +23,26 @@ const RETRY_BASE_MS = 1000;
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const resetExecutionStatesRecursively = (list) => {
+  if (!Array.isArray(list)) return list;
   return list.map((node) => {
-    let newNode = {
-      ...node,
-      data: {
-        ...node.data,
-        state: NODE_STATES.DEFAULT,
-        executed: false,
-        errorDetails: null,
-        error: null,
-        executionTime: null,
-      },
-      style: getNodeStyle(NODE_STATES.DEFAULT, node.style),
+    // Perform deep clone to avoid mutating live reference objects in nodesRef.current or subFlow
+    const newNode = deepClone(node);
+
+    newNode.data = {
+      ...(newNode.data || {}),
+      state: NODE_STATES.DEFAULT,
+      executed: false,
+      errorDetails: null,
+      error: null,
+      executionTime: null,
     };
+    newNode.style = getNodeStyle(NODE_STATES.DEFAULT, newNode.style);
 
     if (newNode.data?.subFlow?.edges) {
       newNode.data.subFlow.edges = newNode.data.subFlow.edges.map((e) => ({
         ...e,
         animated: false,
-        data: { ...e.data, executionState: "default" },
+        data: { ...(e.data || {}), executionState: "default" },
       }));
     }
 
@@ -82,6 +84,8 @@ export function useFlowExecution({
   });
   const [activeBrowserId, setActiveBrowserId] = useState(null);
   const [activeRunId, setActiveRunId] = useState(null);
+
+  const { autoHealingEnabled } = useSettings();
 
   const isReadOnly = useMemo(
     () => apiStatus.state === "running",
@@ -285,7 +289,7 @@ export function useFlowExecution({
         });
 
         let base64Screenshot =
-          data.screenshot || data.image || data.data || data.data?.screenshot;
+          data.data?.screenshot || data.screenshot || data.image || (typeof data.data === 'string' ? data.data : null);
         if (!base64Screenshot || typeof base64Screenshot !== "string")
           throw new Error("Invalid screenshot data");
 
@@ -338,7 +342,8 @@ export function useFlowExecution({
       });
 
       const startTime = Date.now();
-      for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      const maxActionAttempts = autoHealingEnabled ? MAX_RETRIES : 1;
+      for (let attempt = 0; attempt < maxActionAttempts; attempt++) {
         if (executionAbortController.current?.signal.aborted) {
           updateNodeState(nodeId, NODE_STATES.SKIPPED);
           setIsLoading(false);
@@ -447,7 +452,7 @@ export function useFlowExecution({
           setIsLoading(false);
           return { success: true, result, duration, instanceId };
         } catch (error) {
-          if (error.name !== "AbortError" && attempt < MAX_RETRIES - 1) {
+          if (error.name !== "AbortError" && attempt < maxActionAttempts - 1) {
             await sleep(RETRY_BASE_MS * 2 ** attempt);
             continue;
           }
@@ -647,7 +652,8 @@ export function useFlowExecution({
         resetExecutionStates();
 
         if (!options.nodes) {
-          const errors = validateFlowStructure(nodes, edges);
+          const draftMode = useExecutionStore.getState().draftMode;
+          const errors = draftMode ? [] : validateFlowStructure(nodes, edges);
           if (errors.length > 0) {
             setApiStatus({ state: "error", message: errors[0] });
             return { success: false, error: errors[0] };

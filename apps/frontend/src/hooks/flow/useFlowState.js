@@ -25,7 +25,7 @@ import {
 
 const DEFAULT_EDGE_OPTIONS = {
   type: "custom",
-  animated: true,
+  animated: !import.meta.env.DEV,
   style: {
     stroke: "#ff8c32", // hal-orange
     strokeWidth: 2,
@@ -416,7 +416,7 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
         sourceHandle: params.sourceHandle || "default",
         targetHandle: params.targetHandle || "default",
         type: "custom",
-        animated: true,
+        animated: !import.meta.env.DEV,
         ...DEFAULT_EDGE_OPTIONS,
       };
 
@@ -659,7 +659,7 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
             source: inputId,
             target: edge.target,
             type: "default",
-            animated: true,
+            animated: !import.meta.env.DEV,
           };
           finalSubEdges.push(newInternalEdge);
         });
@@ -683,7 +683,7 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
             source: edge.source,
             target: outputId,
             type: "default",
-            animated: true,
+            animated: !import.meta.env.DEV,
           };
           finalSubEdges.push(newInternalEdge);
         });
@@ -927,7 +927,7 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
             source: inputId,
             target: edge.target,
             type: "default",
-            animated: true,
+            animated: !import.meta.env.DEV,
           });
         });
       }
@@ -949,7 +949,7 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
             source: edge.source,
             target: outputId,
             type: "default",
-            animated: true,
+            animated: !import.meta.env.DEV,
           });
         });
       }

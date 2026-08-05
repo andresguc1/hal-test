@@ -33,6 +33,7 @@ import { NODE_INPUTS } from "@/config/validationRules";
 
 import ConditionalBranchesEditor from "./editors/ConditionalBranchesEditor";
 import SwitchCasesEditor from "./editors/SwitchCasesEditor";
+import FormFillEditor from "./editors/FormFillEditor";
 import { useTranslation } from "react-i18next";
 import { useForm, Controller } from "react-hook-form";
 import { createPortal } from "react-dom";
@@ -158,8 +159,21 @@ const NodeConfigurationPanel = ({
 
   const colorKey = safeConfig?.color || "slate";
 
+  const defaultValues = React.useMemo(() => {
+    const config = activeNode?.data?.configuration || {};
+    const merged = { ...config };
+    if (definedInputs && definedInputs.length > 0) {
+      definedInputs.forEach((input) => {
+        if (merged[input.key] === undefined && input.defaultValue !== undefined) {
+          merged[input.key] = input.defaultValue;
+        }
+      });
+    }
+    return merged;
+  }, [activeNode, definedInputs]);
+
   const { control, handleSubmit, reset, watch } = useForm({
-    defaultValues: activeNode?.data?.configuration || {},
+    defaultValues,
   });
 
   const [localLabel, setLocalLabel] = useState(
@@ -217,6 +231,12 @@ const NodeConfigurationPanel = ({
         if (allowedKeys.has(key)) {
           cleaned[key] = val;
         }
+      }
+      if (
+        cleaned.continueOnFailure !== undefined &&
+        cleaned.continueOnError === undefined
+      ) {
+        cleaned.continueOnError = cleaned.continueOnFailure;
       }
       return cleaned;
     },
@@ -433,6 +453,7 @@ const NodeConfigurationPanel = ({
     const stringValue = value.toString();
     const isBase64 = stringValue.length > 100 && !stringValue.includes(" ");
     const isFilePath =
+      stringValue.startsWith("blob:") ||
       stringValue.startsWith("storage/") ||
       stringValue.endsWith(".png") ||
       stringValue.endsWith(".jpg") ||
@@ -445,7 +466,9 @@ const NodeConfigurationPanel = ({
           ? stringValue.startsWith("data:image")
             ? stringValue
             : `data:image/png;base64,${stringValue}`
-          : api.getFileUrl(stringValue);
+          : stringValue.startsWith("blob:")
+            ? stringValue
+            : api.getFileUrl(stringValue);
 
         return (
           <div className="mt-1 bg-slate-900/50 p-2 rounded-lg border border-white/5 inline-block group relative">
@@ -487,11 +510,29 @@ const NodeConfigurationPanel = ({
   };
 
   const renderEmittedData = () => {
-    const result = activeNode.data?.result;
+    let result = activeNode.data?.result;
+    const manualScreenshot = activeNode.data?.screenshots?.after?.url || activeNode.data?.screenshots?.after?.path;
+
     if (!result)
       return (
         <div className="text-[10px] text-slate-600 italic">No data yet</div>
       );
+
+    let dataToRender = result.data !== undefined ? result.data : result;
+    
+    if (typeof dataToRender === 'object' && dataToRender !== null) {
+      const screenshotToInject = result.screenshot || manualScreenshot;
+      if (screenshotToInject && !dataToRender.screenshot && !dataToRender.screenshot_evidence) {
+        dataToRender = Array.isArray(dataToRender) 
+          ? { items: dataToRender, screenshot_evidence: screenshotToInject }
+          : { ...dataToRender, screenshot_evidence: screenshotToInject };
+      }
+    } else if (result.screenshot || manualScreenshot) {
+      dataToRender = { 
+        value: dataToRender, 
+        screenshot_evidence: result.screenshot || manualScreenshot 
+      };
+    }
 
     return (
       <div className="relative group/panel">
@@ -508,7 +549,7 @@ const NodeConfigurationPanel = ({
               <Copy size={12} />
             </button>
           </div>
-          {renderDataValue(result.data !== undefined ? result.data : result)}
+          {renderDataValue(dataToRender)}
         </div>
       </div>
     );
@@ -544,6 +585,29 @@ const NodeConfigurationPanel = ({
                   variables={contextualVariablesMap}
                   allVariables={variablesMap}
                   suggestions={availableVariablePaths}
+                />
+              </div>
+            )}
+          />
+        );
+      case "form_fill_fields":
+        return (
+          <Controller
+            key={reactKey}
+            name={dataKey}
+            control={control}
+            render={({ field: { value, onChange } }) => (
+              <div className="space-y-1.5">
+                <FormFillEditor
+                  value={value}
+                  onChange={onChange}
+                  data={activeNode?.data}
+                  variables={contextualVariablesMap}
+                  allVariables={variablesMap}
+                  suggestions={availableVariablePaths}
+                  onStartPick={onStartPick}
+                  onCancelPick={onCancelPick}
+                  pickingField={activeNode.data?.state === "picking" ? activeNode.data?.pickingField : null}
                 />
               </div>
             )}

@@ -195,6 +195,7 @@ function Dashboard({
     loopNodes,
     ungroupNodes,
     viewStack,
+    setViewStack,
     enterComponent,
     exitComponent,
     deepNavigate,
@@ -388,7 +389,8 @@ function Dashboard({
       // ------------------------------------------
 
       // 0. DRY RUN VALIDATION (Clean UX: No loading toast for instant validation)
-      const validationErrors = validateFlowStructure(nodes, edges);
+      const draftMode = useExecutionStore.getState().draftMode;
+      const validationErrors = draftMode ? [] : validateFlowStructure(nodes, edges);
       if (validationErrors.length > 0) {
         const firstError = validationErrors[0];
         const errorMsg =
@@ -593,9 +595,13 @@ function Dashboard({
         toast.dismiss(toastId);
         console.error("Error ejecutando flujo:", error);
         toast.error(
-          t("common.flow_exec_error_msg", "Flow execution failed: {{message}}", {
-            message: error.message,
-          }),
+          t(
+            "common.flow_exec_error_msg",
+            "Flow execution failed: {{message}}",
+            {
+              message: error.message,
+            },
+          ),
         );
       } finally {
         let runDetails = null;
@@ -862,7 +868,7 @@ function Dashboard({
           source: mappedNodes[i].id,
           target: mappedNodes[i + 1].id,
           type: "custom",
-          animated: true,
+          animated: !import.meta.env.DEV,
         });
       }
 
@@ -933,7 +939,7 @@ function Dashboard({
         source: sourceId,
         target: targetId,
         type: "custom",
-        animated: true,
+        animated: !import.meta.env.DEV,
       };
       setEdges((prev) => [...prev, newEdge]);
       return { success: true };
@@ -1175,7 +1181,7 @@ function Dashboard({
           id: `edge_${nodes[index - 1].id}_to_${nodeId}`,
           source: nodes[index - 1].id,
           target: nodeId,
-          animated: true,
+          animated: !import.meta.env.DEV,
           type: "custom",
         });
       }
@@ -1685,8 +1691,8 @@ function Dashboard({
       // OPTIMIZATION: Performance Overhaul
       minZoom: 0.4, // Standard zoom limits
       maxZoom: 2.0, // Standard zoom limits
-      connectionMode: ConnectionMode.Loose, // Loose connections for smoother flows
-      onlyRenderVisibleElements: false, // Critical for performance
+      connectionMode: ConnectionMode.Strict, // Strict connections so it only snaps to target (input) handles, fixing the visual jump bug
+      onlyRenderVisibleElements: true, // Only render visible nodes/edges for performance
       defaultEdgeOptions: { type: "custom" }, // Force our custom edge (SmoothStep) globally
       translateExtent: [
         [-5000, -5000],
@@ -1796,7 +1802,7 @@ function Dashboard({
       ...staticFlowProps,
       snapToGrid: enableSnapping, // Controlled by Global Settings
       nodes: enrichedNodes,
-      edges: edges.map(edge => ({ ...edge, type: "custom" })),
+      edges: edges.map((edge) => ({ ...edge, type: "custom" })),
       onNodesChange: isWorkspaceReadOnly ? undefined : onNodesChange,
       onEdgesChange: isWorkspaceReadOnly ? undefined : onEdgesChange,
       onConnect: isWorkspaceReadOnly ? undefined : onConnect,
@@ -1876,6 +1882,76 @@ function Dashboard({
   // ========================================
   // RENDER - MAREA LAYOUT
   // ========================================
+
+  const derivedFlowData = useMemo(() => {
+    const dbFlows = currentProject?.flows || [];
+    const overrideNames = new Map();
+
+    // 1. Scan ALL DB flows to find component nodes and extract their custom names
+    dbFlows.forEach((f) => {
+      let fNodes = [];
+      if (Array.isArray(f.nodes)) {
+        fNodes = f.nodes;
+      } else if (typeof f.nodes === 'string') {
+        try {
+          fNodes = JSON.parse(f.nodes) || [];
+          if (!Array.isArray(fNodes)) fNodes = [];
+        } catch(e) {
+          fNodes = [];
+        }
+      }
+      fNodes.forEach((n) => {
+        if ((n.type === "component" || n.data?.type === "component") && n.data?.flowId) {
+          overrideNames.set(n.data.flowId, n.data.customLabel || n.data.label || "Untitled Component");
+        }
+      });
+    });
+
+    console.log("[DEBUG] overrideNames:", Array.from(overrideNames.entries()));
+
+    // 2. Override with live canvas nodes (in case of unsaved edits in current flow)
+    nodes.forEach((n) => {
+      if ((n.type === "component" || n.data?.type === "component") && n.data?.flowId) {
+        overrideNames.set(n.data.flowId, n.data.customLabel || n.data.label || "Untitled Component");
+      }
+    });
+
+    // 3. Rebuild flows list with updated names
+    const flowMap = new Map();
+    dbFlows.forEach((f) => {
+      if (f.type === "component" && overrideNames.has(f.id)) {
+        flowMap.set(f.id, { ...f, name: overrideNames.get(f.id), isLive: true });
+      } else {
+        flowMap.set(f.id, f);
+      }
+    });
+    
+    // 4. Also add any live components on canvas that might not be in DB yet
+    nodes.forEach((n) => {
+      if ((n.type === "component" || n.data?.type === "component") && n.data?.flowId) {
+        if (!flowMap.has(n.data.flowId)) {
+          flowMap.set(n.data.flowId, {
+            id: n.data.flowId,
+            name: n.data.customLabel || n.data.label || "Untitled Component",
+            type: "component",
+            isLive: true,
+          });
+        }
+      }
+    });
+
+    // Determine current flow name
+    const currentOverride = overrideNames.get(currentFlowId);
+    let name = "No Flow Selected";
+    if (currentOverride) {
+       name = currentOverride;
+    } else {
+       const f = dbFlows.find((f) => f.id === currentFlowId);
+       if (f) name = f.name;
+    }
+
+    return { flows: [...flowMap.values()], flowName: name };
+  }, [currentProject?.flows, nodes, currentFlowId]);
 
   return (
     <>
@@ -2251,9 +2327,23 @@ function Dashboard({
               }}
               onExecute={executeSingleNode} // ATOMIC EXECUTION (Run Node)
               onRunNode={executeSingleNode} // Redundant but kept for safety if header used it
-              updateNodeConfiguration={(nodeId, newData) =>
-                updateNodeConfiguration(nodeId, newData)
-              }
+              updateNodeConfiguration={(nodeId, newData) => {
+                updateNodeConfiguration(nodeId, newData);
+                
+                // If the user renamed a Component node, keep the underlying flow entity's name in sync!
+                if (newData.customLabel !== undefined || newData.label !== undefined) {
+                  const node = enrichedNodes.find((n) => n.id === nodeId);
+                  const newName = newData.customLabel || newData.label;
+                  if (
+                    node &&
+                    (node.type === "component" || node.data?.type === "component") &&
+                    node.data?.flowId &&
+                    newName
+                  ) {
+                    renameFlow(node.data.flowId, newName);
+                  }
+                }
+              }}
               onDeleteNode={deleteNode}
               projectPath={projectPath}
               isReadOnly={isWorkspaceReadOnly}
@@ -2335,51 +2425,12 @@ function Dashboard({
           onRenameProject={(p, newName) => renameProject(p.id, newName)}
           onDeleteProject={(p) => deleteProject(p.id)}
           // Flow Props
-          flowName={
-            // 1. Check if we're inside a Component (Sub-flow)
-            // If so, we want to find its representation in the parent flow to get its customLabel
-            nodes.find(
-              (n) => n.id === currentFlowId || n.data?.flowId === currentFlowId,
-            )?.data?.customLabel ||
-            nodes.find(
-              (n) => n.id === currentFlowId || n.data?.flowId === currentFlowId,
-            )?.data?.label ||
-            // 2. Fallback to DB flow name
-            currentProject?.flows?.find((f) => f.id === currentFlowId)?.name ||
-            "No Flow Selected"
-          }
-          flows={useMemo(() => {
-            const dbFlows = currentProject?.flows || [];
-
-            // 1. Extract Live Components from Canvas
-            const liveComponentFlows = nodes
-              .filter(
-                (n) =>
-                  (n.type === "component" || n.data?.type === "component") &&
-                  n.data?.flowId,
-              )
-              .map((n) => ({
-                id: n.data.flowId,
-                name:
-                  n.data.customLabel || n.data.label || "Untitled Component",
-                type: "component",
-                isLive: true, // Flag for styling if needed
-              }));
-
-            // 2. Filter out DB flows that are currently represented by live nodes (to avoid duplicates)
-            //    OR merge them updating the name.
-            //    Strategy: Keep DB flows but valid ONLY non-components or components NOT on canvas?
-            //    Actually, if we are in Main Flow, 'dbFlows' has all components.
-            //    We want to OVERRIDE the DB flow entry with the Live Node entry if IDs match.
-
-            // 3. Final deduplication: DB flows first, then live overrides (last write wins)
-            const flowMap = new Map();
-            dbFlows.forEach((f) => flowMap.set(f.id, f));
-            liveComponentFlows.forEach((f) => flowMap.set(f.id, f));
-
-            return [...flowMap.values()];
-          }, [currentProject?.flows, nodes])}
-          onSwitchFlow={(f) => switchFlow(f.id)}
+          flowName={derivedFlowData.flowName}
+          flows={derivedFlowData.flows}
+          onSwitchFlow={(f) => {
+            setViewStack([]);
+            switchFlow(f.id);
+          }}
           onNewFlow={() => setCreationModal({ isOpen: true, type: "flow" })}
           onRenameFlow={(f, newName) => renameFlow(f.id, newName)}
           onDeleteFlow={(f) => {

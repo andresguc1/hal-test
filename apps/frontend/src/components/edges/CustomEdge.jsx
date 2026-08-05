@@ -102,7 +102,9 @@ const CustomEdge = ({
     });
   } else {
     // Short, same-row edge — simple SmoothStep is fine
-    const hash = id.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const hash = id
+      .split("")
+      .reduce((acc, char) => acc + char.charCodeAt(0), 0);
     const jitter = (hash % 20) - 10;
 
     [edgePath] = getSmoothStepPath({
@@ -177,6 +179,7 @@ const CustomEdge = ({
       />
 
       {/* ANIMATED SIGNAL PARTICLE (Only for Running/Success/Selected) */}
+      {/* PERFORMANCE OPTIMIZATION: Disabled to reduce CPU usage
       {(selected || isRunning || isSuccess) && (
         <circle
           r={isRunning || isSuccess ? 4 : 3}
@@ -191,6 +194,7 @@ const CustomEdge = ({
           />
         </circle>
       )}
+      */}
     </>
   );
 };

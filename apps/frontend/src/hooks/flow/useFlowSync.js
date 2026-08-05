@@ -1,8 +1,9 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { v4 as uuidv4 } from "uuid";
+import { useQueryClient } from "@tanstack/react-query";
 import { logger } from "../../utils/logger";
 import { projectManager } from "../../utils/ProjectManager";
-import { debounce } from "../../utils/flowUtils";
+import { debounce, deepClone } from "../../utils/flowUtils";
 import { STARTER_TEMPLATE } from "../../config/starterTemplate";
 import { useCollaboration } from "../../collaboration";
 
@@ -26,15 +27,50 @@ export function useFlowSync({
   fitView,
   migrateNodes,
 }) {
+  const queryClient = useQueryClient();
   const [isStarterTemplate, setIsStarterTemplate] = useState(false);
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
   const [viewStack, setViewStack] = useState([]);
   const [isNavigating, setIsNavigating] = useState(false); // Navigation guard state
   const currentProjectId = currentProject?.id;
   const lastLoadedFlowId = useRef(null);
+  const activeFlowIdRef = useRef(currentFlowId);
   const isSavingRef = useRef(false);
   const saveQueueRef = useRef([]);
   const isNavigatingRef = useRef(isNavigating);
+
+  useEffect(() => {
+    activeFlowIdRef.current = currentFlowId;
+  }, [currentFlowId]);
+
+  // Auto-rebuild viewStack for deep links or page refreshes
+  useEffect(() => {
+    if (viewStack.length === 0 && currentProject && currentFlowId) {
+      const flow = currentProject.flows?.find((f) => f.id === currentFlowId);
+      if (flow && flow.parentId) {
+        const newStack = [];
+        let current = flow;
+        while (current && current.parentId) {
+          const parent = currentProject.flows?.find(
+            (f) => f.id === current.parentId,
+          );
+          if (parent) {
+            newStack.unshift({
+              id: parent.id,
+              label: parent.name,
+              nodeId: null,
+            });
+            current = parent;
+          } else {
+            break;
+          }
+        }
+        if (newStack.length > 0) {
+          setViewStack(newStack);
+        }
+      }
+    }
+  }, [currentProject, currentFlowId, viewStack.length]);
 
   const saveFlow = useCallback(
     async (silent = false) => {
@@ -42,10 +78,13 @@ export function useFlowSync({
       const targetProjectId = currentProjectId;
       if (!targetProjectId || !targetFlowId) return;
 
-      // Prevent saving if the flow ID does not match what was loaded
-      if (lastLoadedFlowId.current !== targetFlowId) {
+      // Prevent saving if current active flow or last loaded flow ID does not match target flow
+      if (
+        activeFlowIdRef.current !== targetFlowId ||
+        lastLoadedFlowId.current !== targetFlowId
+      ) {
         console.warn(
-          `[useFlowSync] Blocked save: lastLoadedFlowId (${lastLoadedFlowId.current}) does not match currentFlowId (${targetFlowId})`,
+          `[useFlowSync] Blocked save: flow ID mismatch (activeFlowId: ${activeFlowIdRef.current}, targetFlowId: ${targetFlowId}, lastLoadedFlowId: ${lastLoadedFlowId.current})`,
         );
         return;
       }
@@ -65,8 +104,8 @@ export function useFlowSync({
       isSavingRef.current = true;
       try {
         const flowData = {
-          nodes: nodesRef.current,
-          edges: edgesRef.current,
+          nodes: deepClone(nodesRef.current || []),
+          edges: deepClone(edgesRef.current || []),
           viewport: getViewport(),
           updatedAt: new Date().toISOString(),
         };
@@ -76,6 +115,10 @@ export function useFlowSync({
           targetFlowId,
           flowData,
         );
+        
+        // Invalidate query to keep global project state (and derived flow names) in sync
+        queryClient.invalidateQueries({ queryKey: ["project", targetProjectId] });
+        
         if (!silent) setApiStatus({ message: "✓ Flow saved" });
         setHasUnsavedChanges(false);
 
@@ -83,11 +126,15 @@ export function useFlowSync({
         if (saveQueueRef.current.length > 0) {
           const next = saveQueueRef.current.shift();
           if (
-            next.targetFlowId === currentFlowId &&
-            next.targetProjectId === currentProjectId
+            next.targetFlowId === activeFlowIdRef.current &&
+            next.targetProjectId === currentProjectId &&
+            lastLoadedFlowId.current === activeFlowIdRef.current
           ) {
             saveFlow(next.silent).then(next.resolve).catch(next.reject);
           } else {
+            console.warn(
+              `[useFlowSync] Discarding queued save for inactive flow ${next.targetFlowId}`,
+            );
             next.resolve();
           }
         }
@@ -99,8 +146,9 @@ export function useFlowSync({
         if (saveQueueRef.current.length > 0) {
           const next = saveQueueRef.current.shift();
           if (
-            next.targetFlowId === currentFlowId &&
-            next.targetProjectId === currentProjectId
+            next.targetFlowId === activeFlowIdRef.current &&
+            next.targetProjectId === currentProjectId &&
+            lastLoadedFlowId.current === activeFlowIdRef.current
           ) {
             saveFlow(next.silent).then(next.resolve).catch(next.reject);
           } else {
@@ -147,11 +195,19 @@ export function useFlowSync({
 
   const loadFlowData = useCallback(async () => {
     if (!currentProjectId || !currentFlowId) return;
+    const targetFlowId = currentFlowId;
     try {
       const flow = await projectManager.getFlow(
         currentProjectId,
-        currentFlowId,
+        targetFlowId,
       );
+      // Guard against race condition: check if user switched flow while request was in-flight
+      if (activeFlowIdRef.current !== targetFlowId) {
+        console.warn(
+          `[useFlowSync] Ignored stale loadFlowData response for flow: ${targetFlowId}`,
+        );
+        return;
+      }
       if (flow) {
         setNodes(flow.nodes || []);
         setEdges(
@@ -165,12 +221,12 @@ export function useFlowSync({
               ...(sourceHandle && { sourceHandle }),
               ...(targetHandle && { targetHandle }),
               type: "custom",
-              animated: true,
+              animated: !import.meta.env.DEV,
             };
           }),
         );
         // Only set loaded ID after state is successfully populated to prevent auto-saving old state
-        lastLoadedFlowId.current = currentFlowId;
+        lastLoadedFlowId.current = targetFlowId;
         setHasUnsavedChanges(false);
       }
     } catch (err) {
@@ -185,7 +241,8 @@ export function useFlowSync({
   ]);
 
   useEffect(() => {
-    // Clear save queue and reset state when switching flows
+    // Clear save queue, cancel pending state, and reset loaded flow ID when switching flows
+    lastLoadedFlowId.current = null;
     saveQueueRef.current = [];
     isSavingRef.current = false;
 
@@ -332,15 +389,22 @@ export function useFlowSync({
               viewport: { x: 0, y: 0, zoom: 1 },
             });
 
-            // Update parent node data
-            componentNode.data = {
-              ...componentNode.data,
+            // Update parent node data using deepClone to avoid in-place reference mutation
+            const clonedComponentNode = deepClone(componentNode);
+            clonedComponentNode.data = {
+              ...clonedComponentNode.data,
               flowId,
               configuration: {
-                ...componentNode.data?.configuration,
+                ...clonedComponentNode.data?.configuration,
                 flowId,
               },
             };
+
+            const updatedNodes = nodesRef.current.map((n) =>
+              n.id === componentId ? clonedComponentNode : n,
+            );
+            nodesRef.current = updatedNodes;
+            setNodes(updatedNodes);
 
             // Save the parent flow
             await saveFlow(true);
@@ -371,7 +435,7 @@ export function useFlowSync({
         isNavigatingRef.current = false;
       }
     },
-    [currentFlowId, currentProject, saveFlow, switchFlow, nodesRef, toast],
+    [currentFlowId, currentProject, saveFlow, switchFlow, nodesRef, setNodes, toast],
   );
 
   const exitComponent = useCallback(
@@ -390,12 +454,14 @@ export function useFlowSync({
         // Support indexed exit: if targetIndex provided, truncate stack to that point
         const newLength =
           typeof targetIndex === "number"
-            ? Math.max(0, targetIndex + 1)
+            ? targetIndex
             : viewStack.length - 1;
-        const parentView = viewStack[newLength];
-        setViewStack((prev) => prev.slice(0, newLength));
-        if (parentView) {
-          switchFlow(parentView.id);
+        
+        const targetView = typeof targetIndex === "number" ? viewStack[targetIndex] : viewStack[newLength];
+        
+        if (targetView) {
+          switchFlow(targetView.id);
+          setViewStack((prev) => prev.slice(0, newLength));
         }
       } catch (err) {
         console.error("[useFlowSync] Error during exitComponent:", err);
@@ -489,7 +555,7 @@ export function useFlowSync({
             STARTER_TEMPLATE.edges.map((e) => ({
               ...e,
               type: "custom",
-              animated: true,
+              animated: !import.meta.env.DEV,
             })),
           );
 

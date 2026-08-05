@@ -1,4 +1,4 @@
-import { StrictMode } from "react";
+import { StrictMode, useState, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { ReactFlowProvider } from "@xyflow/react";
 import { ToastProvider, HalToaster } from "./components/Toast";
@@ -25,6 +25,18 @@ const queryClient = new QueryClient({
 import { AuthProvider } from "./context/AuthContext";
 import { AIProvider } from "./context/AIContext";
 
+const DevtoolsWrapper = () => {
+  const [show, setShow] = useState(import.meta.env.VITE_SHOW_QUERY_DEVTOOLS === 'true');
+
+  useEffect(() => {
+    window.toggleQueryDevtools = () => setShow((prev) => !prev);
+    console.info("💡 TanStack Devtools ocultas. Ejecuta window.toggleQueryDevtools() en consola para mostrarlas.");
+  }, []);
+
+  if (!show) return null;
+  return <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-right" />;
+};
+
 createRoot(document.getElementById("root")).render(
   <QueryClientProvider client={queryClient}>
     <ThemeProvider
@@ -47,8 +59,6 @@ createRoot(document.getElementById("root")).render(
         </ToastProvider>
       </ReactFlowProvider>
     </ThemeProvider>
-    {import.meta.env.DEV && (
-      <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />
-    )}
+    {import.meta.env.DEV && <DevtoolsWrapper />}
   </QueryClientProvider>,
 );

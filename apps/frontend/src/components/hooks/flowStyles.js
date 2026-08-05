@@ -101,7 +101,8 @@ export const getNodeStyle = (state, customStyle = {}) => {
     padding: "0",
     borderRadius: "12px",
     boxShadow: "none",
-    transition: "all 0.2s ease-in-out",
+    transition:
+      "color 200ms, background-color 200ms, opacity 200ms, transform 200ms",
     minWidth: "200px",
     cursor: "pointer",
     ...customStyle,

@@ -21,6 +21,9 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useExecutionStore } from "@/stores/useExecutionStore";
+import { useSettings } from "@/context/SettingsContext";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "./ui/select";
+import { Switch } from "./ui/switch";
 import { cn } from "@/lib/utils";
 import { motion as Motion, AnimatePresence } from "framer-motion";
 
@@ -498,8 +501,19 @@ function AppFooter({
   };
 
   const globalExecutionStatus = useExecutionStore((s) => s.status);
+  const draftMode = useExecutionStore((s) => s.draftMode);
+  const setDraftMode = useExecutionStore((s) => s.setDraftMode);
+  
   const isRunning =
     apiStatus.state === "running" || globalExecutionStatus === "running";
+
+  const {
+    autoHealingEnabled,
+    setAutoHealingEnabled,
+    autoHealingRetryLimit,
+    setAutoHealingRetryLimit,
+    isAIConfigured,
+  } = useSettings();
 
   const handleCancelOrResetRun = async () => {
     const activeRunId = useExecutionStore.getState().activeRunId;
@@ -682,6 +696,60 @@ function AppFooter({
           aria-orientation="vertical"
         />
 
+        <div className="flex items-center gap-2 px-2 py-1.5 rounded-full border border-white/10 bg-slate-950/80 text-xs">
+          <span className="uppercase tracking-[0.25em] text-slate-400">
+            Draft
+          </span>
+          <Switch
+            checked={draftMode}
+            onCheckedChange={setDraftMode}
+            aria-label="Enable Draft Mode"
+            title="Tolerant Design Mode: Relaxes strict validations and skips auto-healing to allow debugging incomplete flows."
+          />
+        </div>
+
+        <div className="flex items-center gap-2 px-2 py-1.5 rounded-full border border-white/10 bg-slate-950/80 text-xs">
+          <span className="uppercase tracking-[0.25em] text-slate-400">
+            Auto
+          </span>
+          <Switch
+            checked={autoHealingEnabled}
+            onCheckedChange={(checked) => {
+              if (isAIConfigured) setAutoHealingEnabled(checked);
+            }}
+            disabled={!isAIConfigured || draftMode}
+            aria-label="Enable auto healing"
+            title={
+              draftMode 
+                ? "Auto healing is forcibly disabled in Draft Mode"
+                : isAIConfigured 
+                  ? "Enable auto healing" 
+                  : "AI provider/API is not configured"
+            }
+          />
+          <Select
+            value={String(autoHealingRetryLimit)}
+            onValueChange={(value) => setAutoHealingRetryLimit(Number(value))}
+            disabled={!autoHealingEnabled || !isAIConfigured || draftMode}
+          >
+            <SelectTrigger
+              className={cn(
+                "min-w-[2.75rem] h-8 bg-slate-950 border-slate-800 text-xs",
+                (!autoHealingEnabled || draftMode) && "opacity-50",
+              )}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[0, 1, 2, 3].map((retry) => (
+                <SelectItem key={retry} value={String(retry)}>
+                  {retry}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         <FooterButton
           icon={Database}
           label="RUN DATASET"
@@ -689,7 +757,6 @@ function AppFooter({
           onClick={onRunDataset}
           className="pl-3 pr-4 py-2 hover:bg-emerald-500/10 hover:text-emerald-400 border-emerald-500/20"
         />
-
         <FooterButton
           icon={RefreshCw}
           label="RUN BATCH"
