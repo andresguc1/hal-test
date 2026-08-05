@@ -43,7 +43,7 @@
   --z-modal: 200;
 
   /* GLOBAL TRANSITION */
-  --theme-transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  --theme-transition: var(--transition-theme);
 }
 
 .dark {
@@ -222,7 +222,7 @@
   .glass-panel {
     border-radius: 12px;
     backdrop-filter: blur(16px);
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: var(--transition-interactive);
     background: var(--bg-panel);
     border: 1px solid var(--border-ui);
     box-shadow: var(--panel-shadow);
@@ -252,6 +252,26 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+  }
+
+  /* ── GPU-safe transition utilities ─────────────────────────────────────
+   * Replace `transition-all` with one of these semantic alternatives.
+   * They only animate compositor-layer properties (no layout triggers).
+   * ────────────────────────────────────────────────────────────────────── */
+
+  /** Full interactive element: color + bg + border + opacity + transform + shadow */
+  .ui-transition {
+    transition: var(--transition-interactive);
+  }
+
+  /** Color-only: text, background, border — no movement */
+  .ui-transition-colors {
+    transition: var(--transition-colors);
+  }
+
+  /** Movement + opacity: for scale/translate hover effects */
+  .ui-transition-transform {
+    transition: var(--transition-transform);
   }
 }
 
@@ -317,7 +337,9 @@
   text-transform: uppercase;
   letter-spacing: 0.1em;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    var(--transition-colors),
+    transform var(--duration-fast) var(--ease-standard);
   z-index: 40;
   display: flex;
   align-items: center;
@@ -328,7 +350,7 @@
 .terminal-tag:hover {
   background: hsl(217 33% 17%);
   color: hsl(0 0% 100%);
-  padding-bottom: 6px;
+  transform: translateY(-2px);
 }
 
 .terminal-tag .icon {

@@ -66,7 +66,7 @@ const injectInspectorUI = () => {
 
         // 2. ID (Attributes) - Only if not dynamic
         if (el.id && !isDynamicId(el.id)) {
-            candidates.id = `#${el.id}`;
+            candidates.id = `#${window.CSS.escape(el.id)}`;
         }
 
         // 3. Aria Label (Accessibility)
@@ -112,7 +112,7 @@ const injectInspectorUI = () => {
         while (el.nodeType === Node.ELEMENT_NODE) {
             let selector = el.nodeName.toLowerCase();
             if (el.id && !isDynamicId(el.id)) {
-                selector += '#' + el.id;
+                selector += '#' + window.CSS.escape(el.id);
                 path.unshift(selector);
                 break;
             } else {
@@ -228,16 +228,12 @@ export async function startInspector(page) {
                     );
                     if (sanitized && sanitized.confidence > 0.6) {
                         console.log(
-                            `[Inspector] ✨ AI Optimized Selector: ${sanitized.sanitizedSelector}`,
+                            `[Inspector] ✨ AI Optimized Selector available (not re-emitted): ${sanitized.sanitizedSelector}`,
                         );
-                        const updatedData = {
-                            ...data,
-                            sanitizedSelector: sanitized.sanitizedSelector,
-                            isAI: true,
-                            aiReasoning: sanitized.reasoning,
-                        };
-                        // Emit update with AI-optimized selector
-                        emitElementPicked(updatedData);
+                        // Note: We intentionally do not emit a second element_picked event.
+                        // The initial raw pick event is enough for UI update, and emitting
+                        // a second event causes duplicate updates that make selectors appear
+                        // to change unexpectedly.
                     }
                 } catch (aiError) {
                     console.warn('[Inspector] AI Sanitization failed:', aiError.message);

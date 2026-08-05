@@ -220,13 +220,51 @@ export const NODE_INPUTS = {
       defaultValue: false,
     },
   ],
-  submit_form: [
+  fill_form: [
     {
-      key: "selector",
-      label: "Form Selector",
+      key: "formSelector",
+      label: "Form Selector or Container",
       type: "selector",
-      placeholder: "form#login",
+      placeholder: "e.g. form#login or #checkout-form",
       required: true,
+    },
+    {
+      key: "fields",
+      label: "Form Fields",
+      type: "form_fill_fields",
+      required: true,
+    },
+    {
+      key: "clearBeforeType",
+      label: "Clear fields before typing?",
+      type: "checkbox",
+      defaultValue: true,
+    },
+    {
+      key: "submitAfterFill",
+      label: "Submit form after filling?",
+      type: "checkbox",
+      defaultValue: false,
+    },
+    {
+      key: "submitSelector",
+      label: "Submit Button Selector",
+      type: "selector",
+      placeholder: "e.g. button[type='submit']",
+      isVisible: (config) => config.submitAfterFill,
+    },
+    {
+      key: "waitForNavigation",
+      label: "Wait for navigation after submit",
+      type: "checkbox",
+      defaultValue: true,
+      isVisible: (config) => config.submitAfterFill || (typeof config.submitSelector === 'string' && config.submitSelector.trim().length > 0),
+    },
+    {
+      key: "timeout",
+      label: "Timeout (ms)",
+      type: "number",
+      placeholder: "30000",
     },
     {
       key: "takeScreenshot",
@@ -234,7 +272,14 @@ export const NODE_INPUTS = {
       type: "checkbox",
       defaultValue: true,
     },
+    {
+      key: "continueOnError",
+      label: "🛡️ Continue on failure (Soft Fail)",
+      type: "checkbox",
+      defaultValue: false,
+    },
   ],
+
   scroll: [
     {
       key: "selector",

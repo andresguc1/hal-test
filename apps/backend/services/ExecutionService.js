@@ -137,6 +137,7 @@ export class ExecutionService {
         });
 
         const mode = options.mode || 'e2e';
+        options.securityObservability = options.securityObservability ?? mode === 'security';
 
         let runId = options.runId;
         if (!runId) {
@@ -165,24 +166,31 @@ export class ExecutionService {
             await this.validateGraph(nodes, edges);
             console.log(`[ExecutionService] ✅ Graph validation successful.`);
         } catch (validationError) {
-            console.error(
-                `❌ [ExecutionService] Pre-execution validation failed:`,
-                validationError.message,
-            );
+            if (options.draftMode) {
+                console.warn(
+                    `⚠️ [ExecutionService] Pre-execution validation failed, but continuing due to Draft Mode:`,
+                    validationError.message,
+                );
+            } else {
+                console.error(
+                    `❌ [ExecutionService] Pre-execution validation failed:`,
+                    validationError.message,
+                );
 
-            await executionLogger.endRun(runId, 'failed').catch(() => {});
+                await executionLogger.endRun(runId, 'failed').catch(() => {});
 
-            // Signal failure with node metadata for UI auto-focus
-            emitFlowFinished({
-                runId,
-                status: 'failed',
-                flowId,
-                error: validationError.message,
-                failedNodeId: validationError.failedNodeId,
-                divePath: validationError.divePath,
-            });
+                // Signal failure with node metadata for UI auto-focus
+                emitFlowFinished({
+                    runId,
+                    status: 'failed',
+                    flowId,
+                    error: validationError.message,
+                    failedNodeId: validationError.failedNodeId,
+                    divePath: validationError.divePath,
+                });
 
-            throw validationError;
+                throw validationError;
+            }
         }
 
         // 3. Execution logic (BFS/DFS traversal)
@@ -946,6 +954,7 @@ export class ExecutionService {
                 label: node.data?.customLabel || node.data?.label || actionType,
                 runId: state.runId,
                 browserId: state.browserId,
+                securityObservability: state.options?.securityObservability || false,
             };
 
             console.log(

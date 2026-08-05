@@ -45,7 +45,7 @@ export default function ProgressBar({
       <div className="progress-bar-track">
         <div
           className="progress-bar-fill"
-          style={{ width: `${percentage}%` }}
+          style={{ transform: `scaleX(${percentage / 100})` }}
         />
       </div>
 

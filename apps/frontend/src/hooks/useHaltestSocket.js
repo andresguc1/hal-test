@@ -116,7 +116,7 @@ export const useHaltestSocket = ({
 
     socket.on("execution-status", (data) => {
       if (!data || !data.stepId) return;
-      const { stepId, status, error, result, runId, batchId } = data;
+      const { stepId, status, error, result, runId, batchId, message } = data;
 
       // Update global execution store
       if (status === "running") {
@@ -168,7 +168,11 @@ export const useHaltestSocket = ({
 
       // Log structured error to console
       if (status === "failed" || status === "softfailed") {
-        const errorMsg = error || "Unknown error";
+        let errorMsg = error;
+        if (status === "softfailed" && message && !error) {
+          errorMsg = message;
+        }
+        errorMsg = errorMsg || "Unknown error";
         console.error(
           `%c[NodeError] NodeId=${stepId} Status=${status} Error="${errorMsg}"`,
           "color: #ef4444; font-weight: bold;",

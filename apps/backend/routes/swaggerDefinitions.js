@@ -291,6 +291,27 @@
 
 /**
  * @swagger
+ * /api/actions/fill_form:
+ *   post:
+ *     summary: Rellena un formulario con múltiples campos.
+ *     tags: [User Simulation]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/FillFormBodySchema'
+ *     responses:
+ *       200:
+ *         description: Formulario rellenado.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/StandardSuccess'
+ */
+
+/**
+ * @swagger
  * /api/actions/select_option:
  *   post:
  *     summary: Selecciona una opción en un desplegable.
@@ -304,27 +325,6 @@
  *     responses:
  *       200:
  *         description: Opción seleccionada.
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/StandardSuccess'
- */
-
-/**
- * @swagger
- * /api/actions/submit_form:
- *   post:
- *     summary: Envía un formulario.
- *     tags: [User Simulation]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/SubmitFormBodySchema'
- *     responses:
- *       200:
- *         description: Formulario enviado.
  *         content:
  *           application/json:
  *             schema:

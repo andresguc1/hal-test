@@ -80,7 +80,10 @@
   height: 100%;
   background: linear-gradient(90deg, #2196f3, #4caf50);
   border-radius: 4px;
-  transition: width 0.3s ease;
+  /* GPU-safe: animate scaleX from left origin instead of width */
+  width: 100%;
+  transform-origin: left;
+  transition: transform 0.3s var(--ease-standard, cubic-bezier(0.4, 0, 0.2, 1));
   position: relative;
   overflow: hidden;
 }

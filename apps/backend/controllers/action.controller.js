@@ -254,6 +254,136 @@ function validateBrowser(req, browserId) {
     return { error: false, browserId: id, entry };
 }
 
+async function attachSecurityContextListeners(context) {
+    if (!context._securityListenersAttached) {
+        context._securityListenersAttached = true;
+
+        context.on('page', async (page) => {
+            page._securityMode = true;
+            page._securityAlerts = page._securityAlerts || [];
+
+            // Expose function for DOM XSS / Prototype Pollution real-time tracking
+            try {
+                await page.exposeFunction('onDOMAlert', (alert) => {
+                    if (!page._securityMode) return;
+                    const currentRunId = page._currentRunId;
+                    const currentNodeId = page._currentNodeId;
+                    const enriched = {
+                        ...alert,
+                        url: page.url(),
+                        runId: currentRunId || null,
+                        nodeId: currentNodeId || null,
+                        timestamp: Date.now(),
+                    };
+                    page._securityAlerts.push(enriched);
+                    emitSecurityAlert(enriched);
+                });
+            } catch (err) {
+                // ignore if already exposed
+            }
+
+            page.on('response', async (response) => {
+                if (!page._securityMode) return;
+                try {
+                    const url = response.url();
+                    if (url.startsWith('data:') || url.startsWith('blob:')) return;
+                    const headers = response.headers();
+                    const alerts = SecurityAuditor.auditHeaders(url, headers);
+                    const setCookie = headers['set-cookie'];
+                    if (setCookie) {
+                        const cookieAlerts = SecurityAuditor.auditCookies(url, setCookie);
+                        alerts.push(...cookieAlerts);
+                    }
+
+                    const currentRunId = page._currentRunId;
+                    const currentNodeId = page._currentNodeId;
+
+                    for (const alert of alerts) {
+                        const enriched = {
+                            ...alert,
+                            url,
+                            runId: currentRunId || null,
+                            nodeId: currentNodeId || null,
+                            timestamp: Date.now(),
+                        };
+                        page._securityAlerts.push(enriched);
+                        emitSecurityAlert(enriched);
+                    }
+
+                    const dlpFindings = await DataLeakEngine.auditResponse(response);
+                    for (const finding of dlpFindings) {
+                        const enriched = {
+                            ...finding,
+                            url,
+                            runId: currentRunId || null,
+                            nodeId: currentNodeId || null,
+                            timestamp: Date.now(),
+                        };
+                        page._securityAlerts.push(enriched);
+                        emitSecurityAlert(enriched);
+                    }
+                } catch (e) {
+                    /* ignore */
+                }
+            });
+
+            page.on('request', async (request) => {
+                if (!page._securityMode) return;
+                try {
+                    const url = request.url();
+                    if (url.startsWith('data:') || url.startsWith('blob:')) return;
+
+                    const currentRunId = page._currentRunId;
+                    const currentNodeId = page._currentNodeId;
+
+                    const dlpFindings = await DataLeakEngine.auditRequest(request);
+                    for (const finding of dlpFindings) {
+                        const enriched = {
+                            ...finding,
+                            url,
+                            runId: currentRunId || null,
+                            nodeId: currentNodeId || null,
+                            timestamp: Date.now(),
+                        };
+                        page._securityAlerts.push(enriched);
+                        emitSecurityAlert(enriched);
+                    }
+                } catch (e) {
+                    /* ignore */
+                }
+            });
+
+            page.on('console', async (msg) => {
+                if (!page._securityMode) return;
+                try {
+                    const alert = SecurityAuditor.auditConsoleMessage(msg);
+                    if (alert) {
+                        const currentRunId = page._currentRunId;
+                        const currentNodeId = page._currentNodeId;
+                        const enriched = {
+                            ...alert,
+                            runId: currentRunId || null,
+                            nodeId: currentNodeId || null,
+                            timestamp: Date.now(),
+                        };
+                        page._securityAlerts.push(enriched);
+                        emitSecurityAlert(enriched);
+                    }
+                } catch (e) {
+                    /* ignore */
+                }
+            });
+        });
+    }
+
+    // Ensure existing pages are marked for the current context mode.
+    const pages = context.pages ? context.pages() : [];
+    for (const page of pages) {
+        page._securityMode = true;
+        page._securityAlerts = page._securityAlerts || [];
+    }
+}
+
 /**
  * Get or create context efficiently
  */
@@ -270,6 +400,9 @@ async function getOrCreateContext(req, browser, browserId) {
                 try {
                     // Test context health - this prevents 'guid not bound' errors
                     await ctx.pages();
+                    if (req.body?.securityObservability) {
+                        await attachSecurityContextListeners(ctx);
+                    }
                     return ctx;
                 } catch (err) {
                     console.log('[WARN] Context unhealthy, closing and creating new:', err.message);
@@ -609,123 +742,9 @@ async function getOrCreateContext(req, browser, browserId) {
             // Track background network history to avoid race conditions in sequential nodes
             networkHistoryService.track(browserId, newContext);
 
-            // Security Observability Layer: Listen for console events, HTTP requests and responses
-            newContext.on('page', async (page) => {
-                page._securityAlerts = [];
-
-                // Expose function for DOM XSS / Prototype Pollution real-time tracking
-                try {
-                    await page.exposeFunction('onDOMAlert', (alert) => {
-                        const currentRunId = page._currentRunId;
-                        const currentNodeId = page._currentNodeId;
-                        const enriched = {
-                            ...alert,
-                            url: page.url(),
-                            runId: currentRunId || null,
-                            nodeId: currentNodeId || null,
-                            timestamp: Date.now(),
-                        };
-                        page._securityAlerts.push(enriched);
-                        emitSecurityAlert(enriched);
-                    });
-                } catch (err) {
-                    // ignore if already exposed
-                }
-
-                // Real-time Response Scans (DLP & Headers)
-                page.on('response', async (response) => {
-                    try {
-                        const url = response.url();
-                        if (url.startsWith('data:') || url.startsWith('blob:')) return;
-                        const headers = response.headers();
-                        const alerts = SecurityAuditor.auditHeaders(url, headers);
-                        const setCookie = headers['set-cookie'];
-                        if (setCookie) {
-                            const cookieAlerts = SecurityAuditor.auditCookies(url, setCookie);
-                            alerts.push(...cookieAlerts);
-                        }
-
-                        const currentRunId = page._currentRunId;
-                        const currentNodeId = page._currentNodeId;
-
-                        // Emit general header/cookie security alerts
-                        for (const alert of alerts) {
-                            const enriched = {
-                                ...alert,
-                                url,
-                                runId: currentRunId || null,
-                                nodeId: currentNodeId || null,
-                                timestamp: Date.now(),
-                            };
-                            page._securityAlerts.push(enriched);
-                            emitSecurityAlert(enriched);
-                        }
-
-                        // Run new Data Leak Engine Response Audit
-                        const dlpFindings = await DataLeakEngine.auditResponse(response);
-                        for (const finding of dlpFindings) {
-                            const enriched = {
-                                ...finding,
-                                url,
-                                runId: currentRunId || null,
-                                nodeId: currentNodeId || null,
-                                timestamp: Date.now(),
-                            };
-                            page._securityAlerts.push(enriched);
-                            emitSecurityAlert(enriched);
-                        }
-                    } catch (e) {
-                        /* ignore */
-                    }
-                });
-
-                // Real-time Request Scans (DLP Transmission)
-                page.on('request', async (request) => {
-                    try {
-                        const url = request.url();
-                        if (url.startsWith('data:') || url.startsWith('blob:')) return;
-
-                        const currentRunId = page._currentRunId;
-                        const currentNodeId = page._currentNodeId;
-
-                        const dlpFindings = await DataLeakEngine.auditRequest(request);
-                        for (const finding of dlpFindings) {
-                            const enriched = {
-                                ...finding,
-                                url,
-                                runId: currentRunId || null,
-                                nodeId: currentNodeId || null,
-                                timestamp: Date.now(),
-                            };
-                            page._securityAlerts.push(enriched);
-                            emitSecurityAlert(enriched);
-                        }
-                    } catch (e) {
-                        /* ignore */
-                    }
-                });
-
-                page.on('console', async (msg) => {
-                    try {
-                        const alert = SecurityAuditor.auditConsoleMessage(msg);
-                        if (alert) {
-                            const currentRunId = page._currentRunId;
-                            const currentNodeId = page._currentNodeId;
-                            const enriched = {
-                                ...alert,
-                                runId: currentRunId || null,
-                                nodeId: currentNodeId || null,
-                                timestamp: Date.now(),
-                            };
-                            page._securityAlerts.push(enriched);
-
-                            emitSecurityAlert(enriched);
-                        }
-                    } catch (e) {
-                        /* ignore */
-                    }
-                });
-            });
+            if (req.body?.securityObservability) {
+                await attachSecurityContextListeners(newContext);
+            }
 
             return newContext;
         } catch (err) {
@@ -831,6 +850,37 @@ async function fetchContext(req, browserId) {
     }
 }
 
+async function normalizeSelectorForDotId(page, selector) {
+    if (!selector || typeof selector !== 'string') return selector;
+    if (!selector.startsWith('#') || !selector.includes('.')) return selector;
+
+    const attributeSelector = `[id="${selector.slice(1).replace(/"/g, '\\"')}"]`;
+    let originalCount = 0;
+    try {
+        originalCount = await page.locator(selector).count();
+    } catch (err) {
+        originalCount = 0;
+    }
+
+    if (originalCount > 0) return selector;
+
+    let fallbackCount = 0;
+    try {
+        fallbackCount = await page.locator(attributeSelector).count();
+    } catch (err) {
+        fallbackCount = 0;
+    }
+
+    if (fallbackCount > 0) {
+        console.warn(
+            `[ActionController] Selector fallback from ${selector} to ${attributeSelector}`,
+        );
+        return attributeSelector;
+    }
+
+    return selector;
+}
+
 /**
  * Generic wrapper for Playwright actions.
  */
@@ -841,6 +891,13 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
     const nodeId = req.body.nodeId; // Extract nodeId if present
     const useExperienceVault = req.headers?.['x-hal-experience-vault'] !== 'false';
     const enableFineTuning = req.headers?.['x-hal-fine-tuning'] === 'true';
+    const autoHealingHeader = req.headers?.['x-hal-auto-healing-enabled'];
+    const autoHealingRetryHeader = req.headers?.['x-hal-auto-healing-max-retries'];
+    const autoHealingEnabled = autoHealingHeader === 'true' || autoHealingHeader === '1';
+    const autoHealingRetryLimit = Number.isFinite(Number(autoHealingRetryHeader))
+        ? Math.max(0, Math.min(3, Number(autoHealingRetryHeader)))
+        : 0;
+    const effectiveAutoHealingRetryLimit = autoHealingEnabled ? autoHealingRetryLimit : 0;
     let simplifiedDOMBefore = null;
 
     // --- VARIABLE RESOLUTION ---
@@ -852,6 +909,7 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
         opts.continueOnError = true;
     if (opts.continueOnError === 'false' || opts.continueOnError === '0')
         opts.continueOnError = false;
+    if (opts.continueOnError === undefined && opts.continueOnFailure) opts.continueOnError = true;
 
     if (opts.takeScreenshot === 'true' || opts.takeScreenshot === '1') opts.takeScreenshot = true;
     if (opts.takeScreenshot === 'false' || opts.takeScreenshot === '0') opts.takeScreenshot = false;
@@ -1248,6 +1306,24 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
     } catch (error) {
         // Clean HTML entities from error message (Playwright sometimes escapes them)
         const errorMessage = (error.message || 'Unknown selector error').replace(/&quot;/g, '"');
+        const isDraftMode = req.headers['x-hal-draft-mode'] === 'true';
+
+        // --- DRAFT MODE: GRACEFUL SKIP ---
+        if (isDraftMode) {
+            console.warn(
+                `[Draft Mode] Execution error in node ${nodeId}. Skipping action gracefully. Error: ${errorMessage}`,
+            );
+            if (nodeId) {
+                emitExecutionStatus({ stepId: nodeId, status: 'softfailed' });
+                smartEmitLog(`Acción omitida: Nodo incompleto (Draft Mode)`, 'warning', nodeId);
+            }
+            return res.status(200).json({
+                success: true,
+                status: 'softfailed',
+                message: `Acción omitida: Nodo incompleto (Draft Mode). Detalles: ${errorMessage.substring(0, 100)}`,
+                browserId: targetBrowserId,
+            });
+        }
 
         // MILESTONE C: CI Mode Short-Circuit
         if (isCIEnvironment()) {
@@ -1288,11 +1364,29 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
             errorMessage.includes('parsing css selector') ||
             errorMessage.includes('is not a valid selector');
 
+        const isHealingDisabled = !autoHealingEnabled || effectiveAutoHealingRetryLimit === 0;
+
         if (
             isSelectorError &&
             opts.selector &&
             (runId || opts.debugMode) &&
             !opts.continueOnError
+        ) {
+            if (isHealingDisabled) {
+                emitLog({
+                    message: `[Self-Healing] ℹ️ Auto-healing skipped (enabled=${autoHealingEnabled}, maxRetries=${effectiveAutoHealingRetryLimit}).`,
+                    nodeId: opts.nodeId,
+                    type: 'info',
+                });
+            }
+        }
+
+        if (
+            isSelectorError &&
+            opts.selector &&
+            (runId || opts.debugMode) &&
+            !opts.continueOnError &&
+            !isHealingDisabled
         ) {
             const healingStart = Date.now();
             emitLog({
@@ -1392,6 +1486,7 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
                             actionName,
                             timeout: 55000,
                             aiConfig,
+                            maxTiers: effectiveAutoHealingRetryLimit,
                             onProgress: (p) => {
                                 if (p.step === 'verifying_candidate') {
                                     emitLog({
@@ -2408,13 +2503,14 @@ export const clickAction = (req, res) =>
 
         if (!selector) throw new Error(req.t('errors.selector_required'));
 
+        const targetSelector = await normalizeSelectorForDotId(page, selector);
         const clickOptions = { button, clickCount, modifiers, timeout, force };
 
-        await page.click(selector, clickOptions);
+        await page.click(targetSelector, clickOptions);
 
         return {
-            message: req.t('actions.click.success', { selector }),
-            traceDetails: { selector, details: clickOptions },
+            message: req.t('actions.click.success', { selector: targetSelector }),
+            traceDetails: { selector: targetSelector, details: clickOptions },
         };
     });
 
@@ -2427,21 +2523,22 @@ export const typeTextAction = (req, res) =>
         if (text === undefined || text === null) throw new Error(req.t('errors.text_required'));
 
         const actionOptions = { timeout };
+        const targetSelector = await normalizeSelectorForDotId(page, selector);
 
         // Corrected typing logic
         if (clearBeforeType) {
             if (delay > 0) {
                 // If there's a delay, we clear first and then type with delay
-                await page.fill(selector, '', actionOptions);
-                await page.type(selector, text, { ...actionOptions, delay });
+                await page.fill(targetSelector, '', actionOptions);
+                await page.type(targetSelector, text, { ...actionOptions, delay });
             } else {
                 // If no delay, fill is faster and clears automatically
-                await page.fill(selector, text, actionOptions);
+                await page.fill(targetSelector, text, actionOptions);
             }
         } else {
             // If NOT clearing, use type to append
             // page.type appends at the end if not explicitly cleared
-            await page.type(selector, text, { ...actionOptions, delay: delay || 0 });
+            await page.type(targetSelector, text, { ...actionOptions, delay: delay || 0 });
         }
 
         // Automatic screenshot capture (Frontend Requirement)
@@ -2462,6 +2559,210 @@ export const typeTextAction = (req, res) =>
             message: req.t('actions.type_text.success', { selector }),
             data: { screenshot: screenshotData },
             traceDetails: { selector, textLength: text.length, delay, clearBeforeType },
+        };
+    });
+
+export const fillFormAction = (req, res) =>
+    executePlaywrightAction(req, res, 'fill_form', async (page, opts) => {
+        const {
+            formSelector,
+            fields,
+            clearBeforeType = true,
+            submitAfterFill = false,
+            submitSelector,
+            waitForNavigation = true,
+            timeout = 30000,
+        } = opts;
+
+        if (!formSelector) {
+            console.error('[fillFormAction] Error: formSelector is missing');
+            throw new Error(req.t('errors.selector_required'));
+        }
+        if (!fields || !Array.isArray(fields) || fields.length === 0) {
+            console.error('[fillFormAction] Error: fields array is missing or empty', fields);
+            throw new Error(
+                req.t('errors.fields_required') || 'At least one field definition is required.',
+            );
+        }
+
+        console.log(
+            `[fillFormAction] Starting fill_form on ${formSelector} with ${fields.length} fields:`,
+            JSON.stringify(fields),
+        );
+
+        const timeoutMs = typeof timeout === 'number' ? timeout : 30000;
+        const formLocator = page.locator(formSelector);
+        await formLocator.waitFor({ state: 'attached', timeout: timeoutMs });
+
+        const fillResults = [];
+
+        for (let i = 0; i < fields.length; i++) {
+            const field = fields[i];
+            if (!field || typeof field !== 'object') {
+                console.error(
+                    `[fillFormAction] Error: Field at index ${i} is not an object`,
+                    field,
+                );
+                throw new Error('Each field must be an object with selector and value.');
+            }
+            const selector = field.selector;
+            if (!selector) {
+                console.error(
+                    `[fillFormAction] Error: Field at index ${i} has an empty selector`,
+                    field,
+                );
+                throw new Error('Field selector is required for every field.');
+            }
+            // Resolve variables dynamically at runtime
+            const runId = page._currentRunId || req.body?.runId;
+            let resolvedValue = field.value ?? '';
+            if (runId && typeof resolvedValue === 'string' && resolvedValue.includes('{{')) {
+                resolvedValue = variableManager.resolveRecursive(resolvedValue, runId);
+            }
+
+            const fieldType = field.type || 'text';
+            const fieldDelay = typeof field.delay === 'number' ? field.delay : 0;
+            const fieldClear = field.clearBeforeType ?? clearBeforeType;
+
+            const targetLocator = formLocator.locator(selector).first();
+            await targetLocator.waitFor({ state: 'attached', timeout: timeoutMs });
+
+            if (fieldDelay > 0) {
+                await page.waitForTimeout(fieldDelay);
+            }
+
+            switch (fieldType) {
+                case 'text':
+                    if (fieldClear) {
+                        await targetLocator.fill('', { timeout: timeoutMs });
+                        if (String(resolvedValue)) {
+                            await targetLocator.type(String(resolvedValue), {
+                                delay: fieldDelay,
+                                timeout: timeoutMs,
+                            });
+                        }
+                    } else {
+                        await targetLocator.type(String(resolvedValue), {
+                            delay: fieldDelay,
+                            timeout: timeoutMs,
+                        });
+                    }
+                    break;
+                case 'select':
+                    await targetLocator
+                        .selectOption({ label: String(resolvedValue) }, { timeout: timeoutMs })
+                        .catch(async () => {
+                            // fallback to value
+                            await targetLocator.selectOption(
+                                { value: String(resolvedValue) },
+                                { timeout: timeoutMs },
+                            );
+                        });
+                    break;
+                case 'checkbox':
+                case 'radio': {
+                    const isChecked = resolvedValue === 'true' || resolvedValue === true;
+                    if (isChecked) {
+                        await targetLocator.check({ timeout: timeoutMs });
+                    } else {
+                        await targetLocator.uncheck({ timeout: timeoutMs });
+                    }
+                    break;
+                }
+                case 'file':
+                    await targetLocator.setInputFiles(String(resolvedValue), {
+                        timeout: timeoutMs,
+                    });
+                    break;
+                default:
+                    throw new Error(`Unsupported field type: ${fieldType}`);
+            }
+
+            fillResults.push({
+                selector,
+                value: String(resolvedValue),
+                cleared: fieldClear,
+                delay: fieldDelay,
+            });
+        }
+
+        let submitData = null;
+        const shouldSubmit =
+            submitAfterFill === true ||
+            submitAfterFill === 'true' ||
+            (typeof submitSelector === 'string' && submitSelector.trim().length > 0);
+        console.log(
+            `[fillFormAction] DEBUG: shouldSubmit=${shouldSubmit}, submitAfterFill=${submitAfterFill} (${typeof submitAfterFill}), submitSelector='${submitSelector}', waitForNavigation=${waitForNavigation}`,
+        );
+        if (shouldSubmit) {
+            const submitAction = async () => {
+                if (submitSelector && submitSelector.trim().length > 0) {
+                    let submitLocator = formLocator.locator(submitSelector).first();
+                    try {
+                        // Wait briefly to see if it's inside the form
+                        await submitLocator.waitFor({
+                            state: 'attached',
+                            timeout: Math.min(timeoutMs, 500),
+                        });
+                    } catch (e) {
+                        console.warn(
+                            `[fillFormAction] submitSelector '${submitSelector}' not found inside form within 500ms, falling back to page level.`,
+                        );
+                        submitLocator = page.locator(submitSelector).first();
+                        await submitLocator.waitFor({
+                            state: 'attached',
+                            timeout: Math.max(1000, timeoutMs - 500),
+                        });
+                    }
+                    await submitLocator.click({ timeout: timeoutMs });
+                } else {
+                    await formLocator.evaluate((form) => {
+                        if (typeof form.requestSubmit === 'function') {
+                            form.requestSubmit();
+                        } else {
+                            form.submit();
+                        }
+                    });
+                }
+            };
+
+            if (waitForNavigation) {
+                await Promise.all([
+                    page
+                        .waitForNavigation({ timeout: timeoutMs, waitUntil: 'load' })
+                        .catch((err) => {
+                            console.warn(
+                                `[fillFormAction] waitForNavigation timed out: ${err.message}`,
+                            );
+                            throw err;
+                        }),
+                    submitAction(),
+                ]);
+            } else {
+                await submitAction();
+            }
+
+            submitData = {
+                submitted: true,
+                submitSelector: submitSelector || null,
+                waitForNavigation,
+            };
+        }
+
+        return {
+            message: req.t('actions.fill_form.success'),
+            data: {
+                filledFields: fillResults,
+                ...(submitData ? { submit: submitData } : {}),
+            },
+            traceDetails: {
+                formSelector,
+                fieldCount: fillResults.length,
+                submitAfterFill,
+                submitSelector,
+                waitForNavigation,
+                timeout: timeoutMs,
+            },
         };
     });
 
@@ -2953,104 +3254,6 @@ export const selectOptionAction = (req, res) =>
                 timeout,
                 resolvedTarget: resolvedTargetType,
                 implicitSelection: !selectionValue && resolvedTargetType === 'parent_select',
-            },
-        };
-    });
-
-export const submitFormAction = (req, res) =>
-    executePlaywrightAction(req, res, 'submit_form', async (page, opts) => {
-        const { selector, waitForNavigation = true, timeout = 30000 } = opts;
-
-        if (!selector) throw new Error(req.t('errors.selector_required'));
-        const timeoutMs = typeof timeout === 'number' ? timeout : 30000;
-
-        const locator = page.locator(selector);
-        // Wait for target element to exist
-        await locator.waitFor({ state: 'attached', timeout: timeoutMs });
-
-        // Retrieve information about the element tag and form structure
-        const formInfo = await locator
-            .evaluate((el) => {
-                const tagName = el.tagName.toLowerCase();
-                if (tagName === 'form') {
-                    return { isForm: true, hasParentForm: false, isSubmitButton: false };
-                }
-                const closestForm = el.closest('form');
-                const isSubmitButton =
-                    (tagName === 'button' && (el.type === 'submit' || !el.type)) ||
-                    (tagName === 'input' && el.type === 'submit');
-                return {
-                    isForm: false,
-                    hasParentForm: !!closestForm,
-                    isSubmitButton,
-                };
-            })
-            .catch(() => ({ isForm: false, hasParentForm: false, isSubmitButton: false }));
-
-        const triggerSubmit = async () => {
-            if (formInfo.isForm) {
-                await locator.evaluate((form) => {
-                    if (typeof form.requestSubmit === 'function') {
-                        form.requestSubmit();
-                    } else {
-                        form.submit();
-                    }
-                });
-            } else if (formInfo.hasParentForm && !formInfo.isSubmitButton) {
-                await locator.evaluate((el) => {
-                    const form = el.closest('form');
-                    if (form) {
-                        if (typeof form.requestSubmit === 'function') {
-                            form.requestSubmit();
-                        } else {
-                            form.submit();
-                        }
-                    }
-                });
-            } else {
-                await locator.click({ timeout: timeoutMs });
-            }
-        };
-
-        if (waitForNavigation) {
-            await Promise.all([
-                page.waitForNavigation({ timeout: timeoutMs, waitUntil: 'load' }).catch((err) => {
-                    console.warn(`[submitFormAction] waitForNavigation timed out: ${err.message}`);
-                    throw err;
-                }),
-                triggerSubmit(),
-            ]);
-        } else {
-            await triggerSubmit();
-        }
-
-        return {
-            message: req.t('actions.submit_form.success'),
-            data: {
-                traceDetails: {
-                    selector,
-                    waitForNavigation,
-                    timeout: timeoutMs,
-                    detectedType: formInfo.isForm
-                        ? 'form'
-                        : formInfo.isSubmitButton
-                          ? 'submit_button'
-                          : formInfo.hasParentForm
-                            ? 'form_input'
-                            : 'other',
-                },
-            },
-            traceDetails: {
-                selector,
-                waitForNavigation,
-                timeout: timeoutMs,
-                detectedType: formInfo.isForm
-                    ? 'form'
-                    : formInfo.isSubmitButton
-                      ? 'submit_button'
-                      : formInfo.hasParentForm
-                        ? 'form_input'
-                        : 'other',
             },
         };
     });

@@ -74,13 +74,15 @@ const UserConfigMenu = ({
         {/* Unified Settings Hub */}
         <Button
           variant="ghost"
-          className="w-full justify-start h-9 px-3 gap-3 !bg-transparent text-slate-300 hover:text-white hover:!bg-white/5 transition-all rounded-lg"
+          className="w-full justify-start h-9 px-3 gap-3 !bg-transparent text-slate-300 hover:text-white hover:!bg-white/5 ui-transition-colors rounded-lg"
           onClick={() => onOpenSettings("general")}
         >
           <div className="p-1 rounded bg-blue-500/10 text-blue-400">
             <Settings size={14} />
           </div>
-          <span className="text-xs font-medium">{t("app.settings", "Settings")}</span>
+          <span className="text-xs font-medium">
+            {t("app.settings", "Settings")}
+          </span>
         </Button>
 
         {/* Language Selector */}
@@ -100,7 +102,11 @@ const UserConfigMenu = ({
               </SelectTrigger>
               <SelectContent className="bg-slate-900 border-slate-800 text-slate-200">
                 {languages.map((lang) => (
-                  <SelectItem key={lang.value} value={lang.value} className="text-xs hover:bg-slate-800 focus:bg-slate-800">
+                  <SelectItem
+                    key={lang.value}
+                    value={lang.value}
+                    className="text-xs hover:bg-slate-800 focus:bg-slate-800"
+                  >
                     {lang.label}
                   </SelectItem>
                 ))}
@@ -116,14 +122,16 @@ const UserConfigMenu = ({
         {/* Logout - Subtle Red on Hover */}
         <Button
           variant="ghost"
-          className="w-full justify-start h-9 px-3 gap-3 !bg-transparent text-slate-400 hover:!bg-rose-500/10 hover:text-rose-400 transition-all rounded-lg group"
+          className="w-full justify-start h-9 px-3 gap-3 !bg-transparent text-slate-400 hover:!bg-rose-500/10 hover:text-rose-400 ui-transition-colors rounded-lg group"
           onClick={onLogout}
         >
           <LogOut
             size={16}
             className="group-hover:stroke-rose-400 transition-colors"
           />
-          <span className="text-xs font-medium">{t("app.logout", "Log Out")}</span>
+          <span className="text-xs font-medium">
+            {t("app.logout", "Log Out")}
+          </span>
         </Button>
       </div>
 

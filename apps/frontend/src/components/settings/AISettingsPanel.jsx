@@ -192,16 +192,32 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
           }}
         >
           <SelectTrigger className="bg-slate-950 border-slate-800">
-            <SelectValue placeholder={t("settings.ai.select_provider_placeholder", "Select Provider")} />
+            <SelectValue
+              placeholder={t(
+                "settings.ai.select_provider_placeholder",
+                "Select Provider",
+              )}
+            />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="ollama">{t("settings.ai.providers.ollama", "Ollama (Local)")}</SelectItem>
-            <SelectItem value="openai">{t("settings.ai.providers.openai", "OpenAI (Cloud)")}</SelectItem>
-            <SelectItem value="anthropic">
-              {t("settings.ai.providers.anthropic", "Claude / Anthropic (Cloud)")}
+            <SelectItem value="ollama">
+              {t("settings.ai.providers.ollama", "Ollama (Local)")}
             </SelectItem>
-            <SelectItem value="google">{t("settings.ai.providers.google", "Gemini / Google (Cloud)")}</SelectItem>
-            <SelectItem value="openrouter">{t("settings.ai.providers.openrouter", "OpenRouter (Cloud)")}</SelectItem>
+            <SelectItem value="openai">
+              {t("settings.ai.providers.openai", "OpenAI (Cloud)")}
+            </SelectItem>
+            <SelectItem value="anthropic">
+              {t(
+                "settings.ai.providers.anthropic",
+                "Claude / Anthropic (Cloud)",
+              )}
+            </SelectItem>
+            <SelectItem value="google">
+              {t("settings.ai.providers.google", "Gemini / Google (Cloud)")}
+            </SelectItem>
+            <SelectItem value="openrouter">
+              {t("settings.ai.providers.openrouter", "OpenRouter (Cloud)")}
+            </SelectItem>
           </SelectContent>
         </Select>
       </div>

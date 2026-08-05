@@ -76,6 +76,9 @@
         "submit_form": {
             "success": "Formulário enviado com sucesso."
         },
+        "fill_form": {
+            "success": "Formulário preenchido com sucesso."
+        },
         "upload_file": {
             "success": "Arquivos enviados com sucesso."
         },
@@ -285,6 +288,7 @@
         "browser_not_found": "Nenhum navegador encontrado com ID: {{id}}",
         "no_active_pages": "Nenhuma página ativa no contexto.  Chame open_url primeiro.",
         "selector_required": "O parâmetro 'seletor' é obrigatório.",
+        "fields_required": "Pelo menos uma definição de campo de formulário é exigida.",
         "invalid_action": "O parâmetro 'action' deve ser 'get' ou 'set'.",
         "invalid_content_type": "O parâmetro 'contentType' deve ser 'text', 'html' ou 'attribute'.",
         "invalid_selection_criteria": "Critérios de seleção inválidos: {{criteria}}.",

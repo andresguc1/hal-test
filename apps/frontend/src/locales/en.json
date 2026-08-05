@@ -154,6 +154,7 @@
       "assert_page_text": "Assert Page Contains Text",
       "click": "Click",
       "type_text": "Type Text",
+      "fill_form": "Fill Form",
       "select_option": "Select Options",
       "scroll": "Scroll",
       "hover": "Hover",

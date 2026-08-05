@@ -70,8 +70,8 @@ export const NODE_CATEGORIES = {
     nodes: [
       "click",
       "type_text",
+      "fill_form",
       "select_option",
-      "submit_form",
       "scroll",
       "drag_drop",
       "hover",
@@ -269,11 +269,7 @@ export const NODE_OUTPUTS = {
     value: "string",
     selector: "string",
   },
-  submit_form: {
-    success: "boolean",
-    selector: "string",
-    message: "string",
-  },
+
   scroll: {
     success: "boolean",
     direction: "string",

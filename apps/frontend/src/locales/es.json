@@ -154,6 +154,7 @@
       "assert_page_text": "Validar Texto de la Página",
       "click": "Click",
       "type_text": "Escribir Texto",
+      "fill_form": "Rellenar Formulario",
       "select_option": "Seleccionar opciones",
       "scroll": "Desplazar",
       "hover": "Pasar mouse sobre elemento",

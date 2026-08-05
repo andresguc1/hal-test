@@ -154,9 +154,13 @@ const PerformanceDashboard = () => {
       toast.dismiss(toastId);
       console.error("[PerformanceDashboard] Performance run failed:", error);
       toast.error(
-        t("performance_dashboard.toast_engine_error_msg", "Engine error: {{message}}", {
-          message: error.message,
-        }),
+        t(
+          "performance_dashboard.toast_engine_error_msg",
+          "Engine error: {{message}}",
+          {
+            message: error.message,
+          },
+        ),
       );
     }
   };

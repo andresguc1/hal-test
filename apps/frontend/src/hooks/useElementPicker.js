@@ -147,10 +147,8 @@ export const useElementPicker = ({
           }
         }
 
-        if (needsLaunch || !inspectorBrowserId) {
-          console.log(
-            "[useElementPicker] 🌐 Needs browser state for picker...",
-          );
+        if (!inspectorBrowserId) {
+          console.log("[useElementPicker] 🌐 Needs browser state for picker...");
 
           const getAncestors = (nodeId, graphNodes, graphEdges) => {
             const ancestors = [];
@@ -204,19 +202,19 @@ export const useElementPicker = ({
               console.warn("[useElementPicker] ⚠ Error building state:", err);
             }
           }
+        }
 
-          if (inspectorBrowserId) {
-            const data = await api.post("/inspector/start", {
-              browserId: inspectorBrowserId,
-              url: getStartingUrl(),
-            });
-            if (!data.success) throw new Error(data.message);
-          } else {
-            const res = await api.post("/inspector/launch-remote", {
-              url: getStartingUrl(),
-            });
-            if (!res.success) throw new Error(res.message);
-          }
+        if (inspectorBrowserId) {
+          const data = await api.post("/inspector/start", {
+            browserId: inspectorBrowserId,
+            url: getStartingUrl(),
+          });
+          if (!data.success) throw new Error(data.message);
+        } else {
+          const res = await api.post("/inspector/launch-remote", {
+            url: getStartingUrl(),
+          });
+          if (!res.success) throw new Error(res.message);
         }
       } catch (error) {
         console.error("[useElementPicker] Picker Start Error:", error);
@@ -286,6 +284,20 @@ export const useElementPicker = ({
         const trimmedSelector = finalSelector.trim();
         let updatedAny = false;
 
+        const setNestedValue = (obj, path, value) => {
+          const keys = path.split('.');
+          const lastKey = keys.pop();
+          const newObj = JSON.parse(JSON.stringify(obj || {}));
+          let current = newObj;
+          for (let i = 0; i < keys.length; i++) {
+            const key = keys[i];
+            if (!current[key]) current[key] = isNaN(Number(keys[i + 1])) ? {} : [];
+            current = current[key];
+          }
+          current[lastKey] = value;
+          return newObj;
+        };
+
         setNodes((currNodes) => {
           const pickingNodes = currNodes.filter(
             (n) => n.data?.state === NODE_STATES.PICKING,
@@ -301,10 +313,7 @@ export const useElementPicker = ({
                 data: {
                   ...node.data,
                   state: NODE_STATES.DEFAULT,
-                  configuration: {
-                    ...node.data.configuration,
-                    [pickingField]: trimmedSelector,
-                  },
+                  configuration: setNestedValue(node.data.configuration, pickingField, trimmedSelector),
                 },
               };
             }
@@ -315,10 +324,10 @@ export const useElementPicker = ({
         if (updatedAny) {
           toast.success(t("common.selector_captured"));
         } else if (selectedAction) {
-          await updateNodeConfiguration(selectedAction.nodeId, {
-            ...selectedAction.data.configuration,
-            [pickingField]: trimmedSelector,
-          });
+          await updateNodeConfiguration(
+            selectedAction.nodeId,
+            setNestedValue(selectedAction.data.configuration, pickingField, trimmedSelector)
+          );
           updateNodeState(selectedAction.nodeId, NODE_STATES.DEFAULT);
           toast.success(t("common.selector_captured"));
         }

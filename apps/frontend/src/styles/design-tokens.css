@@ -288,14 +288,66 @@
    * TRANSITIONS
    * Smooth, technical feel
    * ========================================== */
+
+  /* Back-compat aliases (do not remove) */
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
 
-  /* Easing curves */
-  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
-  --ease-out: cubic-bezier(0, 0, 0.2, 1);
-  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  /* ── Duration scale ──────────────────────── */
+  --duration-instant: 100ms; /* micro-feedback: pressed state, checkbox       */
+  --duration-micro: 150ms; /* fast elements: tooltips, badges               */
+  --duration-fast: 200ms; /* common interactions: hover, focus             */
+  --duration-normal: 300ms; /* panel/dropdown transitions                    */
+  --duration-slow: 400ms; /* modals, drawers, dialogs                      */
+  --duration-entrance: 500ms; /* page/view entrance animations                 */
+
+  /* ── Semantic easing curves ─────────────── */
+  --ease-standard: cubic-bezier(
+    0.4,
+    0,
+    0.2,
+    1
+  ); /* Material standard          */
+  --ease-decel: cubic-bezier(0, 0, 0.2, 1); /* elements entering viewport */
+  --ease-accel: cubic-bezier(0.4, 0, 1, 1); /* elements leaving viewport  */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); /* playful interactions  */
+
+  /* Back-compat easing aliases */
+  --ease-in-out: var(--ease-standard);
+  --ease-out: var(--ease-decel);
+  --ease-in: var(--ease-accel);
+
+  /* ── Composite transitions (GPU-safe only) ─
+   * Only animate: color, background-color, border-color,
+   *               opacity, transform, box-shadow, filter.
+   * NEVER animate: width, height, padding, margin, top, left.
+   * ─────────────────────────────────────────── */
+  --transition-interactive:
+    color var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard),
+    opacity var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard);
+
+  --transition-colors:
+    color var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard);
+
+  --transition-transform:
+    transform var(--duration-fast) var(--ease-standard),
+    opacity var(--duration-fast) var(--ease-standard);
+
+  --transition-entrance:
+    opacity var(--duration-normal) var(--ease-decel),
+    transform var(--duration-normal) var(--ease-decel);
+
+  --transition-theme:
+    color var(--duration-slow) var(--ease-standard),
+    background-color var(--duration-slow) var(--ease-standard),
+    border-color var(--duration-slow) var(--ease-standard);
 
   /* ==========================================
    * Z-INDEX SCALE

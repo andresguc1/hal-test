@@ -80,21 +80,6 @@ export const getLayoutedElements = (nodes, edges, direction = "LR") => {
     });
 
     sortedEdges.forEach((edge) => {
-      let isPrimary = false;
-      const sourceNode = nodes.find((n) => n.id === edge.source);
-      if (sourceNode) {
-        const branches =
-          sourceNode.data?.configuration?.branches ||
-          sourceNode.data?.configuration?.cases ||
-          [];
-        // Is primary if it's the first branch, or if it matches common defaults
-        if (branches.length > 0) {
-          isPrimary = branches[0].id === edge.sourceHandle;
-        } else {
-          isPrimary = edge.sourceHandle === "branch-0" || edge.sourceHandle === "true";
-        }
-      }
-
       dagreGraph.setEdge(edge.source, edge.target, {
         weight: 1, // Remove the primary bias so branches fan out symmetrically without crossing
       });
@@ -104,7 +89,9 @@ export const getLayoutedElements = (nodes, edges, direction = "LR") => {
       // React Flow will still draw the edge visually, but it won't break the layout.
       if (!dagre.graphlib.alg.isAcyclic(dagreGraph)) {
         dagreGraph.removeEdge(edge.source, edge.target);
-        console.warn(`[Magic Organizer] Cycle detected and ignored for layout: ${edge.source} -> ${edge.target}`);
+        console.warn(
+          `[Magic Organizer] Cycle detected and ignored for layout: ${edge.source} -> ${edge.target}`,
+        );
       }
     });
   }

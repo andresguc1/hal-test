@@ -14,7 +14,7 @@
   color: #334155;
   width: 36px;
   height: 36px;
-  transition: all 0.2s ease;
+  transition: var(--transition-colors);
 }
 
 .dark .react-flow__controls-button {
@@ -69,7 +69,7 @@
 .react-flow__edge-path {
   stroke: var(--connection-line);
   stroke-width: 2.5;
-  transition: stroke 0.2s ease;
+  transition: stroke var(--duration-fast) var(--ease-standard);
 }
 
 .react-flow__edge-path:hover {

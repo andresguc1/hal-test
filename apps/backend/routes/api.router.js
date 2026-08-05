@@ -152,17 +152,18 @@ export const actionRoutes = [
         category: 'interaction',
     },
     {
+        path: 'fill_form',
+        schema: 'fillFormBodySchema',
+        action: 'fillFormAction',
+        category: 'interaction',
+    },
+    {
         path: 'select_option',
         schema: 'selectOptionBodySchema',
         action: 'selectOptionAction',
         category: 'interaction',
     },
-    {
-        path: 'submit_form',
-        schema: 'submitFormBodySchema',
-        action: 'submitFormAction',
-        category: 'interaction',
-    },
+
     {
         path: 'scroll',
         schema: 'scrollBodySchema',

@@ -191,11 +191,21 @@ export function KeyVaultPanel() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-slate-900 border-slate-800 text-slate-200">
-                  <SelectItem value="ollama">{t("settings.ai.providers.ollama", "Ollama (Local)")}</SelectItem>
-                  <SelectItem value="openai">{t("settings.ai.providers.openai", "OpenAI")}</SelectItem>
-                  <SelectItem value="anthropic">{t("settings.ai.providers.anthropic", "Claude / Anthropic")}</SelectItem>
-                  <SelectItem value="google">{t("settings.ai.providers.google", "Gemini / Google")}</SelectItem>
-                  <SelectItem value="openrouter">{t("settings.ai.providers.openrouter", "OpenRouter")}</SelectItem>
+                  <SelectItem value="ollama">
+                    {t("settings.ai.providers.ollama", "Ollama (Local)")}
+                  </SelectItem>
+                  <SelectItem value="openai">
+                    {t("settings.ai.providers.openai", "OpenAI")}
+                  </SelectItem>
+                  <SelectItem value="anthropic">
+                    {t("settings.ai.providers.anthropic", "Claude / Anthropic")}
+                  </SelectItem>
+                  <SelectItem value="google">
+                    {t("settings.ai.providers.google", "Gemini / Google")}
+                  </SelectItem>
+                  <SelectItem value="openrouter">
+                    {t("settings.ai.providers.openrouter", "OpenRouter")}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>

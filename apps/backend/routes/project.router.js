@@ -716,13 +716,27 @@ router.get('/projects/:projectId/flows/:flowId/export', async (req, res) => {
     }
 });
 
+// Helper for deep cloning backend payloads to prevent reference mutations
+const deepClonePayload = (obj) => {
+    if (obj === null || typeof obj !== 'object') return obj;
+    try {
+        return JSON.parse(JSON.stringify(obj));
+    } catch (err) {
+        console.warn('[ProjectRouter] Deep clone failed for payload:', err);
+        return obj;
+    }
+};
+
 // Update flow (syncing nodes/edges)
 router.put('/projects/:projectId/flows/:flowId', async (req, res) => {
     const transaction = await sequelize.transaction();
     let transactionCommitted = false;
     try {
         const { projectId, flowId } = req.params;
-        const { name, viewport, nodes, edges } = req.body;
+
+        // Deep clone payload to sanitize input and prevent in-memory reference sharing across models
+        const sanitizedBody = deepClonePayload(req.body);
+        const { name, viewport, nodes, edges } = sanitizedBody;
 
         console.log(`[ProjectRouter] PUT Flow: ID=${flowId}, ProjectID=${projectId}`);
 
@@ -758,34 +772,60 @@ router.put('/projects/:projectId/flows/:flowId', async (req, res) => {
 
         await flow.update({ name, viewport }, { transaction });
 
-        if (nodes) {
+        if (nodes !== undefined) {
+            if (!Array.isArray(nodes)) {
+                await transaction.rollback();
+                return res.status(400).json({ error: 'Nodes must be an array' });
+            }
+
+            // Strictly filter and sanitize incoming nodes to ensure they belong to this flowId
+            const sanitizedNodes = nodes
+                .filter((n) => n && (n.id || n.nodeId))
+                .map((n) => {
+                    const nodeId = n.id || n.nodeId;
+                    const nodeData = deepClonePayload(n.data || {});
+
+                    // Validate flow ownership
+                    if (n.flowId && n.flowId !== flow.id) {
+                        console.warn(
+                            `[ProjectRouter] Node ${nodeId} specifies flowId ${n.flowId} different from route flowId ${flow.id}. Re-binding to route flowId.`,
+                        );
+                    }
+
+                    return {
+                        nodeId,
+                        type: n.type || 'default',
+                        data: nodeData,
+                        position: n.position || { x: 0, y: 0 },
+                        flowId: flow.id, // Strictly bind to route flow ID
+                        parentId: n.parentId || null,
+                    };
+                });
+
             await Node.destroy({ where: { flowId: flow.id }, transaction });
-            await Node.bulkCreate(
-                nodes.map((n) => ({
-                    nodeId: n.id,
-                    type: n.type,
-                    data: n.data,
-                    position: n.position,
-                    flowId: flow.id,
-                    parentId: n.parentId || null,
-                })),
-                { transaction },
-            );
+            await Node.bulkCreate(sanitizedNodes, { transaction });
         }
 
-        if (edges) {
-            await Edge.destroy({ where: { flowId: flow.id }, transaction });
-            await Edge.bulkCreate(
-                edges.map((e) => ({
-                    edgeId: e.id,
+        if (edges !== undefined) {
+            if (!Array.isArray(edges)) {
+                await transaction.rollback();
+                return res.status(400).json({ error: 'Edges must be an array' });
+            }
+
+            const sanitizedEdges = edges
+                .filter((e) => e && (e.id || e.edgeId) && e.source && e.target)
+                .map((e) => ({
+                    edgeId: e.id || e.edgeId,
                     source: e.source,
                     target: e.target,
-                    sourceHandle: e.sourceHandle || null,
-                    targetHandle: e.targetHandle || null,
-                    flowId: flow.id,
-                })),
-                { transaction },
-            );
+                    sourceHandle: e.sourceHandle === 'default' ? null : e.sourceHandle || null,
+                    targetHandle: e.targetHandle === 'default' ? null : e.targetHandle || null,
+                    type: e.type || 'custom',
+                    flowId: flow.id, // Strictly bind to route flow ID
+                }));
+
+            await Edge.destroy({ where: { flowId: flow.id }, transaction });
+            await Edge.bulkCreate(sanitizedEdges, { transaction });
         }
 
         await transaction.commit();

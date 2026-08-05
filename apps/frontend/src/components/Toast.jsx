@@ -127,8 +127,9 @@ export const HalToaster = ({ offsetRight = 0 }) => {
       theme="system"
       position="top-center" // Force top-center for better visibility
       style={{
-        marginRight: offsetRight,
-        transition: "margin-right 0.3s ease-in-out",
+        /* GPU-safe: use translateX instead of margin-right to avoid layout reflow */
+        transform: `translateX(-${offsetRight}px)`,
+        transition: "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
       }}
       toastOptions={{
         style: { background: "transparent", border: "none", boxShadow: "none" },

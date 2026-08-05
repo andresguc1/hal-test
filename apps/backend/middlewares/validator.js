@@ -114,16 +114,23 @@ const validate = (schemas) => (req, res, next) => {
             }
         }
     }
+    const isDraftMode = req.headers['x-hal-draft-mode'] === 'true';
 
     if (hasError) {
-        const validationError = new Error(
-            req.t ? req.t('common.error_validation') : 'Validation Error',
-        );
-        validationError.statusCode = 400;
-        validationError.details = errorDetails;
-        return next(validationError);
+        if (isDraftMode) {
+            console.warn(
+                `[Validator Middleware] ⚠️ Validation failed, but bypassing due to Draft Mode. Errors:`,
+                JSON.stringify(errorDetails),
+            );
+        } else {
+            const validationError = new Error(
+                req.t ? req.t('common.error_validation') : 'Validation Error',
+            );
+            validationError.statusCode = 400;
+            validationError.details = errorDetails;
+            return next(validationError);
+        }
     }
-
     // 6. If validation is successful, replace request data with cleaned data.
     // 🛡️ PRESERVE metadata fields commonly used outside schema scope
     const originalNodeId = req.body?.nodeId;

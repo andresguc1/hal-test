@@ -1,24 +1,13 @@
 /* NodeCreationPanel.css */
-
-/* Variables y paleta de colores */
-:root {
-  --header-height: 56px;
-  --deep-space: #0b0c10;
-  --tech-gray: #2c2f33;
-  --cold-white: #e5e5e5;
-  --star-blue: #1a73e8;
-  --metallic-silver: #b0b0b0;
-  --hal-orange: #ff8c32;
-  --darker-gray: #1d2024;
-}
+/* Variables migrated to design system tokens — see design-tokens.css */
 
 /* Body base */
 body {
   margin: 0;
   padding: 0;
-  background-color: var(--darker-gray);
-  font-family: "Inter", sans-serif;
-  color: var(--cold-white);
+  background-color: var(--hal-neutral-900);
+  font-family: var(--font-sans);
+  color: var(--hal-neutral-200);
 }
 
 /* Header */
@@ -27,45 +16,29 @@ body {
   top: 0;
   left: 0;
   width: 100%;
-  height: var(--header-height);
-  background-color: var(--deep-space);
+  height: var(--header-height, 56px);
+  background-color: var(--hal-neutral-950);
   z-index: 40;
   display: flex;
   align-items: center;
   padding-left: 20px;
-  color: var(--hal-orange);
+  color: var(--color-warning);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
 }
 
 /* Main content */
 .app-main {
   min-height: 100vh;
-  background-color: var(--darker-gray);
-  padding-top: var(--header-height);
-  transition: padding-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background-color: var(--hal-neutral-900);
+  padding-top: var(--header-height, 56px);
+  /* GPU-safe: use translateX for panel-open shift instead of padding-left */
+  transition: transform var(--duration-normal) var(--ease-standard);
   padding: 20px;
 }
 
 /* Panel lateral - DISABLED: Now using Tailwind classes in JSX */
 /*
-.panel-left {
-  width: 280px;
-  background-color: var(--tech-gray);
-  color: var(--cold-white);
-  padding: 20px 0;
-  border-right: 1px solid var(--deep-space);
-  display: flex;
-  flex-direction: column;
-  position: fixed;
-  top: var(--header-height);
-  left: 0;
-  height: calc(100vh - var(--header-height));
-  z-index: 20;
-  box-sizing: border-box;
-  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.7);
-  border-radius: 0 8px 8px 0;
-  overflow: hidden;
-}
+.panel-left { ... }
 */
 
 /* Removed .hidden class - AnimatePresence handles visibility */
@@ -73,22 +46,22 @@ body {
 .panel-left h2 {
   margin: 0 15px 20px 15px;
   font-size: 1.1rem;
-  color: var(--star-blue);
+  color: var(--tint-blue);
   font-weight: 700;
   letter-spacing: 1px;
-  border-bottom: 2px solid var(--deep-space);
+  border-bottom: 2px solid var(--hal-neutral-950);
   padding-bottom: 10px;
 }
 
 /* Botón toggle */
 .btn-toggle-burger {
   position: fixed;
-  top: calc(var(--header-height) + 20px);
+  top: calc(var(--header-height, 56px) + 20px);
   left: 20px;
   width: 40px;
   height: 40px;
-  background-color: var(--star-blue);
-  color: var(--cold-white);
+  background-color: var(--tint-blue);
+  color: var(--hal-neutral-200);
   border: none;
   border-radius: 8px;
   display: flex;
@@ -97,9 +70,8 @@ body {
   cursor: pointer;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.6);
   transition:
-    left 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-    background-color 0.2s ease,
-    transform 0.2s ease;
+    background-color var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
   z-index: 30;
   font-size: 1rem;
 }
@@ -115,8 +87,8 @@ body {
   height: 60px;
   border-radius: 0 8px 8px 0;
   font-size: 1rem;
-  background-color: var(--hal-orange);
-  color: var(--deep-space);
+  background-color: var(--color-warning);
+  color: var(--hal-neutral-950);
   box-shadow: 5px 2px 8px rgba(0, 0, 0, 0.6);
 }
 
@@ -137,45 +109,40 @@ body {
   display: flex;
   flex-direction: column;
   width: 80px;
-  /* Reduced specific width */
   flex-shrink: 0;
   padding: 5px 2px;
   overflow-y: auto;
-  border-right: 1px solid var(--darker-gray);
-  max-height: calc(100vh - var(--header-height) - 60px);
-  /* Slightly more vertical space */
+  border-right: 1px solid var(--hal-neutral-900);
+  max-height: calc(100vh - var(--header-height, 56px) - 60px);
 }
 
 /* Visible scrollbar for tabs */
 .tab-bar-vertical::-webkit-scrollbar {
   width: 4px;
-  /* Thinner scrollbar */
 }
 
 .tab-bar-vertical::-webkit-scrollbar-track {
-  background: var(--darker-gray);
+  background: var(--hal-neutral-900);
 }
 
 .tab-bar-vertical::-webkit-scrollbar-thumb {
-  background: var(--metallic-silver);
+  background: var(--hal-neutral-400);
   border-radius: 3px;
 }
 
 .tab-bar-vertical::-webkit-scrollbar-thumb:hover {
-  background: var(--star-blue);
+  background: var(--tint-blue);
 }
 
 .tab-button-vertical {
   background: none;
   border: none;
   padding: 6px 0;
-  /* Reduced padding */
   margin-bottom: 2px;
-  /* Reduced margin */
   cursor: pointer;
   font-size: 0.8rem;
-  color: var(--metallic-silver);
-  transition: all 0.2s;
+  color: var(--hal-neutral-400);
+  transition: var(--transition-colors);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -183,14 +150,11 @@ body {
   letter-spacing: 0.5px;
   border-radius: 6px;
   width: 100%;
-  /* Full width */
 }
 
 .tab-button-vertical .tab-label-vertical {
   margin-top: 3px;
-  /* Reduced top margin */
   font-size: 0.6rem;
-  /* Slightly smaller font */
   font-weight: 500;
   text-align: center;
   line-height: 1.1;
@@ -198,20 +162,17 @@ body {
 }
 
 .tab-button-vertical.active {
-  color: var(--hal-orange);
+  color: var(--color-warning);
   font-weight: 700;
-  background-color: var(--darker-gray);
-  box-shadow: inset 3px 0 0 var(--hal-orange);
+  background-color: var(--hal-neutral-900);
+  box-shadow: inset 3px 0 0 var(--color-warning);
   border-radius: 4px;
-  /* Slightly squarer */
   padding-left: 0;
-  /* Reset padding change */
   transform: none;
-  /* Remove shift on active to save space/jitter */
 }
 
 .tab-button-vertical:hover:not(.active) {
-  color: var(--cold-white);
+  color: var(--hal-neutral-200);
   background-color: rgba(255, 255, 255, 0.05);
 }
 
@@ -221,14 +182,11 @@ body {
   flex-direction: column;
   gap: 2px;
   padding: 10px 0;
-  border-bottom: 1px solid var(--deep-space);
+  border-bottom: 1px solid var(--hal-neutral-950);
   overflow: hidden;
   max-height: 450px;
-  /* Limit height to enable scrolling */
   overflow-y: auto;
-  /* Enable vertical scroll */
   padding-right: 5px;
-  /* Space for scrollbar */
 }
 
 /* Hide scrollbar but keep functionality */
@@ -241,12 +199,12 @@ body {
 }
 
 .vertical-tabs::-webkit-scrollbar-thumb {
-  background: var(--metallic-silver);
+  background: var(--hal-neutral-400);
   border-radius: 3px;
 }
 
 .vertical-tabs::-webkit-scrollbar-thumb:hover {
-  background: var(--star-blue);
+  background: var(--tint-blue);
 }
 
 /* Contenido de nodos */
@@ -256,10 +214,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  /* Slightly tighter gap */
   overflow-y: auto;
-  /* Enable scroll for nodes list */
-  max-height: calc(100vh - var(--header-height) - 60px);
+  max-height: calc(100vh - var(--header-height, 56px) - 60px);
 }
 
 /* Scrollbar for node content */
@@ -271,9 +227,9 @@ body {
 .btn-node {
   width: 100%;
   height: 40px;
-  background-color: #3c4044;
-  color: var(--cold-white);
-  border: 1px solid #4a4e54;
+  background-color: var(--hal-neutral-700);
+  color: var(--hal-neutral-200);
+  border: 1px solid var(--hal-neutral-600);
   border-radius: 6px;
   cursor: grab;
   font-weight: 500;
@@ -283,17 +239,17 @@ body {
   padding-left: 12px;
   margin: 0;
   transition:
-    background-color 0.2s ease,
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
+    background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard);
   font-size: 0.9rem;
   text-align: left;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .btn-node:hover {
-  background-color: var(--star-blue);
+  background-color: var(--tint-blue);
   border-color: #1a73e8;
-  color: var(--cold-white);
+  color: var(--hal-neutral-200);
   box-shadow: 0 0 8px rgba(26, 115, 232, 0.6);
 }

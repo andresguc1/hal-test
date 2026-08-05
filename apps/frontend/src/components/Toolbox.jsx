@@ -257,10 +257,11 @@ const ToolboxCategory = ({
       <AnimatePresence>
         {isOpen && (
           <Motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-visible px-1 pt-1" // visible overflow for hover effects
+            initial={{ scaleY: 0, opacity: 0 }}
+            animate={{ scaleY: 1, opacity: 1 }}
+            exit={{ scaleY: 0, opacity: 0 }}
+            style={{ transformOrigin: "top" }}
+            className="overflow-hidden px-1 pt-1"
           >
             {nodes.map((nodeId) => (
               <ToolboxItem

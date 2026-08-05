@@ -87,7 +87,7 @@ export const NODE_TYPE_ICONS = {
   click: MousePointerClick,
   type_text: Keyboard,
   select_option: ListIcon,
-  submit_form: SendIcon,
+
   scroll: MoveVertical,
   drag_drop: MousePointer2,
   upload_file: Upload,
