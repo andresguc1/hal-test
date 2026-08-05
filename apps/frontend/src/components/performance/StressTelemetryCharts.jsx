@@ -27,7 +27,11 @@ export const StressTelemetryCharts = ({ timeline = [], _metrics }) => {
       <div className="bg-slate-900/80 border border-slate-800/80 rounded-2xl p-4 space-y-3">
         <div className="flex items-center justify-between">
           <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-            <TrendingUp size={14} className="text-amber-400" /> {t("performance.stress.latency_vs_vus", "P95 Latency vs Concurrent Users")}
+            <TrendingUp size={14} className="text-amber-400" />{" "}
+            {t(
+              "performance.stress.latency_vs_vus",
+              "P95 Latency vs Concurrent Users",
+            )}
           </h4>
           <span className="text-[10px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded-full border border-amber-500/20 font-mono">
             {t("performance.stress.axis_x_vus", "X Axis = VUs")}
@@ -49,9 +53,10 @@ export const StressTelemetryCharts = ({ timeline = [], _metrics }) => {
                   className="flex-1 flex flex-col items-center group relative h-full justify-end"
                 >
                   <motion.div
-                    initial={{ height: 0 }}
-                    animate={{ height: `${heightPct}%` }}
-                    className={`w-full rounded-t transition-all ${
+                    initial={{ scaleY: 0 }}
+                    animate={{ scaleY: heightPct / 100 }}
+                    style={{ transformOrigin: "bottom", height: "100%" }}
+                    className={`w-full rounded-t ${
                       isHigh
                         ? "bg-red-500/80"
                         : pt.latency > 800
@@ -71,7 +76,12 @@ export const StressTelemetryCharts = ({ timeline = [], _metrics }) => {
 
           <div className="flex justify-between items-center text-[10px] text-slate-500 border-t border-slate-800/80 pt-1.5 font-mono">
             <span>1 VU</span>
-            <span>{t("performance.stress.latency_evolution", "Latency Evolution by Load")}</span>
+            <span>
+              {t(
+                "performance.stress.latency_evolution",
+                "Latency Evolution by Load",
+              )}
+            </span>
             <span>{maxVUs} VUs</span>
           </div>
         </div>
@@ -81,7 +91,11 @@ export const StressTelemetryCharts = ({ timeline = [], _metrics }) => {
       <div className="bg-slate-900/80 border border-slate-800/80 rounded-2xl p-4 space-y-3">
         <div className="flex items-center justify-between">
           <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-            <Zap size={14} className="text-sky-400" /> {t("performance.stress.throughput_vs_vus", "Throughput (req/s) vs Concurrent Users")}
+            <Zap size={14} className="text-sky-400" />{" "}
+            {t(
+              "performance.stress.throughput_vs_vus",
+              "Throughput (req/s) vs Concurrent Users",
+            )}
           </h4>
           <span className="text-[10px] bg-sky-500/10 text-sky-400 px-2 py-0.5 rounded-full border border-sky-500/20 font-mono">
             {t("performance.stress.saturation_plateau", "Saturation Plateau")}
@@ -101,9 +115,10 @@ export const StressTelemetryCharts = ({ timeline = [], _metrics }) => {
                   className="flex-1 flex flex-col items-center group relative h-full justify-end"
                 >
                   <motion.div
-                    initial={{ height: 0 }}
-                    animate={{ height: `${heightPct}%` }}
-                    className="w-full bg-sky-500/80 rounded-t transition-all hover:bg-sky-400"
+                    initial={{ scaleY: 0 }}
+                    animate={{ scaleY: heightPct / 100 }}
+                    style={{ transformOrigin: "bottom", height: "100%" }}
+                    className="w-full bg-sky-500/80 rounded-t hover:bg-sky-400"
                   />
                   <div className="absolute bottom-full mb-1 hidden group-hover:flex flex-col bg-slate-900 text-slate-200 text-[10px] p-1.5 rounded border border-slate-700 shadow-xl z-20 whitespace-nowrap">
                     <span className="font-bold">{pt.vus} VUs</span>
@@ -116,7 +131,12 @@ export const StressTelemetryCharts = ({ timeline = [], _metrics }) => {
 
           <div className="flex justify-between items-center text-[10px] text-slate-500 border-t border-slate-800/80 pt-1.5 font-mono">
             <span>1 VU</span>
-            <span>{t("performance.stress.capacity_ceiling", "Processing Capacity Ceiling")}</span>
+            <span>
+              {t(
+                "performance.stress.capacity_ceiling",
+                "Processing Capacity Ceiling",
+              )}
+            </span>
             <span>{maxVUs} VUs</span>
           </div>
         </div>

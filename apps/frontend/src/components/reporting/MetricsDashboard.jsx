@@ -83,7 +83,10 @@ export default function MetricsDashboard() {
         />
         <KPICard
           icon={<Zap size={20} />}
-          label={t("metrics.kpi.memory_utilization", "Memory Palace Utilization")}
+          label={t(
+            "metrics.kpi.memory_utilization",
+            "Memory Palace Utilization",
+          )}
           value={data?.memory?.hits || 0}
           subValue={t("metrics.kpi.fixes_reused", "Historical Fixes Reused")}
           trend={t("metrics.kpi.memories_trend", "+24 New memories")}
@@ -93,7 +96,10 @@ export default function MetricsDashboard() {
           icon={<ShieldCheck size={20} />}
           label={t("metrics.kpi.total_runs", "Total Executions")}
           value={data?.totalRuns || 0}
-          subValue={t("metrics.kpi.all_environments", "Across all environments")}
+          subValue={t(
+            "metrics.kpi.all_environments",
+            "Across all environments",
+          )}
           trend={t("metrics.kpi.stability_trend", "Stability: 98.2%")}
           color="emerald"
         />
@@ -126,7 +132,10 @@ export default function MetricsDashboard() {
               ))
             ) : (
               <div className="p-10 text-center text-slate-600 text-xs italic">
-                {t("metrics.heatmap.no_data", "Insufficient failure data to generate heatmap.")}
+                {t(
+                  "metrics.heatmap.no_data",
+                  "Insufficient failure data to generate heatmap.",
+                )}
               </div>
             )}
           </div>
@@ -162,7 +171,9 @@ export default function MetricsDashboard() {
           </div>
           <div className="mt-4 flex items-center justify-between text-[10px] text-slate-500 font-bold uppercase tracking-widest px-1">
             <span>{t("metrics.integrity.last_days", "Last 12 Days")}</span>
-            <span className="text-indigo-400">{t("metrics.integrity.stable_growth", "Stable Growth")}</span>
+            <span className="text-indigo-400">
+              {t("metrics.integrity.stable_growth", "Stable Growth")}
+            </span>
           </div>
         </section>
       </div>

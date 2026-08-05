@@ -268,15 +268,17 @@ export default function RunsPage({ onViewReport }) {
                 {/* Expanded details */}
                 {isExpanded && (
                   <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
+                    initial={{ scaleY: 0, opacity: 0 }}
+                    animate={{ scaleY: 1, opacity: 1 }}
+                    exit={{ scaleY: 0, opacity: 0 }}
                     transition={{ duration: 0.2 }}
                     style={{
+                      transformOrigin: "top",
                       borderTop: "1px solid var(--dash-border-subtle)",
                       background: "var(--dash-surface-hover)",
                       padding: "16px",
                     }}
+                    className="overflow-hidden"
                   >
                     <RunDetail run={run} />
                   </motion.div>

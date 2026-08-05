@@ -506,7 +506,10 @@ function ReportDashboardContent({ runId, onClose }) {
                       <div className="w-full h-full flex flex-col items-center justify-center text-slate-600 gap-2">
                         <AlertCircle size={24} />
                         <span className="text-[10px]">
-                          {t("report.no_visual_capture", "No visual capture available")}
+                          {t(
+                            "report.no_visual_capture",
+                            "No visual capture available",
+                          )}
                         </span>
                       </div>
                     )}
@@ -529,15 +532,24 @@ function ReportDashboardContent({ runId, onClose }) {
                     <p className="text-[11px] text-slate-400 leading-relaxed italic">
                       {currentStep.ai_diagnosis ||
                         (currentStep.status === "success"
-                          ? t("report.step_success_desc", "Step completed successfully according to the plan.")
-                          : t("report.analyzing_failure_desc", "Analyzing failure patterns..."))}
+                          ? t(
+                              "report.step_success_desc",
+                              "Step completed successfully according to the plan.",
+                            )
+                          : t(
+                              "report.analyzing_failure_desc",
+                              "Analyzing failure patterns...",
+                            ))}
                     </p>
                   </div>
                 </div>
 
                 {/* DATA INSPECTOR */}
                 <div className="space-y-4">
-                  <DataInspector label={t("report.input", "Input")} data={currentStep.input_data} />
+                  <DataInspector
+                    label={t("report.input", "Input")}
+                    data={currentStep.input_data}
+                  />
                   <DataInspector
                     label={t("report.output", "Output")}
                     data={currentStep.output_data}

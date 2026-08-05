@@ -20,7 +20,8 @@ export { default as executeJsBodySchema } from './execute_js/body.js';
 export { default as clickBodySchema } from './click/body.js';
 export { default as typeTextBodySchema } from './type_text/body.js';
 export { default as selectOptionBodySchema } from './select_option/body.js';
-export { default as submitFormBodySchema } from './submit_form/body.js';
+export { default as fillFormBodySchema } from './fill_form/body.js';
+
 export { default as scrollBodySchema } from './scroll/body.js';
 export { default as dragDropBodySchema } from './drag_drop/body.js';
 export { default as uploadFileBodySchema } from './upload_file/body.js';

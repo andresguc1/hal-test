@@ -1,5 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
+import { useMotionVariants } from "../../../hooks/useReducedMotion";
 import {
   FolderKanban,
   GitBranch,
@@ -22,13 +23,18 @@ const container = {
   show: { transition: { staggerChildren: 0.06 } },
 };
 
-const fadeUp = {
+const FADE_UP_FULL = {
   hidden: { opacity: 0, y: 16 },
   show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" } },
+};
+const FADE_UP_REDUCED = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { duration: 0.15 } },
 };
 
 export default function OverviewPage({ onNavigate, onViewRun }) {
   const { isLoading, metrics, last7Days, recentRuns } = useOverviewMetrics();
+  const fadeUp = useMotionVariants(FADE_UP_FULL, FADE_UP_REDUCED);
 
   return (
     <motion.div variants={container} initial="hidden" animate="show">
@@ -186,20 +192,28 @@ export default function OverviewPage({ onNavigate, onViewRun }) {
                     {failedH > 0 && (
                       <div
                         style={{
-                          height: failedH,
+                          height: "100%",
+                          maxHeight: failedH,
                           background: "hsl(0 84% 60% / 0.7)",
                           borderRadius: "3px 3px 0 0",
-                          transition: "height 0.5s ease",
+                          transform: `scaleY(${failedH / 64})`,
+                          transformOrigin: "bottom",
+                          transition:
+                            "transform 0.5s var(--ease-standard, cubic-bezier(0.4,0,0.2,1))",
                         }}
                       />
                     )}
                     {passedH > 0 && (
                       <div
                         style={{
-                          height: passedH,
+                          height: "100%",
+                          maxHeight: passedH,
                           background: "hsl(142 71% 45% / 0.8)",
                           borderRadius: failedH > 0 ? 0 : "3px 3px 0 0",
-                          transition: "height 0.5s ease",
+                          transform: `scaleY(${passedH / 64})`,
+                          transformOrigin: "bottom",
+                          transition:
+                            "transform 0.5s var(--ease-standard, cubic-bezier(0.4,0,0.2,1))",
                         }}
                       />
                     )}
