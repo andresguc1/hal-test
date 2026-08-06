@@ -231,7 +231,10 @@
       "dom_sanitizer": "Sanitizador DOM",
       "audit_policy": "Auditoría de políticas de seguridad",
       "sensitive_data_monitor": "Monitor de datos confidenciales",
-      "fuzz_input": "Fuzzing de entradas (XSS/SQLi)"
+      "fuzz_input": "Fuzzing de entradas (XSS/SQLi)",
+      "db_connect": "Conectar a BD",
+      "db_query": "Ejecutar Consulta",
+      "db_assert_record": "Validar Registro"
     },
     "categories": {
       "security_audit": "Seguridad",
@@ -248,7 +251,8 @@
       "execution_interface": "Ejecución",
       "flow_control": "Motor Lógico",
       "composition": "Composición de Módulos",
-      "collaboration": "Anotación de UI"
+      "collaboration": "Anotación de UI",
+      "database_ops": "Bases de Datos"
     },
     "fields": {
       "browserType": "Tipo de navegador",

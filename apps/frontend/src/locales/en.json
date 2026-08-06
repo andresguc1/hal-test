@@ -231,7 +231,10 @@
       "dom_sanitizer": "DOM Sanitizer",
       "audit_policy": "Security Policy Audit",
       "sensitive_data_monitor": "Sensitive Data Monitor",
-      "fuzz_input": "Fuzzing de Inputs (XSS/SQLi)"
+      "fuzz_input": "Fuzzing de Inputs (XSS/SQLi)",
+      "db_connect": "Connect to DB",
+      "db_query": "Execute Query",
+      "db_assert_record": "Assert DB Record"
     },
     "categories": {
       "security_audit": "Security",
@@ -248,7 +251,8 @@
       "flow_control": "Logic Engine",
       "composition": "Module Composition",
       "collaboration": "UI Annotation",
-      "session_management": "Session"
+      "session_management": "Session",
+      "database_ops": "Databases"
     },
     "fields": {
       "browserType": "Browser Type",
