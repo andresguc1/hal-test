@@ -258,7 +258,10 @@ export const NODE_INPUTS = {
       label: "Wait for navigation after submit",
       type: "checkbox",
       defaultValue: true,
-      isVisible: (config) => config.submitAfterFill || (typeof config.submitSelector === 'string' && config.submitSelector.trim().length > 0),
+      isVisible: (config) =>
+        config.submitAfterFill ||
+        (typeof config.submitSelector === "string" &&
+          config.submitSelector.trim().length > 0),
     },
     {
       key: "timeout",

@@ -390,7 +390,9 @@ function Dashboard({
 
       // 0. DRY RUN VALIDATION (Clean UX: No loading toast for instant validation)
       const draftMode = useExecutionStore.getState().draftMode;
-      const validationErrors = draftMode ? [] : validateFlowStructure(nodes, edges);
+      const validationErrors = draftMode
+        ? []
+        : validateFlowStructure(nodes, edges);
       if (validationErrors.length > 0) {
         const firstError = validationErrors[0];
         const errorMsg =
@@ -1892,17 +1894,23 @@ function Dashboard({
       let fNodes = [];
       if (Array.isArray(f.nodes)) {
         fNodes = f.nodes;
-      } else if (typeof f.nodes === 'string') {
+      } else if (typeof f.nodes === "string") {
         try {
           fNodes = JSON.parse(f.nodes) || [];
           if (!Array.isArray(fNodes)) fNodes = [];
-        } catch(e) {
+        } catch {
           fNodes = [];
         }
       }
       fNodes.forEach((n) => {
-        if ((n.type === "component" || n.data?.type === "component") && n.data?.flowId) {
-          overrideNames.set(n.data.flowId, n.data.customLabel || n.data.label || "Untitled Component");
+        if (
+          (n.type === "component" || n.data?.type === "component") &&
+          n.data?.flowId
+        ) {
+          overrideNames.set(
+            n.data.flowId,
+            n.data.customLabel || n.data.label || "Untitled Component",
+          );
         }
       });
     });
@@ -1911,8 +1919,14 @@ function Dashboard({
 
     // 2. Override with live canvas nodes (in case of unsaved edits in current flow)
     nodes.forEach((n) => {
-      if ((n.type === "component" || n.data?.type === "component") && n.data?.flowId) {
-        overrideNames.set(n.data.flowId, n.data.customLabel || n.data.label || "Untitled Component");
+      if (
+        (n.type === "component" || n.data?.type === "component") &&
+        n.data?.flowId
+      ) {
+        overrideNames.set(
+          n.data.flowId,
+          n.data.customLabel || n.data.label || "Untitled Component",
+        );
       }
     });
 
@@ -1920,15 +1934,22 @@ function Dashboard({
     const flowMap = new Map();
     dbFlows.forEach((f) => {
       if (f.type === "component" && overrideNames.has(f.id)) {
-        flowMap.set(f.id, { ...f, name: overrideNames.get(f.id), isLive: true });
+        flowMap.set(f.id, {
+          ...f,
+          name: overrideNames.get(f.id),
+          isLive: true,
+        });
       } else {
         flowMap.set(f.id, f);
       }
     });
-    
+
     // 4. Also add any live components on canvas that might not be in DB yet
     nodes.forEach((n) => {
-      if ((n.type === "component" || n.data?.type === "component") && n.data?.flowId) {
+      if (
+        (n.type === "component" || n.data?.type === "component") &&
+        n.data?.flowId
+      ) {
         if (!flowMap.has(n.data.flowId)) {
           flowMap.set(n.data.flowId, {
             id: n.data.flowId,
@@ -1944,10 +1965,10 @@ function Dashboard({
     const currentOverride = overrideNames.get(currentFlowId);
     let name = "No Flow Selected";
     if (currentOverride) {
-       name = currentOverride;
+      name = currentOverride;
     } else {
-       const f = dbFlows.find((f) => f.id === currentFlowId);
-       if (f) name = f.name;
+      const f = dbFlows.find((f) => f.id === currentFlowId);
+      if (f) name = f.name;
     }
 
     return { flows: [...flowMap.values()], flowName: name };
@@ -2329,14 +2350,18 @@ function Dashboard({
               onRunNode={executeSingleNode} // Redundant but kept for safety if header used it
               updateNodeConfiguration={(nodeId, newData) => {
                 updateNodeConfiguration(nodeId, newData);
-                
+
                 // If the user renamed a Component node, keep the underlying flow entity's name in sync!
-                if (newData.customLabel !== undefined || newData.label !== undefined) {
+                if (
+                  newData.customLabel !== undefined ||
+                  newData.label !== undefined
+                ) {
                   const node = enrichedNodes.find((n) => n.id === nodeId);
                   const newName = newData.customLabel || newData.label;
                   if (
                     node &&
-                    (node.type === "component" || node.data?.type === "component") &&
+                    (node.type === "component" ||
+                      node.data?.type === "component") &&
                     node.data?.flowId &&
                     newName
                   ) {

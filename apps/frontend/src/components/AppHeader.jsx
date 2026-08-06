@@ -314,7 +314,9 @@ function AppHeader({
               currentFlowName={
                 selectedFlow?.name || t("header.unknown", "Unknown")
               }
-              projectName={selectedProject?.name || t("header.unknown", "Unknown")}
+              projectName={
+                selectedProject?.name || t("header.unknown", "Unknown")
+              }
             />
           ) : selectedProject ? (
             <>

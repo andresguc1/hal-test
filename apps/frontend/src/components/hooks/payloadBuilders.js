@@ -373,7 +373,7 @@ export const select_option = (payload) => {
 
 export const fill_form = (payload = {}) => {
   const formSelector = asString(payload?.formSelector);
-  const fields = parseJsonArray(payload?.fields, 'fields');
+  const fields = parseJsonArray(payload?.fields, "fields");
   if (formSelector === "") {
     throw new Error("Form selector is required.");
   }
@@ -383,8 +383,10 @@ export const fill_form = (payload = {}) => {
   }
 
   const normalizedFields = fields.map((field, index) => {
-    if (!field || typeof field !== 'object') {
-      throw new Error(`Field at index ${index} must be an object with selector and value.`);
+    if (!field || typeof field !== "object") {
+      throw new Error(
+        `Field at index ${index} must be an object with selector and value.`,
+      );
     }
     const selector = asString(field.selector);
     if (selector === "") {
@@ -392,8 +394,9 @@ export const fill_form = (payload = {}) => {
     }
     return {
       selector,
-      value: field.value ?? '',
-      clearBeforeType: field.clearBeforeType ?? asBoolean(payload?.clearBeforeType, true),
+      value: field.value ?? "",
+      clearBeforeType:
+        field.clearBeforeType ?? asBoolean(payload?.clearBeforeType, true),
       delay: asNumber(field.delay, asNumber(payload?.delay, 0, 0), 0),
     };
   });

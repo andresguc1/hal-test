@@ -2807,6 +2807,8 @@ export const NODE_FIELD_CONFIGS = {
       options: [
         { value: "chromium", label: "Chromium" },
         { value: "firefox", label: "Firefox" },
+        { value: "webkit", label: "WebKit (Safari)" },
+        { value: "lightpanda", label: "Lightpanda (CDP Ultraligero)" },
       ],
       defaultValue: "chromium",
       required: true,

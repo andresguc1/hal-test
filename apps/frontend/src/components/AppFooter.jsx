@@ -22,7 +22,13 @@ import {
 import { useTranslation } from "react-i18next";
 import { useExecutionStore } from "@/stores/useExecutionStore";
 import { useSettings } from "@/context/SettingsContext";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "./ui/select";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "./ui/select";
 import { Switch } from "./ui/switch";
 import { cn } from "@/lib/utils";
 import { motion as Motion, AnimatePresence } from "framer-motion";
@@ -503,7 +509,7 @@ function AppFooter({
   const globalExecutionStatus = useExecutionStore((s) => s.status);
   const draftMode = useExecutionStore((s) => s.draftMode);
   const setDraftMode = useExecutionStore((s) => s.setDraftMode);
-  
+
   const isRunning =
     apiStatus.state === "running" || globalExecutionStatus === "running";
 
@@ -720,10 +726,10 @@ function AppFooter({
             disabled={!isAIConfigured || draftMode}
             aria-label="Enable auto healing"
             title={
-              draftMode 
+              draftMode
                 ? "Auto healing is forcibly disabled in Draft Mode"
-                : isAIConfigured 
-                  ? "Enable auto healing" 
+                : isAIConfigured
+                  ? "Enable auto healing"
                   : "AI provider/API is not configured"
             }
           />

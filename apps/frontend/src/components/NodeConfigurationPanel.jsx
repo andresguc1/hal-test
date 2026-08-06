@@ -164,7 +164,10 @@ const NodeConfigurationPanel = ({
     const merged = { ...config };
     if (definedInputs && definedInputs.length > 0) {
       definedInputs.forEach((input) => {
-        if (merged[input.key] === undefined && input.defaultValue !== undefined) {
+        if (
+          merged[input.key] === undefined &&
+          input.defaultValue !== undefined
+        ) {
           merged[input.key] = input.defaultValue;
         }
       });
@@ -511,7 +514,9 @@ const NodeConfigurationPanel = ({
 
   const renderEmittedData = () => {
     let result = activeNode.data?.result;
-    const manualScreenshot = activeNode.data?.screenshots?.after?.url || activeNode.data?.screenshots?.after?.path;
+    const manualScreenshot =
+      activeNode.data?.screenshots?.after?.url ||
+      activeNode.data?.screenshots?.after?.path;
 
     if (!result)
       return (
@@ -519,18 +524,22 @@ const NodeConfigurationPanel = ({
       );
 
     let dataToRender = result.data !== undefined ? result.data : result;
-    
-    if (typeof dataToRender === 'object' && dataToRender !== null) {
+
+    if (typeof dataToRender === "object" && dataToRender !== null) {
       const screenshotToInject = result.screenshot || manualScreenshot;
-      if (screenshotToInject && !dataToRender.screenshot && !dataToRender.screenshot_evidence) {
-        dataToRender = Array.isArray(dataToRender) 
+      if (
+        screenshotToInject &&
+        !dataToRender.screenshot &&
+        !dataToRender.screenshot_evidence
+      ) {
+        dataToRender = Array.isArray(dataToRender)
           ? { items: dataToRender, screenshot_evidence: screenshotToInject }
           : { ...dataToRender, screenshot_evidence: screenshotToInject };
       }
     } else if (result.screenshot || manualScreenshot) {
-      dataToRender = { 
-        value: dataToRender, 
-        screenshot_evidence: result.screenshot || manualScreenshot 
+      dataToRender = {
+        value: dataToRender,
+        screenshot_evidence: result.screenshot || manualScreenshot,
       };
     }
 
@@ -607,7 +616,11 @@ const NodeConfigurationPanel = ({
                   suggestions={availableVariablePaths}
                   onStartPick={onStartPick}
                   onCancelPick={onCancelPick}
-                  pickingField={activeNode.data?.state === "picking" ? activeNode.data?.pickingField : null}
+                  pickingField={
+                    activeNode.data?.state === "picking"
+                      ? activeNode.data?.pickingField
+                      : null
+                  }
                 />
               </div>
             )}

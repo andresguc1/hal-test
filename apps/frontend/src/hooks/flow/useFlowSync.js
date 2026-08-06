@@ -115,10 +115,12 @@ export function useFlowSync({
           targetFlowId,
           flowData,
         );
-        
+
         // Invalidate query to keep global project state (and derived flow names) in sync
-        queryClient.invalidateQueries({ queryKey: ["project", targetProjectId] });
-        
+        queryClient.invalidateQueries({
+          queryKey: ["project", targetProjectId],
+        });
+
         if (!silent) setApiStatus({ message: "✓ Flow saved" });
         setHasUnsavedChanges(false);
 
@@ -166,6 +168,7 @@ export function useFlowSync({
       setHasUnsavedChanges,
       nodesRef,
       edgesRef,
+      queryClient,
     ],
   );
 
@@ -197,10 +200,7 @@ export function useFlowSync({
     if (!currentProjectId || !currentFlowId) return;
     const targetFlowId = currentFlowId;
     try {
-      const flow = await projectManager.getFlow(
-        currentProjectId,
-        targetFlowId,
-      );
+      const flow = await projectManager.getFlow(currentProjectId, targetFlowId);
       // Guard against race condition: check if user switched flow while request was in-flight
       if (activeFlowIdRef.current !== targetFlowId) {
         console.warn(
@@ -435,7 +435,15 @@ export function useFlowSync({
         isNavigatingRef.current = false;
       }
     },
-    [currentFlowId, currentProject, saveFlow, switchFlow, nodesRef, setNodes, toast],
+    [
+      currentFlowId,
+      currentProject,
+      saveFlow,
+      switchFlow,
+      nodesRef,
+      setNodes,
+      toast,
+    ],
   );
 
   const exitComponent = useCallback(
@@ -453,12 +461,13 @@ export function useFlowSync({
         await saveFlow(true);
         // Support indexed exit: if targetIndex provided, truncate stack to that point
         const newLength =
+          typeof targetIndex === "number" ? targetIndex : viewStack.length - 1;
+
+        const targetView =
           typeof targetIndex === "number"
-            ? targetIndex
-            : viewStack.length - 1;
-        
-        const targetView = typeof targetIndex === "number" ? viewStack[targetIndex] : viewStack[newLength];
-        
+            ? viewStack[targetIndex]
+            : viewStack[newLength];
+
         if (targetView) {
           switchFlow(targetView.id);
           setViewStack((prev) => prev.slice(0, newLength));

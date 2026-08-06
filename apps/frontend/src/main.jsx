@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { StrictMode, useState, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { ReactFlowProvider } from "@xyflow/react";
@@ -26,15 +27,21 @@ import { AuthProvider } from "./context/AuthContext";
 import { AIProvider } from "./context/AIContext";
 
 const DevtoolsWrapper = () => {
-  const [show, setShow] = useState(import.meta.env.VITE_SHOW_QUERY_DEVTOOLS === 'true');
+  const [show, setShow] = useState(
+    import.meta.env.VITE_SHOW_QUERY_DEVTOOLS === "true",
+  );
 
   useEffect(() => {
     window.toggleQueryDevtools = () => setShow((prev) => !prev);
-    console.info("💡 TanStack Devtools ocultas. Ejecuta window.toggleQueryDevtools() en consola para mostrarlas.");
+    console.info(
+      "💡 TanStack Devtools ocultas. Ejecuta window.toggleQueryDevtools() en consola para mostrarlas.",
+    );
   }, []);
 
   if (!show) return null;
-  return <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-right" />;
+  return (
+    <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-right" />
+  );
 };
 
 createRoot(document.getElementById("root")).render(

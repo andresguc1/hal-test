@@ -137,13 +137,17 @@ const getHeaders = async () => {
     headers["X-Hal-Draft-Mode"] = "true";
   }
 
-  const effectiveAutoHealingEnabled = !draftMode && aiConfigured && autoHealingEnabledFromSettings;
+  const effectiveAutoHealingEnabled =
+    !draftMode && aiConfigured && autoHealingEnabledFromSettings;
   const effectiveAutoHealingRetries = effectiveAutoHealingEnabled
     ? autoHealingRetryLimitFromSettings
     : 0;
 
-  headers["x-hal-auto-healing-enabled"] = effectiveAutoHealingEnabled.toString();
-  headers["x-hal-auto-healing-max-retries"] = String(effectiveAutoHealingRetries);
+  headers["x-hal-auto-healing-enabled"] =
+    effectiveAutoHealingEnabled.toString();
+  headers["x-hal-auto-healing-max-retries"] = String(
+    effectiveAutoHealingRetries,
+  );
 
   return headers;
 };

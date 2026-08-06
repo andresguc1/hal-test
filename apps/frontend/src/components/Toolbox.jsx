@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { motion as Motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import {
@@ -20,9 +20,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NODE_CATEGORIES, CATEGORY_STYLES } from "@/config/nodeConstants";
-import { useSettings } from "@/context/SettingsContext";
-
-import { useToast } from "@/hooks/useToast";
 
 const ToolboxItem = ({ label, nodeId, color, onAdd }) => {
   // Select styles based on color theme, fallback to slate
@@ -283,7 +280,6 @@ const ToolboxCategory = ({
 
 export default function ToolboxPanel({
   addNode,
-  activeBrowserId,
   isCollapsed: controlledIsCollapsed,
   onToggleCollapse,
 }) {
@@ -524,8 +520,6 @@ export default function ToolboxPanel({
               </div>
             )}
           </div>
-
-
         </div>
 
         {/* FOOTER */}

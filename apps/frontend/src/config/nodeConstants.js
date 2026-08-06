@@ -136,7 +136,7 @@ export const NODE_CATEGORIES = {
   },
   database_ops: {
     icon: Database,
-    color: "amber", 
+    color: "amber",
     label: "Databases",
     nodes: ["db_connect", "db_query", "db_assert_record"],
   },

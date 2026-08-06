@@ -148,7 +148,9 @@ export const useElementPicker = ({
         }
 
         if (!inspectorBrowserId) {
-          console.log("[useElementPicker] 🌐 Needs browser state for picker...");
+          console.log(
+            "[useElementPicker] 🌐 Needs browser state for picker...",
+          );
 
           const getAncestors = (nodeId, graphNodes, graphEdges) => {
             const ancestors = [];
@@ -285,13 +287,14 @@ export const useElementPicker = ({
         let updatedAny = false;
 
         const setNestedValue = (obj, path, value) => {
-          const keys = path.split('.');
+          const keys = path.split(".");
           const lastKey = keys.pop();
           const newObj = JSON.parse(JSON.stringify(obj || {}));
           let current = newObj;
           for (let i = 0; i < keys.length; i++) {
             const key = keys[i];
-            if (!current[key]) current[key] = isNaN(Number(keys[i + 1])) ? {} : [];
+            if (!current[key])
+              current[key] = isNaN(Number(keys[i + 1])) ? {} : [];
             current = current[key];
           }
           current[lastKey] = value;
@@ -313,7 +316,11 @@ export const useElementPicker = ({
                 data: {
                   ...node.data,
                   state: NODE_STATES.DEFAULT,
-                  configuration: setNestedValue(node.data.configuration, pickingField, trimmedSelector),
+                  configuration: setNestedValue(
+                    node.data.configuration,
+                    pickingField,
+                    trimmedSelector,
+                  ),
                 },
               };
             }
@@ -326,7 +333,11 @@ export const useElementPicker = ({
         } else if (selectedAction) {
           await updateNodeConfiguration(
             selectedAction.nodeId,
-            setNestedValue(selectedAction.data.configuration, pickingField, trimmedSelector)
+            setNestedValue(
+              selectedAction.data.configuration,
+              pickingField,
+              trimmedSelector,
+            ),
           );
           updateNodeState(selectedAction.nodeId, NODE_STATES.DEFAULT);
           toast.success(t("common.selector_captured"));

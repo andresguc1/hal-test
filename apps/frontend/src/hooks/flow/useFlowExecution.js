@@ -289,7 +289,10 @@ export function useFlowExecution({
         });
 
         let base64Screenshot =
-          data.data?.screenshot || data.screenshot || data.image || (typeof data.data === 'string' ? data.data : null);
+          data.data?.screenshot ||
+          data.screenshot ||
+          data.image ||
+          (typeof data.data === "string" ? data.data : null);
         if (!base64Screenshot || typeof base64Screenshot !== "string")
           throw new Error("Invalid screenshot data");
 
@@ -477,6 +480,7 @@ export function useFlowExecution({
       updateNodeScreenshot,
       captureScreenshot,
       addLog,
+      autoHealingEnabled,
     ],
   );
 
