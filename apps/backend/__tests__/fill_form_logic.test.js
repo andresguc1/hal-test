@@ -20,6 +20,9 @@ const mockLocator = {
     waitFor: vi.fn(),
     fill: vi.fn(),
     type: vi.fn(),
+    locator: vi.fn().mockReturnThis(),
+    first: vi.fn().mockReturnThis(),
+    evaluate: vi.fn().mockResolvedValue(undefined),
 };
 
 const mockPage = {
@@ -89,8 +92,13 @@ describe('fillFormAction Logic', () => {
         );
 
         expect(mockLocator.waitFor).toHaveBeenCalledTimes(3);
-        expect(mockLocator.fill).toHaveBeenCalledWith('test@example.com', { timeout: 30000 });
-        expect(mockLocator.fill).toHaveBeenCalledWith('secret', { timeout: 30000 });
+        expect(mockLocator.fill).toHaveBeenCalledWith('', { timeout: 30000 });
+        expect(mockLocator.fill).toHaveBeenCalledTimes(2);
+        expect(mockLocator.type).toHaveBeenCalledWith('test@example.com', {
+            delay: 0,
+            timeout: 30000,
+        });
+        expect(mockLocator.type).toHaveBeenCalledWith('secret', { delay: 0, timeout: 30000 });
         expect(mockPage.waitForNavigation).toHaveBeenCalledWith({
             timeout: 30000,
             waitUntil: 'load',

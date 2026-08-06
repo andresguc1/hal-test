@@ -54,6 +54,7 @@ vi.mock('../services/SecurityComplianceEngine.js', () => ({
 import { variableManager } from '../services/VariableManager.js';
 import { emitEdgeStatus } from '../socket.js';
 import { browserService } from '../services/browser.service.js';
+import { ExecutionService } from '../services/ExecutionService.js';
 
 // =============================================================================
 // HELPERS

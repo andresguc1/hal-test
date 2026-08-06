@@ -1306,7 +1306,7 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
     } catch (error) {
         // Clean HTML entities from error message (Playwright sometimes escapes them)
         const errorMessage = (error.message || 'Unknown selector error').replace(/&quot;/g, '"');
-        const isDraftMode = req.headers['x-hal-draft-mode'] === 'true';
+        const isDraftMode = req.headers?.['x-hal-draft-mode'] === 'true';
 
         // --- DRAFT MODE: GRACEFUL SKIP ---
         if (isDraftMode) {

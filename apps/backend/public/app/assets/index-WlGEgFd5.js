@@ -75357,43 +75357,41 @@ function oBe() {
                           {
                               style: { display: 'flex', marginRight: '4px' },
                               children: [
-                                  t
-                                      .slice(0, 4)
-                                      .map((o, i) =>
-                                          u.jsxDEV(
-                                              'div',
-                                              {
-                                                  style: {
-                                                      width: '24px',
-                                                      height: '24px',
-                                                      borderRadius: '50%',
-                                                      background: o.user.color,
-                                                      border: '2px solid var(--hal-surface, #1e1e28)',
-                                                      display: 'flex',
-                                                      alignItems: 'center',
-                                                      justifyContent: 'center',
-                                                      fontSize: '10px',
-                                                      fontWeight: 600,
-                                                      color: 'white',
-                                                      marginLeft: i > 0 ? '-8px' : '0',
-                                                      zIndex: 10 - i,
-                                                      position: 'relative',
-                                                  },
-                                                  title: o.user.name,
-                                                  children:
-                                                      o.user.name?.charAt(0)?.toUpperCase() || '?',
+                                  t.slice(0, 4).map((o, i) =>
+                                      u.jsxDEV(
+                                          'div',
+                                          {
+                                              style: {
+                                                  width: '24px',
+                                                  height: '24px',
+                                                  borderRadius: '50%',
+                                                  background: o.user.color,
+                                                  border: '2px solid var(--hal-surface, #1e1e28)',
+                                                  display: 'flex',
+                                                  alignItems: 'center',
+                                                  justifyContent: 'center',
+                                                  fontSize: '10px',
+                                                  fontWeight: 600,
+                                                  color: 'white',
+                                                  marginLeft: i > 0 ? '-8px' : '0',
+                                                  zIndex: 10 - i,
+                                                  position: 'relative',
                                               },
-                                              o.clientId,
-                                              !1,
-                                              {
-                                                  fileName:
-                                                      '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/collaboration/PresenceIndicator.jsx',
-                                                  lineNumber: 42,
-                                                  columnNumber: 11,
-                                              },
-                                              this,
-                                          ),
+                                              title: o.user.name,
+                                              children:
+                                                  o.user.name?.charAt(0)?.toUpperCase() || '?',
+                                          },
+                                          o.clientId,
+                                          !1,
+                                          {
+                                              fileName:
+                                                  '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/collaboration/PresenceIndicator.jsx',
+                                              lineNumber: 42,
+                                              columnNumber: 11,
+                                          },
+                                          this,
                                       ),
+                                  ),
                                   e > 4 &&
                                       u.jsxDEV(
                                           'div',
@@ -76964,35 +76962,32 @@ function lBe({
                                                     className:
                                                         'flex items-center -space-x-1.5 ml-1',
                                                     children: [
-                                                        z
-                                                            .slice(0, 4)
-                                                            .map((F) =>
-                                                                u.jsxDEV(
-                                                                    'div',
-                                                                    {
-                                                                        className:
-                                                                            'w-6 h-6 rounded-full border-2 border-[var(--bg-primary)] flex items-center justify-center text-[9px] font-bold text-white shadow-sm',
-                                                                        style: {
-                                                                            backgroundColor:
-                                                                                F.user?.color ||
-                                                                                '#6366f1',
-                                                                        },
-                                                                        title:
-                                                                            F.user?.name || 'Peer',
-                                                                        children: (F.user?.name ||
-                                                                            '?')[0].toUpperCase(),
+                                                        z.slice(0, 4).map((F) =>
+                                                            u.jsxDEV(
+                                                                'div',
+                                                                {
+                                                                    className:
+                                                                        'w-6 h-6 rounded-full border-2 border-[var(--bg-primary)] flex items-center justify-center text-[9px] font-bold text-white shadow-sm',
+                                                                    style: {
+                                                                        backgroundColor:
+                                                                            F.user?.color ||
+                                                                            '#6366f1',
                                                                     },
-                                                                    F.clientId,
-                                                                    !1,
-                                                                    {
-                                                                        fileName:
-                                                                            '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppHeader.jsx',
-                                                                        lineNumber: 494,
-                                                                        columnNumber: 17,
-                                                                    },
-                                                                    this,
-                                                                ),
+                                                                    title: F.user?.name || 'Peer',
+                                                                    children: (F.user?.name ||
+                                                                        '?')[0].toUpperCase(),
+                                                                },
+                                                                F.clientId,
+                                                                !1,
+                                                                {
+                                                                    fileName:
+                                                                        '/home/andres/Documents/Projects/Hal_Test_v0/apps/frontend/src/components/AppHeader.jsx',
+                                                                    lineNumber: 494,
+                                                                    columnNumber: 17,
+                                                                },
+                                                                this,
                                                             ),
+                                                        ),
                                                         z.length > 4 &&
                                                             u.jsxDEV(
                                                                 'div',
@@ -118228,13 +118223,11 @@ var cqe = class extends r0 {
             const n = this.options;
             ((this.options = this.#e.defaultMutationOptions(e)),
                 oD(this.options, n) ||
-                    this.#e
-                        .getMutationCache()
-                        .notify({
-                            type: 'observerOptionsUpdated',
-                            mutation: this.#n,
-                            observer: this,
-                        }),
+                    this.#e.getMutationCache().notify({
+                        type: 'observerOptionsUpdated',
+                        mutation: this.#n,
+                        observer: this,
+                    }),
                 n?.mutationKey &&
                 this.options.mutationKey &&
                 Af(n.mutationKey) !== Af(this.options.mutationKey)
@@ -129356,14 +129349,12 @@ function wXe({
                             });
                         ((X = _e),
                             A(X),
-                            bn
-                                .getState()
-                                .startExecution({
-                                    mode: O,
-                                    runId: X,
-                                    flowId: i,
-                                    totalNodes: t.length,
-                                }));
+                            bn.getState().startExecution({
+                                mode: O,
+                                runId: X,
+                                flowId: i,
+                                totalNodes: t.length,
+                            }));
                     } catch (pe) {
                         console.warn('Run creation failed', pe);
                     }
@@ -133907,13 +133898,11 @@ const VJe = () =>
                     W.on('flow-finished', (G) => {
                         console.log('Haltest Socket: 🏁 Flow finished', G);
                         const { status: F, error: Z, failedNodeId: O, divePath: q } = G;
-                        (bn
-                            .getState()
-                            .finishExecution({
-                                status: F === 'failed' ? 'failed' : 'completed',
-                                error: Z || null,
-                                summary: G,
-                            }),
+                        (bn.getState().finishExecution({
+                            status: F === 'failed' ? 'failed' : 'completed',
+                            error: Z || null,
+                            summary: G,
+                        }),
                             window.dispatchEvent(
                                 new CustomEvent('hal:run-completed', { detail: G }),
                             ),
@@ -150382,13 +150371,11 @@ function HQe(t) {
                     (!t || !C || String(C) === String(t)) &&
                         (l(A),
                         o('running'),
-                        bn
-                            .getState()
-                            .startExecution({
-                                mode: 'performance',
-                                runId: A?.runId,
-                                flowId: A?.flowId,
-                            }));
+                        bn.getState().startExecution({
+                            mode: 'performance',
+                            runId: A?.runId,
+                            flowId: A?.flowId,
+                        }));
                 }),
                 n.on('perf-metrics-update', (A) => {
                     const C = A?.flowId || A?.runConfig?.flowId;

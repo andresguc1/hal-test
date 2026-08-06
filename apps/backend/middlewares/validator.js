@@ -114,7 +114,7 @@ const validate = (schemas) => (req, res, next) => {
             }
         }
     }
-    const isDraftMode = req.headers['x-hal-draft-mode'] === 'true';
+    const isDraftMode = req.headers && req.headers['x-hal-draft-mode'] === 'true';
 
     if (hasError) {
         if (isDraftMode) {
