@@ -3,97 +3,7 @@ import { generateText, generateObject } from 'ai';
 import { z } from 'zod';
 import { playwrightMcpServer } from './PlaywrightMCPServer.js';
 import { llmFactory, RECOMMENDED_LOCAL_MODELS, DEFAULT_LOCAL_MODEL } from './LLMFactory.js';
-
-/**
- * Intenta reparar estructuras JSON comunes mal formadas por LLMs locales.
- */
-const repairJson = (str) => {
-    if (!str) return str;
-    let fixed = str.trim();
-
-    // Remove markdown code blocks if present (e.g. ```json ... ```)
-    const markdownMatch = fixed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
-    if (markdownMatch) {
-        fixed = markdownMatch[1].trim();
-    }
-
-    try {
-        // 1. Eliminar comas flotantes antes de cierres de llaves o corchetes
-        fixed = fixed.replace(/,\s*([\]}])/g, '$1');
-        // 2. Eliminar comentarios de una sola línea
-        fixed = fixed.replace(/\/\/.*$/gm, '');
-        return fixed;
-    } catch (e) {
-        return fixed;
-    }
-};
-
-/**
- * Extrae el primer bloque JSON delimitado por llaves de una cadena de texto.
- */
-const extractJson = (str) => {
-    if (!str) return '{}';
-    const firstBrace = str.indexOf('{');
-    const lastBrace = str.lastIndexOf('}');
-    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-        return str.substring(firstBrace, lastBrace + 1);
-    }
-    return str;
-};
-
-/**
- * Robustly parses tool calls inside XML-like tags <tool_call name="...">JSON</tool_call>,
- * even if the closing tag is missing or the content is malformed.
- */
-const parseToolCalls = (text) => {
-    if (!text) return [];
-    const toolCalls = [];
-    const regex = /<tool_call([^>]*)>/g;
-    let match;
-    const matches = [];
-    while ((match = regex.exec(text)) !== null) {
-        matches.push({
-            index: match.index,
-            attributes: match[1],
-            contentStart: regex.lastIndex,
-        });
-    }
-
-    for (let i = 0; i < matches.length; i++) {
-        const current = matches[i];
-        const next = matches[i + 1];
-
-        let contentEnd = text.length;
-        if (next) {
-            contentEnd = next.index;
-        }
-
-        let chunk = text.slice(current.contentStart, contentEnd);
-
-        // If there is a closing tag, cut the chunk there
-        const closeTagIndex = chunk.indexOf('</tool_call>');
-        if (closeTagIndex !== -1) {
-            chunk = chunk.slice(0, closeTagIndex);
-        }
-
-        // Try to extract name from attributes
-        let toolName = null;
-        const nameMatch = current.attributes.match(/name=["']([^"']+)["']/);
-        if (nameMatch) {
-            toolName = nameMatch[1];
-        }
-
-        toolCalls.push({
-            name: toolName,
-            content: chunk.trim(),
-            raw: text.slice(
-                current.index,
-                current.contentStart + chunk.length + (closeTagIndex !== -1 ? 12 : 0),
-            ),
-        });
-    }
-    return toolCalls;
-};
+import { repairJson, extractJson, parseToolCalls } from './AIServiceParsing.js';
 
 /**
  * Servicio Central de IA
@@ -906,6 +816,11 @@ Response Format: Return ONLY raw JSON: {"correctedSelector": "text=...", "confid
                     try {
                         const parsed = JSON.parse(jsonMatch[0]);
                         const corrected = parsed.correctedSelector || parsed.new_selector || null;
+                        const isBreakingChange =
+                            !!corrected &&
+                            (corrected.startsWith('text=') ||
+                                corrected.startsWith('xpath=') ||
+                                corrected !== originalSelector);
 
                         return {
                             correctedSelector: corrected,
@@ -913,6 +828,7 @@ Response Format: Return ONLY raw JSON: {"correctedSelector": "text=...", "confid
                             confidence: parsed.confidence || (corrected ? 0.7 : 0),
                             reasoning: parsed.reasoning || `Tier ${retryCount + 1} repair`,
                             tier: retryCount + 1,
+                            isBreakingChange,
                         };
                     } catch (pErr) {
                         console.warn(`[AIService] Tier ${retryCount + 1} JSON parse failed.`);
@@ -934,15 +850,33 @@ Response Format: Return ONLY raw JSON: {"correctedSelector": "text=...", "confid
                     correctedSelector: z.string(),
                     confidence: z.number(),
                     reasoning: z.string().optional(),
+                    isBreakingChange: z.boolean().optional(),
                 }),
                 prompt,
                 abortSignal: parentSignal || AbortSignal.timeout(customTimeout || 60000),
             });
 
-            return { ...object, tier: retryCount + 1 };
+            const cloudCorrected = object.correctedSelector || object.new_selector || null;
+            return {
+                ...object,
+                correctedSelector: cloudCorrected,
+                alternative_selectors: [cloudCorrected].filter(Boolean),
+                isBreakingChange:
+                    object.isBreakingChange ??
+                    (!!cloudCorrected &&
+                        (cloudCorrected.startsWith('text=') ||
+                            cloudCorrected.startsWith('xpath=') ||
+                            cloudCorrected !== originalSelector)),
+                tier: retryCount + 1,
+            };
         } catch (error) {
             console.error(`[AIService] Tier ${retryCount + 1} Error:`, error);
-            return { correctedSelector: null, confidence: 0, reasoning: error.message };
+            return {
+                correctedSelector: null,
+                confidence: 0,
+                reasoning: error.message,
+                isBreakingChange: false,
+            };
         }
     }
 
