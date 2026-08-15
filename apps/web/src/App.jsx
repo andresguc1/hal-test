@@ -2,6 +2,7 @@ import React from "react";
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
 import Capabilities from "./components/Capabilities";
+import Showcase from "./components/Showcase";
 import Healing from "./components/Healing";
 import Interop from "./components/Interop";
 import UseCases from "./components/UseCases";
@@ -42,6 +43,7 @@ export default function App() {
       <main className="relative z-10">
         <Hero />
         <Capabilities />
+        <Showcase />
         <Healing />
         <Interop />
         <UseCases />
