@@ -15,6 +15,7 @@ import {
   Users,
   Loader2,
   Shield,
+  BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
@@ -99,6 +100,7 @@ function AppHeader({
   onOpenApiKeys,
   onToggleHistory,
   onToggleVariables,
+  onOpenMetricsDashboard,
 
   isToolboxVisible,
   isVariablesVisible,
@@ -431,6 +433,16 @@ function AppHeader({
         >
           <Shield size={18} />
         </HeaderButton>
+
+        {onOpenMetricsDashboard && (
+          <HeaderButton
+            onClick={onOpenMetricsDashboard}
+            title="Dashboard de Métricas & Cobertura HalTest"
+            className="text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10"
+          >
+            <BarChart3 size={18} />
+          </HeaderButton>
+        )}
 
         <HeaderButton
           onClick={onToggleVariables}

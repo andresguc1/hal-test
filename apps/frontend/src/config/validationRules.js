@@ -789,9 +789,8 @@ export const NODE_INPUTS = {
     },
     {
       key: "flowId",
-      label: "Linked Sub-flow ID",
-      type: "text",
-      placeholder: "Select or enter sub-flow ID...",
+      label: "Sub-flujo Vinculado",
+      type: "subflow_select",
     },
   ],
   for_each: [
@@ -894,16 +893,15 @@ export const NODE_INPUTS = {
     },
     {
       key: "flowId",
-      label: "Linked Sub-flow ID",
-      type: "text",
-      placeholder: "Select or enter sub-flow ID...",
+      label: "Sub-flujo Vinculado",
+      type: "subflow_select",
     },
   ],
   component: [
     {
       key: "flowId",
-      label: "Component (Sub-flow) ID",
-      type: "text",
+      label: "Sub-flujo a Ejecutar",
+      type: "subflow_select",
       required: true,
     },
   ],
