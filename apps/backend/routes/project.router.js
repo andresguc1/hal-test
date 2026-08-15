@@ -385,6 +385,102 @@ router.post('/projects', async (req, res) => {
     }
 });
 
+// Import / Clone flow from another project as a Subflow Component
+router.post('/projects/:projectId/flows/import-subflow', async (req, res) => {
+    const transaction = await sequelize.transaction();
+    try {
+        const { projectId } = req.params;
+        const { sourceFlowId, customName, flowJson } = req.body || {};
+
+        let sourceNodes = [];
+        let sourceEdges = [];
+        let subflowName = customName || 'Imported Subflow';
+
+        if (sourceFlowId) {
+            const sourceFlow = await Flow.findByPk(sourceFlowId, {
+                include: [
+                    { model: Node, as: 'nodes' },
+                    { model: Edge, as: 'edges' },
+                ],
+            });
+            if (!sourceFlow) {
+                await transaction.rollback();
+                return res.status(404).json({ success: false, error: 'Source flow not found' });
+            }
+            subflowName = customName || `Subflow - ${sourceFlow.name}`;
+            sourceNodes = sourceFlow.nodes.map((n) => n.toJSON());
+            sourceEdges = sourceFlow.edges.map((e) => e.toJSON());
+        } else if (flowJson) {
+            subflowName = customName || flowJson.name || 'Imported Component';
+            sourceNodes = flowJson.nodes || [];
+            sourceEdges = flowJson.edges || [];
+        } else {
+            await transaction.rollback();
+            return res
+                .status(400)
+                .json({ success: false, error: 'Either sourceFlowId or flowJson is required' });
+        }
+
+        // Create new component flow in target project
+        const newFlow = await Flow.create(
+            {
+                name: subflowName,
+                projectId,
+                type: 'component',
+            },
+            { transaction },
+        );
+
+        if (sourceNodes.length > 0) {
+            await Node.bulkCreate(
+                sourceNodes.map((n) => ({
+                    nodeId: n.nodeId || n.id,
+                    type: n.type,
+                    data: n.data,
+                    position: n.position,
+                    flowId: newFlow.id,
+                })),
+                { transaction },
+            );
+        }
+
+        if (sourceEdges.length > 0) {
+            await Edge.bulkCreate(
+                sourceEdges.map((e) => ({
+                    edgeId: e.edgeId || e.id,
+                    source: e.source,
+                    target: e.target,
+                    sourceHandle: e.sourceHandle,
+                    targetHandle: e.targetHandle,
+                    flowId: newFlow.id,
+                })),
+                { transaction },
+            );
+        }
+
+        await transaction.commit();
+
+        return res.status(201).json({
+            success: true,
+            data: {
+                flowId: newFlow.id,
+                name: newFlow.name,
+                nodeCount: sourceNodes.length,
+                componentNode: {
+                    type: 'component',
+                    data: {
+                        label: newFlow.name,
+                        flowId: newFlow.id,
+                    },
+                },
+            },
+        });
+    } catch (err) {
+        if (!transaction.finished) await transaction.rollback();
+        return res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 // Get project with flows
 router.get('/projects/:id', async (req, res) => {
     try {

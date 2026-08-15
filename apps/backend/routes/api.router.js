@@ -803,8 +803,66 @@ router.use('/export', exportRouter);
 // AUDIT & FINE-TUNING ROUTES
 // ==========================================================
 import { getAuditLogs, clearAuditLogs, startFineTuning } from '../controllers/audit.controller.js';
+import selectorPreValidator from '../services/SelectorPreValidator.js';
+import flowMetricsDashboardService from '../services/FlowMetricsDashboardService.js';
+import accessibilityTreePlanner from '../services/agents/AccessibilityTreePlanner.js';
+
 router.get('/audit/logs', getAuditLogs);
 router.delete('/audit/logs', clearAuditLogs);
 router.post('/audit/train', startFineTuning);
+
+// Real-time pre-execution selector validation
+router.post('/selectors/validate', async (req, res) => {
+    try {
+        const { selector } = req.body || {};
+        const result = await selectorPreValidator.validateSelector(selector);
+        return res.status(200).json({ success: true, data: result });
+    } catch (err) {
+        return res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// Quality & Cobertura Metrics Dashboard
+router.get('/metrics/dashboard', (req, res) => {
+    try {
+        const metrics = flowMetricsDashboardService.generateDashboardMetrics({
+            flows: [
+                { id: 'f1', nodes: [1, 2, 3] },
+                { id: 'f2', nodes: [1, 2] },
+            ],
+            runs: [
+                { id: 'r1', status: 'completed', duration_ms: 1200 },
+                { id: 'r2', status: 'completed', duration_ms: 1500 },
+            ],
+            healingLogs: [{ healed: true }, { healed: true }],
+        });
+        return res.status(200).json({ success: true, data: metrics });
+    } catch (err) {
+        return res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// Accessibility Tree Critical Path Planner
+router.post('/planner/generate', (req, res) => {
+    try {
+        const { url, goal, accessibilitySnapshot } = req.body || {};
+        const interactiveNodes =
+            accessibilityTreePlanner.parseAccessibilityTree(accessibilitySnapshot);
+        const criticalPath = accessibilityTreePlanner.analyzeCriticalPaths(interactiveNodes, goal);
+        const flowNodes = accessibilityTreePlanner.generateFlowNodes(url, criticalPath);
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                goal,
+                interactiveCount: interactiveNodes.length,
+                criticalPath,
+                nodes: flowNodes,
+            },
+        });
+    } catch (err) {
+        return res.status(500).json({ success: false, error: err.message });
+    }
+});
 
 export default router;
