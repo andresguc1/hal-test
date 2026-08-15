@@ -1,6 +1,6 @@
 import React from "react";
 import { motion as Motion } from "framer-motion";
-import { Gauge, ShieldCheck, Boxes } from "lucide-react";
+import { Gauge, ShieldCheck, Boxes, Cpu } from "lucide-react";
 
 const PANELS = [
   {
@@ -26,6 +26,15 @@ const PANELS = [
     label: "50+ nodes",
     caption: "A categorized toolbox: browser, DOM, network, AI, databases.",
     alt: "Haltest node toolbox showing categories such as Security, Browser, DOM, AI Models, Network and Databases.",
+  },
+  {
+    src: "/images/panel_ai.png",
+    icon: Cpu,
+    accent: "text-hal-primary-400",
+    label: "Bring your own AI",
+    caption:
+      "Any provider or a local model via Ollama — your keys, your infra.",
+    alt: "Haltest AI and integrations settings with a local Ollama provider, custom model identifier and temperature control.",
   },
 ];
 
@@ -80,7 +89,7 @@ export default function Showcase() {
       </Motion.div>
 
       {/* Panel grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {PANELS.map((panel, i) => (
           <Motion.div
             key={panel.label}

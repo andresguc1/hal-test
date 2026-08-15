@@ -93,6 +93,16 @@ export default function Healing() {
               <span className="text-emerald-400 font-bold">98% · verified</span>
             </div>
           </div>
+
+          {/* Real execution logs */}
+          <div className="border-t border-white/10">
+            <img
+              src="/images/execution_logs.png"
+              alt="Haltest execution logs showing a successful click, the healed selector being stored and linked to a node, a conditional branch match, and the flow completing successfully."
+              className="w-full block"
+              loading="lazy"
+            />
+          </div>
         </Motion.div>
       </div>
     </section>
