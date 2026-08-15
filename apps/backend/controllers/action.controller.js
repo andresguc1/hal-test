@@ -850,19 +850,93 @@ async function fetchContext(req, browserId) {
     }
 }
 
+function extractQuotedValue(str, prefixLength) {
+    const content = str.slice(prefixLength, -1);
+    return content.slice(1, -1).replace(/\\'/g, "'").replace(/\\"/g, '"');
+}
+
+function buildPlaywrightLocator(page, selector) {
+    if (!selector || typeof selector !== 'string') return page.locator(selector);
+
+    const trimmed = selector.trim();
+
+    if (/^getByTestId\(/i.test(trimmed)) {
+        return page.getByTestId(extractQuotedValue(trimmed, 12));
+    }
+
+    if (/^getByPlaceholder\(/i.test(trimmed)) {
+        return page.getByPlaceholder(extractQuotedValue(trimmed, 16));
+    }
+
+    if (/^getByText\(/i.test(trimmed)) {
+        return page.getByText(extractQuotedValue(trimmed, 10));
+    }
+
+    if (/^getByRole\(/i.test(trimmed)) {
+        const content = trimmed.slice(10, -1);
+        const firstQuote = content[0];
+        if (firstQuote === "'" || firstQuote === '"') {
+            let role = '';
+            let i = 1;
+            while (i < content.length) {
+                if (content[i] === '\\' && i + 1 < content.length) {
+                    role += content[i + 1];
+                    i += 2;
+                } else if (content[i] === firstQuote) {
+                    break;
+                } else {
+                    role += content[i];
+                    i++;
+                }
+            }
+
+            const afterRole = content.slice(i + 1);
+            const nameIndex = afterRole.indexOf('name:');
+            if (nameIndex !== -1) {
+                const afterName = afterRole.slice(nameIndex + 5).trim();
+                const nameQuote = afterName[0];
+                if (nameQuote === "'" || nameQuote === '"') {
+                    let name = '';
+                    let j = 1;
+                    while (j < afterName.length) {
+                        if (afterName[j] === '\\' && j + 1 < afterName.length) {
+                            name += afterName[j + 1];
+                            j += 2;
+                        } else if (afterName[j] === nameQuote) {
+                            break;
+                        } else {
+                            name += afterName[j];
+                            j++;
+                        }
+                    }
+                    return page.getByRole(role, { name });
+                }
+            }
+            return page.getByRole(role);
+        }
+    }
+
+    return page.locator(selector);
+}
+
 async function normalizeSelectorForDotId(page, selector) {
     if (!selector || typeof selector !== 'string') return selector;
-    if (!selector.startsWith('#') || !selector.includes('.')) return selector;
 
-    const attributeSelector = `[id="${selector.slice(1).replace(/"/g, '\\"')}"]`;
+    const converted = convertPlaywrightLocator(selector);
+
+    // Only apply dot-id normalization for CSS ID selectors
+    if (!converted.startsWith('#') || !converted.includes('.')) return converted;
+
+    const idValue = converted.slice(1);
+    const attributeSelector = `[id="${idValue.replace(/"/g, '\\"')}"]`;
     let originalCount = 0;
     try {
-        originalCount = await page.locator(selector).count();
+        originalCount = await page.locator(converted).count();
     } catch (err) {
         originalCount = 0;
     }
 
-    if (originalCount > 0) return selector;
+    if (originalCount > 0) return converted;
 
     let fallbackCount = 0;
     try {
@@ -873,12 +947,68 @@ async function normalizeSelectorForDotId(page, selector) {
 
     if (fallbackCount > 0) {
         console.warn(
-            `[ActionController] Selector fallback from ${selector} to ${attributeSelector}`,
+            `[ActionController] Selector fallback from ${converted} to ${attributeSelector}`,
         );
         return attributeSelector;
     }
 
+    return converted;
+}
+
+function convertPlaywrightLocator(selector) {
+    if (!selector || typeof selector !== 'string') return selector;
+
+    const trimmed = selector.trim();
+
+    if (
+        /^getByTestId\(/i.test(trimmed) ||
+        /^getByPlaceholder\(/i.test(trimmed) ||
+        /^getByText\(/i.test(trimmed) ||
+        /^getByRole\(/i.test(trimmed)
+    ) {
+        return selector;
+    }
+
     return selector;
+}
+
+const SELECTOR_FIELDS_BY_ACTION = {
+    click: ['selector'],
+    type_text: ['selector'],
+    fill_form: ['formSelector', 'submitSelector'],
+    find_element: ['selector'],
+    wait_visible: ['selector'],
+    select_option: ['selector'],
+    hover: ['selector'],
+    scroll: ['selector'],
+    drag_drop: ['sourceSelector', 'targetSelector'],
+    upload_file: ['selector'],
+    take_screenshot: ['selector'],
+    extract_text: ['selector'],
+    get_set_content: ['selector'],
+    wait_for_element: ['selector'],
+    save_dom: ['selector'],
+};
+
+function resolveSelectors(opts, actionName) {
+    const fields = SELECTOR_FIELDS_BY_ACTION[actionName] || [];
+    if (fields.length === 0) return opts;
+
+    const resolved = { ...opts };
+    for (const field of fields) {
+        if (resolved[field]) {
+            resolved[field] = convertPlaywrightLocator(resolved[field]);
+        }
+    }
+
+    if (actionName === 'fill_form' && resolved.fields && Array.isArray(resolved.fields)) {
+        resolved.fields = resolved.fields.map((field) => ({
+            ...field,
+            selector: convertPlaywrightLocator(field.selector),
+        }));
+    }
+
+    return resolved;
 }
 
 /**
@@ -924,6 +1054,11 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
             }
         }
     }
+
+    // --- PLAYWRIGHT LOCATOR RESOLUTION ---
+    // Convert Playwright method-call locators (getByRole, getByTestId, etc.)
+    // to executable selector strings before any Playwright API call.
+    const resolvedOpts = resolveSelectors(opts, actionName);
 
     // --- LABEL SAFETY NET ---
     let finalLabel = opts.label || req.body.label || req.body.customLabel;
@@ -1039,7 +1174,7 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
                 if (!page._securityAlerts) page._securityAlerts = [];
             }
 
-            if (page && !page.isClosed() && enableFineTuning) {
+            if (page && !page.isClosed()) {
                 try {
                     const { default: selectorHealer } =
                         await import('../services/SelectorHealer.js');
@@ -1080,7 +1215,7 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
                 .catch(() => {});
 
             // Highlight target selector
-            if (opts.selector) {
+            if (resolvedOpts.selector) {
                 await page
                     .evaluate((sel) => {
                         try {
@@ -1096,12 +1231,12 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
                         } catch (e) {
                             // Ignore invalid selector queries
                         }
-                    }, opts.selector)
+                    }, resolvedOpts.selector)
                     .catch(() => {});
             }
         }
 
-        const result = await actionLogic(page, opts, targetBrowserId, context);
+        const result = await actionLogic(page, resolvedOpts, targetBrowserId, context);
 
         if (page && !page.isClosed()) {
             await page
@@ -1594,6 +1729,7 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
                             newSelector: diagnosis.correctedSelector,
                             source: diagnosis.source,
                             reasoning: diagnosis.reasoning,
+                            isBreakingChange: !!diagnosis.isBreakingChange,
                         });
 
                         // RETRY
@@ -1605,11 +1741,63 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
                         );
                         const totalDuration = Date.now() - healingStart;
 
+                        if (retryResult.success !== false) {
+                            try {
+                                if (opts.flowId && opts.nodeId) {
+                                    const flow = await Flow.findByPk(opts.flowId);
+                                    if (flow && flow.data?.nodes) {
+                                        const updatedNodes = flow.data.nodes.map((n) => {
+                                            if ((n.id || n.nodeId) === opts.nodeId) {
+                                                const updated = {
+                                                    ...n,
+                                                    data: {
+                                                        ...(n.data || {}),
+                                                        configuration: {
+                                                            ...(n.data?.configuration || {}),
+                                                            selector: diagnosis.correctedSelector,
+                                                            healed: true,
+                                                            healedFrom: diagnosis.source,
+                                                            originalValue: opts.selector,
+                                                            healedValue:
+                                                                diagnosis.correctedSelector,
+                                                            aiReasoning: diagnosis.reasoning,
+                                                            healingConfidence: diagnosis.confidence,
+                                                        },
+                                                    },
+                                                };
+                                                return updated;
+                                            }
+                                            return n;
+                                        });
+                                        await flow.update({
+                                            data: { ...flow.data, nodes: updatedNodes },
+                                        });
+                                        console.log(
+                                            `[Self-Healing] Flow document updated for flow: ${opts.flowId}`,
+                                        );
+                                    }
+                                }
+                            } catch (flowErr) {
+                                console.error(
+                                    '[Self-Healing] Flow persistence failed:',
+                                    flowErr.message,
+                                );
+                            }
+                        }
+
                         emitLog({
                             message: `[Self-Healing] 🎉 Repair successful! Total time: ${totalDuration}ms`,
                             nodeId: opts.nodeId,
                             type: 'success',
                         });
+
+                        if (diagnosis.isBreakingChange) {
+                            emitLog({
+                                message: `[Self-Healing] ⚠️ Breaking change detected: selector type/locator strategy changed. Review flow after execution.`,
+                                nodeId: opts.nodeId,
+                                type: 'warning',
+                            });
+                        }
 
                         if (runId && opts.nodeId) {
                             try {
@@ -2505,8 +2693,9 @@ export const clickAction = (req, res) =>
 
         const targetSelector = await normalizeSelectorForDotId(page, selector);
         const clickOptions = { button, clickCount, modifiers, timeout, force };
+        const locator = buildPlaywrightLocator(page, targetSelector);
 
-        await page.click(targetSelector, clickOptions);
+        await locator.click(clickOptions);
 
         return {
             message: req.t('actions.click.success', { selector: targetSelector }),
@@ -2524,27 +2713,22 @@ export const typeTextAction = (req, res) =>
 
         const actionOptions = { timeout };
         const targetSelector = await normalizeSelectorForDotId(page, selector);
+        const locator = buildPlaywrightLocator(page, targetSelector);
 
-        // Corrected typing logic
         if (clearBeforeType) {
             if (delay > 0) {
-                // If there's a delay, we clear first and then type with delay
-                await page.fill(targetSelector, '', actionOptions);
-                await page.type(targetSelector, text, { ...actionOptions, delay });
+                await locator.fill('', actionOptions);
+                await locator.type(text, { ...actionOptions, delay });
             } else {
-                // If no delay, fill is faster and clears automatically
-                await page.fill(targetSelector, text, actionOptions);
+                await locator.fill(text, actionOptions);
             }
         } else {
-            // If NOT clearing, use type to append
-            // page.type appends at the end if not explicitly cleared
-            await page.type(targetSelector, text, { ...actionOptions, delay: delay || 0 });
+            await locator.type(text, { ...actionOptions, delay: delay || 0 });
         }
 
         // Automatic screenshot capture (Frontend Requirement)
         let screenshotData = null;
         try {
-            // Small wait to ensure rendering updates after typing
             await page.waitForTimeout(200);
             const screenshot = await page.screenshot({
                 fullPage: false,
@@ -2591,7 +2775,7 @@ export const fillFormAction = (req, res) =>
         );
 
         const timeoutMs = typeof timeout === 'number' ? timeout : 30000;
-        const formLocator = page.locator(formSelector);
+        const formLocator = buildPlaywrightLocator(page, formSelector);
         await formLocator.waitFor({ state: 'attached', timeout: timeoutMs });
 
         const fillResults = [];
@@ -2613,7 +2797,7 @@ export const fillFormAction = (req, res) =>
                 );
                 throw new Error('Field selector is required for every field.');
             }
-            // Resolve variables dynamically at runtime
+
             const runId = page._currentRunId || req.body?.runId;
             let resolvedValue = field.value ?? '';
             if (runId && typeof resolvedValue === 'string' && resolvedValue.includes('{{')) {
@@ -2624,7 +2808,7 @@ export const fillFormAction = (req, res) =>
             const fieldDelay = typeof field.delay === 'number' ? field.delay : 0;
             const fieldClear = field.clearBeforeType ?? clearBeforeType;
 
-            const targetLocator = formLocator.locator(selector).first();
+            const targetLocator = buildPlaywrightLocator(page, selector);
             await targetLocator.waitFor({ state: 'attached', timeout: timeoutMs });
 
             if (fieldDelay > 0) {
@@ -2652,7 +2836,6 @@ export const fillFormAction = (req, res) =>
                     await targetLocator
                         .selectOption({ label: String(resolvedValue) }, { timeout: timeoutMs })
                         .catch(async () => {
-                            // fallback to value
                             await targetLocator.selectOption(
                                 { value: String(resolvedValue) },
                                 { timeout: timeoutMs },
@@ -2697,24 +2880,17 @@ export const fillFormAction = (req, res) =>
         if (shouldSubmit) {
             const submitAction = async () => {
                 if (submitSelector && submitSelector.trim().length > 0) {
-                    let submitLocator = formLocator.locator(submitSelector).first();
+                    const submitLocator = buildPlaywrightLocator(page, submitSelector);
                     try {
-                        // Wait briefly to see if it's inside the form
                         await submitLocator.waitFor({
                             state: 'attached',
                             timeout: Math.min(timeoutMs, 500),
                         });
-                    } catch (e) {
-                        console.warn(
-                            `[fillFormAction] submitSelector '${submitSelector}' not found inside form within 500ms, falling back to page level.`,
-                        );
-                        submitLocator = page.locator(submitSelector).first();
-                        await submitLocator.waitFor({
-                            state: 'attached',
-                            timeout: Math.max(1000, timeoutMs - 500),
-                        });
+                        await submitLocator.click();
+                    } catch (clickErr) {
+                        console.warn('[fillFormAction] Submit click failed:', clickErr.message);
+                        throw clickErr;
                     }
-                    await submitLocator.click({ timeout: timeoutMs });
                 } else {
                     await formLocator.evaluate((form) => {
                         if (typeof form.requestSubmit === 'function') {
@@ -2778,8 +2954,10 @@ export const scrollAction = (req, res) =>
             waitTime = 2000,
             x, // Absolute X coordinate
             y, // Absolute Y coordinate
-            duration, // Custom duration
         } = opts;
+
+        const targetSelector = selector ? await normalizeSelectorForDotId(page, selector) : null;
+        const locator = targetSelector ? buildPlaywrightLocator(page, targetSelector) : null;
 
         // NEW: Infinite Scroll Mode
         if (scrollToEnd) {
@@ -2789,33 +2967,21 @@ export const scrollAction = (req, res) =>
             let attempts = 0;
 
             // Get initial height
-            if (selector) {
-                await page.waitForSelector(selector, { state: 'attached', timeout: 5000 });
-                currentHeight = await page.evaluate((sel) => {
-                    const element = document.querySelector(sel);
-                    if (!element) throw new Error(`Element not found: ${sel}`);
-                    return element.scrollHeight;
-                }, selector);
+            if (locator) {
+                await locator.waitFor({ state: 'attached', timeout: 5000 });
+                currentHeight = await locator.evaluate((el) => el.scrollHeight);
             } else {
-                currentHeight = await page.evaluate(() => {
-                    return document.body.scrollHeight;
-                });
+                currentHeight = await page.evaluate(() => document.body.scrollHeight);
             }
 
             while (attempts < maxScrolls && lastHeight !== currentHeight) {
                 lastHeight = currentHeight;
 
                 // Perform scroll
-                if (selector) {
-                    await page.evaluate(
-                        ({ sel, beh }) => {
-                            const element = document.querySelector(sel);
-                            if (element) {
-                                element.scrollTo({ top: element.scrollHeight, behavior: beh });
-                            }
-                        },
-                        { sel: selector, beh: behavior },
-                    );
+                if (locator) {
+                    await locator.evaluate((el, beh) => {
+                        el.scrollTo({ top: el.scrollHeight, behavior: beh });
+                    }, behavior);
                 } else {
                     await page.evaluate((beh) => {
                         window.scrollTo({ top: document.body.scrollHeight, behavior: beh });
@@ -2826,16 +2992,10 @@ export const scrollAction = (req, res) =>
                 await page.waitForTimeout(waitTime);
 
                 // Check new height
-                if (selector) {
-                    currentHeight = await page.evaluate((sel) => {
-                        const element = document.querySelector(sel);
-                        if (!element) throw new Error(`Element not found: ${sel}`);
-                        return element.scrollHeight;
-                    }, selector);
+                if (locator) {
+                    currentHeight = await locator.evaluate((el) => el.scrollHeight);
                 } else {
-                    currentHeight = await page.evaluate(() => {
-                        return document.body.scrollHeight;
-                    });
+                    currentHeight = await page.evaluate(() => document.body.scrollHeight);
                 }
 
                 attempts++;
@@ -2848,114 +3008,49 @@ export const scrollAction = (req, res) =>
                 lastHeight === currentHeight ? 'Reached end' : 'Max attempts reached';
 
             return {
-                message:
-                    req.t('actions.scroll.success_infinite', {
-                        attempts,
-                        status: finalStatus,
-                    }) || `Scrolled to end after ${attempts} attempts. ${finalStatus}`,
+                message: req.t('actions.scroll.success', { status: finalStatus }),
                 data: {
-                    scrolledHeight: currentHeight,
+                    status: finalStatus,
                     attempts,
-                    reachedEnd: lastHeight === currentHeight,
-                },
-                traceDetails: {
-                    action: 'scroll_infinite',
-                    selector: selector || 'window',
-                    attempts,
-                    maxScrolls,
-                    waitTime,
                     finalHeight: currentHeight,
                 },
+                traceDetails: { selector: targetSelector, scrollToEnd: true, attempts },
             };
         }
 
-        // EXISTING: Standard scroll logic
-        let dx = 0;
-        let dy = 0;
-
-        if (x !== undefined && y !== undefined) {
-            // Absolute displacement
-            if (selector) {
-                await page.waitForSelector(selector, { state: 'attached', timeout: 5000 });
+        // Standard scroll behavior
+        if (locator) {
+            await locator.scrollIntoViewIfNeeded();
+            if (direction === 'up') {
                 await page.evaluate(
-                    ({ selector, x, y, behavior }) => {
-                        const element = document.querySelector(selector);
-                        if (!element)
-                            throw new Error(`Element not found with selector: ${selector}`);
-                        element.scrollTo({ left: x, top: y, behavior });
+                    (sel, amt) => {
+                        const el = document.querySelector(sel);
+                        if (el) el.scrollBy({ top: -amt, behavior: 'smooth' });
                     },
-                    { selector, x, y, behavior },
+                    targetSelector,
+                    amount,
                 );
             } else {
                 await page.evaluate(
-                    ({ x, y, behavior }) => {
-                        window.scrollTo({ left: x, top: y, behavior });
+                    (sel, amt) => {
+                        const el = document.querySelector(sel);
+                        if (el) el.scrollBy({ top: amt, behavior: 'smooth' });
                     },
-                    { x, y, behavior },
+                    targetSelector,
+                    amount,
                 );
             }
+        } else if (x !== undefined && y !== undefined) {
+            await page.mouse.wheel(x, y);
+        } else if (direction === 'up') {
+            await page.evaluate(() => window.scrollBy({ top: -amount, behavior }));
         } else {
-            // Relative displacement
-            switch (direction) {
-                case 'down':
-                    dy = amount;
-                    break;
-                case 'up':
-                    dy = -amount;
-                    break;
-                case 'right':
-                    dx = amount;
-                    break;
-                case 'left':
-                    dx = -amount;
-                    break;
-                default:
-                    throw new Error(`Invalid scroll direction: ${direction}`);
-            }
-
-            if (selector) {
-                await page.waitForSelector(selector, { state: 'attached', timeout: 5000 });
-                await page.evaluate(
-                    ({ selector, dx, dy, behavior }) => {
-                        const element = document.querySelector(selector);
-                        if (!element)
-                            throw new Error(`Element not found with selector: ${selector}`);
-                        element.scrollBy({ left: dx, top: dy, behavior });
-                    },
-                    { selector, dx, dy, behavior },
-                );
-            } else {
-                await page.evaluate(
-                    ({ dx, dy, behavior }) => {
-                        window.scrollBy({ left: dx, top: dy, behavior });
-                    },
-                    { dx, dy, behavior },
-                );
-            }
+            await page.evaluate(() => window.scrollBy({ top: amount, behavior }));
         }
 
-        // Generate associated events
-        const startTime = Date.now();
-        const endTime = startTime + (duration || 0);
-        const eventDetails = {
-            action: 'scroll',
-            startTime,
-            endTime,
-            selector: selector || 'window',
-            direction,
-            amount,
-            x,
-            y,
-        };
-
-        traceService.add({
-            ...eventDetails,
-            status: 'success',
-        });
-
         return {
-            message: req.t('actions.scroll.success', { target: selector || 'the main window' }),
-            traceDetails: eventDetails,
+            message: req.t('actions.scroll.success', { status: 'Scrolled' }),
+            traceDetails: { selector: targetSelector, direction, amount },
         };
     });
 
@@ -3135,27 +3230,17 @@ export const findElementAction = (req, res) =>
 
         if (!selector) throw new Error(req.t('errors.selector_required'));
 
-        // Convert selector based on type
-        let playwrightSelector = selector;
-        if (selectorType === 'xpath') {
-            // Playwright requires 'xpath=' prefix for XPath selectors
-            playwrightSelector = selector.startsWith('xpath=') ? selector : `xpath=${selector}`;
-        }
+        const targetSelector = await normalizeSelectorForDotId(page, selector);
+        const locator = buildPlaywrightLocator(page, targetSelector);
 
         // Determine wait state based on visible parameter
         const waitState = visible ? 'visible' : 'attached';
 
-        // Wait for the element with correct configuration
-        await page.waitForSelector(playwrightSelector, {
-            state: waitState,
-            timeout,
-        });
-
-        // Verify current visibility of the element
-        const isVisible = await page.isVisible(playwrightSelector);
+        await locator.waitFor({ state: waitState, timeout });
+        const isVisible = await locator.isVisible();
 
         return {
-            message: req.t('actions.find_element.success', { selector }),
+            message: req.t('actions.find_element.success', { selector: targetSelector }),
             data: {
                 found: true,
                 visible: isVisible,
@@ -3163,7 +3248,7 @@ export const findElementAction = (req, res) =>
                 state: waitState,
             },
             traceDetails: {
-                selector,
+                selector: targetSelector,
                 selectorType,
                 found: true,
                 visible: isVisible,
@@ -3177,6 +3262,8 @@ export const selectOptionAction = (req, res) =>
         const timeout = opts.timeout ? Number(opts.timeout) : undefined;
 
         if (!selector) throw new Error(req.t('errors.selector_required'));
+
+        const targetSelector = await normalizeSelectorForDotId(page, selector);
 
         // Base options configuration
         let valuesToSelect = {};
@@ -3199,34 +3286,23 @@ export const selectOptionAction = (req, res) =>
         }
 
         // Logic to handle selectors and target resolution
-        let targetElement = selector; // By default we use the selector as string (for page.selectOption)
+        let resolvedTarget = targetSelector;
         let resolvedTargetType = 'original_selector';
 
         try {
-            // Inspect the element
-            await page.waitForSelector(selector, { state: 'attached', timeout: timeout || 30000 });
-            const element = await page.$(selector);
+            const locator = buildPlaywrightLocator(page, targetSelector);
+            await locator.waitFor({ state: 'attached', timeout: timeout || 30000 });
+            const tagName = await locator.evaluate((el) => el.tagName);
 
-            if (element) {
-                const tagName = await element.evaluate((el) => el.tagName);
+            if (tagName === 'OPTION') {
+                const selectLocator = locator.locator('xpath=ancestor::select').first();
+                const count = await selectLocator.count();
+                if (count > 0) {
+                    resolvedTarget = selectLocator;
+                    resolvedTargetType = 'parent_select';
 
-                if (tagName === 'OPTION') {
-                    // Case: Selector points to <option>
-                    const selectHandle = await element.evaluateHandle((el) => el.closest('select'));
-                    const isSelect = await selectHandle.evaluate(
-                        (el) => el instanceof HTMLSelectElement, // eslint-disable-line no-undef
-                    );
-
-                    if (isSelect) {
-                        targetElement = selectHandle; // Now the target is the <select> handle
-                        resolvedTargetType = 'parent_select';
-
-                        // If no explicit value, select THIS specific option
-                        if (!selectionValue) {
-                            valuesToSelect = element; // Pass the option handle as value to select
-                        }
-                    } else {
-                        console.warn('[WARN] Selector points to OPTION but has no SELECT parent.');
+                    if (!selectionValue) {
+                        valuesToSelect = await locator.evaluate((el) => el.value);
                     }
                 }
             }
@@ -3236,19 +3312,17 @@ export const selectOptionAction = (req, res) =>
 
         // Execute selection
         let result;
-        if (typeof targetElement === 'string') {
-            // Use page method with string selector
-            result = await page.selectOption(targetElement, valuesToSelect, runOptions);
+        if (resolvedTargetType === 'parent_select' && typeof resolvedTarget !== 'string') {
+            result = await resolvedTarget.selectOption(valuesToSelect, runOptions);
         } else {
-            // Use handle method (targetElement is an ElementHandle of <select>)
-            result = await targetElement.selectOption(valuesToSelect, runOptions);
+            result = await page.selectOption(resolvedTarget, valuesToSelect, runOptions);
         }
 
         return {
             message: req.t('actions.select_option.success'),
             data: { selected: result },
             traceDetails: {
-                selector,
+                selector: targetSelector,
                 selectionCriteria,
                 selectionValue,
                 timeout,
@@ -3313,11 +3387,13 @@ export const hoverAction = (req, res) =>
             throw new Error(req.t('errors.selector_required'));
         }
 
-        await page.hover(selector, { timeout });
+        const targetSelector = await normalizeSelectorForDotId(page, selector);
+        const locator = buildPlaywrightLocator(page, targetSelector);
+        await locator.hover({ timeout });
 
         return {
-            message: req.t('actions.hover.success', { selector }),
-            traceDetails: { selector, timeout },
+            message: req.t('actions.hover.success', { selector: targetSelector }),
+            traceDetails: { selector: targetSelector, timeout },
         };
     });
 
@@ -3499,12 +3575,10 @@ export const saveDomAction = (req, res) =>
     executePlaywrightAction(req, res, 'save_dom', async (page, opts) => {
         const { path: savePath, variableName, selector, timeout = 30000 } = opts;
 
-        // 1. Validacion: Se requiere al menos un destino (path o variableName)
         if (!savePath && !variableName) {
             throw new Error(req.t('errors.save_dom_destination_required'));
         }
 
-        // 2. Validacion de seguridad para path (si se proporciona)
         let resolvedPath = null;
         if (savePath) {
             if (savePath.includes('..')) {
@@ -3513,32 +3587,23 @@ export const saveDomAction = (req, res) =>
             resolvedPath = path.resolve(savePath);
         }
 
-        // 3. Obtencion del Contenido
         let content = '';
         if (selector) {
-            // Caso: Capturar elemento especifico
-            await page.waitForSelector(selector, { state: 'attached', timeout });
-            const element = await page.$(selector);
-            if (!element) {
-                throw new Error(`Elemento no encontrado: ${selector}`);
-            }
-            // Extraer outerHTML para incluir el elemento mismo
-            content = await element.evaluate((el) => el.outerHTML);
+            const targetSelector = await normalizeSelectorForDotId(page, selector);
+            const locator = buildPlaywrightLocator(page, targetSelector);
+            await locator.waitFor({ state: 'attached', timeout });
+            content = await locator.evaluate((el) => el.outerHTML);
         } else {
-            // Caso: Capturar página completa
             content = await page.content();
         }
 
-        // 4. Persistencia del Contenido
         const results = {};
 
-        // Guardar en Archivo
         if (resolvedPath) {
             await fsp.writeFile(resolvedPath, content);
             results.path = resolvedPath;
         }
 
-        // Guardar en Variable
         if (variableName) {
             variableManager.set(variableName, content, req.body.runId);
             results.variableStored = variableName;
@@ -3642,52 +3707,48 @@ export const waitForElementAction = (req, res) =>
         const { selector, condition = 'visible', timeout = 30000, scrollIntoView = false } = opts;
 
         try {
+            const targetSelector = await normalizeSelectorForDotId(page, selector);
+            const locator = buildPlaywrightLocator(page, targetSelector);
+
             // Scroll if requested
             if (scrollIntoView) {
                 try {
-                    // First wait for it to be attached (so we can scroll)
-                    await page.waitForSelector(selector, { state: 'attached', timeout });
-                    const el = page.locator(selector).first();
-                    await el.scrollIntoViewIfNeeded({ timeout: 5000 }).catch(() => {});
+                    await locator.waitFor({ state: 'attached', timeout });
+                    await locator.scrollIntoViewIfNeeded({ timeout: 5000 }).catch(() => {});
                 } catch (err) {
-                    // Ignore scroll errors, maybe it's not interpretable yet or will fail in the main wait
-                    console.warn(`[WARN] Scroll attempt failed for '${selector}':`, err.message);
+                    console.warn(
+                        `[WARN] Scroll attempt failed for '${targetSelector}':`,
+                        err.message,
+                    );
                 }
             }
 
             // Map condition to Playwright's state
-            // Conditions 'visible', 'hidden', 'attached', 'detached' match Playwright states
             const playwrightState = condition;
 
-            // Execute wait with clean parameters
-            await page.waitForSelector(selector, {
-                state: playwrightState,
-                timeout: timeout,
-            });
+            await locator.waitFor({ state: playwrightState, timeout });
 
-            // Descriptive messages based on the condition
             const messages = {
-                visible: req.t('actions.wait_for_element.visible', { selector }),
-                hidden: req.t('actions.wait_for_element.hidden', { selector }),
-                attached: req.t('actions.wait_for_element.attached', { selector }),
-                detached: req.t('actions.wait_for_element.detached', { selector }),
+                visible: req.t('actions.wait_for_element.visible', { selector: targetSelector }),
+                hidden: req.t('actions.wait_for_element.hidden', { selector: targetSelector }),
+                attached: req.t('actions.wait_for_element.attached', { selector: targetSelector }),
+                detached: req.t('actions.wait_for_element.detached', { selector: targetSelector }),
             };
 
             return {
                 message: messages[condition] || req.t('actions.wait_for_element.condition_met'),
                 data: {
-                    selector,
+                    selector: targetSelector,
                     condition,
                     conditionMet: true,
                 },
                 traceDetails: {
-                    selector,
+                    selector: targetSelector,
                     condition,
                     timeout,
                 },
             };
         } catch (error) {
-            // Specific handling for TimeoutError
             if (error.name === 'TimeoutError' || error.message.includes('Timeout')) {
                 throw new Error(req.t('errors.wait_timeout', { selector, condition, timeout }));
             }
@@ -3778,25 +3839,23 @@ export const waitVisibleAction = (req, res) =>
             throw new Error(req.t('errors.selector_required'));
         }
 
+        const targetSelector = await normalizeSelectorForDotId(page, selector);
+        const locator = buildPlaywrightLocator(page, targetSelector);
+
         // 1. Scroll if necessary
         if (scrollIntoView) {
             try {
-                // First wait for it to exist in the DOM to be able to scroll
-                await page.waitForSelector(selector, { state: 'attached', timeout });
-
-                // Attempt to scroll
-                await page.evaluate((sel) => {
-                    const el = document.querySelector(sel);
-                    if (el) el.scrollIntoView({ block: 'center', inline: 'center' });
-                }, selector);
+                await locator.waitFor({ state: 'attached', timeout });
+                await locator.scrollIntoViewIfNeeded();
             } catch (err) {
-                console.warn(`[WARN] Could not scroll to element '${selector}': ${err.message}`);
-                // Continue, maybe it's already visible or the error will trigger in the next step
+                console.warn(
+                    `[WARN] Could not scroll to element '${targetSelector}': ${err.message}`,
+                );
             }
         }
 
         // 2. Wait for visibility
-        await page.waitForSelector(selector, { state: 'visible', timeout });
+        await locator.waitFor({ state: 'visible', timeout });
 
         // 3. Implicit screenshot capture (VISUAL_CHANGE_NODES)
         let screenshotData = null;
@@ -5068,22 +5127,31 @@ export const dragDropAction = (req, res) =>
             throw error;
         }
 
+        const sourceTarget = await normalizeSelectorForDotId(page, sourceSelector);
+        const targetTarget = await normalizeSelectorForDotId(page, targetSelector);
+        const sourceLocator = buildPlaywrightLocator(page, sourceTarget);
+        const targetLocator = buildPlaywrightLocator(page, targetTarget);
+
         console.log(
-            `[INFO] Dragging ${sourceSelector} to ${targetSelector}. Steps: ${steps}, Force: ${force}`,
+            `[INFO] Dragging ${sourceTarget} to ${targetTarget}. Steps: ${steps}, Force: ${force}`,
         );
 
-        await page.dragAndDrop(sourceSelector, targetSelector, {
+        await sourceLocator.dragTo(targetLocator, {
             steps: Number(steps),
             force,
-            timeout: 30000,
         });
 
         return {
             message: req.t('actions.drag_drop.success', {
-                source: sourceSelector,
-                target: targetSelector,
+                source: sourceTarget,
+                target: targetTarget,
             }),
-            traceDetails: { sourceSelector, targetSelector, steps, force },
+            traceDetails: {
+                sourceSelector: sourceTarget,
+                targetSelector: targetTarget,
+                steps,
+                force,
+            },
         };
     });
 /**
@@ -6190,7 +6258,18 @@ export const componentAction = async (req, res) => {
         const { variableManager: vm } = await import('../services/VariableManager.js');
         const executionService = new ExecutionService();
 
-        // 2.b Handle Input Mapping (Parent -> Child)
+        // 2.b Handle Input Mapping & Parameter Passing (Parent -> Child)
+        if (configuration && typeof configuration === 'object') {
+            Object.entries(configuration).forEach(([key, val]) => {
+                if (
+                    !['flowId', 'label', 'inputMapping', 'outputMapping', 'subNodes'].includes(key)
+                ) {
+                    const resolvedVal = typeof val === 'string' ? vm.resolve(val, runId) : val;
+                    vm.set(key, resolvedVal, runId);
+                }
+            });
+        }
+
         const inputMapping = configuration?.inputMapping || [];
         if (Array.isArray(inputMapping)) {
             for (const mapping of inputMapping) {
