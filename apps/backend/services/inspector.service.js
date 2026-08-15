@@ -1,4 +1,4 @@
-import { emitElementPicked } from '../socket.js';
+import { emitElementPicked, emitElementSanitized } from '../socket.js';
 /* global window, document, Element, Node */
 import ollamaService from './OllamaService.js';
 
@@ -9,105 +9,145 @@ import ollamaService from './OllamaService.js';
 const injectInspectorUI = () => {
     const HIGHLIGHT_ID = 'haltest-inspector-highlight';
 
-    // NOTE: If we re-run this, we want to RESET the inspector, not return early.
-    // So we call cleanup first just in case.
     if (window.__haltestInspectorActive) {
         console.log('[Inspector] Inspector already active, resetting...');
     }
 
     window.__haltestInspectorActive = true;
 
-    // Cleanup Helper
     window.__haltestInspectorCleanup = function () {
         const oldEl = document.getElementById(HIGHLIGHT_ID);
         if (oldEl) oldEl.remove();
-
         window.__haltestInspectorActive = false;
     };
 
-    // Run once to start fresh
     window.__haltestInspectorCleanup();
 
-    // Create Highlighter Element
     let highlightEl = document.createElement('div');
     highlightEl.id = HIGHLIGHT_ID;
     Object.assign(highlightEl.style, {
         position: 'fixed',
         pointerEvents: 'none',
-        background: 'rgba(64, 150, 255, 0.2)', // Semi-transparent blue
+        background: 'rgba(64, 150, 255, 0.2)',
         border: '2px solid #4096ff',
-        zIndex: '2147483647', // Max z-index
+        zIndex: '2147483647',
         transition: 'all 0.1s ease',
         display: 'none',
         borderRadius: '4px',
-        boxSizing: 'border-box', // Ensure border doesn't add size
+        boxSizing: 'border-box',
     });
     document.body.appendChild(highlightEl);
 
-    // Helper to check if ID looks dynamic (e.g., container-1234, uid-abcde)
     function isDynamicId(id) {
         if (!id) return false;
-        // Matches: long numbers, GUID-like strings, randomized suffixes
         return /([0-9]{3,})/.test(id) || /([a-f0-9]{8}-[a-f0-9]{4})/.test(id);
     }
 
-    // Smart Selector Generator
+    function escapeSelectorValue(value) {
+        if (value == null) return '';
+        return String(value).replace(/'/g, "\\'");
+    }
+
+    function escapeXPathValue(value) {
+        if (value == null) return '';
+        const escaped = String(value).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        if (escaped.includes("'")) {
+            return `concat('${escaped.replace(/'/g, "', \"'\", '")}')`;
+        }
+        return escaped;
+    }
+
     function generateSelector(el) {
         const candidates = {};
 
-        // 1. Data-Test Attributes (Gold Standard)
         const testIdAttrs = ['data-testid', 'data-test-id', 'data-test', 'data-cy'];
         for (const attr of testIdAttrs) {
             if (el.hasAttribute(attr)) {
-                candidates.testId = `[${attr}="${el.getAttribute(attr)}"]`;
+                const testIdValue = el.getAttribute(attr);
+                candidates.testId = `[${attr}="${testIdValue}"]`;
+                if (attr === 'data-testid' || attr === 'data-test-id') {
+                    candidates.playwrightTestId = `getByTestId('${escapeSelectorValue(testIdValue)}')`;
+                }
                 break;
             }
         }
 
-        // 2. ID (Attributes) - Only if not dynamic
         if (el.id && !isDynamicId(el.id)) {
             candidates.id = `#${window.CSS.escape(el.id)}`;
         }
 
-        // 3. Aria Label (Accessibility)
-        if (el.getAttribute('aria-label')) {
-            candidates.aria = `[aria-label="${el.getAttribute('aria-label')}"]`;
+        const ariaLabel = el.getAttribute('aria-label');
+        if (ariaLabel) {
+            candidates.aria = `[aria-label="${ariaLabel}"]`;
+            const explicitRole = el.getAttribute('role');
+            const implicitRoleMap = {
+                BUTTON: 'button',
+                A: 'link',
+                INPUT: 'textbox',
+                SELECT: 'combobox',
+                TEXTAREA: 'textbox',
+                H1: 'heading',
+                H2: 'heading',
+                H3: 'heading',
+                NAV: 'navigation',
+                MAIN: 'main',
+                HEADER: 'banner',
+                FOOTER: 'contentinfo',
+            };
+            const role = explicitRole || implicitRoleMap[el.tagName] || el.tagName.toLowerCase();
+            candidates.playwrightRole = `getByRole('${role}', { name: '${escapeSelectorValue(ariaLabel)}' })`;
         }
 
-        // 4. Input Name (Forms)
         if (el.tagName === 'INPUT' && el.getAttribute('name')) {
             candidates.name = `input[name="${el.getAttribute('name')}"]`;
         }
+        const placeholder = el.getAttribute('placeholder');
+        if (placeholder && ['INPUT', 'TEXTAREA'].includes(el.tagName)) {
+            candidates.playwrightLabel = `getByPlaceholder('${escapeSelectorValue(placeholder)}')`;
+        }
 
-        // 5. Text Content (Buttons/Links) - Contextual
-        if (['BUTTON', 'A', 'SPAN'].includes(el.tagName)) {
+        if (['BUTTON', 'A', 'SPAN', 'LI'].includes(el.tagName)) {
             const text = el.innerText.trim();
-            // Short, meaningful text, no newlines
-            if (text && text.length < 30 && !text.includes('\n')) {
-                // Using XPath for text as standard CSS doesn't support text matching seamlessly without :has or special syntax
-                // We format this as a pseudo-selector for readability or standard xpath
-                candidates.text = `//${el.tagName.toLowerCase()}[contains(text(), '${text}')]`;
+            if (text && text.length < 40 && !text.includes('\n')) {
+                candidates.text = `//${el.tagName.toLowerCase()}[contains(text(), ${escapeXPathValue(text)})]`;
+
+                if (!candidates.playwrightRole) {
+                    const roleByTag = { BUTTON: 'button', A: 'link', LI: 'listitem' };
+                    const tagRole = roleByTag[el.tagName];
+                    if (tagRole) {
+                        candidates.playwrightRole = `getByRole('${tagRole}', { name: '${escapeSelectorValue(text)}' })`;
+                    }
+                }
+                candidates.playwrightText = `getByText('${escapeSelectorValue(text)}')`;
             }
         }
 
-        // 6. Full CSS Path (Fallback)
         candidates.cssPath = getCssPath(el);
 
-        // --- SELECTION STRATEGY ---
-        // Priority: TestID > Stable ID > Input Name > Aria > Text > CSS Path
-
+        if (candidates.playwrightTestId)
+            return {
+                best: candidates.playwrightTestId,
+                type: 'playwright_test_id',
+                all: candidates,
+            };
+        if (candidates.playwrightRole)
+            return { best: candidates.playwrightRole, type: 'playwright_role', all: candidates };
         if (candidates.testId) return { best: candidates.testId, type: 'test_id', all: candidates };
         if (candidates.id) return { best: candidates.id, type: 'id', all: candidates };
         if (candidates.name) return { best: candidates.name, type: 'name', all: candidates };
+        if (candidates.playwrightLabel)
+            return { best: candidates.playwrightLabel, type: 'playwright_label', all: candidates };
         if (candidates.aria)
             return { best: candidates.aria, type: 'accessibility', all: candidates };
+        if (candidates.playwrightText)
+            return { best: candidates.playwrightText, type: 'playwright_text', all: candidates };
         if (candidates.text) return { best: candidates.text, type: 'content', all: candidates };
 
         return { best: candidates.cssPath, type: 'path', all: candidates };
     }
 
     function getCssPath(el) {
-        if (!(el instanceof Element)) return;
+        if (!(el instanceof Element)) return '';
         const path = [];
         while (el.nodeType === Node.ELEMENT_NODE) {
             let selector = el.nodeName.toLowerCase();
@@ -129,7 +169,6 @@ const injectInspectorUI = () => {
         return path.join(' > ');
     }
 
-    // Event Handlers
     function onMouseOver(e) {
         const el = e.target;
         if (el.id === HIGHLIGHT_ID) return;
@@ -146,7 +185,6 @@ const injectInspectorUI = () => {
 
     function onClick(e) {
         console.log('[HaltestInspector] Element clicked:', e.target);
-        // Prevent default click behavior
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
@@ -155,18 +193,40 @@ const injectInspectorUI = () => {
         const result = generateSelector(el);
         console.log('[HaltestInspector] Selection result:', result);
 
-        // Clean up
+        const pickId = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+
+        const semanticContext = {
+            tagName: el.tagName.toLowerCase(),
+            role: el.getAttribute('role') || null,
+            ariaLabel: el.getAttribute('aria-label') || null,
+            ariaDescribedby: el.getAttribute('aria-describedby') || null,
+            text: el.innerText ? el.innerText.trim().substring(0, 150) : null,
+            type: el.getAttribute('type') || null,
+            name: el.getAttribute('name') || null,
+            placeholder: el.getAttribute('placeholder') || null,
+            href: el.getAttribute('href') || null,
+            parentTag: el.parentElement ? el.parentElement.tagName.toLowerCase() : null,
+            parentRole: el.parentElement ? el.parentElement.getAttribute('role') : null,
+            parentText:
+                el.parentElement && el.parentElement.innerText
+                    ? el.parentElement.innerText.trim().substring(0, 100)
+                    : null,
+            siblingCount: el.parentElement ? el.parentElement.children.length : 0,
+            siblingIndex: el.parentElement ? Array.from(el.parentElement.children).indexOf(el) : -1,
+        };
+
         cleanup();
 
-        // Send to backend
-        // We verify the backend expects 'selector' property for backward compatibility
         if (window.onElementSelected) {
             console.log('[HaltestInspector] Sending to backend via window.onElementSelected...');
             window.onElementSelected({
+                pickId,
                 selector: result.best,
+                selectorType: result.type,
                 candidates: result.all,
                 strategy: result.type,
-                htmlContext: el.outerHTML, // Pass HTML context for Phase 4
+                htmlContext: el.innerText ? el.innerText.trim().substring(0, 400) : null,
+                semanticContext,
                 timestamp: new Date().toISOString(),
             });
         } else {
@@ -175,7 +235,6 @@ const injectInspectorUI = () => {
     }
 
     function cleanup() {
-        // Remove listeners
         document.removeEventListener('mouseover', onMouseOver, true);
         document.removeEventListener('click', onClick, true);
 
@@ -184,20 +243,12 @@ const injectInspectorUI = () => {
         window.__haltestInspectorActive = false;
     }
 
-    // Store cleanup on window so we can potentially call it later if needed (though we rely on this closure for now)
-    // Ideally we would want to remove previous listeners if they exist, but simple overwriting works if we trust the flow.
-    // For robustness, lets attach to document (capturing) to ensure we get events first.
     document.addEventListener('mouseover', onMouseOver, true);
     document.addEventListener('click', onClick, true);
 
-    // Expose robust cleanup that removes listeners
     window.__haltestInspectorCleanup = cleanup;
 };
 
-/**
- * Injects the inspection script into the Page.
- * @param {import('playwright').Page} page
- */
 export async function startInspector(page) {
     if (!page || page.isClosed()) {
         throw new Error('No active page found to inspect.');
@@ -205,8 +256,6 @@ export async function startInspector(page) {
 
     console.log('[Inspector] Starting inspection mode on page...');
 
-    // 1. Expose the callback function to Node.js
-    // Wrap in try-catch because if it's already exposed, it throws an error
     try {
         console.log('[Inspector] Exposing onElementSelected function...');
         await page.exposeFunction('onElementSelected', async (data) => {
@@ -215,25 +264,33 @@ export async function startInspector(page) {
                 JSON.stringify(data, null, 2),
             );
 
-            // 🚀 FAST RESPONSE: Emit raw result immediately so UI feels snappy
-            emitElementPicked(data);
+            const pickId = `${Date.now()}-${Math.random()}`;
 
-            // PHASE 4: AI Sanitization (Async/Non-blocking)
-            // We don't 'await' this so the function returns to the browser context instantly
+            emitElementPicked({ ...data, pickId });
+
             (async () => {
                 try {
                     const sanitized = await ollamaService.sanitizeSelector(
                         data.selector,
                         data.htmlContext,
+                        data.selectorType,
                     );
                     if (sanitized && sanitized.confidence > 0.6) {
                         console.log(
-                            `[Inspector] ✨ AI Optimized Selector available (not re-emitted): ${sanitized.sanitizedSelector}`,
+                            `[Inspector] ✨ AI Optimized Selector — emitting element_sanitized: ${sanitized.sanitizedSelector} (confidence: ${sanitized.confidence})`,
                         );
-                        // Note: We intentionally do not emit a second element_picked event.
-                        // The initial raw pick event is enough for UI update, and emitting
-                        // a second event causes duplicate updates that make selectors appear
-                        // to change unexpectedly.
+                        emitElementSanitized({
+                            pickId,
+                            selector: sanitized.sanitizedSelector,
+                            originalSelector: data.selector,
+                            aiOptimized: true,
+                            confidence: sanitized.confidence,
+                            reasoning: sanitized.reasoning,
+                        });
+                    } else {
+                        console.log(
+                            '[Inspector] AI Sanitization confidence too low, skipping re-emit.',
+                        );
                     }
                 } catch (aiError) {
                     console.warn('[Inspector] AI Sanitization failed:', aiError.message);
@@ -242,7 +299,6 @@ export async function startInspector(page) {
         });
         console.log('[Inspector] ✅ onElementSelected function exposed successfully.');
     } catch (error) {
-        // Ignore "already has been exposed" or "already has been registered" error
         const msg = error.message || '';
         const isAlreadyExposed =
             msg.includes('already has been exposed') ||
@@ -257,9 +313,6 @@ export async function startInspector(page) {
         }
     }
 
-    // 2. Attach Listener for Navigation Resilience
-    // If the user logs in or manually navigates, the picker script is destroyed.
-    // We want to immediately re-inject it on the new page automatically until stopInspector is explicitly called.
     if (!page.__halInspectorListenerAdded) {
         page.__halInspectorListenerAdded = true;
 
@@ -267,8 +320,6 @@ export async function startInspector(page) {
             if (page.__halIsPicking) {
                 console.log('[Inspector] Navigation detected. Re-injecting inspector UI...');
                 try {
-                    // Because `exposeFunction` persists across navigations in Playwright,
-                    // `window.onElementSelected` will still exist! We just need the UI again.
                     await page.evaluate(injectInspectorUI);
                     console.log('[Inspector] Re-injection successful.');
                 } catch (err) {
@@ -278,20 +329,14 @@ export async function startInspector(page) {
         });
     }
 
-    // 3. Mark page as actively picking and inject immediately
     page.__halIsPicking = true;
     await page.evaluate(injectInspectorUI);
 }
 
-/**
- * Stops the inspector by calling cleanup on the page.
- * @param {import('playwright').Page} page
- */
 export async function stopInspector(page) {
     if (!page || page.isClosed()) return;
 
     try {
-        // Formally disarm the auto-re-injector
         page.__halIsPicking = false;
 
         await page.evaluate(() => {

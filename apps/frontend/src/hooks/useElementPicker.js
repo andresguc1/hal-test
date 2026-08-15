@@ -1,12 +1,9 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useToast } from "./useToast";
 import { useTranslation } from "react-i18next";
 import { api } from "../utils/api";
 import { NODE_STATES } from "../components/hooks/flowStyles";
 
-/**
- * Hook para gestionar la lógica de selección de elementos (Picker/Inspector)
- */
 export const useElementPicker = ({
   selectedAction,
   updateNodeState,
@@ -21,20 +18,33 @@ export const useElementPicker = ({
   const toast = useToast();
   const { t } = useTranslation();
   const [pickingField, setPickingField] = useState("selector");
+  const lastPickIdRef = useRef(null);
+  const lastPickedTargetRef = useRef(null);
 
-  // CANCEL PICKING HANDLER
+  const setNestedValue = useCallback((obj, path, value) => {
+    const keys = path.split(".");
+    const lastKey = keys.pop();
+    const newObj = JSON.parse(JSON.stringify(obj || {}));
+    let current = newObj;
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i];
+      if (!current[key]) current[key] = isNaN(Number(keys[i + 1])) ? {} : [];
+      current = current[key];
+    }
+    current[lastKey] = value;
+    return newObj;
+  }, []);
+
   const handleCancelPicking = useCallback(async () => {
     if (selectedAction) {
       updateNodeState(selectedAction.nodeId, NODE_STATES.DEFAULT, {
         pickingField: null,
       });
-      console.log(
-        "[useElementPicker] Resetting node state to DEFAULT for node:",
-        selectedAction.nodeId,
-      );
     }
 
     setPickingField("selector");
+    lastPickIdRef.current = null;
+    lastPickedTargetRef.current = null;
 
     try {
       await api.post("/inspector/stop", { browserId: activeBrowserId || null });
@@ -43,7 +53,6 @@ export const useElementPicker = ({
     }
   }, [selectedAction, updateNodeState, activeBrowserId]);
 
-  // START PICKING HANDLER
   const handleStartPicking = useCallback(
     async (fieldKey = "selector") => {
       if (selectedAction?.data?.state === NODE_STATES.PICKING) {
@@ -68,7 +77,6 @@ export const useElementPicker = ({
 
       const isRemote = window.location.hostname !== "localhost";
 
-      // Dynamic Session Lookup: check if there's already an active session in the backend!
       let inspectorBrowserId = activeBrowserId;
       if (!inspectorBrowserId) {
         try {
@@ -239,40 +247,58 @@ export const useElementPicker = ({
     ],
   );
 
-  // ELEMENT PICKED HANDLER
+  const pickBestSelector = useCallback((data) => {
+    const sources = data.candidates || data.selectors || {};
+
+    const preferredOrder = [
+      "playwrightTestId",
+      "playwrightRole",
+      "playwrightLabel",
+      "playwrightText",
+      "testId",
+      "id",
+      "name",
+      "aria",
+      "text",
+      "cssPath",
+    ];
+
+    for (const type of preferredOrder) {
+      const candidate = sources[type];
+      if (candidate) return candidate;
+    }
+
+    const fallbackMap = {
+      dataAttribute: sources.dataAttribute,
+      testId: sources.testId,
+      css: sources.css || sources.cssPath,
+      xpath: sources.xpath || sources.text,
+    };
+
+    for (const candidate of Object.values(fallbackMap)) {
+      if (candidate) return candidate;
+    }
+
+    return data.selector || data.sanitizedSelector || "";
+  }, []);
+
   const handleElementPicked = useCallback(
     async (data) => {
       console.log("[useElementPicker] 🎯 Element Picked Event Received:", data);
 
+      const pickId = data.pickId;
+      if (!pickId) {
+        console.warn("[useElementPicker] Missing pickId on element_picked event");
+        return;
+      }
+      lastPickIdRef.current = pickId;
+      lastPickedTargetRef.current = {
+        nodeId: selectedAction?.nodeId,
+        field: pickingField,
+      };
+
       try {
-        const sources = data.candidates || data.selectors || {};
-        const isValidSelector =
-          data &&
-          (data.selector || (sources && Object.values(sources).some((v) => v)));
-
-        if (!isValidSelector) {
-          toast.error(
-            t("common.selector_capture_failed", "Failed to capture element."),
-          );
-          nodes.forEach((n) => {
-            if (n.data?.state === NODE_STATES.PICKING)
-              updateNodeState(n.id, NODE_STATES.DEFAULT);
-          });
-          return;
-        }
-
-        let finalSelector = data.sanitizedSelector || data.selector;
-        if (sources) {
-          const id = sources.id;
-          const dataAttr = sources.dataAttribute || sources.testId;
-          const css = sources.css || sources.cssPath;
-          const xpath = sources.xpath || sources.text;
-
-          if (id) finalSelector = id;
-          else if (dataAttr) finalSelector = dataAttr;
-          else if (css) finalSelector = css;
-          else if (xpath) finalSelector = xpath;
-        }
+        const finalSelector = pickBestSelector(data);
 
         if (
           !finalSelector ||
@@ -280,26 +306,15 @@ export const useElementPicker = ({
           finalSelector.trim() === ""
         ) {
           toast.error(t("common.selector_empty"));
+          nodes.forEach((n) => {
+            if (n.data?.state === NODE_STATES.PICKING)
+              updateNodeState(n.id, NODE_STATES.DEFAULT);
+          });
           return;
         }
 
         const trimmedSelector = finalSelector.trim();
         let updatedAny = false;
-
-        const setNestedValue = (obj, path, value) => {
-          const keys = path.split(".");
-          const lastKey = keys.pop();
-          const newObj = JSON.parse(JSON.stringify(obj || {}));
-          let current = newObj;
-          for (let i = 0; i < keys.length; i++) {
-            const key = keys[i];
-            if (!current[key])
-              current[key] = isNaN(Number(keys[i + 1])) ? {} : [];
-            current = current[key];
-          }
-          current[lastKey] = value;
-          return newObj;
-        };
 
         setNodes((currNodes) => {
           const pickingNodes = currNodes.filter(
@@ -321,6 +336,13 @@ export const useElementPicker = ({
                     pickingField,
                     trimmedSelector,
                   ),
+                  selectorMeta: {
+                    candidates: data.candidates || {},
+                    selectorType: data.selectorType || data.strategy || "unknown",
+                    semanticContext: data.semanticContext || null,
+                    aiOptimized: data.aiOptimized || false,
+                    capturedAt: data.timestamp || new Date().toISOString(),
+                  },
                 },
               };
             }
@@ -360,9 +382,83 @@ export const useElementPicker = ({
       handleCancelPicking,
       selectedAction,
       setNodes,
+      setNestedValue,
+      pickBestSelector,
       t,
       toast,
     ],
+  );
+
+  const handleElementSanitized = useCallback(
+    async (data) => {
+      console.log(
+        "[useElementPicker] ✨ Element Sanitized Event Received:",
+        data,
+      );
+
+      const pickId = data.pickId;
+      if (!pickId || pickId !== lastPickIdRef.current) {
+        console.warn(
+          "[useElementPicker] Stale or mismatched sanitized event, ignoring.",
+          { expected: lastPickIdRef.current, received: pickId },
+        );
+        return;
+      }
+
+      const target = lastPickedTargetRef.current;
+      if (!target) {
+        console.warn("[useElementPicker] No picked target to sanitize");
+        return;
+      }
+
+      const sanitizedSelector = data.selector;
+      if (!sanitizedSelector) return;
+
+      try {
+        setNodes((currNodes) => {
+          return currNodes.map((node) => {
+            if (node.id !== target.nodeId) return node;
+
+            const currentConfig = node.data?.configuration || {};
+            const updatedConfig = setNestedValue(
+              currentConfig,
+              target.field,
+              sanitizedSelector,
+            );
+
+            const currentMeta = node.data?.selectorMeta || {};
+            const updatedMeta = {
+              ...currentMeta,
+              aiOptimized: true,
+              confidence: data.confidence,
+              reasoning: data.reasoning,
+              originalSelector: data.originalSelector || currentMeta.originalSelector,
+              sanitizedSelector,
+            };
+
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                configuration: updatedConfig,
+                selectorMeta: updatedMeta,
+              },
+            };
+          });
+        });
+
+        toast.success(
+          t("common.selector_ai_optimized", "Selector optimized by AI") +
+            ` (${Math.round((data.confidence || 0) * 100)}% confidence)`,
+        );
+      } catch (err) {
+        console.error(
+          "[useElementPicker] Error applying sanitized selector:",
+          err,
+        );
+      }
+    },
+    [setNodes, setNestedValue, toast, t],
   );
 
   return {
@@ -370,5 +466,6 @@ export const useElementPicker = ({
     handleStartPicking,
     handleCancelPicking,
     handleElementPicked,
+    handleElementSanitized,
   };
 };

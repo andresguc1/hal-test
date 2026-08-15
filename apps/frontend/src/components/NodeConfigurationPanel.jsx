@@ -34,6 +34,7 @@ import { NODE_INPUTS } from "@/config/validationRules";
 import ConditionalBranchesEditor from "./editors/ConditionalBranchesEditor";
 import SwitchCasesEditor from "./editors/SwitchCasesEditor";
 import FormFillEditor from "./editors/FormFillEditor";
+import { SelectorResultPanel } from "./SelectorResultPanel";
 import { useTranslation } from "react-i18next";
 import { useForm, Controller } from "react-hook-form";
 import { createPortal } from "react-dom";
@@ -94,6 +95,23 @@ const NodeConfigurationPanel = ({
     unlockNode,
   ]);
   const [liveVariables, setLiveVariables] = useState({});
+  const [allWorkspaceProjects, setAllWorkspaceProjects] = useState([]);
+
+  useEffect(() => {
+    const fetchAllProjects = async () => {
+      try {
+        const response = await api.get("/projects");
+        if (Array.isArray(response)) {
+          setAllWorkspaceProjects(response);
+        } else if (response && Array.isArray(response.data)) {
+          setAllWorkspaceProjects(response.data);
+        }
+      } catch (err) {
+        console.warn("[NodeConfig] Failed to fetch workspace projects:", err);
+      }
+    };
+    fetchAllProjects();
+  }, []);
 
   const refreshVariables = useCallback(async () => {
     try {
@@ -573,6 +591,115 @@ const NodeConfigurationPanel = ({
       : "";
 
     switch (field.type) {
+      case "subflow_select":
+        return (
+          <div key={reactKey} className="space-y-1.5">
+            <label className="text-[10px] uppercase tracking-wider font-semibold text-slate-400 flex items-center justify-between">
+              <span>
+                {fieldLabel}{" "}
+                {field.required && (
+                  <span className="text-rose-500 ml-1">*</span>
+                )}
+              </span>
+            </label>
+            <Controller
+              name={dataKey}
+              control={control}
+              render={({ field: { value, onChange } }) => (
+                <div className="relative">
+                  <select
+                    value={value || activeNode?.data?.flowId || ""}
+                    onChange={(e) => {
+                      const selectedId = e.target.value;
+                      onChange(selectedId);
+
+                      const currentFlows = (currentProject?.flows || []).map((f) => ({
+                        ...f,
+                        projectName: currentProject?.name,
+                      }));
+
+                      const externalFlows = (allWorkspaceProjects || [])
+                        .filter((p) => p.id !== currentProject?.id)
+                        .flatMap((p) =>
+                          (p.flows || []).map((f) => ({ ...f, projectName: p.name }))
+                        );
+
+                      const allAvailable = [...currentFlows, ...externalFlows];
+                      const matched = allAvailable.find((f) => f.id === selectedId);
+
+                      if (matched && activeNode) {
+                        const newLabel = matched.name;
+                        const nodeCount = matched.nodeCount !== undefined ? matched.nodeCount : matched.nodes?.length || 0;
+                        const hasInput = matched.nodes?.some((n) => n.type === "input") || false;
+                        const hasOutput = matched.nodes?.some((n) => n.type === "output") || false;
+
+                        activeNode.data = {
+                          ...(activeNode.data || {}),
+                          label: newLabel,
+                          customLabel: newLabel,
+                          flowId: selectedId,
+                          nodeCount,
+                          hasInput,
+                          hasOutput,
+                          configuration: {
+                            ...(activeNode.data?.configuration || {}),
+                            flowId: selectedId,
+                          },
+                        };
+
+                        setLocalLabel(newLabel);
+
+                        updateNodeConfiguration(activeNode.id, activeNode.data);
+                        window.dispatchEvent(
+                          new CustomEvent("node-data-updated", {
+                            detail: { nodeId: activeNode.id },
+                          })
+                        );
+                      }
+                    }}
+                    className="w-full px-3 py-2.5 text-xs font-mono bg-slate-900 border border-slate-700/80 rounded-lg text-slate-100 focus:outline-none focus:border-indigo-500 transition-colors appearance-none cursor-pointer"
+                  >
+                    <option value="">-- Seleccionar Sub-flujo --</option>
+
+                    {currentProject?.flows && currentProject.flows.length > 0 && (
+                      <optgroup label={`📁 Proyecto Actual (${currentProject.name})`}>
+                        {currentProject.flows.map((f) => (
+                          <option key={f.id} value={f.id}>
+                            {f.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+
+                    {(allWorkspaceProjects || [])
+                      .filter((p) => p.id !== currentProject?.id && p.flows && p.flows.length > 0)
+                      .map((proj) => (
+                        <optgroup key={proj.id} label={`🌐 Proyecto: ${proj.name}`}>
+                          {proj.flows.map((f) => (
+                            <option key={f.id} value={f.id}>
+                              {f.name}
+                            </option>
+                          ))}
+                        </optgroup>
+                      ))}
+                  </select>
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                  </div>
+                </div>
+              )}
+            />
+          </div>
+        );
       case "conditional_branches":
       case "conditional":
         return (
@@ -786,7 +913,7 @@ const NodeConfigurationPanel = ({
                     ? onCancelPick?.()
                     : onStartPick?.(field.key)
                 }
-                className="text-[10px] text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded"
+                className="text-[10px] text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded hover:bg-indigo-500/20 transition-colors"
               >
                 {activeNode.data?.state === "picking"
                   ? t("common.cancel", "Cancel")
@@ -797,14 +924,28 @@ const NodeConfigurationPanel = ({
               name={dataKey}
               control={control}
               render={({ field: { value, onChange } }) => (
-                <VariableInput
-                  value={value}
-                  type={field.type}
-                  variables={variablesMap}
-                  suggestions={availableVariablePaths}
-                  onChange={onChange}
-                  className="w-full px-3 py-2 text-xs font-mono"
-                />
+                <>
+                  <VariableInput
+                    value={value}
+                    type={field.type}
+                    variables={variablesMap}
+                    suggestions={availableVariablePaths}
+                    onChange={onChange}
+                    className="w-full px-3 py-2 text-xs font-mono"
+                  />
+                  {activeNode.data?.selectorMeta && (
+                    <SelectorResultPanel
+                      selectorMeta={activeNode.data.selectorMeta}
+                      onApplyAlternative={(newValue) => {
+                        onChange(newValue);
+                        updateNodeConfiguration(activeNode.id, {
+                          ...activeNode.data.configuration,
+                          [field.key]: newValue,
+                        });
+                      }}
+                    />
+                  )}
+                </>
               )}
             />
           </div>

@@ -92,6 +92,13 @@ export const emitElementPicked = (selectorData) => {
     }
 };
 
+export const emitElementSanitized = (selectorData) => {
+    if (io) {
+        console.log(`📡 [Socket.io] Emitting element_sanitized (AI optimized)`, selectorData);
+        io.emit('element_sanitized', selectorData);
+    }
+};
+
 export const emitScreenshotReady = ({ nodeId, screenshotPath, runId }) => {
     if (io) {
         console.log(

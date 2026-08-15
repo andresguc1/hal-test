@@ -1532,5 +1532,18 @@
     "input": "Input",
     "output": "Output",
     "exception": "Exception"
+  },
+  "picker": {
+    "ai_optimized": "AI-Optimized Selector",
+    "captured": "Selector captured",
+    "use_this": "Use",
+    "copy": "Copy",
+    "alternatives_short": "alt",
+    "badge_pw_best": "⚡ PW Best",
+    "badge_pw": "⚡ PW",
+    "badge_stable": "✓ Stable",
+    "badge_form": "Form",
+    "badge_a11y": "A11y",
+    "badge_fragile": "⚠ Fragile"
   }
 }

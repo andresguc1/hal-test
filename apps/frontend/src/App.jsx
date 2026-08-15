@@ -34,6 +34,7 @@ import ProgressBar from "./components/ProgressBar";
 
 import ImportDialog from "./components/ImportDialog";
 import ExportDialog from "./components/ExportDialog";
+import MetricsDashboardModal from "./components/MetricsDashboardModal";
 import ContextMenu from "./components/ContextMenu";
 import CreationModal from "./components/CreationModal";
 import StarterOverlay from "./components/StarterOverlay";
@@ -661,6 +662,7 @@ function Dashboard({
   const [isDatasetModalOpen, setIsDatasetModalOpen] = useState(false);
   const [isPerfModalOpen, setIsPerfModalOpen] = useState(false);
   const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
+  const [isMetricsDashboardOpen, setIsMetricsDashboardOpen] = useState(false);
 
   const [isExecutionDashboardOpen, setIsExecutionDashboardOpen] =
     useState(false);
@@ -765,18 +767,22 @@ function Dashboard({
   }, [currentFlowId, reactFlowFitView, nodes.length]);
 
   // Element Picker Hook
-  const { handleStartPicking, handleCancelPicking, handleElementPicked } =
-    useElementPicker({
-      selectedAction,
-      updateNodeState,
-      updateNodeConfiguration,
-      activeBrowserId,
-      setActiveBrowserId,
-      nodes,
-      edges,
-      executeFlow,
-      setNodes,
-    });
+  const {
+    handleStartPicking,
+    handleCancelPicking,
+    handleElementPicked,
+    handleElementSanitized,
+  } = useElementPicker({
+    selectedAction,
+    updateNodeState,
+    updateNodeConfiguration,
+    activeBrowserId,
+    setActiveBrowserId,
+    nodes,
+    edges,
+    executeFlow,
+    setNodes,
+  });
 
   const handleSelectRun = useCallback(
     async (runBasic, openReport = false) => {
@@ -970,6 +976,7 @@ function Dashboard({
     setNodes,
     setEdges,
     onElementPicked: handleElementPicked,
+    onElementSanitized: handleElementSanitized,
     onLogReceived: addLog,
     onTerminalOutput: null,
     onCodegenAction: handleCodegenAction,
@@ -979,6 +986,7 @@ function Dashboard({
     onConnectNodes: handleMCPConnectNodes,
     onRemoveNode: handleMCPRemoveNode,
     onUpdateNode: handleMCPUpdateNode,
+    onSaveFlow: saveFlow,
     toast,
     executionMode: canvasViewMode,
   });
@@ -1739,9 +1747,12 @@ function Dashboard({
       let updatedNode = node;
 
       if (isContainer) {
-        const flowId = node.data?.flowId;
+        const flowId = node.data?.flowId || node.data?.configuration?.flowId;
         if (flowId) {
-          const subFlow = currentProject.flows?.find((f) => f.id === flowId);
+          const allWorkspaceFlows = (currentProject?.flows || []).concat(
+            (projects || []).flatMap((p) => p.flows || [])
+          );
+          const subFlow = allWorkspaceFlows.find((f) => f.id === flowId);
           if (subFlow) {
             const nodeCount =
               subFlow.nodeCount !== undefined
@@ -2023,6 +2034,7 @@ function Dashboard({
           isStarterTemplate={isStarterTemplate}
           onOpenSettings={openSettings}
           onOpenApiKeys={openApiKeys}
+          onOpenMetricsDashboard={() => setIsMetricsDashboardOpen(true)}
           onToggleHistory={() => {
             setIsHistoryPanelVisible((prev) => !prev);
             if (!isHistoryPanelVisible) {
@@ -2402,6 +2414,11 @@ function Dashboard({
           nodes={nodes}
           edges={edges}
           projectId={currentProject?.id}
+        />
+
+        <MetricsDashboardModal
+          isOpen={isMetricsDashboardOpen}
+          onClose={() => setIsMetricsDashboardOpen(false)}
         />
 
         <DatasetRunModal

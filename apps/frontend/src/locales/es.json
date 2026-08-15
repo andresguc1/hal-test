@@ -1532,5 +1532,18 @@
     "input": "Aporte",
     "output": "Producción",
     "exception": "Excepción"
+  },
+  "picker": {
+    "ai_optimized": "Selector optimizado por IA",
+    "captured": "Selector capturado",
+    "use_this": "Usar",
+    "copy": "Copiar",
+    "alternatives_short": "alt",
+    "badge_pw_best": "⚡ PW Best",
+    "badge_pw": "⚡ PW",
+    "badge_stable": "✓ Estable",
+    "badge_form": "Form",
+    "badge_a11y": "A11y",
+    "badge_fragile": "⚠ Frágil"
   }
 }
