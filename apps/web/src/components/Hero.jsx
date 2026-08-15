@@ -2,7 +2,6 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { motion as Motion } from "framer-motion";
 import { Slack, Copy, Check, Workflow, Gauge, ShieldCheck } from "lucide-react";
-import FlowCanvasMock from "./FlowCanvasMock";
 
 const PILLARS = [
   { icon: Workflow, label: "Automation", color: "text-hal-primary-400" },
@@ -179,14 +178,34 @@ export default function Hero() {
         </p>
       </Motion.div>
 
-      {/* Product visual */}
+      {/* Product visual — real studio screenshot */}
       <Motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, delay: 0.5 }}
         className="w-full max-w-5xl mb-16"
       >
-        <FlowCanvasMock />
+        <div className="rounded-xl overflow-hidden border border-white/10 bg-slate-900/60 shadow-2xl shadow-hal-primary-900/40 backdrop-blur-xl">
+          {/* Window chrome */}
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-white/10 bg-slate-950/60">
+            <span className="w-3 h-3 rounded-full bg-red-500/70" />
+            <span className="w-3 h-3 rounded-full bg-hal-warning-500/70" />
+            <span className="w-3 h-3 rounded-full bg-emerald-500/70" />
+            <span className="ml-3 text-[11px] font-mono text-slate-500 tracking-tight">
+              haltest · flow editor
+            </span>
+            <span className="ml-auto flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-emerald-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Run passed
+            </span>
+          </div>
+          <img
+            src="/images/flow_canvas.png"
+            alt="Haltest visual flow editor showing a browser test: launch browser, open a page, assert text and take a screenshot, then close the browser — each node marked as passed."
+            className="w-full block"
+            loading="lazy"
+          />
+        </div>
       </Motion.div>
 
       {/* Honest stats */}
