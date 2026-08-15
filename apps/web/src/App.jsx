@@ -4,6 +4,8 @@ import Hero from "./components/Hero";
 import Capabilities from "./components/Capabilities";
 import Healing from "./components/Healing";
 import Interop from "./components/Interop";
+import UseCases from "./components/UseCases";
+import Comparison from "./components/Comparison";
 import FinalCTA from "./components/FinalCTA";
 import Footer from "./components/Footer";
 
@@ -42,6 +44,8 @@ export default function App() {
         <Capabilities />
         <Healing />
         <Interop />
+        <UseCases />
+        <Comparison />
         <FinalCTA />
       </main>
 
