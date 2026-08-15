@@ -6,6 +6,23 @@ import {
 import { DataLeakEngine } from '../services/security/DataLeakEngine.js';
 import { SecurityComplianceEngine } from '../services/SecurityComplianceEngine.js';
 
+// Mock DB models to prevent actual DB writes during unit tests
+vi.mock('../database/models/SecurityComplianceRun.js', () => ({
+    default: {
+        create: vi.fn().mockResolvedValue({ id: 'mock-run-id' }),
+    },
+}));
+vi.mock('../database/models/SecurityComplianceResult.js', () => ({
+    default: {
+        bulkCreate: vi.fn().mockResolvedValue([]),
+    },
+}));
+vi.mock('../services/validators/CryptoTLSValidator.js', () => ({
+    CryptoTLSValidator: {
+        validate: vi.fn().mockResolvedValue([]),
+    },
+}));
+
 describe('SensitiveDataScanner', () => {
     it('should detect JWT tokens', () => {
         const text =
@@ -90,18 +107,6 @@ describe('DataLeakEngine', () => {
 
 describe('SecurityComplianceEngine with Data Leak scans', () => {
     it('should calculate specific data leak scores and risk levels', async () => {
-        // Mock DB models to prevent actual DB writes during unit tests
-        vi.mock('../database/models/SecurityComplianceRun.js', () => ({
-            default: {
-                create: vi.fn().mockResolvedValue({ id: 'mock-run-id' }),
-            },
-        }));
-        vi.mock('../database/models/SecurityComplianceResult.js', () => ({
-            default: {
-                bulkCreate: vi.fn().mockResolvedValue([]),
-            },
-        }));
-
         const result = await SecurityComplianceEngine.runComplianceAudit({
             targetUrl: 'https://vulnerable.target',
             localStorage: {

@@ -76,6 +76,9 @@
         "submit_form": {
             "success": "Form submitted successfully."
         },
+        "fill_form": {
+            "success": "Form filled successfully."
+        },
         "upload_file": {
             "success": "Files uploaded successfully."
         },
@@ -285,6 +288,7 @@
         "browser_not_found": "No browser found with ID: {{id}}",
         "no_active_pages": "No active pages in the context. Call open_url first.",
         "selector_required": "The 'selector' parameter is required.",
+        "fields_required": "At least one form field definition is required.",
         "invalid_action": "The 'action' parameter must be 'get' or 'set'.",
         "invalid_content_type": "The 'contentType' parameter must be 'text', 'html' or 'attribute'.",
         "invalid_selection_criteria": "Invalid selection criteria: {{criteria}}.",

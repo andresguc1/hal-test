@@ -89,6 +89,22 @@ const asJsonString = (value, required = false, fieldName = "Field") => {
   return jsonString;
 };
 
+const parseJsonArray = (value, fieldName = "fields") => {
+  if (Array.isArray(value)) return value;
+  if (typeof value === "string" && value.trim() !== "") {
+    try {
+      const parsed = JSON.parse(value);
+      if (!Array.isArray(parsed)) {
+        throw new Error(`${fieldName} must be a JSON array.`);
+      }
+      return parsed;
+    } catch (err) {
+      throw new Error(`${fieldName} is not valid JSON: ${err.message}`);
+    }
+  }
+  throw new Error(`${fieldName} is required and must be a JSON array.`);
+};
+
 // ---------------------------------------------
 // Payload Builders (Browser Actions)
 // ---------------------------------------------
@@ -311,7 +327,10 @@ export const click = (payload = {}) => {
     browserId: asString(payload?.browserId),
     timeout: asNumber(payload?.timeout, 30000, 1),
     takeScreenshot: asBoolean(payload?.takeScreenshot, true),
-    continueOnError: asBoolean(payload?.continueOnError, false),
+    continueOnError: asBoolean(
+      payload?.continueOnError ?? payload?.continueOnFailure,
+      false,
+    ),
   };
 };
 
@@ -335,7 +354,10 @@ export const type_text = (payload = {}) => {
     timeout: asNumber(payload?.timeout, 30000, 1),
     browserId: asString(payload?.browserId),
     takeScreenshot: asBoolean(payload?.takeScreenshot, true),
-    continueOnError: asBoolean(payload?.continueOnError, false),
+    continueOnError: asBoolean(
+      payload?.continueOnError ?? payload?.continueOnFailure,
+      false,
+    ),
   };
 };
 
@@ -346,6 +368,53 @@ export const select_option = (payload) => {
     selectionValue: asString(payload?.selectionValue),
     timeout: asNumber(payload?.timeout, 30000, 1),
     browserId: asString(payload?.browserId),
+  };
+};
+
+export const fill_form = (payload = {}) => {
+  const formSelector = asString(payload?.formSelector);
+  const fields = parseJsonArray(payload?.fields, "fields");
+  if (formSelector === "") {
+    throw new Error("Form selector is required.");
+  }
+
+  if (fields.length === 0) {
+    throw new Error("At least one field definition is required.");
+  }
+
+  const normalizedFields = fields.map((field, index) => {
+    if (!field || typeof field !== "object") {
+      throw new Error(
+        `Field at index ${index} must be an object with selector and value.`,
+      );
+    }
+    const selector = asString(field.selector);
+    if (selector === "") {
+      throw new Error(`Field at index ${index} must include a selector.`);
+    }
+    return {
+      selector,
+      value: field.value ?? "",
+      clearBeforeType:
+        field.clearBeforeType ?? asBoolean(payload?.clearBeforeType, true),
+      delay: asNumber(field.delay, asNumber(payload?.delay, 0, 0), 0),
+    };
+  });
+
+  return {
+    formSelector,
+    fields: normalizedFields,
+    clearBeforeType: asBoolean(payload?.clearBeforeType, true),
+    submitAfterFill: asBoolean(payload?.submitAfterFill, false),
+    submitSelector: asString(payload?.submitSelector, ""),
+    waitForNavigation: asBoolean(payload?.waitForNavigation, true),
+    timeout: asNumber(payload?.timeout, 30000, 1),
+    browserId: asString(payload?.browserId),
+    takeScreenshot: asBoolean(payload?.takeScreenshot, true),
+    continueOnError: asBoolean(
+      payload?.continueOnError ?? payload?.continueOnFailure,
+      false,
+    ),
   };
 };
 
@@ -370,7 +439,10 @@ export const scroll = (payload) => {
     timeout: asNumber(payload?.timeout, 30000, 1),
     browserId: asString(payload?.browserId),
     takeScreenshot: asBoolean(payload?.takeScreenshot, true),
-    continueOnError: asBoolean(payload?.continueOnError, false),
+    continueOnError: asBoolean(
+      payload?.continueOnError ?? payload?.continueOnFailure,
+      false,
+    ),
   };
 };
 
@@ -433,7 +505,10 @@ export const drag_drop = (payload) => {
     timeout: asNumber(payload?.timeout, 30000, 1),
     browserId: asString(payload?.browserId),
     takeScreenshot: asBoolean(payload?.takeScreenshot, true),
-    continueOnError: asBoolean(payload?.continueOnError, false),
+    continueOnError: asBoolean(
+      payload?.continueOnError ?? payload?.continueOnFailure,
+      false,
+    ),
   };
 };
 
@@ -449,7 +524,10 @@ export const hover = (payload) => {
     timeout: asNumber(payload?.timeout, 30000, 1),
     browserId: asString(payload?.browserId),
     takeScreenshot: asBoolean(payload?.takeScreenshot, true),
-    continueOnError: asBoolean(payload?.continueOnError, false),
+    continueOnError: asBoolean(
+      payload?.continueOnError ?? payload?.continueOnFailure,
+      false,
+    ),
   };
 };
 
@@ -460,7 +538,10 @@ export const assert_page_text = (payload) => {
     caseSensitive: asBoolean(payload?.caseSensitive, false),
     timeout: asNumber(payload?.timeout, 5000, 0),
     browserId: asString(payload?.browserId),
-    continueOnError: asBoolean(payload?.continueOnError, false),
+    continueOnError: asBoolean(
+      payload?.continueOnError ?? payload?.continueOnFailure,
+      false,
+    ),
   };
 };
 
@@ -471,7 +552,10 @@ export const wait_for_element = (payload) => {
     timeout: asNumber(payload?.timeout, 30000, 0),
     browserId: asString(payload?.browserId),
     takeScreenshot: asBoolean(payload?.takeScreenshot, true),
-    continueOnError: asBoolean(payload?.continueOnError, false),
+    continueOnError: asBoolean(
+      payload?.continueOnError ?? payload?.continueOnFailure,
+      false,
+    ),
   };
 };
 

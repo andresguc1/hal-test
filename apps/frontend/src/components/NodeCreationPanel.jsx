@@ -55,6 +55,7 @@ const NODE_CATEGORIES = {
     nodes: [
       { id: "click" },
       { id: "type_text" },
+      { id: "fill_form" },
       { id: "select_option" },
       { id: "submit_form" },
       { id: "scroll" },

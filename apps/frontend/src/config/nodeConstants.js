@@ -22,6 +22,7 @@ import {
   MessageSquare,
   Shield,
   ShieldCheck,
+  Database,
 } from "lucide-react";
 
 // --- GLOBAL ALL-IN-ONE CONFIGURATION ---
@@ -70,8 +71,8 @@ export const NODE_CATEGORIES = {
     nodes: [
       "click",
       "type_text",
+      "fill_form",
       "select_option",
-      "submit_form",
       "scroll",
       "drag_drop",
       "hover",
@@ -132,6 +133,12 @@ export const NODE_CATEGORIES = {
     color: "yellow", // Files = Yellow (High visibility)
     label: "Files & Data",
     nodes: ["read_file", "write_file", "upload_file", "download_file"],
+  },
+  database_ops: {
+    icon: Database,
+    color: "amber",
+    label: "Databases",
+    nodes: ["db_connect", "db_query", "db_assert_record"],
   },
   execution_interface: {
     icon: Terminal,
@@ -269,11 +276,7 @@ export const NODE_OUTPUTS = {
     value: "string",
     selector: "string",
   },
-  submit_form: {
-    success: "boolean",
-    selector: "string",
-    message: "string",
-  },
+
   scroll: {
     success: "boolean",
     direction: "string",

@@ -17,9 +17,12 @@ export const getLayoutedElements = (nodes, edges, direction = "LR") => {
   const dagreGraph = new dagre.graphlib.Graph();
   dagreGraph.setDefaultEdgeLabel(() => ({}));
   dagreGraph.setGraph({
+    compound: true,
     rankdir: direction,
-    nodesep: 100, // Distance between nodes in the same rank
-    ranksep: 150, // Distance between ranks
+    align: "UL", // Compact upper-left
+    ranker: "tight-tree", // Strict tree to avoid chaotic shifts
+    nodesep: 80, // Restored to a sensible value for zoom
+    ranksep: 120, // Restored to a sensible value for zoom
     marginx: 50,
     marginy: 50,
   });
@@ -45,7 +48,15 @@ export const getLayoutedElements = (nodes, edges, direction = "LR") => {
       height = 100;
     }
 
+    // Add dynamic padding to prevent overlap with floating UI (tooltips, etc.)
+    width += 40;
+    height += 80; // Reasonable padding for tooltips without breaking zoom
+
     dagreGraph.setNode(node.id, { width, height });
+
+    if (node.parentNode) {
+      dagreGraph.setParent(node.id, node.parentNode);
+    }
   });
 
   if (edges) {
@@ -69,7 +80,19 @@ export const getLayoutedElements = (nodes, edges, direction = "LR") => {
     });
 
     sortedEdges.forEach((edge) => {
-      dagreGraph.setEdge(edge.source, edge.target);
+      dagreGraph.setEdge(edge.source, edge.target, {
+        weight: 1, // Remove the primary bias so branches fan out symmetrically without crossing
+      });
+
+      // Eliminate cycles early: Dagre requires DAGs for optimal layout math.
+      // If adding this edge creates a cycle, we remove it from Dagre's calculation.
+      // React Flow will still draw the edge visually, but it won't break the layout.
+      if (!dagre.graphlib.alg.isAcyclic(dagreGraph)) {
+        dagreGraph.removeEdge(edge.source, edge.target);
+        console.warn(
+          `[Magic Organizer] Cycle detected and ignored for layout: ${edge.source} -> ${edge.target}`,
+        );
+      }
     });
   }
 
@@ -95,6 +118,10 @@ export const getLayoutedElements = (nodes, edges, direction = "LR") => {
       height = 100;
     }
 
+    // Must re-apply the same padding used during setNode, otherwise nodes shift off-center
+    width += 40;
+    height += 60;
+
     const position = {
       x: nodeWithPosition.x - width / 2,
       y: nodeWithPosition.y - height / 2,
@@ -103,8 +130,22 @@ export const getLayoutedElements = (nodes, edges, direction = "LR") => {
     return {
       ...node,
       position,
+      targetPosition: "left",
+      sourcePosition: "right",
     };
   });
 
-  return [newNodes, edges];
+  const newEdges = edges.map((edge) => {
+    const dagreEdge = dagreGraph.edge(edge.source, edge.target);
+    return {
+      ...edge,
+      // Pass the layout points into the edge data so CustomEdge can render them
+      data: {
+        ...edge.data,
+        dagrePoints: dagreEdge ? dagreEdge.points : null,
+      },
+    };
+  });
+
+  return [newNodes, newEdges];
 };

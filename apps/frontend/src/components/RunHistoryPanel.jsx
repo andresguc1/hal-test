@@ -146,7 +146,7 @@ export default function RunHistoryPanel({
             <div
               key={run.id}
               className={cn(
-                "group relative w-full text-left p-3 rounded-lg transition-all border cursor-pointer",
+                "group relative w-full text-left p-3 rounded-lg ui-transition border cursor-pointer",
                 "bg-slate-900/40 hover:bg-slate-800/60",
                 selectedRunId === run.id
                   ? "border-indigo-500/50 bg-indigo-500/10 shadow-[0_0_15px_rgba(99,102,241,0.15)]"
@@ -204,7 +204,7 @@ export default function RunHistoryPanel({
                       e.stopPropagation();
                       onSelectRun(run, true); // Second param 'true' indicates opening report
                     }}
-                    className="p-1.5 bg-indigo-500/20 hover:bg-indigo-500/40 rounded-md text-indigo-400 transition-all border border-indigo-500/30"
+                    className="p-1.5 bg-indigo-500/20 hover:bg-indigo-500/40 rounded-md text-indigo-400 ui-transition border border-indigo-500/30"
                     title="Intelligence Report"
                   >
                     <Activity size={12} />
@@ -220,7 +220,7 @@ export default function RunHistoryPanel({
                             : "http://localhost:2001");
                         setPlayingVideo(`${apiBase}/${run.video_path}`);
                       }}
-                      className="p-1.5 bg-sky-500/20 hover:bg-sky-500/40 rounded-md text-sky-400 transition-all border border-sky-500/30"
+                      className="p-1.5 bg-sky-500/20 hover:bg-sky-500/40 rounded-md text-sky-400 ui-transition border border-sky-500/30"
                       title="Watch Recording"
                     >
                       <Play size={12} fill="currentColor" />
@@ -228,7 +228,7 @@ export default function RunHistoryPanel({
                   )}
                   <button
                     onClick={(e) => handleDeleteRun(e, run.id)}
-                    className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-rose-500/20 rounded-md text-slate-500 hover:text-rose-400 transition-all"
+                    className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-rose-500/20 rounded-md text-slate-500 hover:text-rose-400 ui-transition"
                     title="Delete Run"
                   >
                     <Trash2 size={12} />
@@ -266,7 +266,7 @@ export default function RunHistoryPanel({
                 <div className="absolute top-4 right-4 z-10">
                   <button
                     onClick={() => setPlayingVideo(null)}
-                    className="p-2 bg-black/50 hover:bg-black/80 text-white rounded-full backdrop-blur-md transition-all"
+                    className="p-2 bg-black/50 hover:bg-black/80 text-white rounded-full backdrop-blur-md ui-transition"
                   >
                     <X size={20} />
                   </button>

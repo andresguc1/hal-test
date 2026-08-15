@@ -22,9 +22,16 @@ const ENV_API_URL =
 const API_BASE_URL = ENV_API_URL;
 
 import { supabase } from "./supabaseClient";
+import { useExecutionStore } from "../stores/useExecutionStore";
 
 const getHeaders = async () => {
   const headers = { "Content-Type": "application/json" };
+
+  // Set Accept-Language to the user selected language
+  const selectedLang = localStorage.getItem("i18nextLng");
+  if (selectedLang) {
+    headers["Accept-Language"] = selectedLang;
+  }
 
   const isAuthEnabled = import.meta.env.VITE_AUTH_ENABLED !== "false";
   const isLocalMode = import.meta.env.VITE_HALTEST_MODE === "local";
@@ -73,12 +80,14 @@ const getHeaders = async () => {
 
   // --- STANDARD AI HEADERS (Hal AI Config) ---
   const aiConfigStr = localStorage.getItem("hal_ai_config");
+  let aiConfigured = false;
   if (aiConfigStr) {
     try {
       const aiConfig = JSON.parse(aiConfigStr);
       const activeProvider = aiConfig.activeProvider;
       const activeKey = aiConfig.keys?.[activeProvider];
       const activeModel = aiConfig.selectedModel;
+      aiConfigured = activeProvider === "ollama" || Boolean(activeKey);
 
       if (activeKey) {
         headers["x-ai-api-key"] = activeKey;
@@ -103,6 +112,42 @@ const getHeaders = async () => {
       console.error("Error parsing hal_ai_config", e);
     }
   }
+
+  const savedSettings = localStorage.getItem("hal_settings");
+  let autoHealingEnabledFromSettings = false;
+  let autoHealingRetryLimitFromSettings = 1;
+
+  if (savedSettings) {
+    try {
+      const settings = JSON.parse(savedSettings);
+      autoHealingEnabledFromSettings = settings.autoHealingEnabled ?? false;
+      autoHealingRetryLimitFromSettings = Number.isFinite(
+        Number(settings.autoHealingRetryLimit),
+      )
+        ? Math.max(0, Math.min(3, Number(settings.autoHealingRetryLimit)))
+        : 1;
+    } catch (e) {
+      console.error("Error parsing hal_settings", e);
+    }
+  }
+
+  // --- DRAFT MODE INJECTION ---
+  const draftMode = useExecutionStore.getState().draftMode;
+  if (draftMode) {
+    headers["X-Hal-Draft-Mode"] = "true";
+  }
+
+  const effectiveAutoHealingEnabled =
+    !draftMode && aiConfigured && autoHealingEnabledFromSettings;
+  const effectiveAutoHealingRetries = effectiveAutoHealingEnabled
+    ? autoHealingRetryLimitFromSettings
+    : 0;
+
+  headers["x-hal-auto-healing-enabled"] =
+    effectiveAutoHealingEnabled.toString();
+  headers["x-hal-auto-healing-max-retries"] = String(
+    effectiveAutoHealingRetries,
+  );
 
   return headers;
 };

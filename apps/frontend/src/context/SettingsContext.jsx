@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useMemo,
+} from "react";
 import { api } from "../utils/api";
 import { supabase } from "../utils/supabaseClient";
 
@@ -25,6 +31,10 @@ export const SettingsProvider = ({ children }) => {
 
   // Performance
   const [highQualityRendering, setHighQualityRendering] = useState(true);
+
+  // Auto-Healing Designer Controls
+  const [autoHealingEnabled, setAutoHealingEnabled] = useState(false);
+  const [autoHealingRetryLimit, setAutoHealingRetryLimit] = useState(1);
 
   // Integrations / System Status (Mock Data for now, can be replaced with real checks)
   const [integrations] = useState({
@@ -54,6 +64,12 @@ export const SettingsProvider = ({ children }) => {
 
   // Vault Keys State (Centralized)
   const [vaultKeys, setVaultKeys] = useState([]);
+
+  const isAIConfigured = useMemo(() => {
+    if (!aiConfig?.activeProvider) return false;
+    if (aiConfig.activeProvider === "ollama") return true;
+    return Boolean(aiConfig.keys?.[aiConfig.activeProvider]);
+  }, [aiConfig]);
 
   const loadVaultKeys = async () => {
     try {
@@ -128,13 +144,13 @@ export const SettingsProvider = ({ children }) => {
           setEnableSnapping(parsed.enableSnapping ?? true);
           setShowMinimap(parsed.showMinimap ?? true);
           setHighQualityRendering(parsed.highQualityRendering ?? true);
-          setAutoSaveEnabled(parsed.autoSaveEnabled ?? true);
+          setAutoHealingEnabled(parsed.autoHealingEnabled ?? false);
+          setAutoHealingRetryLimit(parsed.autoHealingRetryLimit ?? 1);
         } catch (e) {
           console.error("Failed to parse settings", e);
         }
       }
 
-      // Load AI Config
       const savedAi = localStorage.getItem("hal_ai_config");
       if (savedAi) {
         try {
@@ -162,6 +178,12 @@ export const SettingsProvider = ({ children }) => {
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
 
   useEffect(() => {
+    if (!isAIConfigured && autoHealingEnabled) {
+      setAutoHealingEnabled(false);
+    }
+  }, [isAIConfigured, autoHealingEnabled]);
+
+  useEffect(() => {
     localStorage.setItem(
       "hal_settings",
       JSON.stringify({
@@ -169,6 +191,8 @@ export const SettingsProvider = ({ children }) => {
         enableSnapping,
         showMinimap,
         highQualityRendering,
+        autoHealingEnabled,
+        autoHealingRetryLimit,
         autoSaveEnabled,
       }),
     );
@@ -177,6 +201,8 @@ export const SettingsProvider = ({ children }) => {
     enableSnapping,
     showMinimap,
     highQualityRendering,
+    autoHealingEnabled,
+    autoHealingRetryLimit,
     autoSaveEnabled,
   ]);
 
@@ -202,8 +228,13 @@ export const SettingsProvider = ({ children }) => {
         aiConfig,
         vaultKeys,
         loadVaultKeys,
+        autoHealingEnabled,
+        setAutoHealingEnabled,
+        autoHealingRetryLimit,
+        setAutoHealingRetryLimit,
         autoSaveEnabled,
         setAutoSaveEnabled,
+        isAIConfigured,
       }}
     >
       {children}

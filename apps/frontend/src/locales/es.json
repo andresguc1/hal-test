@@ -85,7 +85,8 @@
     "false": "Falso",
     "optional_label": "Etiqueta visible (opcional)",
     "select": "Seleccionar",
-    "pick": "Capturar"
+    "pick": "Capturar",
+    "toolbox": "CAJA DE INSTRUMENTO"
   },
   "api_status": {
     "status": "Estado de API",
@@ -153,6 +154,7 @@
       "assert_page_text": "Validar Texto de la Página",
       "click": "Click",
       "type_text": "Escribir Texto",
+      "fill_form": "Rellenar Formulario",
       "select_option": "Seleccionar opciones",
       "scroll": "Desplazar",
       "hover": "Pasar mouse sobre elemento",
@@ -226,7 +228,13 @@
       "discussion": "Discusión",
       "csp_validator": "Validador CSP",
       "header_auditor": "Auditor de Cabeceras",
-      "dom_sanitizer": "Sanitizador DOM"
+      "dom_sanitizer": "Sanitizador DOM",
+      "audit_policy": "Auditoría de políticas de seguridad",
+      "sensitive_data_monitor": "Monitor de datos confidenciales",
+      "fuzz_input": "Fuzzing de entradas (XSS/SQLi)",
+      "db_connect": "Conectar a BD",
+      "db_query": "Ejecutar Consulta",
+      "db_assert_record": "Validar Registro"
     },
     "categories": {
       "security_audit": "Seguridad",
@@ -243,7 +251,8 @@
       "execution_interface": "Ejecución",
       "flow_control": "Motor Lógico",
       "composition": "Composición de Módulos",
-      "collaboration": "Anotación de UI"
+      "collaboration": "Anotación de UI",
+      "database_ops": "Bases de Datos"
     },
     "fields": {
       "browserType": "Tipo de navegador",
@@ -382,7 +391,8 @@
       "executablePath": "Ruta del ejecutable (personalizado)",
       "forceClose": "Forzar cierre (forceClose)",
       "clearContext": "Limpiar contexto (clearContext)",
-      "mode": "Modo de Ejecución"
+      "mode": "Modo de Ejecución",
+      "duration": "Duración (ms)"
     },
     "config": {
       "save_error": "No se pudo guardar la configuración. Por favor, verifica los datos e intenta nuevamente.",
@@ -444,7 +454,14 @@
       "no_captures": "Sin captura disponible",
       "alt_text": "Resultado de la ejecución",
       "before": "Antes",
-      "after": "Después"
+      "after": "Después",
+      "waitForNavigation": "Si está activo, espera a que se cargue la página después del envío del formulario.  Desactívelo si usa AJAX.",
+      "selector": "Déjelo vacío para desplazarse por la ventana principal.  Utilice un selector para un elemento específico.",
+      "force": "Si está activo, ignora las comprobaciones de visibilidad antes de arrastrar.",
+      "fullPage": "Si está activo, captura la longitud completa de la página.  Se ignora si se utiliza el selector.",
+      "path": "Ruta en el servidor.  Si está vacío, devuelve una imagen en respuesta.",
+      "logToFile": "Si está activo, los registros se guardan en un archivo.  De lo contrario, solo se imprime en la consola backend.",
+      "timeout": "Es hora de escuchar los errores.  0 por tiempo indefinido."
     },
     "validation": {
       "width_number": "Width debe ser un número",
@@ -591,7 +608,10 @@
         "light": "Claro",
         "dark": "Oscuro",
         "system": "Sistema"
-      }
+      },
+      "theme_light": "Por supuesto",
+      "theme_dark": "Oscuro",
+      "theme_system": "Sistema"
     },
     "ai": {
       "title": "IA e Integraciones",
@@ -655,7 +675,16 @@
       "health_connected": "Ollama conectado • Modelo {{model}} cargado",
       "health_not_found": "Ollama funcionando pero {{model}} no encontrado. ollama pull {{model}}",
       "models_installed": "{{count}} modelo instalado",
-      "models_installed_plural": "{{count}} modelos instalados"
+      "models_installed_plural": "{{count}} modelos instalados",
+      "select_provider_placeholder": "Seleccionar Proveedor",
+      "providers": {
+        "ollama": "Ollamá (Local)",
+        "openai": "OpenAI (nube)",
+        "anthropic": "Claude / Antrópico (Nube)",
+        "google": "Géminis / Google (Nube)",
+        "openrouter": "OpenRouter (nube)"
+      },
+      "api_key_placeholder": "sk-o-..."
     },
     "vault": {
       "title": "Billetera Segura",
@@ -678,7 +707,17 @@
       "key_saved": "Llave guardada en la Billetera",
       "key_deleted": "Llave eliminada",
       "test_success": "¡Conexión Exitosa!",
-      "test_failed": "Conexión Fallida"
+      "test_failed": "Conexión Fallida",
+      "key_placeholder": "sk-..."
+    },
+    "title": "Ajustes",
+    "close": "para cerrar",
+    "save": "Ahorrar",
+    "tabs": {
+      "general": "General",
+      "editor": "Lienzo & Editor",
+      "ai": "IA e integraciones",
+      "system": "Sistema"
     }
   },
   "context_menu": {
@@ -1092,7 +1131,9 @@
         "description": "Carga sostenida por tiempo prolongado.",
         "goal": "Detectar degradación progresiva"
       }
-    }
+    },
+    "rose_time": "tiempo de subida",
+    "rose_time_hint": "Tiempo en la base antes del pico"
   },
   "security_config": {
     "dast_header": "Configuración de Auditoría DAST",
@@ -1363,5 +1404,146 @@
     "col_status": "Estado",
     "col_action": "Acción",
     "view_report": "Ver informe"
+  },
+  "performance": {
+    "toasts": {
+      "load_error": "Error al cargar el historial.",
+      "delete_success": "La ejecución se eliminó correctamente.",
+      "delete_error": "Error al eliminar la ejecución.",
+      "delete_server_error": "Error del servidor al eliminar la ejecución.",
+      "config_error": "No se pudo extraer la configuración para esta ejecución.",
+      "compare_error": "Datos incompatibles para comparación."
+    },
+    "confirmations": {
+      "delete": "¿Está seguro de que desea eliminar este registro del historial?"
+    },
+    "navigation": {
+      "history": "Historia"
+    },
+    "buttons": {
+      "rerun": "correr de nuevo",
+      "close_report": "Cerrar informe"
+    },
+    "compare": {
+      "title": "Comparación de rendimiento",
+      "back": "Volver a la Historia",
+      "run_a": "Ejecución A",
+      "run_b": "Ejecución B (Objetivo)",
+      "no_change": "Sin cambios",
+      "equal": "Igual",
+      "vs_run_a": "vs Ejecución A"
+    },
+    "history": {
+      "title": "Historial de rendimiento",
+      "subtitle": "Explore, analice y compare ejecuciones de carga anteriores",
+      "comparing": "Comparando:",
+      "compare_now": "Comparar ahora",
+      "loading": "Cargando historial...",
+      "no_runs": "No se han registrado ejecuciones de rendimiento anteriores para este flujo."
+    },
+    "headers": {
+      "compare": "Comparar",
+      "run_id": "ID de ejecución",
+      "date": "Fecha",
+      "load_profile": "Perfil de carga",
+      "config": "configuración",
+      "throughput": "Rendimiento",
+      "p95_latency": "Latencia P95",
+      "errors": "Errores",
+      "actions": "Comportamiento",
+      "avg_latency": "Latencia promedio",
+      "error_rate": "Tasa de errores"
+    },
+    "actions": {
+      "rerun": "Corre de nuevo",
+      "delete": "Eliminar ejecución"
+    },
+    "soak": {
+      "matrix_title": "Matriz de Descomposición Horaria (Evolución H1...Hn)",
+      "matrix_subtitle": "Seguimiento de bloques horarios para identificar momentos específicos de degradación.",
+      "hour_intervals_val": "Intervalos de horas",
+      "interval": "Intervalo",
+      "samples": "Muestras",
+      "errors_percent": "% de errores",
+      "ram_avg": "Promedio de RAM",
+      "cpu_avg": "Promedio de CPU"
+    },
+    "spike": {
+      "pre_title": "1. Antes del pico (línea de base)",
+      "pre_desc": "Carga inicial estable antes de un pico repentino",
+      "pre_badge": "Carga básica",
+      "peak_title": "2. PIKE REPENTINA (Pico)",
+      "peak_desc": "Sobrecarga instantánea de concurrencia máxima",
+      "peak_badge": "PICO REPENTINO",
+      "post_title": "3. Post-Spike (recuperación automática)",
+      "post_desc": "Enfriamiento y regreso a los parámetros normales.",
+      "recovered": "Recuperado",
+      "recovering": "Recuperante",
+      "matrix_title": "Matriz comparativa por fases de pico repentino",
+      "matrix_subtitle": "Comparación trifásica para evaluar el grado de impacto y capacidad de autorrecuperación del sistema."
+    },
+    "stress": {
+      "latency_vs_vus": "Latencia P95 frente a usuarios simultáneos",
+      "axis_x_vus": "Eje X = VU",
+      "latency_evolution": "Evolución de la latencia por carga",
+      "throughput_vs_vus": "Rendimiento (req/s) frente a usuarios simultáneos",
+      "saturation_plateau": "Meseta de saturación",
+      "capacity_ceiling": "Techo de capacidad de procesamiento"
+    }
+  },
+  "metrics": {
+    "loading": "Cuantificando la inteligencia del sistema...",
+    "header": {
+      "subtitle": "ROI y auditoría de rendimiento",
+      "title": "Descripción ejecutiva",
+      "latest_update": "Última actualización"
+    },
+    "kpi": {
+      "time_saved": "Tiempo humano ahorrado",
+      "auto_repairs": "Reparaciones automáticas",
+      "time_saved_trend": "+12% respecto a la semana pasada",
+      "memory_utilization": "Utilización del Palacio de la Memoria",
+      "fixes_reused": "Correcciones históricas reutilizadas",
+      "memories_trend": "+24 Nuevos recuerdos",
+      "total_runs": "Ejecuciones totales",
+      "all_environments": "En todos los entornos",
+      "stability_trend": "Estabilidad: 98,2%"
+    },
+    "heatmap": {
+      "title": "Mapa de calor de descamación",
+      "no_data": "Datos de falla insuficientes para generar un mapa de calor."
+    },
+    "integrity": {
+      "title": "Integridad de ejecución",
+      "last_days": "Últimos 12 días",
+      "stable_growth": "Crecimiento estable"
+    }
+  },
+  "report": {
+    "total_duration": "Duración total",
+    "memory_hits": "Golpes de memoria",
+    "auto_healed": "Curación automática",
+    "ai_diagnosis": "Diagnóstico de IA",
+    "step_evidence": "Paso Evidencia",
+    "no_visual_capture": "No hay captura visual disponible",
+    "intelligence_insight": "Perspectiva de inteligencia",
+    "step_success_desc": "Paso completado exitosamente según el plan.",
+    "analyzing_failure_desc": "Analizando patrones de falla...",
+    "input": "Aporte",
+    "output": "Producción",
+    "exception": "Excepción"
+  },
+  "picker": {
+    "ai_optimized": "Selector optimizado por IA",
+    "captured": "Selector capturado",
+    "use_this": "Usar",
+    "copy": "Copiar",
+    "alternatives_short": "alt",
+    "badge_pw_best": "⚡ PW Best",
+    "badge_pw": "⚡ PW",
+    "badge_stable": "✓ Estable",
+    "badge_form": "Form",
+    "badge_a11y": "A11y",
+    "badge_fragile": "⚠ Frágil"
   }
 }

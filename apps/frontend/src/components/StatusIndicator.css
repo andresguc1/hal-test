@@ -17,7 +17,7 @@
   font-size: 13px;
   padding: 4px 8px;
   border-radius: 4px;
-  transition: all 0.2s;
+  transition: var(--transition-colors);
 }
 
 .status-connected {

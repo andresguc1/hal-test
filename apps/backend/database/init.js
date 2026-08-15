@@ -331,7 +331,7 @@ export {
 };
 
 // Allow running directly from CLI
-if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith('init.js')) {
+if (process.argv[1] && process.argv[1].endsWith('init.js')) {
     const force = process.argv.includes('--force');
     initDb(force)
         .then(() => {

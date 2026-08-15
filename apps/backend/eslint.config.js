@@ -6,7 +6,7 @@ import globals from 'globals';
 
 export default [
     {
-        ignores: ['tests/', 'public/'],
+        ignores: ['tests/', 'public/', 'database.sqlite*'],
     },
     {
         // 1. Configuración de Archivos y Entornos

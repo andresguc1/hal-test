@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { Clock, TrendingUp, Activity, Cpu, Layers } from "lucide-react";
 
@@ -6,6 +7,7 @@ import { Clock, TrendingUp, Activity, Cpu, Layers } from "lucide-react";
  * SoakTrendCharts — Hourly Bucket Matrix Table & Endurance Trend Charts
  */
 export const SoakTrendCharts = ({ soakAnalysis }) => {
+  const { t } = useTranslation();
   if (!soakAnalysis) return null;
 
   const buckets = soakAnalysis.hourlyBuckets || [];
@@ -19,16 +21,22 @@ export const SoakTrendCharts = ({ soakAnalysis }) => {
             <div>
               <h3 className="text-base font-semibold text-slate-100 flex items-center gap-2">
                 <Clock size={18} className="text-purple-400" />
-                Matriz de Descomposición Horaria (Evolución H1 ... Hn)
+                {t(
+                  "performance.soak.matrix_title",
+                  "Hourly Decomposition Matrix (Evolution H1 ... Hn)",
+                )}
               </h3>
               <p className="text-xs text-slate-400 mt-0.5">
-                Seguimiento por bloques de hora para identificar en qué momento
-                específico comenzó la degradación.
+                {t(
+                  "performance.soak.matrix_subtitle",
+                  "Hourly blocks tracking to identify specific moment of degradation.",
+                )}
               </p>
             </div>
 
             <span className="text-xs font-mono font-bold bg-purple-500/10 text-purple-400 px-3 py-1 rounded-xl border border-purple-500/20">
-              {buckets.length} Intervalos Horarios
+              {buckets.length}{" "}
+              {t("performance.soak.hour_intervals_val", "Hour Intervals")}
             </span>
           </div>
 
@@ -36,13 +44,27 @@ export const SoakTrendCharts = ({ soakAnalysis }) => {
             <table className="w-full text-left text-xs border-collapse font-mono">
               <thead>
                 <tr className="bg-slate-900/90 text-slate-400 font-semibold border-b border-slate-800 uppercase tracking-wider">
-                  <th className="py-3 px-4">Intervalo</th>
-                  <th className="py-3 px-3 text-right">Muestras</th>
-                  <th className="py-3 px-3 text-right">Latencia P95</th>
-                  <th className="py-3 px-3 text-right">Throughput</th>
-                  <th className="py-3 px-3 text-right">Errores %</th>
-                  <th className="py-3 px-3 text-right">RAM Avg</th>
-                  <th className="py-3 px-3 text-right">CPU Avg</th>
+                  <th className="py-3 px-4">
+                    {t("performance.soak.interval", "Interval")}
+                  </th>
+                  <th className="py-3 px-3 text-right">
+                    {t("performance.soak.samples", "Samples")}
+                  </th>
+                  <th className="py-3 px-3 text-right">
+                    {t("performance.headers.p95_latency", "P95 Latency")}
+                  </th>
+                  <th className="py-3 px-3 text-right">
+                    {t("performance.headers.throughput", "Throughput")}
+                  </th>
+                  <th className="py-3 px-3 text-right">
+                    {t("performance.soak.errors_percent", "Errors %")}
+                  </th>
+                  <th className="py-3 px-3 text-right">
+                    {t("performance.soak.ram_avg", "RAM Avg")}
+                  </th>
+                  <th className="py-3 px-3 text-right">
+                    {t("performance.soak.cpu_avg", "CPU Avg")}
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">

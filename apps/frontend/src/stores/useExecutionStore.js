@@ -15,6 +15,7 @@ export const useExecutionStore = create((set, get) => ({
   totalNodesCount: 0,
   currentNode: null,
   error: null,
+  draftMode: false,
 
   // Persistence of completed execution reports
   lastRunSummary: null,
@@ -22,6 +23,8 @@ export const useExecutionStore = create((set, get) => ({
   lastSecurityReport: null,
 
   setStatus: (status) => set({ status }),
+
+  setDraftMode: (draftMode) => set({ draftMode }),
 
   setMode: (mode) => set({ mode }),
 

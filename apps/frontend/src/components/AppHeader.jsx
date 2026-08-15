@@ -15,6 +15,7 @@ import {
   Users,
   Loader2,
   Shield,
+  BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
@@ -42,7 +43,7 @@ const HeaderButton = ({ onClick, children, title, className }) => (
   </Motion.button>
 );
 
-const Breadcrumbs = ({ viewStack, onExit, currentFlowName }) => {
+const Breadcrumbs = ({ viewStack, onExit, currentFlowName, projectName }) => {
   if (!viewStack || viewStack.length === 0) return null;
 
   return (
@@ -54,9 +55,9 @@ const Breadcrumbs = ({ viewStack, onExit, currentFlowName }) => {
       <button
         type="button"
         onClick={() => onExit(0)}
-        className="text-[var(--text-secondary)] hover:text-indigo-400 cursor-pointer transition-colors bg-transparent border-none p-0"
+        className="text-[var(--text-secondary)] hover:text-indigo-400 cursor-pointer transition-colors bg-transparent border-none p-0 max-w-[100px] md:max-w-[150px] lg:max-w-[200px] truncate"
       >
-        Main
+        {projectName}
       </button>
 
       {viewStack.map((view, index) => (
@@ -70,15 +71,7 @@ const Breadcrumbs = ({ viewStack, onExit, currentFlowName }) => {
           <button
             type="button"
             onClick={() => onExit(index)}
-            aria-current={
-              index === viewStack.length - 1 ? "location" : undefined
-            }
-            className={cn(
-              "transition-colors max-w-[150px] truncate bg-transparent border-none p-0",
-              index === viewStack.length - 1
-                ? "text-indigo-500 font-medium"
-                : "text-[var(--text-secondary)] hover:text-indigo-400 cursor-pointer",
-            )}
+            className="transition-colors max-w-[150px] truncate bg-transparent border-none p-0 text-[var(--text-secondary)] hover:text-indigo-400 cursor-pointer"
           >
             {view.label}
           </button>
@@ -107,6 +100,7 @@ function AppHeader({
   onOpenApiKeys,
   onToggleHistory,
   onToggleVariables,
+  onOpenMetricsDashboard,
 
   isToolboxVisible,
   isVariablesVisible,
@@ -322,6 +316,9 @@ function AppHeader({
               currentFlowName={
                 selectedFlow?.name || t("header.unknown", "Unknown")
               }
+              projectName={
+                selectedProject?.name || t("header.unknown", "Unknown")
+              }
             />
           ) : selectedProject ? (
             <>
@@ -436,6 +433,16 @@ function AppHeader({
         >
           <Shield size={18} />
         </HeaderButton>
+
+        {onOpenMetricsDashboard && (
+          <HeaderButton
+            onClick={onOpenMetricsDashboard}
+            title="Dashboard de Métricas & Cobertura HalTest"
+            className="text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10"
+          >
+            <BarChart3 size={18} />
+          </HeaderButton>
+        )}
 
         <HeaderButton
           onClick={onToggleVariables}

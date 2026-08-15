@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { api } from "../../utils/api";
 import {
   TrendingUp,
@@ -15,6 +16,7 @@ import { cn } from "../../lib/utils";
 import { motion as Motion, AnimatePresence } from "framer-motion";
 
 export default function MetricsDashboard() {
+  const { t } = useTranslation();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -39,7 +41,7 @@ export default function MetricsDashboard() {
       <div className="flex flex-col items-center justify-center p-20 gap-4 opacity-50">
         <Activity size={32} className="animate-pulse text-indigo-500" />
         <span className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">
-          Quantifying System Intelligence...
+          {t("metrics.loading", "Quantifying System Intelligence...")}
         </span>
       </div>
     );
@@ -52,16 +54,16 @@ export default function MetricsDashboard() {
           <div className="flex items-center gap-2 text-indigo-400 mb-2">
             <TrendingUp size={16} />
             <span className="text-[10px] font-bold uppercase tracking-[0.2em]">
-              ROI & Performance Audit
+              {t("metrics.header.subtitle", "ROI & Performance Audit")}
             </span>
           </div>
           <h2 className="text-3xl font-black tracking-tight text-white uppercase italic">
-            Executive Overview
+            {t("metrics.header.title", "Executive Overview")}
           </h2>
         </div>
         <div className="text-right">
           <span className="text-[10px] text-slate-500 font-bold uppercase block tracking-widest">
-            Latest Update
+            {t("metrics.header.latest_update", "Latest Update")}
           </span>
           <span className="text-xs font-mono text-slate-400">
             {new Date().toLocaleString()}
@@ -73,26 +75,32 @@ export default function MetricsDashboard() {
       <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <KPICard
           icon={<Clock size={20} />}
-          label="Human Time Saved"
+          label={t("metrics.kpi.time_saved", "Human Time Saved")}
           value={data?.roi?.timeSaved || "0h"}
-          subValue={`${data?.roi?.healed || 0} Auto-Repairs`}
-          trend="+12% vs last week"
+          subValue={`${data?.roi?.healed || 0} ${t("metrics.kpi.auto_repairs", "Auto-Repairs")}`}
+          trend={t("metrics.kpi.time_saved_trend", "+12% vs last week")}
           color="indigo"
         />
         <KPICard
           icon={<Zap size={20} />}
-          label="Memory Palace Utilization"
+          label={t(
+            "metrics.kpi.memory_utilization",
+            "Memory Palace Utilization",
+          )}
           value={data?.memory?.hits || 0}
-          subValue="Historical Fixes Reused"
-          trend="+24 New memories"
+          subValue={t("metrics.kpi.fixes_reused", "Historical Fixes Reused")}
+          trend={t("metrics.kpi.memories_trend", "+24 New memories")}
           color="amber"
         />
         <KPICard
           icon={<ShieldCheck size={20} />}
-          label="Total Executions"
+          label={t("metrics.kpi.total_runs", "Total Executions")}
           value={data?.totalRuns || 0}
-          subValue="Across all environments"
-          trend="Stability: 98.2%"
+          subValue={t(
+            "metrics.kpi.all_environments",
+            "Across all environments",
+          )}
+          trend={t("metrics.kpi.stability_trend", "Stability: 98.2%")}
           color="emerald"
         />
       </section>
@@ -106,7 +114,7 @@ export default function MetricsDashboard() {
                 <AlertTriangle size={16} />
               </div>
               <h3 className="text-sm font-bold uppercase tracking-widest">
-                Flakiness Heatmap
+                {t("metrics.heatmap.title", "Flakiness Heatmap")}
               </h3>
             </div>
             <BarChart3 size={16} className="text-slate-600" />
@@ -124,7 +132,10 @@ export default function MetricsDashboard() {
               ))
             ) : (
               <div className="p-10 text-center text-slate-600 text-xs italic">
-                Insufficient failure data to generate heatmap.
+                {t(
+                  "metrics.heatmap.no_data",
+                  "Insufficient failure data to generate heatmap.",
+                )}
               </div>
             )}
           </div>
@@ -138,7 +149,7 @@ export default function MetricsDashboard() {
                 <Activity size={16} />
               </div>
               <h3 className="text-sm font-bold uppercase tracking-widest">
-                Execution Integrity
+                {t("metrics.integrity.title", "Execution Integrity")}
               </h3>
             </div>
             <Calendar size={16} className="text-slate-600" />
@@ -159,8 +170,10 @@ export default function MetricsDashboard() {
             ))}
           </div>
           <div className="mt-4 flex items-center justify-between text-[10px] text-slate-500 font-bold uppercase tracking-widest px-1">
-            <span>Last 12 Days</span>
-            <span className="text-indigo-400">Stable Growth</span>
+            <span>{t("metrics.integrity.last_days", "Last 12 Days")}</span>
+            <span className="text-indigo-400">
+              {t("metrics.integrity.stable_growth", "Stable Growth")}
+            </span>
           </div>
         </section>
       </div>

@@ -23,6 +23,7 @@ export const useHaltestSocket = ({
   setNodes,
   setEdges,
   onElementPicked,
+  onElementSanitized,
   onLogReceived,
   onTerminalOutput,
   onCodegenAction,
@@ -32,6 +33,7 @@ export const useHaltestSocket = ({
   onConnectNodes,
   onRemoveNode,
   onUpdateNode,
+  onSaveFlow,
   toast,
   onSecurityAlert,
   executionMode,
@@ -39,6 +41,7 @@ export const useHaltestSocket = ({
   const socketRef = useRef(null);
   const activeRunIdRef = useRef(activeRunId);
   const onElementPickedRef = useRef(onElementPicked);
+  const onElementSanitizedRef = useRef(onElementSanitized);
   const setNodesRef = useRef(setNodes);
   const setEdgesRef = useRef(setEdges);
   const onTerminalOutputRef = useRef(onTerminalOutput);
@@ -49,6 +52,7 @@ export const useHaltestSocket = ({
   const onConnectNodesRef = useRef(onConnectNodes);
   const onRemoveNodeRef = useRef(onRemoveNode);
   const onUpdateNodeRef = useRef(onUpdateNode);
+  const onSaveFlowRef = useRef(onSaveFlow);
   const onLogReceivedRef = useRef(onLogReceived);
   const toastRef = useRef(toast);
   const onSecurityAlertRef = useRef(onSecurityAlert);
@@ -58,6 +62,7 @@ export const useHaltestSocket = ({
   useEffect(() => {
     activeRunIdRef.current = activeRunId;
     onElementPickedRef.current = onElementPicked;
+    onElementSanitizedRef.current = onElementSanitized;
     setNodesRef.current = setNodes;
     setEdgesRef.current = setEdges;
     onTerminalOutputRef.current = onTerminalOutput;
@@ -68,6 +73,7 @@ export const useHaltestSocket = ({
     onConnectNodesRef.current = onConnectNodes;
     onRemoveNodeRef.current = onRemoveNode;
     onUpdateNodeRef.current = onUpdateNode;
+    onSaveFlowRef.current = onSaveFlow;
     onLogReceivedRef.current = onLogReceived;
     toastRef.current = toast;
     onSecurityAlertRef.current = onSecurityAlert;
@@ -75,6 +81,7 @@ export const useHaltestSocket = ({
   }, [
     activeRunId,
     onElementPicked,
+    onElementSanitized,
     setNodes,
     setEdges,
     onTerminalOutput,
@@ -85,6 +92,7 @@ export const useHaltestSocket = ({
     onConnectNodes,
     onRemoveNode,
     onUpdateNode,
+    onSaveFlow,
     onLogReceived,
     toast,
     onSecurityAlert,
@@ -116,7 +124,7 @@ export const useHaltestSocket = ({
 
     socket.on("execution-status", (data) => {
       if (!data || !data.stepId) return;
-      const { stepId, status, error, result, runId, batchId } = data;
+      const { stepId, status, error, result, runId, batchId, message } = data;
 
       // Update global execution store
       if (status === "running") {
@@ -168,7 +176,11 @@ export const useHaltestSocket = ({
 
       // Log structured error to console
       if (status === "failed" || status === "softfailed") {
-        const errorMsg = error || "Unknown error";
+        let errorMsg = error;
+        if (status === "softfailed" && message && !error) {
+          errorMsg = message;
+        }
+        errorMsg = errorMsg || "Unknown error";
         console.error(
           `%c[NodeError] NodeId=${stepId} Status=${status} Error="${errorMsg}"`,
           "color: #ef4444; font-weight: bold;",
@@ -388,6 +400,15 @@ export const useHaltestSocket = ({
       }
     });
 
+    socket.on("element_sanitized", (data) => {
+      console.log("[HaltestSocket] ✨ Element Sanitized Event Fired:", data);
+      if (onElementSanitizedRef.current) {
+        onElementSanitizedRef.current(data);
+      } else {
+        console.warn("[HaltestSocket] No sanitized callback ref found!");
+      }
+    });
+
     socket.on("step_screenshot_ready", (data) => {
       const { nodeId, screenshotPath } = data;
       if (setNodesRef.current) {
@@ -512,7 +533,7 @@ export const useHaltestSocket = ({
     });
 
     socket.on("auto_healing_update", (data) => {
-      const { nodeId, newSelector, source, reasoning } = data;
+      const { nodeId, newSelector, source, reasoning, isBreakingChange } = data;
       console.log(`[HaltestSocket] 🩹 Auto-healing update for node: ${nodeId}`);
 
       // 1. UPDATE NODES (Real-time sync of the configuration)
@@ -565,6 +586,54 @@ export const useHaltestSocket = ({
           description: `New selector: ${newSelector}`,
           duration: 5000,
           icon: "🩹",
+        });
+      }
+
+      if (isBreakingChange && toastRef.current) {
+        toastRef.current.warning(
+          "Breaking change: selector strategy changed. Please review the flow.",
+          {
+            description: `Healed selector type changed for node ${nodeId}.`,
+            duration: 7000,
+          },
+        );
+      }
+
+      // 3. PERSIST FLOW AFTER HEALING
+      if (onSaveFlowRef.current) {
+        onSaveFlowRef.current();
+      }
+
+      // 4. CLEAN HEALED STATE AFTER PERSISTENCE
+      if (setNodesRef.current) {
+        setNodesRef.current((nds) => {
+          if (!Array.isArray(nds)) return nds;
+          return nds.map((node) => {
+            if (node.id === nodeId) {
+              const config = node.data?.configuration || {};
+              const restConfig = Object.fromEntries(
+                Object.entries(config).filter(
+                  ([key]) =>
+                    ![
+                      "healed",
+                      "healedFrom",
+                      "healedValue",
+                      "originalValue",
+                      "aiReasoning",
+                      "healingConfidence",
+                    ].includes(key),
+                ),
+              );
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  configuration: restConfig,
+                },
+              };
+            }
+            return node;
+          });
         });
       }
     });

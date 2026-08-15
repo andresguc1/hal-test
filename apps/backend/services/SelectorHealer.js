@@ -175,11 +175,21 @@ class SelectorHealer {
         aiConfig,
         timeout = 30000,
         onProgress = null,
+        maxTiers = 3,
     }) {
         try {
+            const tiers = Math.max(0, Math.min(3, maxTiers));
             console.log(
-                `[SelectorHealer] Starting Advanced Tiered Healing: ${originalSelector} (Timeout: ${timeout}ms)`,
+                `[SelectorHealer] Starting Advanced Tiered Healing: ${originalSelector} (Timeout: ${timeout}ms, maxTiers: ${tiers})`,
             );
+
+            if (tiers === 0) {
+                return {
+                    correctedSelector: null,
+                    reasoning: 'Self-healing skipped because retry limit is 0.',
+                    confidence: 0,
+                };
+            }
 
             // 1. Extract Compressed DOM (Layer 1: DOM-Crusher)
             let compressedDOM = '';
@@ -193,9 +203,8 @@ class SelectorHealer {
             }
 
             const previousSelectors = [];
-            const maxTiers = 3;
 
-            for (let tier = 0; tier < maxTiers; tier++) {
+            for (let tier = 0; tier < tiers; tier++) {
                 if (onProgress) {
                     onProgress({ step: `tier_${tier + 1}_start`, tier: tier + 1 });
                 }
@@ -212,7 +221,7 @@ class SelectorHealer {
                     provider: aiConfig?.provider || 'ollama',
                     model: aiConfig?.model,
                     baseUrl: aiConfig?.baseUrl,
-                    timeout: timeout / maxTiers,
+                    timeout: timeout / tiers,
                     retryCount: tier,
                     previousSelectors: [...previousSelectors],
                 });

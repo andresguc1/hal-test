@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { motion } from "framer-motion";
+import { useMotionVariants } from "../../../hooks/useReducedMotion";
 import {
   FolderKanban,
   Plus,
@@ -17,9 +18,13 @@ const container = {
   show: { transition: { staggerChildren: 0.05 } },
 };
 
-const item = {
+const ITEM_FULL = {
   hidden: { opacity: 0, y: 12 },
   show: { opacity: 1, y: 0, transition: { duration: 0.25, ease: "easeOut" } },
+};
+const ITEM_REDUCED = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { duration: 0.15 } },
 };
 
 export default function ProjectsPage({
@@ -32,6 +37,7 @@ export default function ProjectsPage({
   const [search, setSearch] = useState("");
   const [view, setView] = useState("grid");
   const [sort, setSort] = useState("name");
+  const item = useMotionVariants(ITEM_FULL, ITEM_REDUCED);
 
   // Map runs to projects
   const runsByProject = useMemo(() => {

@@ -1,15 +1,17 @@
 import { NODE_STATES, getNodeStyle } from "../../components/hooks/flowStyles";
+import { deepClone } from "../../utils/flowUtils";
 
 /**
  * Recursive Helper for Modifying Nodes Data even if they are deep inside Components
  */
 export const updateNodeRecursively = (nodes, nodeId, updaterFn) => {
+  if (!Array.isArray(nodes)) return nodes;
   let hasChanges = false;
   const recursiveMap = (list) => {
     return list.map((node) => {
       if (node.id === nodeId) {
         hasChanges = true;
-        return updaterFn(node);
+        return updaterFn(deepClone(node));
       }
       if (
         (node.type === "component" || node.data?.type === "component") &&
@@ -19,16 +21,11 @@ export const updateNodeRecursively = (nodes, nodeId, updaterFn) => {
         const newSubNodes = recursiveMap(oldSubNodes);
         if (oldSubNodes !== newSubNodes) {
           hasChanges = true;
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              subFlow: {
-                ...node.data.subFlow,
-                nodes: newSubNodes,
-              },
-            },
-          };
+          const clonedNode = deepClone(node);
+          clonedNode.data = clonedNode.data || {};
+          clonedNode.data.subFlow = clonedNode.data.subFlow || {};
+          clonedNode.data.subFlow.nodes = newSubNodes;
+          return clonedNode;
         }
       }
       return node;
@@ -42,25 +39,26 @@ export const updateNodeRecursively = (nodes, nodeId, updaterFn) => {
  * Helper to reset all nodes recursively
  */
 export const resetExecutionStatesRecursively = (list) => {
+  if (!Array.isArray(list)) return list;
   return list.map((node) => {
-    let newNode = {
-      ...node,
-      data: {
-        ...node.data,
-        state: NODE_STATES.DEFAULT,
-        executed: false,
-        errorDetails: null,
-        error: null,
-        executionTime: null,
-      },
-      style: getNodeStyle(NODE_STATES.DEFAULT, node.style),
+    // Perform deep clone to avoid mutating live reference objects in nodesRef.current or subFlow
+    const newNode = deepClone(node);
+
+    newNode.data = {
+      ...(newNode.data || {}),
+      state: NODE_STATES.DEFAULT,
+      executed: false,
+      errorDetails: null,
+      error: null,
+      executionTime: null,
     };
+    newNode.style = getNodeStyle(NODE_STATES.DEFAULT, newNode.style);
 
     if (newNode.data?.subFlow?.edges) {
       newNode.data.subFlow.edges = newNode.data.subFlow.edges.map((e) => ({
         ...e,
         animated: false,
-        data: { ...e.data, executionState: "default" },
+        data: { ...(e.data || {}), executionState: "default" },
       }));
     }
 

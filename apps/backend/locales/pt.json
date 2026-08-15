@@ -1,0 +1,319 @@
+{
+    "common": {
+        "success": "Operação concluída com sucesso.",
+        "error_internal": "Erro do Servidor Interno.  Por favor, tente novamente mais tarde.",
+        "error_unknown": "Erro de servidor desconhecido.",
+        "route_not_found": "Rota não encontrada: {{method}} {{path}}",
+        "error_validation": "Erro de validação de dados na solicitação.",
+        "browser_disconnected": "O navegador foi desconectado.  Por favor, inicie um novo navegador.",
+        "browser_closed": "O navegador foi fechado.  Por favor, inicie um novo navegador.",
+        "page_closed": "A página de destino está fechada."
+    },
+    "actions": {
+        "launch_browser": {
+            "success": "Navegador iniciado com sucesso.",
+            "error": "Falha ao iniciar o navegador."
+        },
+        "open_url": {
+            "success": "URL aberto com sucesso.",
+            "error": "Falha ao abrir o URL.",
+            "url_required": "url é obrigatório."
+        },
+        "assert_page_text": {
+            "success": "A página contém o texto '{{text}}'.",
+            "text_required": "O texto a ser localizado é obrigatório.",
+            "timeout_error": "A página não contém o texto '{{text}}' dentro do tempo limite de {{timeout}}ms."
+        },
+        "close_browser": {
+            "success": "Navegador fechado com sucesso.",
+            "error": "Erro ao fechar o navegador."
+        },
+        "click": {
+            "success": "Clique com sucesso no seletor '{{selector}}'."
+        },
+        "type_text": {
+            "success": "Texto inserido com sucesso no seletor '{{selector}}'."
+        },
+        "scroll": {
+            "success": "Rolagem aplicada com sucesso a {{target}}."
+        },
+        "manage_tabs": {
+            "new_success": "Nova aba aberta com sucesso.  Total de guias: {{count}}",
+            "switch_success": "Mudou para a guia {{index}}: {{title}}",
+            "close_all_success": "Todas as guias fechadas ({{count}} guias).",
+            "close_index_success": "Guia no índice {{index}} fechada.",
+            "close_active_success": "Guia ativa fechada.",
+            "list_success": "Foram encontradas {{count}} abas abertas.",
+            "error_invalid_action": "Ação de guia inválida: {{action}}.  Ações válidas: {{validActions}}",
+            "error_tab_index_required": "O parâmetro 'tabIndex' é necessário para a ação 'switch'.",
+            "error_invalid_index": "Índice de guia inválido: {{index}}.  Guias disponíveis: 0-{{max}}",
+            "error_no_tabs": "Nenhuma guia ativa para fechar."
+        },
+        "find_element": {
+            "success": "Elemento encontrado: {{selector}}"
+        },
+        "back": {
+            "success": "Navegação 'Voltar' bem-sucedida.",
+            "error_no_history": "Nenhum histórico de navegação nesta guia."
+        },
+        "forward": {
+            "success": "Navegação 'Avançar' bem-sucedida.",
+            "error_no_history": "Nenhum histórico de navegação nesta guia."
+        },
+        "get_set_content": {
+            "get_attribute_success": "Atributo '{{attribute}}' obtido com sucesso.",
+            "get_html_success": "Conteúdo HTML obtido com sucesso.",
+            "get_text_success": "Conteúdo de texto obtido com sucesso.",
+            "get_success": "Conteúdo obtido com sucesso.",
+            "set_attribute_success": "Atributo '{{attribute}}' definido com sucesso.",
+            "set_html_success": "Conteúdo HTML definido com sucesso.",
+            "set_text_success": "Conteúdo de texto definido com sucesso.",
+            "set_success": "Conteúdo atualizado com sucesso."
+        },
+        "select_option": {
+            "success": "Opção selecionada com sucesso."
+        },
+        "submit_form": {
+            "success": "Formulário enviado com sucesso."
+        },
+        "fill_form": {
+            "success": "Formulário preenchido com sucesso."
+        },
+        "upload_file": {
+            "success": "Arquivos enviados com sucesso."
+        },
+        "execute_js": {
+            "success": "Script executado com sucesso."
+        },
+        "take_screenshot": {
+            "success": "Captura de tela tirada com sucesso."
+        },
+        "save_dom": {
+            "success": "DOM salvo com sucesso."
+        },
+        "wait_for_element": {
+            "visible": "O elemento '{{selector}}' agora está visível.",
+            "hidden": "O elemento '{{selector}}' agora está oculto.",
+            "attached": "O elemento '{{selector}}' está anexado ao DOM.",
+            "detached": "O elemento '{{selector}}' foi removido do DOM.",
+            "condition_met": "Condição atendida."
+        },
+        "wait_visible": {
+            "success": "O elemento agora está visível."
+        },
+        "wait_navigation": {
+            "success": "Navegação concluída."
+        },
+        "wait_network": {
+            "success": "Condição de inatividade de rede atendida."
+        },
+        "wait_conditional": {
+            "success": "Condição de espera cumprida."
+        },
+        "log_errors": {
+            "success": "O registro de erros do navegador foi iniciado."
+        },
+        "listen_events": {
+            "success": "Ouvinte de evento registrado."
+        },
+        "intercept_request": {
+            "success": "Interceptação ({{action}}) configurada para: {{urlPattern}}"
+        },
+        "mock_response": {
+            "success": "Resposta simulada configurada para: {{urlPattern}}"
+        },
+        "block_resource": {
+            "success": "Bloqueio configurado para padrão: {{urlPattern}} (tipo: {{resourceType}})"
+        },
+        "modify_headers": {
+            "success": "Injeção de cabeçalho configurada para: {{urlPattern}}"
+        },
+        "wait_for_response": {
+            "success": "Resposta recebida."
+        },
+        "wait_for_request": {
+            "success": "Solicitação detectada."
+        },
+        "set_network_conditions": {
+            "success": "Condições de rede aplicadas: {{profile}}"
+        },
+        "clear_all_mocks": {
+            "success": "Todas as interceptações e simulações foram removidas."
+        },
+        "manage_cookies": {
+            "get_success": "Biscoitos obtidos.",
+            "set_success": "Cookies definidos com sucesso.",
+            "delete_success": "Cookies excluídos: {{cookies}}.",
+            "clear_success": "Todos os cookies foram apagados."
+        },
+        "manage_storage": {
+            "get_success": "Armazenamento obtido.",
+            "set_success": "Armazenamento atualizado.",
+            "remove_success": "Propriedade de armazenamento removida.",
+            "clear_success": "Armazenamento limpo."
+        },
+        "inject_tokens": {
+            "header_success": "Token injetado no cabeçalho: {{key}}",
+            "cookie_success": "Token injetado no Cookie: {{key}}",
+            "query_success": "Token injetado no Query Param e recarregado: {{key}}"
+        },
+        "persist_session": {
+            "save_success": "Sessão salva em arquivo.",
+            "load_success": "Sessão carregada (melhor esforço) no contexto ativo.",
+            "clear_success": "Sessão limpa (cookies e armazenamento)."
+        },
+        "reload": {
+            "success": "Página recarregada com sucesso."
+        },
+        "create_context": {
+            "success": "Contexto verificado/criado com sucesso."
+        },
+        "cleanup_state": {
+            "success": "Estado (cookies e armazenamento) apagado com sucesso."
+        },
+        "close_context": {
+            "success": "Contexto fechado com sucesso."
+        },
+        "handle_hooks": {
+            "success": "Gancho executado.",
+            "no_script": "Nenhum script de gancho fornecido."
+        },
+        "control_exceptions": {
+            "success": "Controle de exceção configurado na página."
+        },
+        "read_data": {
+            "success": "Dados lidos com sucesso.",
+            "unsupported_type": "Tipo de leitura não compatível."
+        },
+        "save_results": {
+            "success": "Resultados salvos."
+        },
+        "handle_downloads": {
+            "success": "Download concluído."
+        },
+        "call_llm": {
+            "success": "LLM chamado (Simulado)."
+        },
+        "generate_data": {
+            "success": "Dados gerados."
+        },
+        "validate_semantic": {
+            "success": "Validação semântica concluída."
+        },
+        "extract_dom_context": {
+            "success": "Contexto DOM extraído corretamente.",
+            "error": "Erro ao extrair o contexto DOM."
+        },
+        "chain_of_thought": {
+            "success": "Cadeia de raciocínio de pensamento concluída.",
+            "error": "Erro durante o raciocínio da IA."
+        },
+        "smart_selector": {
+            "success": "Sugestão de seletor inteligente gerada.",
+            "error": "Erro ao tentar reparar o seletor."
+        },
+        "mock_router": {
+            "operation_not_found": "Operação '{{operationName}}' não encontrada.",
+            "project_not_found": "Projeto não encontrado.",
+            "no_data_received": "Nenhum dado recebido no corpo da solicitação.",
+            "flow_processed_success": "Fluxo de trabalho ou dados recebidos e processados ​​corretamente (Mock).",
+            "open_url_test_success": "Validação de esquema de URL aberta bem-sucedida."
+        },
+        "interaction": {
+            "error_unsupported_action": "Ação não suportada: {{action}}."
+        },
+        "resize_viewport": {
+            "success": "Janela de visualização redimensionada para {{width}}x{{height}}."
+        },
+        "drag_drop": {
+            "success": "Elemento {{source}} arrastado e solto corretamente em {{target}}."
+        },
+        "import_router": {
+            "content_required": "O conteúdo é obrigatório.",
+            "directory_path_required": "O caminho do diretório é obrigatório.",
+            "directory_path_required_pom": "O caminho do diretório é necessário para importação de POM.",
+            "files_or_directory_required": "Arquivos ou caminho de diretório são necessários."
+        },
+        "export_router": {
+            "flow_required": "É necessário um fluxo válido (matriz de etapas).",
+            "flow_data_required": "Os dados de fluxo são obrigatórios."
+        },
+        "run_tests": {
+            "success": "Execução de teste acionada (Simulado).  A integração real exigiria um executor de testes."
+        },
+        "integrate_ci": {
+            "success": "Integração de CI notificada (Simulada)."
+        }
+    },
+    "nodes": {
+        "categories": {
+            "browser_management": "Navegador",
+            "navigation": "Navegação",
+            "element": "Elementos",
+            "interaction": "Interação",
+            "wait": "Espera",
+            "tabs": "Guias",
+            "viewport": "Janela de visualização",
+            "screenshot": "Capturas",
+            "network": "Rede",
+            "session": "Sessão",
+            "llm_ai": "Operações de IA",
+            "exec": "Executar",
+            "flow_control": "Mecanismo Lógico",
+            "composition": "Composição"
+        },
+        "labels": {
+            "variable": "Variável",
+            "conditional": "Condicional",
+            "switch": "Trocar",
+            "loop": "Laço",
+            "branch": "Filial",
+            "flow_control": "Controle de Fluxo",
+            "transform": "Transformar",
+            "wait_conditional": "Aguarde a condição",
+            "pause": "Pausa (sono)",
+            "component": "Componente",
+            "input": "Entrada do Módulo",
+            "output": "Saída do Módulo"
+        },
+        "fields": {
+            "enable": "Habilitar registros",
+            "logToFile": "Registrar em arquivo",
+            "filePath": "Caminho do arquivo",
+            "args": "Argumentos extras do navegador"
+        }
+    },
+    "errors": {
+        "no_active_browsers": "Nenhum navegador ativo.  Chame launch_browser primeiro.",
+        "browser_not_found": "Nenhum navegador encontrado com ID: {{id}}",
+        "no_active_pages": "Nenhuma página ativa no contexto.  Chame open_url primeiro.",
+        "selector_required": "O parâmetro 'seletor' é obrigatório.",
+        "fields_required": "Pelo menos uma definição de campo de formulário é exigida.",
+        "invalid_action": "O parâmetro 'action' deve ser 'get' ou 'set'.",
+        "invalid_content_type": "O parâmetro 'contentType' deve ser 'text', 'html' ou 'attribute'.",
+        "invalid_selection_criteria": "Critérios de seleção inválidos: {{criteria}}.",
+        "files_required": "Pelo menos um arquivo deve ser fornecido para upload.",
+        "unsafe_file_paths": "Os seguintes caminhos de arquivo não são seguros: {{paths}}.",
+        "parse_args_error": "Erro ao analisar 'args': {{error}}.",
+        "script_execution_error": "Erro na execução do script injetado: {{error}}.",
+        "unsafe_file_path": "Caminho de arquivo inseguro: uso de '..' detectado.",
+        "element_not_found": "Elemento não encontrado: {{selector}}",
+        "save_dom_destination_required": "Você deve fornecer 'path' (arquivo) ou 'variableName' (variável) para salvar o DOM.",
+        "wait_timeout": "Tempo limite: o elemento '{{selector}}' não atendeu à condição '{{condition}}' dentro de {{timeout}}ms",
+        "invalid_cookies_data_format": "cookiesData deve ser uma string JSON válida.",
+        "cookies_array_required": "cookiesData deve ser uma matriz de objetos/nomes para esta ação.",
+        "invalid_cookies_action": "Ação de cookies inválida: {{action}}.",
+        "headers_json_required": "O campo de cabeçalhos deve ser uma string JSON válida.",
+        "invalid_storage_action": "Ação de armazenamento inválida: {{action}}.",
+        "unsupported_injection_target": "Alvo de injeção não suportado: {{target}}.",
+        "session_path_required": "O caminho é necessário para persistir a sessão.",
+        "session_load_error": "Não foi possível ler o arquivo da sessão em: {{path}}",
+        "invalid_persistence_action": "Ação de persistência inválida: {{action}}.",
+        "width_height_required": "Os parâmetros largura e altura são obrigatórios.",
+        "error_dragging": "Erro ao executar a ação de arrastar e soltar.",
+        "source_target_required": "sourceSelector e targetSelector são obrigatórios.",
+        "text_required": "O parâmetro 'texto' é obrigatório.",
+        "value_required_for_set": "O parâmetro 'value' é necessário para a ação 'set'.",
+        "url_pattern_required": "O padrão de URL (urlPattern) é necessário para ações de rede."
+    }
+}

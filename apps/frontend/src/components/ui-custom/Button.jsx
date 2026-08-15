@@ -46,7 +46,7 @@ const Button = React.forwardRef(
         transition={{ type: "spring", stiffness: 400, damping: 17 }}
         className={cn(
           // Base styles - Apple HIG
-          "inline-flex items-center justify-center whitespace-nowrap rounded-full font-semibold transition-all duration-200 select-none",
+          "inline-flex items-center justify-center whitespace-nowrap rounded-full font-semibold ui-transition select-none",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
           "disabled:pointer-events-none disabled:opacity-50",
           // Variants & Sizes

@@ -27,7 +27,7 @@ import {
     clickBodySchema as click,
     typeTextBodySchema as typeText,
     selectOptionBodySchema as selectOption,
-    submitFormBodySchema as submitForm,
+    // fillFormBodySchema as fillForm,
     scrollBodySchema as scroll,
     dragDropBodySchema as dragDrop,
     uploadFileBodySchema as uploadFile,
@@ -95,7 +95,7 @@ const allBodySchemas = {
     clickBodySchema: click,
     typeTextBodySchema: typeText,
     selectOptionBodySchema: selectOption,
-    submitFormBodySchema: submitForm,
+
     scrollBodySchema: scroll,
     dragDropBodySchema: dragDrop,
     uploadFileBodySchema: uploadFile,

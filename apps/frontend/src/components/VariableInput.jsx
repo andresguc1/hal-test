@@ -68,6 +68,14 @@ export const VariableInput = ({
   };
 
   const parsedParts = React.useMemo(() => parseValue(value), [value]);
+  const stringValue =
+    typeof value === "string"
+      ? value
+      : value == null
+        ? ""
+        : typeof value === "object"
+          ? JSON.stringify(value)
+          : String(value);
 
   const renderBackgroundContent = () => {
     return parsedParts.map((part, i) => {
@@ -267,8 +275,8 @@ export const VariableInput = ({
 
       {/* Suggestion list - Custom UI */}
       {(() => {
-        const lastOpen = value.lastIndexOf("{{");
-        const lastClose = value.lastIndexOf("}}");
+        const lastOpen = stringValue.lastIndexOf("{{");
+        const lastClose = stringValue.lastIndexOf("}}");
         const isInsideVar = lastOpen > lastClose;
         return showSuggestions && isInsideVar && suggestions?.length > 0;
       })() && (
@@ -276,13 +284,15 @@ export const VariableInput = ({
           {(() => {
             // Flatten and filter based on current input
             // 1. Only filter if we are actually inside a variable tag
-            const lastOpen = value.lastIndexOf("{{");
-            const lastClose = value.lastIndexOf("}}");
+            const lastOpen = stringValue.lastIndexOf("{{");
+            const lastClose = stringValue.lastIndexOf("}}");
             const isInsideVar = lastOpen > lastClose;
 
             // If not inside {{ }}, show all or nothing based on preference.
             // Here we show all if empty or nothing if typing normal text.
-            const filterText = isInsideVar ? value.substring(lastOpen + 2) : "";
+            const filterText = isInsideVar
+              ? stringValue.substring(lastOpen + 2)
+              : "";
 
             const filteredGroups = suggestions
               .map((group) => {
@@ -321,11 +331,13 @@ export const VariableInput = ({
                       onMouseDown={(e) => {
                         e.preventDefault();
                         // Find where the last {{ started
-                        const lastOpen = value.lastIndexOf("{{");
-                        const prefix = value.substring(0, lastOpen);
-                        const closeIdx = value.indexOf("}}", lastOpen);
+                        const lastOpen = stringValue.lastIndexOf("{{");
+                        const prefix = stringValue.substring(0, lastOpen);
+                        const closeIdx = stringValue.indexOf("}}", lastOpen);
                         const suffix =
-                          closeIdx !== -1 ? value.substring(closeIdx + 2) : "";
+                          closeIdx !== -1
+                            ? stringValue.substring(closeIdx + 2)
+                            : "";
                         const inserted = item.path || "";
                         const newValue = prefix + inserted + suffix;
                         onChange({ target: { value: newValue } });

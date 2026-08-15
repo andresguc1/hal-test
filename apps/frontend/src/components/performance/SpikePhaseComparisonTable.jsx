@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import {
   Layers,
@@ -14,6 +15,7 @@ import {
  * Compares Pre-Spike Baseline, Peak Impact, and Post-Spike Auto-Recovery.
  */
 export const SpikePhaseComparisonTable = ({ spikeAnalysis }) => {
+  const { t } = useTranslation();
   if (!spikeAnalysis) return null;
 
   const pre = spikeAnalysis.preSpike || {};
@@ -22,25 +24,36 @@ export const SpikePhaseComparisonTable = ({ spikeAnalysis }) => {
 
   const phases = [
     {
-      title: "1. Pre-Spike (Baseline)",
-      desc: "Carga base estable previa al salto súbito",
+      title: t("performance.spike.pre_title", "1. Pre-Spike (Baseline)"),
+      desc: t(
+        "performance.spike.pre_desc",
+        "Stable baseline load before sudden spike",
+      ),
       stats: pre,
-      badge: "Carga Base",
+      badge: t("performance.spike.pre_badge", "Base Load"),
       badgeColor: "bg-blue-500/20 text-blue-300 border-blue-500/30",
     },
     {
-      title: "2. PICO SÚBITO (Peak)",
-      desc: "Sobrecarga instantánea de máxima concurrencia",
+      title: t("performance.spike.peak_title", "2. SUDDEN PIKE (Peak)"),
+      desc: t(
+        "performance.spike.peak_desc",
+        "Instantaneous overload of maximum concurrency",
+      ),
       stats: peak,
-      badge: "PICO SÚBITO",
+      badge: t("performance.spike.peak_badge", "SUDDEN SPIKE"),
       badgeColor:
         "bg-orange-500/20 text-orange-300 border-orange-500/30 animate-pulse",
     },
     {
-      title: "3. Post-Spike (Auto-Recuperación)",
-      desc: "Enfriamiento y retorno a parámetros normales",
+      title: t("performance.spike.post_title", "3. Post-Spike (Auto-Recovery)"),
+      desc: t(
+        "performance.spike.post_desc",
+        "Cooldown and return to normal parameters",
+      ),
+      badge: spikeAnalysis.isFullyRecovered
+        ? t("performance.spike.recovered", "Recovered")
+        : t("performance.spike.recovering", "Recovering"),
       stats: post,
-      badge: spikeAnalysis.isFullyRecovered ? "Recuperado" : "En Recuperación",
       badgeColor: spikeAnalysis.isFullyRecovered
         ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
         : "bg-amber-500/20 text-amber-300 border-amber-500/30",
@@ -53,11 +66,16 @@ export const SpikePhaseComparisonTable = ({ spikeAnalysis }) => {
         <div>
           <h3 className="text-base font-semibold text-slate-100 flex items-center gap-2">
             <Layers size={18} className="text-sky-400" />
-            Matriz Comparativa por Fases del Pico Súbito
+            {t(
+              "performance.spike.matrix_title",
+              "Comparative Matrix by Sudden Spike Phases",
+            )}
           </h3>
           <p className="text-xs text-slate-400 mt-0.5">
-            Comparación tri-fásica para evaluar el grado de impacto y la
-            capacidad de auto-recuperación del sistema.
+            {t(
+              "performance.spike.matrix_subtitle",
+              "Tri-phasic comparison to evaluate the degree of impact and self-recovery capacity of the system.",
+            )}
           </p>
         </div>
 
@@ -90,7 +108,9 @@ export const SpikePhaseComparisonTable = ({ spikeAnalysis }) => {
 
             <div className="space-y-2 pt-2 border-t border-slate-800/60 text-xs font-mono">
               <div className="flex justify-between items-center">
-                <span className="text-slate-500">Latencia P95:</span>
+                <span className="text-slate-500">
+                  {t("performance.headers.p95_latency", "P95 Latency")}:
+                </span>
                 <span
                   className={`font-bold ${
                     ph.stats.p95Latency > 2000
@@ -105,21 +125,27 @@ export const SpikePhaseComparisonTable = ({ spikeAnalysis }) => {
               </div>
 
               <div className="flex justify-between items-center">
-                <span className="text-slate-500">Latencia Promedio:</span>
+                <span className="text-slate-500">
+                  {t("performance.headers.avg_latency", "Average Latency")}:
+                </span>
                 <span className="text-slate-300">
                   {ph.stats.avgLatency || 0} ms
                 </span>
               </div>
 
               <div className="flex justify-between items-center">
-                <span className="text-slate-500">Throughput:</span>
+                <span className="text-slate-500">
+                  {t("performance.headers.throughput", "Throughput")}:
+                </span>
                 <span className="text-sky-400 font-bold">
                   {ph.stats.avgThroughput || 0} req/s
                 </span>
               </div>
 
               <div className="flex justify-between items-center">
-                <span className="text-slate-500">Tasa de Error:</span>
+                <span className="text-slate-500">
+                  {t("performance.headers.error_rate", "Error Rate")}:
+                </span>
                 <span
                   className={`font-bold ${
                     ph.stats.avgErrorRate > 0

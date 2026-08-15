@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { motion as Motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import {
@@ -15,12 +15,11 @@ import {
   Settings,
   X,
   Trash2,
+  Star,
+  Map,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NODE_CATEGORIES, CATEGORY_STYLES } from "@/config/nodeConstants";
-import { useSettings } from "@/context/SettingsContext";
-import { useAIContext } from "@/context/AIContext";
-import { useToast } from "@/hooks/useToast";
 
 const ToolboxItem = ({ label, nodeId, color, onAdd }) => {
   // Select styles based on color theme, fallback to slate
@@ -257,10 +256,11 @@ const ToolboxCategory = ({
       <AnimatePresence>
         {isOpen && (
           <Motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-visible px-1 pt-1" // visible overflow for hover effects
+            initial={{ scaleY: 0, opacity: 0 }}
+            animate={{ scaleY: 1, opacity: 1 }}
+            exit={{ scaleY: 0, opacity: 0 }}
+            style={{ transformOrigin: "top" }}
+            className="overflow-hidden px-1 pt-1"
           >
             {nodes.map((nodeId) => (
               <ToolboxItem
@@ -280,21 +280,10 @@ const ToolboxCategory = ({
 
 export default function ToolboxPanel({
   addNode,
-  activeBrowserId,
   isCollapsed: controlledIsCollapsed,
   onToggleCollapse,
 }) {
   const { t } = useTranslation();
-  const { aiConfig, openSettings } = useSettings();
-
-  const chatMessages = useAIContext((state) => state.chatMessages);
-  const isGenerating = useAIContext((state) => state.isGenerating);
-  const isAiReady = useAIContext((state) => state.isAiReady);
-  const selectedKeyId = useAIContext((state) => state.selectedKeyId);
-  const setSelectedKeyId = useAIContext((state) => state.setSelectedKeyId);
-  const availableKeys = useAIContext((state) => state.availableKeys);
-  const sendMessage = useAIContext((state) => state.sendMessage);
-  const clearMessages = useAIContext((state) => state.clearMessages);
 
   const [localIsCollapsed, setLocalIsCollapsed] = useState(false);
   const isCollapsed =
@@ -315,16 +304,6 @@ export default function ToolboxPanel({
   };
 
   const [searchTerm, setSearchTerm] = useState("");
-
-  // Chat State
-  const messagesEndRef = useRef(null);
-
-  // Auto-scroll to bottom of chat
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [chatMessages]);
 
   const [openCategories, setOpenCategories] = useState({});
 
@@ -366,39 +345,6 @@ export default function ToolboxPanel({
       });
     }
   }, [filteredCategories, searchTerm]);
-
-  // Get active browser ID from flow manager hook context if available
-  // Since we are inside ToolBox, we need to access the parent state or store
-  // Assuming useFlowManager or similar global state exposes it
-  // But wait, Toolbox is a child. App.jsx has activeBrowserId.
-  // We should probably ask for it as a prop or rely on a context.
-  // For now, let's verify if we can get it from the window or a global store if not passed.
-  // The user hook `useFlowManager` was viewed earlier and returns `activeBrowserId`.
-  // Let's assume we can get it. But Toolbox doesn't import it.
-  // Let's verify App.jsx where Toolbox is used. It might be passed or not.
-  // Actually, we can just fetch it from the API if the backend knows?
-  // No, client must say "I am looking at browser X".
-  // Let's add `activeBrowserId` prop to ToolboxPanel in this edit if possible or just use a placeholder for now.
-  // Wait, I can't edit App.jsx in the same call easily without checking.
-  // Let's check props. `addNode` is passed.
-  // I will add `activeBrowserId` to props in the function signature.
-
-  const toast = useToast();
-  const [chatInput, setChatInput] = useState("");
-
-  const handleSendMessageLocal = async () => {
-    if (!chatInput.trim() || !isAiReady) return;
-    const text = chatInput;
-    setChatInput("");
-    await sendMessage(text, activeBrowserId, toast);
-  };
-
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessageLocal();
-    }
-  };
 
   const toggleCategory = (cat) => {
     setOpenCategories((prev) => ({ ...prev, [cat]: !prev[cat] }));
@@ -507,6 +453,25 @@ export default function ToolboxPanel({
 
                 {/* List */}
                 <div className="flex-1">
+                  {!searchTerm.trim() && (
+                    <ToolboxCategory
+                      key="favorites"
+                      categoryKey="favorites"
+                      icon={Star}
+                      color="amber"
+                      nodes={[
+                        "click",
+                        "type_text",
+                        "wait_visible",
+                        "assert_page_text",
+                      ]}
+                      isOpen={!!openCategories["favorites"]}
+                      onToggle={() => toggleCategory("favorites")}
+                      t={t}
+                      onAdd={addNode}
+                    />
+                  )}
+
                   {Object.entries(filteredCategories).map(([key, section]) => (
                     <ToolboxCategory
                       key={key}
@@ -532,7 +497,7 @@ export default function ToolboxPanel({
                       aria-label={t(`nodes.categories.${key}`)}
                       onClick={() => {
                         handleToggleCollapse(false);
-                        setOpenCategories({ [key]: true });
+                        toggleCategory(key);
                       }}
                       className={cn(
                         "w-9 h-9 flex items-center justify-center rounded-lg transition-all bg-white/5 hover:bg-white/10",
@@ -546,179 +511,15 @@ export default function ToolboxPanel({
                 })}
               </div>
             )}
-          </div>
-
-          {/* AI COPILOT */}
-          {!isCollapsed && (
-            <div className="mt-auto shrink-0 border-t border-white/5">
-              <div className="bg-slate-950 flex flex-col min-h-0">
-                {/* Internal Header for AI Chat */}
-                <div className="p-3 border-b border-slate-800 bg-slate-900/50 flex items-center justify-between sticky top-0 z-10">
-                  <div className="flex flex-col">
-                    <div className="flex items-center gap-2">
-                      <Sparkles size={14} className="text-purple-400" />
-                      <span className="text-xs font-bold text-slate-300 uppercase tracking-widest">
-                        Hal-9001
-                      </span>
-                      {activeBrowserId && (
-                        <span
-                          className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse"
-                          title="Connected to Browser"
-                        />
-                      )}
-                    </div>
-                    {/* Available Keys Selector */}
-                    {availableKeys.length > 0 && (
-                      <div className="mt-1">
-                        <select
-                          className="bg-transparent text-[10px] text-slate-500 border-none outline-none cursor-pointer hover:text-slate-300"
-                          value={selectedKeyId}
-                          onChange={(e) => setSelectedKeyId(e.target.value)}
-                        >
-                          {availableKeys.map((k) => (
-                            <option key={k.id} value={k.id}>
-                              Using: {k.alias}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-1">
-                    {chatMessages.length > 0 && (
-                      <button
-                        onClick={() => clearMessages()}
-                        className="p-1.5 hover:bg-slate-800 rounded-md text-slate-500 hover:text-slate-300 transition-colors"
-                        title="Clear History"
-                        aria-label="Clear chat history"
-                      >
-                        <Trash2 size={13} aria-hidden="true" />
-                      </button>
-                    )}
-                    <button
-                      onClick={() => openSettings("integrations")}
-                      className="p-1.5 hover:bg-slate-800 rounded-md text-slate-500 hover:text-slate-300 transition-colors"
-                      title={t("toolbox.configureAI")}
-                      aria-label={t("toolbox.configureAI")}
-                    >
-                      <Settings size={14} aria-hidden="true" />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex-none h-[25vh] min-h-[180px] bg-gradient-to-b from-slate-900/80 to-slate-900/40 border border-white/10 rounded-xl p-0 relative group overflow-hidden flex flex-col shadow-lg">
-                  <div className="flex-1 p-3 overflow-y-auto custom-scrollbar flex flex-col gap-3">
-                    {chatMessages.length === 0 ? (
-                      <div className="flex gap-3 mb-2">
-                        <div className="w-5 h-5 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0">
-                          <Bot size={12} className="text-indigo-400" />
-                        </div>
-                        <p className="text-[11px] text-slate-300 leading-relaxed mt-0.5">
-                          {isAiReady ? (
-                            <>
-                              Connected to{" "}
-                              <span className="text-indigo-300 font-semibold">
-                                {aiConfig?.activeProvider}
-                              </span>
-                              .
-                              <br />
-                              How can I help you automate today?
-                            </>
-                          ) : (
-                            <>
-                              I can help you build this flow. Try asking:{" "}
-                              <span className="text-indigo-300 italic">
-                                "Go to google.com and search for kittens"
-                              </span>
-                            </>
-                          )}
-                        </p>
-                      </div>
-                    ) : (
-                      <>
-                        {chatMessages.map((msg, i) => (
-                          <div
-                            key={i}
-                            className={cn(
-                              "flex flex-col gap-1 max-w-[90%]",
-                              msg.role === "user"
-                                ? "self-end items-end"
-                                : "self-start items-start",
-                            )}
-                          >
-                            <div
-                              className={cn(
-                                "p-2 rounded-lg text-[11px] leading-relaxed",
-                                msg.role === "user"
-                                  ? "bg-indigo-600/90 text-white rounded-br-none"
-                                  : "bg-slate-800 text-slate-200 rounded-bl-none border border-slate-700",
-                              )}
-                            >
-                              {msg.content}
-                            </div>
-                          </div>
-                        ))}
-                        {isGenerating && (
-                          <div className="flex items-center gap-2 text-[10px] text-slate-500 ml-1 opacity-70">
-                            <Loader2 size={10} className="animate-spin" />
-                            <span>Thinking...</span>
-                          </div>
-                        )}
-                        {/* Auto-scroll anchor */}
-                        <div ref={messagesEndRef} />
-                      </>
-                    )}
-                  </div>
-                  <div className="h-9 border-t border-white/5 bg-white/[0.02] flex items-center px-3 gap-2">
-                    <input
-                      className="bg-transparent border-none text-[11px] text-slate-200 placeholder:text-slate-600 focus:outline-none w-full h-full disabled:opacity-50"
-                      placeholder={
-                        isAiReady
-                          ? isGenerating
-                            ? "HAL is thinking..."
-                            : "Describe a test case..."
-                          : "Configure AI to chat..."
-                      }
-                      aria-label="AI chat message"
-                      disabled={!isAiReady || isGenerating}
-                      value={chatInput}
-                      onChange={(e) => setChatInput(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                    />
-                    {isGenerating ? (
-                      <Loader2
-                        size={12}
-                        className="text-indigo-400 animate-spin"
-                      />
-                    ) : (
-                      <Send
-                        size={12}
-                        className={cn(
-                          "transition-colors",
-                          isAiReady
-                            ? "text-indigo-400 cursor-pointer hover:text-indigo-300"
-                            : "text-slate-700",
-                        )}
-                        onClick={handleSendMessageLocal}
-                      />
-                    )}
-                  </div>
-
-                  {!isAiReady && (
-                    <div
-                      onClick={() => openSettings("integrations")}
-                      className="absolute inset-0 bg-[var(--bg-canvas)]/80 backdrop-blur-[1px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 rounded-lg cursor-pointer"
-                    >
-                      <span className="text-[10px] font-bold text-amber-500 border border-amber-500/30 px-3 py-1 rounded-full bg-amber-500/10 shadow-[0_0_10px_rgba(245,158,11,0.2)] hover:bg-amber-500/20 transition-colors">
-                        SETUP REQUIRED
-                      </span>
-                    </div>
-                  )}
-                </div>
+            {/* MINIMAP / SNIPPETS PLACEHOLDER */}
+            {!isCollapsed && (
+              <div className="shrink-0 mt-2 mx-3 mb-3 p-4 rounded-xl border border-dashed border-white/20 bg-slate-900/30 flex flex-col items-center justify-center text-center gap-2 text-slate-500 min-h-[160px]">
+                <Map size={24} className="opacity-50" />
+                <span className="text-xs font-medium">Mini-map / Snippets</span>
+                <span className="text-[10px] opacity-70">Coming soon</span>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* FOOTER */}

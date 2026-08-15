@@ -22,9 +22,9 @@ class DependencyService {
             if (visited.has(flowId)) continue;
             visited.add(flowId);
 
-            // Fetch the flow definition from DB
+            // Fetch the flow definition from DB (supports cross-project component subflows)
             const flow = await Flow.findOne({
-                where: { id: flowId, projectId },
+                where: { id: flowId },
                 include: [
                     { model: Node, as: 'nodes' },
                     { model: Edge, as: 'edges' },

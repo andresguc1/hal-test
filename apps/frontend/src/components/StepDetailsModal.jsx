@@ -122,7 +122,7 @@ export default function StepDetailsModal({ isOpen, onClose, nodeData }) {
               <button
                 onClick={() => setActiveTab("general")}
                 className={cn(
-                  "px-4 py-3 text-xs font-semibold uppercase tracking-wider border-b-2 transition-all",
+                  "px-4 py-3 text-xs font-semibold uppercase tracking-wider border-b-2 ui-transition-colors",
                   activeTab === "general"
                     ? "border-cyan-500 text-cyan-400 font-bold"
                     : "border-transparent text-slate-400 hover:text-slate-200",
@@ -133,7 +133,7 @@ export default function StepDetailsModal({ isOpen, onClose, nodeData }) {
               <button
                 onClick={() => setActiveTab("security")}
                 className={cn(
-                  "px-4 py-3 text-xs font-semibold uppercase tracking-wider border-b-2 transition-all flex items-center gap-1.5",
+                  "px-4 py-3 text-xs font-semibold uppercase tracking-wider border-b-2 ui-transition-colors flex items-center gap-1.5",
                   activeTab === "security"
                     ? "border-red-500 text-red-400 font-bold"
                     : "border-transparent text-slate-400 hover:text-slate-200",

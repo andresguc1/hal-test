@@ -92,7 +92,9 @@
   cursor: pointer;
   padding: 4px;
   border-radius: 4px;
-  transition: all 0.2s;
+  transition:
+    var(--transition-colors),
+    transform var(--duration-fast) var(--ease-standard);
 }
 
 .toast-close:hover {

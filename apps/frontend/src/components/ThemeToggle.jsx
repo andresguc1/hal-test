@@ -18,7 +18,7 @@ const ThemeToggle = ({ className }) => {
       whileTap={{ scale: 0.95 }}
       onClick={toggleTheme}
       className={cn(
-        "relative w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-500",
+        "relative w-10 h-10 flex items-center justify-center rounded-xl ui-transition-colors overflow-hidden",
         "bg-background/20 backdrop-blur-md border border-panel-border overflow-hidden",
         isDark
           ? "text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.5)]"

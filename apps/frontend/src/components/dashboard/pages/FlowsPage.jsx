@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { motion } from "framer-motion";
+import { useMotionVariants } from "../../../hooks/useReducedMotion";
 import {
   GitBranch,
   Search,
@@ -26,15 +27,20 @@ function timeAgo(d) {
   return `${days}d ago`;
 }
 
-const rowVariant = {
+const ROW_FULL = {
   hidden: { opacity: 0, x: -8 },
   show: { opacity: 1, x: 0, transition: { duration: 0.2 } },
+};
+const ROW_REDUCED = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { duration: 0.1 } },
 };
 
 export default function FlowsPage({ onOpenFlow, onRunFlow, onNavigate }) {
   const { data: projects = [], isLoading } = useProjects();
   const [search, setSearch] = useState("");
   const [selectedProject, setSelectedProject] = useState("all");
+  const rowVariant = useMotionVariants(ROW_FULL, ROW_REDUCED);
 
   const allFlows = useMemo(
     () =>
@@ -342,7 +348,11 @@ function SuccessRateBar({ rate }) {
       <div className="dash-success-bar__track">
         <div
           className="dash-success-bar__fill"
-          style={{ width: `${pct}%`, background: color }}
+          style={{
+            width: "100%",
+            transform: `scaleX(${pct / 100})`,
+            background: color,
+          }}
         />
       </div>
       <span

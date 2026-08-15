@@ -1,0 +1,7 @@
+
+
+echo "[Husky] Running pre-push hooks (turbo run test --affected)..."
+
+# Use turborepo to run tests only on affected packages
+# This prevents pushing broken tests to the remote repo
+pnpm turbo run test --affected

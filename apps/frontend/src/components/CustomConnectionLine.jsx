@@ -6,6 +6,8 @@ const CustomConnectionLine = ({
   fromY,
   toX,
   toY,
+  fromPosition,
+  toPosition,
   connectionLineStyle,
 }) => {
   const [edgePath] = getSmoothStepPath({
@@ -13,6 +15,8 @@ const CustomConnectionLine = ({
     sourceY: fromY,
     targetX: toX,
     targetY: toY,
+    sourcePosition: fromPosition,
+    targetPosition: toPosition,
   });
 
   return (

@@ -170,7 +170,7 @@ export default function TerminalPanel({
             id: `edge_${prevSibling.id}_to_${nodeId}`,
             source: prevSibling.id,
             target: nodeId,
-            animated: true,
+            animated: !import.meta.env.DEV,
             type: "custom",
           });
         }
@@ -400,9 +400,10 @@ export default function TerminalPanel({
 
   return (
     <motion.div
-      initial={{ height: 0, opacity: 0 }}
-      animate={{ height: 260, opacity: 1 }}
-      exit={{ height: 0, opacity: 0 }}
+      initial={{ scaleY: 0, opacity: 0 }}
+      animate={{ scaleY: 1, opacity: 1 }}
+      exit={{ scaleY: 0, opacity: 0 }}
+      style={{ transformOrigin: "bottom", height: 260 }}
       tabIndex={0}
       onKeyDown={(e) => {
         // Global Ctrl+C handler for the panel
@@ -813,9 +814,9 @@ export default function TerminalPanel({
       <AnimatePresence>
         {mode === "interactive" && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             className="shrink-0 border-t border-slate-800 flex items-center gap-2 px-3 py-1.5 bg-slate-900"
           >
             <span className="text-cyan-500 text-xs select-none">$</span>

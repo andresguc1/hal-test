@@ -1240,9 +1240,10 @@ const PerfResultsView = ({
                 <AnimatePresence>
                   {groupExpanded && (
                     <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
+                      initial={{ scaleY: 0, opacity: 0 }}
+                      animate={{ scaleY: 1, opacity: 1 }}
+                      exit={{ scaleY: 0, opacity: 0 }}
+                      style={{ transformOrigin: "top" }}
                       className="overflow-hidden"
                     >
                       <div className="p-4 space-y-2">
@@ -1288,9 +1289,10 @@ const PerfResultsView = ({
                               <AnimatePresence>
                                 {nodeExpanded && (
                                   <motion.div
-                                    initial={{ height: 0, opacity: 0 }}
-                                    animate={{ height: "auto", opacity: 1 }}
-                                    exit={{ height: 0, opacity: 0 }}
+                                    initial={{ scaleY: 0, opacity: 0 }}
+                                    animate={{ scaleY: 1, opacity: 1 }}
+                                    exit={{ scaleY: 0, opacity: 0 }}
+                                    style={{ transformOrigin: "top" }}
                                     className="overflow-hidden"
                                   >
                                     <div className="ml-6 mt-1 bg-slate-950/80 border border-slate-800/30 rounded-lg p-3 grid grid-cols-2 md:grid-cols-4 gap-3 text-[11px]">

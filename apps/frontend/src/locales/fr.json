@@ -155,6 +155,7 @@
       "click": "Cliquer",
       "type_text": "Saisir du Texte",
       "select_option": "Sélectionner des Options",
+      "fill_form": "Remplir le formulaire",
       "scroll": "Défiler",
       "hover": "Survoler",
       "drag_drop": "Glisser & Déposer",
@@ -220,7 +221,17 @@
       "discussion": "Discussion",
       "csp_validator": "Validateur CSP",
       "header_auditor": "Auditeur d'En-têtes",
-      "dom_sanitizer": "Désinfecteur DOM"
+      "dom_sanitizer": "Désinfecteur DOM",
+      "iterations": "itérations",
+      "iterations_plural": "itérations",
+      "nodes_inside": "{{count}} NŒUDS À L'INTÉRIEUR",
+      "nodes_inside_plural": "{{count}} NŒUDS À L'INTÉRIEUR",
+      "array": "Tableau",
+      "while": "Alors que",
+      "sub_flow_loop": "Boucle de sous-flux",
+      "audit_policy": "Audit de la politique de sécurité",
+      "sensitive_data_monitor": "Moniteur de données sensibles",
+      "fuzz_input": "Fuzzing des entrées (XSS/SQLi)"
     },
     "categories": {
       "security_audit": "Sécurité",
@@ -236,7 +247,8 @@
       "execution_interface": "Exécution",
       "flow_control": "Moteur Logique",
       "composition": "Composition de Module",
-      "collaboration": "Annotation d'interface"
+      "collaboration": "Annotation d'interface",
+      "session_management": "Session"
     },
     "fields": {
       "browserType": "Type de Navigateur",
@@ -441,7 +453,11 @@
       "branch_mode": "Définit comment les nœuds suivants seront exécutés : En parallèle (tous en même temps), Séquentiellement (l'un après l'autre), ou En course (le premier arrivé gagne).",
       "flow_control_action": "Break sort d'une boucle, Continue passe à l'itération suivante, et Return arrête toute l'exécution du flux.",
       "transform_logic": "Sélectionnez une opération pour manipuler un tableau de données. Utilisez les variables 'acc' et 'item' dans les expressions pour Reduce.",
-      "component_flow_id": "L'identifiant du flux que vous souhaitez exécuter en tant que composant réutilisable."
+      "component_flow_id": "L'identifiant du flux que vous souhaitez exécuter en tant que composant réutilisable.",
+      "no_captures": "Aucune prise disponible",
+      "alt_text": "Résultat de l'exécution",
+      "before": "Avant",
+      "after": "Après"
     },
     "validation": {
       "width_number": "La largeur doit être un nombre",
@@ -551,7 +567,22 @@
         "filter": "Filtrer (Filter)",
         "reduce": "Accumuler (Reduce)",
         "merge": "Combiner (Merge)"
+      },
+      "executionMode": {
+        "sequential": "Séquentiel",
+        "parallel": "Parallèle",
+        "random": "aléatoire",
+        "single": "Article unique"
       }
+    },
+    "buttons": {
+      "dive_in": "Plongez",
+      "open": "Ouvrir"
+    },
+    "prompts": {
+      "double_click_edit": "Double-cliquez pour modifier",
+      "contains_logic": "Contient de la logique",
+      "guide": "GUIDE"
     }
   },
   "settings": {
@@ -573,7 +604,10 @@
         "light": "Clair",
         "dark": "Sombre",
         "system": "Système"
-      }
+      },
+      "theme_light": "Bien sûr",
+      "theme_dark": "Sombre",
+      "theme_system": "Système"
     },
     "ai": {
       "title": "IA & Intégrations",
@@ -637,7 +671,16 @@
       "health_connected": "Ollama connecté • Modèle {{model}} chargé",
       "health_not_found": "Ollama s'exécute mais {{model}} est introuvable. Lancez : ollama pull {{model}}",
       "models_installed": "{{count}} modèle installé",
-      "models_installed_plural": "{{count}} modèles installés"
+      "models_installed_plural": "{{count}} modèles installés",
+      "select_provider_placeholder": "Sélectionnez le fournisseur",
+      "providers": {
+        "ollama": "Ollama (local)",
+        "openai": "OpenAI (Cloud)",
+        "anthropic": "Claude / Anthropique (Nuage)",
+        "google": "Gémeaux / Google (Cloud)",
+        "openrouter": "OpenRouter (Cloud)"
+      },
+      "api_key_placeholder": "sk-ou-..."
     },
     "vault": {
       "title": "Portefeuille Sécurisé",
@@ -660,7 +703,17 @@
       "key_saved": "Clé enregistrée dans le Portefeuille",
       "key_deleted": "Clé supprimée",
       "test_success": "Connexion Réussie !",
-      "test_failed": "Connexion Échouée"
+      "test_failed": "Connexion Échouée",
+      "key_placeholder": "sk-..."
+    },
+    "title": "Paramètres",
+    "close": "Pour fermer",
+    "save": "Sauvegarder",
+    "tabs": {
+      "general": "Général",
+      "editor": "Toile et éditeur",
+      "ai": "IA et intégrations",
+      "system": "Système"
     }
   },
   "context_menu": {
@@ -791,7 +844,9 @@
     "run_performance": "Lancer la performance",
     "tooltip_run_performance": "Lancer le flux de test de latence de performance",
     "run_security": "Lancer la sécurité",
-    "tooltip_run_security": "Lancer le flux de scanner d'audit de sécurité"
+    "tooltip_run_security": "Lancer le flux de scanner d'audit de sécurité",
+    "running": "En cours d'exécution...",
+    "running_tooltip": "Flux en cours..."
   },
   "performance_modal": {
     "title": "Configurer l'Exécution de Performance",
@@ -847,7 +902,44 @@
     "remaining_time": "Temps Restant",
     "elapsed_time": "Temps Écoulé",
     "stop": "Arrêter",
-    "new_test": "Nouveau Test"
+    "new_test": "Nouveau Test",
+    "initializing_engines": "Initialisation des moteurs...",
+    "running_vus": "En cours d'exécution : {{count}} VU",
+    "scenario_parameters": "Paramètres du scénario",
+    "flow_info": "Informations sur le flux",
+    "flow_info_desc": "Sélectionnez un flux dans la liste pour configurer le test de charge.  Le profil constant est idéal pour les tests de base, tandis que les profils de contrainte et de pointe sont recommandés pour les tests avancés de limite et de capacité.",
+    "total_nodes": "Nombre total de nœuds :",
+    "last_execution": "Dernière exécution :",
+    "moments_ago": "Il y a quelques instants",
+    "no_flow_selected": "Aucun flux sélectionné",
+    "toast_select_flow": "Sélectionnez un flux avant de lancer le test de charge.",
+    "toast_initializing": "Initialisation du moteur de performances...",
+    "toast_launched_success": "Test de charge lancé avec succès !",
+    "toast_launch_error": "Échec du lancement du test",
+    "toast_engine_error": "Erreur moteur :",
+    "toast_cancel_success": "Annulation demandée avec succès.",
+    "toast_cancel_error": "Erreur lors de l'annulation du test :",
+    "waiting_telemetry": "En attente des données de télémétrie...",
+    "waiting_telemetry_sub": "Lancez un test pour visualiser des graphiques et des KPI en temps réel.",
+    "live_test_title": "TEST EN DIRECT (TÉLÉMÉTRIE)",
+    "load_profile_label": "Profil de charge :",
+    "stop_test": "Arrêter le test",
+    "test_progress": "Progression du test ({{profil}}) :",
+    "critical_memory_stress": "Stress critique de la mémoire",
+    "resource_warning": "Avertissement de ressources",
+    "test_aborted": "Test interrompu.",
+    "p95_latency": "Latence (P95)",
+    "active_vus": "Vus actifs",
+    "bottlenecks": "Goulots d'étranglement",
+    "pending": "En attente",
+    "no_nodes": "Aucun nœud enregistré",
+    "latency_timeline_title": "Chronologie de latence par nœud",
+    "latency_ms": "Latence (ms)",
+    "total": "Total",
+    "median": "Médian",
+    "failures": "Échecs",
+    "completed": "Complété",
+    "samples": "Échantillons"
   },
   "perf_results": {
     "latency_profiling_tag": "PROFILAGE DE LATENCE (1 VU)",
@@ -1099,7 +1191,38 @@
     "critical": "Critique",
     "high": "Élevé",
     "medium": "Moyen",
-    "low": "Faible"
+    "low": "Faible",
+    "ai_suggestions": {
+      "csp-missing-header": "Suggestion AI : configurez l'en-tête « Content-Security-Policy » sur votre serveur Web.  Définissez 'default-src 'self'' comme politique de base pour éviter les injections de code.",
+      "csp-insecure-directive": "Suggestion AI : évitez d'utiliser « unsafe-inline » ou « unsafe-eval » dans vos politiques CSP.  Utilisez des hachages cryptographiques ou des noms occasionnels pour valider les scripts légitimes.",
+      "hsts-missing-header": "Suggestion AI : activez HSTS en ajoutant l'en-tête « Strict-Transport-Security : max-age=63072000 ;  includeSubDomains ;  preload' sur votre serveur de production.",
+      "xfo-missing-header": "Suggestion d'IA : ajoutez l'en-tête « X-Frame-Options : SAMEORIGIN » ou « DENY » pour empêcher les attaques de détournement de clic (détournement de clic).",
+      "xfo-insecure-value": "Suggestion AI : modifiez l'en-tête « X-Frame-Options » pour utiliser une valeur sécurisée telle que « SAMEORIGIN » ou « DENY ».",
+      "xcto-missing-header": "Suggestion d'IA : ajoutez l'en-tête « X-Content-Type-Options : nosniff » pour empêcher les navigateurs de détecter les types MIME d'actifs statiques.",
+      "xcto-insecure-value": "Suggestion AI : configurez « X-Content-Type-Options » avec la valeur exacte « nosniff ».",
+      "cors-wildcard-credentials": "Suggestion AI : évitez d'utiliser « * » dans « Access-Control-Allow-Origin » si vous autorisez les informations d'identification.  Configurez le domaine client exact.",
+      "cookie-missing-secure": "Suggestion IA : ajoutez le ';  Secure' à votre en-tête 'Set-Cookie' pour forcer sa transmission exclusivement sous HTTPS sécurisé.",
+      "cookie-missing-httponly": "Suggestion IA : ajouter ';  HttpOnly' à vos cookies de session pour empêcher les scripts malveillants côté client d'y accéder.",
+      "cookie-missing-samesite": "Suggestion IA : Définir ';  SameSite=Lax' ou ';  SameSite=Strict' dans vos cookies pour empêcher les attaques CSRF d'origine croisée.",
+      "cookie-samesite-none-insecure": "Suggestion AI : Si vous déclarez 'SameSite=None', vous devez l'accompagner du ';  Attribut Secure' afin que les navigateurs ne bloquent pas le cookie.",
+      "csp-console-violation": "Suggestion AI : un script ou une ressource externe non autorisé a tenté de se charger.  Vérifiez la source du script et ajoutez-la à votre stratégie CSP si elle est légitime.",
+      "mixed-content-warning": "Suggestion AI : une ressource HTTP non sécurisée a été chargée sur une page HTTPS.  Mettez à jour l’URL de la ressource vers HTTPS pour maintenir le chiffrement de bout en bout.",
+      "dom-inline-event": "Suggestion AI : évitez d'utiliser des gestionnaires d'événements en HTML (par exemple onclick=\"...\").  Déclarez les gestionnaires d'événements modernes à l'aide de « addEventListener » dans des fichiers JS propres.",
+      "dom-javascript-uri": "Suggestion AI : l'attribut href contient « javascript :... ».  Remplacez cette logique par des événements de clic de bouton et évitez l'exécution directe de scripts dans les liens.",
+      "dom-password-autocomplete": "Suggestion d'IA : ajoutez l'attribut « autocomplete=\"current-password\" » à vos champs de mot de passe pour guider les navigateurs en toute sécurité.",
+      "dom-insecure-form-action": "Suggestion AI : le formulaire pointe vers un point de terminaison HTTP simple.  Modifiez « l'action » pour soumettre les données sous HTTPS sécurisé.",
+      "dom-plaintext-transmit": "Suggestion AI : vous transmettez des informations sensibles via HTTP simple et non chiffré.  Migrez votre serveur et votre flux de navigation pour sécuriser HTTPS.",
+      "SEC-LEAK-APIKEY": "Suggestion AI : révoquez immédiatement les informations d'identification exposées.  Stockez les clés secrètes dans des variables d'environnement sécurisées côté serveur et ne les exposez jamais dans le code côté client.",
+      "SEC-LEAK-PII": "Suggestion d'IA : filtrez les informations personnelles identifiables (PII) avant de les transmettre ou de les enregistrer.  Assurez-vous que les e-mails, les numéros de téléphone ou les cartes de crédit sont anonymisés.",
+      "SEC-LEAK-SYSTEM": "Suggestion d'IA : désactivez les messages d'erreur détaillés et les traces de pile dans les environnements de production.  Configurez un gestionnaire d'erreurs générique sur le serveur.",
+      "SEC-DOM-XSS": "Suggestion d'IA : évitez d'utiliser des récepteurs dangereux comme innerHTML.  Utilisez document.textContent, des API de modèles sécurisées ou des bibliothèques de nettoyage (DOMPurify).",
+      "SEC-DOM-PROTOPOL": "Suggestion d'IA : sécurisez le prototype de base à l'aide de Object.freeze (Object.prototype) ou de cartes sans prototype comme Object.create (null) pour éviter la pollution.",
+      "SEC-DOM-CLOBBER": "Suggestion d'IA : évitez de vous fier à des valeurs globales implicites liées aux ID DOM.  Utilisez des déclarations explicites (let, const) et des espaces de noms.",
+      "SEC-DOM-SRI": "Suggestion d'IA : intégrez des hachages cryptographiques robustes (SHA-384) dans l'attribut « intégrité » lors du chargement de bibliothèques à partir de CDN externes.",
+      "SEC-DOM-TRUSTED": "Suggestion AI : configurez et activez une stratégie de types approuvés pour appliquer la désinfection de tout le code HTML injecté dans le DOM.",
+      "SEC-DOM-COOP": "Suggestion AI : activez l'en-tête Cross-Origin-Opener-Policy (COOP) avec la valeur « same-origin » pour atténuer les fuites de contexte de navigateur d'origine croisée.",
+      "default": "Suggestion d'IA : évaluez le contexte du nœud et les paramètres d'entrée/sortie pour garantir une désinfection appropriée des données et le respect des politiques de sécurité."
+    }
   },
   "security_live": {
     "status_preparing": "Initialisation du scan DAST...",
@@ -1161,5 +1284,249 @@
     "col_status": "Statut",
     "col_action": "Action",
     "view_report": "Voir le rapport"
+  },
+  "security_modal": {
+    "title": "Configurer l'audit de sécurité (Quality Gate)",
+    "target_flow": "Flux cible :",
+    "subtitle": "Audits de confiance active",
+    "policy_compliance": "Conformité aux politiques",
+    "policy_compliance_desc": "Audite les en-têtes de réponse HTTP (CSP, HSTS, X-Frame-Options) et les indicateurs de sécurité des cookies de session.",
+    "data_leak": "Fuite de données et protection DOM",
+    "data_leak_desc": "Surveille les données sensibles dans le DOM, empêche la transmission en texte clair (HTTP) et audite les entrées vulnérables.",
+    "warning_title": "Avertissement d’audit non intrusif (Quality Gate)",
+    "warning_desc": "L'audit de sécurité est effectué de manière passive et non destructive lors de l'exécution normale du flux E2E, servant de Quality Gate qui génère des alertes de confiance sans bloquer l'exécution ni surcharger le serveur cible.",
+    "start_audit": "Démarrer l'audit"
+  },
+  "scenario_builder": {
+    "test_type": "Type d'essai",
+    "vu_projection": "Projection VU",
+    "initial_vus": "VU initiales",
+    "initial_vus_hint": "Utilisateurs débutants (0 = à partir de zéro)",
+    "max_vus": "Nombre maximum de VU",
+    "max_vus_stepped_hint": "Limite de mise à l'échelle maximale",
+    "ramp_time": "Temps de montée en puissance",
+    "ramp_time_hint": "Secondes pour passer de l'initiale au maximum",
+    "total_duration": "Durée totale",
+    "step_count": "Nombre de pas",
+    "step_count_hint": "Étapes progressives",
+    "virtual_users": "Utilisateurs virtuels",
+    "constant_vus_hint": "Nombre fixe de VU pendant tout le test",
+    "stress_step_count_hint": "Étapes d'incrémentation",
+    "auto_stop": "Arrêt automatique",
+    "auto_stop_hint": "S'arrête automatiquement lorsque ce taux d'erreur est dépassé",
+    "base_load": "Charge de base",
+    "base_load_hint": "VU avant et après le pic",
+    "peak_max": "Pic maximum",
+    "rise_time": "Temps de montée",
+    "rise_time_hint": "Temps de base avant pic",
+    "peak_duration": "Durée de pointe",
+    "cooldown_time": "Temps de recharge",
+    "cooldown_hint": "Récupération après pic",
+    "duration": "Durée",
+    "soak_limit_info": "Le plan gratuit limite Soak à 60 minutes pour protéger les ressources cloud partagées.  Des tests de longue durée (8 à 24 h) sont disponibles sur les forfaits On-Premise et Enterprise.",
+    "advanced_options": "Options avancées",
+    "baseline_title": "Référence (1 VU)",
+    "baseline_desc": "Établit des métriques de base avec un seul utilisateur",
+    "custom_title": "Personnalisé (étapes)",
+    "custom_desc": "Définir manuellement chaque étape temporelle et ses VU cibles",
+    "duration_sec": "Durée (s)",
+    "target_vus": "Cibler les VU",
+    "add_stage": "Ajouter une étape",
+    "resource_estimation": "Estimation des ressources",
+    "resource_estimation_text": "Pic du {{count}} navigateur sans tête{{pluriel}}.  RAM ≈ {{ram}} Go",
+    "oom_risk": "⚠️ Risque de MOO.  Réduisez le nombre maximum de VU.",
+    "start_load_test": "Lancer le test de charge",
+    "profiles": {
+      "ramp": {
+        "label": "Montée en puissance",
+        "description": "Augmente progressivement les VU jusqu'à la cible.",
+        "goal": "Détecter le point de dégradation"
+      },
+      "stepped": {
+        "label": "Étagé",
+        "description": "Incréments progressifs de charge.",
+        "goal": "Évaluer le comportement à chaque niveau de charge"
+      },
+      "constant": {
+        "label": "Constante",
+        "description": "Maintient les VU fixes sur toute la période.",
+        "goal": "Valider la stabilité et les fuites de mémoire"
+      },
+      "stress": {
+        "label": "Stresser",
+        "description": "Évolue par étapes jusqu'à l'effondrement du système.",
+        "goal": "Découvrez la limite maximale absolue"
+      },
+      "spike": {
+        "label": "Pointe",
+        "description": "Pic de trafic soudain et reprise.",
+        "goal": "Valider la survie lors d'événements de pointe"
+      },
+      "soak": {
+        "label": "Trempage / Endurance",
+        "description": "Charge soutenue pendant une période prolongée.",
+        "goal": "Détecter la dégradation progressive"
+      }
+    },
+    "rose_time": "Temps de montée",
+    "rose_time_hint": "Temps à la base avant la pointe"
+  },
+  "security_config": {
+    "dast_header": "Configuration de l'audit DAST",
+    "security_parameters": "Paramètres de sécurité",
+    "active_flow": "Flux actif",
+    "header_desc": "Ajustez les vecteurs d’attaque passifs et les contrôles de conformité des contrôles de qualité avant de lancer l’analyse de sécurité.",
+    "aggressiveness_profile": "Profil d’agressivité de l’audit",
+    "quick_title": "Rapide (porte qualité)",
+    "quick_desc": "Analyse passive des en-têtes HTTP (CSP, HSTS, XFO) et transmission des mots de passe.",
+    "standard_title": "Standard (recommandé)",
+    "standard_desc": "Vérification complète des politiques OWASP, des attributs des cookies, du CORS et de la désinfection des entrées.",
+    "deep_title": "Profond (exhaustif)",
+    "deep_desc": "Audit intensif comprenant les pièges DOM en ligne, l'injection de charge utile et les fuites de PII.",
+    "active_vectors": "Vecteurs d'inspection actifs",
+    "start_audit": "Démarrer l'audit de sécurité",
+    "running_audit": "Audit en cours...",
+    "vectors": {
+      "headerAudit_title": "En-têtes de sécurité HTTP",
+      "headerAudit_desc": "Validation des options HSTS, X-Frame-Options et X-Content-Type-Options.",
+      "cspValidation_title": "Politique de sécurité du contenu (CSP)",
+      "cspValidation_desc": "Détection des directives non sécurisées (« unsafe-inline », « unsafe-eval »).",
+      "cookieAttributes_title": "Attributs des cookies (Secure/HttpOnly/SameSite)",
+      "cookieAttributes_desc": "Vérification de la protection contre les attaques CSRF et le détournement de session.",
+      "inputSanitization_title": "Désinfection des entrées et XSS",
+      "inputSanitization_desc": "Inspection des événements DOM en ligne et des liens 'javascript:'.",
+      "sensitiveDataCheck_title": "Fuite de données sensibles (PII/identifiants)",
+      "sensitiveDataCheck_desc": "Surveillance du stockage des mots de passe et des réponses API.",
+      "corsWildcardCheck_title": "Autorisations CORS excessives",
+      "corsWildcardCheck_desc": "Alerte si « Access-Control-Allow-Origin » utilise des caractères génériques avec les informations d'identification."
+    }
+  },
+  "performance": {
+    "toasts": {
+      "load_error": "Erreur de chargement de l'historique.",
+      "delete_success": "Exécution supprimée avec succès.",
+      "delete_error": "Erreur lors de la suppression de l'exécution.",
+      "delete_server_error": "Erreur du serveur lors de la suppression de l'exécution.",
+      "config_error": "Impossible d'extraire la configuration pour cette exécution.",
+      "compare_error": "Données incompatibles pour comparaison."
+    },
+    "confirmations": {
+      "delete": "Etes-vous sûr de vouloir supprimer cet enregistrement d'historique ?"
+    },
+    "navigation": {
+      "history": "Histoire"
+    },
+    "buttons": {
+      "rerun": "Courez à nouveau",
+      "close_report": "Fermer le rapport"
+    },
+    "compare": {
+      "title": "Comparaison des performances",
+      "back": "Retour à l'Histoire",
+      "run_a": "Exécution A",
+      "run_b": "Exécution B (cible)",
+      "no_change": "Aucun changement",
+      "equal": "Égal",
+      "vs_run_a": "vs exécution A"
+    },
+    "history": {
+      "title": "Historique des performances",
+      "subtitle": "Explorer, analyser et comparer les exécutions de chargement précédentes",
+      "comparing": "En comparant :",
+      "compare_now": "Comparez maintenant",
+      "loading": "Chargement de l'historique...",
+      "no_runs": "Aucune exécution de performance précédente enregistrée pour ce flux."
+    },
+    "headers": {
+      "compare": "Comparer",
+      "run_id": "ID d'exécution",
+      "date": "Date",
+      "load_profile": "Profil de charge",
+      "config": "Configuration",
+      "throughput": "Débit",
+      "p95_latency": "Latence P95",
+      "errors": "Erreurs",
+      "actions": "Actes",
+      "avg_latency": "Latence moyenne",
+      "error_rate": "Taux d'erreur"
+    },
+    "actions": {
+      "rerun": "Courez à nouveau",
+      "delete": "Supprimer l'exécution"
+    },
+    "soak": {
+      "matrix_title": "Matrice de Décomposition Horaire (Evolution H1...Hn)",
+      "matrix_subtitle": "Suivi des blocs horaires pour identifier le moment spécifique de dégradation.",
+      "hour_intervals_val": "Intervalles horaires",
+      "interval": "Intervalle",
+      "samples": "Échantillons",
+      "errors_percent": "% d'erreurs",
+      "ram_avg": "RAM moyenne",
+      "cpu_avg": "CPU moyenne"
+    },
+    "spike": {
+      "pre_title": "1. Pré-Spike (référence)",
+      "pre_desc": "Charge de base stable avant un pic soudain",
+      "pre_badge": "Charge de base",
+      "peak_title": "2. Brochet soudain (pic)",
+      "peak_desc": "Surcharge instantanée de concurrence maximale",
+      "peak_badge": "POINTE SOUDAINE",
+      "post_title": "3. Post-Spike (récupération automatique)",
+      "post_desc": "Temps de recharge et retour aux paramètres normaux",
+      "recovered": "Rétabli",
+      "recovering": "Récupération",
+      "matrix_title": "Matrice comparative par phases de pointe soudaines",
+      "matrix_subtitle": "Comparaison triphasique pour évaluer le degré d’impact et la capacité d’auto-récupération du système."
+    },
+    "stress": {
+      "latency_vs_vus": "Latence P95 par rapport aux utilisateurs simultanés",
+      "axis_x_vus": "Axe X = VU",
+      "latency_evolution": "Evolution de la latence par charge",
+      "throughput_vs_vus": "Débit (req/s) par rapport aux utilisateurs simultanés",
+      "saturation_plateau": "Plateau de saturation",
+      "capacity_ceiling": "Plafond de capacité de traitement"
+    }
+  },
+  "metrics": {
+    "loading": "Quantifier l'intelligence du système...",
+    "header": {
+      "subtitle": "ROI et audit de performance",
+      "title": "Aperçu de la direction",
+      "latest_update": "Dernière mise à jour"
+    },
+    "kpi": {
+      "time_saved": "Gain de temps humain",
+      "auto_repairs": "Réparations automobiles",
+      "time_saved_trend": "+12% par rapport à la semaine dernière",
+      "memory_utilization": "Utilisation du Palais de la Mémoire",
+      "fixes_reused": "Correctifs historiques réutilisés",
+      "memories_trend": "+24 Nouveaux souvenirs",
+      "total_runs": "Total des exécutions",
+      "all_environments": "Dans tous les environnements",
+      "stability_trend": "Stabilité : 98,2 %"
+    },
+    "heatmap": {
+      "title": "Carte thermique des flocons",
+      "no_data": "Données de défaillance insuffisantes pour générer une carte thermique."
+    },
+    "integrity": {
+      "title": "Intégrité de l'exécution",
+      "last_days": "12 derniers jours",
+      "stable_growth": "Croissance stable"
+    }
+  },
+  "report": {
+    "total_duration": "Durée totale",
+    "memory_hits": "Coups de mémoire",
+    "auto_healed": "Guérison automatique",
+    "ai_diagnosis": "Diagnostic IA",
+    "step_evidence": "Étape Preuve",
+    "no_visual_capture": "Aucune capture visuelle disponible",
+    "intelligence_insight": "Aperçu du renseignement",
+    "step_success_desc": "Étape réalisée avec succès selon le plan.",
+    "analyzing_failure_desc": "Analyser les modèles de défaillance...",
+    "input": "Saisir",
+    "output": "Sortir",
+    "exception": "Exception"
   }
 }

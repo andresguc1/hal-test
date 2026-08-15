@@ -250,14 +250,29 @@ class BrowserManager {
             ...(timeout && { timeout }),
         };
 
-        const browser = await browserEngine.launch(launchOptions);
+        let browser;
+        let launchMethod = 'launch';
+
+        if (browserType === 'lightpanda') {
+            const endpoint = process.env.LIGHTPANDA_ENDPOINT || 'ws://127.0.0.1:9222';
+            console.log(`[BrowserService] Connecting to Lightpanda via CDP at ${endpoint}`);
+            // Lightpanda uses the Chromium protocol
+            browser = await chromium.connectOverCDP({
+                endpointURL: endpoint,
+                ...(slowMo && { slowMo }),
+                ...(timeout && { timeout }),
+            });
+            launchMethod = 'connectOverCDP';
+        } else {
+            browser = await browserEngine.launch(launchOptions);
+        }
 
         const browserId = randomUUID().split('-')[0];
 
         // We also save if maximize was requested to use it when creating contexts/pages
         this.set(browserId, {
             browser,
-            launchMethod: 'launch',
+            launchMethod,
             options: { ...options, launchArgs, maximizeWindow, recordVideo },
         });
 
