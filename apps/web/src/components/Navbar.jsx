@@ -1,6 +1,7 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { motion as Motion } from "framer-motion";
+import { motion as Motion, AnimatePresence } from "framer-motion";
+import { Menu, X } from "lucide-react";
 
 const NAV_LINKS = [
   { label: "Platform", href: "#platform" },
@@ -20,6 +21,7 @@ const NAV_LINKS = [
 
 export default function Navbar() {
   const { t, i18n } = useTranslation();
+  const [menuOpen, setMenuOpen] = React.useState(false);
 
   const toggleLanguage = () => {
     const newLang = i18n.language.startsWith("es") ? "en" : "es";
@@ -84,7 +86,47 @@ export default function Navbar() {
         >
           {t("cta.launch_app") || "Launch App"}
         </a>
+        <button
+          onClick={() => setMenuOpen((o) => !o)}
+          className="md:hidden text-white/70 hover:text-white transition-colors"
+          aria-label={menuOpen ? "Close menu" : "Open menu"}
+          aria-expanded={menuOpen}
+        >
+          {menuOpen ? <X size={22} /> : <Menu size={22} />}
+        </button>
       </Motion.div>
+
+      <AnimatePresence>
+        {menuOpen && (
+          <Motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+            className="md:hidden absolute top-full left-0 w-full bg-slate-900/95 backdrop-blur-xl border-b border-white/10 flex flex-col p-6 gap-4"
+          >
+            {NAV_LINKS.map((link) => (
+              <a
+                key={link.label}
+                href={link.href}
+                target={link.external ? "_blank" : undefined}
+                rel={link.external ? "noopener noreferrer" : undefined}
+                onClick={() => setMenuOpen(false)}
+                className="text-sm font-bold uppercase tracking-widest text-slate-300 hover:text-hal-primary-400 transition-colors no-underline"
+              >
+                {link.label}
+              </a>
+            ))}
+            <a
+              href="/app"
+              onClick={() => setMenuOpen(false)}
+              className="mt-2 flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-hal-primary-500 hover:bg-hal-primary-400 text-white text-xs font-bold uppercase tracking-widest transition-colors no-underline"
+            >
+              {t("cta.launch_app") || "Launch App"}
+            </a>
+          </Motion.div>
+        )}
+      </AnimatePresence>
     </nav>
   );
 }
