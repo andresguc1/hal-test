@@ -888,39 +888,68 @@ export const getNodeConfig = (nodeType) =>
     label: nodeType,
   };
 
-// Dynamic update: replaces NODE_CATEGORIES and NODE_TYPE_MAP in-place
-// so all existing imports see the new data without re-importing.
-export const updateNodeDefinitions = (categoriesData, definitionsData) => {
-  // Rebuild NODE_CATEGORIES from API categories data
-  Object.keys(NODE_CATEGORIES).forEach((k) => delete NODE_CATEGORIES[k]);
-  for (const [catKey, catData] of Object.entries(categoriesData)) {
-    NODE_CATEGORIES[catKey] = {
-      icon: resolveIcon(catData.icon),
-      color: catData.color || "slate",
-      label: catData.label || catKey,
-      nodes: catData.nodes || [],
-    };
-  }
+// Dynamic update: merges API definitions into NODE_TYPE_MAP in-place
+// and adds any new node types to existing NODE_CATEGORIES.
+// NODE_CATEGORIES itself is NOT replaced — its labels, icons, colors
+// and i18n keys are curated by the frontend and must be preserved.
+const BACKEND_TO_FRONTEND_CATEGORY = {
+    user_interaction: "user_simulation",
+    navigation: "browser_management",
+    capture: "diagnostics",
+    network: "network_control",
+    ai_llm: "llm_ai",
+    flow_logic: "flow_control",
+    security: "security_audit",
+    assertion: "dom_manipulation",
+    session: "test_execution",
+    data: "file_data",
+    testing: "execution_interface",
+};
+export const updateNodeDefinitions = (_categoriesData, definitionsData) => {
+    // 1. Update NODE_TYPE_MAP from API definitions (the main value)
+    Object.keys(NODE_TYPE_MAP).forEach((k) => delete NODE_TYPE_MAP[k]);
+    for (const [nodeType, def] of Object.entries(definitionsData)) {
+        const frontendCat =
+            BACKEND_TO_FRONTEND_CATEGORY[def.category] || def.category;
+        const category = NODE_CATEGORIES[frontendCat];
+        NODE_TYPE_MAP[nodeType] = {
+            category: frontendCat,
+            color: def.color || category?.color || "slate",
+            icon: resolveIcon(def.icon) || category?.icon || Box,
+            i18nKey: `nodes.labels.${nodeType}`,
+            label:
+                def.label ||
+                nodeType
+                    .split("_")
+                    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                    .join(" "),
+        };
+    }
 
-  // Rebuild NODE_TYPE_MAP from API definitions data
-  Object.keys(NODE_TYPE_MAP).forEach((k) => delete NODE_TYPE_MAP[k]);
-  for (const [nodeType, def] of Object.entries(definitionsData)) {
-    const category = NODE_CATEGORIES[def.category];
-    NODE_TYPE_MAP[nodeType] = {
-      category: def.category || "default",
-      color: def.color || category?.color || "slate",
-      icon: resolveIcon(def.icon) || category?.icon || Box,
-      i18nKey: `nodes.labels.${nodeType}`,
-      label:
-        def.label ||
-        nodeType
-          .split("_")
-          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-          .join(" "),
-    };
-  }
+    // 2. Ensure every registered node type appears in a NODE_CATEGORIES entry
+    //    (handles third-party plugins that add new node types)
+    const allKnownNodes = new Set();
+    for (const cat of Object.values(NODE_CATEGORIES)) {
+        for (const n of cat.nodes) allKnownNodes.add(n);
+    }
+    for (const [nodeType, def] of Object.entries(definitionsData)) {
+        if (!allKnownNodes.has(nodeType)) {
+            const frontendCat =
+                BACKEND_TO_FRONTEND_CATEGORY[def.category] || def.category;
+            if (!NODE_CATEGORIES[frontendCat]) {
+                NODE_CATEGORIES[frontendCat] = {
+                    icon: Box,
+                    color: def.color || "slate",
+                    label: frontendCat,
+                    nodes: [],
+                };
+            }
+            NODE_CATEGORIES[frontendCat].nodes.push(nodeType);
+            allKnownNodes.add(nodeType);
+        }
+    }
 
-  console.log(
-    `[nodeConstants] Updated: ${Object.keys(NODE_CATEGORIES).length} categories, ${Object.keys(NODE_TYPE_MAP).length} node types`,
-  );
+    console.log(
+        `[nodeConstants] Updated: ${Object.keys(NODE_CATEGORIES).length} categories, ${Object.keys(NODE_TYPE_MAP).length} node types`,
+    );
 };
