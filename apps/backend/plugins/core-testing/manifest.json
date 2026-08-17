@@ -1,0 +1,57 @@
+{
+  "id": "core-testing",
+  "name": "Testing & CI",
+  "version": "1.0.0",
+  "description": "Core plugin for running tests, CLI parameters, and CI integration",
+  "author": "haltest-core",
+  "haltestVersion": ">=2.0.0",
+
+  "nodes": [
+    {
+      "type": "run_tests",
+      "category": "testing",
+      "label": "Run Tests",
+      "description": "Run tests using a specified framework and command",
+      "color": "pink",
+      "icon": "PlayCircle",
+      "version": "1.0.0",
+      "schema": "./schemas/run_tests.js",
+      "handler": "./handlers/run_tests.js"
+    },
+    {
+      "type": "cli_params",
+      "category": "testing",
+      "label": "CLI Params",
+      "description": "Pass CLI parameters to a test runner or process",
+      "color": "pink",
+      "icon": "Terminal",
+      "version": "1.0.0",
+      "schema": "./schemas/cli_params.js",
+      "handler": "./handlers/cli_params.js"
+    },
+    {
+      "type": "return_code",
+      "category": "testing",
+      "label": "Return Code",
+      "description": "Set and return an exit code with optional message",
+      "color": "pink",
+      "icon": "Flag",
+      "version": "1.0.0",
+      "schema": "./schemas/return_code.js",
+      "handler": "./handlers/return_code.js"
+    },
+    {
+      "type": "integrate_ci",
+      "category": "testing",
+      "label": "Integrate CI",
+      "description": "Configure CI integration for GitHub, GitLab, Jenkins, or custom platforms",
+      "color": "pink",
+      "icon": "Zap",
+      "version": "1.0.0",
+      "schema": "./schemas/integrate_ci.js",
+      "handler": "./handlers/integrate_ci.js"
+    }
+  ],
+
+  "hooks": {}
+}

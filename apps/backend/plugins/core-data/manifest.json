@@ -1,0 +1,46 @@
+{
+  "id": "core-data",
+  "name": "Data & File I/O",
+  "version": "1.0.0",
+  "description": "Core plugin for reading, writing, and downloading files",
+  "author": "haltest-core",
+  "haltestVersion": ">=2.0.0",
+
+  "nodes": [
+    {
+      "type": "read_data",
+      "category": "data",
+      "label": "Read Data",
+      "description": "Read data from a file (text, JSON, or CSV)",
+      "color": "slate",
+      "icon": "FileInput",
+      "version": "1.0.0",
+      "schema": "./schemas/read_data.js",
+      "handler": "./handlers/read_data.js"
+    },
+    {
+      "type": "save_results",
+      "category": "data",
+      "label": "Save Results",
+      "description": "Save data to a file (text, JSON, or CSV)",
+      "color": "slate",
+      "icon": "FileOutput",
+      "version": "1.0.0",
+      "schema": "./schemas/save_results.js",
+      "handler": "./handlers/save_results.js"
+    },
+    {
+      "type": "handle_downloads",
+      "category": "data",
+      "label": "Handle Downloads",
+      "description": "Download a file from a URL and optionally save it to disk",
+      "color": "slate",
+      "icon": "Download",
+      "version": "1.0.0",
+      "schema": "./schemas/handle_downloads.js",
+      "handler": "./handlers/handle_downloads.js"
+    }
+  ],
+
+  "hooks": {}
+}

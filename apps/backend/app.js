@@ -37,6 +37,8 @@ import projectRouter from './routes/project.router.js';
 import aiRouter from './routes/ai.routes.js';
 import keysRouter from './routes/keys.routes.js';
 import historyRouter from './routes/history.router.js';
+import storageRouter from './routes/storage.router.js';
+import safetyGateRouter from './routes/safetyGate.router.js';
 
 // Database
 import { initDb } from './database/init.js';
@@ -184,6 +186,8 @@ app.use('/api/history', historyRouter);
 app.use('/api', projectRouter);
 app.use('/api/ai', aiRouter);
 app.use('/api/keys', keysRouter);
+app.use('/api/storage', storageRouter);
+app.use('/api/safety-gate', safetyGateRouter);
 
 // --- STATIC FILES SERVING (Production) ---
 

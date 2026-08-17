@@ -1,0 +1,7 @@
+{
+  "id": "core-capture",
+  "name": "Capture & Diagnostics",
+  "category": "capture",
+  "color": "violet",
+  "icons": ["Camera", "Download", "AlertTriangle", "Eye"]
+}

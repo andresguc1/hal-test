@@ -1,56 +1,18 @@
 import { PlaywrightGenerator } from './generators/PlaywrightGenerator.js';
 import { CypressGenerator } from './generators/CypressGenerator.js';
 import { SeleniumGenerator } from './generators/SeleniumGenerator.js';
+import { flowResolver } from '../../core/FlowResolver.js';
 
 export const exportService = {
     /**
      * Resuelve recursivamente los sub-flujos de los componentes.
+     * Delegates to FlowResolver for consistent resolution logic.
      * @param {Array} nodes - Nodos del flujo.
      * @param {string} projectId - ID del proyecto para buscar las tablas.
      * @returns {Promise<Array>} - Nodos con subNodes poblados.
      */
     resolveSubFlows: async (nodes, projectId) => {
-        if (!nodes || !Array.isArray(nodes)) return [];
-
-        const { Flow, Node, Edge } = await import('../../database/init.js');
-        const resolvedNodes = [];
-
-        for (const node of nodes) {
-            const newNode = { ...node };
-            const type = node.type || node.data?.type;
-
-            if (type === 'component') {
-                const flowId = node.data?.configuration?.flowId || node.data?.flowId;
-                if (flowId && projectId) {
-                    const subFlow = await Flow.findOne({
-                        where: { id: flowId, projectId },
-                        include: [
-                            { model: Node, as: 'nodes' },
-                            { model: Edge, as: 'edges' },
-                        ],
-                    });
-
-                    if (subFlow) {
-                        // Mapear los nodos del sub-flujo al formato esperado
-                        const subNodesRaw = (subFlow.nodes || []).map((n) => ({
-                            id: n.nodeId,
-                            type: n.type,
-                            data: n.data,
-                            position: n.position,
-                        }));
-
-                        // Resolver recursivamente
-                        newNode.data = {
-                            ...newNode.data,
-                            flowName: subFlow.name,
-                            subNodes: await exportService.resolveSubFlows(subNodesRaw, projectId),
-                        };
-                    }
-                }
-            }
-            resolvedNodes.push(newNode);
-        }
-        return resolvedNodes;
+        return flowResolver.resolve(nodes, projectId);
     },
 
     /**

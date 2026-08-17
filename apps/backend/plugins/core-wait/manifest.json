@@ -1,0 +1,64 @@
+{
+  "id": "core-wait",
+  "name": "Wait & Timing",
+  "version": "1.0.0",
+  "description": "Wait, timing, and synchronization actions",
+  "nodes": [
+    {
+      "name": "wait_for_element",
+      "label": "Wait for Element",
+      "category": "wait_timing",
+      "color": "amber",
+      "icon": "Clock"
+    },
+    {
+      "name": "wait_visible",
+      "label": "Wait Visible",
+      "category": "wait_timing",
+      "color": "amber",
+      "icon": "Eye"
+    },
+    {
+      "name": "wait_navigation",
+      "label": "Wait Navigation",
+      "category": "wait_timing",
+      "color": "amber",
+      "icon": "Loader"
+    },
+    {
+      "name": "wait_network",
+      "label": "Wait Network",
+      "category": "wait_timing",
+      "color": "amber",
+      "icon": "Timer"
+    },
+    {
+      "name": "wait_conditional",
+      "label": "Wait Conditional",
+      "category": "wait_timing",
+      "color": "amber",
+      "icon": "Clock"
+    },
+    {
+      "name": "pause",
+      "label": "Pause",
+      "category": "wait_timing",
+      "color": "amber",
+      "icon": "Timer"
+    },
+    {
+      "name": "wait_for_response",
+      "label": "Wait for Response",
+      "category": "wait_timing",
+      "color": "amber",
+      "icon": "Loader"
+    },
+    {
+      "name": "wait_for_request",
+      "label": "Wait for Request",
+      "category": "wait_timing",
+      "color": "amber",
+      "icon": "Eye"
+    }
+  ]
+}

@@ -1,0 +1,114 @@
+{
+  "id": "core-flow-control",
+  "name": "Flow Control & Logic",
+  "author": "haltest-core",
+  "haltestVersion": ">=2.0.0",
+  "hooks": {},
+  "nodes": [
+    {
+      "type": "variable",
+      "name": "Variable",
+      "category": "flow_logic",
+      "icon": "Variable",
+      "color": "slate"
+    },
+    {
+      "type": "conditional",
+      "name": "Conditional",
+      "category": "flow_logic",
+      "icon": "GitBranch",
+      "color": "slate"
+    },
+    {
+      "type": "switch",
+      "name": "Switch",
+      "category": "flow_logic",
+      "icon": "GitBranch",
+      "color": "slate"
+    },
+    {
+      "type": "loop",
+      "name": "Loop",
+      "category": "flow_logic",
+      "icon": "Repeat",
+      "color": "slate"
+    },
+    {
+      "type": "for_each",
+      "name": "For Each",
+      "category": "flow_logic",
+      "icon": "List",
+      "color": "slate"
+    },
+    {
+      "type": "branch",
+      "name": "Branch",
+      "category": "flow_logic",
+      "icon": "GitFork",
+      "color": "slate"
+    },
+    {
+      "type": "flow_control",
+      "name": "Flow Control",
+      "category": "flow_logic",
+      "icon": "Play",
+      "color": "slate"
+    },
+    {
+      "type": "transform",
+      "name": "Transform",
+      "category": "flow_logic",
+      "icon": "Shuffle",
+      "color": "slate"
+    },
+    {
+      "type": "backend_js",
+      "name": "Backend JS",
+      "category": "flow_logic",
+      "icon": "Code",
+      "color": "slate"
+    },
+    {
+      "type": "fail_flow",
+      "name": "Fail Flow",
+      "category": "flow_logic",
+      "icon": "XCircle",
+      "color": "red"
+    },
+    {
+      "type": "component",
+      "name": "Component",
+      "category": "flow_logic",
+      "icon": "Puzzle",
+      "color": "purple"
+    },
+    {
+      "type": "input",
+      "name": "Input",
+      "category": "flow_logic",
+      "icon": "ArrowDownToLine",
+      "color": "slate"
+    },
+    {
+      "type": "output",
+      "name": "Output",
+      "category": "flow_logic",
+      "icon": "ArrowUpFromLine",
+      "color": "slate"
+    },
+    {
+      "type": "handle_hooks",
+      "name": "Handle Hooks",
+      "category": "flow_logic",
+      "icon": "Anchor",
+      "color": "slate"
+    },
+    {
+      "type": "control_exceptions",
+      "name": "Control Exceptions",
+      "category": "flow_logic",
+      "icon": "ShieldAlert",
+      "color": "amber"
+    }
+  ]
+}

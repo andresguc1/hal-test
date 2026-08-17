@@ -74,6 +74,7 @@ export class SelectorPreValidator {
         // 3. Live Page DOM Verification if page provided
         if (page && validSyntax) {
             try {
+                /* eslint-disable no-undef */
                 const stats = await page.evaluate((sel) => {
                     try {
                         let elements = [];

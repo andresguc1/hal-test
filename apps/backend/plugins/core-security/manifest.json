@@ -1,0 +1,68 @@
+{
+  "id": "core-security",
+  "name": "Security",
+  "version": "1.0.0",
+  "description": "Core plugin for security auditing, CSP validation, and sensitive data monitoring",
+  "author": "haltest-core",
+  "haltestVersion": ">=2.0.0",
+
+  "nodes": [
+    {
+      "type": "csp_validator",
+      "category": "security",
+      "label": "CSP Validator",
+      "description": "Validate Content Security Policy headers for a URL",
+      "color": "red",
+      "icon": "Shield",
+      "version": "1.0.0",
+      "schema": "./schemas/csp_validator.js",
+      "handler": "./handlers/csp_validator.js"
+    },
+    {
+      "type": "header_auditor",
+      "category": "security",
+      "label": "Header Auditor",
+      "description": "Audit HTTP security headers against expected values",
+      "color": "red",
+      "icon": "AlertTriangle",
+      "version": "1.0.0",
+      "schema": "./schemas/header_auditor.js",
+      "handler": "./handlers/header_auditor.js"
+    },
+    {
+      "type": "dom_sanitizer",
+      "category": "security",
+      "label": "DOM Sanitizer",
+      "description": "Sanitize DOM elements based on selector and rules",
+      "color": "red",
+      "icon": "Scan",
+      "version": "1.0.0",
+      "schema": "./schemas/dom_sanitizer.js",
+      "handler": "./handlers/dom_sanitizer.js"
+    },
+    {
+      "type": "audit_policy",
+      "category": "security",
+      "label": "Audit Policy",
+      "description": "Audit a security policy for a given URL",
+      "color": "red",
+      "icon": "Lock",
+      "version": "1.0.0",
+      "schema": "./schemas/audit_policy.js",
+      "handler": "./handlers/audit_policy.js"
+    },
+    {
+      "type": "sensitive_data_monitor",
+      "category": "security",
+      "label": "Sensitive Data Monitor",
+      "description": "Monitor for sensitive data patterns and log, block, or alert",
+      "color": "red",
+      "icon": "Eye",
+      "version": "1.0.0",
+      "schema": "./schemas/sensitive_data_monitor.js",
+      "handler": "./handlers/sensitive_data_monitor.js"
+    }
+  ],
+
+  "hooks": {}
+}

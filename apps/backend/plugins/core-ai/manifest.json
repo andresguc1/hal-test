@@ -1,0 +1,79 @@
+{
+  "id": "core-ai",
+  "name": "AI / Intelligence",
+  "version": "1.0.0",
+  "description": "Core plugin for AI-powered nodes (LLM calls, semantic validation, data generation)",
+  "author": "haltest-core",
+  "haltestVersion": ">=2.0.0",
+
+  "nodes": [
+    {
+      "type": "call_llm",
+      "category": "llm_ai",
+      "label": "Ask AI (Text)",
+      "description": "Send a prompt to an LLM and get a text response",
+      "color": "violet",
+      "icon": "Brain",
+      "version": "1.0.0",
+      "schema": "./schemas/call_llm.js",
+      "handler": "./handlers/call_llm.js"
+    },
+    {
+      "type": "generate_data",
+      "category": "llm_ai",
+      "label": "Generate Data (AI)",
+      "description": "Generate structured data using AI",
+      "color": "violet",
+      "icon": "Brain",
+      "version": "1.0.0",
+      "schema": "./schemas/generate_data.js",
+      "handler": "./handlers/generate_data.js"
+    },
+    {
+      "type": "validate_semantic",
+      "category": "llm_ai",
+      "label": "Semantic Validation",
+      "description": "Validate page content using AI",
+      "color": "violet",
+      "icon": "Brain",
+      "version": "1.0.0",
+      "schema": "./schemas/validate_semantic.js",
+      "handler": "./handlers/validate_semantic.js"
+    },
+    {
+      "type": "extract_dom_context",
+      "category": "llm_ai",
+      "label": "Extract DOM Context",
+      "description": "Extract DOM context for AI processing",
+      "color": "violet",
+      "icon": "Brain",
+      "version": "1.0.0",
+      "schema": "./schemas/extract_dom_context.js",
+      "handler": "./handlers/extract_dom_context.js"
+    },
+    {
+      "type": "chain_of_thought",
+      "category": "llm_ai",
+      "label": "Chain of Thought",
+      "description": "Step-by-step reasoning with AI",
+      "color": "violet",
+      "icon": "Brain",
+      "version": "1.0.0",
+      "schema": "./schemas/chain_of_thought.js",
+      "handler": "./handlers/chain_of_thought.js"
+    },
+    {
+      "type": "smart_selector",
+      "category": "llm_ai",
+      "label": "Smart Selector",
+      "description": "Suggest CSS/Playwright selectors using AI",
+      "color": "violet",
+      "icon": "Brain",
+      "version": "1.0.0",
+      "schema": "./schemas/smart_selector.js",
+      "handler": "./handlers/smart_selector.js"
+    }
+  ],
+
+  "hooks": {}
+}

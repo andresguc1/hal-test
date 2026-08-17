@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { playwrightMcpServer } from './PlaywrightMCPServer.js';
 import { llmFactory, RECOMMENDED_LOCAL_MODELS, DEFAULT_LOCAL_MODEL } from './LLMFactory.js';
 import { repairJson, extractJson, parseToolCalls } from './AIServiceParsing.js';
+import { aiGenerationGuard } from '../core/AIGenerationGuard.js';
 
 /**
  * Servicio Central de IA
@@ -1229,6 +1230,30 @@ Response Format: Return ONLY raw JSON: {"correctedSelector": "text=...", "confid
             console.error('[AIService] Error in semantic validation:', error);
             throw llmFactory.mapError(error);
         }
+    }
+
+    /**
+     * Generates a flow with Safety Gate validation.
+     * Retries up to maxRetries if the generated flow fails validation.
+     * @param {string} prompt - User's natural language request
+     * @param {object} config - { provider, apiKey, model, baseUrl }
+     * @param {object} options - { currentCanvas, level, maxRetries }
+     * @returns {{ response, gateReport, attempts }}
+     */
+    async generateFlowWithGuard(prompt, config, options = {}) {
+        const maxRetries = options.maxRetries || 3;
+        const level = options.level || 'normal';
+        const currentCanvas = options.currentCanvas || { nodes: [], edges: [] };
+
+        const generateFn = async (currentPrompt) => {
+            return this.generateFlow(currentPrompt, config);
+        };
+
+        return aiGenerationGuard.guardedGenerate(generateFn, currentCanvas, {
+            prompt,
+            level,
+            maxRetries,
+        });
     }
 }
 

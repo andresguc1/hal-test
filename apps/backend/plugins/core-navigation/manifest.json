@@ -1,0 +1,36 @@
+{
+  "id": "core-navigation",
+  "name": "Navigation",
+  "version": "1.0.0",
+  "description": "Core browser navigation actions",
+  "nodes": [
+    {
+      "name": "open_url",
+      "label": "Open URL",
+      "category": "navigation",
+      "color": "indigo",
+      "icon": "Compass"
+    },
+    {
+      "name": "go_back",
+      "label": "Go Back",
+      "category": "navigation",
+      "color": "indigo",
+      "icon": "ArrowLeft"
+    },
+    {
+      "name": "go_forward",
+      "label": "Go Forward",
+      "category": "navigation",
+      "color": "indigo",
+      "icon": "ArrowRight"
+    },
+    {
+      "name": "reload_page",
+      "label": "Reload Page",
+      "category": "navigation",
+      "color": "indigo",
+      "icon": "RefreshCw"
+    }
+  ]
+}

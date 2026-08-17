@@ -1,0 +1,7 @@
+{
+  "id": "core-network",
+  "name": "Network Control",
+  "category": "network",
+  "color": "cyan",
+  "icons": ["Wifi", "Server", "Shield"]
+}

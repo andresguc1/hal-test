@@ -1,0 +1,123 @@
+{
+  "id": "core-interaction",
+  "name": "User Interaction",
+  "version": "1.0.0",
+  "description": "Core plugin for user interaction actions (click, type, fill, scroll, etc.)",
+  "author": "haltest-core",
+  "haltestVersion": ">=2.0.0",
+
+  "nodes": [
+    {
+      "type": "click",
+      "category": "user_interaction",
+      "label": "Click Element",
+      "description": "Click on an element",
+      "color": "green",
+      "icon": "MousePointerClick",
+      "version": "1.0.0",
+      "schema": "./schemas/click.js",
+      "handler": "./handlers/click.js"
+    },
+    {
+      "type": "type_text",
+      "category": "user_interaction",
+      "label": "Type Text",
+      "description": "Type text into an element",
+      "color": "green",
+      "icon": "Keyboard",
+      "version": "1.0.0",
+      "schema": "./schemas/type_text.js",
+      "handler": "./handlers/type_text.js"
+    },
+    {
+      "type": "fill_form",
+      "category": "user_interaction",
+      "label": "Fill Form",
+      "description": "Fill form fields with values",
+      "color": "green",
+      "icon": "FormInput",
+      "version": "1.0.0",
+      "schema": "./schemas/fill_form.js",
+      "handler": "./handlers/fill_form.js"
+    },
+    {
+      "type": "select_option",
+      "category": "user_interaction",
+      "label": "Select Option",
+      "description": "Select an option from a dropdown",
+      "color": "green",
+      "icon": "List",
+      "version": "1.0.0",
+      "schema": "./schemas/select_option.js",
+      "handler": "./handlers/select_option.js"
+    },
+    {
+      "type": "scroll",
+      "category": "user_interaction",
+      "label": "Scroll",
+      "description": "Scroll the page or element",
+      "color": "green",
+      "icon": "ArrowUpDown",
+      "version": "1.0.0",
+      "schema": "./schemas/scroll.js",
+      "handler": "./handlers/scroll.js"
+    },
+    {
+      "type": "hover",
+      "category": "user_interaction",
+      "label": "Hover",
+      "description": "Hover over an element",
+      "color": "green",
+      "icon": "MousePointer2",
+      "version": "1.0.0",
+      "schema": "./schemas/hover.js",
+      "handler": "./handlers/hover.js"
+    },
+    {
+      "type": "drag_drop",
+      "category": "user_interaction",
+      "label": "Drag and Drop",
+      "description": "Drag an element to a target location",
+      "color": "green",
+      "icon": "Move",
+      "version": "1.0.0",
+      "schema": "./schemas/drag_drop.js",
+      "handler": "./handlers/drag_drop.js"
+    },
+    {
+      "type": "upload_file",
+      "category": "user_interaction",
+      "label": "Upload File",
+      "description": "Upload a file to a file input element",
+      "color": "green",
+      "icon": "Upload",
+      "version": "1.0.0",
+      "schema": "./schemas/upload_file.js",
+      "handler": "./handlers/upload_file.js"
+    },
+    {
+      "type": "find_element",
+      "category": "element",
+      "label": "Find Element",
+      "description": "Find an element on the page",
+      "color": "teal",
+      "icon": "Search",
+      "version": "1.0.0",
+      "schema": "./schemas/find_element.js",
+      "handler": "./handlers/find_element.js"
+    },
+    {
+      "type": "get_set_content",
+      "category": "element",
+      "label": "Get/Set Content",
+      "description": "Get or set text content of an element",
+      "color": "teal",
+      "icon": "FileText",
+      "version": "1.0.0",
+      "schema": "./schemas/get_set_content.js",
+      "handler": "./handlers/get_set_content.js"
+    }
+  ],
+
+  "hooks": {}
+}

@@ -106,3 +106,9 @@ export { default as headerAuditorBodySchema } from './header_auditor/body.js';
 export { default as domSanitizerBodySchema } from './dom_sanitizer/body.js';
 export { default as auditPolicyBodySchema } from './audit_policy/body.js';
 export { default as sensitiveDataMonitorBodySchema } from './sensitive_data_monitor/body.js';
+
+// 📦 v2 Storage Schemas
+export { default as flowV2BodySchema } from './flow_v2/body.js';
+export { default as componentV1BodySchema } from './component_v1/body.js';
+export { default as pageV1BodySchema } from './page_v1/body.js';
+export { default as projectV2BodySchema } from './project_v2/body.js';

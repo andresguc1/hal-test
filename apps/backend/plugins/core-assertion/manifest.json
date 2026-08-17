@@ -1,0 +1,7 @@
+{
+  "id": "core-assertion",
+  "name": "Assertions",
+  "category": "assertion",
+  "color": "emerald",
+  "icons": ["CheckCircle"]
+}

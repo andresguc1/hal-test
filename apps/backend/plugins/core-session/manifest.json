@@ -1,0 +1,90 @@
+{
+  "id": "core-session",
+  "name": "Session & Context",
+  "version": "1.0.0",
+  "description": "Core plugin for session persistence, context management, and storage operations",
+  "author": "haltest-core",
+  "haltestVersion": ">=2.0.0",
+
+  "nodes": [
+    {
+      "type": "persist_session",
+      "category": "session",
+      "label": "Persist Session",
+      "description": "Save, load, list, or delete browser sessions",
+      "color": "orange",
+      "icon": "Database",
+      "version": "1.0.0",
+      "schema": "./schemas/persist_session.js",
+      "handler": "./handlers/persist_session.js"
+    },
+    {
+      "type": "manage_session",
+      "category": "session",
+      "label": "Manage Session",
+      "description": "Create, restore, or clear the current session",
+      "color": "orange",
+      "icon": "Key",
+      "version": "1.0.0",
+      "schema": "./schemas/manage_session.js",
+      "handler": "./handlers/manage_session.js"
+    },
+    {
+      "type": "create_context",
+      "category": "session",
+      "label": "Create Context",
+      "description": "Create a new browser context with optional storage state and viewport",
+      "color": "orange",
+      "icon": "Layers",
+      "version": "1.0.0",
+      "schema": "./schemas/create_context.js",
+      "handler": "./handlers/create_context.js"
+    },
+    {
+      "type": "cleanup_state",
+      "category": "session",
+      "label": "Cleanup State",
+      "description": "Clear cookies and/or storage from the current context",
+      "color": "orange",
+      "icon": "Trash2",
+      "version": "1.0.0",
+      "schema": "./schemas/cleanup_state.js",
+      "handler": "./handlers/cleanup_state.js"
+    },
+    {
+      "type": "close_context",
+      "category": "session",
+      "label": "Close Context",
+      "description": "Close the current browser context",
+      "color": "orange",
+      "icon": "XCircle",
+      "version": "1.0.0",
+      "schema": "./schemas/close_context.js",
+      "handler": "./handlers/close_context.js"
+    },
+    {
+      "type": "inject_tokens",
+      "category": "session",
+      "label": "Inject Tokens",
+      "description": "Inject authentication tokens as cookies, headers, or localStorage",
+      "color": "orange",
+      "icon": "Cookie",
+      "version": "1.0.0",
+      "schema": "./schemas/inject_tokens.js",
+      "handler": "./handlers/inject_tokens.js"
+    },
+    {
+      "type": "manage_storage",
+      "category": "session",
+      "label": "Manage Storage",
+      "description": "Get, set, or clear localStorage and sessionStorage values",
+      "color": "orange",
+      "icon": "HardDrive",
+      "version": "1.0.0",
+      "schema": "./schemas/manage_storage.js",
+      "handler": "./handlers/manage_storage.js"
+    }
+  ],
+
+  "hooks": {}
+}

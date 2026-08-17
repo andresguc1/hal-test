@@ -1,0 +1,58 @@
+{
+  "id": "core-browser",
+  "name": "Browser Management",
+  "version": "1.0.0",
+  "description": "Core plugin for browser lifecycle management (launch, close, tabs, resize)",
+  "author": "haltest-core",
+  "haltestVersion": ">=2.0.0",
+
+  "nodes": [
+    {
+      "type": "launch_browser",
+      "category": "browser_management",
+      "label": "Launch Browser",
+      "description": "Launches a new browser instance",
+      "color": "blue",
+      "icon": "Globe",
+      "version": "1.0.0",
+      "schema": "./schemas/launch_browser.js",
+      "handler": "./handlers/launch_browser.js",
+      "mapper": "./mappers/BrowserActionMapper.js"
+    },
+    {
+      "type": "close_browser",
+      "category": "browser_management",
+      "label": "Close Browser",
+      "description": "Closes the current browser instance",
+      "color": "blue",
+      "icon": "Globe",
+      "version": "1.0.0",
+      "schema": "./schemas/close_browser.js",
+      "handler": "./handlers/close_browser.js"
+    },
+    {
+      "type": "manage_tabs",
+      "category": "browser_management",
+      "label": "Manage Tabs",
+      "description": "Create, switch, or close browser tabs",
+      "color": "blue",
+      "icon": "Globe",
+      "version": "1.0.0",
+      "schema": "./schemas/manage_tabs.js",
+      "handler": "./handlers/manage_tabs.js"
+    },
+    {
+      "type": "resize_viewport",
+      "category": "browser_management",
+      "label": "Resize Viewport",
+      "description": "Resize the browser viewport",
+      "color": "blue",
+      "icon": "Globe",
+      "version": "1.0.0",
+      "schema": "./schemas/resize_viewport.js",
+      "handler": "./handlers/resize_viewport.js"
+    }
+  ],
+
+  "hooks": {}
+}
