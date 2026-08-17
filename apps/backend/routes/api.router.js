@@ -38,548 +38,151 @@ console.log('✅ Inspector routes registered: /start, /stop, /reset');
 router.use('/runs', runRouter);
 
 // ==========================================================
-// DECLARATIVE ROUTE CONFIGURATION
+// DECLARATIVE ROUTE CONFIGURATION (auto-generated from compact registry)
 // ==========================================================
 
-export const actionRoutes = [
-    // ========== Navigation and Environment ==========
-    {
-        path: 'launch_browser',
-        schema: 'launchBrowserBodySchema',
-        action: 'launchBrowserAction',
-        category: 'browser',
-    },
-    {
-        path: 'open_url',
-        schema: 'openUrlBodySchema',
-        action: 'openUrlAction',
-        category: 'navigation',
-    },
-    {
-        path: 'close_browser',
-        schema: 'closeBrowserBodySchema',
-        action: 'closeBrowserAction',
-        category: 'browser',
-    },
-    {
-        // 🆕 Cambiar 'back' a 'go_back'
-        path: 'go_back',
-        schema: 'backForwardBodySchema',
-        action: 'backAction',
-        category: 'navigation',
-    },
-    {
-        // 🆕 Cambiar 'forward' a 'go_forward'
-        path: 'go_forward',
-        schema: 'backForwardBodySchema',
-        action: 'forwardAction',
-        category: 'navigation',
-    },
-    {
-        // 🔙 Alias de compatibilidad para 'back'
-        path: 'back',
-        schema: 'backForwardBodySchema',
-        action: 'backAction',
-        category: 'navigation',
-    },
-    {
-        // ⏩ Alias de compatibilidad para 'forward'
-        path: 'forward',
-        schema: 'backForwardBodySchema',
-        action: 'forwardAction',
-        category: 'navigation',
-    },
-    {
-        path: 'manage_tabs',
-        schema: 'manageTabsBodySchema',
-        action: 'manageTabsAction',
-        category: 'tabs',
-    },
-    {
-        path: 'drag_drop',
-        schema: 'dragDropBodySchema',
-        action: 'dragDropAction',
-        category: 'interaction',
-    },
-    {
-        path: 'resize_viewport',
-        schema: 'resizeViewportBodySchema',
-        action: 'resizeViewportAction',
-        category: 'viewport',
-    },
-    {
-        path: 'reload_page',
-        schema: 'backForwardBodySchema',
-        action: 'reloadAction',
-        category: 'navigation',
-    },
+// Compact registry: nodeType → { schema, category }
+// Action names follow the convention: `${nodeType}Action` (camelCase)
+// Route aliases map alternative paths to an existing nodeType
+const ROUTE_REGISTRY = {
+    // Browser
+    launch_browser: { schema: 'launchBrowserBodySchema', category: 'browser' },
+    close_browser: { schema: 'closeBrowserBodySchema', category: 'browser' },
+    manage_tabs: { schema: 'manageTabsBodySchema', category: 'tabs' },
+    resize_viewport: { schema: 'resizeViewportBodySchema', category: 'viewport' },
+    // Navigation
+    open_url: { schema: 'openUrlBodySchema', category: 'navigation' },
+    go_back: { schema: 'backForwardBodySchema', category: 'navigation' },
+    go_forward: { schema: 'backForwardBodySchema', category: 'navigation' },
+    reload_page: { schema: 'backForwardBodySchema', category: 'navigation' },
+    // Interaction
+    click: { schema: 'clickBodySchema', category: 'interaction' },
+    type_text: { schema: 'typeTextBodySchema', category: 'interaction' },
+    fill_form: { schema: 'fillFormBodySchema', category: 'interaction' },
+    select_option: { schema: 'selectOptionBodySchema', category: 'interaction' },
+    scroll: { schema: 'scrollBodySchema', category: 'interaction' },
+    hover: { schema: 'hoverBodySchema', category: 'interaction' },
+    drag_drop: { schema: 'dragDropBodySchema', category: 'interaction' },
+    upload_file: { schema: 'uploadFileBodySchema', category: 'interaction' },
+    find_element: { schema: 'findElementBodySchema', category: 'element' },
+    get_set_content: { schema: 'getSetContentBodySchema', category: 'element' },
+    interaction: { schema: 'interactionBodySchema', category: 'interaction' },
+    execute_js: { schema: 'executeJsBodySchema', category: 'scripting' },
+    // Wait
+    wait_for_element: { schema: 'waitForElementBodySchema', category: 'wait' },
+    wait_visible: { schema: 'waitVisibleBodySchema', category: 'wait' },
+    wait_navigation: { schema: 'waitNavigationBodySchema', category: 'wait' },
+    wait_network: { schema: 'waitNetworkBodySchema', category: 'wait' },
+    wait_conditional: { schema: 'waitConditionalBodySchema', category: 'wait' },
+    pause: { schema: 'pauseBodySchema', category: 'wait' },
+    wait_for_response: { schema: 'waitForResponseBodySchema', category: 'wait' },
+    wait_for_request: { schema: 'waitForRequestBodySchema', category: 'wait' },
+    // Capture
+    take_screenshot: { schema: 'takeScreenshotBodySchema', category: 'capture' },
+    save_dom: { schema: 'saveDomBodySchema', category: 'capture' },
+    log_errors: { schema: 'logErrorsBodySchema', category: 'monitoring' },
+    listen_events: { schema: 'listenEventsBodySchema', category: 'monitoring' },
+    // Network
+    intercept_request: { schema: 'interceptRequestBodySchema', category: 'network' },
+    mock_response: { schema: 'mockResponseBodySchema', category: 'network' },
+    block_resource: { schema: 'blockResourceBodySchema', category: 'network' },
+    modify_headers: { schema: 'modifyHeadersBodySchema', category: 'network' },
+    set_network_conditions: { schema: 'setNetworkConditionsBodySchema', category: 'network' },
+    clear_all_mocks: { schema: 'clearAllMocksBodySchema', category: 'network' },
+    configure_route: { schema: 'configureRouteBodySchema', category: 'network' },
+    wait_network_match: { schema: 'waitNetworkMatchBodySchema', category: 'network' },
+    manage_cookies: { schema: 'manageCookiesBodySchema', category: 'network' },
+    // Session
+    persist_session: { schema: 'persistSessionBodySchema', category: 'session' },
+    manage_session: { schema: 'manageSessionBodySchema', category: 'session' },
+    create_context: { schema: 'createContextBodySchema', category: 'context' },
+    cleanup_state: { schema: 'cleanupStateBodySchema', category: 'context' },
+    close_context: { schema: 'closeContextBodySchema', category: 'context' },
+    // Data
+    read_file: { schema: 'readDataBodySchema', category: 'data' },
+    write_file: { schema: 'saveResultsBodySchema', category: 'data' },
+    download_file: { schema: 'handleDownloadsBodySchema', category: 'data' },
+    read_data: { schema: 'readDataBodySchema', category: 'data' },
+    save_results: { schema: 'saveResultsBodySchema', category: 'data' },
+    handle_downloads: { schema: 'handleDownloadsBodySchema', category: 'data' },
+    // Testing
+    run_tests: { schema: 'runTestsBodySchema', category: 'testing' },
+    cli_params: { schema: 'cliParamsBodySchema', category: 'cli' },
+    return_code: { schema: 'returnCodeBodySchema', category: 'cli' },
+    integrate_ci: { schema: 'integrateCIBodySchema', category: 'ci' },
+    // Flow Control
+    variable: { schema: 'variableBodySchema', category: 'flow_control' },
+    conditional: { schema: 'conditionalBodySchema', category: 'logic' },
+    switch: { schema: 'switchBodySchema', category: 'logic' },
+    loop: { schema: 'loopBodySchema', category: 'flow_control' },
+    branch: { schema: 'branchBodySchema', category: 'flow_control' },
+    flow_control: { schema: 'flowControlBodySchema', category: 'flow_control' },
+    transform: { schema: 'transformBodySchema', category: 'flow_control' },
+    backend_js: { schema: 'backendJsBodySchema', category: 'flow_control' },
+    fail_flow: { schema: 'failFlowBodySchema', category: 'flow_control' },
+    handle_hooks: { schema: 'handleHooksBodySchema', category: 'flow' },
+    control_exceptions: { schema: 'controlExceptionsBodySchema', category: 'flow' },
+    component: { schema: 'componentBodySchema', category: 'flow_control' },
+    input: { schema: 'inputBodySchema', category: 'flow_control' },
+    output: { schema: 'outputBodySchema', category: 'flow_control' },
+    // AI
+    call_llm: { schema: 'callLlmBodySchema', category: 'llm_ai' },
+    generate_data: { schema: 'generateDataBodySchema', category: 'llm_ai' },
+    validate_semantic: { schema: 'validateSemanticBodySchema', category: 'llm_ai' },
+    extract_dom_context: { schema: 'extractDomContextBodySchema', category: 'llm_ai' },
+    chain_of_thought: { schema: 'chainOfThoughtBodySchema', category: 'llm_ai' },
+    smart_selector: { schema: 'smartSelectorBodySchema', category: 'llm_ai' },
+    // Security
+    csp_validator: { schema: 'cspValidatorBodySchema', category: 'security' },
+    header_auditor: { schema: 'headerAuditorBodySchema', category: 'security' },
+    dom_sanitizer: { schema: 'domSanitizerBodySchema', category: 'security' },
+    audit_policy: { schema: 'auditPolicyBodySchema', category: 'security' },
+    sensitive_data_monitor: { schema: 'sensitiveDataMonitorBodySchema', category: 'security' },
+    assert_page_text: { schema: 'assertPageTextBodySchema', category: 'element' },
+};
+// Route aliases: alternative paths → existing nodeType
+const ROUTE_ALIASES = {
+    back: 'go_back',
+    forward: 'go_forward',
+};
 
-    // ========== Element Interaction ==========
-    {
-        path: 'find_element',
-        schema: 'findElementBodySchema',
-        action: 'findElementAction',
-        category: 'element',
-    },
-    {
-        path: 'get_set_content',
-        schema: 'getSetContentBodySchema',
-        action: 'getSetContentAction',
-        category: 'element',
-    },
-    {
-        path: 'assert_page_text',
-        schema: 'assertPageTextBodySchema',
-        action: 'assertPageTextAction',
-        category: 'element',
-    },
-    {
-        path: 'interaction',
-        schema: 'interactionBodySchema',
-        action: 'interactionAction',
-        category: 'interaction',
-    },
-    {
-        path: 'click',
-        schema: 'clickBodySchema',
-        action: 'clickAction',
-        category: 'interaction',
-    },
-    {
-        path: 'type_text',
-        schema: 'typeTextBodySchema',
-        action: 'typeTextAction',
-        category: 'interaction',
-    },
-    {
-        path: 'fill_form',
-        schema: 'fillFormBodySchema',
-        action: 'fillFormAction',
-        category: 'interaction',
-    },
-    {
-        path: 'select_option',
-        schema: 'selectOptionBodySchema',
-        action: 'selectOptionAction',
-        category: 'interaction',
-    },
+// Explicit action name overrides where the barrel export name
+// doesn't follow the `${snake_type}Action` → `${camelType}Action` convention
+const ACTION_NAME_OVERRIDES = {
+    go_back: 'backAction',
+    go_forward: 'forwardAction',
+    reload_page: 'reloadAction',
+    read_file: 'readDataAction',
+    write_file: 'saveResultsAction',
+    download_file: 'handleDownloadsAction',
+    read_data: 'readDataAction',
+    save_results: 'saveResultsAction',
+    handle_downloads: 'handleDownloadsAction',
+};
 
-    {
-        path: 'scroll',
-        schema: 'scrollBodySchema',
-        action: 'scrollAction',
-        category: 'interaction',
-    },
-    {
-        path: 'upload_file',
-        schema: 'uploadFileBodySchema',
-        action: 'uploadFileAction',
-        category: 'interaction',
-    },
-    {
-        path: 'hover',
-        schema: 'hoverBodySchema',
-        action: 'hoverAction',
-        category: 'interaction',
-    },
-    {
-        path: 'execute_js',
-        schema: 'executeJsBodySchema',
-        action: 'executeJsAction',
-        category: 'scripting',
-    },
+// Convert snake_type to camelCase Action name (e.g. 'launch_browser' → 'launchBrowserAction')
+const toActionName = (type) =>
+    ACTION_NAME_OVERRIDES[type] || type.replace(/_([a-z])/g, (_, c) => c.toUpperCase()) + 'Action';
 
-    // ========== Wait Operations ==========
-    {
-        path: 'wait_for_element',
-        schema: 'waitForElementBodySchema',
-        action: 'waitForElementAction',
-        category: 'wait',
-    },
-    {
-        path: 'wait_visible',
-        schema: 'waitVisibleBodySchema',
-        action: 'waitVisibleAction',
-        category: 'wait',
-    },
-    {
-        path: 'wait_navigation',
-        schema: 'waitNavigationBodySchema',
-        action: 'waitNavigationAction',
-        category: 'wait',
-    },
-    {
-        path: 'wait_network',
-        schema: 'waitNetworkBodySchema',
-        action: 'waitNetworkAction',
-        category: 'wait',
-    },
-    {
-        path: 'wait_conditional',
-        schema: 'waitConditionalBodySchema',
-        action: 'waitConditionalAction',
-        category: 'wait',
-    },
-    {
-        path: 'pause',
-        schema: 'pauseBodySchema',
-        action: 'pauseAction',
-        category: 'wait',
-    },
-    {
-        path: 'wait_for_response',
-        schema: 'waitForResponseBodySchema',
-        action: 'waitForResponseAction',
-        category: 'wait',
-    },
-    {
-        path: 'wait_for_request',
-        schema: 'waitForRequestBodySchema',
-        action: 'waitForRequestAction',
-        category: 'wait',
-    },
+// Auto-generate actionRoutes from the registry
+export const actionRoutes = Object.entries(ROUTE_REGISTRY).flatMap(
+    ([nodeType, { schema, category }]) => [
+        { path: nodeType, schema, action: toActionName(nodeType), category },
+    ],
+);
 
-    // ========== Monitoring and Capture ==========
-    {
-        path: 'take_screenshot',
-        schema: 'takeScreenshotBodySchema',
-        action: 'takeScreenshotAction',
-        category: 'capture',
-    },
-    {
-        path: 'save_dom',
-        schema: 'saveDomBodySchema',
-        action: 'saveDomAction',
-        category: 'capture',
-    },
-    {
-        path: 'log_errors',
-        schema: 'logErrorsBodySchema',
-        action: 'logErrorsAction',
-        category: 'monitoring',
-    },
-    {
-        path: 'listen_events',
-        schema: 'listenEventsBodySchema',
-        action: 'listenEventsAction',
-        category: 'monitoring',
-    },
-
-    // ========== Network and Session ==========
-    {
-        path: 'intercept_request',
-        schema: 'interceptRequestBodySchema',
-        action: 'interceptRequestAction',
-        category: 'network',
-    },
-    {
-        path: 'mock_response',
-        schema: 'mockResponseBodySchema',
-        action: 'mockResponseAction',
-        category: 'network',
-    },
-    {
-        path: 'block_resource',
-        schema: 'blockResourceBodySchema',
-        action: 'blockResourceAction',
-        category: 'network',
-    },
-    {
-        path: 'modify_headers',
-        schema: 'modifyHeadersBodySchema',
-        action: 'modifyHeadersAction',
-        category: 'network',
-    },
-    {
-        path: 'set_network_conditions',
-        schema: 'setNetworkConditionsBodySchema',
-        action: 'setNetworkConditionsAction',
-        category: 'network',
-    },
-    {
-        path: 'clear_all_mocks',
-        schema: 'clearAllMocksBodySchema',
-        action: 'clearAllMocksAction',
-        category: 'network',
-    },
-    {
-        path: 'configure_route',
-        schema: 'configureRouteBodySchema',
-        action: 'configureRouteAction',
-        category: 'network',
-    },
-    {
-        path: 'wait_network_match',
-        schema: 'waitNetworkMatchBodySchema',
-        action: 'waitNetworkMatchAction',
-        category: 'network',
-    },
-    {
-        path: 'persist_session',
-        schema: 'persistSessionBodySchema',
-        action: 'persistSessionAction',
-        category: 'session',
-    },
-    {
-        path: 'manage_session',
-        schema: 'manageSessionBodySchema',
-        action: 'manageSessionAction',
-        category: 'session',
-    },
-    {
-        path: 'manage_cookies',
-        schema: 'manageCookiesBodySchema',
-        action: 'manageCookiesAction',
-        category: 'network',
-    },
-
-    // ========== Context and State ==========
-    {
-        path: 'create_context',
-        schema: 'createContextBodySchema',
-        action: 'createContextAction',
-        category: 'context',
-    },
-    {
-        path: 'cleanup_state',
-        schema: 'cleanupStateBodySchema',
-        action: 'cleanupStateAction',
-        category: 'context',
-    },
-    {
-        path: 'close_context',
-        schema: 'closeContextBodySchema',
-        action: 'closeContextAction',
-        category: 'context',
-    },
-
-    // ========== Flow and Data Utilities ==========
-    {
-        path: 'handle_hooks',
-        schema: 'handleHooksBodySchema',
-        action: 'handleHooksAction',
-        category: 'flow',
-    },
-    {
-        path: 'control_exceptions',
-        schema: 'controlExceptionsBodySchema',
-        action: 'controlExceptionsAction',
-        category: 'flow',
-    },
-    {
-        path: 'read_file',
-        schema: 'readDataBodySchema',
-        action: 'readDataAction',
-        category: 'data',
-    },
-    {
-        path: 'write_file',
-        schema: 'saveResultsBodySchema',
-        action: 'saveResultsAction',
-        category: 'data',
-    },
-    {
-        path: 'download_file',
-        schema: 'handleDownloadsBodySchema',
-        action: 'handleDownloadsAction',
-        category: 'data',
-    },
-    {
-        // 🔙 Alias compatibility
-        path: 'read_data',
-        schema: 'readDataBodySchema',
-        action: 'readDataAction',
-        category: 'data',
-    },
-    {
-        // 🔙 Alias compatibility
-        path: 'save_results',
-        schema: 'saveResultsBodySchema',
-        action: 'saveResultsAction',
-        category: 'data',
-    },
-    {
-        // 🔙 Alias compatibility
-        path: 'handle_downloads',
-        schema: 'handleDownloadsBodySchema',
-        action: 'handleDownloadsAction',
-        category: 'data',
-    },
-
-    // ========== Testing and CI/CD ==========
-    {
-        path: 'run_tests',
-        schema: 'runTestsBodySchema',
-        action: 'runTestsAction',
-        category: 'testing',
-    },
-    {
-        path: 'cli_params',
-        schema: 'cliParamsBodySchema',
-        action: 'cliParamsAction',
-        category: 'cli',
-    },
-    {
-        path: 'return_code',
-        schema: 'returnCodeBodySchema',
-        action: 'returnCodeAction',
-        category: 'cli',
-    },
-    {
-        path: 'integrate_ci',
-        schema: 'integrateCIBodySchema',
-        action: 'integrateCiAction',
-        category: 'ci',
-    },
-
-    // ========== Flow Control ==========
-    {
-        path: 'variable',
-        schema: 'variableBodySchema',
-        action: 'variableAction',
-        category: 'flow_control',
-    },
-    {
-        path: 'conditional',
-        schema: 'conditionalBodySchema',
-        action: 'conditionalAction',
-        category: 'logic',
-    },
-    {
-        path: 'switch',
-        schema: 'switchBodySchema',
-        action: 'switchAction',
-        category: 'logic',
-    },
-    {
-        path: 'loop',
-        schema: 'loopBodySchema',
-        action: 'loopAction',
-        category: 'flow_control',
-    },
-    {
-        path: 'branch',
-        schema: 'branchBodySchema',
-        action: 'branchAction',
-        category: 'flow_control',
-    },
-    {
-        path: 'switch',
-        schema: 'switchBodySchema',
-        action: 'switchAction',
-        category: 'flow_control',
-    },
-    {
-        path: 'flow_control',
-        schema: 'flowControlBodySchema',
-        action: 'flowControlAction',
-        category: 'flow_control',
-    },
-    {
-        path: 'transform',
-        schema: 'transformBodySchema',
-        action: 'transformAction',
-        category: 'flow_control',
-    },
-    {
-        path: 'backend_js',
-        schema: 'backendJsBodySchema',
-        action: 'backendJsAction',
-        category: 'flow_control',
-    },
-    {
-        path: 'fail_flow',
-        schema: 'failFlowBodySchema',
-        action: 'failFlowAction',
-        category: 'flow_control',
-    },
-    {
-        path: 'component',
-        schema: 'componentBodySchema',
-        action: 'componentAction',
-        category: 'flow_control',
-    },
-    {
-        path: 'input',
-        schema: 'inputBodySchema',
-        action: 'inputAction',
-        category: 'flow_control',
-    },
-    {
-        path: 'output',
-        schema: 'outputBodySchema',
-        action: 'outputAction',
-        category: 'flow_control',
-    },
-
-    // ========== AI Integration (LLM) ==========
-    {
-        path: 'call_llm',
-        schema: 'callLlmBodySchema',
-        action: 'callLlmAction',
-        category: 'llm_ai',
-    },
-    {
-        path: 'generate_data',
-        schema: 'generateDataBodySchema',
-        action: 'generateDataAction',
-        category: 'llm_ai',
-    },
-    {
-        path: 'validate_semantic',
-        schema: 'validateSemanticBodySchema',
-        action: 'validateSemanticAction',
-        category: 'llm_ai',
-    },
-    {
-        path: 'extract_dom_context',
-        schema: 'extractDomContextBodySchema',
-        action: 'extractDomContextAction',
-        category: 'llm_ai',
-    },
-    {
-        path: 'chain_of_thought',
-        schema: 'chainOfThoughtBodySchema',
-        action: 'chainOfThoughtAction',
-        category: 'llm_ai',
-    },
-    {
-        path: 'smart_selector',
-        schema: 'smartSelectorBodySchema',
-        action: 'smartSelectorAction',
-        category: 'llm_ai',
-    },
-    {
-        path: 'csp_validator',
-        schema: 'cspValidatorBodySchema',
-        action: 'cspValidatorAction',
-        category: 'security',
-    },
-    {
-        path: 'header_auditor',
-        schema: 'headerAuditorBodySchema',
-        action: 'headerAuditorAction',
-        category: 'security',
-    },
-    {
-        path: 'dom_sanitizer',
-        schema: 'domSanitizerBodySchema',
-        action: 'domSanitizerAction',
-        category: 'security',
-    },
-    {
-        path: 'audit_policy',
-        schema: 'auditPolicyBodySchema',
-        action: 'auditPolicyAction',
-        category: 'security',
-    },
-    {
-        path: 'sensitive_data_monitor',
-        schema: 'sensitiveDataMonitorBodySchema',
-        action: 'sensitiveDataMonitorAction',
-        category: 'security',
-    },
-];
+// Append aliases
+for (const [aliasPath, targetType] of Object.entries(ROUTE_ALIASES)) {
+    const target = ROUTE_REGISTRY[targetType];
+    if (target) {
+        actionRoutes.push({
+            path: aliasPath,
+            schema: target.schema,
+            action: toActionName(targetType),
+            category: target.category,
+        });
+    }
+}
 
 // ==========================================================
 // DYNAMIC ROUTE GENERATION
