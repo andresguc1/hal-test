@@ -29,14 +29,32 @@ export const SelectorResultPanel = ({ selectorMeta, onApplyAlternative }) => {
       badgeClass: "bg-violet-500/15 text-violet-400 border border-violet-500/20",
       isPlaywright: true,
     },
-    playwrightText: {
-      label: "getByText",
+    playwrightLabel: {
+      label: "getByLabel",
       badge: t("picker.badge_pw", "⚡ PW"),
       badgeClass: "bg-violet-500/15 text-violet-400 border border-violet-500/20",
       isPlaywright: true,
     },
-    playwrightLabel: {
+    playwrightPlaceholder: {
       label: "getByPlaceholder",
+      badge: t("picker.badge_pw", "⚡ PW"),
+      badgeClass: "bg-violet-500/15 text-violet-400 border border-violet-500/20",
+      isPlaywright: true,
+    },
+    playwrightAltText: {
+      label: "getByAltText",
+      badge: t("picker.badge_pw", "⚡ PW"),
+      badgeClass: "bg-violet-500/15 text-violet-400 border border-violet-500/20",
+      isPlaywright: true,
+    },
+    playwrightTitle: {
+      label: "getByTitle",
+      badge: t("picker.badge_pw", "⚡ PW"),
+      badgeClass: "bg-violet-500/15 text-violet-400 border border-violet-500/20",
+      isPlaywright: true,
+    },
+    playwrightText: {
+      label: "getByText",
       badge: t("picker.badge_pw", "⚡ PW"),
       badgeClass: "bg-violet-500/15 text-violet-400 border border-violet-500/20",
       isPlaywright: true,
@@ -77,6 +95,12 @@ export const SelectorResultPanel = ({ selectorMeta, onApplyAlternative }) => {
       badgeClass: "bg-rose-500/15 text-rose-400 border border-rose-500/20",
       isPlaywright: false,
     },
+    xpath: {
+      label: "XPath",
+      badge: t("picker.badge_fragile", "⚠ Fragile"),
+      badgeClass: "bg-amber-500/15 text-amber-400 border border-amber-500/20",
+      isPlaywright: false,
+    },
   };
 
   const candidates = Object.entries(selectorMeta.candidates)
@@ -114,6 +138,7 @@ export const SelectorResultPanel = ({ selectorMeta, onApplyAlternative }) => {
   const typeLabel =
     TYPE_META[selectorMeta.selectorType]?.label || selectorMeta.selectorType;
   const alternativeCount = candidates.length - 1;
+  const isAmbiguous = selectorMeta.ambiguous || false;
 
   return (
     <div className="mt-1.5 rounded-lg border border-indigo-500/20 bg-indigo-500/5 overflow-hidden text-xs">
@@ -137,7 +162,12 @@ export const SelectorResultPanel = ({ selectorMeta, onApplyAlternative }) => {
           <span className="text-slate-500 font-mono shrink-0">
             &middot; {typeLabel}
           </span>
-          {alternativeCount > 0 && (
+          {isAmbiguous && (
+            <span className="text-[9px] text-amber-400 shrink-0">
+              ⚠ Ambiguous
+            </span>
+          )}
+          {!isAmbiguous && alternativeCount > 0 && (
             <span className="ml-1 text-[9px] text-indigo-500 shrink-0">
               +{alternativeCount} {t("picker.alternatives_short", "alt")}
             </span>

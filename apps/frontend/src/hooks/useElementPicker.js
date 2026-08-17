@@ -7,7 +7,7 @@ import { NODE_STATES } from "../components/hooks/flowStyles";
 export const useElementPicker = ({
   selectedAction,
   updateNodeState,
-  updateNodeConfiguration,
+  _updateNodeConfiguration,
   activeBrowserId,
   setActiveBrowserId,
   nodes,
@@ -19,7 +19,7 @@ export const useElementPicker = ({
   const { t } = useTranslation();
   const [pickingField, setPickingField] = useState("selector");
   const lastPickIdRef = useRef(null);
-  const lastPickedTargetRef = useRef(null);
+  const activePickSession = useRef(null);
 
   const setNestedValue = useCallback((obj, path, value) => {
     const keys = path.split(".");
@@ -36,15 +36,16 @@ export const useElementPicker = ({
   }, []);
 
   const handleCancelPicking = useCallback(async () => {
-    if (selectedAction) {
-      updateNodeState(selectedAction.nodeId, NODE_STATES.DEFAULT, {
+    const targetNodeId = activePickSession.current?.nodeId || selectedAction?.nodeId;
+    if (targetNodeId) {
+      updateNodeState(targetNodeId, NODE_STATES.DEFAULT, {
         pickingField: null,
       });
     }
 
     setPickingField("selector");
     lastPickIdRef.current = null;
-    lastPickedTargetRef.current = null;
+    activePickSession.current = null;
 
     try {
       await api.post("/inspector/stop", { browserId: activeBrowserId || null });
@@ -67,6 +68,12 @@ export const useElementPicker = ({
 
       console.log("[useElementPicker] 📍 Starting picker for field:", fieldKey);
       setPickingField(fieldKey);
+
+      activePickSession.current = {
+        nodeId: selectedAction.nodeId,
+        field: fieldKey,
+        pickId: null,
+      };
 
       updateNodeState(selectedAction.nodeId, NODE_STATES.PICKING, {
         pickingField: fieldKey,
@@ -231,6 +238,7 @@ export const useElementPicker = ({
         toast.error(error.message || "Failed to start inspector");
         if (selectedAction)
           updateNodeState(selectedAction.nodeId, NODE_STATES.DEFAULT);
+        activePickSession.current = null;
       }
     },
     [
@@ -254,6 +262,9 @@ export const useElementPicker = ({
       "playwrightTestId",
       "playwrightRole",
       "playwrightLabel",
+      "playwrightPlaceholder",
+      "playwrightAltText",
+      "playwrightTitle",
       "playwrightText",
       "testId",
       "id",
@@ -261,6 +272,7 @@ export const useElementPicker = ({
       "aria",
       "text",
       "cssPath",
+      "xpath",
     ];
 
     for (const type of preferredOrder) {
@@ -291,11 +303,17 @@ export const useElementPicker = ({
         console.warn("[useElementPicker] Missing pickId on element_picked event");
         return;
       }
+
+      if (!activePickSession.current) {
+        console.warn("[useElementPicker] No active pick session for element_picked");
+        return;
+      }
+
+      activePickSession.current.pickId = pickId;
+      const targetNodeId = activePickSession.current.nodeId;
+      const targetField = activePickSession.current.field;
+
       lastPickIdRef.current = pickId;
-      lastPickedTargetRef.current = {
-        nodeId: selectedAction?.nodeId,
-        field: pickingField,
-      };
 
       try {
         const finalSelector = pickBestSelector(data);
@@ -306,81 +324,57 @@ export const useElementPicker = ({
           finalSelector.trim() === ""
         ) {
           toast.error(t("common.selector_empty"));
-          nodes.forEach((n) => {
-            if (n.data?.state === NODE_STATES.PICKING)
-              updateNodeState(n.id, NODE_STATES.DEFAULT);
+          updateNodeState(targetNodeId, NODE_STATES.DEFAULT, {
+            pickingField: null,
           });
+          activePickSession.current = null;
+          setPickingField("selector");
           return;
         }
 
         const trimmedSelector = finalSelector.trim();
-        let updatedAny = false;
 
         setNodes((currNodes) => {
-          const pickingNodes = currNodes.filter(
-            (n) => n.data?.state === NODE_STATES.PICKING,
-          );
-
-          if (pickingNodes.length === 0) return currNodes;
-
-          updatedAny = true;
           return currNodes.map((node) => {
-            if (node.data?.state === NODE_STATES.PICKING) {
-              return {
-                ...node,
-                data: {
-                  ...node.data,
-                  state: NODE_STATES.DEFAULT,
-                  configuration: setNestedValue(
-                    node.data.configuration,
-                    pickingField,
-                    trimmedSelector,
-                  ),
-                  selectorMeta: {
-                    candidates: data.candidates || {},
-                    selectorType: data.selectorType || data.strategy || "unknown",
-                    semanticContext: data.semanticContext || null,
-                    aiOptimized: data.aiOptimized || false,
-                    capturedAt: data.timestamp || new Date().toISOString(),
-                  },
+            if (node.id !== targetNodeId) return node;
+
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                state: NODE_STATES.DEFAULT,
+                configuration: setNestedValue(
+                  node.data.configuration,
+                  targetField,
+                  trimmedSelector,
+                ),
+                selectorMeta: {
+                  candidates: data.candidates || {},
+                  selectorType: data.selectorType || data.strategy || "unknown",
+                  semanticContext: data.semanticContext || null,
+                  aiOptimized: data.aiOptimized || false,
+                  capturedAt: data.timestamp || new Date().toISOString(),
+                  originalSelector: trimmedSelector,
                 },
-              };
-            }
-            return node;
+              },
+            };
           });
         });
 
-        if (updatedAny) {
-          toast.success(t("common.selector_captured"));
-        } else if (selectedAction) {
-          await updateNodeConfiguration(
-            selectedAction.nodeId,
-            setNestedValue(
-              selectedAction.data.configuration,
-              pickingField,
-              trimmedSelector,
-            ),
-          );
-          updateNodeState(selectedAction.nodeId, NODE_STATES.DEFAULT);
-          toast.success(t("common.selector_captured"));
-        }
-
-        await handleCancelPicking();
+        toast.success(t("common.selector_captured"));
       } catch (err) {
         console.error(
           "[useElementPicker] Error processing picked element:",
           err,
         );
         toast.error("Error processing selection");
+      } finally {
+        await handleCancelPicking();
       }
     },
     [
-      nodes,
-      pickingField,
-      updateNodeConfiguration,
       updateNodeState,
       handleCancelPicking,
-      selectedAction,
       setNodes,
       setNestedValue,
       pickBestSelector,
@@ -397,19 +391,16 @@ export const useElementPicker = ({
       );
 
       const pickId = data.pickId;
-      if (!pickId || pickId !== lastPickIdRef.current) {
+      if (!pickId || !activePickSession.current || pickId !== activePickSession.current.pickId) {
         console.warn(
           "[useElementPicker] Stale or mismatched sanitized event, ignoring.",
-          { expected: lastPickIdRef.current, received: pickId },
+          { expected: activePickSession.current?.pickId, received: pickId },
         );
         return;
       }
 
-      const target = lastPickedTargetRef.current;
-      if (!target) {
-        console.warn("[useElementPicker] No picked target to sanitize");
-        return;
-      }
+      const targetNodeId = activePickSession.current.nodeId;
+      const targetField = activePickSession.current.field;
 
       const sanitizedSelector = data.selector;
       if (!sanitizedSelector) return;
@@ -417,22 +408,35 @@ export const useElementPicker = ({
       try {
         setNodes((currNodes) => {
           return currNodes.map((node) => {
-            if (node.id !== target.nodeId) return node;
+            if (node.id !== targetNodeId) return node;
 
             const currentConfig = node.data?.configuration || {};
+            const currentSelector = currentConfig[targetField];
+            const meta = node.data?.selectorMeta || {};
+            const originalSelector = meta.originalSelector;
+
+            if (originalSelector !== undefined && currentSelector !== originalSelector) {
+              console.log(
+                "[useElementPicker] Manual edit detected on selector, preserving user modification.",
+              );
+              toast.info(
+                t("common.selector_ai_skipped", "AI optimization skipped: selector was manually edited"),
+              );
+              return node;
+            }
+
             const updatedConfig = setNestedValue(
               currentConfig,
-              target.field,
+              targetField,
               sanitizedSelector,
             );
 
-            const currentMeta = node.data?.selectorMeta || {};
             const updatedMeta = {
-              ...currentMeta,
+              ...meta,
               aiOptimized: true,
               confidence: data.confidence,
               reasoning: data.reasoning,
-              originalSelector: data.originalSelector || currentMeta.originalSelector,
+              originalSelector: meta.originalSelector || data.originalSelector,
               sanitizedSelector,
             };
 

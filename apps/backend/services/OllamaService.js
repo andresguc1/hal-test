@@ -478,6 +478,8 @@ when the correct result is:
         if (locator.includes('.getByPlaceholder(')) return 'getByPlaceholder';
         if (locator.includes('.getByText(')) return 'getByText';
         if (locator.includes('.getByTestId(')) return 'getByTestId';
+        if (locator.includes('.getByAltText(')) return 'getByAltText';
+        if (locator.includes('.getByTitle(')) return 'getByTitle';
         if (locator.includes('.locator(')) return 'locator';
         if (locator.includes('xpath=')) return 'xpath';
 

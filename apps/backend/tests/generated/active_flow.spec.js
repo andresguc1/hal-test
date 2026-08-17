@@ -2,68 +2,39 @@ import { test } from '@playwright/test';
 
 test(`Flujo Generado Hal-Test`, async ({ page }) => {
     console.log(`🚀 Iniciando ejecución del flujo en javascript...`);
-    // [node_id: starter_launch]
+    // [node_id: node_f02f9efb-6ef7-4fc5-996c-aeefcd5cbd6e]
     await test.step(`Launch Browser`, async () => {
         // Browser managed by runner
     });
 
-    // [node_id: starter_open]
-    await test.step(`Navigate`, async () => {
-        await page.goto(`https://www.saucedemo.com`);
+    // [node_id: node_7b69cdb6-f262-468d-b2b5-5ae8185ebce0]
+    await test.step(`parabank.parasoft.com`, async () => {
+        await page.goto(`https://parabank.parasoft.com/parabank/index.htm`);
     });
 
-    // [node_id: starter_var_user]
-    await test.step(`Set User Role`, async () => {
-        const user_role = "standard_user";
+    // [node_id: node_a740b728-15dd-4694-b67f-4b594f0d3d21]
+    await test.step(`Click Register Button`, async () => {
+        await page.click(`getByRole('link', { name: 'Register' })`);
     });
 
-    // [node_id: starter_switch_role]
-    await test.step(`Select Username`, async () => {
-        switch (value) {
-        case 'option1':
-            // Case body
-            break;
-        default:
-            // Default case
-            break;
-    }
-    });
-
-    // [node_id: sub_type_user]
-    await test.step(`Enter Username`, async () => {
-        await page.fill(`#user-name`, `{{user_role}}`);
-    });
-
-    // [node_id: sub_type_pass]
-    await test.step(`Enter Password`, async () => {
-        await page.fill(`#password`, `secret_sauce`);
-    });
-
-    // [node_id: sub_click]
-    await test.step(`Click Login`, async () => {
-        await page.click(`#login-button`);
-    });
-
-    // [node_id: starter_conditional]
-    await test.step(`Verify User Role`, async () => {
-        if (true) {
-        // Then branch
-    }
-    });
-
-    // [node_id: starter_fail]
-    await test.step(`Unexpected Role`, async () => {
-        throw new Error(`Routed invalid user role branch!`);
-    });
-
-    // [node_id: starter_screenshot]
-    await test.step(`Take Evidence`, async () => {
-        await page.screenshot({ path: 'screenshot_9.png' });
-    });
-
-    // [node_id: starter_close]
-    await test.step(`Complete Tour`, async () => {
+    // [node_id: node_3b2f81b2-b355-471b-b464-4f7e8307679f]
+    await test.step(`Close Browser`, async () => {
         // Browser managed by runner
+    });
+
+    // [node_id: node_712cf7de-42f3-4aa9-ab24-655376e715ef]
+    await test.step(`Click Register`, async () => {
+        await page.click(
+            `form#customerForm > table > tbody > tr:nth-of-type(13) > td:nth-of-type(2) > input`,
+        );
+    });
+
+    // [node_id: node_9e657501-cb5b-49d8-a9de-16630c7facb3]
+    await test.step(`Assert Page Contains Text`, async () => {
+        await expect(page.locator('body')).toContainText(`Welcome`, {
+            ignoreCase: true,
+            timeout: 0,
+        });
     });
     console.log(`✅ Flujo completado con éxito.`);
 });

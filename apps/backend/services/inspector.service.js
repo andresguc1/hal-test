@@ -9,6 +9,21 @@ import ollamaService from './OllamaService.js';
 const injectInspectorUI = () => {
     const HIGHLIGHT_ID = 'haltest-inspector-highlight';
 
+    const IMPLICIT_ROLE_MAP = {
+        BUTTON: 'button',
+        A: 'link',
+        INPUT: 'textbox',
+        SELECT: 'combobox',
+        TEXTAREA: 'textbox',
+        H1: 'heading',
+        H2: 'heading',
+        H3: 'heading',
+        NAV: 'navigation',
+        MAIN: 'main',
+        HEADER: 'banner',
+        FOOTER: 'contentinfo',
+    };
+
     if (window.__haltestInspectorActive) {
         console.log('[Inspector] Inspector already active, resetting...');
     }
@@ -101,9 +116,49 @@ const injectInspectorUI = () => {
         if (el.tagName === 'INPUT' && el.getAttribute('name')) {
             candidates.name = `input[name="${el.getAttribute('name')}"]`;
         }
+
         const placeholder = el.getAttribute('placeholder');
         if (placeholder && ['INPUT', 'TEXTAREA'].includes(el.tagName)) {
-            candidates.playwrightLabel = `getByPlaceholder('${escapeSelectorValue(placeholder)}')`;
+            candidates.playwrightPlaceholder = `getByPlaceholder('${escapeSelectorValue(placeholder)}')`;
+        }
+
+        let labelText = null;
+        if (['INPUT', 'SELECT', 'TEXTAREA'].includes(el.tagName)) {
+            const elId = el.getAttribute('id');
+            if (elId) {
+                try {
+                    const label = document.querySelector(`label[for="${window.CSS.escape(elId)}"]`);
+                    if (label) {
+                        labelText = label.innerText.trim();
+                    }
+                } catch (e) {
+                    // ignore selector errors
+                }
+            }
+            if (!labelText) {
+                const parentLabel = el.closest?.('label');
+                if (parentLabel) {
+                    labelText = parentLabel.innerText
+                        .trim()
+                        .replace(el.value || el.innerText || '', '')
+                        .trim();
+                }
+            }
+        }
+        if (labelText) {
+            candidates.playwrightLabel = `getByLabel('${escapeSelectorValue(labelText)}')`;
+        }
+
+        if (el.tagName === 'IMG' && el.hasAttribute('alt')) {
+            const altText = el.getAttribute('alt');
+            if (altText) {
+                candidates.playwrightAltText = `getByAltText('${escapeSelectorValue(altText)}')`;
+            }
+        }
+
+        const title = el.getAttribute('title');
+        if (title && !candidates.playwrightLabel && !candidates.playwrightRole) {
+            candidates.playwrightTitle = `getByTitle('${escapeSelectorValue(title)}')`;
         }
 
         if (['BUTTON', 'A', 'SPAN', 'LI'].includes(el.tagName)) {
@@ -124,23 +179,115 @@ const injectInspectorUI = () => {
 
         candidates.cssPath = getCssPath(el);
 
-        if (candidates.playwrightTestId)
+        if (!candidates.xpath) {
+            candidates.xpath = getCssPath(el);
+        }
+
+        if (candidates.playwrightTestId) {
             return {
                 best: candidates.playwrightTestId,
                 type: 'playwright_test_id',
                 all: candidates,
             };
-        if (candidates.playwrightRole)
+        }
+        if (candidates.playwrightRole) {
+            const matchCount = countRoleMatches(
+                candidates.playwrightRole.match(/getByRole\('([^']+)'/)?.[1],
+                candidates.playwrightRole.match(/name:\s*['"]([^'"]+)['"]/)?.[1],
+            );
+            if (matchCount > 1) {
+                const context = findStableContext(el);
+                if (context) {
+                    candidates.playwrightRole = wrapWithContext(
+                        candidates.playwrightRole.replace('page.', ''),
+                        context,
+                    );
+                    candidates.ambiguous = true;
+                    candidates.context = context;
+                }
+            }
             return { best: candidates.playwrightRole, type: 'playwright_role', all: candidates };
+        }
+        if (candidates.playwrightLabel) {
+            const labelValue = candidates.playwrightLabel.match(
+                /getByLabel\(['"]([^'"]+)['"]\)/,
+            )?.[1];
+            const matchCount = countLabelMatches(labelValue);
+            if (matchCount > 1) {
+                const context = findStableContext(el);
+                if (context) {
+                    candidates.playwrightLabel = wrapWithContext(
+                        candidates.playwrightLabel.replace('page.', ''),
+                        context,
+                    );
+                    candidates.ambiguous = true;
+                    candidates.context = context;
+                }
+            }
+            return { best: candidates.playwrightLabel, type: 'playwright_label', all: candidates };
+        }
         if (candidates.testId) return { best: candidates.testId, type: 'test_id', all: candidates };
         if (candidates.id) return { best: candidates.id, type: 'id', all: candidates };
         if (candidates.name) return { best: candidates.name, type: 'name', all: candidates };
-        if (candidates.playwrightLabel)
-            return { best: candidates.playwrightLabel, type: 'playwright_label', all: candidates };
+        if (candidates.playwrightPlaceholder) {
+            const placeholderValue = candidates.playwrightPlaceholder.match(
+                /getByPlaceholder\(['"]([^'"]+)['"]\)/,
+            )?.[1];
+            const matchCount = countPlaceholderMatches(placeholderValue);
+            if (matchCount > 1) {
+                candidates.playwrightPlaceholder = candidates.playwrightPlaceholder.replace(
+                    'page.',
+                    '',
+                );
+                candidates.ambiguous = true;
+            }
+            return {
+                best: candidates.playwrightPlaceholder,
+                type: 'playwright_placeholder',
+                all: candidates,
+            };
+        }
         if (candidates.aria)
             return { best: candidates.aria, type: 'accessibility', all: candidates };
-        if (candidates.playwrightText)
+        if (candidates.playwrightAltText) {
+            const altValue = candidates.playwrightAltText.match(
+                /getByAltText\(['"]([^'"]+)['"]\)/,
+            )?.[1];
+            const matchCount = countAltTextMatches(altValue);
+            if (matchCount > 1) {
+                candidates.playwrightAltText = candidates.playwrightAltText.replace('page.', '');
+                candidates.ambiguous = true;
+            }
+            return {
+                best: candidates.playwrightAltText,
+                type: 'playwright_alt_text',
+                all: candidates,
+            };
+        }
+        if (candidates.playwrightTitle) {
+            const titleValue = candidates.playwrightTitle.match(
+                /getByTitle\(['"]([^'"]+)['"]\)/,
+            )?.[1];
+            const matchCount = countTitleMatches(titleValue);
+            if (matchCount > 1) {
+                candidates.playwrightTitle = candidates.playwrightTitle.replace('page.', '');
+                candidates.ambiguous = true;
+            }
+            return {
+                best: candidates.playwrightTitle,
+                type: 'playwright_title',
+                all: candidates,
+            };
+        }
+        if (candidates.playwrightText) {
+            const textValue = candidates.playwrightText.match(/getByText\(['"]([^'"]+)['"]\)/)?.[1];
+            const matchCount = countTextMatches(textValue);
+            if (matchCount > 1) {
+                candidates.playwrightText = candidates.playwrightText.replace('page.', '');
+                candidates.ambiguous = true;
+            }
             return { best: candidates.playwrightText, type: 'playwright_text', all: candidates };
+        }
         if (candidates.text) return { best: candidates.text, type: 'content', all: candidates };
 
         return { best: candidates.cssPath, type: 'path', all: candidates };
@@ -167,6 +314,209 @@ const injectInspectorUI = () => {
             el = el.parentNode;
         }
         return path.join(' > ');
+    }
+
+    function getAccessibleName(el) {
+        if (!(el instanceof Element)) return '';
+        const ariaLabel = el.getAttribute('aria-label');
+        if (ariaLabel) return ariaLabel.trim();
+
+        const labelledBy = el.getAttribute('aria-labelledby');
+        if (labelledBy) {
+            const parts = labelledBy.split(/\s+/);
+            const text = parts
+                .map((id) => {
+                    const node = document.getElementById(id);
+                    return node ? node.innerText.trim() : '';
+                })
+                .filter(Boolean)
+                .join(' ');
+            if (text) return text;
+        }
+
+        const role =
+            el.getAttribute('role') || IMPLICIT_ROLE_MAP[el.tagName] || el.tagName.toLowerCase();
+        if (
+            [
+                'button',
+                'link',
+                'textbox',
+                'combobox',
+                'checkbox',
+                'radio',
+                'heading',
+                'listitem',
+                'menuitem',
+            ].includes(role)
+        ) {
+            const text = el.innerText.trim();
+            if (text) return text;
+        }
+
+        const placeholder = el.getAttribute('placeholder');
+        if (placeholder && (role === 'textbox' || role === 'combobox')) {
+            return placeholder;
+        }
+
+        const title = el.getAttribute('title');
+        if (title) return title;
+
+        return '';
+    }
+
+    function isElementVisible(el) {
+        if (!(el instanceof Element)) return false;
+        const rect = el.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return false;
+        const style = window.getComputedStyle(el);
+        return style.visibility !== 'hidden' && style.display !== 'none' && style.opacity !== '0';
+    }
+
+    function countRoleMatches(role, name) {
+        if (!role || !name) return 0;
+        const lowerName = name.toLowerCase();
+        const elements = document.querySelectorAll('*');
+        let count = 0;
+        for (const el of elements) {
+            if (!isElementVisible(el)) continue;
+            const elRole =
+                el.getAttribute('role') ||
+                IMPLICIT_ROLE_MAP[el.tagName] ||
+                el.tagName.toLowerCase();
+            if (elRole !== role) continue;
+            const accessibleName = getAccessibleName(el);
+            if (accessibleName.toLowerCase() === lowerName) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    function countTextMatches(text) {
+        if (!text) return 0;
+        const elements = document.querySelectorAll('*');
+        let count = 0;
+        for (const el of elements) {
+            if (!isElementVisible(el)) continue;
+            if (el.children.length === 0) {
+                const nodeText = el.innerText.trim();
+                if (nodeText === text) {
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
+
+    function countPlaceholderMatches(placeholder) {
+        if (!placeholder) return 0;
+        const elements = document.querySelectorAll('input, textarea, select');
+        let count = 0;
+        for (const el of elements) {
+            if (!isElementVisible(el)) continue;
+            if (el.getAttribute('placeholder') === placeholder) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    function countLabelMatches(label) {
+        if (!label) return 0;
+        const lowerLabel = label.toLowerCase();
+        const elements = document.querySelectorAll('input, select, textarea');
+        let count = 0;
+        for (const el of elements) {
+            if (!isElementVisible(el)) continue;
+            const elId = el.getAttribute('id');
+            if (elId) {
+                try {
+                    const labelEl = document.querySelector(
+                        `label[for="${window.CSS.escape(elId)}"]`,
+                    );
+                    if (labelEl && labelEl.innerText.trim().toLowerCase() === lowerLabel) {
+                        count++;
+                        continue;
+                    }
+                } catch (e) {
+                    // ignore
+                }
+            }
+            const parentLabel = el.closest?.('label');
+            if (parentLabel) {
+                const labelText = parentLabel.innerText
+                    .trim()
+                    .replace(el.value || el.innerText || '', '')
+                    .trim();
+                if (labelText.toLowerCase() === lowerLabel) {
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
+
+    function countAltTextMatches(altText) {
+        if (!altText) return 0;
+        const elements = document.querySelectorAll('img[alt]');
+        let count = 0;
+        for (const el of elements) {
+            if (!isElementVisible(el)) continue;
+            if (el.getAttribute('alt') === altText) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    function countTitleMatches(title) {
+        if (!title) return 0;
+        const elements = document.querySelectorAll('[title]');
+        let count = 0;
+        for (const el of elements) {
+            if (!isElementVisible(el)) continue;
+            if (el.getAttribute('title') === title) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    function findStableContext(el) {
+        if (!el) return null;
+        const contextRoles = [
+            'dialog',
+            'form',
+            'fieldset',
+            'navigation',
+            'main',
+            'header',
+            'footer',
+        ];
+        let current = el.parentElement;
+        while (current && current !== document.body) {
+            const role =
+                current.getAttribute('role') ||
+                IMPLICIT_ROLE_MAP[current.tagName] ||
+                current.tagName.toLowerCase();
+            if (contextRoles.includes(role)) {
+                const contextName = getAccessibleName(current);
+                if (contextName) {
+                    return { role, name: contextName };
+                }
+                return { role, name: null };
+            }
+            current = current.parentElement;
+        }
+        return null;
+    }
+
+    function wrapWithContext(locator, context) {
+        if (!context) return locator;
+        if (context.name) {
+            return `page.getByRole('${context.role}', { name: '${escapeSelectorValue(context.name)}' }).${locator}`;
+        }
+        return `page.locator('[role="${context.role}"]').${locator}`;
     }
 
     function onMouseOver(e) {
@@ -227,6 +577,8 @@ const injectInspectorUI = () => {
                 strategy: result.type,
                 htmlContext: el.innerText ? el.innerText.trim().substring(0, 400) : null,
                 semanticContext,
+                ambiguous: result.ambiguous || false,
+                locatorContext: result.context || null,
                 timestamp: new Date().toISOString(),
             });
         } else {
@@ -264,7 +616,7 @@ export async function startInspector(page) {
                 JSON.stringify(data, null, 2),
             );
 
-            const pickId = `${Date.now()}-${Math.random()}`;
+            const pickId = data.pickId || `${Date.now()}-${Math.random()}`;
 
             emitElementPicked({ ...data, pickId });
 
