@@ -914,7 +914,7 @@ export const updateNodeDefinitions = (_categoriesData, definitionsData) => {
         const category = NODE_CATEGORIES[frontendCat];
         NODE_TYPE_MAP[nodeType] = {
             category: frontendCat,
-            color: def.color || category?.color || "slate",
+            color: category?.color || def.color || "slate",
             icon: resolveIcon(def.icon) || category?.icon || Box,
             i18nKey: `nodes.labels.${nodeType}`,
             label:
