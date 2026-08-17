@@ -132,6 +132,9 @@ async function recoverFromCorruption(sequelizeInstance) {
         await newSequelize.authenticate();
         console.log('[Database] New database connection established after recovery');
 
+        // Update the module-level sequelize so all imports see the new instance
+        sequelize = newSequelize;
+
         return newSequelize;
     } catch (e) {
         console.error('[Database] Recovery failed:', e.message);

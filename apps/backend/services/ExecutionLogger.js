@@ -2,39 +2,11 @@ import { Run, StepResult } from '../database/init.js';
 import fs from 'fs/promises';
 import path from 'path';
 import { STORAGE_RUNS_DIR } from '../config/paths.js';
-import { verifyIntegrity, recoverFromCorruption, createBackup } from '../database/index.js';
+import { recoverFromCorruption, createBackup } from '../database/index.js';
 
 class ExecutionLogger {
-    async _ensureDatabaseHealthy() {
-        try {
-            const sequelizeModule = await import('../database/index.js');
-            const healthy = await verifyIntegrity(sequelizeModule.default);
-            if (!healthy) {
-                console.warn(
-                    '[ExecutionLogger] Database integrity check failed, attempting recovery...',
-                );
-                const recovered = await recoverFromCorruption(sequelizeModule.default);
-                if (recovered) {
-                    console.log('[ExecutionLogger] Database recovered successfully');
-                    return true;
-                }
-                console.error('[ExecutionLogger] Database recovery failed');
-                return false;
-            }
-            return true;
-        } catch (e) {
-            console.error('[ExecutionLogger] Health check error:', e.message);
-            return false;
-        }
-    }
-
     async startRun(flowId, metadata = {}) {
         try {
-            const healthy = await this._ensureDatabaseHealthy();
-            if (!healthy) {
-                console.error('[ExecutionLogger] Cannot start run: database unhealthy');
-                return null;
-            }
 
             const run = await Run.create({
                 flow_id: flowId,

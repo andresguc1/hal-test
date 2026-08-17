@@ -278,9 +278,10 @@ router.get('/projects', async (req, res) => {
 
 // Create project
 router.post('/projects', async (req, res) => {
-    const transaction = await sequelize.transaction();
+    let transaction;
     let transactionCommitted = false;
     try {
+        transaction = await sequelize.transaction();
         const { name, description, nodes, edges } = req.body;
         let userId = req.user ? req.user.id : null;
 
@@ -387,8 +388,9 @@ router.post('/projects', async (req, res) => {
 
 // Import / Clone flow from another project as a Subflow Component
 router.post('/projects/:projectId/flows/import-subflow', async (req, res) => {
-    const transaction = await sequelize.transaction();
+    let transaction;
     try {
+        transaction = await sequelize.transaction();
         const { projectId } = req.params;
         const { sourceFlowId, customName, flowJson } = req.body || {};
 
@@ -628,9 +630,10 @@ router.delete('/projects/:projectId/collaborators/:userId', async (req, res) => 
 
 // Create flow
 router.post('/projects/:projectId/flows', async (req, res) => {
-    const transaction = await sequelize.transaction();
+    let transaction;
     let transactionCommitted = false;
     try {
+        transaction = await sequelize.transaction();
         const { projectId } = req.params;
         const { name, type, parentId, nodes, edges } = req.body;
 
@@ -825,9 +828,10 @@ const deepClonePayload = (obj) => {
 
 // Update flow (syncing nodes/edges)
 router.put('/projects/:projectId/flows/:flowId', async (req, res) => {
-    const transaction = await sequelize.transaction();
+    let transaction;
     let transactionCommitted = false;
     try {
+        transaction = await sequelize.transaction();
         const { projectId, flowId } = req.params;
 
         // Deep clone payload to sanitize input and prevent in-memory reference sharing across models
@@ -949,8 +953,9 @@ router.put('/projects/:projectId/flows/:flowId', async (req, res) => {
 
 // Bulk reorder flows
 router.put('/projects/:projectId/flows/reorder', async (req, res) => {
-    const transaction = await sequelize.transaction();
+    let transaction;
     try {
+        transaction = await sequelize.transaction();
         const { projectId } = req.params;
         const { orders } = req.body; // Array of { id: string, order: number }
 
