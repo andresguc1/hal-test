@@ -3,62 +3,80 @@
   "name": "Wait & Timing",
   "version": "1.0.0",
   "description": "Wait, timing, and synchronization actions",
+  "category": "wait_timing",
+  "color": "amber",
   "nodes": [
     {
-      "name": "wait_for_element",
+      "type": "wait_for_element",
       "label": "Wait for Element",
       "category": "wait_timing",
       "color": "amber",
-      "icon": "Clock"
+      "icon": "Clock",
+      "handler": "./handlers/wait_for_element.js",
+      "schema": "./schemas/wait_for_element.js"
     },
     {
-      "name": "wait_visible",
+      "type": "wait_visible",
       "label": "Wait Visible",
       "category": "wait_timing",
       "color": "amber",
-      "icon": "Eye"
+      "icon": "Eye",
+      "handler": "./handlers/wait_visible.js",
+      "schema": "./schemas/wait_visible.js"
     },
     {
-      "name": "wait_navigation",
+      "type": "wait_navigation",
       "label": "Wait Navigation",
       "category": "wait_timing",
       "color": "amber",
-      "icon": "Loader"
+      "icon": "Loader",
+      "handler": "./handlers/wait_navigation.js",
+      "schema": "./schemas/wait_navigation.js"
     },
     {
-      "name": "wait_network",
+      "type": "wait_network",
       "label": "Wait Network",
       "category": "wait_timing",
       "color": "amber",
-      "icon": "Timer"
+      "icon": "Wifi",
+      "handler": "./handlers/wait_network.js",
+      "schema": "./schemas/wait_network.js"
     },
     {
-      "name": "wait_conditional",
+      "type": "wait_conditional",
       "label": "Wait Conditional",
       "category": "wait_timing",
       "color": "amber",
-      "icon": "Clock"
+      "icon": "Timer",
+      "handler": "./handlers/wait_conditional.js",
+      "schema": "./schemas/wait_conditional.js"
     },
     {
-      "name": "pause",
+      "type": "pause",
       "label": "Pause",
       "category": "wait_timing",
       "color": "amber",
-      "icon": "Timer"
+      "icon": "Pause",
+      "handler": "./handlers/pause.js",
+      "schema": "./schemas/pause.js"
     },
     {
-      "name": "wait_for_response",
+      "type": "wait_for_response",
       "label": "Wait for Response",
       "category": "wait_timing",
       "color": "amber",
-      "icon": "Loader"
+      "icon": "ArrowDownToLine",
+      "handler": "./handlers/wait_for_response.js",
+      "schema": "./schemas/wait_for_response.js"
     },
     {
-      "name": "wait_for_request",
+      "type": "wait_for_request",
       "label": "Wait for Request",
       "category": "wait_timing",
       "color": "amber",
-      "icon": "Eye"
+      "icon": "ArrowUpFromLine",
+      "handler": "./handlers/wait_for_request.js",
+      "schema": "./schemas/wait_for_request.js"
     }
   ]
 }

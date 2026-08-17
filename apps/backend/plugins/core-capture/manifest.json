@@ -1,7 +1,46 @@
 {
   "id": "core-capture",
   "name": "Capture & Diagnostics",
+  "version": "1.0.0",
+  "description": "Screenshot, DOM capture, error logging, and event listening",
   "category": "capture",
   "color": "violet",
-  "icons": ["Camera", "Download", "AlertTriangle", "Eye"]
+  "nodes": [
+    {
+      "type": "take_screenshot",
+      "label": "Take Screenshot",
+      "category": "capture",
+      "color": "violet",
+      "icon": "Camera",
+      "handler": "./handlers/take_screenshot.js",
+      "schema": "./schemas/take_screenshot.schema.js"
+    },
+    {
+      "type": "save_dom",
+      "label": "Save DOM",
+      "category": "capture",
+      "color": "violet",
+      "icon": "Download",
+      "handler": "./handlers/save_dom.js",
+      "schema": "./schemas/save_dom.schema.js"
+    },
+    {
+      "type": "log_errors",
+      "label": "Log Errors",
+      "category": "capture",
+      "color": "violet",
+      "icon": "Bug",
+      "handler": "./handlers/log_errors.js",
+      "schema": "./schemas/log_errors.schema.js"
+    },
+    {
+      "type": "listen_events",
+      "label": "Listen Events",
+      "category": "capture",
+      "color": "violet",
+      "icon": "Radio",
+      "handler": "./handlers/listen_events.js",
+      "schema": "./schemas/listen_events.schema.js"
+    }
+  ]
 }

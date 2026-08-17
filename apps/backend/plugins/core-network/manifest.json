@@ -1,7 +1,91 @@
 {
   "id": "core-network",
   "name": "Network Control",
+  "version": "1.0.0",
+  "description": "Request interception, mocking, routing, and network conditions",
   "category": "network",
   "color": "cyan",
-  "icons": ["Wifi", "Server", "Shield"]
+  "nodes": [
+    {
+      "type": "mock_response",
+      "label": "Mock Response",
+      "category": "network",
+      "color": "cyan",
+      "icon": "Server",
+      "handler": "./handlers/mock_response.handler.js",
+      "schema": "./schemas/mock_response.schema.js"
+    },
+    {
+      "type": "intercept_request",
+      "label": "Intercept Request",
+      "category": "network",
+      "color": "cyan",
+      "icon": "Shield",
+      "handler": "./handlers/intercept_request.handler.js",
+      "schema": "./schemas/intercept_request.schema.js"
+    },
+    {
+      "type": "manage_cookies",
+      "label": "Manage Cookies",
+      "category": "network",
+      "color": "cyan",
+      "icon": "Cookie",
+      "handler": "./handlers/manage_cookies.handler.js",
+      "schema": "./schemas/manage_cookies.schema.js"
+    },
+    {
+      "type": "set_network_conditions",
+      "label": "Set Network Conditions",
+      "category": "network",
+      "color": "cyan",
+      "icon": "Gauge",
+      "handler": "./handlers/set_network_conditions.handler.js",
+      "schema": "./schemas/set_network_conditions.schema.js"
+    },
+    {
+      "type": "configure_route",
+      "label": "Configure Route",
+      "category": "network",
+      "color": "cyan",
+      "icon": "Route",
+      "handler": "./handlers/configure_route.handler.js",
+      "schema": "./schemas/configure_route.schema.js"
+    },
+    {
+      "type": "clear_all_mocks",
+      "label": "Clear All Mocks",
+      "category": "network",
+      "color": "cyan",
+      "icon": "Trash2",
+      "handler": "./handlers/clear_all_mocks.handler.js",
+      "schema": "./schemas/clear_all_mocks.schema.js"
+    },
+    {
+      "type": "wait_network_match",
+      "label": "Wait Network Match",
+      "category": "network",
+      "color": "cyan",
+      "icon": "Target",
+      "handler": "./handlers/wait_network_match.handler.js",
+      "schema": "./schemas/wait_network_match.schema.js"
+    },
+    {
+      "type": "block_resource",
+      "label": "Block Resource",
+      "category": "network",
+      "color": "cyan",
+      "icon": "Ban",
+      "handler": "./handlers/block_resource.handler.js",
+      "schema": "./schemas/block_resource.schema.js"
+    },
+    {
+      "type": "modify_headers",
+      "label": "Modify Headers",
+      "category": "network",
+      "color": "cyan",
+      "icon": "Settings",
+      "handler": "./handlers/modify_headers.handler.js",
+      "schema": "./schemas/modify_headers.schema.js"
+    }
+  ]
 }

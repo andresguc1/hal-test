@@ -3,34 +3,44 @@
   "name": "Navigation",
   "version": "1.0.0",
   "description": "Core browser navigation actions",
+  "category": "navigation",
+  "color": "indigo",
   "nodes": [
     {
-      "name": "open_url",
+      "type": "open_url",
       "label": "Open URL",
       "category": "navigation",
       "color": "indigo",
-      "icon": "Compass"
+      "icon": "Compass",
+      "handler": "./handlers/open_url.js",
+      "schema": "./schemas/open_url.js"
     },
     {
-      "name": "go_back",
+      "type": "go_back",
       "label": "Go Back",
       "category": "navigation",
       "color": "indigo",
-      "icon": "ArrowLeft"
+      "icon": "ArrowLeft",
+      "handler": "./handlers/go_back.js",
+      "schema": "./schemas/go_back.js"
     },
     {
-      "name": "go_forward",
+      "type": "go_forward",
       "label": "Go Forward",
       "category": "navigation",
       "color": "indigo",
-      "icon": "ArrowRight"
+      "icon": "ArrowRight",
+      "handler": "./handlers/go_forward.js",
+      "schema": "./schemas/go_forward.js"
     },
     {
-      "name": "reload_page",
+      "type": "reload_page",
       "label": "Reload Page",
       "category": "navigation",
       "color": "indigo",
-      "icon": "RefreshCw"
+      "icon": "RefreshCw",
+      "handler": "./handlers/reload_page.js",
+      "schema": "./schemas/reload_page.js"
     }
   ]
 }

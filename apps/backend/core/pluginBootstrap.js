@@ -3,14 +3,11 @@ import { nodeRegistry } from './NodeRegistry.js';
 /**
  * Registers all built-in plugin handlers into the NodeRegistry.
  * Called at app startup to make handlers available to ActionRouter.
- * Each handler is a thin proxy to the existing action.controller.js exports.
+ * Each handler is a standalone module imported from its plugin directory.
  */
 
-// We dynamically import each handler and schema, then register them.
-// This keeps startup fast and avoids loading unused modules.
-
 const BUILTIN_PLUGINS = [
-    // ── Browser ──
+    // ── Browser (4) ──
     {
         type: 'launch_browser',
         category: 'browser_management',
@@ -48,7 +45,7 @@ const BUILTIN_PLUGINS = [
         schemaPath: '../plugins/core-browser/schemas/resize_viewport.js',
     },
 
-    // ── Navigation ──
+    // ── Navigation (4) ──
     {
         type: 'open_url',
         category: 'navigation',
@@ -86,7 +83,7 @@ const BUILTIN_PLUGINS = [
         schemaPath: '../plugins/core-navigation/schemas/reload_page.js',
     },
 
-    // ── Interaction ──
+    // ── Interaction (10) ──
     {
         type: 'click',
         category: 'user_interaction',
@@ -159,8 +156,26 @@ const BUILTIN_PLUGINS = [
         handlerPath: '../plugins/core-interaction/handlers/upload_file.js',
         schemaPath: '../plugins/core-interaction/schemas/upload_file.js',
     },
+    {
+        type: 'find_element',
+        category: 'user_interaction',
+        label: 'Find Element',
+        color: 'green',
+        icon: 'Search',
+        handlerPath: '../plugins/core-interaction/handlers/find_element.js',
+        schemaPath: '../plugins/core-interaction/schemas/find_element.js',
+    },
+    {
+        type: 'get_set_content',
+        category: 'user_interaction',
+        label: 'Get/Set Content',
+        color: 'green',
+        icon: 'FileText',
+        handlerPath: '../plugins/core-interaction/handlers/get_set_content.js',
+        schemaPath: '../plugins/core-interaction/schemas/get_set_content.js',
+    },
 
-    // ── Wait ──
+    // ── Wait (8) ──
     {
         type: 'wait_for_element',
         category: 'wait_timing',
@@ -215,15 +230,33 @@ const BUILTIN_PLUGINS = [
         handlerPath: '../plugins/core-wait/handlers/pause.js',
         schemaPath: '../plugins/core-wait/schemas/pause.js',
     },
+    {
+        type: 'wait_for_response',
+        category: 'wait_timing',
+        label: 'Wait for Response',
+        color: 'amber',
+        icon: 'ArrowDownToLine',
+        handlerPath: '../plugins/core-wait/handlers/wait_for_response.js',
+        schemaPath: '../plugins/core-wait/schemas/wait_for_response.js',
+    },
+    {
+        type: 'wait_for_request',
+        category: 'wait_timing',
+        label: 'Wait for Request',
+        color: 'amber',
+        icon: 'ArrowUpFromLine',
+        handlerPath: '../plugins/core-wait/handlers/wait_for_request.js',
+        schemaPath: '../plugins/core-wait/schemas/wait_for_request.js',
+    },
 
-    // ── Capture ──
+    // ── Capture (4) ──
     {
         type: 'take_screenshot',
         category: 'capture',
         label: 'Take Screenshot',
         color: 'violet',
         icon: 'Camera',
-        handlerPath: '../plugins/core-capture/handlers/take_screenshot.handler.js',
+        handlerPath: '../plugins/core-capture/handlers/take_screenshot.js',
         schemaPath: '../plugins/core-capture/schemas/take_screenshot.schema.js',
     },
     {
@@ -232,11 +265,29 @@ const BUILTIN_PLUGINS = [
         label: 'Save DOM',
         color: 'violet',
         icon: 'Download',
-        handlerPath: '../plugins/core-capture/handlers/save_dom.handler.js',
+        handlerPath: '../plugins/core-capture/handlers/save_dom.js',
         schemaPath: '../plugins/core-capture/schemas/save_dom.schema.js',
     },
+    {
+        type: 'log_errors',
+        category: 'capture',
+        label: 'Log Errors',
+        color: 'violet',
+        icon: 'Bug',
+        handlerPath: '../plugins/core-capture/handlers/log_errors.js',
+        schemaPath: '../plugins/core-capture/schemas/log_errors.schema.js',
+    },
+    {
+        type: 'listen_events',
+        category: 'capture',
+        label: 'Listen Events',
+        color: 'violet',
+        icon: 'Radio',
+        handlerPath: '../plugins/core-capture/handlers/listen_events.js',
+        schemaPath: '../plugins/core-capture/schemas/listen_events.schema.js',
+    },
 
-    // ── Network ──
+    // ── Network (9) ──
     {
         type: 'mock_response',
         category: 'network',
@@ -264,8 +315,62 @@ const BUILTIN_PLUGINS = [
         handlerPath: '../plugins/core-network/handlers/manage_cookies.handler.js',
         schemaPath: '../plugins/core-network/schemas/manage_cookies.schema.js',
     },
+    {
+        type: 'set_network_conditions',
+        category: 'network',
+        label: 'Set Network Conditions',
+        color: 'cyan',
+        icon: 'Gauge',
+        handlerPath: '../plugins/core-network/handlers/set_network_conditions.handler.js',
+        schemaPath: '../plugins/core-network/schemas/set_network_conditions.schema.js',
+    },
+    {
+        type: 'configure_route',
+        category: 'network',
+        label: 'Configure Route',
+        color: 'cyan',
+        icon: 'Route',
+        handlerPath: '../plugins/core-network/handlers/configure_route.handler.js',
+        schemaPath: '../plugins/core-network/schemas/configure_route.schema.js',
+    },
+    {
+        type: 'clear_all_mocks',
+        category: 'network',
+        label: 'Clear All Mocks',
+        color: 'cyan',
+        icon: 'Trash2',
+        handlerPath: '../plugins/core-network/handlers/clear_all_mocks.handler.js',
+        schemaPath: '../plugins/core-network/schemas/clear_all_mocks.schema.js',
+    },
+    {
+        type: 'wait_network_match',
+        category: 'network',
+        label: 'Wait Network Match',
+        color: 'cyan',
+        icon: 'Target',
+        handlerPath: '../plugins/core-network/handlers/wait_network_match.handler.js',
+        schemaPath: '../plugins/core-network/schemas/wait_network_match.schema.js',
+    },
+    {
+        type: 'block_resource',
+        category: 'network',
+        label: 'Block Resource',
+        color: 'cyan',
+        icon: 'Ban',
+        handlerPath: '../plugins/core-network/handlers/block_resource.handler.js',
+        schemaPath: '../plugins/core-network/schemas/block_resource.schema.js',
+    },
+    {
+        type: 'modify_headers',
+        category: 'network',
+        label: 'Modify Headers',
+        color: 'cyan',
+        icon: 'Settings',
+        handlerPath: '../plugins/core-network/handlers/modify_headers.handler.js',
+        schemaPath: '../plugins/core-network/schemas/modify_headers.schema.js',
+    },
 
-    // ── AI ──
+    // ── AI (6) ──
     {
         type: 'call_llm',
         category: 'ai_llm',
@@ -293,8 +398,35 @@ const BUILTIN_PLUGINS = [
         handlerPath: '../plugins/core-ai/handlers/validate_semantic.js',
         schemaPath: '../plugins/core-ai/schemas/validate_semantic.js',
     },
+    {
+        type: 'extract_dom_context',
+        category: 'ai_llm',
+        label: 'Extract DOM Context',
+        color: 'rose',
+        icon: 'ScanSearch',
+        handlerPath: '../plugins/core-ai/handlers/extract_dom_context.js',
+        schemaPath: '../plugins/core-ai/schemas/extract_dom_context.js',
+    },
+    {
+        type: 'chain_of_thought',
+        category: 'ai_llm',
+        label: 'Chain of Thought',
+        color: 'rose',
+        icon: 'Lightbulb',
+        handlerPath: '../plugins/core-ai/handlers/chain_of_thought.js',
+        schemaPath: '../plugins/core-ai/schemas/chain_of_thought.js',
+    },
+    {
+        type: 'smart_selector',
+        category: 'ai_llm',
+        label: 'Smart Selector',
+        color: 'rose',
+        icon: 'ScanEye',
+        handlerPath: '../plugins/core-ai/handlers/smart_selector.js',
+        schemaPath: '../plugins/core-ai/schemas/smart_selector.js',
+    },
 
-    // ── Flow Control ──
+    // ── Flow Control (14) ──
     {
         type: 'variable',
         category: 'flow_logic',
@@ -314,6 +446,15 @@ const BUILTIN_PLUGINS = [
         schemaPath: '../plugins/core-flow-control/schemas/conditional.js',
     },
     {
+        type: 'switch',
+        category: 'flow_logic',
+        label: 'Switch',
+        color: 'slate',
+        icon: 'Shuffle',
+        handlerPath: '../plugins/core-flow-control/handlers/switch.js',
+        schemaPath: '../plugins/core-flow-control/schemas/switch.js',
+    },
+    {
         type: 'loop',
         category: 'flow_logic',
         label: 'Loop',
@@ -321,6 +462,24 @@ const BUILTIN_PLUGINS = [
         icon: 'Repeat',
         handlerPath: '../plugins/core-flow-control/handlers/loop.js',
         schemaPath: '../plugins/core-flow-control/schemas/loop.js',
+    },
+    {
+        type: 'branch',
+        category: 'flow_logic',
+        label: 'Branch',
+        color: 'slate',
+        icon: 'GitMerge',
+        handlerPath: '../plugins/core-flow-control/handlers/branch.js',
+        schemaPath: '../plugins/core-flow-control/schemas/branch.js',
+    },
+    {
+        type: 'flow_control',
+        category: 'flow_logic',
+        label: 'Flow Control',
+        color: 'slate',
+        icon: 'Network',
+        handlerPath: '../plugins/core-flow-control/handlers/flow-control.js',
+        schemaPath: '../plugins/core-flow-control/schemas/flow-control.js',
     },
     {
         type: 'transform',
@@ -340,8 +499,62 @@ const BUILTIN_PLUGINS = [
         handlerPath: '../plugins/core-flow-control/handlers/backend-js.js',
         schemaPath: '../plugins/core-flow-control/schemas/backend-js.js',
     },
+    {
+        type: 'fail_flow',
+        category: 'flow_logic',
+        label: 'Fail Flow',
+        color: 'slate',
+        icon: 'AlertOctagon',
+        handlerPath: '../plugins/core-flow-control/handlers/fail-flow.js',
+        schemaPath: '../plugins/core-flow-control/schemas/fail-flow.js',
+    },
+    {
+        type: 'handle_hooks',
+        category: 'flow_logic',
+        label: 'Handle Hooks',
+        color: 'slate',
+        icon: 'Anchor',
+        handlerPath: '../plugins/core-flow-control/handlers/handle-hooks.js',
+        schemaPath: '../plugins/core-flow-control/schemas/handle-hooks.js',
+    },
+    {
+        type: 'control_exceptions',
+        category: 'flow_logic',
+        label: 'Control Exceptions',
+        color: 'slate',
+        icon: 'ShieldAlert',
+        handlerPath: '../plugins/core-flow-control/handlers/control-exceptions.js',
+        schemaPath: '../plugins/core-flow-control/schemas/control-exceptions.js',
+    },
+    {
+        type: 'component',
+        category: 'flow_logic',
+        label: 'Component',
+        color: 'slate',
+        icon: 'Puzzle',
+        handlerPath: '../plugins/core-flow-control/handlers/component.js',
+        schemaPath: '../plugins/core-flow-control/schemas/component.js',
+    },
+    {
+        type: 'input',
+        category: 'flow_logic',
+        label: 'Input',
+        color: 'slate',
+        icon: 'LogIn',
+        handlerPath: '../plugins/core-flow-control/handlers/input.js',
+        schemaPath: '../plugins/core-flow-control/schemas/input.js',
+    },
+    {
+        type: 'output',
+        category: 'flow_logic',
+        label: 'Output',
+        color: 'slate',
+        icon: 'LogOut',
+        handlerPath: '../plugins/core-flow-control/handlers/output.js',
+        schemaPath: '../plugins/core-flow-control/schemas/output.js',
+    },
 
-    // ── Security ──
+    // ── Security (5) ──
     {
         type: 'csp_validator',
         category: 'security',
@@ -360,8 +573,35 @@ const BUILTIN_PLUGINS = [
         handlerPath: '../plugins/core-security/handlers/header_auditor.js',
         schemaPath: '../plugins/core-security/schemas/header_auditor.js',
     },
+    {
+        type: 'dom_sanitizer',
+        category: 'security',
+        label: 'DOM Sanitizer',
+        color: 'red',
+        icon: 'Sparkles',
+        handlerPath: '../plugins/core-security/handlers/dom_sanitizer.js',
+        schemaPath: '../plugins/core-security/schemas/dom_sanitizer.js',
+    },
+    {
+        type: 'audit_policy',
+        category: 'security',
+        label: 'Audit Policy',
+        color: 'red',
+        icon: 'FileCheck',
+        handlerPath: '../plugins/core-security/handlers/audit_policy.js',
+        schemaPath: '../plugins/core-security/schemas/audit_policy.js',
+    },
+    {
+        type: 'sensitive_data_monitor',
+        category: 'security',
+        label: 'Sensitive Data Monitor',
+        color: 'red',
+        icon: 'EyeOff',
+        handlerPath: '../plugins/core-security/handlers/sensitive_data_monitor.js',
+        schemaPath: '../plugins/core-security/schemas/sensitive_data_monitor.js',
+    },
 
-    // ── Assertion ──
+    // ── Assertion (1) ──
     {
         type: 'assert_page_text',
         category: 'assertion',
@@ -372,7 +612,7 @@ const BUILTIN_PLUGINS = [
         schemaPath: '../plugins/core-assertion/schemas/assert_page_text.schema.js',
     },
 
-    // ── Session ──
+    // ── Session (7) ──
     {
         type: 'persist_session',
         category: 'session',
@@ -400,8 +640,44 @@ const BUILTIN_PLUGINS = [
         handlerPath: '../plugins/core-session/handlers/create_context.js',
         schemaPath: '../plugins/core-session/schemas/create_context.js',
     },
+    {
+        type: 'cleanup_state',
+        category: 'session',
+        label: 'Cleanup State',
+        color: 'orange',
+        icon: 'Trash2',
+        handlerPath: '../plugins/core-session/handlers/cleanup_state.js',
+        schemaPath: '../plugins/core-session/schemas/cleanup_state.js',
+    },
+    {
+        type: 'close_context',
+        category: 'session',
+        label: 'Close Context',
+        color: 'orange',
+        icon: 'X',
+        handlerPath: '../plugins/core-session/handlers/close_context.js',
+        schemaPath: '../plugins/core-session/schemas/close_context.js',
+    },
+    {
+        type: 'manage_storage',
+        category: 'session',
+        label: 'Manage Storage',
+        color: 'orange',
+        icon: 'HardDrive',
+        handlerPath: '../plugins/core-session/handlers/manage_storage.js',
+        schemaPath: '../plugins/core-session/schemas/manage_storage.js',
+    },
+    {
+        type: 'inject_tokens',
+        category: 'session',
+        label: 'Inject Tokens',
+        color: 'orange',
+        icon: 'Syringe',
+        handlerPath: '../plugins/core-session/handlers/inject_tokens.js',
+        schemaPath: '../plugins/core-session/schemas/inject_tokens.js',
+    },
 
-    // ── Data ──
+    // ── Data (3) ──
     {
         type: 'read_file',
         category: 'data',
@@ -419,6 +695,53 @@ const BUILTIN_PLUGINS = [
         icon: 'FileOutput',
         handlerPath: '../plugins/core-data/handlers/save_results.js',
         schemaPath: '../plugins/core-data/schemas/save_results.js',
+    },
+    {
+        type: 'download_file',
+        category: 'data',
+        label: 'Download File',
+        color: 'slate',
+        icon: 'Download',
+        handlerPath: '../plugins/core-data/handlers/handle_downloads.js',
+        schemaPath: '../plugins/core-data/schemas/handle_downloads.js',
+    },
+
+    // ── Testing (4) ──
+    {
+        type: 'run_tests',
+        category: 'testing',
+        label: 'Run Tests',
+        color: 'teal',
+        icon: 'Play',
+        handlerPath: '../plugins/core-testing/handlers/run_tests.js',
+        schemaPath: '../plugins/core-testing/schemas/run_tests.js',
+    },
+    {
+        type: 'cli_params',
+        category: 'testing',
+        label: 'CLI Params',
+        color: 'teal',
+        icon: 'Terminal',
+        handlerPath: '../plugins/core-testing/handlers/cli_params.js',
+        schemaPath: '../plugins/core-testing/schemas/cli_params.js',
+    },
+    {
+        type: 'return_code',
+        category: 'testing',
+        label: 'Return Code',
+        color: 'teal',
+        icon: 'Hash',
+        handlerPath: '../plugins/core-testing/handlers/return_code.js',
+        schemaPath: '../plugins/core-testing/schemas/return_code.js',
+    },
+    {
+        type: 'integrate_ci',
+        category: 'testing',
+        label: 'Integrate CI',
+        color: 'teal',
+        icon: 'GitBranch',
+        handlerPath: '../plugins/core-testing/handlers/integrate_ci.js',
+        schemaPath: '../plugins/core-testing/schemas/integrate_ci.js',
     },
 ];
 

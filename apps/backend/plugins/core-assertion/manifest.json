@@ -1,7 +1,19 @@
 {
   "id": "core-assertion",
   "name": "Assertions",
+  "version": "1.0.0",
+  "description": "Page content assertions and validation",
   "category": "assertion",
   "color": "emerald",
-  "icons": ["CheckCircle"]
+  "nodes": [
+    {
+      "type": "assert_page_text",
+      "label": "Assert Page Text",
+      "category": "assertion",
+      "color": "emerald",
+      "icon": "CheckCircle",
+      "handler": "./handlers/assert_page_text.handler.js",
+      "schema": "./schemas/assert_page_text.schema.js"
+    }
+  ]
 }

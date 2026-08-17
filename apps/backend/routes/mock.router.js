@@ -2,29 +2,61 @@
 /**
  * API routes that return configuration data (Mocks)
  * such as categories, node schemas, and simulated project data.
+ * Now powered by NodeRegistry for dynamic plugin-driven definitions.
  */
 
 import { Router } from 'express';
 import validate from '../middlewares/validator.js';
 import openUrlBodySchema from '../schemas/open_url/body.js';
-import { mockCategories, allNodeFieldConfigs, mockProjectData } from '../config/mockData.js';
+import { mockProjectData } from '../config/mockData.js';
+import { nodeRegistry } from '../core/NodeRegistry.js';
 
 const router = Router();
 
-// 1. API: Get node categories and structure
+// 1. API: Get node categories and structure (dynamic from NodeRegistry, fallback to mock)
 router.get('/nodes/categories', (req, res) => {
-    console.log('📂 API: Returning MCP node categories.');
-    res.json(mockCategories);
+    if (nodeRegistry.count() > 0) {
+        return res.json(nodeRegistry.getFrontendDefinitions());
+    }
+    // Fallback: import mock data if NodeRegistry is not yet populated
+    import('../config/mockData.js')
+        .then(({ mockCategories }) => res.json(mockCategories))
+        .catch(() => res.json({}));
 });
 
-// 2. API: Get schema (parameters) for one or all operations
+// 2. API: Get all node type definitions (for frontend node palette)
+router.get('/nodes/definitions', (req, res) => {
+    const types = nodeRegistry.getAllTypes();
+    const definitions = {};
+
+    for (const type of types) {
+        const def = nodeRegistry.get(type);
+        if (def) {
+            definitions[type] = {
+                type: def.type,
+                category: def.category,
+                label: def.label,
+                color: def.color,
+                icon: def.icon,
+                version: def.version,
+                source: def.source,
+            };
+        }
+    }
+
+    res.json({
+        success: true,
+        total: types.length,
+        nodes: definitions,
+    });
+});
+
+// 3. API: Get schema (parameters) for one or all operations (dynamic from NodeRegistry)
 router.get('/nodes/operations', (req, res) => {
     const operationName = req.query.op;
 
     if (operationName) {
-        console.log(`📋 API: Returning schema for operation: ${operationName}`);
-        const schema = allNodeFieldConfigs[operationName];
-
+        const schema = nodeRegistry.getSchema(operationName);
         if (schema) {
             return res.json({ [operationName]: schema });
         } else {
@@ -34,8 +66,15 @@ router.get('/nodes/operations', (req, res) => {
         }
     }
 
-    console.log('📋 API: Returning all operation schemas.');
-    res.json(allNodeFieldConfigs);
+    const allTypes = nodeRegistry.getAllTypes();
+    const allSchemas = {};
+    for (const type of allTypes) {
+        const schema = nodeRegistry.getSchema(type);
+        if (schema) {
+            allSchemas[type] = schema;
+        }
+    }
+    res.json(allSchemas);
 });
 
 // 3. API: Load project data (Mock)

@@ -1,114 +1,136 @@
 {
   "id": "core-flow-control",
   "name": "Flow Control & Logic",
+  "version": "1.0.0",
   "author": "haltest-core",
   "haltestVersion": ">=2.0.0",
   "hooks": {},
   "nodes": [
     {
       "type": "variable",
-      "name": "Variable",
+      "label": "Variable",
       "category": "flow_logic",
       "icon": "Variable",
-      "color": "slate"
+      "color": "slate",
+      "handler": "./handlers/variable.js",
+      "schema": "./schemas/variable.js"
     },
     {
       "type": "conditional",
-      "name": "Conditional",
+      "label": "Conditional",
       "category": "flow_logic",
       "icon": "GitBranch",
-      "color": "slate"
+      "color": "slate",
+      "handler": "./handlers/conditional.js",
+      "schema": "./schemas/conditional.js"
     },
     {
       "type": "switch",
-      "name": "Switch",
+      "label": "Switch",
       "category": "flow_logic",
-      "icon": "GitBranch",
-      "color": "slate"
+      "icon": "Shuffle",
+      "color": "slate",
+      "handler": "./handlers/switch.js",
+      "schema": "./schemas/switch.js"
     },
     {
       "type": "loop",
-      "name": "Loop",
+      "label": "Loop",
       "category": "flow_logic",
       "icon": "Repeat",
-      "color": "slate"
-    },
-    {
-      "type": "for_each",
-      "name": "For Each",
-      "category": "flow_logic",
-      "icon": "List",
-      "color": "slate"
+      "color": "slate",
+      "handler": "./handlers/loop.js",
+      "schema": "./schemas/loop.js"
     },
     {
       "type": "branch",
-      "name": "Branch",
+      "label": "Branch",
       "category": "flow_logic",
-      "icon": "GitFork",
-      "color": "slate"
+      "icon": "GitMerge",
+      "color": "slate",
+      "handler": "./handlers/branch.js",
+      "schema": "./schemas/branch.js"
     },
     {
       "type": "flow_control",
-      "name": "Flow Control",
+      "label": "Flow Control",
       "category": "flow_logic",
-      "icon": "Play",
-      "color": "slate"
+      "icon": "Network",
+      "color": "slate",
+      "handler": "./handlers/flow-control.js",
+      "schema": "./schemas/flow-control.js"
     },
     {
       "type": "transform",
-      "name": "Transform",
+      "label": "Transform",
       "category": "flow_logic",
       "icon": "Shuffle",
-      "color": "slate"
+      "color": "slate",
+      "handler": "./handlers/transform.js",
+      "schema": "./schemas/transform.js"
     },
     {
       "type": "backend_js",
-      "name": "Backend JS",
+      "label": "Backend JS",
       "category": "flow_logic",
       "icon": "Code",
-      "color": "slate"
+      "color": "slate",
+      "handler": "./handlers/backend-js.js",
+      "schema": "./schemas/backend-js.js"
     },
     {
       "type": "fail_flow",
-      "name": "Fail Flow",
+      "label": "Fail Flow",
       "category": "flow_logic",
-      "icon": "XCircle",
-      "color": "red"
-    },
-    {
-      "type": "component",
-      "name": "Component",
-      "category": "flow_logic",
-      "icon": "Puzzle",
-      "color": "purple"
-    },
-    {
-      "type": "input",
-      "name": "Input",
-      "category": "flow_logic",
-      "icon": "ArrowDownToLine",
-      "color": "slate"
-    },
-    {
-      "type": "output",
-      "name": "Output",
-      "category": "flow_logic",
-      "icon": "ArrowUpFromLine",
-      "color": "slate"
+      "icon": "AlertOctagon",
+      "color": "slate",
+      "handler": "./handlers/fail-flow.js",
+      "schema": "./schemas/fail-flow.js"
     },
     {
       "type": "handle_hooks",
-      "name": "Handle Hooks",
+      "label": "Handle Hooks",
       "category": "flow_logic",
       "icon": "Anchor",
-      "color": "slate"
+      "color": "slate",
+      "handler": "./handlers/handle-hooks.js",
+      "schema": "./schemas/handle-hooks.js"
     },
     {
       "type": "control_exceptions",
-      "name": "Control Exceptions",
+      "label": "Control Exceptions",
       "category": "flow_logic",
       "icon": "ShieldAlert",
-      "color": "amber"
+      "color": "slate",
+      "handler": "./handlers/control-exceptions.js",
+      "schema": "./schemas/control-exceptions.js"
+    },
+    {
+      "type": "component",
+      "label": "Component",
+      "category": "flow_logic",
+      "icon": "Puzzle",
+      "color": "slate",
+      "handler": "./handlers/component.js",
+      "schema": "./schemas/component.js"
+    },
+    {
+      "type": "input",
+      "label": "Input",
+      "category": "flow_logic",
+      "icon": "LogIn",
+      "color": "slate",
+      "handler": "./handlers/input.js",
+      "schema": "./schemas/input.js"
+    },
+    {
+      "type": "output",
+      "label": "Output",
+      "category": "flow_logic",
+      "icon": "LogOut",
+      "color": "slate",
+      "handler": "./handlers/output.js",
+      "schema": "./schemas/output.js"
     }
   ]
 }
