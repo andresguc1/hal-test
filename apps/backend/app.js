@@ -42,6 +42,7 @@ import safetyGateRouter from './routes/safetyGate.router.js';
 
 // Database
 import { initDb } from './database/init.js';
+import { bootstrapBuiltinPlugins } from './core/pluginBootstrap.js';
 
 const app = express();
 const server = createServer(app);
@@ -299,6 +300,9 @@ import { executionLock } from './services/collaboration/ExecutionLock.js';
 let serverInstance;
 const startServer = async () => {
     await initDb();
+
+    // Register built-in plugin handlers into NodeRegistry
+    await bootstrapBuiltinPlugins();
 
     // Load any active execution locks persisted before the last restart
     await executionLock.loadFromDB();
