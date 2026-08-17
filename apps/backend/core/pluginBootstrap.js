@@ -257,7 +257,7 @@ const BUILTIN_PLUGINS = [
         color: 'violet',
         icon: 'Camera',
         handlerPath: '../plugins/core-capture/handlers/take_screenshot.js',
-        schemaPath: '../plugins/core-capture/schemas/take_screenshot.schema.js',
+        schemaPath: '../plugins/core-capture/schemas/take_screenshot.js',
     },
     {
         type: 'save_dom',
@@ -266,7 +266,7 @@ const BUILTIN_PLUGINS = [
         color: 'violet',
         icon: 'Download',
         handlerPath: '../plugins/core-capture/handlers/save_dom.js',
-        schemaPath: '../plugins/core-capture/schemas/save_dom.schema.js',
+        schemaPath: '../plugins/core-capture/schemas/save_dom.js',
     },
     {
         type: 'log_errors',
@@ -275,7 +275,7 @@ const BUILTIN_PLUGINS = [
         color: 'violet',
         icon: 'Bug',
         handlerPath: '../plugins/core-capture/handlers/log_errors.js',
-        schemaPath: '../plugins/core-capture/schemas/log_errors.schema.js',
+        schemaPath: '../plugins/core-capture/schemas/log_errors.js',
     },
     {
         type: 'listen_events',
@@ -284,7 +284,7 @@ const BUILTIN_PLUGINS = [
         color: 'violet',
         icon: 'Radio',
         handlerPath: '../plugins/core-capture/handlers/listen_events.js',
-        schemaPath: '../plugins/core-capture/schemas/listen_events.schema.js',
+        schemaPath: '../plugins/core-capture/schemas/listen_events.js',
     },
 
     // ── Network (9) ──
@@ -295,7 +295,7 @@ const BUILTIN_PLUGINS = [
         color: 'cyan',
         icon: 'Server',
         handlerPath: '../plugins/core-network/handlers/mock_response.handler.js',
-        schemaPath: '../plugins/core-network/schemas/mock_response.schema.js',
+        schemaPath: '../plugins/core-network/schemas/mock_response.js',
     },
     {
         type: 'intercept_request',
@@ -304,7 +304,7 @@ const BUILTIN_PLUGINS = [
         color: 'cyan',
         icon: 'Shield',
         handlerPath: '../plugins/core-network/handlers/intercept_request.handler.js',
-        schemaPath: '../plugins/core-network/schemas/intercept_request.schema.js',
+        schemaPath: '../plugins/core-network/schemas/intercept_request.js',
     },
     {
         type: 'manage_cookies',
@@ -313,7 +313,7 @@ const BUILTIN_PLUGINS = [
         color: 'cyan',
         icon: 'Cookie',
         handlerPath: '../plugins/core-network/handlers/manage_cookies.handler.js',
-        schemaPath: '../plugins/core-network/schemas/manage_cookies.schema.js',
+        schemaPath: '../plugins/core-network/schemas/manage_cookies.js',
     },
     {
         type: 'set_network_conditions',
@@ -322,7 +322,7 @@ const BUILTIN_PLUGINS = [
         color: 'cyan',
         icon: 'Gauge',
         handlerPath: '../plugins/core-network/handlers/set_network_conditions.handler.js',
-        schemaPath: '../plugins/core-network/schemas/set_network_conditions.schema.js',
+        schemaPath: '../plugins/core-network/schemas/set_network_conditions.js',
     },
     {
         type: 'configure_route',
@@ -331,7 +331,7 @@ const BUILTIN_PLUGINS = [
         color: 'cyan',
         icon: 'Route',
         handlerPath: '../plugins/core-network/handlers/configure_route.handler.js',
-        schemaPath: '../plugins/core-network/schemas/configure_route.schema.js',
+        schemaPath: '../plugins/core-network/schemas/configure_route.js',
     },
     {
         type: 'clear_all_mocks',
@@ -340,7 +340,7 @@ const BUILTIN_PLUGINS = [
         color: 'cyan',
         icon: 'Trash2',
         handlerPath: '../plugins/core-network/handlers/clear_all_mocks.handler.js',
-        schemaPath: '../plugins/core-network/schemas/clear_all_mocks.schema.js',
+        schemaPath: '../plugins/core-network/schemas/clear_all_mocks.js',
     },
     {
         type: 'wait_network_match',
@@ -349,7 +349,7 @@ const BUILTIN_PLUGINS = [
         color: 'cyan',
         icon: 'Target',
         handlerPath: '../plugins/core-network/handlers/wait_network_match.handler.js',
-        schemaPath: '../plugins/core-network/schemas/wait_network_match.schema.js',
+        schemaPath: '../plugins/core-network/schemas/wait_network_match.js',
     },
     {
         type: 'block_resource',
@@ -358,7 +358,7 @@ const BUILTIN_PLUGINS = [
         color: 'cyan',
         icon: 'Ban',
         handlerPath: '../plugins/core-network/handlers/block_resource.handler.js',
-        schemaPath: '../plugins/core-network/schemas/block_resource.schema.js',
+        schemaPath: '../plugins/core-network/schemas/block_resource.js',
     },
     {
         type: 'modify_headers',
@@ -367,7 +367,7 @@ const BUILTIN_PLUGINS = [
         color: 'cyan',
         icon: 'Settings',
         handlerPath: '../plugins/core-network/handlers/modify_headers.handler.js',
-        schemaPath: '../plugins/core-network/schemas/modify_headers.schema.js',
+        schemaPath: '../plugins/core-network/schemas/modify_headers.js',
     },
 
     // ── AI (6) ──
@@ -609,7 +609,7 @@ const BUILTIN_PLUGINS = [
         color: 'emerald',
         icon: 'CheckCircle',
         handlerPath: '../plugins/core-assertion/handlers/assert_page_text.handler.js',
-        schemaPath: '../plugins/core-assertion/schemas/assert_page_text.schema.js',
+        schemaPath: '../plugins/core-assertion/schemas/assert_page_text.js',
     },
 
     // ── Session (7) ──
