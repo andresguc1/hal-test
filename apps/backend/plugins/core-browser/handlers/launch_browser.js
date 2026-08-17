@@ -1,10 +1,223 @@
-/**
- * Plugin Handler: launch_browser
- *
- * This is a thin proxy that delegates to the existing action.controller.js
- * implementation. During Phase 2, this serves as a compatibility bridge.
- * In future phases, the full logic can be migrated here.
- */
-import { launchBrowserAction } from '../../controllers/action.controller.js';
+import { variableManager } from '../../../services/VariableManager.js';
+import { browserService } from '../../../services/browser.service.js';
+import { traceService } from '../../../services/trace.service.js';
+import { executionLogger } from '../../../services/ExecutionLogger.js';
+import { emitExecutionStatus } from '../../../socket.js';
+import { Run } from '../../../database/init.js';
+import { smartEmitLog } from '../../../core/ActionExecutor.js';
+
+const launchBrowserAction = async (req, res) => {
+    const nodeId = req.body.nodeId;
+    const runId = req.body.runId;
+    const start = Date.now();
+    if (nodeId) {
+        emitExecutionStatus({ stepId: nodeId, status: 'running' });
+        smartEmitLog('Launching browser...', 'info', nodeId);
+    }
+
+    let launchedBrowserId = null;
+
+    try {
+        // --- VARIABLE RESOLUTION ---
+        const resolvedBody = variableManager.resolveRecursive(req.body, runId);
+
+        // Coerce types
+        if (
+            resolvedBody.slowMo !== undefined &&
+            resolvedBody.slowMo !== null &&
+            resolvedBody.slowMo !== ''
+        ) {
+            const parsed = Number(resolvedBody.slowMo);
+            if (!isNaN(parsed)) resolvedBody.slowMo = parsed;
+        }
+        if (
+            resolvedBody.timeout !== undefined &&
+            resolvedBody.timeout !== null &&
+            resolvedBody.timeout !== ''
+        ) {
+            const parsed = Number(resolvedBody.timeout);
+            if (!isNaN(parsed)) resolvedBody.timeout = parsed;
+        }
+        if (
+            resolvedBody.width !== undefined &&
+            resolvedBody.width !== null &&
+            resolvedBody.width !== ''
+        ) {
+            const parsed = Number(resolvedBody.width);
+            if (!isNaN(parsed)) resolvedBody.width = parsed;
+        }
+        if (
+            resolvedBody.height !== undefined &&
+            resolvedBody.height !== null &&
+            resolvedBody.height !== ''
+        ) {
+            const parsed = Number(resolvedBody.height);
+            if (!isNaN(parsed)) resolvedBody.height = parsed;
+        }
+
+        if (resolvedBody.headless === 'true' || resolvedBody.headless === '1')
+            resolvedBody.headless = true;
+        if (resolvedBody.headless === 'false' || resolvedBody.headless === '0')
+            resolvedBody.headless = false;
+
+        if (resolvedBody.maximizeWindow === 'true' || resolvedBody.maximizeWindow === '1')
+            resolvedBody.maximizeWindow = true;
+        if (resolvedBody.maximizeWindow === 'false' || resolvedBody.maximizeWindow === '0')
+            resolvedBody.maximizeWindow = false;
+
+        // --- PERSISTENT BROWSER (Debug Mode) ---
+        const { debugMode } = resolvedBody;
+        if (debugMode) {
+            const latestBrowser = browserService.getLatest();
+            const latestId = Array.from(browserService.keys()).pop();
+
+            // Reuse if exists and is connected, AND options match
+            if (latestBrowser && latestBrowser.browser.isConnected()) {
+                const oldOpts = latestBrowser.options || {};
+                const newOpts = resolvedBody || {};
+
+                // Detect changes that require a browser restart
+                const hasChanges =
+                    oldOpts.devicePreset !== newOpts.devicePreset ||
+                    oldOpts.width !== newOpts.width ||
+                    oldOpts.height !== newOpts.height ||
+                    oldOpts.isMobile !== newOpts.isMobile ||
+                    oldOpts.maximizeWindow !== newOpts.maximizeWindow ||
+                    oldOpts.headless !== newOpts.headless;
+
+                if (!hasChanges) {
+                    console.log('[ACTION] Reusing existing browser (Debug Mode)');
+                    smartEmitLog(
+                        `Reusing browser (${oldOpts.devicePreset || 'Desktop'})`,
+                        'info',
+                        nodeId,
+                    );
+                    if (nodeId) emitExecutionStatus({ stepId: nodeId, status: 'success' });
+                    return res.status(200).json({
+                        success: true,
+                        message: 'Browser reused (Debug Mode)',
+                        browserId: latestId,
+                        reused: true,
+                        headless: latestBrowser.options.headless || false,
+                    });
+                } else {
+                    console.log(
+                        `[ACTION] Options changed (${oldOpts.devicePreset} -> ${newOpts.devicePreset}), restarting browser...`,
+                    );
+                    smartEmitLog(
+                        `Preset changed to ${newOpts.devicePreset}, restarting...`,
+                        'info',
+                        nodeId,
+                    );
+                    await browserService.delete(latestId).catch(() => {});
+                }
+            }
+        }
+        // ---------------------------------------
+
+        console.log(
+            '[ACTION] Starting browser launch with options:',
+            JSON.stringify(resolvedBody, null, 2),
+        );
+        const { browserId, version } = await browserService.launchBrowser(resolvedBody);
+        launchedBrowserId = browserId;
+
+        // Update Run record with browser version if we are in a run
+        if (runId) {
+            try {
+                const run = await Run.findByPk(runId);
+                if (run) {
+                    await run.update({ browser_version: version });
+                }
+            } catch (err) {
+                console.warn(
+                    '[FlightRecorder] Failed to update run with browser version:',
+                    err.message,
+                );
+            }
+        }
+
+        const duration = Date.now() - start;
+
+        console.log(`[SUCCESS] Browser launched with ID: ${browserId} (v${version})`);
+        smartEmitLog(`Browser launched with ID: ${browserId}`, 'success', nodeId);
+        if (nodeId) emitExecutionStatus({ stepId: nodeId, status: 'success' });
+
+        // --- FLIGHT RECORDER: Log Success ---
+        if (runId && nodeId) {
+            console.log(`[FlightRecorder] Saving step result for run ${runId}, node ${nodeId}`);
+            try {
+                await executionLogger.logStep(
+                    runId,
+                    { id: nodeId, type: 'launch_browser' },
+                    {
+                        status: 'success',
+                        duration,
+                        input: resolvedBody,
+                        output: { browserId },
+                    },
+                );
+                console.log(`[FlightRecorder] Step result saved successfully`);
+            } catch (logErr) {
+                console.error('[FlightRecorder] Failed to log step result:', logErr.message);
+            }
+        }
+        // ------------------------------------
+
+        traceService.add({ action: 'launch_browser', browserId, status: 'success' });
+
+        return res.status(200).json({
+            success: true,
+            message: req.t('actions.launch_browser.success'),
+            browserId,
+            headless: resolvedBody.headless || false,
+        });
+    } catch (error) {
+        if (launchedBrowserId) {
+            console.log(`[ACTION] Cleaning up launched browser ${launchedBrowserId} after error`);
+            await browserService.delete(launchedBrowserId).catch((err) => {
+                console.error(`[ACTION] Failed to cleanup browser session: ${err.message}`);
+            });
+        }
+        const duration = Date.now() - start;
+        console.error('[ERROR] Failed to launch browser:', error.message);
+        smartEmitLog(`Browser launch failed: ${error.message}`, 'error', nodeId);
+        if (nodeId)
+            emitExecutionStatus({
+                stepId: nodeId,
+                status: 'failed',
+                error: error.message,
+            });
+
+        // --- FLIGHT RECORDER: Log Failure ---
+        if (runId && nodeId) {
+            try {
+                await executionLogger.logStep(
+                    runId,
+                    { id: nodeId, type: 'launch_browser' },
+                    {
+                        status: 'failed',
+                        duration,
+                        input: req.body,
+                        error: error.message,
+                    },
+                );
+            } catch (logErr) {
+                console.error('[FlightRecorder] Failed to log failure step:', logErr.message);
+            }
+        }
+        // ------------------------------------
+
+        return res.status(500).json({
+            success: false,
+            message: req.t('actions.launch_browser.error'),
+            error: error.message,
+            hint:
+                error.message.includes('Zygote') || error.message.includes('HistoryService')
+                    ? 'System resource limit or zombie process conflict. Try restarting the application.'
+                    : 'Check if another browser instance is blocking execution.',
+        });
+    }
+};
 
 export default launchBrowserAction;

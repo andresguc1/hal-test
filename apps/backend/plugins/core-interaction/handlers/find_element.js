@@ -1,10 +1,35 @@
-/**
- * Plugin Handler: find_element
- *
- * This is a thin proxy that delegates to the existing action.controller.js
- * implementation. During Phase 2, this serves as a compatibility bridge.
- * In future phases, the full logic can be migrated here.
- */
-import { findElementAction } from '../../controllers/action.controller.js';
+import { executePlaywrightAction } from '../../../core/ActionExecutor.js';
+import { buildPlaywrightLocator, normalizeSelectorForDotId } from '../../../core/selector-utils.js';
 
-export default findElementAction;
+const findElement = (req, res) =>
+    executePlaywrightAction(req, res, 'find_element', async (page, opts) => {
+        const { selector, selectorType = 'css', timeout = 10000, visible = true } = opts;
+
+        if (!selector) throw new Error(req.t('errors.selector_required'));
+
+        const targetSelector = await normalizeSelectorForDotId(page, selector);
+        const locator = buildPlaywrightLocator(page, targetSelector);
+
+        const waitState = visible ? 'visible' : 'attached';
+
+        await locator.waitFor({ state: waitState, timeout });
+        const isVisible = await locator.isVisible();
+
+        return {
+            message: req.t('actions.find_element.success', { selector: targetSelector }),
+            data: {
+                found: true,
+                visible: isVisible,
+                selectorType,
+                state: waitState,
+            },
+            traceDetails: {
+                selector: targetSelector,
+                selectorType,
+                found: true,
+                visible: isVisible,
+            },
+        };
+    });
+
+export default findElement;

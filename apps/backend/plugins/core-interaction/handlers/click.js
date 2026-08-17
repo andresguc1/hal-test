@@ -1,10 +1,23 @@
-/**
- * Plugin Handler: click
- *
- * This is a thin proxy that delegates to the existing action.controller.js
- * implementation. During Phase 2, this serves as a compatibility bridge.
- * In future phases, the full logic can be migrated here.
- */
-import { clickAction } from '../../controllers/action.controller.js';
+import { executePlaywrightAction } from '../../../core/ActionExecutor.js';
+import { buildPlaywrightLocator, normalizeSelectorForDotId } from '../../../core/selector-utils.js';
 
-export default clickAction;
+const click = (req, res) =>
+    executePlaywrightAction(req, res, 'click', async (page, opts) => {
+        const { selector, button, clickCount, modifiers, force } = opts;
+        const timeout = opts.timeout ? Number(opts.timeout) : undefined;
+
+        if (!selector) throw new Error(req.t('errors.selector_required'));
+
+        const targetSelector = await normalizeSelectorForDotId(page, selector);
+        const clickOptions = { button, clickCount, modifiers, timeout, force };
+        const locator = buildPlaywrightLocator(page, targetSelector);
+
+        await locator.click(clickOptions);
+
+        return {
+            message: req.t('actions.click.success', { selector: targetSelector }),
+            traceDetails: { selector: targetSelector, details: clickOptions },
+        };
+    });
+
+export default click;

@@ -1,10 +1,22 @@
-/**
- * Plugin Handler: hover
- *
- * This is a thin proxy that delegates to the existing action.controller.js
- * implementation. During Phase 2, this serves as a compatibility bridge.
- * In future phases, the full logic can be migrated here.
- */
-import { hoverAction } from '../../controllers/action.controller.js';
+import { executePlaywrightAction } from '../../../core/ActionExecutor.js';
+import { buildPlaywrightLocator, normalizeSelectorForDotId } from '../../../core/selector-utils.js';
 
-export default hoverAction;
+const hover = (req, res) =>
+    executePlaywrightAction(req, res, 'hover', async (page, opts) => {
+        const { selector, timeout = 30000 } = opts;
+
+        if (!selector) {
+            throw new Error(req.t('errors.selector_required'));
+        }
+
+        const targetSelector = await normalizeSelectorForDotId(page, selector);
+        const locator = buildPlaywrightLocator(page, targetSelector);
+        await locator.hover({ timeout });
+
+        return {
+            message: req.t('actions.hover.success', { selector: targetSelector }),
+            traceDetails: { selector: targetSelector, timeout },
+        };
+    });
+
+export default hover;
