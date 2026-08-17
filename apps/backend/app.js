@@ -43,6 +43,7 @@ import safetyGateRouter from './routes/safetyGate.router.js';
 // Database
 import { initDb } from './database/init.js';
 import { bootstrapBuiltinPlugins } from './core/pluginBootstrap.js';
+import { pluginManager } from './core/PluginManager.js';
 
 const app = express();
 const server = createServer(app);
@@ -303,6 +304,13 @@ const startServer = async () => {
 
     // Register built-in plugin handlers into NodeRegistry
     await bootstrapBuiltinPlugins();
+
+    // Discover and load third-party plugins from storage/plugins/
+    try {
+        await pluginManager.loadAllPlugins();
+    } catch (error) {
+        console.error(`[PluginManager] Failed to load third-party plugins: ${error.message}`);
+    }
 
     // Load any active execution locks persisted before the last restart
     await executionLock.loadFromDB();
