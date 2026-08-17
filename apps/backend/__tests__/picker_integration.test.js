@@ -181,4 +181,30 @@ describe('Picker-to-Execution Integration Tests', () => {
             expect(count).toBe(2);
         });
     });
+
+    describe('Fill form field Playwright locators', () => {
+        it('should fill a field using getByLabel', async () => {
+            const locator = buildPlaywrightLocator(page, "getByLabel('Username')");
+            await locator.fill('picker-user', { timeout: 3000, force: true });
+            const value = await locator.inputValue();
+            expect(value).toBe('picker-user');
+        });
+
+        it('should fill a field using getByPlaceholder', async () => {
+            const locator = buildPlaywrightLocator(page, "getByPlaceholder('Enter password')");
+            await locator.fill('picker-pass', { timeout: 3000, force: true });
+            const value = await locator.inputValue();
+            expect(value).toBe('picker-pass');
+        });
+
+        it('should fill a field using chained context locator', async () => {
+            const locator = buildPlaywrightLocator(
+                page,
+                "page.locator('#login-form').getByLabel('Username')",
+            );
+            await locator.fill('chained-user', { timeout: 3000, force: true });
+            const value = await locator.inputValue();
+            expect(value).toBe('chained-user');
+        });
+    });
 });

@@ -106,7 +106,7 @@ const SortableFieldItem = ({
                 type="text"
                 value={f.selector || ""}
                 onChange={(e) => updateField(index, "selector", e.target.value)}
-                placeholder="CSS/XPath Selector"
+                placeholder="Selector (CSS / Playwright Locator)"
                 className="flex-1 bg-[#0b1222] border border-slate-700 text-slate-200 text-xs rounded-md px-2 py-1.5 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none min-w-0"
               />
               <button
