@@ -24,6 +24,7 @@ import {
   ShieldCheck,
   Database,
 } from "lucide-react";
+import { resolveIcon } from "./iconMap";
 
 // --- GLOBAL ALL-IN-ONE CONFIGURATION ---
 
@@ -886,3 +887,40 @@ export const getNodeConfig = (nodeType) =>
     icon: Box,
     label: nodeType,
   };
+
+// Dynamic update: replaces NODE_CATEGORIES and NODE_TYPE_MAP in-place
+// so all existing imports see the new data without re-importing.
+export const updateNodeDefinitions = (categoriesData, definitionsData) => {
+  // Rebuild NODE_CATEGORIES from API categories data
+  Object.keys(NODE_CATEGORIES).forEach((k) => delete NODE_CATEGORIES[k]);
+  for (const [catKey, catData] of Object.entries(categoriesData)) {
+    NODE_CATEGORIES[catKey] = {
+      icon: resolveIcon(catData.icon),
+      color: catData.color || "slate",
+      label: catData.label || catKey,
+      nodes: catData.nodes || [],
+    };
+  }
+
+  // Rebuild NODE_TYPE_MAP from API definitions data
+  Object.keys(NODE_TYPE_MAP).forEach((k) => delete NODE_TYPE_MAP[k]);
+  for (const [nodeType, def] of Object.entries(definitionsData)) {
+    const category = NODE_CATEGORIES[def.category];
+    NODE_TYPE_MAP[nodeType] = {
+      category: def.category || "default",
+      color: def.color || category?.color || "slate",
+      icon: resolveIcon(def.icon) || category?.icon || Box,
+      i18nKey: `nodes.labels.${nodeType}`,
+      label:
+        def.label ||
+        nodeType
+          .split("_")
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(" "),
+    };
+  }
+
+  console.log(
+    `[nodeConstants] Updated: ${Object.keys(NODE_CATEGORIES).length} categories, ${Object.keys(NODE_TYPE_MAP).length} node types`,
+  );
+};

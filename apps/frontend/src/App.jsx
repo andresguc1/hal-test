@@ -53,6 +53,7 @@ import { useHaltestSocket } from "./hooks/useHaltestSocket";
 import { useFigmaInteraction } from "./hooks/useFigmaInteraction";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "next-themes";
+import { useNodeDefinitions } from "./hooks/useNodeDefinitions";
 import RunHistoryPanel from "./components/RunHistoryPanel";
 import StepDetailsModal from "./components/StepDetailsModal";
 import ReportDashboard from "./components/reporting/ReportDashboard";
@@ -129,6 +130,9 @@ function Dashboard({
   const { theme } = useTheme();
   const toast = useToast();
   const navigate = useNavigate();
+
+  // Fetch dynamic node definitions from API on mount (updates nodeConstants in-place)
+  useNodeDefinitions();
   const hasLogs = useLogStore((state) => state.logs.length > 0);
   const addLog = useLogStore((state) => state.addLog);
   const isPanelVisible = useLogStore((state) => state.isPanelVisible);
