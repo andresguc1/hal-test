@@ -7,7 +7,6 @@ import { recoverFromCorruption, createBackup } from '../database/index.js';
 class ExecutionLogger {
     async startRun(flowId, metadata = {}) {
         try {
-
             const run = await Run.create({
                 flow_id: flowId,
                 batch_id: metadata.batchId || null,

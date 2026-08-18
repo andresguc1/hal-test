@@ -99,6 +99,7 @@ import {
 import { useLogStore } from "./context/LogContext";
 import TerminalPanel from "./components/TerminalPanel";
 import VariablePanel from "./components/VariablePanel";
+import ProjectExplorer from "./components/explorer/ProjectExplorer";
 import AskAIPanel from "./components/AskAIPanel";
 import { cn } from "@/lib/utils";
 
@@ -122,6 +123,8 @@ function Dashboard({
   switchFlow,
   deleteFlow,
   renameFlow,
+  moveFlowType,
+  moveFlowToFolder,
   renameProject,
   updateProject,
 }) {
@@ -2039,6 +2042,17 @@ function Dashboard({
           onOpenSettings={openSettings}
           onOpenApiKeys={openApiKeys}
           onOpenMetricsDashboard={() => setIsMetricsDashboardOpen(true)}
+          isExplorerVisible={!isCreationPanelVisible && !isHistoryPanelVisible && !isVariablePanelVisible}
+          onToggleExplorer={() => {
+            const showingExplorer = !isCreationPanelVisible && !isHistoryPanelVisible && !isVariablePanelVisible;
+            if (showingExplorer) {
+              setIsCreationPanelVisible(true);
+            } else {
+              setIsHistoryPanelVisible(false);
+              setIsVariablePanelVisible(false);
+              setIsCreationPanelVisible(false);
+            }
+          }}
           onToggleHistory={() => {
             setIsHistoryPanelVisible((prev) => !prev);
             if (!isHistoryPanelVisible) {
@@ -2089,13 +2103,12 @@ function Dashboard({
 
         {/* 2. Content Wrapper */}
         <div className="flex-1 flex flex-row overflow-hidden relative">
-          {/* SIDEBAR IZQUIERDO - Either Toolbox OR History Panel */}
+          {/* SIDEBAR IZQUIERDO - Explorer (default) OR Toolbox/History/Variables */}
           {isHistoryPanelVisible ? (
             <RunHistoryPanel
               isOpen={true}
               onClose={() => {
                 setIsHistoryPanelVisible(false);
-                setIsCreationPanelVisible(true);
               }}
               onSelectRun={handleSelectRun}
               currentFlowId={currentFlowId}
@@ -2108,7 +2121,6 @@ function Dashboard({
               nodes={nodes}
               onClose={() => {
                 setIsVariablePanelVisible(false);
-                setIsCreationPanelVisible(true);
               }}
               onDeleteNode={deleteNode}
               onUpdateNode={updateNodeConfiguration}
@@ -2116,14 +2128,52 @@ function Dashboard({
                 addNode(type, { x: 100, y: 100 }, configData);
               }}
             />
-          ) : (
+          ) : isCreationPanelVisible ? (
             <Toolbox
               addNode={addNode}
               activeBrowserId={activeBrowserId}
               isCollapsed={!isCreationPanelVisible}
-              onToggleCollapse={(collapsed) =>
-                setIsCreationPanelVisible(!collapsed)
-              }
+              onToggleCollapse={(collapsed) => {
+                setIsCreationPanelVisible(!collapsed);
+              }}
+            />
+          ) : (
+            <ProjectExplorer
+              flows={derivedFlowData.flows || []}
+              projects={projects}
+              currentProject={currentProject}
+              currentFlowId={currentFlowId}
+              onSwitchProject={(p) => loadProject(p.id)}
+              onRenameProject={(id, newName) => renameProject(id, newName)}
+              onDeleteProject={(id) => deleteProject(id)}
+              onSwitchFlow={(f) => {
+                setViewStack([]);
+                switchFlow(f.id);
+              }}
+              onNewProject={() => setCreationModal({ isOpen: true, type: "project" })}
+              onNewFlow={() => setCreationModal({ isOpen: true, type: "flow" })}
+              onRenameFlow={(f, newName) => renameFlow(f.id, newName)}
+              onDeleteFlow={(f) => {
+                deleteFlow(f.id);
+                if (f.id === currentFlowId) {
+                  setNodes([]);
+                  setEdges([]);
+                }
+              }}
+              onDuplicateFlow={(f) => {
+                createFlow(`${f.name} (copy)`, f.type);
+              }}
+              onMoveFlowType={(flowId, newType) => moveFlowType(flowId, newType)}
+              onMoveFlowToFolder={(flowId, parentId) => moveFlowToFolder(flowId, parentId)}
+              onRunFlow={(f) => {
+                setViewStack([]);
+                switchFlow(f.id);
+                setTimeout(() => {
+                  if (canvasViewMode === "performance") setIsPerfModalOpen(true);
+                  else if (canvasViewMode === "seguridad") setIsSecurityModalOpen(true);
+                  else handleExecuteFlow();
+                }, 100);
+              }}
             />
           )}
 

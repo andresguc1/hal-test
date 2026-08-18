@@ -410,17 +410,17 @@ const GlassMenu = ({
 
 function AppFooter({
   projectName,
-  projects = [], // Array of projects
-  onSwitchProject,
-  onNewProject,
-  onRenameProject,
-  onDeleteProject,
+  projects: _projects = [],
+  onSwitchProject: _onSwitchProject,
+  onNewProject: _onNewProject,
+  onRenameProject: _onRenameProject,
+  onDeleteProject: _onDeleteProject,
   flowName,
-  flows = [], // Array of flows
-  onSwitchFlow,
-  onNewFlow,
-  onRenameFlow,
-  onDeleteFlow,
+  flows = [],
+  onSwitchFlow: _onSwitchFlow,
+  onNewFlow: _onNewFlow,
+  onRenameFlow: _onRenameFlow,
+  onDeleteFlow: _onDeleteFlow,
   onRun,
   onSave,
   onShowImport,
@@ -438,44 +438,11 @@ function AppFooter({
   executionMode = "calidad",
 }) {
   const { t } = useTranslation();
-  const [activeMenu, setActiveMenu] = useState(null); // 'project' | 'flow' | null
-  const containerRef = useRef(null);
   const isLocked = isRemoteExecuting || (isCollaborative && role !== "owner");
 
-  // Close menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target)
-      ) {
-        setActiveMenu(null);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const toggleMenu = (menu) => {
-    setActiveMenu((prev) => (prev === menu ? null : menu));
-  };
-
-  const handleProjectSwitch = (p) => {
-    onSwitchProject(p);
-    setActiveMenu(null);
-  };
-
-  const handleFlowSwitch = (f) => {
-    onSwitchFlow(f);
-    setActiveMenu(null);
-  };
-
-  // Find active IDs safely
-  const activeProjectId = projects?.find((p) => p.name === projectName)?.id;
-  const activeFlowId = flows?.find((f) => f.name === flowName)?.id;
-
+  // Find active flow for icon/label
   const activeFlow = flows?.find(
-    (f) => f.id === activeFlowId || f.name === flowName,
+    (f) => f.name === flowName,
   );
   const activeFlowIcon =
     activeFlow?.type === "loop"
@@ -489,22 +456,6 @@ function AppFooter({
       : activeFlow?.type === "component"
         ? "Component"
         : "Flow";
-
-  const projectButtonRef = useRef(null);
-  const flowButtonRef = useRef(null);
-
-  // Calculate menu position
-  const getMenuPosition = () => {
-    if (activeMenu === "project" && projectButtonRef.current) {
-      // Align with project button
-      return { left: projectButtonRef.current.offsetLeft };
-    }
-    if (activeMenu === "flow" && flowButtonRef.current) {
-      // Align with flow button
-      return { left: flowButtonRef.current.offsetLeft };
-    }
-    return { left: 16 }; // Fallback
-  };
 
   const globalExecutionStatus = useExecutionStore((s) => s.status);
   const draftMode = useExecutionStore((s) => s.draftMode);
@@ -603,77 +554,32 @@ function AppFooter({
 
   return (
     <div className="w-full h-14 flex items-center justify-between px-2 md:px-4 glass-panel z-[var(--z-hud)] relative rounded-none border-t border-white/5">
-      {/* MENUS POPUP ABOVE - Adjusted position */}
-      <AnimatePresence>
-        {activeMenu === "project" && (
-          <div
-            style={{ ...getMenuPosition(), bottom: "100%" }}
-            className="absolute z-50 pb-1"
-          >
-            <GlassMenu
-              type="Project"
-              items={projects}
-              activeId={activeProjectId}
-              onItemClick={handleProjectSwitch}
-              onRename={onRenameProject}
-              onDelete={onDeleteProject}
-              onNew={() => {
-                onNewProject?.();
-                setActiveMenu(null);
-              }}
-            />
-          </div>
-        )}
-        {activeMenu === "flow" && (
-          <div
-            style={{ ...getMenuPosition(), bottom: "100%" }}
-            className="absolute z-50 pb-1"
-          >
-            <GlassMenu
-              type="Flow"
-              items={flows}
-              activeId={activeFlowId}
-              onItemClick={handleFlowSwitch}
-              onRename={onRenameFlow}
-              onDelete={onDeleteFlow}
-              onNew={() => {
-                onNewFlow?.();
-                setActiveMenu(null);
-              }}
-            />
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* LEFT: Project & Flow Info */}
-      <div className="flex items-center gap-1 md:gap-4">
-        {/* SECTION 1: PROJECT SELECTOR */}
-        <div ref={projectButtonRef}>
-          <SelectorButton
-            icon={Folder}
-            label="Project"
-            subLabel={projectName}
-            isActive={activeMenu === "project"}
-            onClick={() => toggleMenu("project")}
-          />
+      {/* LEFT: Project & Flow Info (Compact - selectors moved to Explorer) */}
+      <div className="flex items-center gap-2 md:gap-4 min-w-0">
+        {/* Project indicator */}
+        <div className="flex items-center gap-1.5 text-xs min-w-0">
+          <Folder size={12} className="text-indigo-400 shrink-0" aria-hidden="true" />
+          <span className="text-slate-500 font-mono uppercase tracking-wider text-[10px] hidden md:inline">Project</span>
+          <span className="text-slate-300 font-medium truncate max-w-[100px] md:max-w-[150px]">
+            {projectName || "—"}
+          </span>
         </div>
 
-        <div
-          className="h-8 w-px bg-white/10"
-          role="separator"
-          aria-orientation="vertical"
-        />
+        <div className="h-8 w-px bg-white/10" role="separator" aria-orientation="vertical" />
 
-        {/* SECTION 2: FLOW SELECTOR */}
-        <div ref={flowButtonRef}>
-          <SelectorButton
-            icon={activeFlowIcon}
-            label={activeFlowLabel}
-            subLabel={flowName}
-            isActive={activeMenu === "flow"}
-            onClick={() => toggleMenu("flow")}
-            hasUnsavedChanges={hasUnsavedChanges}
-          />
+        {/* Flow indicator */}
+        <div className="flex items-center gap-1.5 text-xs min-w-0">
+          {activeFlowIcon && <activeFlowIcon size={12} className="text-indigo-400 shrink-0" aria-hidden="true" />}
+          <span className="text-slate-500 font-mono uppercase tracking-wider text-[10px] hidden md:inline">{activeFlowLabel}</span>
+          <span className={cn(
+            "font-medium truncate max-w-[100px] md:max-w-[200px]",
+            flowName ? "text-slate-300" : "text-slate-600 italic"
+          )}>
+            {flowName || "Select a flow"}
+          </span>
+          {hasUnsavedChanges && (
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)] animate-pulse" aria-label="Unsaved changes" />
+          )}
         </div>
       </div>
 

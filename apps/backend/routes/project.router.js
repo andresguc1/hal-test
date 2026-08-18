@@ -1,7 +1,17 @@
 import { Router } from 'express';
-import { User, Project, Canvas, Flow, Node, Edge, CollaboratorRole } from '../database/init.js';
+import {
+    User,
+    Project,
+    Canvas,
+    Flow,
+    Node,
+    Edge,
+    CollaboratorRole,
+    Run,
+} from '../database/init.js';
 import sequelize from '../database/index.js';
 import { exportService } from '../services/exporter/index.js';
+import { projectStorageService } from '../services/ProjectStorageService.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -497,6 +507,163 @@ router.get('/projects/:id', async (req, res) => {
     }
 });
 
+// Get project tree structure with last run status per flow
+router.get('/projects/:id/tree', async (req, res) => {
+    try {
+        const project = await Project.findByPk(req.params.id, {
+            include: [
+                {
+                    model: Flow,
+                    as: 'flows',
+                    attributes: [
+                        'id',
+                        'name',
+                        'type',
+                        'order',
+                        'parentId',
+                        'createdAt',
+                        'updatedAt',
+                    ],
+                    include: [
+                        {
+                            model: Node,
+                            as: 'nodes',
+                            attributes: ['nodeId'],
+                        },
+                    ],
+                },
+            ],
+            order: [
+                [{ model: Flow, as: 'flows' }, 'order', 'ASC'],
+                [{ model: Flow, as: 'flows' }, 'createdAt', 'ASC'],
+            ],
+        });
+
+        if (!project) {
+            return res.status(404).json({ error: 'Project not found' });
+        }
+
+        // Fetch last run status for each flow
+        const flows = project.Flows || [];
+        const flowIds = flows.map((f) => f.id);
+
+        let lastRuns = [];
+        if (flowIds.length > 0) {
+            lastRuns = await Run.findAll({
+                where: { flow_id: flowIds },
+                attributes: [
+                    'flow_id',
+                    'status',
+                    [sequelize.fn('MAX', sequelize.col('started_at')), 'lastRunAt'],
+                ],
+                group: ['flow_id', 'status'],
+                order: [[sequelize.fn('MAX', sequelize.col('started_at')), 'DESC']],
+                raw: true,
+            });
+        }
+
+        // Build a map: flowId -> last run status (most recent)
+        const lastRunMap = {};
+        for (const run of lastRuns) {
+            if (!lastRunMap[run.flow_id]) {
+                lastRunMap[run.flow_id] = {
+                    status: run.status,
+                    lastRunAt: run.lastRunAt,
+                };
+            }
+        }
+
+        // Enrich flows with nodeCount and lastRunStatus
+        const enrichedFlows = flows.map((f) => {
+            const flowJson = f.toJSON();
+            return {
+                id: flowJson.id,
+                name: flowJson.name,
+                type: flowJson.type,
+                order: flowJson.order,
+                parentId: flowJson.parentId,
+                nodeCount: (flowJson.nodes || []).length,
+                lastRunStatus: lastRunMap[f.id]?.status || 'never-run',
+                lastRunAt: lastRunMap[f.id]?.lastRunAt || null,
+                createdAt: flowJson.createdAt,
+                updatedAt: flowJson.updatedAt,
+            };
+        });
+
+        res.json({
+            projectId: project.id,
+            projectName: project.name,
+            flows: enrichedFlows,
+            total: enrichedFlows.length,
+        });
+    } catch (error) {
+        console.error('[ProjectRouter] Error fetching tree:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get disk tree structure for a project
+router.get('/projects/:id/disk-tree', async (req, res) => {
+    try {
+        const project = await Project.findByPk(req.params.id);
+        if (!project) {
+            return res.status(404).json({ error: 'Project not found' });
+        }
+
+        const tree = await projectStorageService.getProjectTree(req.params.id);
+        res.json(tree);
+    } catch (error) {
+        console.error('[ProjectRouter] Error fetching disk tree:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Create a folder within project
+router.post('/projects/:id/folders', async (req, res) => {
+    try {
+        const { path: folderPath, category = 'flows' } = req.body;
+        if (!folderPath) {
+            return res.status(400).json({ error: 'Path is required' });
+        }
+
+        const project = await Project.findByPk(req.params.id);
+        if (!project) {
+            return res.status(404).json({ error: 'Project not found' });
+        }
+
+        const result = await projectStorageService.createFolder(
+            req.params.id,
+            `${category}/${folderPath}`,
+        );
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Delete a folder within project
+router.delete('/projects/:id/folders', async (req, res) => {
+    try {
+        const { path: folderPath, category = 'flows' } = req.body;
+        if (!folderPath) {
+            return res.status(400).json({ error: 'Path is required' });
+        }
+
+        const project = await Project.findByPk(req.params.id);
+        if (!project) {
+            return res.status(404).json({ error: 'Project not found' });
+        }
+
+        const result = await projectStorageService.deleteFolder(
+            req.params.id,
+            `${category}/${folderPath}`,
+        );
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Update project
 router.put('/projects/:id', async (req, res) => {
     try {
@@ -836,7 +1003,7 @@ router.put('/projects/:projectId/flows/:flowId', async (req, res) => {
 
         // Deep clone payload to sanitize input and prevent in-memory reference sharing across models
         const sanitizedBody = deepClonePayload(req.body);
-        const { name, viewport, nodes, edges } = sanitizedBody;
+        const { name, viewport, nodes, edges, type, parentId } = sanitizedBody;
 
         console.log(`[ProjectRouter] PUT Flow: ID=${flowId}, ProjectID=${projectId}`);
 
@@ -870,7 +1037,15 @@ router.put('/projects/:projectId/flows/:flowId', async (req, res) => {
             }
         }
 
-        await flow.update({ name, viewport }, { transaction });
+        const flowUpdates = { name, viewport };
+        if (type !== undefined && ['main', 'component', 'loop'].includes(type)) {
+            flowUpdates.type = type;
+        }
+        if (parentId !== undefined) {
+            flowUpdates.parentId = parentId || null;
+        }
+
+        await flow.update(flowUpdates, { transaction });
 
         if (nodes !== undefined) {
             if (!Array.isArray(nodes)) {

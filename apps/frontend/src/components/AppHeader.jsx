@@ -16,6 +16,7 @@ import {
   Loader2,
   Shield,
   BarChart3,
+  FolderGit2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
@@ -101,6 +102,8 @@ function AppHeader({
   onToggleHistory,
   onToggleVariables,
   onOpenMetricsDashboard,
+  isExplorerVisible,
+  onToggleExplorer,
 
   isToolboxVisible,
   isVariablesVisible,
@@ -392,6 +395,18 @@ function AppHeader({
           className="hidden md:flex text-slate-400 hover:text-indigo-400"
         >
           <LayoutDashboard size={18} />
+        </HeaderButton>
+
+        <HeaderButton
+          onClick={onToggleExplorer}
+          title={isExplorerVisible ? "Hide Explorer" : "Show Explorer"}
+          className={cn(
+            isExplorerVisible
+              ? "text-slate-200 bg-slate-800/80 border border-slate-700"
+              : "text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10",
+          )}
+        >
+          <FolderGit2 size={18} />
         </HeaderButton>
 
         <HeaderButton

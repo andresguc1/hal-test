@@ -257,6 +257,80 @@ class ProjectStorageService {
             fs.unlinkSync(filePath);
         }
     }
+
+    // ── Tree Structure ────────────────────────────────────────
+
+    /**
+     * Returns the hierarchical tree structure of a project's flows on disk.
+     */
+    async getProjectTree(projectId) {
+        const projectDir = this.getProjectDir(projectId);
+        const flowsDir = path.join(projectDir, 'flows');
+        const componentsDir = path.join(projectDir, 'components');
+
+        const tree = {
+            flows: this._scanDirTree(flowsDir, ''),
+            components: this._scanDirTree(componentsDir, ''),
+        };
+
+        return tree;
+    }
+
+    /**
+     * Recursively scans a directory and returns a tree of folders and files.
+     */
+    _scanDirTree(dir, relativePath) {
+        if (!fs.existsSync(dir)) return [];
+
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+        const items = [];
+
+        for (const entry of entries) {
+            const rel = path.join(relativePath, entry.name);
+            if (entry.isDirectory()) {
+                items.push({
+                    type: 'folder',
+                    name: entry.name,
+                    path: rel,
+                    children: this._scanDirTree(path.join(dir, entry.name), rel),
+                });
+            } else if (entry.name.endsWith('.json')) {
+                const name = entry.name.replace('.json', '');
+                items.push({
+                    type: 'file',
+                    name,
+                    path: rel,
+                });
+            }
+        }
+
+        items.sort((a, b) => {
+            if (a.type === b.type) return a.name.localeCompare(b.name);
+            return a.type === 'folder' ? -1 : 1;
+        });
+
+        return items;
+    }
+
+    /**
+     * Creates a subfolder within the flows directory.
+     */
+    async createFolder(projectId, relativePath) {
+        const fullPath = this.getFilePath(projectId, relativePath);
+        fs.mkdirSync(fullPath, { recursive: true });
+        return { path: relativePath, created: true };
+    }
+
+    /**
+     * Deletes a subfolder within the flows directory.
+     */
+    async deleteFolder(projectId, relativePath) {
+        const fullPath = this.getFilePath(projectId, relativePath);
+        if (fs.existsSync(fullPath)) {
+            fs.rmSync(fullPath, { recursive: true, force: true });
+        }
+        return { path: relativePath, deleted: true };
+    }
 }
 
 export const projectStorageService = new ProjectStorageService();

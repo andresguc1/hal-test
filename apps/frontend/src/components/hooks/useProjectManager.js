@@ -260,6 +260,18 @@ export function useProjectManager() {
         flowId,
         updates: { name: newName },
       }),
+    moveFlowType: (flowId, newType) =>
+      updateFlowMutation.mutateAsync({
+        projectId: currentProjectId,
+        flowId,
+        updates: { type: newType },
+      }),
+    moveFlowToFolder: (flowId, parentId) =>
+      updateFlowMutation.mutateAsync({
+        projectId: currentProjectId,
+        flowId,
+        updates: { parentId: parentId || null },
+      }),
     reorderFlows: (orders) =>
       reorderFlowsMutation.mutateAsync({ projectId: currentProjectId, orders }),
   };
