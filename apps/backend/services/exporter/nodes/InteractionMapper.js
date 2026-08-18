@@ -1,6 +1,8 @@
 /**
  * Mapper for user interactions.
  */
+import { escapeForTemplateLiteral, escapeForDoubleQuotes } from '../core/escapeUtils.js';
+
 export const InteractionMapper = {
     type: ['click', 'type_text', 'type', 'hover', 'scroll', 'press_key'],
 
@@ -9,12 +11,14 @@ export const InteractionMapper = {
         const text = params.text || '';
 
         if (framework.toLowerCase() === 'cypress') {
+            const s = escapeForTemplateLiteral(selector);
+            const t = escapeForTemplateLiteral(text);
             return (
                 {
-                    click: `cy.get(\`${selector}\`).click();`,
-                    type_text: `cy.get(\`${selector}\`).type(\`${text}\`);`,
-                    type: `cy.get(\`${selector}\`).type(\`${text}\`);`,
-                    hover: `cy.get(\`${selector}\`).trigger('mouseover');`,
+                    click: `cy.get(\`${s}\`).click();`,
+                    type_text: `cy.get(\`${s}\`).type(\`${t}\`);`,
+                    type: `cy.get(\`${s}\`).type(\`${t}\`);`,
+                    hover: `cy.get(\`${s}\`).trigger('mouseover');`,
                     scroll: `cy.scrollTo(${params.deltaX || 0}, ${params.deltaY || 500});`,
                     press_key: `cy.get('body').type(\`{${params.key || ''}}\`);`,
                 }[params.actionType || params.type] || `// action not implemented for Cypress`
@@ -23,12 +27,14 @@ export const InteractionMapper = {
 
         if (framework.toLowerCase() === 'selenium') {
             if (lang.toLowerCase() === 'python') {
+                const s = escapeForDoubleQuotes(selector);
+                const t = escapeForDoubleQuotes(text);
                 return (
                     {
-                        click: `driver.find_element(By.CSS_SELECTOR, "${selector}").click()`,
-                        type_text: `driver.find_element(By.CSS_SELECTOR, "${selector}").send_keys("${text}")`,
-                        type: `driver.find_element(By.CSS_SELECTOR, "${selector}").send_keys("${text}")`,
-                        hover: `from selenium.webdriver.common.action_chains import ActionChains\n        element = driver.find_element(By.CSS_SELECTOR, "${selector}")\n        ActionChains(driver).move_to_element(element).perform()`,
+                        click: `driver.find_element(By.CSS_SELECTOR, "${s}").click()`,
+                        type_text: `driver.find_element(By.CSS_SELECTOR, "${s}").send_keys("${t}")`,
+                        type: `driver.find_element(By.CSS_SELECTOR, "${s}").send_keys("${t}")`,
+                        hover: `from selenium.webdriver.common.action_chains import ActionChains\n        element = driver.find_element(By.CSS_SELECTOR, "${s}")\n        ActionChains(driver).move_to_element(element).perform()`,
                         scroll: `driver.execute_script("window.scrollBy(${params.deltaX || 0}, ${params.deltaY || 500});")`,
                         press_key: `driver.find_element(By.TAG_NAME, "body").send_keys(Keys.${(params.key || '').toUpperCase()})`,
                     }[params.actionType || params.type] ||
@@ -36,12 +42,14 @@ export const InteractionMapper = {
                 );
             }
             if (lang.toLowerCase() === 'java') {
+                const s = escapeForDoubleQuotes(selector);
+                const t = escapeForDoubleQuotes(text);
                 return (
                     {
-                        click: `driver.findElement(By.cssSelector("${selector}")).click();`,
-                        type_text: `driver.findElement(By.cssSelector("${selector}")).sendKeys("${text}");`,
-                        type: `driver.findElement(By.cssSelector("${selector}")).sendKeys("${text}");`,
-                        hover: `new Actions(driver).moveToElement(driver.findElement(By.cssSelector("${selector}"))).perform();`,
+                        click: `driver.findElement(By.cssSelector("${s}")).click();`,
+                        type_text: `driver.findElement(By.cssSelector("${s}")).sendKeys("${t}");`,
+                        type: `driver.findElement(By.cssSelector("${s}")).sendKeys("${t}");`,
+                        hover: `new Actions(driver).moveToElement(driver.findElement(By.cssSelector("${s}"))).perform();`,
                         scroll: `((org.openqa.selenium.JavascriptExecutor) driver).executeScript("window.scrollBy(${params.deltaX || 0}, ${params.deltaY || 500});");`,
                         press_key: `driver.findElement(By.tagName("body")).sendKeys(Keys.${(params.key || '').toUpperCase()});`,
                     }[params.actionType || params.type] ||
@@ -53,42 +61,54 @@ export const InteractionMapper = {
 
         switch (lang.toLowerCase()) {
             case 'javascript':
-            case 'typescript':
+            case 'typescript': {
+                const s = escapeForTemplateLiteral(selector);
+                const t = escapeForTemplateLiteral(text);
                 return {
-                    click: `await page.click(\`${selector}\`);`,
-                    type_text: `await page.fill(\`${selector}\`, \`${text}\`);`,
-                    type: `await page.fill(\`${selector}\`, \`${text}\`);`,
-                    hover: `await page.hover(\`${selector}\`);`,
+                    click: `await page.click(\`${s}\`);`,
+                    type_text: `await page.fill(\`${s}\`, \`${t}\`);`,
+                    type: `await page.fill(\`${s}\`, \`${t}\`);`,
+                    hover: `await page.hover(\`${s}\`);`,
                     scroll: `await page.mouse.wheel(${params.deltaX || 0}, ${params.deltaY || 500});`,
                     press_key: `await page.keyboard.press(\`${params.key || ''}\`);`,
                 }[params.actionType || params.type];
-            case 'python':
+            }
+            case 'python': {
+                const s = escapeForDoubleQuotes(selector);
+                const t = escapeForDoubleQuotes(text);
                 return {
-                    click: `await page.click("${selector}")`,
-                    type_text: `await page.fill("${selector}", "${text}")`,
-                    type: `await page.fill("${selector}", "${text}")`,
-                    hover: `await page.hover("${selector}")`,
+                    click: `await page.click("${s}")`,
+                    type_text: `await page.fill("${s}", "${t}")`,
+                    type: `await page.fill("${s}", "${t}")`,
+                    hover: `await page.hover("${s}")`,
                     scroll: `await page.mouse.wheel(${params.deltaX || 0}, ${params.deltaY || 500})`,
                     press_key: `await page.keyboard.press("${params.key || ''}")`,
                 }[params.actionType || params.type];
-            case 'java':
+            }
+            case 'java': {
+                const s = escapeForDoubleQuotes(selector);
+                const t = escapeForDoubleQuotes(text);
                 return {
-                    click: `page.click("${selector}");`,
-                    type_text: `page.fill("${selector}", "${text}");`,
-                    type: `page.fill("${selector}", "${text}");`,
-                    hover: `page.hover("${selector}");`,
+                    click: `page.click("${s}");`,
+                    type_text: `page.fill("${s}", "${t}");`,
+                    type: `page.fill("${s}", "${t}");`,
+                    hover: `page.hover("${s}");`,
                     scroll: `page.mouse().wheel(${params.deltaX || 0}, ${params.deltaY || 500});`,
                     press_key: `page.keyboard().press("${params.key || ''}");`,
                 }[params.actionType || params.type];
-            case 'csharp':
+            }
+            case 'csharp': {
+                const s = escapeForDoubleQuotes(selector);
+                const t = escapeForDoubleQuotes(text);
                 return {
-                    click: `await page.ClickAsync("${selector}");`,
-                    type_text: `await page.FillAsync("${selector}", "${text}");`,
-                    type: `await page.FillAsync("${selector}", "${text}");`,
-                    hover: `await page.HoverAsync("${selector}");`,
+                    click: `await page.ClickAsync("${s}");`,
+                    type_text: `await page.FillAsync("${s}", "${t}");`,
+                    type: `await page.FillAsync("${s}", "${t}");`,
+                    hover: `await page.HoverAsync("${s}");`,
                     scroll: `await page.Mouse.WheelAsync(${params.deltaX || 0}, ${params.deltaY || 500});`,
                     press_key: `await page.Keyboard.PressAsync("${params.key || ''}");`,
                 }[params.actionType || params.type];
+            }
             default:
                 return `// interaction not implemented for ${lang}`;
         }

@@ -1,6 +1,7 @@
 import { BaseGenerator } from '../core/BaseGenerator.js';
 import { NodeMapperRegistry } from '../core/GeneratorRegistry.js';
 import { variableManager } from '../../VariableManager.js';
+import { validateSelector } from '../core/escapeUtils.js';
 
 export class PlaywrightGenerator extends BaseGenerator {
     constructor(language, locale, usePOM = false, includeCICD = false) {
@@ -371,6 +372,28 @@ playwright_tests:
 
         if (mapper) {
             const mapperParams = { ...config, type, actionType: type };
+
+            // Validate selector before code generation
+            const selectorFields = [
+                'selector',
+                'sourceSelector',
+                'targetSelector',
+                'formSelector',
+                'submitSelector',
+            ];
+            for (const field of selectorFields) {
+                if (mapperParams[field]) {
+                    const { valid, warnings: selWarnings } = validateSelector(
+                        mapperParams[field],
+                        this.framework,
+                        label,
+                    );
+                    if (!valid) {
+                        selWarnings.forEach((w) => this.addWarning(type, w, index));
+                    }
+                }
+            }
+
             nodeCode = mapper.getCode(mapperParams, this.language, index, this.framework);
         } else {
             this.addWarning(type, label, index);

@@ -2,6 +2,8 @@
  * Mapper for form-related interactions.
  * Covers: select_option, drag_drop
  */
+import { escapeForTemplateLiteral, escapeForDoubleQuotes } from '../core/escapeUtils.js';
+
 export const FormMapper = {
     type: ['select_option', 'drag_drop'],
 
@@ -11,29 +13,49 @@ export const FormMapper = {
 
         switch (lang.toLowerCase()) {
             case 'javascript':
-            case 'typescript':
+            case 'typescript': {
+                const s = escapeForTemplateLiteral(selector);
+                const v = escapeForTemplateLiteral(params.value || params.label || '');
+                const src = escapeForTemplateLiteral(params.sourceSelector || params.source || '');
+                const tgt = escapeForTemplateLiteral(params.targetSelector || params.target || '');
                 return {
-                    select_option: `await page.selectOption(\`${selector}\`, \`${params.value || params.label || ''}\`);`,
-                    drag_drop: `await page.dragAndDrop(\`${params.sourceSelector || params.source || ''}\`, \`${params.targetSelector || params.target || ''}\`);`,
+                    select_option: `await page.selectOption(\`${s}\`, \`${v}\`);`,
+                    drag_drop: `await page.dragAndDrop(\`${src}\`, \`${tgt}\`);`,
                 }[action];
+            }
 
-            case 'python':
+            case 'python': {
+                const s = escapeForDoubleQuotes(selector);
+                const v = escapeForDoubleQuotes(params.value || params.label || '');
+                const src = escapeForDoubleQuotes(params.sourceSelector || params.source || '');
+                const tgt = escapeForDoubleQuotes(params.targetSelector || params.target || '');
                 return {
-                    select_option: `await page.select_option("${selector}", "${params.value || params.label || ''}")`,
-                    drag_drop: `await page.drag_and_drop("${params.sourceSelector || params.source || ''}", "${params.targetSelector || params.target || ''}")`,
+                    select_option: `await page.select_option("${s}", "${v}")`,
+                    drag_drop: `await page.drag_and_drop("${src}", "${tgt}")`,
                 }[action];
+            }
 
-            case 'java':
+            case 'java': {
+                const s = escapeForDoubleQuotes(selector);
+                const v = escapeForDoubleQuotes(params.value || params.label || '');
+                const src = escapeForDoubleQuotes(params.sourceSelector || params.source || '');
+                const tgt = escapeForDoubleQuotes(params.targetSelector || params.target || '');
                 return {
-                    select_option: `page.selectOption("${selector}", "${params.value || params.label || ''}");`,
-                    drag_drop: `page.dragAndDrop("${params.sourceSelector || params.source || ''}", "${params.targetSelector || params.target || ''}");`,
+                    select_option: `page.selectOption("${s}", "${v}");`,
+                    drag_drop: `page.dragAndDrop("${src}", "${tgt}");`,
                 }[action];
+            }
 
-            case 'csharp':
+            case 'csharp': {
+                const s = escapeForDoubleQuotes(selector);
+                const v = escapeForDoubleQuotes(params.value || params.label || '');
+                const src = escapeForDoubleQuotes(params.sourceSelector || params.source || '');
+                const tgt = escapeForDoubleQuotes(params.targetSelector || params.target || '');
                 return {
-                    select_option: `await page.SelectOptionAsync("${selector}", "${params.value || params.label || ''}");`,
-                    drag_drop: `await page.DragAndDropAsync("${params.sourceSelector || params.source || ''}", "${params.targetSelector || params.target || ''}");`,
+                    select_option: `await page.SelectOptionAsync("${s}", "${v}");`,
+                    drag_drop: `await page.DragAndDropAsync("${src}", "${tgt}");`,
                 }[action];
+            }
 
             default:
                 return `// form action not implemented for ${lang}`;

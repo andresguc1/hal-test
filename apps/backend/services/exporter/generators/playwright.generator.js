@@ -1,4 +1,8 @@
 /**
+ * @deprecated This is a legacy standalone generator. Use PlaywrightGenerator class instead.
+ * This file is only kept for backward compatibility with existing tests.
+ * New code should use: import { PlaywrightGenerator } from './PlaywrightGenerator.js';
+ *
  * Generador de código Playwright a partir de un flujo de acciones.
  * Soporta múltiples lenguajes: javascript, typescript, python, java, csharp.
  * @param {Array} flowSteps - Lista de pasos del flujo.

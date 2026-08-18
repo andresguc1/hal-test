@@ -5,6 +5,8 @@
  * Note: validate_semantic in HalTest uses AI-powered validation at runtime.
  * When exporting to Playwright, we translate to the closest native assertion.
  */
+import { escapeForTemplateLiteral, escapeForDoubleQuotes } from '../core/escapeUtils.js';
+
 export const AssertionMapper = {
     type: ['validate_semantic', 'assertion', 'assert_page_text'],
 
@@ -13,36 +15,38 @@ export const AssertionMapper = {
 
         if (framework.toLowerCase() === 'cypress') {
             if (action === 'assert_page_text') {
-                const textToFind = params.textToFind || '';
+                const textToFind = escapeForTemplateLiteral(params.textToFind || '');
                 return `cy.contains(\`${textToFind}\`).should('exist');`;
             }
 
-            const selector = params.selector || '';
-            const expected = params.expected || params.text || params.value || '';
+            const s = escapeForTemplateLiteral(params.selector || '');
+            const e = escapeForTemplateLiteral(
+                params.expected || params.text || params.value || '',
+            );
             const assertType = params.assertionType || params.assertType || 'text_contains';
 
             const cypressAssertion = () => {
                 switch (assertType) {
                     case 'text_equals':
-                        return `cy.get(\`${selector}\`).should('have.text', \`${expected}\`);`;
+                        return `cy.get(\`${s}\`).should('have.text', \`${e}\`);`;
                     case 'text_contains':
-                        return `cy.get(\`${selector}\`).should('contain', \`${expected}\`);`;
+                        return `cy.get(\`${s}\`).should('contain', \`${e}\`);`;
                     case 'visible':
-                        return `cy.get(\`${selector}\`).should('be.visible');`;
+                        return `cy.get(\`${s}\`).should('be.visible');`;
                     case 'hidden':
-                        return `cy.get(\`${selector}\`).should('not.be.visible');`;
+                        return `cy.get(\`${s}\`).should('not.be.visible');`;
                     case 'enabled':
-                        return `cy.get(\`${selector}\`).should('be.enabled');`;
+                        return `cy.get(\`${s}\`).should('be.enabled');`;
                     case 'disabled':
-                        return `cy.get(\`${selector}\`).should('be.disabled');`;
+                        return `cy.get(\`${s}\`).should('be.disabled');`;
                     case 'has_attribute':
-                        return `cy.get(\`${selector}\`).should('have.attr', \`${params.attribute || ''}\`, \`${expected}\`);`;
+                        return `cy.get(\`${s}\`).should('have.attr', \`${escapeForTemplateLiteral(params.attribute || '')}\`, \`${e}\`);`;
                     case 'url_contains':
-                        return `cy.url().should('include', \`${expected}\`);`;
+                        return `cy.url().should('include', \`${e}\`);`;
                     case 'title_contains':
-                        return `cy.title().should('include', \`${expected}\`);`;
+                        return `cy.title().should('include', \`${e}\`);`;
                     default:
-                        return `cy.get(\`${selector}\`).should('contain', \`${expected}\`);`;
+                        return `cy.get(\`${s}\`).should('contain', \`${e}\`);`;
                 }
             };
 
@@ -53,38 +57,38 @@ export const AssertionMapper = {
         }
 
         if (framework.toLowerCase() === 'selenium') {
-            const selector = params.selector || '';
-            const expected = params.expected || params.text || params.value || '';
+            const s = escapeForDoubleQuotes(params.selector || '');
+            const e = escapeForDoubleQuotes(params.expected || params.text || params.value || '');
             const assertType = params.assertionType || params.assertType || 'text_contains';
 
             if (lang.toLowerCase() === 'python') {
                 if (action === 'assert_page_text') {
-                    const textToFind = params.textToFind || '';
+                    const textToFind = escapeForDoubleQuotes(params.textToFind || '');
                     return `self.assertIn("${textToFind}", driver.page_source)`;
                 }
 
                 const seleniumAssertion = () => {
                     switch (assertType) {
                         case 'text_equals':
-                            return `self.assertEqual(driver.find_element(By.CSS_SELECTOR, "${selector}").text, "${expected}")`;
+                            return `self.assertEqual(driver.find_element(By.CSS_SELECTOR, "${s}").text, "${e}")`;
                         case 'text_contains':
-                            return `self.assertIn("${expected}", driver.find_element(By.CSS_SELECTOR, "${selector}").text)`;
+                            return `self.assertIn("${e}", driver.find_element(By.CSS_SELECTOR, "${s}").text)`;
                         case 'visible':
-                            return `self.assertTrue(driver.find_element(By.CSS_SELECTOR, "${selector}").is_displayed())`;
+                            return `self.assertTrue(driver.find_element(By.CSS_SELECTOR, "${s}").is_displayed())`;
                         case 'hidden':
-                            return `self.assertFalse(driver.find_element(By.CSS_SELECTOR, "${selector}").is_displayed())`;
+                            return `self.assertFalse(driver.find_element(By.CSS_SELECTOR, "${s}").is_displayed())`;
                         case 'enabled':
-                            return `self.assertTrue(driver.find_element(By.CSS_SELECTOR, "${selector}").is_enabled())`;
+                            return `self.assertTrue(driver.find_element(By.CSS_SELECTOR, "${s}").is_enabled())`;
                         case 'disabled':
-                            return `self.assertFalse(driver.find_element(By.CSS_SELECTOR, "${selector}").is_enabled())`;
+                            return `self.assertFalse(driver.find_element(By.CSS_SELECTOR, "${s}").is_enabled())`;
                         case 'has_attribute':
-                            return `self.assertEqual(driver.find_element(By.CSS_SELECTOR, "${selector}").get_attribute("${params.attribute || ''}"), "${expected}")`;
+                            return `self.assertEqual(driver.find_element(By.CSS_SELECTOR, "${s}").get_attribute("${escapeForDoubleQuotes(params.attribute || '')}"), "${e}")`;
                         case 'url_contains':
-                            return `self.assertIn("${expected}", driver.current_url)`;
+                            return `self.assertIn("${e}", driver.current_url)`;
                         case 'title_contains':
-                            return `self.assertIn("${expected}", driver.title)`;
+                            return `self.assertIn("${e}", driver.title)`;
                         default:
-                            return `self.assertIn("${expected}", driver.find_element(By.CSS_SELECTOR, "${selector}").text)`;
+                            return `self.assertIn("${e}", driver.find_element(By.CSS_SELECTOR, "${s}").text)`;
                     }
                 };
 
@@ -96,32 +100,32 @@ export const AssertionMapper = {
 
             if (lang.toLowerCase() === 'java') {
                 if (action === 'assert_page_text') {
-                    const textToFind = params.textToFind || '';
+                    const textToFind = escapeForDoubleQuotes(params.textToFind || '');
                     return `org.junit.jupiter.api.Assertions.assertTrue(driver.getPageSource().contains("${textToFind}"));`;
                 }
 
                 const seleniumAssertion = () => {
                     switch (assertType) {
                         case 'text_equals':
-                            return `org.junit.jupiter.api.Assertions.assertEquals("${expected}", driver.findElement(By.cssSelector("${selector}")).getText());`;
+                            return `org.junit.jupiter.api.Assertions.assertEquals("${e}", driver.findElement(By.cssSelector("${s}")).getText());`;
                         case 'text_contains':
-                            return `org.junit.jupiter.api.Assertions.assertTrue(driver.findElement(By.cssSelector("${selector}")).getText().contains("${expected}"));`;
+                            return `org.junit.jupiter.api.Assertions.assertTrue(driver.findElement(By.cssSelector("${s}")).getText().contains("${e}"));`;
                         case 'visible':
-                            return `org.junit.jupiter.api.Assertions.assertTrue(driver.findElement(By.cssSelector("${selector}")).isDisplayed());`;
+                            return `org.junit.jupiter.api.Assertions.assertTrue(driver.findElement(By.cssSelector("${s}")).isDisplayed());`;
                         case 'hidden':
-                            return `org.junit.jupiter.api.Assertions.assertFalse(driver.findElement(By.cssSelector("${selector}")).isDisplayed());`;
+                            return `org.junit.jupiter.api.Assertions.assertFalse(driver.findElement(By.cssSelector("${s}")).isDisplayed());`;
                         case 'enabled':
-                            return `org.junit.jupiter.api.Assertions.assertTrue(driver.findElement(By.cssSelector("${selector}")).isEnabled());`;
+                            return `org.junit.jupiter.api.Assertions.assertTrue(driver.findElement(By.cssSelector("${s}")).isEnabled());`;
                         case 'disabled':
-                            return `org.junit.jupiter.api.Assertions.assertFalse(driver.findElement(By.cssSelector("${selector}")).isEnabled());`;
+                            return `org.junit.jupiter.api.Assertions.assertFalse(driver.findElement(By.cssSelector("${s}")).isEnabled());`;
                         case 'has_attribute':
-                            return `org.junit.jupiter.api.Assertions.assertEquals("${expected}", driver.findElement(By.cssSelector("${selector}")).getAttribute("${params.attribute || ''}"));`;
+                            return `org.junit.jupiter.api.Assertions.assertEquals("${e}", driver.findElement(By.cssSelector("${s}")).getAttribute("${escapeForDoubleQuotes(params.attribute || '')}"));`;
                         case 'url_contains':
-                            return `org.junit.jupiter.api.Assertions.assertTrue(driver.getCurrentUrl().contains("${expected}"));`;
+                            return `org.junit.jupiter.api.Assertions.assertTrue(driver.getCurrentUrl().contains("${e}"));`;
                         case 'title_contains':
-                            return `org.junit.jupiter.api.Assertions.assertTrue(driver.getTitle().contains("${expected}"));`;
+                            return `org.junit.jupiter.api.Assertions.assertTrue(driver.getTitle().contains("${e}"));`;
                         default:
-                            return `org.junit.jupiter.api.Assertions.assertTrue(driver.findElement(By.cssSelector("${selector}")).getText().contains("${expected}"));`;
+                            return `org.junit.jupiter.api.Assertions.assertTrue(driver.findElement(By.cssSelector("${s}")).getText().contains("${e}"));`;
                     }
                 };
 
@@ -151,9 +155,9 @@ export const AssertionMapper = {
 
                     if (matchType === 'regex') {
                         const flags = caseSensitive ? '' : 'i';
-                        return `await expect(page.locator('body')).toContainText(new RegExp(\`${textToFind}\`, '${flags}')${optStr});`;
+                        return `await expect(page.locator('body')).toContainText(new RegExp(\`${escapeForTemplateLiteral(textToFind)}\`, '${flags}')${optStr});`;
                     } else {
-                        return `await expect(page.locator('body')).toContainText(\`${textToFind}\`${optStr});`;
+                        return `await expect(page.locator('body')).toContainText(\`${escapeForTemplateLiteral(textToFind)}\`${optStr});`;
                     }
                 }
                 case 'python': {
@@ -165,9 +169,9 @@ export const AssertionMapper = {
 
                     if (matchType === 'regex') {
                         const flags = !caseSensitive ? ', re.IGNORECASE' : '';
-                        return `expect(page.locator("body")).to_contain_text(re.compile(r"${textToFind}"${flags})${optStr})`;
+                        return `expect(page.locator("body")).to_contain_text(re.compile(r"${escapeForDoubleQuotes(textToFind)}"${flags})${optStr})`;
                     } else {
-                        return `expect(page.locator("body")).to_contain_text("${textToFind}"${optStr})`;
+                        return `expect(page.locator("body")).to_contain_text("${escapeForDoubleQuotes(textToFind)}"${optStr})`;
                     }
                 }
                 case 'java': {
@@ -182,9 +186,9 @@ export const AssertionMapper = {
 
                     if (matchType === 'regex') {
                         const flags = !caseSensitive ? 'Pattern.CASE_INSENSITIVE' : '0';
-                        return `assertThat(page.locator("body")).containsText(Pattern.compile("${textToFind}", ${flags})${optStr});`;
+                        return `assertThat(page.locator("body")).containsText(Pattern.compile("${escapeForDoubleQuotes(textToFind)}", ${flags})${optStr});`;
                     } else {
-                        return `assertThat(page.locator("body")).containsText("${textToFind}"${optStr});`;
+                        return `assertThat(page.locator("body")).containsText("${escapeForDoubleQuotes(textToFind)}"${optStr});`;
                     }
                 }
                 case 'csharp': {
@@ -196,9 +200,9 @@ export const AssertionMapper = {
 
                     if (matchType === 'regex') {
                         const flags = !caseSensitive ? ', RegexOptions.IgnoreCase' : '';
-                        return `await Expect(page.Locator("body")).ToContainTextAsync(new Regex(@"${textToFind}"${flags})${optStr});`;
+                        return `await Expect(page.Locator("body")).ToContainTextAsync(new Regex(@"${escapeForDoubleQuotes(textToFind)}"${flags})${optStr});`;
                     } else {
-                        return `await Expect(page.Locator("body")).ToContainTextAsync("${textToFind}"${optStr});`;
+                        return `await Expect(page.Locator("body")).ToContainTextAsync("${escapeForDoubleQuotes(textToFind)}"${optStr});`;
                     }
                 }
                 default:
@@ -206,8 +210,8 @@ export const AssertionMapper = {
             }
         }
 
-        const selector = params.selector || '';
-        const expected = params.expected || params.text || params.value || '';
+        const s = escapeForTemplateLiteral(params.selector || '');
+        const e = escapeForTemplateLiteral(params.expected || params.text || params.value || '');
         const assertType = params.assertionType || params.assertType || 'text_contains';
 
         // Build assertion based on type
@@ -217,86 +221,101 @@ export const AssertionMapper = {
                 case 'typescript':
                     switch (assertType) {
                         case 'text_equals':
-                            return `await expect(page.locator(\`${selector}\`)).toHaveText(\`${expected}\`);`;
+                            return `await expect(page.locator(\`${s}\`)).toHaveText(\`${e}\`);`;
                         case 'text_contains':
-                            return `await expect(page.locator(\`${selector}\`)).toContainText(\`${expected}\`);`;
+                            return `await expect(page.locator(\`${s}\`)).toContainText(\`${e}\`);`;
                         case 'visible':
-                            return `await expect(page.locator(\`${selector}\`)).toBeVisible();`;
+                            return `await expect(page.locator(\`${s}\`)).toBeVisible();`;
                         case 'hidden':
-                            return `await expect(page.locator(\`${selector}\`)).toBeHidden();`;
+                            return `await expect(page.locator(\`${s}\`)).toBeHidden();`;
                         case 'enabled':
-                            return `await expect(page.locator(\`${selector}\`)).toBeEnabled();`;
+                            return `await expect(page.locator(\`${s}\`)).toBeEnabled();`;
                         case 'disabled':
-                            return `await expect(page.locator(\`${selector}\`)).toBeDisabled();`;
+                            return `await expect(page.locator(\`${s}\`)).toBeDisabled();`;
                         case 'has_attribute':
-                            return `await expect(page.locator(\`${selector}\`)).toHaveAttribute(\`${params.attribute || ''}\`, \`${expected}\`);`;
+                            return `await expect(page.locator(\`${s}\`)).toHaveAttribute(\`${escapeForTemplateLiteral(params.attribute || '')}\`, \`${e}\`);`;
                         case 'url_contains':
-                            return `await expect(page).toHaveURL(/${expected}/);`;
+                            return `await expect(page).toHaveURL(/${e}/);`;
                         case 'title_contains':
-                            return `await expect(page).toHaveTitle(/${expected}/);`;
+                            return `await expect(page).toHaveTitle(/${e}/);`;
                         default:
-                            return `await expect(page.locator(\`${selector}\`)).toContainText(\`${expected}\`);`;
+                            return `await expect(page.locator(\`${s}\`)).toContainText(\`${e}\`);`;
                     }
 
-                case 'python':
+                case 'python': {
+                    const sp = escapeForDoubleQuotes(params.selector || '');
+                    const ep = escapeForDoubleQuotes(
+                        params.expected || params.text || params.value || '',
+                    );
                     switch (assertType) {
                         case 'text_equals':
-                            return `expect(page.locator("${selector}")).to_have_text("${expected}")`;
+                            return `expect(page.locator("${sp}")).to_have_text("${ep}")`;
                         case 'text_contains':
-                            return `expect(page.locator("${selector}")).to_contain_text("${expected}")`;
+                            return `expect(page.locator("${sp}")).to_contain_text("${ep}")`;
                         case 'visible':
-                            return `expect(page.locator("${selector}")).to_be_visible()`;
+                            return `expect(page.locator("${sp}")).to_be_visible()`;
                         case 'hidden':
-                            return `expect(page.locator("${selector}")).to_be_hidden()`;
+                            return `expect(page.locator("${sp}")).to_be_hidden()`;
                         case 'enabled':
-                            return `expect(page.locator("${selector}")).to_be_enabled()`;
+                            return `expect(page.locator("${sp}")).to_be_enabled()`;
                         case 'disabled':
-                            return `expect(page.locator("${selector}")).to_be_disabled()`;
+                            return `expect(page.locator("${sp}")).to_be_disabled()`;
                         case 'has_attribute':
-                            return `expect(page.locator("${selector}")).to_have_attribute("${params.attribute || ''}", "${expected}")`;
+                            return `expect(page.locator("${sp}")).to_have_attribute("${escapeForDoubleQuotes(params.attribute || '')}", "${ep}")`;
                         case 'url_contains':
-                            return `expect(page).to_have_url(re.compile("${expected}"))`;
+                            return `expect(page).to_have_url(re.compile("${ep}"))`;
                         case 'title_contains':
-                            return `expect(page).to_have_title(re.compile("${expected}"))`;
+                            return `expect(page).to_have_title(re.compile("${ep}"))`;
                         default:
-                            return `expect(page.locator("${selector}")).to_contain_text("${expected}")`;
+                            return `expect(page.locator("${sp}")).to_contain_text("${ep}")`;
                     }
+                }
 
-                case 'java':
+                case 'java': {
+                    const sj = escapeForDoubleQuotes(params.selector || '');
+                    const ej = escapeForDoubleQuotes(
+                        params.expected || params.text || params.value || '',
+                    );
                     switch (assertType) {
                         case 'text_equals':
-                            return `assertThat(page.locator("${selector}")).hasText("${expected}");`;
+                            return `assertThat(page.locator("${sj}")).hasText("${ej}");`;
                         case 'text_contains':
-                            return `assertThat(page.locator("${selector}")).containsText("${expected}");`;
+                            return `assertThat(page.locator("${sj}")).containsText("${ej}");`;
                         case 'visible':
-                            return `assertThat(page.locator("${selector}")).isVisible();`;
+                            return `assertThat(page.locator("${sj}")).isVisible();`;
                         case 'hidden':
-                            return `assertThat(page.locator("${selector}")).isHidden();`;
+                            return `assertThat(page.locator("${sj}")).isHidden();`;
                         case 'enabled':
-                            return `assertThat(page.locator("${selector}")).isEnabled();`;
+                            return `assertThat(page.locator("${sj}")).isEnabled();`;
                         case 'disabled':
-                            return `assertThat(page.locator("${selector}")).isDisabled();`;
+                            return `assertThat(page.locator("${sj}")).isDisabled();`;
                         default:
-                            return `assertThat(page.locator("${selector}")).containsText("${expected}");`;
+                            return `assertThat(page.locator("${sj}")).containsText("${ej}");`;
                     }
+                }
 
-                case 'csharp':
+                case 'csharp': {
+                    const sc = escapeForDoubleQuotes(params.selector || '');
+                    const ec = escapeForDoubleQuotes(
+                        params.expected || params.text || params.value || '',
+                    );
                     switch (assertType) {
                         case 'text_equals':
-                            return `await Expect(page.Locator("${selector}")).ToHaveTextAsync("${expected}");`;
+                            return `await Expect(page.Locator("${sc}")).ToHaveTextAsync("${ec}");`;
                         case 'text_contains':
-                            return `await Expect(page.Locator("${selector}")).ToContainTextAsync("${expected}");`;
+                            return `await Expect(page.Locator("${sc}")).ToContainTextAsync("${ec}");`;
                         case 'visible':
-                            return `await Expect(page.Locator("${selector}")).ToBeVisibleAsync();`;
+                            return `await Expect(page.Locator("${sc}")).ToBeVisibleAsync();`;
                         case 'hidden':
-                            return `await Expect(page.Locator("${selector}")).ToBeHiddenAsync();`;
+                            return `await Expect(page.Locator("${sc}")).ToBeHiddenAsync();`;
                         case 'enabled':
-                            return `await Expect(page.Locator("${selector}")).ToBeEnabledAsync();`;
+                            return `await Expect(page.Locator("${sc}")).ToBeEnabledAsync();`;
                         case 'disabled':
-                            return `await Expect(page.Locator("${selector}")).ToBeDisabledAsync();`;
+                            return `await Expect(page.Locator("${sc}")).ToBeDisabledAsync();`;
                         default:
-                            return `await Expect(page.Locator("${selector}")).ToContainTextAsync("${expected}");`;
+                            return `await Expect(page.Locator("${sc}")).ToContainTextAsync("${ec}");`;
                     }
+                }
 
                 default:
                     return `// assertion not implemented for ${lang}`;

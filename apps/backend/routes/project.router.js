@@ -152,8 +152,17 @@ const syncActiveFlowToDisk = async (nodes, edges, projectId) => {
         const sortedNodes = sortNodesTopologically(activeNodes, activeEdges);
         let flattenedNodes = [];
 
-        const flatten = async (currentNodes, executionStack = []) => {
+        const flatten = async (currentNodes, executionStack = [], depth = 0) => {
             const IGNORED_TYPES = ['input', 'output', 'annotation', 'note'];
+            const MAX_FLATTEN_DEPTH = 10;
+
+            if (depth > MAX_FLATTEN_DEPTH) {
+                console.warn(
+                    `[ProjectRouter] Max flatten depth (${MAX_FLATTEN_DEPTH}) reached, stopping recursion`,
+                );
+                return;
+            }
+
             for (const n of currentNodes) {
                 if (n.data?.disabled) continue;
                 if (n.type === 'component' || n.data?.type === 'component') {
@@ -186,7 +195,7 @@ const syncActiveFlowToDisk = async (nodes, edges, projectId) => {
                                 mappedSubFlow.edges,
                             );
                             // Recursively flatten with the updated stack
-                            await flatten(sortedSubNodes, newStack);
+                            await flatten(sortedSubNodes, newStack, depth + 1);
                         }
                     }
                 } else if (!IGNORED_TYPES.includes(n.type)) {

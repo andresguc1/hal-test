@@ -2,7 +2,7 @@
  * Mapper for utility actions.
  */
 export const UtilityMapper = {
-    type: ['take_screenshot', 'save_dom', 'log_errors'],
+    type: ['take_screenshot', 'save_dom', 'log_errors', 'execute_js'],
 
     getCode: (params, lang, index) => {
         switch (lang.toLowerCase()) {

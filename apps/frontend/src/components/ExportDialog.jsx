@@ -93,18 +93,70 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges, projectId }) => {
     });
 
     const roots = [];
+    const childIds = new Set();
 
+    // 1. Build parent-child tree (components, groups)
     nodeMap.forEach((mappedNode) => {
       const parentId = mappedNode.parentNode;
       if (parentId && nodeMap.has(parentId)) {
         nodeMap.get(parentId).data.subNodes.push(mappedNode);
-      } else {
+        childIds.add(mappedNode.id);
+      }
+    });
+
+    // 2. Collect root nodes (not children of any other node)
+    nodeMap.forEach((mappedNode) => {
+      if (!childIds.has(mappedNode.id)) {
         roots.push(mappedNode);
       }
     });
 
+    // 3. Topologically sort roots using edges for correct execution order
+    if (edges && edges.length > 0) {
+      const rootIds = new Set(roots.map((r) => r.id));
+      const adj = new Map();
+      const inDegree = new Map();
+
+      roots.forEach((r) => {
+        adj.set(r.id, []);
+        inDegree.set(r.id, 0);
+      });
+
+      edges.forEach((edge) => {
+        if (rootIds.has(edge.source) && rootIds.has(edge.target)) {
+          adj.get(edge.source)?.push(edge.target);
+          inDegree.set(edge.target, (inDegree.get(edge.target) || 0) + 1);
+        }
+      });
+
+      const queue = [];
+      inDegree.forEach((deg, id) => {
+        if (deg === 0) queue.push(id);
+      });
+
+      const sorted = [];
+      while (queue.length > 0) {
+        const id = queue.shift();
+        sorted.push(id);
+        for (const neighbor of (adj.get(id) || [])) {
+          const newDeg = (inDegree.get(neighbor) || 1) - 1;
+          inDegree.set(neighbor, newDeg);
+          if (newDeg === 0) queue.push(neighbor);
+        }
+      }
+
+      // Append any roots not reached by edges (disconnected)
+      const sortedSet = new Set(sorted);
+      roots.forEach((r) => {
+        if (!sortedSet.has(r.id)) sorted.push(r.id);
+      });
+
+      const rootMap = new Map(roots.map((r) => [r.id, r]));
+      return sorted.map((id) => rootMap.get(id)).filter(Boolean);
+    }
+
     return roots;
-  }, [nodes]);
+  }, [nodes, edges]);
 
   // Handle JSON export (Client-Side)
   const handleJsonExport = useCallback(async () => {
