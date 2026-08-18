@@ -1,0 +1,16 @@
+{
+    "name": "HalTest",
+    "short_name": "HalTest",
+    "description": "Visual Playwright Automation IDE",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#0a0a0a",
+    "theme_color": "#3b82f6",
+    "icons": [
+        {
+            "src": "/images/haltest_logo.ico",
+            "sizes": "any",
+            "type": "image/x-icon"
+        }
+    ]
+}
