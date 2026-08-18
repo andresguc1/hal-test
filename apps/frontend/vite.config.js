@@ -37,9 +37,9 @@ export default defineConfig({
   // === PROXY PARA BACKEND ===
   server: {
     port: parseInt(process.env.VITE_PORT) || 5173,
-    allowedHosts: ['sb-47817dtru2d5.vercel.run'],
+    allowedHosts: ["sb-47817dtru2d5.vercel.run"],
     proxy: {
-      '/api': {
+      "/api": {
         target: `http://localhost:${process.env.PORT || 2001}`,
         changeOrigin: true,
         secure: false,

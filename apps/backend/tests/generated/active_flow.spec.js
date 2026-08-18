@@ -24,12 +24,17 @@ test(`Flujo Generado Hal-Test`, async ({ page }) => {
 
     // [node_id: node_712cf7de-42f3-4aa9-ab24-655376e715ef]
     await test.step(`Click Register`, async () => {
-        await page.click(`form#customerForm > table > tbody > tr:nth-of-type(13) > td:nth-of-type(2) > input`);
+        await page.click(
+            `form#customerForm > table > tbody > tr:nth-of-type(13) > td:nth-of-type(2) > input`,
+        );
     });
 
     // [node_id: node_9e657501-cb5b-49d8-a9de-16630c7facb3]
     await test.step(`Assert Page Contains Text`, async () => {
-        await expect(page.locator('body')).toContainText(`Welcome`, { ignoreCase: true, timeout: 0 });
+        await expect(page.locator('body')).toContainText(`Welcome`, {
+            ignoreCase: true,
+            timeout: 0,
+        });
     });
     console.log(`✅ Flujo completado con éxito.`);
 });

@@ -1,5 +1,12 @@
 import React, { useState } from "react";
-import { Zap, ChevronDown, ChevronUp, Check, Copy, Sparkles } from "lucide-react";
+import {
+  Zap,
+  ChevronDown,
+  ChevronUp,
+  Check,
+  Copy,
+  Sparkles,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 /**
@@ -20,55 +27,64 @@ export const SelectorResultPanel = ({ selectorMeta, onApplyAlternative }) => {
     playwrightTestId: {
       label: "getByTestId",
       badge: t("picker.badge_pw_best", "⚡ PW Best"),
-      badgeClass: "bg-violet-500/20 text-violet-300 border border-violet-500/30",
+      badgeClass:
+        "bg-violet-500/20 text-violet-300 border border-violet-500/30",
       isPlaywright: true,
     },
     playwrightRole: {
       label: "getByRole",
       badge: t("picker.badge_pw", "⚡ PW"),
-      badgeClass: "bg-violet-500/15 text-violet-400 border border-violet-500/20",
+      badgeClass:
+        "bg-violet-500/15 text-violet-400 border border-violet-500/20",
       isPlaywright: true,
     },
     playwrightLabel: {
       label: "getByLabel",
       badge: t("picker.badge_pw", "⚡ PW"),
-      badgeClass: "bg-violet-500/15 text-violet-400 border border-violet-500/20",
+      badgeClass:
+        "bg-violet-500/15 text-violet-400 border border-violet-500/20",
       isPlaywright: true,
     },
     playwrightPlaceholder: {
       label: "getByPlaceholder",
       badge: t("picker.badge_pw", "⚡ PW"),
-      badgeClass: "bg-violet-500/15 text-violet-400 border border-violet-500/20",
+      badgeClass:
+        "bg-violet-500/15 text-violet-400 border border-violet-500/20",
       isPlaywright: true,
     },
     playwrightAltText: {
       label: "getByAltText",
       badge: t("picker.badge_pw", "⚡ PW"),
-      badgeClass: "bg-violet-500/15 text-violet-400 border border-violet-500/20",
+      badgeClass:
+        "bg-violet-500/15 text-violet-400 border border-violet-500/20",
       isPlaywright: true,
     },
     playwrightTitle: {
       label: "getByTitle",
       badge: t("picker.badge_pw", "⚡ PW"),
-      badgeClass: "bg-violet-500/15 text-violet-400 border border-violet-500/20",
+      badgeClass:
+        "bg-violet-500/15 text-violet-400 border border-violet-500/20",
       isPlaywright: true,
     },
     playwrightText: {
       label: "getByText",
       badge: t("picker.badge_pw", "⚡ PW"),
-      badgeClass: "bg-violet-500/15 text-violet-400 border border-violet-500/20",
+      badgeClass:
+        "bg-violet-500/15 text-violet-400 border border-violet-500/20",
       isPlaywright: true,
     },
     testId: {
       label: "data-testid (CSS)",
       badge: t("picker.badge_stable", "✓ Stable"),
-      badgeClass: "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20",
+      badgeClass:
+        "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20",
       isPlaywright: false,
     },
     id: {
       label: "#id",
       badge: t("picker.badge_stable", "✓ Stable"),
-      badgeClass: "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20",
+      badgeClass:
+        "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20",
       isPlaywright: false,
     },
     name: {
@@ -197,7 +213,9 @@ export const SelectorResultPanel = ({ selectorMeta, onApplyAlternative }) => {
                   >
                     {meta.badge}
                   </span>
-                  <span className="text-[9px] text-slate-500">{meta.label}</span>
+                  <span className="text-[9px] text-slate-500">
+                    {meta.label}
+                  </span>
                 </div>
                 <p className="text-[10px] font-mono text-slate-300 truncate leading-snug">
                   {value}

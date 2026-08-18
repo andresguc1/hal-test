@@ -893,63 +893,63 @@ export const getNodeConfig = (nodeType) =>
 // NODE_CATEGORIES itself is NOT replaced — its labels, icons, colors
 // and i18n keys are curated by the frontend and must be preserved.
 const BACKEND_TO_FRONTEND_CATEGORY = {
-    user_interaction: "user_simulation",
-    navigation: "browser_management",
-    capture: "diagnostics",
-    network: "network_control",
-    ai_llm: "llm_ai",
-    flow_logic: "flow_control",
-    security: "security_audit",
-    assertion: "dom_manipulation",
-    session: "test_execution",
-    data: "file_data",
-    testing: "execution_interface",
+  user_interaction: "user_simulation",
+  navigation: "browser_management",
+  capture: "diagnostics",
+  network: "network_control",
+  ai_llm: "llm_ai",
+  flow_logic: "flow_control",
+  security: "security_audit",
+  assertion: "dom_manipulation",
+  session: "test_execution",
+  data: "file_data",
+  testing: "execution_interface",
 };
 export const updateNodeDefinitions = (_categoriesData, definitionsData) => {
-    // 1. Update NODE_TYPE_MAP from API definitions (the main value)
-    Object.keys(NODE_TYPE_MAP).forEach((k) => delete NODE_TYPE_MAP[k]);
-    for (const [nodeType, def] of Object.entries(definitionsData)) {
-        const frontendCat =
-            BACKEND_TO_FRONTEND_CATEGORY[def.category] || def.category;
-        const category = NODE_CATEGORIES[frontendCat];
-        NODE_TYPE_MAP[nodeType] = {
-            category: frontendCat,
-            color: category?.color || def.color || "slate",
-            icon: resolveIcon(def.icon) || category?.icon || Box,
-            i18nKey: `nodes.labels.${nodeType}`,
-            label:
-                def.label ||
-                nodeType
-                    .split("_")
-                    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-                    .join(" "),
+  // 1. Update NODE_TYPE_MAP from API definitions (the main value)
+  Object.keys(NODE_TYPE_MAP).forEach((k) => delete NODE_TYPE_MAP[k]);
+  for (const [nodeType, def] of Object.entries(definitionsData)) {
+    const frontendCat =
+      BACKEND_TO_FRONTEND_CATEGORY[def.category] || def.category;
+    const category = NODE_CATEGORIES[frontendCat];
+    NODE_TYPE_MAP[nodeType] = {
+      category: frontendCat,
+      color: category?.color || def.color || "slate",
+      icon: resolveIcon(def.icon) || category?.icon || Box,
+      i18nKey: `nodes.labels.${nodeType}`,
+      label:
+        def.label ||
+        nodeType
+          .split("_")
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(" "),
+    };
+  }
+
+  // 2. Ensure every registered node type appears in a NODE_CATEGORIES entry
+  //    (handles third-party plugins that add new node types)
+  const allKnownNodes = new Set();
+  for (const cat of Object.values(NODE_CATEGORIES)) {
+    for (const n of cat.nodes) allKnownNodes.add(n);
+  }
+  for (const [nodeType, def] of Object.entries(definitionsData)) {
+    if (!allKnownNodes.has(nodeType)) {
+      const frontendCat =
+        BACKEND_TO_FRONTEND_CATEGORY[def.category] || def.category;
+      if (!NODE_CATEGORIES[frontendCat]) {
+        NODE_CATEGORIES[frontendCat] = {
+          icon: Box,
+          color: def.color || "slate",
+          label: frontendCat,
+          nodes: [],
         };
+      }
+      NODE_CATEGORIES[frontendCat].nodes.push(nodeType);
+      allKnownNodes.add(nodeType);
     }
+  }
 
-    // 2. Ensure every registered node type appears in a NODE_CATEGORIES entry
-    //    (handles third-party plugins that add new node types)
-    const allKnownNodes = new Set();
-    for (const cat of Object.values(NODE_CATEGORIES)) {
-        for (const n of cat.nodes) allKnownNodes.add(n);
-    }
-    for (const [nodeType, def] of Object.entries(definitionsData)) {
-        if (!allKnownNodes.has(nodeType)) {
-            const frontendCat =
-                BACKEND_TO_FRONTEND_CATEGORY[def.category] || def.category;
-            if (!NODE_CATEGORIES[frontendCat]) {
-                NODE_CATEGORIES[frontendCat] = {
-                    icon: Box,
-                    color: def.color || "slate",
-                    label: frontendCat,
-                    nodes: [],
-                };
-            }
-            NODE_CATEGORIES[frontendCat].nodes.push(nodeType);
-            allKnownNodes.add(nodeType);
-        }
-    }
-
-    console.log(
-        `[nodeConstants] Updated: ${Object.keys(NODE_CATEGORIES).length} categories, ${Object.keys(NODE_TYPE_MAP).length} node types`,
-    );
+  console.log(
+    `[nodeConstants] Updated: ${Object.keys(NODE_CATEGORIES).length} categories, ${Object.keys(NODE_TYPE_MAP).length} node types`,
+  );
 };

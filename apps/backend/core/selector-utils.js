@@ -222,7 +222,9 @@ function buildPlaywrightLocator(page, selector) {
             }
             return page.getByRole(role);
         }
-        throw new Error(`Invalid getByRole format: "${selector}". Use getByRole('button', { name: 'Submit' })`);
+        throw new Error(
+            `Invalid getByRole format: "${selector}". Use getByRole('button', { name: 'Submit' })`,
+        );
     }
 
     return page.locator(selector);

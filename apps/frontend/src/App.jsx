@@ -1754,7 +1754,7 @@ function Dashboard({
         const flowId = node.data?.flowId || node.data?.configuration?.flowId;
         if (flowId) {
           const allWorkspaceFlows = (currentProject?.flows || []).concat(
-            (projects || []).flatMap((p) => p.flows || [])
+            (projects || []).flatMap((p) => p.flows || []),
           );
           const subFlow = allWorkspaceFlows.find((f) => f.id === flowId);
           if (subFlow) {

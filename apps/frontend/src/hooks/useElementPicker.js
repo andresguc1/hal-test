@@ -36,7 +36,8 @@ export const useElementPicker = ({
   }, []);
 
   const handleCancelPicking = useCallback(async () => {
-    const targetNodeId = activePickSession.current?.nodeId || selectedAction?.nodeId;
+    const targetNodeId =
+      activePickSession.current?.nodeId || selectedAction?.nodeId;
     if (targetNodeId) {
       updateNodeState(targetNodeId, NODE_STATES.DEFAULT, {
         pickingField: null,
@@ -300,12 +301,16 @@ export const useElementPicker = ({
 
       const pickId = data.pickId;
       if (!pickId) {
-        console.warn("[useElementPicker] Missing pickId on element_picked event");
+        console.warn(
+          "[useElementPicker] Missing pickId on element_picked event",
+        );
         return;
       }
 
       if (!activePickSession.current) {
-        console.warn("[useElementPicker] No active pick session for element_picked");
+        console.warn(
+          "[useElementPicker] No active pick session for element_picked",
+        );
         return;
       }
 
@@ -391,7 +396,11 @@ export const useElementPicker = ({
       );
 
       const pickId = data.pickId;
-      if (!pickId || !activePickSession.current || pickId !== activePickSession.current.pickId) {
+      if (
+        !pickId ||
+        !activePickSession.current ||
+        pickId !== activePickSession.current.pickId
+      ) {
         console.warn(
           "[useElementPicker] Stale or mismatched sanitized event, ignoring.",
           { expected: activePickSession.current?.pickId, received: pickId },
@@ -415,12 +424,18 @@ export const useElementPicker = ({
             const meta = node.data?.selectorMeta || {};
             const originalSelector = meta.originalSelector;
 
-            if (originalSelector !== undefined && currentSelector !== originalSelector) {
+            if (
+              originalSelector !== undefined &&
+              currentSelector !== originalSelector
+            ) {
               console.log(
                 "[useElementPicker] Manual edit detected on selector, preserving user modification.",
               );
               toast.info(
-                t("common.selector_ai_skipped", "AI optimization skipped: selector was manually edited"),
+                t(
+                  "common.selector_ai_skipped",
+                  "AI optimization skipped: selector was manually edited",
+                ),
               );
               return node;
             }

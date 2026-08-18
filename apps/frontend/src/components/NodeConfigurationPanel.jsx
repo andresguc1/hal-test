@@ -613,25 +613,39 @@ const NodeConfigurationPanel = ({
                       const selectedId = e.target.value;
                       onChange(selectedId);
 
-                      const currentFlows = (currentProject?.flows || []).map((f) => ({
-                        ...f,
-                        projectName: currentProject?.name,
-                      }));
+                      const currentFlows = (currentProject?.flows || []).map(
+                        (f) => ({
+                          ...f,
+                          projectName: currentProject?.name,
+                        }),
+                      );
 
                       const externalFlows = (allWorkspaceProjects || [])
                         .filter((p) => p.id !== currentProject?.id)
                         .flatMap((p) =>
-                          (p.flows || []).map((f) => ({ ...f, projectName: p.name }))
+                          (p.flows || []).map((f) => ({
+                            ...f,
+                            projectName: p.name,
+                          })),
                         );
 
                       const allAvailable = [...currentFlows, ...externalFlows];
-                      const matched = allAvailable.find((f) => f.id === selectedId);
+                      const matched = allAvailable.find(
+                        (f) => f.id === selectedId,
+                      );
 
                       if (matched && activeNode) {
                         const newLabel = matched.name;
-                        const nodeCount = matched.nodeCount !== undefined ? matched.nodeCount : matched.nodes?.length || 0;
-                        const hasInput = matched.nodes?.some((n) => n.type === "input") || false;
-                        const hasOutput = matched.nodes?.some((n) => n.type === "output") || false;
+                        const nodeCount =
+                          matched.nodeCount !== undefined
+                            ? matched.nodeCount
+                            : matched.nodes?.length || 0;
+                        const hasInput =
+                          matched.nodes?.some((n) => n.type === "input") ||
+                          false;
+                        const hasOutput =
+                          matched.nodes?.some((n) => n.type === "output") ||
+                          false;
 
                         activeNode.data = {
                           ...(activeNode.data || {}),
@@ -653,7 +667,7 @@ const NodeConfigurationPanel = ({
                         window.dispatchEvent(
                           new CustomEvent("node-data-updated", {
                             detail: { nodeId: activeNode.id },
-                          })
+                          }),
                         );
                       }
                     }}
@@ -661,20 +675,31 @@ const NodeConfigurationPanel = ({
                   >
                     <option value="">-- Seleccionar Sub-flujo --</option>
 
-                    {currentProject?.flows && currentProject.flows.length > 0 && (
-                      <optgroup label={`📁 Proyecto Actual (${currentProject.name})`}>
-                        {currentProject.flows.map((f) => (
-                          <option key={f.id} value={f.id}>
-                            {f.name}
-                          </option>
-                        ))}
-                      </optgroup>
-                    )}
+                    {currentProject?.flows &&
+                      currentProject.flows.length > 0 && (
+                        <optgroup
+                          label={`📁 Proyecto Actual (${currentProject.name})`}
+                        >
+                          {currentProject.flows.map((f) => (
+                            <option key={f.id} value={f.id}>
+                              {f.name}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
 
                     {(allWorkspaceProjects || [])
-                      .filter((p) => p.id !== currentProject?.id && p.flows && p.flows.length > 0)
+                      .filter(
+                        (p) =>
+                          p.id !== currentProject?.id &&
+                          p.flows &&
+                          p.flows.length > 0,
+                      )
                       .map((proj) => (
-                        <optgroup key={proj.id} label={`🌐 Proyecto: ${proj.name}`}>
+                        <optgroup
+                          key={proj.id}
+                          label={`🌐 Proyecto: ${proj.name}`}
+                        >
                           {proj.flows.map((f) => (
                             <option key={f.id} value={f.id}>
                               {f.name}
