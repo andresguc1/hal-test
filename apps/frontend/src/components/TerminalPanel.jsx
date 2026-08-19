@@ -62,6 +62,8 @@ export default function TerminalPanel({
   edges = [],
   _setNodes,
   _setEdges,
+  selectedNodeId,
+  setSelectedNodeId,
   executionMode = "calidad",
 }) {
   const { logs, clearLogs, isPanelVisible, togglePanel } = useLogs();
@@ -122,6 +124,78 @@ export default function TerminalPanel({
 
     return index !== -1 ? index + 1 : -1;
   }, [nodes, isEditMode, editedCode, generatedCode]);
+
+  // ─── Node ↔ Code Line Mapping ─────────────────────────────────────────────
+  const nodeLineMap = useMemo(() => {
+    const codeToSearch = isEditMode ? editedCode : generatedCode;
+    if (!codeToSearch) return new Map();
+
+    const lines = codeToSearch.split("\n");
+    const map = new Map();
+    const nodeStartLines = new Map();
+
+    for (let i = 0; i < lines.length; i++) {
+      const match = lines[i].match(/\[node_id:\s*(.+?)\]/);
+      if (match) {
+        const nodeId = match[1].trim();
+        if (!nodeStartLines.has(nodeId)) {
+          nodeStartLines.set(nodeId, i);
+        }
+        map.set(nodeId, { startLine: i, endLine: i });
+      }
+    }
+
+    for (const [nodeId, range] of map) {
+      const nextEntries = Array.from(nodeLineMap?.entries() || []).filter(
+        ([id]) => id !== nodeId,
+      );
+      let endLine = lines.length - 1;
+      for (const [, otherRange] of nextEntries) {
+        if (otherRange.startLine > range.startLine) {
+          endLine = otherRange.startLine - 1;
+          break;
+        }
+      }
+      range.endLine = endLine;
+    }
+
+    return map;
+  }, [generatedCode, editedCode, isEditMode]);
+
+  const highlightedCodeLines = useMemo(() => {
+    const targetId = selectedNodeId || (() => {
+      const activeNode = nodes.find(
+        (n) =>
+          n.data?.state === "executing" ||
+          n.data?.state === "capturing-before" ||
+          n.data?.state === "capturing-after",
+      );
+      return activeNode?.id || null;
+    })();
+
+    if (!targetId || !nodeLineMap.has(targetId)) return new Set();
+    const range = nodeLineMap.get(targetId);
+    const lines = new Set();
+    for (let i = range.startLine; i <= range.endLine; i++) {
+      lines.add(i);
+    }
+    return lines;
+  }, [selectedNodeId, nodes, nodeLineMap]);
+
+  const handleCodeLineClick = useCallback(
+    (lineIndex) => {
+      const codeToSearch = isEditMode ? editedCode : generatedCode;
+      if (!codeToSearch) return;
+
+      const line = codeToSearch.split("\n")[lineIndex];
+      const match = line?.match(/\[node_id:\s*(.+?)\]/);
+      if (match && setSelectedNodeId) {
+        const nodeId = match[1].trim();
+        setSelectedNodeId(selectedNodeId === nodeId ? null : nodeId);
+      }
+    },
+    [generatedCode, editedCode, isEditMode, selectedNodeId, setSelectedNodeId],
+  );
 
   useEffect(() => {
     if (activeLineRef.current) {
@@ -962,15 +1036,21 @@ export default function TerminalPanel({
                         <div className="flex-1 font-mono text-[11px] leading-relaxed text-slate-300 overflow-x-auto selection:bg-indigo-500/30" style={{ minHeight: panelHeight - 100 }}>
                           {generatedCode.split("\n").map((line, idx) => {
                             const isActive = idx === activeLineIndex;
+                            const isHighlighted = highlightedCodeLines.has(idx);
+                            const hasNodeId = line.includes("[node_id:");
                             return (
                               <div
                                 key={idx}
                                 ref={isActive ? activeLineRef : null}
+                                onClick={() => hasNodeId && handleCodeLineClick(idx)}
                                 className={cn(
                                   "flex items-start px-2 transition-all duration-300 w-full min-w-max",
                                   isActive
                                     ? "bg-amber-500/25 text-amber-200 border-l-2 border-amber-500 font-bold shadow-[inset_0_0_8px_rgba(245,158,11,0.15)]"
-                                    : "hover:bg-white/5 border-l-2 border-transparent",
+                                    : isHighlighted
+                                      ? "bg-indigo-500/15 text-indigo-200 border-l-2 border-indigo-500/60"
+                                      : "hover:bg-white/5 border-l-2 border-transparent",
+                                  hasNodeId && "cursor-pointer hover:bg-indigo-500/10",
                                 )}
                               >
                                 {/* Line number column */}

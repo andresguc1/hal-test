@@ -208,6 +208,7 @@ function Dashboard({
     exitComponent,
     deepNavigate,
     setSelectedNodeId,
+    selectedNodeId,
     validateFlowStructure,
     updateNodeState,
     activeBrowserId,
@@ -2367,6 +2368,8 @@ function Dashboard({
               edges={edges}
               setNodes={setNodes}
               setEdges={setEdges}
+              selectedNodeId={selectedNodeId}
+              setSelectedNodeId={setSelectedNodeId}
               executionMode={canvasViewMode}
             />
 
