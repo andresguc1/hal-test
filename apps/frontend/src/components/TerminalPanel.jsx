@@ -150,7 +150,7 @@ export default function TerminalPanel({
     }
 
     for (const [nodeId, range] of map) {
-      const nextEntries = Array.from(nodeLineMap?.entries() || []).filter(
+      const nextEntries = Array.from(map.entries()).filter(
         ([id]) => id !== nodeId,
       );
       let endLine = lines.length - 1;
