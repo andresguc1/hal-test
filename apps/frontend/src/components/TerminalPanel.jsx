@@ -79,6 +79,7 @@ export default function TerminalPanel({
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
   const activeLineRef = useRef(null);
+  const errorLineRef = useRef(null);
   const toast = useToast();
 
   // ─── Mode ─────────────────────────────────────────────────────────────────
@@ -184,6 +185,22 @@ export default function TerminalPanel({
     return lines;
   }, [selectedNodeId, nodes, nodeLineMap]);
 
+  const errorNodeLines = useMemo(() => {
+    const lines = new Set();
+    const errorNodes = nodes.filter(
+      (n) => n.data?.state === "error" || n.data?.state === "softfailed",
+    );
+    for (const node of errorNodes) {
+      const range = nodeLineMap.get(node.id);
+      if (range) {
+        for (let i = range.startLine; i <= range.endLine; i++) {
+          lines.add(i);
+        }
+      }
+    }
+    return lines;
+  }, [nodes, nodeLineMap]);
+
   const handleCodeLineClick = useCallback(
     (lineIndex) => {
       const codeToSearch = isEditMode ? editedCode : generatedCode;
@@ -207,6 +224,15 @@ export default function TerminalPanel({
       });
     }
   }, [activeLineIndex]);
+
+  useEffect(() => {
+    if (errorLineRef.current) {
+      errorLineRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }
+  }, [errorNodeLines]);
 
   // Keep editedCode in sync with generatedCode when not editing
   useEffect(() => {
@@ -1083,20 +1109,24 @@ export default function TerminalPanel({
                         <div className="flex-1 font-mono text-[11px] leading-relaxed text-slate-300 overflow-x-auto selection:bg-indigo-500/30" style={{ minHeight: panelHeight - 100 }}>
                           {generatedCode.split("\n").map((line, idx) => {
                             const isActive = idx === activeLineIndex;
+                            const isError = errorNodeLines.has(idx);
                             const isHighlighted = highlightedCodeLines.has(idx);
                             const hasNodeId = line.includes("[node_id:");
+                            const isFirstError = isError && !errorNodeLines.has(idx - 1);
                             return (
                               <div
                                 key={idx}
-                                ref={isActive ? activeLineRef : null}
+                                ref={isActive ? activeLineRef : isFirstError ? errorLineRef : null}
                                 onClick={() => hasNodeId && handleCodeLineClick(idx)}
                                 className={cn(
                                   "flex items-start px-2 transition-all duration-300 w-full min-w-max",
                                   isActive
                                     ? "bg-amber-500/25 text-amber-200 border-l-2 border-amber-500 font-bold shadow-[inset_0_0_8px_rgba(245,158,11,0.15)]"
-                                    : isHighlighted
-                                      ? "bg-indigo-500/15 text-indigo-200 border-l-2 border-indigo-500/60"
-                                      : "hover:bg-white/5 border-l-2 border-transparent",
+                                    : isError
+                                      ? "bg-rose-500/15 text-rose-200 border-l-2 border-rose-500/60"
+                                      : isHighlighted
+                                        ? "bg-indigo-500/15 text-indigo-200 border-l-2 border-indigo-500/60"
+                                        : "hover:bg-white/5 border-l-2 border-transparent",
                                   hasNodeId && "cursor-pointer hover:bg-indigo-500/10",
                                 )}
                               >
