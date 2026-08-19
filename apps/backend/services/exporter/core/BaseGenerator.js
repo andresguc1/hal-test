@@ -1,12 +1,16 @@
 /**
  * Base class for all code generators.
  */
+import { DesignPatternRegistry } from '../patterns/DesignPatternRegistry.js';
+
 export class BaseGenerator {
-    constructor(language, locale) {
+    constructor(language, locale, designPattern = 'flat') {
         this.language = language;
         this.locale = locale;
         this.isEn = locale.startsWith('en');
         this.warnings = [];
+        this.designPattern = designPattern;
+        this.pattern = DesignPatternRegistry.get(designPattern);
     }
 
     /**

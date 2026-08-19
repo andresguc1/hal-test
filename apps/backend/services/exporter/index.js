@@ -30,6 +30,7 @@ export const exportService = {
         locale = 'es',
         usePOM = false,
         includeCICD = false,
+        designPattern = 'flat',
     ) => {
         try {
             let code = '';
@@ -50,9 +51,12 @@ export const exportService = {
                         locale,
                         usePOM,
                         includeCICD,
+                        designPattern,
                     );
                     const result = generator.generate(flowData);
-                    if (usePOM || includeCICD) {
+                    const isMultiFile =
+                        usePOM || includeCICD || (designPattern !== 'flat' && result.files);
+                    if (isMultiFile) {
                         return {
                             success: true,
                             isZip: true,
@@ -61,6 +65,7 @@ export const exportService = {
                             framework,
                             language,
                             extension,
+                            designPattern,
                         };
                     }
                     code = result.code;

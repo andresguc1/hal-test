@@ -2,12 +2,13 @@ import { BaseGenerator } from '../core/BaseGenerator.js';
 import { NodeMapperRegistry } from '../core/GeneratorRegistry.js';
 import { variableManager } from '../../VariableManager.js';
 import { validateSelector } from '../core/escapeUtils.js';
+import { DesignPatternRegistry } from '../patterns/DesignPatternRegistry.js';
 
 export class PlaywrightGenerator extends BaseGenerator {
-    constructor(language, locale, usePOM = false, includeCICD = false) {
-        super(language, locale);
+    constructor(language, locale, usePOM = false, includeCICD = false, designPattern = 'flat') {
+        super(language, locale, designPattern);
         this.framework = 'playwright';
-        this.usePOM = usePOM;
+        this.usePOM = usePOM || designPattern === 'pom';
         this.includeCICD = includeCICD;
 
         this.messages = {
@@ -110,6 +111,11 @@ export class PlaywrightGenerator extends BaseGenerator {
     generate(steps) {
         this.warnings = [];
         this.extension = this.language.toLowerCase() === 'typescript' ? 'ts' : 'js';
+
+        // Handle new pattern-based multi-file output
+        if (this.pattern && this.pattern.isMultiFile() && this.designPattern !== 'flat') {
+            return this._generateWithPattern(steps);
+        }
 
         if (!this.usePOM && !this.includeCICD) {
             return super.generate(steps);
@@ -287,6 +293,46 @@ playwright_tests:
     expire_in: 30 days
 `;
         }
+
+        return { files, warnings: this.warnings };
+    }
+
+    /**
+     * Generate multi-file output using a design pattern strategy.
+     */
+    _generateWithPattern(steps) {
+        const files = {};
+        const ctx = { language: this.language, framework: this.framework };
+        const pattern = DesignPatternRegistry.get(this.designPattern);
+
+        if (this.designPattern === 'pom') {
+            this.usePOM = true;
+            return this.generate(steps);
+        }
+
+        if (this.designPattern === 'screenplay' && pattern) {
+            files['actors/Actor.js'] = pattern.generateActor(ctx);
+            files['abilities/BrowseTheWeb.js'] = pattern.generateAbilities(ctx);
+            files['tasks/index.js'] = pattern.generateTasks(steps, ctx);
+            files[`tests/flow.spec.${this.extension}`] = pattern.getSpecCode(steps, ctx);
+        }
+
+        if (this.designPattern === 'data-driven' && pattern) {
+            files['data/test-data.json'] = pattern.generateDataFile(steps, ctx);
+            files[`tests/flow.spec.${this.extension}`] = pattern.getSpecCode(steps, ctx);
+        }
+
+        if (this.designPattern === 'keyword-driven' && pattern) {
+            const keywords = pattern.buildKeywordMap(steps);
+            files['keywords/keywords.js'] = pattern.generateKeywordDefs(keywords, ctx);
+            files['data/keyword-table.json'] = pattern.generateKeywordTable(keywords);
+            files[`tests/flow.spec.${this.extension}`] = pattern.getSpecCode(steps, ctx);
+        }
+
+        files['playwright.config.js'] =
+            `const { defineConfig } = require('@playwright/test');\nmodule.exports = defineConfig({ testDir: './tests', timeout: 60000 });\n`;
+        files['package.json'] =
+            `{\n  "name": "hal-test-generated",\n  "devDependencies": {\n    "@playwright/test": "^1.40.0"\n  }\n}\n`;
 
         return { files, warnings: this.warnings };
     }

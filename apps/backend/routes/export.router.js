@@ -9,7 +9,9 @@ router.post('/subflow', async (req, res) => {
     try {
         const { flowId, projectId } = req.body;
         if (!flowId || !projectId) {
-            return res.status(400).json({ success: false, message: 'flowId and projectId required' });
+            return res
+                .status(400)
+                .json({ success: false, message: 'flowId and projectId required' });
         }
 
         const flow = await Flow.findOne({
@@ -42,7 +44,8 @@ router.post('/subflow', async (req, res) => {
 // Endpoint to export to code (Playwright, etc.)
 router.post('/code', async (req, res) => {
     try {
-        const { flow, framework, language, locale, projectId, usePOM, includeCICD } = req.body;
+        const { flow, framework, language, locale, projectId, usePOM, includeCICD, designPattern } =
+            req.body;
 
         if (!flow || !Array.isArray(flow)) {
             return res.status(400).json({
@@ -63,6 +66,7 @@ router.post('/code', async (req, res) => {
             locale || 'es',
             !!usePOM,
             !!includeCICD,
+            designPattern || 'flat',
         );
 
         if (result.success) {

@@ -30,7 +30,7 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges, projectId }) => {
   const [progress, setProgress] = useState(null);
   const [error, setError] = useState(null);
   const [generatedCode, setGeneratedCode] = useState(null);
-  const [usePOM, setUsePOM] = useState(false);
+  const [designPattern, setDesignPattern] = useState("flat");
   const [includeCICD, setIncludeCICD] = useState(false);
   const [generatedFiles, setGeneratedFiles] = useState(null);
   const [activeFile, setActiveFile] = useState(null);
@@ -41,7 +41,7 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges, projectId }) => {
     setError(null);
     setGeneratedCode(null);
     setLanguage("javascript");
-    setUsePOM(false);
+    setDesignPattern("flat");
     setIncludeCICD(false);
     setGeneratedFiles(null);
     setActiveFile(null);
@@ -264,11 +264,6 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges, projectId }) => {
         message: t("dialogs.export.generating_code"),
       });
 
-      const pomEnabled =
-        usePOM &&
-        framework === "playwright" &&
-        (language === "javascript" || language === "typescript");
-
       const cicdEnabled =
         includeCICD &&
         framework === "playwright" &&
@@ -279,7 +274,7 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges, projectId }) => {
         language,
         flow,
         projectId,
-        usePOM: pomEnabled,
+        designPattern,
         includeCICD: cicdEnabled,
       });
 
@@ -314,7 +309,7 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges, projectId }) => {
     framework,
     language,
     projectId,
-    usePOM,
+    designPattern,
     includeCICD,
     t,
   ]);
@@ -554,30 +549,41 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges, projectId }) => {
                       (language === "javascript" ||
                         language === "typescript") && (
                         <>
-                          <div
-                            className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5 cursor-pointer hover:bg-white/10 transition-colors"
-                            onClick={() => setUsePOM(!usePOM)}
-                          >
-                            <div className="flex flex-col text-left pr-2">
-                              <span className="text-sm text-gray-200 font-medium">
-                                {t(
-                                  "dialogs.export.pom_label",
-                                  "Page Object Model (POM)",
-                                )}
-                              </span>
-                              <span className="text-xs text-slate-400">
-                                {t(
-                                  "dialogs.export.pom_desc",
-                                  "Structure code into page classes based on sub-flows",
-                                )}
-                              </span>
-                            </div>
-                            <input
-                              type="checkbox"
-                              checked={usePOM}
-                              onChange={(e) => setUsePOM(e.target.checked)}
-                              className="w-4 h-4 text-indigo-600 border-white/10 rounded focus:ring-indigo-500 bg-slate-900"
-                            />
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-sm text-gray-200 font-medium">
+                              {t(
+                                "dialogs.export.pattern_label",
+                                "Design Pattern",
+                              )}
+                            </label>
+                            <select
+                              value={designPattern}
+                              onChange={(e) => setDesignPattern(e.target.value)}
+                              className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-white/10 text-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            >
+                              <option value="flat">
+                                {t("patterns.flat", "Flat / Linear")}
+                              </option>
+                              <option value="pom">
+                                {t("patterns.pom", "Page Object Model")}
+                              </option>
+                              <option value="screenplay">
+                                {t("patterns.screenplay", "Screenplay")}
+                              </option>
+                              <option value="data-driven">
+                                {t("patterns.data_driven", "Data-Driven")}
+                              </option>
+                              <option value="keyword-driven">
+                                {t("patterns.keyword_driven", "Keyword-Driven")}
+                              </option>
+                            </select>
+                            <span className="text-xs text-slate-400">
+                              {designPattern === "flat" && "Sequential code in a single file."}
+                              {designPattern === "pom" && "Page classes organized by sub-flows."}
+                              {designPattern === "screenplay" && "Actor-based with abilities and tasks."}
+                              {designPattern === "data-driven" && "Test data separated from logic."}
+                              {designPattern === "keyword-driven" && "Table-driven keywords mapping to actions."}
+                            </span>
                           </div>
 
                           <div
