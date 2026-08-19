@@ -47,6 +47,14 @@ const LOG_COLORS = {
 
 const MAX_SHELL_LINES = 500;
 const CODE_DEBOUNCE_MS = 500;
+const FRAMEWORKS = [
+  { id: "playwright", label: "Playwright" },
+  { id: "cypress", label: "Cypress" },
+  { id: "selenium", label: "Selenium" },
+];
+const MIN_PANEL_HEIGHT = 150;
+const MAX_PANEL_HEIGHT = 600;
+const DEFAULT_PANEL_HEIGHT = 260;
 
 export default function TerminalPanel({
   socket,
@@ -77,15 +85,23 @@ export default function TerminalPanel({
   const [generatedCode, setGeneratedCode] = useState("");
   const [codeWarnings, setCodeWarnings] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [codeError, setCodeError] = useState(null);
   const [copied, setCopied] = useState(false);
   const [language, setLanguage] = useState("javascript");
+  const [framework, setFramework] = useState("playwright");
   const [manualRefresh, setManualRefresh] = useState(0);
 
   // ─── Advanced Edit & Execution Tracing states ─────────────────────────────
   const [isEditMode, setIsEditMode] = useState(false);
   const [editedCode, setEditedCode] = useState("");
-  const [isSyncing] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [showSyncConfirm, setShowSyncConfirm] = useState(false);
+
+  // ─── Resizable Panel ──────────────────────────────────────────────────────
+  const [panelHeight, setPanelHeight] = useState(DEFAULT_PANEL_HEIGHT);
+  const isDraggingPanel = useRef(false);
+  const dragStartY = useRef(0);
+  const dragStartHeight = useRef(0);
 
   const activeLineIndex = useMemo(() => {
     const activeNode = nodes.find(
@@ -123,14 +139,13 @@ export default function TerminalPanel({
     }
   }, [generatedCode, isEditMode]);
 
-  /*
-  // Helper to recursively map actions back to React Flow nodes/edges
+  // Recursively map parsed code actions back to React Flow nodes/edges
   const convertActionsToFlowData = useCallback((actions, parentId = null, depth = 0) => {
     const nodesList = [];
     const edgesList = [];
 
     actions.forEach((actionObj, index) => {
-      const nodeId = `node_${actionObj.action}_${index}_${Math.random().toString(36).substring(2, 6)}`;
+      const nodeId = `${actionObj.action}-${Date.now()}-${index}`;
       const { action, subNodes, label, ...config } = actionObj;
 
       const nodeType = action === 'component' ? 'component' : action;
@@ -141,11 +156,9 @@ export default function TerminalPanel({
         position: { x: (parentId ? 50 : 100) + index * 250, y: (parentId ? 80 : 150) },
         data: {
           type: nodeType,
-          label: label || action
-            .replace(/_/g, " ")
-            .replace(/\b\w/g, (c) => c.toUpperCase()),
+          label: label || action.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
           configuration: config,
-          state: "default",
+          state: 'default',
         },
       };
 
@@ -164,14 +177,15 @@ export default function TerminalPanel({
       }
 
       if (index > 0) {
-        const prevSibling = nodesList.filter(n => (parentId ? n.parentId === parentId : !n.parentId))[index - 1];
+        const siblings = nodesList.filter(n => (parentId ? n.parentId === parentId : !n.parentId));
+        const prevSibling = siblings[siblings.length - 2];
         if (prevSibling) {
           edgesList.push({
             id: `edge_${prevSibling.id}_to_${nodeId}`,
             source: prevSibling.id,
             target: nodeId,
             animated: !import.meta.env.DEV,
-            type: "custom",
+            type: 'custom',
           });
         }
       }
@@ -179,17 +193,29 @@ export default function TerminalPanel({
 
     return { nodes: nodesList, edges: edgesList };
   }, []);
-  */
 
-  // Manual callback to convert and sync code edits back to canvas
   const handleSyncCodeToCanvas = useCallback(() => {
-    toast.error(
-      t(
-        "terminal.sync_disabled_toast",
-        "Reverse synchronization is currently disabled to prevent workflow corruption.",
-      ),
-    );
-  }, [toast, t]);
+    if (!editedCode) return;
+    setIsSyncing(true);
+    try {
+      const result = api.post("/import/code", { code: editedCode, framework });
+      if (result.success && result.actions) {
+        const { nodes: newNodes, edges: newEdges } = convertActionsToFlowData(result.actions);
+        _setNodes?.(newNodes);
+        _setEdges?.(newEdges);
+        toast.success(t("terminal.sync_success", "Code synced to canvas successfully"));
+        setIsEditMode(false);
+      } else {
+        toast.error(t("terminal.sync_parse_error", "Could not parse code back into flow actions."));
+      }
+    } catch (err) {
+      console.error("Failed to sync code to canvas:", err);
+      toast.error(t("terminal.sync_failed", "Failed to sync code to canvas."));
+    } finally {
+      setIsSyncing(false);
+      setShowSyncConfirm(false);
+    }
+  }, [editedCode, framework, convertActionsToFlowData, _setNodes, _setEdges, toast, t]);
 
   const LANGUAGES = [
     { id: "javascript", label: t("terminal.lang_js"), ext: "js" },
@@ -214,63 +240,152 @@ export default function TerminalPanel({
 
     const timer = setTimeout(async () => {
       setIsGenerating(true);
+      setCodeError(null);
       try {
-        const mapNodes = (allNodes) => {
-          if (!allNodes || !Array.isArray(allNodes)) return [];
+        const isContainer = (type) => ["component", "loop", "for_each"].includes(type);
 
-          const nodeMap = new Map();
+        // Step 1: Map canvas nodes, collecting container nodes that need sub-flow resolution
+        const nodeMap = new Map();
+        const needsResolution = [];
 
-          allNodes.forEach((node) => {
-            nodeMap.set(node.id, {
-              id: node.id,
-              type: node.data?.type || node.type,
-              data: {
-                configuration: node.data?.configuration || {},
-                label: node.data?.label || node.data?.customLabel || node.type,
-                customLabel: node.data?.customLabel,
-                subNodes: [],
-              },
-              parentNode: node.parentNode || node.parentId,
-            });
+        for (const node of nodes) {
+          const nodeType = node.data?.type || node.type;
+          const subNodes = node.data?.subNodes || [];
+
+          // Try to get subNodes from: canvas children → subFlow snapshot
+          let effectiveSubNodes = subNodes;
+          if (subNodes.length === 0 && node.data?.subFlow?.nodes) {
+            effectiveSubNodes = node.data.subFlow.nodes;
+          }
+
+          const flowId = node.data?.configuration?.flowId || node.data?.flowId;
+
+          nodeMap.set(node.id, {
+            id: node.id,
+            type: nodeType,
+            data: {
+              configuration: node.data?.configuration || {},
+              label: node.data?.label || node.data?.customLabel || node.type,
+              customLabel: node.data?.customLabel,
+              subNodes: effectiveSubNodes,
+              flowId,
+              flowName: node.data?.flowName || node.data?.label,
+            },
+            parentNode: node.parentNode || node.parentId,
+            isContainer: isContainer(nodeType),
           });
 
-          const roots = [];
+          // Container node without subNodes but with flowId → needs DB resolution
+          if (isContainer(nodeType) && effectiveSubNodes.length === 0 && flowId) {
+            needsResolution.push({ node, flowId, nodeType });
+          }
+        }
 
-          nodeMap.forEach((mappedNode) => {
-            const parentId = mappedNode.parentNode;
-            if (parentId && nodeMap.has(parentId)) {
-              nodeMap.get(parentId).data.subNodes.push(mappedNode);
-            } else {
-              roots.push(mappedNode);
+        // Step 2: Fetch sub-flows from DB for container nodes that need resolution
+        //        Use POST /export/subflow to avoid the side effects of GET /flows/:id
+        if (needsResolution.length > 0 && currentProject?.id) {
+          const fetches = needsResolution.map(async ({ node, flowId }) => {
+            try {
+              const subFlow = await api.post("/export/subflow", {
+                flowId,
+                projectId: currentProject.id,
+              });
+              if (subFlow?.success && subFlow?.nodes && subFlow.nodes.length > 0) {
+                const mapped = nodeMap.get(node.id);
+                if (mapped) {
+                  mapped.data.subNodes = subFlow.nodes;
+                }
+              }
+            } catch {
+              // Sub-flow not found — leave subNodes empty, backend will try too
             }
           });
+          await Promise.allSettled(fetches);
+        }
 
-          return roots;
+        // Step 3: Build edge-based topological ordering
+        const adjacency = new Map();
+        const inDegree = new Map();
+        nodeMap.forEach((_, id) => {
+          adjacency.set(id, []);
+          inDegree.set(id, 0);
+        });
+        if (edges && Array.isArray(edges)) {
+          edges.forEach((edge) => {
+            if (nodeMap.has(edge.source) && nodeMap.has(edge.target)) {
+              adjacency.get(edge.source).push(edge.target);
+              inDegree.set(edge.target, (inDegree.get(edge.target) || 0) + 1);
+            }
+          });
+        }
+
+        // Kahn's algorithm for topological sort
+        const queue = [];
+        inDegree.forEach((deg, id) => {
+          if (deg === 0) queue.push(id);
+        });
+        const sorted = [];
+        while (queue.length > 0) {
+          const id = queue.shift();
+          sorted.push(id);
+          for (const neighbor of adjacency.get(id) || []) {
+            const newDeg = (inDegree.get(neighbor) || 1) - 1;
+            inDegree.set(neighbor, newDeg);
+            if (newDeg === 0) queue.push(neighbor);
+          }
+        }
+        nodeMap.forEach((_, id) => {
+          if (!sorted.includes(id)) sorted.push(id);
+        });
+
+        // Step 4: Group into tree (respecting parentId)
+        const flatOrdered = sorted.map((id) => nodeMap.get(id)).filter(Boolean);
+        const childMap = new Map();
+        const roots = [];
+        flatOrdered.forEach((mappedNode) => {
+          const parentId = mappedNode.parentNode;
+          if (parentId && nodeMap.has(parentId)) {
+            if (!childMap.has(parentId)) childMap.set(parentId, []);
+            childMap.get(parentId).push(mappedNode);
+          } else {
+            roots.push(mappedNode);
+          }
+        });
+
+        // Step 5: Attach subNodes in edge order (merge subFlow + canvas children)
+        const attachSubNodes = (node) => {
+          const canvasChildren = childMap.get(node.id) || [];
+          const existingSubNodes = node.data.subNodes || [];
+          const mergedSubNodes = [...existingSubNodes, ...canvasChildren].map(attachSubNodes);
+          node.data.subNodes = mergedSubNodes;
+          return node;
         };
-
-        const flowSteps = mapNodes(nodes);
+        const flowSteps = roots.map(attachSubNodes);
 
         const result = await api.post("/export/code", {
           flow: flowSteps,
-          framework: "playwright",
-          language: language,
-          locale: i18n.language, // Pass current UI locale
+          framework,
+          language,
+          locale: i18n.language,
           projectId: currentProject?.id,
         });
 
         if (result.success && result.code) {
           setGeneratedCode(result.code);
           setCodeWarnings(result.warnings || []);
+        } else {
+          setCodeError(result.error || "Code generation failed");
         }
       } catch (err) {
         console.error("Failed to generate real-time code:", err);
+        setCodeError(err.message || "Failed to generate code");
       } finally {
         setIsGenerating(false);
       }
     }, CODE_DEBOUNCE_MS);
 
     return () => clearTimeout(timer);
-  }, [nodes, edges, mode, language, currentProject?.id, manualRefresh]);
+  }, [nodes, edges, mode, language, framework, currentProject?.id, manualRefresh]);
 
   const handleCopyCode = useCallback(() => {
     const codeToCopy = isEditMode ? editedCode : generatedCode;
@@ -396,6 +511,34 @@ export default function TerminalPanel({
     }
   };
 
+  // ─── Panel Resize Handlers ────────────────────────────────────────────────
+  const handleResizeStart = useCallback((e) => {
+    e.preventDefault();
+    isDraggingPanel.current = true;
+    dragStartY.current = e.clientY;
+    dragStartHeight.current = panelHeight;
+
+    const handleMouseMove = (moveEvent) => {
+      if (!isDraggingPanel.current) return;
+      const delta = dragStartY.current - moveEvent.clientY;
+      const newHeight = Math.max(MIN_PANEL_HEIGHT, Math.min(MAX_PANEL_HEIGHT, dragStartHeight.current + delta));
+      setPanelHeight(newHeight);
+    };
+
+    const handleMouseUp = () => {
+      isDraggingPanel.current = false;
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+    document.body.style.cursor = "row-resize";
+    document.body.style.userSelect = "none";
+  }, [panelHeight]);
+
   if (!isPanelVisible) return null;
 
   return (
@@ -403,16 +546,22 @@ export default function TerminalPanel({
       initial={{ scaleY: 0, opacity: 0 }}
       animate={{ scaleY: 1, opacity: 1 }}
       exit={{ scaleY: 0, opacity: 0 }}
-      style={{ transformOrigin: "bottom", height: 260 }}
+      style={{ transformOrigin: "bottom", height: panelHeight }}
       tabIndex={0}
       onKeyDown={(e) => {
-        // Global Ctrl+C handler for the panel
         if (e.key === "c" && e.ctrlKey) {
           killProcess();
         }
       }}
       className="relative w-full bg-slate-950 border-t border-slate-800 z-10 flex flex-col shadow-2xl font-mono outline-none overflow-hidden focus-within:ring-1 focus-within:ring-indigo-500/30"
     >
+      {/* ── Drag Handle ── */}
+      <div
+        onMouseDown={handleResizeStart}
+        className="absolute top-0 left-0 right-0 h-1.5 cursor-row-resize z-20 group hover:bg-indigo-500/20 transition-colors"
+      >
+        <div className="mx-auto mt-0.5 w-8 h-0.5 rounded-full bg-slate-600 group-hover:bg-indigo-400 transition-colors" />
+      </div>
       {/* ── Header ── */}
       <div className="flex items-center justify-between px-4 py-2 bg-slate-900 border-b border-slate-800 shrink-0">
         <div className="flex items-center gap-3">
@@ -516,6 +665,27 @@ export default function TerminalPanel({
                         : lang.id === "java"
                           ? "JAVA"
                           : "C#"}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Framework Selector (only in code mode) */}
+          {mode === "code" && (
+            <div className="flex bg-slate-800 p-0.5 rounded-lg border border-slate-700 ml-1">
+              {FRAMEWORKS.map((fw) => (
+                <button
+                  key={fw.id}
+                  onClick={() => setFramework(fw.id)}
+                  title={fw.label}
+                  className={cn(
+                    "px-2 py-1 rounded text-[9px] font-medium transition-all whitespace-nowrap",
+                    framework === fw.id
+                      ? "bg-emerald-500/20 text-emerald-400 shadow-sm"
+                      : "text-slate-500 hover:text-slate-300",
+                  )}
+                >
+                  {fw.label}
                 </button>
               ))}
             </div>
@@ -704,19 +874,44 @@ export default function TerminalPanel({
                       size={12}
                       className="text-amber-500 shrink-0 mt-0.5"
                     />
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <span className="font-medium">
                         {codeWarnings.length}{" "}
                         {t(
-                          "terminal.unmapped_nodes",
-                          "node(s) without Playwright implementation",
+                          "terminal.warnings_count",
+                          "warning(s)",
                         )}
                         :
                       </span>
-                      <span className="ml-1 text-amber-300/60">
-                        {codeWarnings.map((w) => w.nodeLabel).join(", ")}
-                      </span>
+                      <div className="mt-1 space-y-0.5 max-h-16 overflow-y-auto custom-scrollbar">
+                        {codeWarnings.map((w, i) => (
+                          <div key={i} className="flex items-start gap-1.5 text-amber-300/60">
+                            <span className="text-amber-500/80 shrink-0">•</span>
+                            <span className="truncate">
+                              <span className="font-medium text-amber-300/80">{w.nodeLabel || w.nodeId}</span>
+                              {w.message && <span className="ml-1">— {w.message}</span>}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
+                  </div>
+                )}
+
+                {/* Error Banner */}
+                {codeError && (
+                  <div className="mb-3 flex items-start gap-2 p-2 rounded bg-rose-500/10 border border-rose-500/20 text-rose-200/70 text-[10px]">
+                    <OctagonX size={12} className="text-rose-500 shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <span className="font-medium">{t("terminal.generation_error", "Code generation failed")}:</span>
+                      <span className="ml-1 text-rose-300/60 break-all">{codeError}</span>
+                    </div>
+                    <button
+                      onClick={() => setCodeError(null)}
+                      className="text-rose-400 hover:text-rose-300 shrink-0"
+                    >
+                      <X size={10} />
+                    </button>
                   </div>
                 )}
 
@@ -742,9 +937,9 @@ export default function TerminalPanel({
                     </div>
                   )}
                   {generatedCode ? (
-                    <div className="flex flex-1 min-h-[180px] overflow-hidden">
+                    <div className="flex flex-1 overflow-hidden" style={{ minHeight: panelHeight - 100 }}>
                       {isEditMode ? (
-                        <div className="flex-1 flex gap-2 overflow-hidden h-[180px]">
+                        <div className="flex-1 flex gap-2 overflow-hidden" style={{ height: panelHeight - 100 }}>
                           {/* Line Numbers */}
                           <div className="select-none pr-3 mr-1 border-r border-white/5 text-right flex flex-col shrink-0 overflow-y-hidden">
                             {editedCode.split("\n").map((_, i) => (
@@ -764,7 +959,7 @@ export default function TerminalPanel({
                           />
                         </div>
                       ) : (
-                        <div className="flex-1 font-mono text-[11px] leading-relaxed text-slate-300 overflow-x-auto selection:bg-indigo-500/30">
+                        <div className="flex-1 font-mono text-[11px] leading-relaxed text-slate-300 overflow-x-auto selection:bg-indigo-500/30" style={{ minHeight: panelHeight - 100 }}>
                           {generatedCode.split("\n").map((line, idx) => {
                             const isActive = idx === activeLineIndex;
                             return (
@@ -797,10 +992,24 @@ export default function TerminalPanel({
                     </div>
                   ) : (
                     <div className="h-full flex flex-col items-center justify-center text-slate-600 gap-2 opacity-50 py-10">
-                      <Code2 size={28} strokeWidth={1} />
-                      <span className="text-[10px] uppercase tracking-widest text-center">
-                        Build your flow to see <br /> generated code here
-                      </span>
+                      {isGenerating ? (
+                        <>
+                          <RefreshCw size={28} strokeWidth={1} className="animate-spin text-emerald-500/50" />
+                          <span className="text-[10px] uppercase tracking-widest text-center">
+                            Generating {framework} code...
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <Code2 size={28} strokeWidth={1} />
+                          <span className="text-[10px] uppercase tracking-widest text-center">
+                            Build your flow to see <br /> generated code here
+                          </span>
+                          <span className="text-[9px] text-slate-700 mt-1">
+                            {framework} · {language}
+                          </span>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>

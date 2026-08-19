@@ -4,15 +4,17 @@ import { componentRegistry } from '../services/ComponentRegistry.js';
 
 const MAX_DEPTH = 10;
 
+const CONTAINER_TYPES = ['component', 'loop', 'for_each'];
+
 /**
  * FlowResolver
- * Resolves sub-flows (component nodes) recursively.
+ * Resolves sub-flows (component, loop, for_each nodes) recursively.
  * Replaces the ad-hoc resolveSubFlows in exporter/index.js.
  * Supports both disk-based (ref) and inline component resolution.
  */
 class FlowResolver {
     /**
-     * Recursively resolves all component nodes in a flow, populating subNodes.
+     * Recursively resolves all container nodes in a flow, populating subNodes.
      * @param {Array} nodes - Array of node objects
      * @param {string} projectId - Project ID for resolving refs
      * @param {number} depth - Current recursion depth (for cycle detection)
@@ -34,7 +36,7 @@ class FlowResolver {
             const resolved = { ...node };
             const type = node.type || node.data?.type;
 
-            if (type === 'component') {
+            if (CONTAINER_TYPES.includes(type)) {
                 const flowRef =
                     node.data?.configuration?.flowId ||
                     node.data?.configuration?.ref ||
@@ -164,7 +166,7 @@ class FlowResolver {
 
         for (const node of nodes) {
             const type = node.type || node.data?.type;
-            if (type === 'component') {
+            if (CONTAINER_TYPES.includes(type)) {
                 const ref =
                     node.data?.configuration?.flowId ||
                     node.data?.configuration?.ref ||
@@ -173,7 +175,7 @@ class FlowResolver {
                     deps.push({
                         nodeId: node.id,
                         ref,
-                        type: 'component',
+                        type,
                     });
                 }
             }
@@ -210,7 +212,7 @@ class FlowResolver {
             const node = nodesList.find((n) => n.id === nodeId);
             if (node) {
                 const type = node.type || node.data?.type;
-                if (type === 'component') {
+                if (CONTAINER_TYPES.includes(type)) {
                     const ref = node.data?.configuration?.flowId || node.data?.configuration?.ref;
                     if (ref) {
                         const subFlow = await this._loadSubFlow(ref, projectId);

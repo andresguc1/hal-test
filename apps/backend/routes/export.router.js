@@ -1,7 +1,43 @@
 import { Router } from 'express';
 import { exportService } from '../services/exporter/index.js';
+import { Flow, Node, Edge } from '../database/init.js';
 
 const router = Router();
+
+// Lightweight endpoint to fetch a sub-flow's nodes for code preview (no side effects)
+router.post('/subflow', async (req, res) => {
+    try {
+        const { flowId, projectId } = req.body;
+        if (!flowId || !projectId) {
+            return res.status(400).json({ success: false, message: 'flowId and projectId required' });
+        }
+
+        const flow = await Flow.findOne({
+            where: { id: flowId, projectId },
+            include: [
+                { model: Node, as: 'nodes' },
+                { model: Edge, as: 'edges' },
+            ],
+        });
+
+        if (!flow) {
+            return res.json({ success: false, nodes: [] });
+        }
+
+        const flowObj = flow.toJSON();
+        const nodes = (flowObj.nodes || []).map((n) => ({
+            id: n.nodeId || n.id,
+            type: n.type,
+            data: n.data,
+            position: n.position,
+        }));
+
+        res.json({ success: true, nodes });
+    } catch (error) {
+        console.error('[ExportRouter] Error fetching subflow:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
 
 // Endpoint to export to code (Playwright, etc.)
 router.post('/code', async (req, res) => {

@@ -2,6 +2,8 @@ import { BaseGenerator } from '../core/BaseGenerator.js';
 import { NodeMapperRegistry } from '../core/GeneratorRegistry.js';
 import { variableManager } from '../../VariableManager.js';
 
+const CONTAINER_TYPES = ['component', 'loop', 'for_each'];
+
 export class SeleniumGenerator extends BaseGenerator {
     constructor(language, locale) {
         super(language, locale);
@@ -57,17 +59,43 @@ export class SeleniumGenerator extends BaseGenerator {
             variableManager.getActiveRunId?.(),
         );
 
-        const mapper = NodeMapperRegistry.getMapper(type);
-        const indent = '    '.repeat(depth + 2); // Inside test_flow class method
+        const indent = '    '.repeat(depth + 2);
         const label = step.data?.label || step.data?.customLabel || step.label || type;
         const nodeId = step.id || step.nodeId || '';
         const isJava = this.language.toLowerCase() === 'java';
-        const nodeIdComment = nodeId
-            ? isJava
-                ? `// [node_id: ${nodeId}]`
-                : `# [node_id: ${nodeId}]`
-            : '';
+        const commentChar = isJava ? '//' : '#';
+        const nodeIdComment = nodeId ? `${commentChar} [node_id: ${nodeId}]` : '';
 
+        // Handle compound/container nodes (component, loop, for_each)
+        const subNodes = step.data?.subNodes || step.subNodes || [];
+        if (CONTAINER_TYPES.includes(type) || subNodes.length > 0) {
+            const subCode = this.generateSteps(subNodes, depth + 1);
+
+            if (type === 'component') {
+                // Component: group with comment markers (Selenium has no native grouping)
+                return `${indent}${nodeIdComment ? nodeIdComment + '\n' + indent : ''}${commentChar} [GROUP]: ${label}\n${subCode}\n${indent}${commentChar} [END GROUP]`;
+            }
+
+            if (type === 'for_each') {
+                const items = config.items || config.source || 'items';
+                const itemAlias = config.itemAlias || 'item';
+                if (isJava) {
+                    return `${indent}${nodeIdComment ? nodeIdComment + '\n' + indent : ''}for (String ${itemAlias} : ${items}) {\n${subCode}\n${indent}}`;
+                }
+                return `${indent}${nodeIdComment ? nodeIdComment + '\n' + indent : ''}for ${itemAlias} in ${items}:\n${subCode}`;
+            }
+
+            if (type === 'loop') {
+                const count = config.count || config.iterations || 3;
+                const counterVar = config.counterVariable || 'i';
+                if (isJava) {
+                    return `${indent}${nodeIdComment ? nodeIdComment + '\n' + indent : ''}for (int ${counterVar} = 0; ${counterVar} < ${count}; ${counterVar}++) {\n${subCode}\n${indent}}`;
+                }
+                return `${indent}${nodeIdComment ? nodeIdComment + '\n' + indent : ''}for ${counterVar} in range(${count}):\n${subCode}`;
+            }
+        }
+
+        const mapper = NodeMapperRegistry.getMapper(type);
         let nodeCode = '';
 
         if (mapper) {
