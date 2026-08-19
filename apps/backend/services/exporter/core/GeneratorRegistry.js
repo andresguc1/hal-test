@@ -5,6 +5,7 @@ import { WaitMapper } from '../nodes/WaitMapper.js';
 import { UtilityMapper } from '../nodes/UtilityMapper.js';
 import { NavigationMapper } from '../nodes/NavigationMapper.js';
 import { FormMapper } from '../nodes/FormMapper.js';
+import { FillFormMapper } from '../nodes/FillFormMapper.js';
 import { AssertionMapper } from '../nodes/AssertionMapper.js';
 import { NetworkMapper } from '../nodes/NetworkMapper.js';
 import { DOMMapper } from '../nodes/DOMMapper.js';
@@ -12,6 +13,8 @@ import { FileMapper } from '../nodes/FileMapper.js';
 import { SessionMapper } from '../nodes/SessionMapper.js';
 import { FlowControlMapper } from '../nodes/FlowControlMapper.js';
 import { CompositionMapper } from '../nodes/CompositionMapper.js';
+import { AiMapper } from '../nodes/AiMapper.js';
+import { CliMapper } from '../nodes/CliMapper.js';
 
 /**
  * Registry of node mappers.
@@ -55,6 +58,7 @@ NodeMapperRegistry.register(UtilityMapper);
 // ── Extended Mappers ──
 NodeMapperRegistry.register(NavigationMapper);
 NodeMapperRegistry.register(FormMapper);
+NodeMapperRegistry.register(FillFormMapper);
 NodeMapperRegistry.register(AssertionMapper);
 NodeMapperRegistry.register(NetworkMapper);
 NodeMapperRegistry.register(DOMMapper);
@@ -62,3 +66,5 @@ NodeMapperRegistry.register(FileMapper);
 NodeMapperRegistry.register(SessionMapper);
 NodeMapperRegistry.register(FlowControlMapper);
 NodeMapperRegistry.register(CompositionMapper);
+NodeMapperRegistry.register(AiMapper);
+NodeMapperRegistry.register(CliMapper);
