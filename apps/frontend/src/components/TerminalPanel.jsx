@@ -53,6 +53,13 @@ const FRAMEWORKS = [
   { id: "cypress", label: "Cypress" },
   { id: "selenium", label: "Selenium" },
 ];
+const PATTERNS = [
+  { id: "flat", label: "Flat", description: "Sequential single-file" },
+  { id: "pom", label: "POM", description: "Page Object Model" },
+  { id: "screenplay", label: "Screenplay", description: "Actor-based" },
+  { id: "data-driven", label: "Data", description: "Data-Driven" },
+  { id: "keyword-driven", label: "Keyword", description: "Keyword-Driven" },
+];
 const MIN_PANEL_HEIGHT = 150;
 const MAX_PANEL_HEIGHT = 600;
 const DEFAULT_PANEL_HEIGHT = 260;
@@ -87,6 +94,8 @@ export default function TerminalPanel({
 
   // ─── Code Preview ─────────────────────────────────────────────────────────
   const [generatedCode, setGeneratedCode] = useState("");
+  const [generatedFiles, setGeneratedFiles] = useState(null);
+  const [activeFile, setActiveFile] = useState(null);
   const [codeWarnings, setCodeWarnings] = useState([]);
   const [codeLintReport, setCodeLintReport] = useState(null);
   const [codeValidationReport, setCodeValidationReport] = useState(null);
@@ -95,6 +104,7 @@ export default function TerminalPanel({
   const [copied, setCopied] = useState(false);
   const [language, setLanguage] = useState("javascript");
   const [framework, setFramework] = useState("playwright");
+  const [designPattern, setDesignPattern] = useState("flat");
   const [manualRefresh, setManualRefresh] = useState(0);
 
   // ─── Advanced Edit & Execution Tracing states ─────────────────────────────
@@ -471,9 +481,20 @@ export default function TerminalPanel({
           language,
           locale: i18n.language,
           projectId: currentProject?.id,
+          designPattern,
         });
 
-        if (result.success && result.code) {
+        if (result.isZip && result.files) {
+          setGeneratedFiles(result.files);
+          setGeneratedCode("");
+          const firstFile = Object.keys(result.files).find((f) => f.endsWith(`.${language === "typescript" ? "ts" : "js"}`)) || Object.keys(result.files)[0];
+          setActiveFile(firstFile);
+          setCodeWarnings(result.warnings || []);
+          setCodeLintReport(result.lintReport || null);
+          setCodeValidationReport(result.validationReport || null);
+        } else if (result.success && result.code) {
+          setGeneratedFiles(null);
+          setActiveFile(null);
           setGeneratedCode(result.code);
           setCodeWarnings(result.warnings || []);
           setCodeLintReport(result.lintReport || null);
@@ -490,7 +511,7 @@ export default function TerminalPanel({
     }, CODE_DEBOUNCE_MS);
 
     return () => clearTimeout(timer);
-  }, [nodes, edges, mode, language, framework, currentProject?.id, manualRefresh]);
+  }, [nodes, edges, mode, language, framework, designPattern, currentProject?.id, manualRefresh]);
 
   const handleCopyCode = useCallback(() => {
     const codeToCopy = isEditMode ? editedCode : generatedCode;
@@ -791,6 +812,27 @@ export default function TerminalPanel({
                   )}
                 >
                   {fw.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Design Pattern Selector (only in code mode, Playwright only) */}
+          {mode === "code" && framework === "playwright" && (language === "javascript" || language === "typescript") && (
+            <div className="flex bg-slate-800 p-0.5 rounded-lg border border-slate-700 ml-1">
+              {PATTERNS.map((pat) => (
+                <button
+                  key={pat.id}
+                  onClick={() => setDesignPattern(pat.id)}
+                  title={pat.description}
+                  className={cn(
+                    "px-2 py-1 rounded text-[9px] font-medium transition-all whitespace-nowrap",
+                    designPattern === pat.id
+                      ? "bg-indigo-500/20 text-indigo-400 shadow-sm"
+                      : "text-slate-500 hover:text-slate-300",
+                  )}
+                >
+                  {pat.label}
                 </button>
               ))}
             </div>
@@ -1114,7 +1156,33 @@ export default function TerminalPanel({
                       </span>
                     </div>
                   )}
-                  {generatedCode ? (
+                  {generatedFiles ? (
+                    <div className="flex flex-1 overflow-hidden" style={{ minHeight: panelHeight - 100 }}>
+                      {/* File Tree Sidebar */}
+                      <div className="w-40 shrink-0 border-r border-white/5 overflow-y-auto custom-scrollbar bg-slate-900/30">
+                        <div className="p-1.5 text-[9px] text-slate-500 uppercase tracking-wider font-bold">Files</div>
+                        {Object.keys(generatedFiles).map((fileName) => (
+                          <button
+                            key={fileName}
+                            onClick={() => { setActiveFile(fileName); setEditedCode(generatedFiles[fileName]); }}
+                            className={cn(
+                              "w-full text-left px-2 py-1 text-[10px] font-mono truncate transition-colors",
+                              activeFile === fileName
+                                ? "bg-indigo-500/15 text-indigo-300"
+                                : "text-slate-400 hover:bg-white/5 hover:text-slate-200",
+                            )}
+                          >
+                            {fileName.split("/").pop()}
+                          </button>
+                        ))}
+                      </div>
+                      {/* Active File Code */}
+                      <div className="flex-1 font-mono text-[11px] leading-relaxed text-slate-300 overflow-x-auto selection:bg-indigo-500/30 p-2" style={{ minHeight: panelHeight - 100 }}>
+                        <div className="text-[9px] text-slate-500 mb-1 font-bold">{activeFile}</div>
+                        <pre className="whitespace-pre-wrap">{generatedFiles[activeFile] || ""}</pre>
+                      </div>
+                    </div>
+                  ) : generatedCode ? (
                     <div className="flex flex-1 overflow-hidden" style={{ minHeight: panelHeight - 100 }}>
                       {isEditMode ? (
                         <div className="flex-1 flex gap-2 overflow-hidden" style={{ height: panelHeight - 100 }}>
