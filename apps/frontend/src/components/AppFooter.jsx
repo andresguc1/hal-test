@@ -444,7 +444,7 @@ function AppFooter({
   const activeFlow = flows?.find(
     (f) => f.name === flowName,
   );
-  const activeFlowIcon =
+  const ActiveFlowIcon =
     activeFlow?.type === "loop"
       ? Repeat
       : activeFlow?.type === "component"
@@ -569,7 +569,7 @@ function AppFooter({
 
         {/* Flow indicator */}
         <div className="flex items-center gap-1.5 text-xs min-w-0">
-          {activeFlowIcon && <activeFlowIcon size={12} className="text-indigo-400 shrink-0" aria-hidden="true" />}
+          {ActiveFlowIcon && <ActiveFlowIcon size={12} className="text-indigo-400 shrink-0" aria-hidden="true" />}
           <span className="text-slate-500 font-mono uppercase tracking-wider text-[10px] hidden md:inline">{activeFlowLabel}</span>
           <span className={cn(
             "font-medium truncate max-w-[100px] md:max-w-[200px]",
