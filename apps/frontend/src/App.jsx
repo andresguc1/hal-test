@@ -779,6 +779,8 @@ function Dashboard({
     handleCancelPicking,
     handleElementPicked,
     handleElementSanitized,
+    isReplaying: _isReplaying,
+    replayProgress: _replayProgress,
   } = useElementPicker({
     selectedAction,
     updateNodeState,
@@ -787,7 +789,6 @@ function Dashboard({
     setActiveBrowserId,
     nodes,
     edges,
-    executeFlow,
     setNodes,
   });
 

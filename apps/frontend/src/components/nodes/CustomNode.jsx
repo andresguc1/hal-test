@@ -44,6 +44,8 @@ function CustomNode({ data, selected }) {
     state === "executing";
   const isSuccess = state === NODE_STATES.SUCCESS || state === "success";
   const isPicking = state === NODE_STATES.PICKING || state === "picking";
+  const isPickerReplaying =
+    state === NODE_STATES.PICKER_REPLAYING || state === "picker-replaying";
   const isHealed = state === NODE_STATES.HEALED || state === "healed";
   const isSoftFailed =
     state === NODE_STATES.SOFTFAILED || state === "softfailed";
@@ -78,6 +80,10 @@ function CustomNode({ data, selected }) {
     isRunning &&
       "border-blue-500/50 shadow-[0_0_15px_-3px_rgba(59,130,246,0.3)]",
 
+    // Picker Replaying State
+    isPickerReplaying &&
+      "border-indigo-500/50 shadow-[0_0_15px_-3px_rgba(99,102,241,0.3)] animate-pulse",
+
     // Picking/Binding State
     isPicking &&
       "ring-2 ring-sky-400 bg-sky-500/10 border-sky-500/50 shadow-[0_0_15px_-3px_rgba(14,165,233,0.4)] cursor-crosshair",
@@ -101,9 +107,11 @@ function CustomNode({ data, selected }) {
               ? "#f97316"
               : isPicking
                 ? "#0ea5e9"
-                : isHealed
-                  ? "#8b5cf6"
-                  : categoryColor,
+                : isPickerReplaying
+                  ? "#6366f1"
+                  : isHealed
+                    ? "#8b5cf6"
+                    : categoryColor,
         }}
       />
 
@@ -119,14 +127,16 @@ function CustomNode({ data, selected }) {
                 ? "#f97316"
                 : isRunning
                   ? "#60a5fa"
-                  : isPicking
-                    ? "#0ea5e9"
-                    : isHealed
-                      ? "#8b5cf6"
-                      : categoryColor,
+                  : isPickerReplaying
+                    ? "#818cf8"
+                    : isPicking
+                      ? "#0ea5e9"
+                      : isHealed
+                        ? "#8b5cf6"
+                        : categoryColor,
           }}
         >
-          {isRunning ? (
+          {isRunning || isPickerReplaying ? (
             <Loader2 size={24} className="animate-spin" />
           ) : isPicking ? (
             <div className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-20"></div>
@@ -134,7 +144,7 @@ function CustomNode({ data, selected }) {
             <Sparkles size={24} className="animate-pulse" />
           ) : null}
 
-          {isRunning || isHealed ? null : isError || isSoftFailed ? ( // Loader already rendered above
+          {isRunning || isPickerReplaying || isHealed ? null : isError || isSoftFailed ? ( // Loader already rendered above
             <AlertCircle size={24} />
           ) : (
             <NodeIconComponent
@@ -151,10 +161,12 @@ function CustomNode({ data, selected }) {
           <span className="text-[9px] font-bold uppercase tracking-widest text-[var(--text-muted)] mb-0.5 opacity-70">
             {isPicking
               ? "BINDING MODE"
-              : isHealed
-                ? "SELF-HEALED"
-                : NODE_CATEGORIES[categoryKey]?.label ||
-                  categoryKey.replace(/_/g, " ")}
+              : isPickerReplaying
+                ? "REPLAYING"
+                : isHealed
+                  ? "SELF-HEALED"
+                  : NODE_CATEGORIES[categoryKey]?.label ||
+                    categoryKey.replace(/_/g, " ")}
           </span>
 
           <h3
@@ -163,6 +175,7 @@ function CustomNode({ data, selected }) {
               isError && "text-red-400",
               isSoftFailed && "text-orange-400",
               isPicking && "text-sky-400",
+              isPickerReplaying && "text-indigo-400",
               isHealed && "text-violet-400",
             )}
           >

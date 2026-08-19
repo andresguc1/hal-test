@@ -3,6 +3,7 @@ import { useToast } from "./useToast";
 import { useTranslation } from "react-i18next";
 import { api } from "../utils/api";
 import { NODE_STATES } from "../components/hooks/flowStyles";
+import { usePickerReplay } from "./usePickerReplay";
 
 export const useElementPicker = ({
   selectedAction,
@@ -12,7 +13,6 @@ export const useElementPicker = ({
   setActiveBrowserId,
   nodes,
   edges,
-  executeFlow,
   setNodes,
 }) => {
   const toast = useToast();
@@ -20,6 +20,14 @@ export const useElementPicker = ({
   const [pickingField, setPickingField] = useState("selector");
   const lastPickIdRef = useRef(null);
   const activePickSession = useRef(null);
+
+  const { executeToNode, isReplaying, replayProgress } = usePickerReplay({
+    nodes,
+    edges,
+    activeBrowserId,
+    setActiveBrowserId,
+    updateNodeState,
+  });
 
   const setNestedValue = useCallback((obj, path, value) => {
     const keys = path.split(".");
@@ -59,7 +67,7 @@ export const useElementPicker = ({
     async (fieldKey = "selector") => {
       if (selectedAction?.data?.state === NODE_STATES.PICKING) {
         console.log(
-          "[useElementPicker] 🛑 Already picking, stopping current session...",
+          "[useElementPicker] Already picking, stopping current session...",
         );
         await handleCancelPicking();
         return;
@@ -67,7 +75,7 @@ export const useElementPicker = ({
 
       if (!selectedAction) return;
 
-      console.log("[useElementPicker] 📍 Starting picker for field:", fieldKey);
+      console.log("[useElementPicker] Starting picker for field:", fieldKey);
       setPickingField(fieldKey);
 
       activePickSession.current = {
@@ -79,9 +87,6 @@ export const useElementPicker = ({
       updateNodeState(selectedAction.nodeId, NODE_STATES.PICKING, {
         pickingField: fieldKey,
       });
-      toast.info(
-        t("common.inspector_started", "Pick an element in the browser..."),
-      );
 
       const isRemote = window.location.hostname !== "localhost";
 
@@ -92,7 +97,7 @@ export const useElementPicker = ({
           if (sessionRes.success && sessionRes.sessions?.length > 0) {
             inspectorBrowserId = sessionRes.sessions[0];
             console.log(
-              "[useElementPicker] 🔍 Auto-detected active backend browser session:",
+              "[useElementPicker] Auto-detected active backend browser session:",
               inspectorBrowserId,
             );
             if (setActiveBrowserId) {
@@ -121,7 +126,7 @@ export const useElementPicker = ({
       try {
         if (!needsLaunch) {
           console.log(
-            "[useElementPicker] 🚀 Starting local inspector on browserId:",
+            "[useElementPicker] Starting local inspector on browserId:",
             inspectorBrowserId,
           );
           try {
@@ -165,60 +170,43 @@ export const useElementPicker = ({
 
         if (!inspectorBrowserId) {
           console.log(
-            "[useElementPicker] 🌐 Needs browser state for picker...",
+            "[useElementPicker] Replaying previous steps to reach target node...",
           );
 
-          const getAncestors = (nodeId, graphNodes, graphEdges) => {
-            const ancestors = [];
-            const visited = new Set();
-            const queue = [nodeId];
+          const toastId = toast.loading(
+            t(
+              "common.picker_replay",
+              "Preparing page... replaying previous steps",
+            ),
+          );
 
-            while (queue.length > 0) {
-              const currentId = queue.shift();
-              if (visited.has(currentId)) continue;
-              visited.add(currentId);
+          const replayResult = await executeToNode(selectedAction.nodeId);
+          toast.dismiss(toastId);
 
-              const incomingEdges = graphEdges.filter(
-                (e) => e.target === currentId,
-              );
-              for (const edge of incomingEdges) {
-                if (!visited.has(edge.source)) {
-                  const sourceNode = graphNodes.find(
-                    (n) => n.id === edge.source,
-                  );
-                  if (sourceNode) ancestors.push(sourceNode);
-                  queue.push(edge.source);
-                }
-              }
-            }
-            return ancestors;
-          };
-
-          const ancestors = getAncestors(selectedAction.nodeId, nodes, edges);
-
-          if (ancestors.length > 0) {
-            console.log(
-              "[useElementPicker] 🔄 Executing ancestor nodes:",
-              ancestors.length,
-            );
-            const toastId = toast.loading(
-              t("common.picker_setup", "Executing previous steps..."),
+          if (replayResult.error) {
+            const err = replayResult.error;
+            toast.error(
+              t(
+                "common.picker_replay_failed",
+                "Could not reach target node: failed at step {{step}} — {{label}}",
+              )
+                .replace("{{step}}", err.failedAtStep)
+                .replace("{{label}}", err.nodeLabel) || `Failed at: ${err.nodeLabel} — ${err.message}`,
             );
 
-            try {
-              const execResult = await executeFlow({
-                nodes: ancestors,
-                keepOpen: true,
-              });
-              toast.dismiss(toastId);
-
-              if (execResult && execResult.success && execResult.browserId) {
-                inspectorBrowserId = execResult.browserId;
-              }
-            } catch (err) {
-              toast.dismiss(toastId);
-              console.warn("[useElementPicker] ⚠ Error building state:", err);
+            if (replayResult.browserId) {
+              inspectorBrowserId = replayResult.browserId;
+            } else {
+              updateNodeState(selectedAction.nodeId, NODE_STATES.DEFAULT);
+              activePickSession.current = null;
+              return;
             }
+          } else if (replayResult.browserId) {
+            inspectorBrowserId = replayResult.browserId;
+          } else if (!replayResult.skipped) {
+            console.warn(
+              "[useElementPicker] Replay completed but no browserId returned",
+            );
           }
         }
 
@@ -228,11 +216,25 @@ export const useElementPicker = ({
             url: getStartingUrl(),
           });
           if (!data.success) throw new Error(data.message);
+
+          toast.info(
+            t(
+              "common.inspector_started",
+              "Pick an element on the page...",
+            ),
+          );
         } else {
           const res = await api.post("/inspector/launch-remote", {
             url: getStartingUrl(),
           });
           if (!res.success) throw new Error(res.message);
+
+          toast.info(
+            t(
+              "common.inspector_started",
+              "Pick an element on the page...",
+            ),
+          );
         }
       } catch (error) {
         console.error("[useElementPicker] Picker Start Error:", error);
@@ -250,9 +252,8 @@ export const useElementPicker = ({
       activeBrowserId,
       setActiveBrowserId,
       nodes,
-      edges,
-      executeFlow,
       handleCancelPicking,
+      executeToNode,
     ],
   );
 
@@ -297,7 +298,7 @@ export const useElementPicker = ({
 
   const handleElementPicked = useCallback(
     async (data) => {
-      console.log("[useElementPicker] 🎯 Element Picked Event Received:", data);
+      console.log("[useElementPicker] Element Picked Event Received:", data);
 
       const pickId = data.pickId;
       if (!pickId) {
@@ -391,7 +392,7 @@ export const useElementPicker = ({
   const handleElementSanitized = useCallback(
     async (data) => {
       console.log(
-        "[useElementPicker] ✨ Element Sanitized Event Received:",
+        "[useElementPicker] Element Sanitized Event Received:",
         data,
       );
 
@@ -486,5 +487,7 @@ export const useElementPicker = ({
     handleCancelPicking,
     handleElementPicked,
     handleElementSanitized,
+    isReplaying,
+    replayProgress,
   };
 };

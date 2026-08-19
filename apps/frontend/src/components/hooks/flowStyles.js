@@ -16,6 +16,7 @@ export const NODE_STATES = {
   WARNING: "warning",
   SKIPPED: "skipped",
   PICKING: "picking",
+  PICKER_REPLAYING: "picker-replaying",
   HEALED: "healed",
   SOFTFAILED: "softfailed",
 };
@@ -42,6 +43,14 @@ export const PROFESSIONAL_COLORS = {
     border: "#f59e0b", // amber-600
     text: "#b45309", // amber-800
     shadow: "0 0 12px rgba(245,158,11,0.2)",
+    animate: true,
+    borderWidth: "2px",
+  },
+  [NODE_STATES.PICKER_REPLAYING]: {
+    background: "#eef2ff", // indigo-50
+    border: "#6366f1", // indigo-500
+    text: "#4338ca", // indigo-700
+    shadow: "0 0 15px rgba(99,102,241,0.25)",
     animate: true,
     borderWidth: "2px",
   },

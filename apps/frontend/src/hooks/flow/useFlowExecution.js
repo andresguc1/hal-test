@@ -1174,7 +1174,7 @@ export function useFlowExecution({
               }
             }
           }
-          return { success: lastResult.success, healedNodes };
+          return { success: lastResult.success, healedNodes, browserId };
         };
 
         const finalResult = await executeGraph(options.nodes || nodes, edges);

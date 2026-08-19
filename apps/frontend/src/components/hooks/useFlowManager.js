@@ -8,6 +8,7 @@ import { useLogs } from "../../context/LogContext";
 import { useFlowState } from "../../hooks/flow/useFlowState";
 import { useFlowExecution } from "../../hooks/flow/useFlowExecution";
 import { useFlowSync } from "../../hooks/flow/useFlowSync";
+import { usePickerReplay } from "../../hooks/usePickerReplay";
 
 /**
  * useFlowManager: Central orchestrator for flow logic.
@@ -61,6 +62,15 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
     migrateNodes: state.migrateNodes,
   });
 
+  // 4. PICKER REPLAY (replay ancestors before single-node execution)
+  const pickerReplay = usePickerReplay({
+    nodes: state.nodes,
+    edges: state.edges,
+    activeBrowserId: execution.activeBrowserId,
+    setActiveBrowserId: execution.setActiveBrowserId,
+    updateNodeState: state.updateNodeState,
+  });
+
   // Connect saveFlow persistence callback to state hook
   state.setSaveFlow(sync.saveFlow);
 
@@ -73,13 +83,11 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
     saveFlow: sync.saveFlow,
     executeFlow: execution.executeFlow,
     executeStep: execution.executeStep,
-    executeSingleNode: (nodeId, type, config, options) => {
-      const node = state.nodes.find((n) => n.id === nodeId);
-      return execution.executeStep(
-        node || { id: nodeId, type, data: { configuration: config } },
-        type,
+    executeSingleNode: (nodeId, _type, config, _options) => {
+      return pickerReplay.replayAndExecuteNode(
+        nodeId,
+        execution.executeStep,
         config,
-        options,
       );
     },
     onNodesChange: state.onNodesChange,
@@ -117,6 +125,8 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
     isReadOnly: execution.isReadOnly,
     validateFlowStructure: execution.validateFlowStructure,
     projectPath: sync.projectPath,
+    isReplayingNode: pickerReplay.isReplaying,
+    replayNodeProgress: pickerReplay.replayProgress,
     enterComponent: sync.enterComponent,
     exitComponent: sync.exitComponent,
     deepNavigate: sync.deepNavigate,
