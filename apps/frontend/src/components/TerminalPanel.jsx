@@ -89,6 +89,7 @@ export default function TerminalPanel({
   const [generatedCode, setGeneratedCode] = useState("");
   const [codeWarnings, setCodeWarnings] = useState([]);
   const [codeLintReport, setCodeLintReport] = useState(null);
+  const [codeValidationReport, setCodeValidationReport] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [codeError, setCodeError] = useState(null);
   const [copied, setCopied] = useState(false);
@@ -476,6 +477,7 @@ export default function TerminalPanel({
           setGeneratedCode(result.code);
           setCodeWarnings(result.warnings || []);
           setCodeLintReport(result.lintReport || null);
+          setCodeValidationReport(result.validationReport || null);
         } else {
           setCodeError(result.error || "Code generation failed");
         }
@@ -1042,6 +1044,35 @@ export default function TerminalPanel({
                         ))}
                       </div>
                     </div>
+                  </div>
+                )}
+
+                {/* Validation Badge */}
+                {codeValidationReport && (
+                  <div className={cn(
+                    "mb-3 flex items-center gap-2 px-2 py-1 rounded text-[10px]",
+                    codeValidationReport.valid
+                      ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-300/70"
+                      : "bg-rose-500/10 border border-rose-500/20 text-rose-300/70",
+                  )}>
+                    {codeValidationReport.valid ? (
+                      <CheckCircle2 size={10} className="text-emerald-500 shrink-0" />
+                    ) : (
+                      <OctagonX size={10} className="text-rose-500 shrink-0" />
+                    )}
+                    <span className="font-medium">
+                      {codeValidationReport.valid ? "Syntax OK" : "Syntax Errors"}
+                    </span>
+                    {!codeValidationReport.valid && codeValidationReport.errors.length > 0 && (
+                      <span className="opacity-60">
+                        ({codeValidationReport.errors.length} issue{codeValidationReport.errors.length !== 1 ? "s" : ""})
+                      </span>
+                    )}
+                    {codeValidationReport.warnings.length > 0 && (
+                      <span className="text-amber-400/60">
+                        ({codeValidationReport.warnings.length} warning{codeValidationReport.warnings.length !== 1 ? "s" : ""})
+                      </span>
+                    )}
                   </div>
                 )}
 

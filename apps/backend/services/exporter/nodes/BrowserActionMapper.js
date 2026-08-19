@@ -21,6 +21,7 @@ export const BrowserActionMapper = {
                     reload_page: 'await page.reload()',
                     resize_viewport: `await page.set_viewport_size({"width": ${params.width || 1280}, "height": ${params.height || 720}})`,
                     close_browser: 'await browser.close()',
+                    launch_browser: '# Browser managed by runner',
                 }[params.actionType || params.type];
             case 'java':
                 return {
@@ -28,6 +29,7 @@ export const BrowserActionMapper = {
                     reload_page: 'page.reload();',
                     resize_viewport: `page.setViewportSize(${params.width || 1280}, ${params.height || 720});`,
                     close_browser: '// Browser managed by runner',
+                    launch_browser: '// Browser managed by runner',
                 }[params.actionType || params.type];
             case 'csharp':
                 return {
@@ -35,6 +37,7 @@ export const BrowserActionMapper = {
                     reload_page: 'await page.ReloadAsync();',
                     resize_viewport: `await page.SetViewportSizeAsync(${params.width || 1280}, ${params.height || 720});`,
                     close_browser: '// Browser managed by runner',
+                    launch_browser: '// Browser managed by runner',
                 }[params.actionType || params.type];
             default:
                 return `// action not implemented for ${lang}`;

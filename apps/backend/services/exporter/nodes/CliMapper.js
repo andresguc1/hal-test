@@ -22,7 +22,7 @@ export const CliMapper = {
                 if (lang.toLowerCase() === 'csharp') {
                     return `System.Diagnostics.Process.Start("${command}");`;
                 }
-                return `const { execSync } = require('child_process');\nexecSync('${command}', { stdio: 'inherit' });`;
+                return `import { execSync } from 'child_process';\nexecSync('${command}', { stdio: 'inherit' });`;
             }
 
             case 'cli_params': {

@@ -3,6 +3,7 @@ import { CypressGenerator } from './generators/CypressGenerator.js';
 import { SeleniumGenerator } from './generators/SeleniumGenerator.js';
 import { flowResolver } from '../../core/FlowResolver.js';
 import pipelineCodeLinter from '../PipelineCodeLinter.js';
+import codeValidator from '../CodeValidator.js';
 
 export const exportService = {
     /**
@@ -86,14 +87,23 @@ export const exportService = {
 
             const filename = `export_${Date.now()}.${extension}`;
             let lintReport = null;
-            if (
-                code &&
-                (framework.toLowerCase() === 'playwright' || framework.toLowerCase() === 'cypress')
-            ) {
+            let validationReport = null;
+
+            if (code) {
+                if (
+                    framework.toLowerCase() === 'playwright' ||
+                    framework.toLowerCase() === 'cypress'
+                ) {
+                    try {
+                        lintReport = pipelineCodeLinter.lintCode(code, filename);
+                    } catch (lintError) {
+                        console.warn('[ExportService] Lint analysis failed:', lintError.message);
+                    }
+                }
                 try {
-                    lintReport = pipelineCodeLinter.lintCode(code, filename);
-                } catch (lintError) {
-                    console.warn('[ExportService] Lint analysis failed:', lintError.message);
+                    validationReport = codeValidator.validate(code, language);
+                } catch (valError) {
+                    console.warn('[ExportService] Code validation failed:', valError.message);
                 }
             }
 
@@ -102,6 +112,7 @@ export const exportService = {
                 code,
                 warnings,
                 lintReport,
+                validationReport,
                 framework,
                 language,
                 extension,
