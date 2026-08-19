@@ -1,8 +1,10 @@
 import { FolderGit2, Plus, ChevronDown, ChevronRight, FolderPlus, GitBranch, Pencil, Trash2, Check, X as XIcon } from "lucide-react";
 import { useExplorerStore } from "@/stores/useExplorerStore";
+import { useToast } from "@/hooks/useToast";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion as Motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import ConfirmDialog from "@/components/ui-custom/ConfirmDialog";
 
 export default function ExplorerHeader({
   projects = [],
@@ -14,11 +16,14 @@ export default function ExplorerHeader({
   onNewFlow,
 }) {
   const { isOpen, toggleExplorer } = useExplorerStore();
+  const toast = useToast();
   const [menuOpen, setMenuOpen] = useState(false);
   const [projectDropdownOpen, setProjectDropdownOpen] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState("");
   const [projectCtxMenu, setProjectCtxMenu] = useState(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState(null);
   const menuRef = useRef(null);
   const dropdownRef = useRef(null);
   const renameInputRef = useRef(null);
@@ -48,19 +53,44 @@ export default function ExplorerHeader({
     setProjectCtxMenu(null);
   }, [currentProject]);
 
-  const handleSaveRename = useCallback(() => {
+  const handleSaveRename = useCallback(async () => {
     const trimmed = renameValue.trim();
     if (trimmed && trimmed !== currentProject?.name) {
-      onRenameProject?.(currentProject.id, trimmed);
+      try {
+        await onRenameProject?.(currentProject.id, trimmed);
+        toast.success("Project renamed");
+      } catch (error) {
+        toast.error(error?.message || "Failed to rename project");
+      }
     }
     setIsRenaming(false);
-  }, [renameValue, currentProject, onRenameProject]);
+  }, [renameValue, currentProject, onRenameProject, toast]);
 
   const handleProjectCtxMenu = useCallback((e) => {
     e.preventDefault();
     e.stopPropagation();
     setProjectCtxMenu({ x: e.clientX, y: e.clientY });
   }, []);
+
+  const handleDeleteClick = useCallback((project) => {
+    setProjectToDelete(project);
+    setDeleteConfirmOpen(true);
+    setProjectCtxMenu(null);
+    setProjectDropdownOpen(false);
+  }, []);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (projectToDelete) {
+      try {
+        await onDeleteProject?.(projectToDelete.id);
+        toast.success("Project deleted");
+      } catch (error) {
+        toast.error(error?.message || "Failed to delete project");
+      }
+    }
+    setDeleteConfirmOpen(false);
+    setProjectToDelete(null);
+  }, [projectToDelete, onDeleteProject, toast]);
 
   if (!isOpen) {
     return (
@@ -112,7 +142,7 @@ export default function ExplorerHeader({
                 }}
                 onContextMenu={handleProjectCtxMenu}
                 className={cn(
-                  "flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs w-full min-w-0",
+                  "flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs w-full min-w-0 group",
                   "hover:bg-white/5 transition-colors",
                   projectDropdownOpen ? "bg-white/5 text-white" : "text-slate-300",
                 )}
@@ -121,6 +151,10 @@ export default function ExplorerHeader({
                 <span className="truncate font-medium">
                   {currentProject?.name || "No Project"}
                 </span>
+                <Pencil
+                  size={9}
+                  className="shrink-0 text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                />
                 <ChevronDown
                   size={10}
                   className={cn(
@@ -163,7 +197,7 @@ export default function ExplorerHeader({
                           setProjectDropdownOpen(false);
                         }}
                         className={cn(
-                          "w-full flex items-center gap-2 px-3 py-1.5 text-xs transition-colors",
+                          "w-full flex items-center gap-2 px-3 py-1.5 text-xs transition-colors group/item",
                           p.id === currentProject?.id
                             ? "bg-indigo-500/10 text-indigo-400"
                             : "text-slate-300 hover:bg-white/5 hover:text-white",
@@ -263,7 +297,7 @@ export default function ExplorerHeader({
             className="fixed z-[var(--z-modal)]"
             style={{ left: projectCtxMenu.x, top: projectCtxMenu.y }}
           >
-            <div className="bg-[#0f172a]/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl py-1 min-w-[160px]">
+            <div className="bg-[#0f172a]/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl py-1 min-w-[180px]">
               {projectCtxMenu.project && (
                 <div className="px-3 py-1.5 border-b border-white/5">
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
@@ -271,6 +305,32 @@ export default function ExplorerHeader({
                   </span>
                 </div>
               )}
+
+              {/* New actions */}
+              <button
+                onClick={() => {
+                  onNewProject?.();
+                  setProjectCtxMenu(null);
+                }}
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-slate-300 hover:bg-white/5 hover:text-white transition-colors"
+              >
+                <FolderPlus size={12} className="text-indigo-400" />
+                <span>New Project</span>
+              </button>
+              <button
+                onClick={() => {
+                  onNewFlow?.();
+                  setProjectCtxMenu(null);
+                }}
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-slate-300 hover:bg-white/5 hover:text-white transition-colors"
+              >
+                <GitBranch size={12} className="text-emerald-400" />
+                <span>New Flow</span>
+              </button>
+
+              <div className="mx-2 my-0.5 border-t border-white/5" />
+
+              {/* Edit actions */}
               <button
                 onClick={() => {
                   if (projectCtxMenu.project) {
@@ -284,12 +344,14 @@ export default function ExplorerHeader({
                 <Pencil size={12} />
                 <span>Rename</span>
               </button>
+
               <div className="mx-2 my-0.5 border-t border-white/5" />
+
+              {/* Delete action */}
               <button
                 onClick={() => {
                   const target = projectCtxMenu.project || currentProject;
-                  if (target) onDeleteProject?.(target.id);
-                  setProjectCtxMenu(null);
+                  handleDeleteClick(target);
                 }}
                 className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors"
               >
@@ -300,6 +362,20 @@ export default function ExplorerHeader({
           </Motion.div>
         )}
       </AnimatePresence>
+
+      {/* Delete confirmation dialog */}
+      <ConfirmDialog
+        isOpen={deleteConfirmOpen}
+        title="Delete project"
+        description={`Are you sure you want to delete "${projectToDelete?.name}"? This will permanently delete all flows, nodes, and connections. This action cannot be undone.`}
+        confirmLabel="Delete project"
+        variant="destructive"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => {
+          setDeleteConfirmOpen(false);
+          setProjectToDelete(null);
+        }}
+      />
     </div>
   );
 }
