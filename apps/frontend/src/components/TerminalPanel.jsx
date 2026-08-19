@@ -23,6 +23,7 @@ import {
   RefreshCw,
   Eye,
   Edit2,
+  CheckCircle2,
 } from "lucide-react";
 import { useLogs, normalizeMode } from "../context/LogContext";
 import { cn } from "@/lib/utils";
@@ -86,6 +87,7 @@ export default function TerminalPanel({
   // ─── Code Preview ─────────────────────────────────────────────────────────
   const [generatedCode, setGeneratedCode] = useState("");
   const [codeWarnings, setCodeWarnings] = useState([]);
+  const [codeLintReport, setCodeLintReport] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [codeError, setCodeError] = useState(null);
   const [copied, setCopied] = useState(false);
@@ -447,6 +449,7 @@ export default function TerminalPanel({
         if (result.success && result.code) {
           setGeneratedCode(result.code);
           setCodeWarnings(result.warnings || []);
+          setCodeLintReport(result.lintReport || null);
         } else {
           setCodeError(result.error || "Code generation failed");
         }
@@ -964,6 +967,50 @@ export default function TerminalPanel({
                             <span className="truncate">
                               <span className="font-medium text-amber-300/80">{w.nodeLabel || w.nodeId}</span>
                               {w.message && <span className="ml-1">— {w.message}</span>}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Lint Report Banner */}
+                {codeLintReport && codeLintReport.issues.length > 0 && (
+                  <div className={cn(
+                    "mb-3 flex items-start gap-2 p-2 rounded text-[10px]",
+                    codeLintReport.passed
+                      ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-200/70"
+                      : "bg-rose-500/10 border border-rose-500/20 text-rose-200/70",
+                  )}>
+                    {codeLintReport.passed ? (
+                      <CheckCircle2 size={12} className="text-emerald-500 shrink-0 mt-0.5" />
+                    ) : (
+                      <OctagonX size={12} className="text-rose-500 shrink-0 mt-0.5" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <span className="font-medium">
+                        Lint: {codeLintReport.score}/100
+                        <span className="ml-1 opacity-60">
+                          ({codeLintReport.summary.errors} error{codeLintReport.summary.errors !== 1 ? "s" : ""}, {codeLintReport.summary.warnings} warning{codeLintReport.summary.warnings !== 1 ? "s" : ""})
+                        </span>
+                      </span>
+                      <div className="mt-1 space-y-0.5 max-h-20 overflow-y-auto custom-scrollbar">
+                        {codeLintReport.issues.map((issue, i) => (
+                          <div key={i} className={cn(
+                            "flex items-start gap-1.5",
+                            issue.severity === "error" ? "text-rose-300/60" : "text-amber-300/60",
+                          )}>
+                            <span className={cn(
+                              "shrink-0",
+                              issue.severity === "error" ? "text-rose-500/80" : "text-amber-500/80",
+                            )}>•</span>
+                            <span className="truncate">
+                              <span className="font-medium opacity-80">L{issue.line}</span>
+                              <span className="ml-1">{issue.message}</span>
+                              {issue.fix && (
+                                <span className="ml-1 opacity-50">→ {issue.fix}</span>
+                              )}
                             </span>
                           </div>
                         ))}

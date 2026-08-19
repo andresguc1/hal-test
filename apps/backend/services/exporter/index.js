@@ -2,6 +2,7 @@ import { PlaywrightGenerator } from './generators/PlaywrightGenerator.js';
 import { CypressGenerator } from './generators/CypressGenerator.js';
 import { SeleniumGenerator } from './generators/SeleniumGenerator.js';
 import { flowResolver } from '../../core/FlowResolver.js';
+import pipelineCodeLinter from '../PipelineCodeLinter.js';
 
 export const exportService = {
     /**
@@ -83,14 +84,28 @@ export const exportService = {
                     throw new Error(`Framework no soportado: ${framework}`);
             }
 
+            const filename = `export_${Date.now()}.${extension}`;
+            let lintReport = null;
+            if (
+                code &&
+                (framework.toLowerCase() === 'playwright' || framework.toLowerCase() === 'cypress')
+            ) {
+                try {
+                    lintReport = pipelineCodeLinter.lintCode(code, filename);
+                } catch (lintError) {
+                    console.warn('[ExportService] Lint analysis failed:', lintError.message);
+                }
+            }
+
             return {
                 success: true,
                 code,
                 warnings,
+                lintReport,
                 framework,
                 language,
                 extension,
-                filename: `export_${Date.now()}.${extension}`,
+                filename,
             };
         } catch (error) {
             console.error('[ExportService] Error generating code:', error);
