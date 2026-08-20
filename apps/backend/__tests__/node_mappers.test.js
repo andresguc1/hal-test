@@ -96,9 +96,9 @@ describe('HalTest Node Mappers Code Generation', () => {
                 timeout: 3000,
             };
 
-            const jsCode = mapper.getCode(params, 'javascript');
+             const jsCode = mapper.getCode(params, 'javascript');
             expect(jsCode).toBe(
-                "await expect(page.locator('body')).toContainText(new RegExp(`User \\d+`, ''), { timeout: 3000 });",
+                "await expect(page.locator('body')).toContainText(new RegExp(`User \\\\d+`, ''), { timeout: 3000 });",
             );
 
             const pyCode = mapper.getCode(params, 'python');

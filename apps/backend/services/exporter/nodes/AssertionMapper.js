@@ -169,7 +169,8 @@ export const AssertionMapper = {
 
                     if (matchType === 'regex') {
                         const flags = !caseSensitive ? ', re.IGNORECASE' : '';
-                        return `expect(page.locator("body")).to_contain_text(re.compile(r"${escapeForDoubleQuotes(textToFind)}"${flags})${optStr})`;
+                        const rawText = textToFind.replace(/"/g, '\\"');
+                        return `expect(page.locator("body")).to_contain_text(re.compile(r"${rawText}"${flags})${optStr})`;
                     } else {
                         return `expect(page.locator("body")).to_contain_text("${escapeForDoubleQuotes(textToFind)}"${optStr})`;
                     }
