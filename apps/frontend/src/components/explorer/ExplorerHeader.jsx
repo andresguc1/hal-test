@@ -1,4 +1,15 @@
-import { FolderGit2, Plus, ChevronDown, ChevronRight, FolderPlus, GitBranch, Pencil, Trash2, Check, X as XIcon } from "lucide-react";
+import {
+  FolderGit2,
+  Plus,
+  ChevronDown,
+  ChevronRight,
+  FolderPlus,
+  GitBranch,
+  Pencil,
+  Trash2,
+  Check,
+  X as XIcon,
+} from "lucide-react";
 import { useExplorerStore } from "@/stores/useExplorerStore";
 import { useToast } from "@/hooks/useToast";
 import { useState, useRef, useEffect, useCallback } from "react";
@@ -31,9 +42,12 @@ export default function ExplorerHeader({
 
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setProjectDropdownOpen(false);
-      if (ctxMenuRef.current && !ctxMenuRef.current.contains(e.target)) setProjectCtxMenu(null);
+      if (menuRef.current && !menuRef.current.contains(e.target))
+        setMenuOpen(false);
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target))
+        setProjectDropdownOpen(false);
+      if (ctxMenuRef.current && !ctxMenuRef.current.contains(e.target))
+        setProjectCtxMenu(null);
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -125,10 +139,16 @@ export default function ExplorerHeader({
                 onBlur={handleSaveRename}
                 className="flex-1 bg-slate-900/80 border border-indigo-500/50 rounded px-1.5 py-0.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500/30 min-w-0"
               />
-              <button onClick={handleSaveRename} className="p-0.5 text-emerald-400 hover:text-emerald-300">
+              <button
+                onClick={handleSaveRename}
+                className="p-0.5 text-emerald-400 hover:text-emerald-300"
+              >
                 <Check size={11} />
               </button>
-              <button onClick={() => setIsRenaming(false)} className="p-0.5 text-red-400 hover:text-red-300">
+              <button
+                onClick={() => setIsRenaming(false)}
+                className="p-0.5 text-red-400 hover:text-red-300"
+              >
                 <XIcon size={11} />
               </button>
             </div>
@@ -144,7 +164,9 @@ export default function ExplorerHeader({
                 className={cn(
                   "flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs w-full min-w-0 group",
                   "hover:bg-white/5 transition-colors",
-                  projectDropdownOpen ? "bg-white/5 text-white" : "text-slate-300",
+                  projectDropdownOpen
+                    ? "bg-white/5 text-white"
+                    : "text-slate-300",
                 )}
               >
                 <FolderGit2 size={12} className="text-indigo-400 shrink-0" />
@@ -193,7 +215,11 @@ export default function ExplorerHeader({
                         onContextMenu={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          setProjectCtxMenu({ x: e.clientX, y: e.clientY, project: p });
+                          setProjectCtxMenu({
+                            x: e.clientX,
+                            y: e.clientY,
+                            project: p,
+                          });
                           setProjectDropdownOpen(false);
                         }}
                         className={cn(
@@ -204,7 +230,9 @@ export default function ExplorerHeader({
                         )}
                       >
                         <FolderGit2 size={12} />
-                        <span className="flex-1 text-left truncate">{p.name}</span>
+                        <span className="flex-1 text-left truncate">
+                          {p.name}
+                        </span>
                         {p.id === currentProject?.id && (
                           <span className="text-[10px] text-indigo-400 font-mono">
                             active

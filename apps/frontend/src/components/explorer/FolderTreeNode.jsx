@@ -85,13 +85,23 @@ export default function FolderTreeNode({
         </Motion.div>
       )}
       {IconComp ? (
-        <IconComp size={13} className={cn("shrink-0", isDragOver ? "text-indigo-300" : "text-indigo-400")} />
+        <IconComp
+          size={13}
+          className={cn(
+            "shrink-0",
+            isDragOver ? "text-indigo-300" : "text-indigo-400",
+          )}
+        />
       ) : (
         <FolderIcon
           size={13}
           className={cn(
             "shrink-0",
-            isDragOver ? "text-indigo-300" : isExpanded ? "text-indigo-400" : "text-slate-500",
+            isDragOver
+              ? "text-indigo-300"
+              : isExpanded
+                ? "text-indigo-400"
+                : "text-slate-500",
           )}
         />
       )}

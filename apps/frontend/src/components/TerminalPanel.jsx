@@ -177,15 +177,17 @@ export default function TerminalPanel({
   }, [generatedCode, editedCode, isEditMode]);
 
   const highlightedCodeLines = useMemo(() => {
-    const targetId = selectedNodeId || (() => {
-      const activeNode = nodes.find(
-        (n) =>
-          n.data?.state === "executing" ||
-          n.data?.state === "capturing-before" ||
-          n.data?.state === "capturing-after",
-      );
-      return activeNode?.id || null;
-    })();
+    const targetId =
+      selectedNodeId ||
+      (() => {
+        const activeNode = nodes.find(
+          (n) =>
+            n.data?.state === "executing" ||
+            n.data?.state === "capturing-before" ||
+            n.data?.state === "capturing-after",
+        );
+        return activeNode?.id || null;
+      })();
 
     if (!targetId || !nodeLineMap.has(targetId)) return new Set();
     const range = nodeLineMap.get(targetId);
@@ -253,59 +255,75 @@ export default function TerminalPanel({
   }, [generatedCode, isEditMode]);
 
   // Recursively map parsed code actions back to React Flow nodes/edges
-  const convertActionsToFlowData = useCallback((actions, parentId = null, depth = 0) => {
-    const nodesList = [];
-    const edgesList = [];
+  const convertActionsToFlowData = useCallback(
+    (actions, parentId = null, depth = 0) => {
+      const nodesList = [];
+      const edgesList = [];
 
-    actions.forEach((actionObj, index) => {
-      const nodeId = `${actionObj.action}-${Date.now()}-${index}`;
-      const { action, subNodes, label, ...config } = actionObj;
+      actions.forEach((actionObj, index) => {
+        const nodeId = `${actionObj.action}-${Date.now()}-${index}`;
+        const { action, subNodes, label, ...config } = actionObj;
 
-      const nodeType = action === 'component' ? 'component' : action;
+        const nodeType = action === "component" ? "component" : action;
 
-      const mappedNode = {
-        id: nodeId,
-        type: nodeType,
-        position: { x: (parentId ? 50 : 100) + index * 250, y: (parentId ? 80 : 150) },
-        data: {
+        const mappedNode = {
+          id: nodeId,
           type: nodeType,
-          label: label || action.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
-          configuration: config,
-          state: 'default',
-        },
-      };
+          position: {
+            x: (parentId ? 50 : 100) + index * 250,
+            y: parentId ? 80 : 150,
+          },
+          data: {
+            type: nodeType,
+            label:
+              label ||
+              action
+                .replace(/_/g, " ")
+                .replace(/\b\w/g, (c) => c.toUpperCase()),
+            configuration: config,
+            state: "default",
+          },
+        };
 
-      if (parentId) {
-        mappedNode.parentId = parentId;
-        mappedNode.parentNode = parentId;
-        mappedNode.position = { x: 50 + index * 200, y: 80 };
-      }
-
-      nodesList.push(mappedNode);
-
-      if (subNodes && Array.isArray(subNodes) && subNodes.length > 0) {
-        const subResult = convertActionsToFlowData(subNodes, nodeId, depth + 1);
-        nodesList.push(...subResult.nodes);
-        edgesList.push(...subResult.edges);
-      }
-
-      if (index > 0) {
-        const siblings = nodesList.filter(n => (parentId ? n.parentId === parentId : !n.parentId));
-        const prevSibling = siblings[siblings.length - 2];
-        if (prevSibling) {
-          edgesList.push({
-            id: `edge_${prevSibling.id}_to_${nodeId}`,
-            source: prevSibling.id,
-            target: nodeId,
-            animated: !import.meta.env.DEV,
-            type: 'custom',
-          });
+        if (parentId) {
+          mappedNode.parentId = parentId;
+          mappedNode.parentNode = parentId;
+          mappedNode.position = { x: 50 + index * 200, y: 80 };
         }
-      }
-    });
 
-    return { nodes: nodesList, edges: edgesList };
-  }, []);
+        nodesList.push(mappedNode);
+
+        if (subNodes && Array.isArray(subNodes) && subNodes.length > 0) {
+          const subResult = convertActionsToFlowData(
+            subNodes,
+            nodeId,
+            depth + 1,
+          );
+          nodesList.push(...subResult.nodes);
+          edgesList.push(...subResult.edges);
+        }
+
+        if (index > 0) {
+          const siblings = nodesList.filter((n) =>
+            parentId ? n.parentId === parentId : !n.parentId,
+          );
+          const prevSibling = siblings[siblings.length - 2];
+          if (prevSibling) {
+            edgesList.push({
+              id: `edge_${prevSibling.id}_to_${nodeId}`,
+              source: prevSibling.id,
+              target: nodeId,
+              animated: !import.meta.env.DEV,
+              type: "custom",
+            });
+          }
+        }
+      });
+
+      return { nodes: nodesList, edges: edgesList };
+    },
+    [],
+  );
 
   const handleSyncCodeToCanvas = useCallback(() => {
     if (!editedCode) return;
@@ -313,13 +331,22 @@ export default function TerminalPanel({
     try {
       const result = api.post("/import/code", { code: editedCode, framework });
       if (result.success && result.actions) {
-        const { nodes: newNodes, edges: newEdges } = convertActionsToFlowData(result.actions);
+        const { nodes: newNodes, edges: newEdges } = convertActionsToFlowData(
+          result.actions,
+        );
         _setNodes?.(newNodes);
         _setEdges?.(newEdges);
-        toast.success(t("terminal.sync_success", "Code synced to canvas successfully"));
+        toast.success(
+          t("terminal.sync_success", "Code synced to canvas successfully"),
+        );
         setIsEditMode(false);
       } else {
-        toast.error(t("terminal.sync_parse_error", "Could not parse code back into flow actions."));
+        toast.error(
+          t(
+            "terminal.sync_parse_error",
+            "Could not parse code back into flow actions.",
+          ),
+        );
       }
     } catch (err) {
       console.error("Failed to sync code to canvas:", err);
@@ -328,7 +355,15 @@ export default function TerminalPanel({
       setIsSyncing(false);
       setShowSyncConfirm(false);
     }
-  }, [editedCode, framework, convertActionsToFlowData, _setNodes, _setEdges, toast, t]);
+  }, [
+    editedCode,
+    framework,
+    convertActionsToFlowData,
+    _setNodes,
+    _setEdges,
+    toast,
+    t,
+  ]);
 
   const LANGUAGES = [
     { id: "javascript", label: t("terminal.lang_js"), ext: "js" },
@@ -355,7 +390,8 @@ export default function TerminalPanel({
       setIsGenerating(true);
       setCodeError(null);
       try {
-        const isContainer = (type) => ["component", "loop", "for_each"].includes(type);
+        const isContainer = (type) =>
+          ["component", "loop", "for_each"].includes(type);
 
         // Step 1: Map canvas nodes, collecting container nodes that need sub-flow resolution
         const nodeMap = new Map();
@@ -389,7 +425,11 @@ export default function TerminalPanel({
           });
 
           // Container node without subNodes but with flowId → needs DB resolution
-          if (isContainer(nodeType) && effectiveSubNodes.length === 0 && flowId) {
+          if (
+            isContainer(nodeType) &&
+            effectiveSubNodes.length === 0 &&
+            flowId
+          ) {
             needsResolution.push({ node, flowId, nodeType });
           }
         }
@@ -403,7 +443,11 @@ export default function TerminalPanel({
                 flowId,
                 projectId: currentProject.id,
               });
-              if (subFlow?.success && subFlow?.nodes && subFlow.nodes.length > 0) {
+              if (
+                subFlow?.success &&
+                subFlow?.nodes &&
+                subFlow.nodes.length > 0
+              ) {
                 const mapped = nodeMap.get(node.id);
                 if (mapped) {
                   mapped.data.subNodes = subFlow.nodes;
@@ -469,7 +513,9 @@ export default function TerminalPanel({
         const attachSubNodes = (node) => {
           const canvasChildren = childMap.get(node.id) || [];
           const existingSubNodes = node.data.subNodes || [];
-          const mergedSubNodes = [...existingSubNodes, ...canvasChildren].map(attachSubNodes);
+          const mergedSubNodes = [...existingSubNodes, ...canvasChildren].map(
+            attachSubNodes,
+          );
           node.data.subNodes = mergedSubNodes;
           return node;
         };
@@ -487,7 +533,10 @@ export default function TerminalPanel({
         if (result.isZip && result.files) {
           setGeneratedFiles(result.files);
           setGeneratedCode("");
-          const firstFile = Object.keys(result.files).find((f) => f.endsWith(`.${language === "typescript" ? "ts" : "js"}`)) || Object.keys(result.files)[0];
+          const firstFile =
+            Object.keys(result.files).find((f) =>
+              f.endsWith(`.${language === "typescript" ? "ts" : "js"}`),
+            ) || Object.keys(result.files)[0];
           setActiveFile(firstFile);
           setCodeWarnings(result.warnings || []);
           setCodeLintReport(result.lintReport || null);
@@ -511,7 +560,16 @@ export default function TerminalPanel({
     }, CODE_DEBOUNCE_MS);
 
     return () => clearTimeout(timer);
-  }, [nodes, edges, mode, language, framework, designPattern, currentProject?.id, manualRefresh]);
+  }, [
+    nodes,
+    edges,
+    mode,
+    language,
+    framework,
+    designPattern,
+    currentProject?.id,
+    manualRefresh,
+  ]);
 
   const handleCopyCode = useCallback(() => {
     const codeToCopy = isEditMode ? editedCode : generatedCode;
@@ -638,32 +696,38 @@ export default function TerminalPanel({
   };
 
   // ─── Panel Resize Handlers ────────────────────────────────────────────────
-  const handleResizeStart = useCallback((e) => {
-    e.preventDefault();
-    isDraggingPanel.current = true;
-    dragStartY.current = e.clientY;
-    dragStartHeight.current = panelHeight;
+  const handleResizeStart = useCallback(
+    (e) => {
+      e.preventDefault();
+      isDraggingPanel.current = true;
+      dragStartY.current = e.clientY;
+      dragStartHeight.current = panelHeight;
 
-    const handleMouseMove = (moveEvent) => {
-      if (!isDraggingPanel.current) return;
-      const delta = dragStartY.current - moveEvent.clientY;
-      const newHeight = Math.max(MIN_PANEL_HEIGHT, Math.min(MAX_PANEL_HEIGHT, dragStartHeight.current + delta));
-      setPanelHeight(newHeight);
-    };
+      const handleMouseMove = (moveEvent) => {
+        if (!isDraggingPanel.current) return;
+        const delta = dragStartY.current - moveEvent.clientY;
+        const newHeight = Math.max(
+          MIN_PANEL_HEIGHT,
+          Math.min(MAX_PANEL_HEIGHT, dragStartHeight.current + delta),
+        );
+        setPanelHeight(newHeight);
+      };
 
-    const handleMouseUp = () => {
-      isDraggingPanel.current = false;
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-    };
+      const handleMouseUp = () => {
+        isDraggingPanel.current = false;
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      };
 
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-    document.body.style.cursor = "row-resize";
-    document.body.style.userSelect = "none";
-  }, [panelHeight]);
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "row-resize";
+      document.body.style.userSelect = "none";
+    },
+    [panelHeight],
+  );
 
   if (!isPanelVisible) return null;
 
@@ -818,25 +882,27 @@ export default function TerminalPanel({
           )}
 
           {/* Design Pattern Selector (only in code mode, Playwright only) */}
-          {mode === "code" && framework === "playwright" && (language === "javascript" || language === "typescript") && (
-            <div className="flex bg-slate-800 p-0.5 rounded-lg border border-slate-700 ml-1">
-              {PATTERNS.map((pat) => (
-                <button
-                  key={pat.id}
-                  onClick={() => setDesignPattern(pat.id)}
-                  title={pat.description}
-                  className={cn(
-                    "px-2 py-1 rounded text-[9px] font-medium transition-all whitespace-nowrap",
-                    designPattern === pat.id
-                      ? "bg-indigo-500/20 text-indigo-400 shadow-sm"
-                      : "text-slate-500 hover:text-slate-300",
-                  )}
-                >
-                  {pat.label}
-                </button>
-              ))}
-            </div>
-          )}
+          {mode === "code" &&
+            framework === "playwright" &&
+            (language === "javascript" || language === "typescript") && (
+              <div className="flex bg-slate-800 p-0.5 rounded-lg border border-slate-700 ml-1">
+                {PATTERNS.map((pat) => (
+                  <button
+                    key={pat.id}
+                    onClick={() => setDesignPattern(pat.id)}
+                    title={pat.description}
+                    className={cn(
+                      "px-2 py-1 rounded text-[9px] font-medium transition-all whitespace-nowrap",
+                      designPattern === pat.id
+                        ? "bg-indigo-500/20 text-indigo-400 shadow-sm"
+                        : "text-slate-500 hover:text-slate-300",
+                    )}
+                  >
+                    {pat.label}
+                  </button>
+                ))}
+              </div>
+            )}
 
           {/* Code Actions (only in code mode) */}
           {mode === "code" && (
@@ -1024,19 +1090,24 @@ export default function TerminalPanel({
                     <div className="flex-1 min-w-0">
                       <span className="font-medium">
                         {codeWarnings.length}{" "}
-                        {t(
-                          "terminal.warnings_count",
-                          "warning(s)",
-                        )}
-                        :
+                        {t("terminal.warnings_count", "warning(s)")}:
                       </span>
                       <div className="mt-1 space-y-0.5 max-h-16 overflow-y-auto custom-scrollbar">
                         {codeWarnings.map((w, i) => (
-                          <div key={i} className="flex items-start gap-1.5 text-amber-300/60">
-                            <span className="text-amber-500/80 shrink-0">•</span>
+                          <div
+                            key={i}
+                            className="flex items-start gap-1.5 text-amber-300/60"
+                          >
+                            <span className="text-amber-500/80 shrink-0">
+                              •
+                            </span>
                             <span className="truncate">
-                              <span className="font-medium text-amber-300/80">{w.nodeLabel || w.nodeId}</span>
-                              {w.message && <span className="ml-1">— {w.message}</span>}
+                              <span className="font-medium text-amber-300/80">
+                                {w.nodeLabel || w.nodeId}
+                              </span>
+                              {w.message && (
+                                <span className="ml-1">— {w.message}</span>
+                              )}
                             </span>
                           </div>
                         ))}
@@ -1047,39 +1118,65 @@ export default function TerminalPanel({
 
                 {/* Lint Report Banner */}
                 {codeLintReport && codeLintReport.issues.length > 0 && (
-                  <div className={cn(
-                    "mb-3 flex items-start gap-2 p-2 rounded text-[10px]",
-                    codeLintReport.passed
-                      ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-200/70"
-                      : "bg-rose-500/10 border border-rose-500/20 text-rose-200/70",
-                  )}>
+                  <div
+                    className={cn(
+                      "mb-3 flex items-start gap-2 p-2 rounded text-[10px]",
+                      codeLintReport.passed
+                        ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-200/70"
+                        : "bg-rose-500/10 border border-rose-500/20 text-rose-200/70",
+                    )}
+                  >
                     {codeLintReport.passed ? (
-                      <CheckCircle2 size={12} className="text-emerald-500 shrink-0 mt-0.5" />
+                      <CheckCircle2
+                        size={12}
+                        className="text-emerald-500 shrink-0 mt-0.5"
+                      />
                     ) : (
-                      <OctagonX size={12} className="text-rose-500 shrink-0 mt-0.5" />
+                      <OctagonX
+                        size={12}
+                        className="text-rose-500 shrink-0 mt-0.5"
+                      />
                     )}
                     <div className="flex-1 min-w-0">
                       <span className="font-medium">
                         Lint: {codeLintReport.score}/100
                         <span className="ml-1 opacity-60">
-                          ({codeLintReport.summary.errors} error{codeLintReport.summary.errors !== 1 ? "s" : ""}, {codeLintReport.summary.warnings} warning{codeLintReport.summary.warnings !== 1 ? "s" : ""})
+                          ({codeLintReport.summary.errors} error
+                          {codeLintReport.summary.errors !== 1 ? "s" : ""},{" "}
+                          {codeLintReport.summary.warnings} warning
+                          {codeLintReport.summary.warnings !== 1 ? "s" : ""})
                         </span>
                       </span>
                       <div className="mt-1 space-y-0.5 max-h-20 overflow-y-auto custom-scrollbar">
                         {codeLintReport.issues.map((issue, i) => (
-                          <div key={i} className={cn(
-                            "flex items-start gap-1.5",
-                            issue.severity === "error" ? "text-rose-300/60" : "text-amber-300/60",
-                          )}>
-                            <span className={cn(
-                              "shrink-0",
-                              issue.severity === "error" ? "text-rose-500/80" : "text-amber-500/80",
-                            )}>•</span>
+                          <div
+                            key={i}
+                            className={cn(
+                              "flex items-start gap-1.5",
+                              issue.severity === "error"
+                                ? "text-rose-300/60"
+                                : "text-amber-300/60",
+                            )}
+                          >
+                            <span
+                              className={cn(
+                                "shrink-0",
+                                issue.severity === "error"
+                                  ? "text-rose-500/80"
+                                  : "text-amber-500/80",
+                              )}
+                            >
+                              •
+                            </span>
                             <span className="truncate">
-                              <span className="font-medium opacity-80">L{issue.line}</span>
+                              <span className="font-medium opacity-80">
+                                L{issue.line}
+                              </span>
                               <span className="ml-1">{issue.message}</span>
                               {issue.fix && (
-                                <span className="ml-1 opacity-50">→ {issue.fix}</span>
+                                <span className="ml-1 opacity-50">
+                                  → {issue.fix}
+                                </span>
                               )}
                             </span>
                           </div>
@@ -1091,28 +1188,38 @@ export default function TerminalPanel({
 
                 {/* Validation Badge */}
                 {codeValidationReport && (
-                  <div className={cn(
-                    "mb-3 flex items-center gap-2 px-2 py-1 rounded text-[10px]",
-                    codeValidationReport.valid
-                      ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-300/70"
-                      : "bg-rose-500/10 border border-rose-500/20 text-rose-300/70",
-                  )}>
+                  <div
+                    className={cn(
+                      "mb-3 flex items-center gap-2 px-2 py-1 rounded text-[10px]",
+                      codeValidationReport.valid
+                        ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-300/70"
+                        : "bg-rose-500/10 border border-rose-500/20 text-rose-300/70",
+                    )}
+                  >
                     {codeValidationReport.valid ? (
-                      <CheckCircle2 size={10} className="text-emerald-500 shrink-0" />
+                      <CheckCircle2
+                        size={10}
+                        className="text-emerald-500 shrink-0"
+                      />
                     ) : (
                       <OctagonX size={10} className="text-rose-500 shrink-0" />
                     )}
                     <span className="font-medium">
-                      {codeValidationReport.valid ? "Syntax OK" : "Syntax Errors"}
+                      {codeValidationReport.valid
+                        ? "Syntax OK"
+                        : "Syntax Errors"}
                     </span>
-                    {!codeValidationReport.valid && codeValidationReport.errors.length > 0 && (
-                      <span className="opacity-60">
-                        ({codeValidationReport.errors.length} issue{codeValidationReport.errors.length !== 1 ? "s" : ""})
-                      </span>
-                    )}
+                    {!codeValidationReport.valid &&
+                      codeValidationReport.errors.length > 0 && (
+                        <span className="opacity-60">
+                          ({codeValidationReport.errors.length} issue
+                          {codeValidationReport.errors.length !== 1 ? "s" : ""})
+                        </span>
+                      )}
                     {codeValidationReport.warnings.length > 0 && (
                       <span className="text-amber-400/60">
-                        ({codeValidationReport.warnings.length} warning{codeValidationReport.warnings.length !== 1 ? "s" : ""})
+                        ({codeValidationReport.warnings.length} warning
+                        {codeValidationReport.warnings.length !== 1 ? "s" : ""})
                       </span>
                     )}
                   </div>
@@ -1121,10 +1228,21 @@ export default function TerminalPanel({
                 {/* Error Banner */}
                 {codeError && (
                   <div className="mb-3 flex items-start gap-2 p-2 rounded bg-rose-500/10 border border-rose-500/20 text-rose-200/70 text-[10px]">
-                    <OctagonX size={12} className="text-rose-500 shrink-0 mt-0.5" />
+                    <OctagonX
+                      size={12}
+                      className="text-rose-500 shrink-0 mt-0.5"
+                    />
                     <div className="flex-1 min-w-0">
-                      <span className="font-medium">{t("terminal.generation_error", "Code generation failed")}:</span>
-                      <span className="ml-1 text-rose-300/60 break-all">{codeError}</span>
+                      <span className="font-medium">
+                        {t(
+                          "terminal.generation_error",
+                          "Code generation failed",
+                        )}
+                        :
+                      </span>
+                      <span className="ml-1 text-rose-300/60 break-all">
+                        {codeError}
+                      </span>
                     </div>
                     <button
                       onClick={() => setCodeError(null)}
@@ -1157,14 +1275,22 @@ export default function TerminalPanel({
                     </div>
                   )}
                   {generatedFiles ? (
-                    <div className="flex flex-1 overflow-hidden" style={{ minHeight: panelHeight - 100 }}>
+                    <div
+                      className="flex flex-1 overflow-hidden"
+                      style={{ minHeight: panelHeight - 100 }}
+                    >
                       {/* File Tree Sidebar */}
                       <div className="w-40 shrink-0 border-r border-white/5 overflow-y-auto custom-scrollbar bg-slate-900/30">
-                        <div className="p-1.5 text-[9px] text-slate-500 uppercase tracking-wider font-bold">Files</div>
+                        <div className="p-1.5 text-[9px] text-slate-500 uppercase tracking-wider font-bold">
+                          Files
+                        </div>
                         {Object.keys(generatedFiles).map((fileName) => (
                           <button
                             key={fileName}
-                            onClick={() => { setActiveFile(fileName); setEditedCode(generatedFiles[fileName]); }}
+                            onClick={() => {
+                              setActiveFile(fileName);
+                              setEditedCode(generatedFiles[fileName]);
+                            }}
                             className={cn(
                               "w-full text-left px-2 py-1 text-[10px] font-mono truncate transition-colors",
                               activeFile === fileName
@@ -1177,15 +1303,28 @@ export default function TerminalPanel({
                         ))}
                       </div>
                       {/* Active File Code */}
-                      <div className="flex-1 font-mono text-[11px] leading-relaxed text-slate-300 overflow-x-auto selection:bg-indigo-500/30 p-2" style={{ minHeight: panelHeight - 100 }}>
-                        <div className="text-[9px] text-slate-500 mb-1 font-bold">{activeFile}</div>
-                        <pre className="whitespace-pre-wrap">{generatedFiles[activeFile] || ""}</pre>
+                      <div
+                        className="flex-1 font-mono text-[11px] leading-relaxed text-slate-300 overflow-x-auto selection:bg-indigo-500/30 p-2"
+                        style={{ minHeight: panelHeight - 100 }}
+                      >
+                        <div className="text-[9px] text-slate-500 mb-1 font-bold">
+                          {activeFile}
+                        </div>
+                        <pre className="whitespace-pre-wrap">
+                          {generatedFiles[activeFile] || ""}
+                        </pre>
                       </div>
                     </div>
                   ) : generatedCode ? (
-                    <div className="flex flex-1 overflow-hidden" style={{ minHeight: panelHeight - 100 }}>
+                    <div
+                      className="flex flex-1 overflow-hidden"
+                      style={{ minHeight: panelHeight - 100 }}
+                    >
                       {isEditMode ? (
-                        <div className="flex-1 flex gap-2 overflow-hidden" style={{ height: panelHeight - 100 }}>
+                        <div
+                          className="flex-1 flex gap-2 overflow-hidden"
+                          style={{ height: panelHeight - 100 }}
+                        >
                           {/* Line Numbers */}
                           <div className="select-none pr-3 mr-1 border-r border-white/5 text-right flex flex-col shrink-0 overflow-y-hidden">
                             {editedCode.split("\n").map((_, i) => (
@@ -1205,18 +1344,30 @@ export default function TerminalPanel({
                           />
                         </div>
                       ) : (
-                        <div className="flex-1 font-mono text-[11px] leading-relaxed text-slate-300 overflow-x-auto selection:bg-indigo-500/30" style={{ minHeight: panelHeight - 100 }}>
+                        <div
+                          className="flex-1 font-mono text-[11px] leading-relaxed text-slate-300 overflow-x-auto selection:bg-indigo-500/30"
+                          style={{ minHeight: panelHeight - 100 }}
+                        >
                           {generatedCode.split("\n").map((line, idx) => {
                             const isActive = idx === activeLineIndex;
                             const isError = errorNodeLines.has(idx);
                             const isHighlighted = highlightedCodeLines.has(idx);
                             const hasNodeId = line.includes("[node_id:");
-                            const isFirstError = isError && !errorNodeLines.has(idx - 1);
+                            const isFirstError =
+                              isError && !errorNodeLines.has(idx - 1);
                             return (
                               <div
                                 key={idx}
-                                ref={isActive ? activeLineRef : isFirstError ? errorLineRef : null}
-                                onClick={() => hasNodeId && handleCodeLineClick(idx)}
+                                ref={
+                                  isActive
+                                    ? activeLineRef
+                                    : isFirstError
+                                      ? errorLineRef
+                                      : null
+                                }
+                                onClick={() =>
+                                  hasNodeId && handleCodeLineClick(idx)
+                                }
                                 className={cn(
                                   "flex items-start px-2 transition-all duration-300 w-full min-w-max",
                                   isActive
@@ -1226,7 +1377,8 @@ export default function TerminalPanel({
                                       : isHighlighted
                                         ? "bg-indigo-500/15 text-indigo-200 border-l-2 border-indigo-500/60"
                                         : "hover:bg-white/5 border-l-2 border-transparent",
-                                  hasNodeId && "cursor-pointer hover:bg-indigo-500/10",
+                                  hasNodeId &&
+                                    "cursor-pointer hover:bg-indigo-500/10",
                                 )}
                               >
                                 {/* Line number column */}
@@ -1250,7 +1402,11 @@ export default function TerminalPanel({
                     <div className="h-full flex flex-col items-center justify-center text-slate-600 gap-2 opacity-50 py-10">
                       {isGenerating ? (
                         <>
-                          <RefreshCw size={28} strokeWidth={1} className="animate-spin text-emerald-500/50" />
+                          <RefreshCw
+                            size={28}
+                            strokeWidth={1}
+                            className="animate-spin text-emerald-500/50"
+                          />
                           <span className="text-[10px] uppercase tracking-widest text-center">
                             Generating {framework} code...
                           </span>

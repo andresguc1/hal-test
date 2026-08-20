@@ -138,7 +138,7 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges, projectId }) => {
       while (queue.length > 0) {
         const id = queue.shift();
         sorted.push(id);
-        for (const neighbor of (adj.get(id) || [])) {
+        for (const neighbor of adj.get(id) || []) {
           const newDeg = (inDegree.get(neighbor) || 1) - 1;
           inDegree.set(neighbor, newDeg);
           if (newDeg === 0) queue.push(neighbor);
@@ -578,11 +578,16 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges, projectId }) => {
                               </option>
                             </select>
                             <span className="text-xs text-slate-400">
-                              {designPattern === "flat" && "Sequential code in a single file."}
-                              {designPattern === "pom" && "Page classes organized by sub-flows."}
-                              {designPattern === "screenplay" && "Actor-based with abilities and tasks."}
-                              {designPattern === "data-driven" && "Test data separated from logic."}
-                              {designPattern === "keyword-driven" && "Table-driven keywords mapping to actions."}
+                              {designPattern === "flat" &&
+                                "Sequential code in a single file."}
+                              {designPattern === "pom" &&
+                                "Page classes organized by sub-flows."}
+                              {designPattern === "screenplay" &&
+                                "Actor-based with abilities and tasks."}
+                              {designPattern === "data-driven" &&
+                                "Test data separated from logic."}
+                              {designPattern === "keyword-driven" &&
+                                "Table-driven keywords mapping to actions."}
                             </span>
                           </div>
 

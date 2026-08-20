@@ -1378,19 +1378,20 @@ const NodeConfigurationPanel = ({
         </div>
       )}
 
-      {(activeNode.data?.state === "error" || activeNode.data?.state === "softfailed") && (
+      {(activeNode.data?.state === "error" ||
+        activeNode.data?.state === "softfailed") && (
         <div className="mb-6 p-4 rounded-xl border border-rose-500/20 bg-rose-500/5 space-y-3">
           <div className="flex items-center gap-2 text-rose-400 font-bold text-[11px] uppercase tracking-wider">
-            <OctagonX
-              size={14}
-              className="shrink-0 text-rose-500"
-            />
+            <OctagonX size={14} className="shrink-0 text-rose-500" />
             <span>
-              Execution {activeNode.data.state === "softfailed" ? "Warning" : "Error"}
+              Execution{" "}
+              {activeNode.data.state === "softfailed" ? "Warning" : "Error"}
             </span>
           </div>
           <div className="text-rose-300/70 text-[11px] leading-relaxed">
-            {activeNode.data.error || activeNode.data.statusMessage || "An unknown error occurred during execution."}
+            {activeNode.data.error ||
+              activeNode.data.statusMessage ||
+              "An unknown error occurred during execution."}
           </div>
           {activeNode.data.lastUpdate && (
             <div className="text-rose-400/40 text-[9px]">

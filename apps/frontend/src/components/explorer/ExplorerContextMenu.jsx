@@ -15,8 +15,18 @@ import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 const TYPE_OPTIONS = [
-  { value: "main", label: "Main Flow", icon: GitBranch, color: "text-indigo-400" },
-  { value: "component", label: "Component", icon: Box, color: "text-emerald-400" },
+  {
+    value: "main",
+    label: "Main Flow",
+    icon: GitBranch,
+    color: "text-indigo-400",
+  },
+  {
+    value: "component",
+    label: "Component",
+    icon: Box,
+    color: "text-emerald-400",
+  },
   { value: "loop", label: "Loop", icon: Repeat, color: "text-amber-400" },
 ];
 
@@ -150,7 +160,10 @@ export default function ExplorerContextMenu({
         {menuItems.map((menuItem, idx) => {
           if (menuItem === "separator") {
             return (
-              <div key={`sep-${idx}`} className="mx-2 my-0.5 border-t border-white/5" />
+              <div
+                key={`sep-${idx}`}
+                className="mx-2 my-0.5 border-t border-white/5"
+              />
             );
           }
           return (
@@ -196,7 +209,9 @@ export default function ExplorerContextMenu({
                       return (
                         <button
                           key={opt.value}
-                          onClick={() => !isCurrentType && handleMoveTo(opt.value)}
+                          onClick={() =>
+                            !isCurrentType && handleMoveTo(opt.value)
+                          }
                           disabled={isCurrentType}
                           className={cn(
                             "w-full flex items-center gap-2 px-3 py-1.5 text-xs transition-colors",

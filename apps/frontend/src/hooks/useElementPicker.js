@@ -191,7 +191,8 @@ export const useElementPicker = ({
                 "Could not reach target node: failed at step {{step}} — {{label}}",
               )
                 .replace("{{step}}", err.failedAtStep)
-                .replace("{{label}}", err.nodeLabel) || `Failed at: ${err.nodeLabel} — ${err.message}`,
+                .replace("{{label}}", err.nodeLabel) ||
+                `Failed at: ${err.nodeLabel} — ${err.message}`,
             );
 
             if (replayResult.browserId) {
@@ -218,10 +219,7 @@ export const useElementPicker = ({
           if (!data.success) throw new Error(data.message);
 
           toast.info(
-            t(
-              "common.inspector_started",
-              "Pick an element on the page...",
-            ),
+            t("common.inspector_started", "Pick an element on the page..."),
           );
         } else {
           const res = await api.post("/inspector/launch-remote", {
@@ -230,10 +228,7 @@ export const useElementPicker = ({
           if (!res.success) throw new Error(res.message);
 
           toast.info(
-            t(
-              "common.inspector_started",
-              "Pick an element on the page...",
-            ),
+            t("common.inspector_started", "Pick an element on the page..."),
           );
         }
       } catch (error) {
@@ -391,10 +386,7 @@ export const useElementPicker = ({
 
   const handleElementSanitized = useCallback(
     async (data) => {
-      console.log(
-        "[useElementPicker] Element Sanitized Event Received:",
-        data,
-      );
+      console.log("[useElementPicker] Element Sanitized Event Received:", data);
 
       const pickId = data.pickId;
       if (

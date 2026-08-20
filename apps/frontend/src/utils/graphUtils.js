@@ -26,8 +26,7 @@ export function getTopologicalPathToNode(targetNodeId, nodes, edges) {
   const relevantNodes = relevantIds
     .map((id) => nodeMap.get(id))
     .filter(
-      (n) =>
-        n && !n.data?.disabled && !SKIP_TYPES.has(n.data?.type || n.type),
+      (n) => n && !n.data?.disabled && !SKIP_TYPES.has(n.data?.type || n.type),
     );
 
   return topologicalSort(relevantNodes, edges);

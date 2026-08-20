@@ -65,7 +65,8 @@ const ConfirmDialog = ({
       "bg-red-500/20 text-red-400 hover:bg-red-500/30 border-red-500/30",
     warning:
       "bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 border-amber-500/30",
-    primary: "bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30 border-indigo-500/30",
+    primary:
+      "bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30 border-indigo-500/30",
   };
 
   return createPortal(

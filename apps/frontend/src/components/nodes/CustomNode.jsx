@@ -144,7 +144,8 @@ function CustomNode({ data, selected }) {
             <Sparkles size={24} className="animate-pulse" />
           ) : null}
 
-          {isRunning || isPickerReplaying || isHealed ? null : isError || isSoftFailed ? ( // Loader already rendered above
+          {isRunning || isPickerReplaying || isHealed ? null : isError ||
+            isSoftFailed ? ( // Loader already rendered above
             <AlertCircle size={24} />
           ) : (
             <NodeIconComponent

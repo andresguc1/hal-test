@@ -2044,9 +2044,16 @@ function Dashboard({
           onOpenSettings={openSettings}
           onOpenApiKeys={openApiKeys}
           onOpenMetricsDashboard={() => setIsMetricsDashboardOpen(true)}
-          isExplorerVisible={!isCreationPanelVisible && !isHistoryPanelVisible && !isVariablePanelVisible}
+          isExplorerVisible={
+            !isCreationPanelVisible &&
+            !isHistoryPanelVisible &&
+            !isVariablePanelVisible
+          }
           onToggleExplorer={() => {
-            const showingExplorer = !isCreationPanelVisible && !isHistoryPanelVisible && !isVariablePanelVisible;
+            const showingExplorer =
+              !isCreationPanelVisible &&
+              !isHistoryPanelVisible &&
+              !isVariablePanelVisible;
             if (showingExplorer) {
               setIsCreationPanelVisible(true);
             } else {
@@ -2152,7 +2159,9 @@ function Dashboard({
                 setViewStack([]);
                 switchFlow(f.id);
               }}
-              onNewProject={() => setCreationModal({ isOpen: true, type: "project" })}
+              onNewProject={() =>
+                setCreationModal({ isOpen: true, type: "project" })
+              }
               onNewFlow={() => setCreationModal({ isOpen: true, type: "flow" })}
               onRenameFlow={(f, newName) => renameFlow(f.id, newName)}
               onDeleteFlow={(f) => {
@@ -2165,14 +2174,20 @@ function Dashboard({
               onDuplicateFlow={(f) => {
                 createFlow(`${f.name} (copy)`, f.type);
               }}
-              onMoveFlowType={(flowId, newType) => moveFlowType(flowId, newType)}
-              onMoveFlowToFolder={(flowId, parentId) => moveFlowToFolder(flowId, parentId)}
+              onMoveFlowType={(flowId, newType) =>
+                moveFlowType(flowId, newType)
+              }
+              onMoveFlowToFolder={(flowId, parentId) =>
+                moveFlowToFolder(flowId, parentId)
+              }
               onRunFlow={(f) => {
                 setViewStack([]);
                 switchFlow(f.id);
                 setTimeout(() => {
-                  if (canvasViewMode === "performance") setIsPerfModalOpen(true);
-                  else if (canvasViewMode === "seguridad") setIsSecurityModalOpen(true);
+                  if (canvasViewMode === "performance")
+                    setIsPerfModalOpen(true);
+                  else if (canvasViewMode === "seguridad")
+                    setIsSecurityModalOpen(true);
                   else handleExecuteFlow();
                 }, 100);
               }}

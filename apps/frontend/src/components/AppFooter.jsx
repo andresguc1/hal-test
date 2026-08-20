@@ -441,9 +441,7 @@ function AppFooter({
   const isLocked = isRemoteExecuting || (isCollaborative && role !== "owner");
 
   // Find active flow for icon/label
-  const activeFlow = flows?.find(
-    (f) => f.name === flowName,
-  );
+  const activeFlow = flows?.find((f) => f.name === flowName);
   const ActiveFlowIcon =
     activeFlow?.type === "loop"
       ? Repeat
@@ -558,27 +556,50 @@ function AppFooter({
       <div className="flex items-center gap-2 md:gap-4 min-w-0">
         {/* Project indicator */}
         <div className="flex items-center gap-1.5 text-xs min-w-0">
-          <Folder size={12} className="text-indigo-400 shrink-0" aria-hidden="true" />
-          <span className="text-slate-500 font-mono uppercase tracking-wider text-[10px] hidden md:inline">Project</span>
+          <Folder
+            size={12}
+            className="text-indigo-400 shrink-0"
+            aria-hidden="true"
+          />
+          <span className="text-slate-500 font-mono uppercase tracking-wider text-[10px] hidden md:inline">
+            Project
+          </span>
           <span className="text-slate-300 font-medium truncate max-w-[100px] md:max-w-[150px]">
             {projectName || "—"}
           </span>
         </div>
 
-        <div className="h-8 w-px bg-white/10" role="separator" aria-orientation="vertical" />
+        <div
+          className="h-8 w-px bg-white/10"
+          role="separator"
+          aria-orientation="vertical"
+        />
 
         {/* Flow indicator */}
         <div className="flex items-center gap-1.5 text-xs min-w-0">
-          {ActiveFlowIcon && <ActiveFlowIcon size={12} className="text-indigo-400 shrink-0" aria-hidden="true" />}
-          <span className="text-slate-500 font-mono uppercase tracking-wider text-[10px] hidden md:inline">{activeFlowLabel}</span>
-          <span className={cn(
-            "font-medium truncate max-w-[100px] md:max-w-[200px]",
-            flowName ? "text-slate-300" : "text-slate-600 italic"
-          )}>
+          {ActiveFlowIcon && (
+            <ActiveFlowIcon
+              size={12}
+              className="text-indigo-400 shrink-0"
+              aria-hidden="true"
+            />
+          )}
+          <span className="text-slate-500 font-mono uppercase tracking-wider text-[10px] hidden md:inline">
+            {activeFlowLabel}
+          </span>
+          <span
+            className={cn(
+              "font-medium truncate max-w-[100px] md:max-w-[200px]",
+              flowName ? "text-slate-300" : "text-slate-600 italic",
+            )}
+          >
             {flowName || "Select a flow"}
           </span>
           {hasUnsavedChanges && (
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)] animate-pulse" aria-label="Unsaved changes" />
+            <span
+              className="w-1.5 h-1.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)] animate-pulse"
+              aria-label="Unsaved changes"
+            />
           )}
         </div>
       </div>

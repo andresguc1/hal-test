@@ -29,37 +29,34 @@ export function usePickerReplay({
   const [replayProgress, setReplayProgress] = useState(null);
   const abortRef = useRef(null);
 
-  const executeReplayStep = useCallback(
-    async (node, browserId) => {
-      const nodeType = node.data?.type || node.type;
-      const endpoint = `/actions/${nodeType}`;
-      const configuration = node.data?.configuration || {};
+  const executeReplayStep = useCallback(async (node, browserId) => {
+    const nodeType = node.data?.type || node.type;
+    const endpoint = `/actions/${nodeType}`;
+    const configuration = node.data?.configuration || {};
 
-      const body = {
-        ...configuration,
-        nodeId: node.id,
-        debugMode: true,
-      };
+    const body = {
+      ...configuration,
+      nodeId: node.id,
+      debugMode: true,
+    };
 
-      if (browserId) {
-        body.browserId = browserId;
-      }
+    if (browserId) {
+      body.browserId = browserId;
+    }
 
-      const result = await api.post(endpoint, body, {
-        signal: abortRef.current?.signal,
-      });
+    const result = await api.post(endpoint, body, {
+      signal: abortRef.current?.signal,
+    });
 
-      const newBrowserId =
-        result.data?.browserId ?? result.browserId ?? browserId ?? null;
+    const newBrowserId =
+      result.data?.browserId ?? result.browserId ?? browserId ?? null;
 
-      return {
-        success: true,
-        result,
-        browserId: newBrowserId,
-      };
-    },
-    [],
-  );
+    return {
+      success: true,
+      result,
+      browserId: newBrowserId,
+    };
+  }, []);
 
   const executeToNode = useCallback(
     async (targetNodeId) => {
@@ -202,19 +199,18 @@ export function usePickerReplay({
         return { browserId: replayResult.browserId, skipped: true };
       }
 
-      const configuration = overrideConfig || targetNode.data?.configuration || {};
+      const configuration =
+        overrideConfig || targetNode.data?.configuration || {};
 
       if (updateNodeState) {
         updateNodeState(targetNodeId, NODE_STATES.EXECUTING);
       }
 
       try {
-        const result = await executeStep(
-          targetNode,
-          nodeType,
-          configuration,
-          { browserId: replayResult.browserId, debugMode: false },
-        );
+        const result = await executeStep(targetNode, nodeType, configuration, {
+          browserId: replayResult.browserId,
+          debugMode: false,
+        });
 
         if (updateNodeState) {
           updateNodeState(targetNodeId, NODE_STATES.SUCCESS);
@@ -241,13 +237,7 @@ export function usePickerReplay({
         };
       }
     },
-    [
-      nodes,
-      activeBrowserId,
-      updateNodeState,
-      executeToNode,
-      isReplaying,
-    ],
+    [nodes, activeBrowserId, updateNodeState, executeToNode, isReplaying],
   );
 
   return {

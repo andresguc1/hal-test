@@ -39,7 +39,6 @@ export const useExplorerStore = create((set) => ({
   setFilterType: (t) => set({ filterType: t }),
   setFilterStatus: (s) => set({ filterStatus: s }),
 
-  showContextMenu: (x, y, item) =>
-    set({ contextMenu: { x, y, item } }),
+  showContextMenu: (x, y, item) => set({ contextMenu: { x, y, item } }),
   hideContextMenu: () => set({ contextMenu: null }),
 }));

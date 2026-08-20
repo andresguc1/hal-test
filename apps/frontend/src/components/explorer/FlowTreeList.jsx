@@ -54,9 +54,7 @@ function buildTreeItems(flows, expandedFolders, searchQuery, filterType) {
 
     let filtered = group.flows;
     if (lowerQ) {
-      filtered = filtered.filter((f) =>
-        f.name.toLowerCase().includes(lowerQ),
-      );
+      filtered = filtered.filter((f) => f.name.toLowerCase().includes(lowerQ));
     }
 
     items.push({
@@ -202,7 +200,9 @@ export default function FlowTreeList({
                       depth={item.depth}
                       count={item.count}
                       groupId={item.id}
-                      onDropFlow={(flowId, newType) => onMoveFlowType?.(flowId, newType)}
+                      onDropFlow={(flowId, newType) =>
+                        onMoveFlowType?.(flowId, newType)
+                      }
                     />
                   ) : (
                     <FlowTreeNode
