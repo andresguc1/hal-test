@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { api } from "../utils/api";
-import { cn } from "../lib/utils";
+import { cn } from "@/lib/utils";
 import {
   Database,
   X,
@@ -11,6 +11,7 @@ import {
   Search,
   ChevronDown,
   ChevronRight,
+  ChevronLeft,
   Copy,
   Check,
   Plus,
@@ -19,6 +20,7 @@ import {
   Pencil,
   ArrowRightLeft,
 } from "lucide-react";
+import { motion as Motion } from "framer-motion";
 
 // Max characters to display before truncating
 const MAX_DISPLAY_LENGTH = 200;
@@ -236,7 +238,6 @@ const VariableCard = ({
 
 export default function VariablePanel({
   isOpen,
-  onClose,
   nodes = [],
   onDeleteNode,
   onUpdateNode,
@@ -249,6 +250,7 @@ export default function VariablePanel({
   const [searchQuery, setSearchQuery] = useState("");
   const [isAdding, setIsAdding] = useState(false);
   const [newVar, setNewVar] = useState({ key: "", value: "" });
+  const [isMinimized, setIsMinimized] = useState(false);
 
   // ─── Flow Variables: Derived from Canvas Nodes (Reactive) ────────────────
 
@@ -485,8 +487,29 @@ export default function VariablePanel({
   const globalCount = Object.keys(globalVariables).length;
   const executionCount = Object.keys(runtimeVariables).length;
 
+  const WIDTH_EXPANDED = 384;
+  const WIDTH_COLLAPSED = 48;
+
   return (
-    <div className="relative h-full flex flex-col shrink-0 w-full sm:w-72 md:w-80 lg:w-96 glass-panel z-[var(--z-hud)] border-l border-white/5 bg-[#0f172a]/95 backdrop-blur-xl shadow-2xl">
+    <Motion.div
+      initial={false}
+      animate={{ width: isMinimized ? WIDTH_COLLAPSED : WIDTH_EXPANDED }}
+      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      className="relative h-full flex flex-col shrink-0 glass-panel z-[var(--z-hud)] border-l border-white/5 bg-[#0f172a]/95 backdrop-blur-xl shadow-2xl"
+    >
+      {isMinimized ? (
+        <div className="flex flex-col items-center pt-3 gap-3">
+          <button
+            onClick={() => setIsMinimized(false)}
+            title="Variables"
+            aria-label="Variables"
+            className="w-9 h-9 flex items-center justify-center rounded-lg transition-all bg-white/5 hover:bg-emerald-500/20 text-slate-400 hover:text-emerald-400"
+          >
+            <Database size={18} />
+          </button>
+        </div>
+      ) : (
+      <>
       {/* HEADER */}
       <div className="h-14 flex items-center justify-between px-4 border-b border-white/5 shrink-0 bg-[#0f172a]/50">
         <div className="flex items-center gap-3">
@@ -520,7 +543,7 @@ export default function VariablePanel({
             <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
           </button>
           <button
-            onClick={onClose}
+            onClick={() => setIsMinimized(true)}
             className="p-1.5 hover:bg-white/10 rounded-md text-slate-400 hover:text-slate-200 transition-colors"
           >
             <X size={14} />
@@ -760,6 +783,19 @@ export default function VariablePanel({
           )}
         </p>
       </div>
-    </div>
+
+      {/* FOOTER */}
+      <div className="p-3 border-t border-white/5 shrink-0 bg-[#0f172a]/80">
+        <button
+          onClick={() => setIsMinimized(true)}
+          className="w-full flex items-center gap-3 px-2 py-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-canvas)] transition-all group"
+        >
+          <ChevronLeft size={16} />
+          <span className="text-xs font-medium">Hide Panel</span>
+        </button>
+      </div>
+      </>
+      )}
+    </Motion.div>
   );
 }

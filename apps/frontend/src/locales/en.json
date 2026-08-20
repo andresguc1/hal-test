@@ -237,6 +237,7 @@
       "db_assert_record": "Assert DB Record"
     },
     "categories": {
+      "favorites": "Favorites",
       "security_audit": "Security",
       "browser_management": "Browser",
       "dom_manipulation": "DOM",
@@ -1545,5 +1546,8 @@
     "badge_form": "Form",
     "badge_a11y": "A11y",
     "badge_fragile": "⚠ Fragile"
+  },
+  "hal_quote": {
+    "refresh": "Ask HAL for a new quote"
   }
 }

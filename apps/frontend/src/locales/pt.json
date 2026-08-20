@@ -234,6 +234,7 @@
       "smart_selector": "Seletor Inteligente"
     },
     "categories": {
+      "favorites": "Favoritos",
       "security_audit": "Segurança",
       "browser_management": "Navegador",
       "dom_manipulation": "DOM",
@@ -1528,5 +1529,8 @@
     "input": "Entrada",
     "output": "Saída",
     "exception": "Exceção"
+  },
+  "hal_quote": {
+    "refresh": "Pedir ao HAL uma nova frase"
   }
 }

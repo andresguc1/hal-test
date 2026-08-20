@@ -3,6 +3,8 @@ import SearchFilterBar from "./SearchFilterBar";
 import FlowTreeList from "./FlowTreeList";
 import ExplorerContextMenu from "./ExplorerContextMenu";
 import { useExplorerStore } from "@/stores/useExplorerStore";
+import { useTranslation } from "react-i18next";
+import { ChevronLeft, ChevronRight, FolderGit2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion as Motion, AnimatePresence } from "framer-motion";
 
@@ -27,7 +29,8 @@ export default function ProjectExplorer({
   _onMoveFlowToFolder,
   onRunFlow,
 }) {
-  const { isOpen } = useExplorerStore();
+  const { isOpen, togglePanel } = useExplorerStore();
+  const { t } = useTranslation();
 
   return (
     <Motion.div
@@ -40,25 +43,19 @@ export default function ProjectExplorer({
         "border-r border-white/5 bg-[var(--bg-panel)]",
       )}
     >
-      <ExplorerHeader
-        projects={projects}
-        currentProject={currentProject}
-        onSwitchProject={onSwitchProject}
-        onRenameProject={onRenameProject}
-        onDeleteProject={onDeleteProject}
-        onNewProject={onNewProject}
-        onNewFlow={onNewFlow}
-      />
+      {isOpen ? (
+        <>
+          <ExplorerHeader
+            projects={projects}
+            currentProject={currentProject}
+            onSwitchProject={onSwitchProject}
+            onRenameProject={onRenameProject}
+            onDeleteProject={onDeleteProject}
+            onNewProject={onNewProject}
+            onNewFlow={onNewFlow}
+          />
 
-      <AnimatePresence>
-        {isOpen && (
-          <Motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            className="flex-1 flex flex-col min-h-0 overflow-hidden"
-          >
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
             <SearchFilterBar />
             <FlowTreeList
               flows={flows}
@@ -71,18 +68,41 @@ export default function ProjectExplorer({
               onMoveFlowType={onMoveFlowType}
               onRunFlow={onRunFlow}
             />
-          </Motion.div>
-        )}
-      </AnimatePresence>
+          </div>
 
-      <ExplorerContextMenu
-        onRename={onRenameFlow}
-        onDelete={onDeleteFlow}
-        onDuplicate={onDuplicateFlow}
-        onMoveFlowType={onMoveFlowType}
-        onNewFlow={onNewFlow}
-        onRun={onRunFlow}
-      />
+          <ExplorerContextMenu
+            onRename={onRenameFlow}
+            onDelete={onDeleteFlow}
+            onDuplicate={onDuplicateFlow}
+            onMoveFlowType={onMoveFlowType}
+            onNewFlow={onNewFlow}
+            onRun={onRunFlow}
+          />
+
+          <div className="p-3 border-t border-[var(--border-ui)] shrink-0 bg-[var(--bg-panel)]">
+            <button
+              onClick={togglePanel}
+              className="w-full flex items-center gap-3 px-2 py-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-canvas)] transition-all group"
+            >
+              <ChevronLeft size={16} />
+              <span className="text-xs font-medium">
+                {t("common.hide_panel", "Collapse Panel")}
+              </span>
+            </button>
+          </div>
+        </>
+      ) : (
+        <div className="flex flex-col items-center pt-3 gap-3">
+          <button
+            onClick={togglePanel}
+            title={t("nodes.categories.favorites", "Explorer")}
+            aria-label={t("nodes.categories.favorites", "Explorer")}
+            className="w-9 h-9 flex items-center justify-center rounded-lg transition-all bg-white/5 hover:bg-indigo-500/20 text-slate-400 hover:text-indigo-400"
+          >
+            <FolderGit2 size={18} />
+          </button>
+        </div>
+      )}
     </Motion.div>
   );
 }

@@ -234,6 +234,7 @@
       "fuzz_input": "Fuzzing des entrées (XSS/SQLi)"
     },
     "categories": {
+      "favorites": "Favoris",
       "security_audit": "Sécurité",
       "browser_management": "Navigateur",
       "dom_manipulation": "DOM",
@@ -1528,5 +1529,8 @@
     "input": "Saisir",
     "output": "Sortir",
     "exception": "Exception"
+  },
+  "hal_quote": {
+    "refresh": "Demander une nouvelle citation à HAL"
   }
 }

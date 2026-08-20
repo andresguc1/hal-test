@@ -237,6 +237,7 @@
       "db_assert_record": "Validar Registro"
     },
     "categories": {
+      "favorites": "Favoritos",
       "security_audit": "Seguridad",
       "browser_management": "Navegador",
       "dom_manipulation": "DOM",
@@ -1545,5 +1546,8 @@
     "badge_form": "Form",
     "badge_a11y": "A11y",
     "badge_fragile": "⚠ Frágil"
+  },
+  "hal_quote": {
+    "refresh": "Pedirle a HAL una nueva frase"
   }
 }

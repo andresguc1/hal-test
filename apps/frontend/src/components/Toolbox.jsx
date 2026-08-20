@@ -16,10 +16,10 @@ import {
   X,
   Trash2,
   Star,
-  Map,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NODE_CATEGORIES, CATEGORY_STYLES } from "@/config/nodeConstants";
+import HALQuote from "./HALQuote";
 
 const ToolboxItem = ({ label, nodeId, color, onAdd }) => {
   // Select styles based on color theme, fallback to slate
@@ -280,28 +280,11 @@ const ToolboxCategory = ({
 
 export default function ToolboxPanel({
   addNode,
-  isCollapsed: controlledIsCollapsed,
-  onToggleCollapse,
+  favoriteNodes = [],
 }) {
   const { t } = useTranslation();
 
-  const [localIsCollapsed, setLocalIsCollapsed] = useState(false);
-  const isCollapsed =
-    controlledIsCollapsed !== undefined
-      ? controlledIsCollapsed
-      : localIsCollapsed;
-
-  const handleToggleCollapse = (eOrValue) => {
-    // If called via onClick, eOrValue is an event object. Use toggle logic.
-    // If called with an explicit boolean, use that value.
-    const nextState = typeof eOrValue === "boolean" ? eOrValue : !isCollapsed;
-
-    if (onToggleCollapse) {
-      onToggleCollapse(nextState);
-    } else {
-      setLocalIsCollapsed(nextState);
-    }
-  };
+  const [isMinimized, setIsMinimized] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -350,78 +333,88 @@ export default function ToolboxPanel({
     setOpenCategories((prev) => ({ ...prev, [cat]: !prev[cat] }));
   };
 
-  // Helper for JIT-safe hover colors in collapsed sidebar
-  const getSidebarHoverColor = (color) => {
-    switch (color) {
-      case "cyan":
-        return "hover:text-cyan-400";
-      case "blue":
-        return "hover:text-blue-400";
-      case "indigo":
-        return "hover:text-indigo-400";
-      case "violet":
-        return "hover:text-violet-400";
-      case "purple":
-        return "hover:text-purple-400";
-      case "fuchsia":
-        return "hover:text-fuchsia-400";
-      case "pink":
-        return "hover:text-pink-400";
-      case "rose":
-        return "hover:text-rose-400";
-      case "red":
-        return "hover:text-red-400";
-      case "orange":
-        return "hover:text-orange-400";
-      case "amber":
-        return "hover:text-amber-400";
-      case "yellow":
-        return "hover:text-yellow-400";
-      case "lime":
-        return "hover:text-lime-400";
-      case "green":
-        return "hover:text-green-400";
-      case "emerald":
-        return "hover:text-emerald-400";
-      case "teal":
-        return "hover:text-teal-400";
-      default:
-        return "hover:text-slate-300";
-    }
+  const getHoverColor = (color) => {
+    const map = {
+      cyan: "hover:text-cyan-400",
+      blue: "hover:text-blue-400",
+      indigo: "hover:text-indigo-400",
+      violet: "hover:text-violet-400",
+      purple: "hover:text-purple-400",
+      fuchsia: "hover:text-fuchsia-400",
+      pink: "hover:text-pink-400",
+      rose: "hover:text-rose-400",
+      red: "hover:text-red-400",
+      orange: "hover:text-orange-400",
+      amber: "hover:text-amber-400",
+      yellow: "hover:text-yellow-400",
+      lime: "hover:text-lime-400",
+      green: "hover:text-green-400",
+      emerald: "hover:text-emerald-400",
+      teal: "hover:text-teal-400",
+    };
+    return map[color] || "hover:text-slate-300";
   };
+
+  const WIDTH_EXPANDED = 280;
+  const WIDTH_COLLAPSED = 48;
 
   return (
     <aside aria-label="Toolbox">
       <Motion.div
         initial={false}
-        animate={{ width: isCollapsed ? 64 : 280 }}
-        transition={{ type: "spring", stiffness: 400, damping: 30, mass: 0.8 }}
+        animate={{ width: isMinimized ? WIDTH_COLLAPSED : WIDTH_EXPANDED }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
         className={cn(
           "relative h-full flex flex-col shrink-0 font-sans glass-panel",
           "z-[var(--z-hud)]",
         )}
       >
+        {isMinimized ? (
+          <div className="flex flex-col items-center pt-3 gap-1">
+            <button
+              onClick={() => setIsMinimized(false)}
+              title="Toolbox"
+              aria-label="Toolbox"
+              className="w-9 h-9 flex items-center justify-center rounded-lg transition-all bg-white/5 hover:bg-indigo-500/20 text-slate-400 hover:text-indigo-400 mb-1"
+            >
+              <Box size={18} />
+            </button>
+            {Object.entries(NODE_CATEGORIES).map(([key, section]) => (
+              <button
+                key={key}
+                title={t(`nodes.categories.${key}`)}
+                aria-label={t(`nodes.categories.${key}`)}
+                onClick={() => {
+                  setIsMinimized(false);
+                  setTimeout(() => toggleCategory(key), 50);
+                }}
+                className={cn(
+                  "w-9 h-9 flex items-center justify-center rounded-lg transition-all bg-white/5 hover:bg-white/10",
+                  "text-slate-400",
+                  getHoverColor(section.color),
+                )}
+              >
+                <section.icon size={18} aria-hidden="true" />
+              </button>
+            ))}
+          </div>
+        ) : (
+          <>
         {/* HEADER */}
-        <div className="h-14 flex items-center justify-center px-4 border-b border-white/5 shrink-0 bg-[#0f172a]/50">
-          {!isCollapsed ? (
-            <div className="w-full flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center border border-white/10">
-                <Box size={16} className="text-indigo-400" />
-              </div>
-              <span className="font-bold text-sm tracking-wide text-slate-100">
-                TOOLBOX
-              </span>
+        <div className="h-14 flex items-center justify-between px-4 border-b border-white/5 shrink-0 bg-[#0f172a]/50">
+          <div className="w-full flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center border border-white/10">
+              <Box size={16} className="text-indigo-400" />
             </div>
-          ) : (
-            <Box size={20} className="text-indigo-400" />
-          )}
+            <span className="font-bold text-sm tracking-wide text-slate-100">
+              TOOLBOX
+            </span>
+          </div>
         </div>
 
         {/* CONTENT */}
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
           <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 custom-scrollbar flex flex-col">
-            {!isCollapsed ? (
-              <>
                 {/* Search */}
                 <div className="relative mb-4 group">
                   <label htmlFor="toolbox-search" className="visually-hidden">
@@ -453,18 +446,13 @@ export default function ToolboxPanel({
 
                 {/* List */}
                 <div className="flex-1">
-                  {!searchTerm.trim() && (
+                  {!searchTerm.trim() && favoriteNodes.length > 0 && (
                     <ToolboxCategory
                       key="favorites"
                       categoryKey="favorites"
                       icon={Star}
                       color="amber"
-                      nodes={[
-                        "click",
-                        "type_text",
-                        "wait_visible",
-                        "assert_page_text",
-                      ]}
+                      nodes={favoriteNodes}
                       isOpen={!!openCategories["favorites"]}
                       onToggle={() => toggleCategory("favorites")}
                       t={t}
@@ -486,64 +474,24 @@ export default function ToolboxPanel({
                     />
                   ))}
                 </div>
-              </>
-            ) : (
-              <div className="flex flex-col gap-4 items-center mt-2">
-                {Object.entries(NODE_CATEGORIES).map(([key, section]) => {
-                  return (
-                    <button
-                      key={key}
-                      title={t(`nodes.categories.${key}`)}
-                      aria-label={t(`nodes.categories.${key}`)}
-                      onClick={() => {
-                        handleToggleCollapse(false);
-                        toggleCategory(key);
-                      }}
-                      className={cn(
-                        "w-9 h-9 flex items-center justify-center rounded-lg transition-all bg-white/5 hover:bg-white/10",
-                        "text-slate-400", // Default color
-                        getSidebarHoverColor(section.color),
-                      )}
-                    >
-                      <section.icon size={18} aria-hidden="true" />
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-            {/* MINIMAP / SNIPPETS PLACEHOLDER */}
-            {!isCollapsed && (
-              <div className="shrink-0 mt-2 mx-3 mb-3 p-4 rounded-xl border border-dashed border-white/20 bg-slate-900/30 flex flex-col items-center justify-center text-center gap-2 text-slate-500 min-h-[160px]">
-                <Map size={24} className="opacity-50" />
-                <span className="text-xs font-medium">Mini-map / Snippets</span>
-                <span className="text-[10px] opacity-70">Coming soon</span>
-              </div>
-            )}
+                {!searchTerm.trim() && <HALQuote />}
           </div>
         </div>
 
         {/* FOOTER */}
         <div className="p-3 border-t border-[var(--border-ui)] shrink-0 bg-[var(--bg-panel)]">
           <button
-            onClick={handleToggleCollapse}
-            className={cn(
-              "w-full flex items-center gap-3 px-2 py-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-canvas)] transition-all group",
-              isCollapsed && "justify-center",
-            )}
-            aria-label={isCollapsed ? "Expand toolbox" : "Collapse toolbox"}
+            onClick={() => setIsMinimized(true)}
+            className="w-full flex items-center gap-3 px-2 py-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-canvas)] transition-all group"
           >
-            {isCollapsed ? (
-              <ChevronRight size={16} className="group-hover:text-indigo-400" />
-            ) : (
-              <>
-                <ChevronLeft size={16} />
-                <span className="text-xs font-medium">
-                  {t("common.hide_panel", "Collapse Panel")}
-                </span>
-              </>
-            )}
+            <ChevronLeft size={16} />
+            <span className="text-xs font-medium">
+              {t("common.hide_panel", "Hide Panel")}
+            </span>
           </button>
         </div>
+          </>
+        )}
       </Motion.div>
     </aside>
   );

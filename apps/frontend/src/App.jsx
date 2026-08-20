@@ -661,7 +661,8 @@ function Dashboard({
 
   // 4. Local UI State
   const [pendingExecution, setPendingExecution] = useState(false);
-  const [isCreationPanelVisible, setIsCreationPanelVisible] = useState(false);
+  const [isCreationPanelVisible, setIsCreationPanelVisible] = useState(true);
+  const [isExplorerVisible, setIsExplorerVisible] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [isHistoryPanelVisible, setIsHistoryPanelVisible] = useState(false);
@@ -1003,12 +1004,25 @@ function Dashboard({
   // Computed values
   const isConfigurationPanelVisible = selectedAction !== null;
 
-  // Track Node Usage for Smart Favorites
-  const [nodeUsage, setNodeUsage] = useState({});
+  // Track Node Usage for Smart Favorites (persisted to localStorage)
+  const [nodeUsage, setNodeUsage] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("ht_node_usage") || "{}");
+    } catch {
+      return {};
+    }
+  });
+  const trackNodeUsage = useCallback((type) => {
+    setNodeUsage((prev) => {
+      const next = { ...prev, [type]: (prev[type] || 0) + 1 };
+      localStorage.setItem("ht_node_usage", JSON.stringify(next));
+      return next;
+    });
+  }, []);
   const frequentNodes = useMemo(() => {
     return Object.entries(nodeUsage)
       .sort(([, a], [, b]) => b - a)
-      .slice(0, 4)
+      .slice(0, 5)
       .map(([type]) => type);
   }, [nodeUsage]);
 
@@ -1630,8 +1644,9 @@ function Dashboard({
 
       // Add node at the drop position
       addNode(type, flowPosition);
+      trackNodeUsage(type);
     },
-    [addNode, screenToFlowPosition],
+    [addNode, screenToFlowPosition, trackNodeUsage],
   );
 
   const onNodeDragStop = useCallback((_event, node) => {
@@ -2044,19 +2059,12 @@ function Dashboard({
           onOpenSettings={openSettings}
           onOpenApiKeys={openApiKeys}
           onOpenMetricsDashboard={() => setIsMetricsDashboardOpen(true)}
-          isExplorerVisible={
-            !isCreationPanelVisible &&
-            !isHistoryPanelVisible &&
-            !isVariablePanelVisible
-          }
+          isExplorerVisible={isExplorerVisible}
           onToggleExplorer={() => {
-            const showingExplorer =
-              !isCreationPanelVisible &&
-              !isHistoryPanelVisible &&
-              !isVariablePanelVisible;
-            if (showingExplorer) {
-              setIsCreationPanelVisible(true);
+            if (isExplorerVisible) {
+              setIsExplorerVisible(false);
             } else {
+              setIsExplorerVisible(true);
               setIsHistoryPanelVisible(false);
               setIsVariablePanelVisible(false);
               setIsCreationPanelVisible(false);
@@ -2067,6 +2075,7 @@ function Dashboard({
             if (!isHistoryPanelVisible) {
               setIsVariablePanelVisible(false);
               setIsCreationPanelVisible(false);
+              setIsExplorerVisible(false);
             }
           }}
           isVariablesVisible={isVariablePanelVisible}
@@ -2075,6 +2084,7 @@ function Dashboard({
             if (!isVariablePanelVisible) {
               setIsHistoryPanelVisible(false);
               setIsCreationPanelVisible(false);
+              setIsExplorerVisible(false);
             }
           }}
           isAskAIVisible={isAskAIPanelVisible}
@@ -2085,6 +2095,7 @@ function Dashboard({
             if (!isCreationPanelVisible) {
               setIsHistoryPanelVisible(false);
               setIsVariablePanelVisible(false);
+              setIsExplorerVisible(false);
             }
           }}
           selectedProject={currentProject}
@@ -2116,9 +2127,6 @@ function Dashboard({
           {isHistoryPanelVisible ? (
             <RunHistoryPanel
               isOpen={true}
-              onClose={() => {
-                setIsHistoryPanelVisible(false);
-              }}
               onSelectRun={handleSelectRun}
               currentFlowId={currentFlowId}
             />
@@ -2128,9 +2136,6 @@ function Dashboard({
               projectId={currentProject?.id}
               isOpen={isVariablePanelVisible}
               nodes={nodes}
-              onClose={() => {
-                setIsVariablePanelVisible(false);
-              }}
               onDeleteNode={deleteNode}
               onUpdateNode={updateNodeConfiguration}
               onAddNode={(type, configData) => {
@@ -2139,14 +2144,14 @@ function Dashboard({
             />
           ) : isCreationPanelVisible ? (
             <Toolbox
-              addNode={addNode}
-              activeBrowserId={activeBrowserId}
-              isCollapsed={!isCreationPanelVisible}
-              onToggleCollapse={(collapsed) => {
-                setIsCreationPanelVisible(!collapsed);
+              addNode={(type, position, data) => {
+                addNode(type, { x: 100, y: 100 }, data);
+                trackNodeUsage(type);
               }}
+              favoriteNodes={frequentNodes}
+              activeBrowserId={activeBrowserId}
             />
-          ) : (
+          ) : isExplorerVisible ? (
             <ProjectExplorer
               flows={derivedFlowData.flows || []}
               projects={projects}
@@ -2192,7 +2197,7 @@ function Dashboard({
                 }, 100);
               }}
             />
-          )}
+          ) : null}
 
           {/* LIENZO (CANVAS - Abyss Blue Environment) */}
           <main
@@ -2317,18 +2322,14 @@ function Dashboard({
                           setMenu(null);
                         },
                         duplicate: handleDuplicateNodes,
-                        addNode: () => setIsCreationPanelVisible(true), // Legacy: Open Panel
+                        addNode: () => { setIsCreationPanelVisible(true); setIsExplorerVisible(false); },
                         createNode: (type) => {
                           const position = screenToFlowPosition({
                             x: menu.x,
                             y: menu.y,
                           });
                           addNode(type, position);
-                          // Track usage
-                          setNodeUsage((prev) => ({
-                            ...prev,
-                            [type]: (prev[type] || 0) + 1,
-                          }));
+                          trackNodeUsage(type);
                         },
                         selectAll: handleSelectAll,
                         undo: undo,
