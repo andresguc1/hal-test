@@ -9,6 +9,14 @@ import { activeRunManager } from './ActiveRunManager.js';
 import { yjsServer } from './collaboration/YjsServer.js';
 import chalk from 'chalk';
 
+/**
+ * Default timeout per node in milliseconds.
+ * Prevents a single hung node (e.g. stuck waitForSelector, dead network)
+ * from blocking the entire flow execution.
+ * Configurable via options.overrides.nodeTimeoutMs.
+ */
+const DEFAULT_NODE_TIMEOUT_MS = 30_000;
+
 console.log(`[ExecutionService] 🔥 Service File Loaded at ${new Date().toISOString()}`);
 import Table from 'cli-table3';
 import { browserService } from './browser.service.js';
@@ -862,6 +870,32 @@ export class ExecutionService {
     }
 
     /**
+     * Wraps an async operation with a per-node timeout.
+     * If the operation exceeds nodeTimeoutMs, throws a descriptive TimeoutError.
+     * @param {Promise} promise - The operation to wrap
+     * @param {string} nodeId - Node identifier for error messaging
+     * @param {string} actionType - Node type for error messaging
+     * @param {number} timeoutMs - Timeout in milliseconds
+     * @returns {Promise} Resolved value or throws on timeout
+     */
+    _withNodeTimeout(promise, nodeId, actionType, timeoutMs) {
+        return Promise.race([
+            promise,
+            new Promise((_, reject) =>
+                setTimeout(() => {
+                    reject(
+                        new Error(
+                            `Node timeout: "${actionType}" (node ${nodeId}) exceeded ${timeoutMs}ms limit. ` +
+                                `The node may be stuck on a network request, selector wait, or unresponsive element. ` +
+                                `Increase timeout via options.overrides.nodeTimeoutMs or check the target application.`,
+                        ),
+                    );
+                }, timeoutMs),
+            ),
+        ]);
+    }
+
+    /**
      * Executes a single node action
      */
     async executeNode(node, allNodes, allEdges, state) {
@@ -897,10 +931,21 @@ export class ExecutionService {
         }
 
         // SPECIAL CASE: Composition Containers (Loop, ForEach)
+        const nodeTimeoutMs = state.overrides?.nodeTimeoutMs || DEFAULT_NODE_TIMEOUT_MS;
         if (actionType === 'loop') {
-            resultData = await this.executeLoopContainer(node, allNodes, allEdges, state);
+            resultData = await this._withNodeTimeout(
+                this.executeLoopContainer(node, allNodes, allEdges, state),
+                node.nodeId,
+                actionType,
+                nodeTimeoutMs,
+            );
         } else if (actionType === 'for_each') {
-            resultData = await this.executeForEachContainer(node, allNodes, allEdges, state);
+            resultData = await this._withNodeTimeout(
+                this.executeForEachContainer(node, allNodes, allEdges, state),
+                node.nodeId,
+                actionType,
+                nodeTimeoutMs,
+            );
         } else {
             const handlerName = this.getHandlerName(actionType);
             const handler = actions[handlerName];
@@ -994,9 +1039,14 @@ export class ExecutionService {
                 },
             };
 
-            // Call the controller action
+            // Call the controller action with per-node timeout
             try {
-                await handler(req, res);
+                await this._withNodeTimeout(
+                    handler(req, res),
+                    node.nodeId,
+                    actionType,
+                    nodeTimeoutMs,
+                );
             } catch (err) {
                 emitLog({
                     message: `Critical error in node ${node.nodeId}: ${err.message}`,
@@ -1004,6 +1054,12 @@ export class ExecutionService {
                     nodeId: node.nodeId,
                 });
                 throw err;
+            }
+
+            // Track browserId IMMEDIATELY after handler success to prevent leak
+            // if subsequent processing (telemetry, parent sync) throws.
+            if (resultData?.browserId) {
+                state.browserId = resultData.browserId;
             }
         }
 
@@ -1146,11 +1202,6 @@ export class ExecutionService {
                     },
                 });
             }
-        }
-
-        // Update state with browserId if it was a launch action
-        if (resultData && resultData.browserId) {
-            state.browserId = resultData.browserId;
         }
 
         // 🌟 UNIFIED SUCCESS EMISSION (Included result for frontend edge highlighting)

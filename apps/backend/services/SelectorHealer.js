@@ -8,6 +8,83 @@ import aiService from './AIService.js';
  */
 class SelectorHealer {
     /**
+     * Minimum confidence threshold for accepting a healed selector.
+     * Selectors below this confidence are rejected even if they pass DOM verification.
+     */
+    static MIN_CONFIDENCE = 0.5;
+
+    /**
+     * Patterns that indicate the AI returned a selector targeting a different element type
+     * than what was originally requested (potential hallucination / wrong element).
+     */
+    static SENSITIVE_SELECTORS = /password|secret|token|api[_-]?key|authorization/i;
+
+    /**
+     * Validates and sanitizes an AI-suggested selector candidate.
+     * Rejects obviously malformed selectors, low-confidence results,
+     * and selectors targeting sensitive fields when the original was not.
+     *
+     * @param {string} candidate - The AI-suggested selector
+     * @param {number} confidence - The AI-reported confidence score
+     * @param {string} originalSelector - The original failing selector
+     * @returns {{ valid: boolean, reason: string }}
+     */
+    _sanitizeCandidate(candidate, confidence, originalSelector) {
+        if (!candidate || typeof candidate !== 'string') {
+            return { valid: false, reason: 'Empty or non-string selector returned by AI' };
+        }
+
+        const trimmed = candidate.trim();
+        if (trimmed.length === 0) {
+            return { valid: false, reason: 'Empty selector after trimming' };
+        }
+
+        if (trimmed.length > 500) {
+            return { valid: false, reason: `Selector suspiciously long (${trimmed.length} chars)` };
+        }
+
+        // Reject obviously invalid selectors (JS code injection attempts)
+        if (
+            trimmed.includes('function(') ||
+            trimmed.includes('eval(') ||
+            trimmed.includes('document.cookie') ||
+            trimmed.includes('localStorage') ||
+            trimmed.includes('fetch(') ||
+            trimmed.includes('XMLHttpRequest')
+        ) {
+            console.warn(
+                `[SelectorHealer] 🚨 Rejected suspicious selector candidate: ${trimmed.substring(0, 100)}`,
+            );
+            return { valid: false, reason: 'Selector contains code injection patterns' };
+        }
+
+        // Confidence threshold check
+        if (confidence < SelectorHealer.MIN_CONFIDENCE) {
+            return {
+                valid: false,
+                reason: `Confidence ${confidence} below minimum threshold ${SelectorHealer.MIN_CONFIDENCE}`,
+            };
+        }
+
+        // Check if selector targets a sensitive field when original didn't
+        const originalIsSensitive = SelectorHealer.SENSITIVE_SELECTORS.test(originalSelector);
+        const candidateIsSensitive = SelectorHealer.SENSITIVE_SELECTORS.test(trimmed);
+
+        if (candidateIsSensitive && !originalIsSensitive) {
+            console.warn(
+                `[SelectorHealer] ⚠️ AI selected a sensitive field selector when original was not sensitive. ` +
+                    `Original: "${originalSelector}" → Candidate: "${trimmed}"`,
+            );
+            return {
+                valid: false,
+                reason: 'Candidate targets a sensitive field not present in original selector',
+            };
+        }
+
+        return { valid: true, reason: 'OK' };
+    }
+
+    /**
      * Compresses the DOM to only include interactive and relevant elements.
      * This reduces token usage and improves AI accuracy.
      * @param {string} html
@@ -228,6 +305,20 @@ class SelectorHealer {
 
                 if (result.correctedSelector) {
                     const candidate = result.correctedSelector;
+
+                    // Validate candidate before attempting DOM verification
+                    const sanitization = this._sanitizeCandidate(
+                        candidate,
+                        result.confidence || 0,
+                        originalSelector,
+                    );
+                    if (!sanitization.valid) {
+                        console.warn(
+                            `[SelectorHealer] ❌ Tier ${tier + 1} candidate rejected: ${sanitization.reason}`,
+                        );
+                        previousSelectors.push(candidate);
+                        continue;
+                    }
 
                     if (onProgress) {
                         onProgress({ step: 'verifying_candidate', candidate, tier: tier + 1 });
