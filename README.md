@@ -56,12 +56,15 @@ Most automation frameworks suffer from **"Framework Fatigue"**: complex YAMLs, b
 ---
 
 ## ⚡ Quick Start
-The fastest way to get started is using **npx**. No cloning or installation required:
+The fastest way to get started is using **npx**:
+> **Prerequisite:** [Node.js](https://nodejs.org) 20 or newer. That's it — no cloning required.
 
 ```bash
 npx haltest@latest
 ```
 *This will start the backend server, run pre-requisite checks, and open the HAL-TEST studio in your browser.*
+
+On first run, the launcher verifies that a **Chromium** browser is available for automation (Playwright). If it's missing, you'll be offered an automatic download — no manual steps needed.
 
 ---
 
@@ -77,7 +80,14 @@ cd hal-test
 pnpm install
 ```
 
-### 2. Configure Guest Mode
+### 2. Install Playwright browsers
+Browser binaries are not downloaded by `pnpm install` automatically:
+
+```bash
+pnpm --filter backend exec playwright install chromium
+```
+
+### 3. Configure Guest Mode
 For quick local testing without Supabase:
 
 ```bash
@@ -86,7 +96,7 @@ AUTH_ENABLED=false
 VITE_AUTH_ENABLED=false
 ```
 
-### 3. Run
+### 4. Run
 ```bash
 pnpm --filter backend db:init
 pnpm run dev

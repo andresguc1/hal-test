@@ -78,6 +78,7 @@ export default function Hero() {
         transition={{ duration: 0.6, delay: 0.28 }}
         className="flex flex-wrap items-center justify-center gap-3 mb-10"
       >
+        {/* eslint-disable no-unused-vars */}
         {PILLARS.map(({ icon: Icon, label, color }) => (
           <div
             key={label}

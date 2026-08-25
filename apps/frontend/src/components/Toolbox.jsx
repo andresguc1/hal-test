@@ -278,10 +278,7 @@ const ToolboxCategory = ({
   );
 };
 
-export default function ToolboxPanel({
-  addNode,
-  favoriteNodes = [],
-}) {
+export default function ToolboxPanel({ addNode, favoriteNodes = [] }) {
   const { t } = useTranslation();
 
   const [isMinimized, setIsMinimized] = useState(false);
@@ -400,21 +397,21 @@ export default function ToolboxPanel({
           </div>
         ) : (
           <>
-        {/* HEADER */}
-        <div className="h-14 flex items-center justify-between px-4 border-b border-white/5 shrink-0 bg-[#0f172a]/50">
-          <div className="w-full flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center border border-white/10">
-              <Box size={16} className="text-indigo-400" />
+            {/* HEADER */}
+            <div className="h-14 flex items-center justify-between px-4 border-b border-white/5 shrink-0 bg-[#0f172a]/50">
+              <div className="w-full flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center border border-white/10">
+                  <Box size={16} className="text-indigo-400" />
+                </div>
+                <span className="font-bold text-sm tracking-wide text-slate-100">
+                  TOOLBOX
+                </span>
+              </div>
             </div>
-            <span className="font-bold text-sm tracking-wide text-slate-100">
-              TOOLBOX
-            </span>
-          </div>
-        </div>
 
-        {/* CONTENT */}
-        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-          <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 custom-scrollbar flex flex-col">
+            {/* CONTENT */}
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 custom-scrollbar flex flex-col">
                 {/* Search */}
                 <div className="relative mb-4 group">
                   <label htmlFor="toolbox-search" className="visually-hidden">
@@ -475,21 +472,21 @@ export default function ToolboxPanel({
                   ))}
                 </div>
                 {!searchTerm.trim() && <HALQuote />}
-          </div>
-        </div>
+              </div>
+            </div>
 
-        {/* FOOTER */}
-        <div className="p-3 border-t border-[var(--border-ui)] shrink-0 bg-[var(--bg-panel)]">
-          <button
-            onClick={() => setIsMinimized(true)}
-            className="w-full flex items-center gap-3 px-2 py-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-canvas)] transition-all group"
-          >
-            <ChevronLeft size={16} />
-            <span className="text-xs font-medium">
-              {t("common.hide_panel", "Hide Panel")}
-            </span>
-          </button>
-        </div>
+            {/* FOOTER */}
+            <div className="p-3 border-t border-[var(--border-ui)] shrink-0 bg-[var(--bg-panel)]">
+              <button
+                onClick={() => setIsMinimized(true)}
+                className="w-full flex items-center gap-3 px-2 py-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-canvas)] transition-all group"
+              >
+                <ChevronLeft size={16} />
+                <span className="text-xs font-medium">
+                  {t("common.hide_panel", "Hide Panel")}
+                </span>
+              </button>
+            </div>
           </>
         )}
       </Motion.div>

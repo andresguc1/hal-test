@@ -509,292 +509,302 @@ export default function VariablePanel({
           </button>
         </div>
       ) : (
-      <>
-      {/* HEADER */}
-      <div className="h-14 flex items-center justify-between px-4 border-b border-white/5 shrink-0 bg-[#0f172a]/50">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30">
-            <Database size={16} className="text-emerald-400" />
+        <>
+          {/* HEADER */}
+          <div className="h-14 flex items-center justify-between px-4 border-b border-white/5 shrink-0 bg-[#0f172a]/50">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30">
+                <Database size={16} className="text-emerald-400" />
+              </div>
+              <span className="font-bold text-sm tracking-wide text-slate-100 uppercase">
+                Variables
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              {activeTab !== "execution" && (
+                <button
+                  onClick={() => setIsAdding(!isAdding)}
+                  className={cn(
+                    "p-1.5 rounded-md transition-colors",
+                    isAdding
+                      ? "bg-emerald-500/20 text-emerald-400"
+                      : "text-slate-400 hover:bg-white/10 hover:text-slate-200",
+                  )}
+                  title="Add Variable"
+                >
+                  <Plus size={14} />
+                </button>
+              )}
+              <button
+                onClick={loadVariables}
+                className="p-1.5 hover:bg-white/10 rounded-md text-slate-400 hover:text-slate-200 transition-colors"
+                title="Refresh Variables"
+              >
+                <RefreshCw
+                  size={14}
+                  className={loading ? "animate-spin" : ""}
+                />
+              </button>
+              <button
+                onClick={() => setIsMinimized(true)}
+                className="p-1.5 hover:bg-white/10 rounded-md text-slate-400 hover:text-slate-200 transition-colors"
+              >
+                <X size={14} />
+              </button>
+            </div>
           </div>
-          <span className="font-bold text-sm tracking-wide text-slate-100 uppercase">
-            Variables
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          {activeTab !== "execution" && (
+
+          {/* TABS */}
+          <div className="flex border-b border-white/5 bg-slate-900/40 p-1 gap-0.5">
             <button
-              onClick={() => setIsAdding(!isAdding)}
+              onClick={() => {
+                setActiveTab("flow");
+                setIsAdding(false);
+              }}
               className={cn(
-                "p-1.5 rounded-md transition-colors",
-                isAdding
-                  ? "bg-emerald-500/20 text-emerald-400"
-                  : "text-slate-400 hover:bg-white/10 hover:text-slate-200",
-              )}
-              title="Add Variable"
-            >
-              <Plus size={14} />
-            </button>
-          )}
-          <button
-            onClick={loadVariables}
-            className="p-1.5 hover:bg-white/10 rounded-md text-slate-400 hover:text-slate-200 transition-colors"
-            title="Refresh Variables"
-          >
-            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-          </button>
-          <button
-            onClick={() => setIsMinimized(true)}
-            className="p-1.5 hover:bg-white/10 rounded-md text-slate-400 hover:text-slate-200 transition-colors"
-          >
-            <X size={14} />
-          </button>
-        </div>
-      </div>
-
-      {/* TABS */}
-      <div className="flex border-b border-white/5 bg-slate-900/40 p-1 gap-0.5">
-        <button
-          onClick={() => {
-            setActiveTab("flow");
-            setIsAdding(false);
-          }}
-          className={cn(
-            "flex-1 flex items-center justify-center gap-1.5 py-2 text-[9px] font-bold uppercase tracking-wider rounded transition-all",
-            activeTab === "flow"
-              ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-              : "text-slate-500 hover:text-slate-300",
-          )}
-        >
-          <Layers size={11} />
-          Flow
-          {flowCount > 0 && (
-            <span
-              className={cn(
-                "text-[8px] px-1.5 py-0.2 rounded-full font-bold shrink-0",
+                "flex-1 flex items-center justify-center gap-1.5 py-2 text-[9px] font-bold uppercase tracking-wider rounded transition-all",
                 activeTab === "flow"
-                  ? "bg-emerald-500/30 text-emerald-300"
-                  : "bg-white/5 text-slate-500",
+                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                  : "text-slate-500 hover:text-slate-300",
               )}
             >
-              {flowCount}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => {
-            setActiveTab("global");
-            setIsAdding(false);
-          }}
-          className={cn(
-            "flex-1 flex items-center justify-center gap-1.5 py-2 text-[9px] font-bold uppercase tracking-wider rounded transition-all",
-            activeTab === "global"
-              ? "bg-sky-500/20 text-sky-400 border border-sky-500/30"
-              : "text-slate-500 hover:text-slate-300",
-          )}
-        >
-          <Globe size={11} />
-          Global
-          {globalCount > 0 && (
-            <span
+              <Layers size={11} />
+              Flow
+              {flowCount > 0 && (
+                <span
+                  className={cn(
+                    "text-[8px] px-1.5 py-0.2 rounded-full font-bold shrink-0",
+                    activeTab === "flow"
+                      ? "bg-emerald-500/30 text-emerald-300"
+                      : "bg-white/5 text-slate-500",
+                  )}
+                >
+                  {flowCount}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab("global");
+                setIsAdding(false);
+              }}
               className={cn(
-                "text-[8px] px-1.5 py-0.2 rounded-full font-bold shrink-0",
+                "flex-1 flex items-center justify-center gap-1.5 py-2 text-[9px] font-bold uppercase tracking-wider rounded transition-all",
                 activeTab === "global"
-                  ? "bg-sky-500/30 text-sky-300"
-                  : "bg-white/5 text-slate-500",
+                  ? "bg-sky-500/20 text-sky-400 border border-sky-500/30"
+                  : "text-slate-500 hover:text-slate-300",
               )}
             >
-              {globalCount}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => {
-            setActiveTab("execution");
-            setIsAdding(false);
-          }}
-          className={cn(
-            "flex-1 flex items-center justify-center gap-1.5 py-2 text-[9px] font-bold uppercase tracking-wider rounded transition-all",
-            activeTab === "execution"
-              ? "bg-violet-500/20 text-violet-400 border border-violet-500/30"
-              : "text-slate-500 hover:text-slate-300",
-          )}
-        >
-          <Play size={11} />
-          Live
-          {executionCount > 0 && (
-            <span
+              <Globe size={11} />
+              Global
+              {globalCount > 0 && (
+                <span
+                  className={cn(
+                    "text-[8px] px-1.5 py-0.2 rounded-full font-bold shrink-0",
+                    activeTab === "global"
+                      ? "bg-sky-500/30 text-sky-300"
+                      : "bg-white/5 text-slate-500",
+                  )}
+                >
+                  {globalCount}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab("execution");
+                setIsAdding(false);
+              }}
               className={cn(
-                "text-[8px] px-1.5 py-0.2 rounded-full font-bold shrink-0",
+                "flex-1 flex items-center justify-center gap-1.5 py-2 text-[9px] font-bold uppercase tracking-wider rounded transition-all",
                 activeTab === "execution"
-                  ? "bg-violet-500/30 text-violet-300"
-                  : "bg-white/5 text-slate-500",
+                  ? "bg-violet-500/20 text-violet-400 border border-violet-500/30"
+                  : "text-slate-500 hover:text-slate-300",
               )}
             >
-              {executionCount}
-            </span>
-          )}
-        </button>
-      </div>
+              <Play size={11} />
+              Live
+              {executionCount > 0 && (
+                <span
+                  className={cn(
+                    "text-[8px] px-1.5 py-0.2 rounded-full font-bold shrink-0",
+                    activeTab === "execution"
+                      ? "bg-violet-500/30 text-violet-300"
+                      : "bg-white/5 text-slate-500",
+                  )}
+                >
+                  {executionCount}
+                </span>
+              )}
+            </button>
+          </div>
 
-      {/* SEARCH QUERY */}
-      <div className="relative px-3 py-2 border-b border-white/5 bg-[#0f172a]/40 flex items-center gap-2">
-        <Search size={12} className="absolute left-6 text-slate-500" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder={`Search ${activeTab} variables...`}
-          className="w-full bg-black/30 border border-white/5 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-200 placeholder:text-slate-600 focus:border-indigo-500/50 outline-none transition-colors font-mono"
-        />
-      </div>
-
-      {/* ADD VARIABLE FORM */}
-      {isAdding && activeTab !== "execution" && (
-        <div className="p-3 border-b border-white/5 bg-slate-900/60 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
-          <div className="space-y-2">
-            <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
-              Variable Name
-            </label>
+          {/* SEARCH QUERY */}
+          <div className="relative px-3 py-2 border-b border-white/5 bg-[#0f172a]/40 flex items-center gap-2">
+            <Search size={12} className="absolute left-6 text-slate-500" />
             <input
               type="text"
-              value={newVar.key}
-              onChange={(e) => setNewVar({ ...newVar, key: e.target.value })}
-              placeholder="e.g. test_user"
-              className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-xs text-slate-100 placeholder:text-slate-600 focus:border-emerald-500/50 outline-none transition-colors font-mono"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={`Search ${activeTab} variables...`}
+              className="w-full bg-black/30 border border-white/5 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-200 placeholder:text-slate-600 focus:border-indigo-500/50 outline-none transition-colors font-mono"
             />
           </div>
-          <div className="space-y-2">
-            <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
-              Value
-            </label>
-            <textarea
-              value={newVar.value}
-              onChange={(e) => setNewVar({ ...newVar, value: e.target.value })}
-              placeholder="Value..."
-              className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-xs text-slate-100 placeholder:text-slate-600 focus:border-emerald-500/50 outline-none transition-colors min-h-[60px] font-mono"
-            />
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={handleAddVariable}
-              disabled={!newVar.key.trim()}
-              className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:hover:bg-emerald-600 text-white text-[10px] font-bold py-1.5 rounded transition-colors uppercase tracking-wider"
-            >
-              <Save size={12} />
-              Save to {activeTab}
-            </button>
-            <button
-              onClick={() => setIsAdding(false)}
-              className="px-3 bg-white/5 hover:bg-white/10 text-slate-400 text-[10px] font-bold rounded transition-colors uppercase tracking-wider"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
 
-      {/* CONTENT */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2">
-        {loading && filteredEntries.length === 0 ? (
-          <div className="flex items-center justify-center p-8 text-slate-500 text-xs text-center h-48">
-            <div className="flex flex-col items-center gap-3">
-              <RefreshCw size={24} className="animate-spin opacity-30 px-1" />
-              <span>Fetching environment...</span>
+          {/* ADD VARIABLE FORM */}
+          {isAdding && activeTab !== "execution" && (
+            <div className="p-3 border-b border-white/5 bg-slate-900/60 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="space-y-2">
+                <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+                  Variable Name
+                </label>
+                <input
+                  type="text"
+                  value={newVar.key}
+                  onChange={(e) =>
+                    setNewVar({ ...newVar, key: e.target.value })
+                  }
+                  placeholder="e.g. test_user"
+                  className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-xs text-slate-100 placeholder:text-slate-600 focus:border-emerald-500/50 outline-none transition-colors font-mono"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+                  Value
+                </label>
+                <textarea
+                  value={newVar.value}
+                  onChange={(e) =>
+                    setNewVar({ ...newVar, value: e.target.value })
+                  }
+                  placeholder="Value..."
+                  className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-xs text-slate-100 placeholder:text-slate-600 focus:border-emerald-500/50 outline-none transition-colors min-h-[60px] font-mono"
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleAddVariable}
+                  disabled={!newVar.key.trim()}
+                  className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:hover:bg-emerald-600 text-white text-[10px] font-bold py-1.5 rounded transition-colors uppercase tracking-wider"
+                >
+                  <Save size={12} />
+                  Save to {activeTab}
+                </button>
+                <button
+                  onClick={() => setIsAdding(false)}
+                  className="px-3 bg-white/5 hover:bg-white/10 text-slate-400 text-[10px] font-bold rounded transition-colors uppercase tracking-wider"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
-          </div>
-        ) : filteredEntries.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-8 text-slate-500 text-xs gap-3 text-center h-48">
-            <Database size={32} className="opacity-20" />
-            <div className="flex flex-col gap-1">
-              <span className="font-bold text-slate-400">
-                No Variables Found
-              </span>
-              <span className="text-[10px] text-slate-600 leading-relaxed max-w-[200px] mx-auto">
-                {searchQuery
-                  ? "No variables in this scope match your filter."
-                  : activeTab === "flow"
-                    ? "No variable nodes in this flow. Add a Variable node to the canvas."
-                    : activeTab === "global"
-                      ? "No global variables set. Click + to create one."
-                      : "No variables captured from execution yet. Run the flow to see outputs."}
-              </span>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-2 animate-in fade-in duration-300">
-            {filteredEntries.map((entry) => (
-              <VariableCard
-                key={entry.key}
-                varKey={entry.key}
-                value={entry.value}
-                source={entry.source}
-                accentColor={
-                  activeTab === "flow"
-                    ? "emerald"
-                    : activeTab === "global"
-                      ? "sky"
-                      : "violet"
-                }
-                scopeLabel={activeTab}
-                onDelete={
-                  activeTab === "flow"
-                    ? handleDeleteFlowVariable
-                    : activeTab === "global"
-                      ? handleDeleteGlobalVariable
-                      : null
-                }
-                onEdit={
-                  activeTab === "flow"
-                    ? handleEditFlowVariable
-                    : activeTab === "global"
-                      ? handleEditGlobalVariable
-                      : null
-                }
-                onMigrateScope={
-                  activeTab === "flow"
-                    ? handleMigrateToGlobal
-                    : activeTab === "global"
-                      ? handleMigrateToFlow
-                      : null
-                }
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* FOOTER HINT */}
-      <div className="p-3 border-t border-white/5 bg-[#0f172a]/80">
-        <p className="text-[9px] text-slate-600 leading-relaxed uppercase tracking-tighter">
-          Use{" "}
-          <span className="text-indigo-400/70 font-bold font-mono">
-            {"{{variableName}}"}
-          </span>{" "}
-          in any node input to reference these values.
-          {activeTab === "flow" && (
-            <span className="block mt-1 text-emerald-500/50">
-              Flow scope has priority over Global scope (shadowing).
-            </span>
           )}
-          {activeTab === "execution" && (
-            <span className="block mt-1 text-violet-400/50">
-              Live run outputs are read-only and update dynamically.
-            </span>
-          )}
-        </p>
-      </div>
 
-      {/* FOOTER */}
-      <div className="p-3 border-t border-white/5 shrink-0 bg-[#0f172a]/80">
-        <button
-          onClick={() => setIsMinimized(true)}
-          className="w-full flex items-center gap-3 px-2 py-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-canvas)] transition-all group"
-        >
-          <ChevronLeft size={16} />
-          <span className="text-xs font-medium">Hide Panel</span>
-        </button>
-      </div>
-      </>
+          {/* CONTENT */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2">
+            {loading && filteredEntries.length === 0 ? (
+              <div className="flex items-center justify-center p-8 text-slate-500 text-xs text-center h-48">
+                <div className="flex flex-col items-center gap-3">
+                  <RefreshCw
+                    size={24}
+                    className="animate-spin opacity-30 px-1"
+                  />
+                  <span>Fetching environment...</span>
+                </div>
+              </div>
+            ) : filteredEntries.length === 0 ? (
+              <div className="flex flex-col items-center justify-center p-8 text-slate-500 text-xs gap-3 text-center h-48">
+                <Database size={32} className="opacity-20" />
+                <div className="flex flex-col gap-1">
+                  <span className="font-bold text-slate-400">
+                    No Variables Found
+                  </span>
+                  <span className="text-[10px] text-slate-600 leading-relaxed max-w-[200px] mx-auto">
+                    {searchQuery
+                      ? "No variables in this scope match your filter."
+                      : activeTab === "flow"
+                        ? "No variable nodes in this flow. Add a Variable node to the canvas."
+                        : activeTab === "global"
+                          ? "No global variables set. Click + to create one."
+                          : "No variables captured from execution yet. Run the flow to see outputs."}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2 animate-in fade-in duration-300">
+                {filteredEntries.map((entry) => (
+                  <VariableCard
+                    key={entry.key}
+                    varKey={entry.key}
+                    value={entry.value}
+                    source={entry.source}
+                    accentColor={
+                      activeTab === "flow"
+                        ? "emerald"
+                        : activeTab === "global"
+                          ? "sky"
+                          : "violet"
+                    }
+                    scopeLabel={activeTab}
+                    onDelete={
+                      activeTab === "flow"
+                        ? handleDeleteFlowVariable
+                        : activeTab === "global"
+                          ? handleDeleteGlobalVariable
+                          : null
+                    }
+                    onEdit={
+                      activeTab === "flow"
+                        ? handleEditFlowVariable
+                        : activeTab === "global"
+                          ? handleEditGlobalVariable
+                          : null
+                    }
+                    onMigrateScope={
+                      activeTab === "flow"
+                        ? handleMigrateToGlobal
+                        : activeTab === "global"
+                          ? handleMigrateToFlow
+                          : null
+                    }
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* FOOTER HINT */}
+          <div className="p-3 border-t border-white/5 bg-[#0f172a]/80">
+            <p className="text-[9px] text-slate-600 leading-relaxed uppercase tracking-tighter">
+              Use{" "}
+              <span className="text-indigo-400/70 font-bold font-mono">
+                {"{{variableName}}"}
+              </span>{" "}
+              in any node input to reference these values.
+              {activeTab === "flow" && (
+                <span className="block mt-1 text-emerald-500/50">
+                  Flow scope has priority over Global scope (shadowing).
+                </span>
+              )}
+              {activeTab === "execution" && (
+                <span className="block mt-1 text-violet-400/50">
+                  Live run outputs are read-only and update dynamically.
+                </span>
+              )}
+            </p>
+          </div>
+
+          {/* FOOTER */}
+          <div className="p-3 border-t border-white/5 shrink-0 bg-[#0f172a]/80">
+            <button
+              onClick={() => setIsMinimized(true)}
+              className="w-full flex items-center gap-3 px-2 py-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-canvas)] transition-all group"
+            >
+              <ChevronLeft size={16} />
+              <span className="text-xs font-medium">Hide Panel</span>
+            </button>
+          </div>
+        </>
       )}
     </Motion.div>
   );

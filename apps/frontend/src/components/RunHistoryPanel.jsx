@@ -1,7 +1,16 @@
 import React, { useState } from "react";
 import { api } from "../utils/api";
 import { cn } from "../lib/utils";
-import { History, X, RefreshCw, Trash2, Play, Activity, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  History,
+  X,
+  RefreshCw,
+  Trash2,
+  Play,
+  Activity,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { AnimatePresence, motion as Motion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRuns, dashboardKeys } from "./dashboard/hooks/useDashboardData";
@@ -122,7 +131,10 @@ export default function RunHistoryPanel({
                 className="p-1.5 hover:bg-white/10 rounded-md text-slate-400 hover:text-slate-200 transition-colors disabled:opacity-50"
                 title="Refresh"
               >
-                <RefreshCw size={14} className={isFetching ? "animate-spin" : ""} />
+                <RefreshCw
+                  size={14}
+                  className={isFetching ? "animate-spin" : ""}
+                />
               </button>
             </div>
           </div>

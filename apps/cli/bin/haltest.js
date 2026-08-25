@@ -11,6 +11,8 @@ import { spawn } from "child_process";
 import net from "net";
 import path from "path";
 import fs from "fs";
+import readline from "readline/promises";
+import { createRequire } from "module";
 import { fileURLToPath } from "url";
 
 // ── Resolve paths ──────────────────────────────────────────────────────────
@@ -131,6 +133,79 @@ function isPortListening(port) {
 }
 
 // ── Pre-requisite checks ───────────────────────────────────────────────────
+
+/**
+ * Resolve playwright from any valid location:
+ *  1. Standalone npx bundle (playwright ships as a merged dependency)
+ *  2. Backend's node_modules (monorepo dev mode)
+ */
+function resolvePlaywright() {
+  try {
+    return createRequire(__filename)("playwright");
+  } catch {
+    // fall through
+  }
+  if (BACKEND_ENTRY) {
+    try {
+      return createRequire(BACKEND_ENTRY)("playwright");
+    } catch {
+      // fall through
+    }
+  }
+  return null;
+}
+
+function promptInstall(message) {
+  if (!process.stdin.isTTY || !process.stdout.isTTY)
+    return Promise.resolve(false);
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+  return rl
+    .question(`${message} (y/N): `)
+    .then((answer) => answer.trim().toLowerCase() === "y")
+    .finally(() => rl.close());
+}
+
+async function installChromium(playwright) {
+  let cliPath = null;
+  try {
+    cliPath = path.join(
+      path.dirname(createRequire(__filename).resolve("playwright")),
+      "cli.js",
+    );
+  } catch {
+    // fall through
+  }
+  if (!cliPath && playwright && BACKEND_ENTRY) {
+    try {
+      cliPath = path.join(
+        path.dirname(createRequire(BACKEND_ENTRY).resolve("playwright")),
+        "cli.js",
+      );
+    } catch {
+      // fall through
+    }
+  }
+
+  const command =
+    cliPath && fs.existsSync(cliPath)
+      ? [process.execPath, cliPath, "install", "chromium"]
+      : ["npx", "-y", "playwright", "install", "chromium"];
+
+  console.log(style(c.dim, `     Running: ${command.join(" ")}\n`));
+
+  return new Promise((resolve) => {
+    spawn(command[0], command.slice(1), { stdio: "inherit" }).on(
+      "exit",
+      (code) => {
+        resolve(code === 0);
+      },
+    );
+  });
+}
+
 async function runPreRequisiteChecks() {
   console.log(style(c.bold, "  🔍 Running pre-requisite checks...\n"));
 
@@ -152,19 +227,61 @@ async function runPreRequisiteChecks() {
     );
   }
 
-  // Check Playwright — NON-BLOCKING
-  try {
-    const { chromium } = await import("playwright");
-    chromium.executablePath();
+  // Check Playwright Chromium — offers automatic download when missing
+  let chromiumMissing = true;
+  const playwright = resolvePlaywright();
+  if (playwright) {
+    try {
+      const execPath = playwright.chromium.executablePath();
+      chromiumMissing = !execPath || !fs.existsSync(execPath);
+    } catch {
+      chromiumMissing = true;
+    }
+  }
+
+  if (!chromiumMissing) {
     console.log(style(c.green, "  ✅ Playwright  — Chromium browser found."));
-  } catch {
+  } else {
     console.log(
       style(c.red + c.bold, "  ❌ Playwright  — Chromium browser is missing!"),
     );
     console.log(
-      style(c.white, "     Automation flows require Chromium. Please run:") +
-        style(c.cyan + c.bold, "\n     npx playwright install chromium\n"),
+      style(c.white, "     Automation flows require Chromium to run."),
     );
+
+    const shouldInstall = await promptInstall(
+      "     ⬇️  Download it now automatically?",
+    );
+    if (shouldInstall) {
+      console.log("");
+      const installed = await installChromium(playwright);
+      if (installed) {
+        console.log(
+          style(c.green + c.bold, "\n  ✅ Chromium installed successfully!"),
+        );
+      } else {
+        console.log(
+          style(c.red + c.bold, "\n  ❌ Automatic installation failed."),
+        );
+        console.log(
+          style(c.white, "     Try manually with:") +
+            style(c.cyan + c.bold, " npx playwright install chromium"),
+        );
+        if (process.platform === "linux") {
+          console.log(
+            style(
+              c.dim,
+              "     On very new distros, prefix with PLAYWRIGHT_HOST_PLATFORM_OVERRIDE=ubuntu24.04-x64",
+            ),
+          );
+        }
+      }
+    } else {
+      console.log(
+        style(c.white, "     Install it later with:") +
+          style(c.cyan + c.bold, " npx playwright install chromium\n"),
+      );
+    }
   }
 
   console.log("");
@@ -265,6 +382,8 @@ if (args[0] === "cli") {
 }
 
 printBanner();
+
+await runPreRequisiteChecks();
 
 // 🚀 Port detection with small retry to avoid race during turbo startup
 let isAlreadyRunning = await isPortListening(PORT);

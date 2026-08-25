@@ -2322,7 +2322,10 @@ function Dashboard({
                           setMenu(null);
                         },
                         duplicate: handleDuplicateNodes,
-                        addNode: () => { setIsCreationPanelVisible(true); setIsExplorerVisible(false); },
+                        addNode: () => {
+                          setIsCreationPanelVisible(true);
+                          setIsExplorerVisible(false);
+                        },
                         createNode: (type) => {
                           const position = screenToFlowPosition({
                             x: menu.x,
