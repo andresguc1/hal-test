@@ -835,6 +835,46 @@ export const CATEGORY_STYLES = {
       buttonGradient: "from-slate-600 to-slate-500 shadow-slate-500/20",
     },
   },
+  green: {
+    card: "bg-green-500 text-white hover:brightness-110 border-none shadow-sm",
+    icon: "text-white",
+    text: "text-white font-medium",
+    node: {
+      base: "bg-green-500 border border-white/20 shadow-md",
+      selected:
+        "!border-[3px] !border-white shadow-[0_0_25px_rgba(34,197,94,0.8)] scale-105",
+      glow: "",
+    },
+    panel: {
+      border: "border-green-500",
+      shadow: "shadow-2xl shadow-green-500/20",
+      header: "bg-green-600 text-white",
+      headerBorder: "border-green-500/50",
+      headerGradient: "from-green-600/60 via-green-600/20 to-transparent",
+      categoryText: "text-green-500 dark:text-green-400",
+      buttonGradient: "from-green-600 to-green-500 shadow-green-500/20",
+    },
+  },
+  teal: {
+    card: "bg-teal-500 text-white hover:brightness-110 border-none shadow-sm",
+    icon: "text-white",
+    text: "text-white font-medium",
+    node: {
+      base: "bg-teal-500 border border-white/20 shadow-md",
+      selected:
+        "!border-[3px] !border-white shadow-[0_0_25px_rgba(20,184,166,0.8)] scale-105",
+      glow: "",
+    },
+    panel: {
+      border: "border-teal-500",
+      shadow: "shadow-2xl shadow-teal-500/20",
+      header: "bg-teal-600 text-white",
+      headerBorder: "border-teal-500/50",
+      headerGradient: "from-teal-600/60 via-teal-600/20 to-transparent",
+      categoryText: "text-teal-500 dark:text-teal-400",
+      buttonGradient: "from-teal-600 to-teal-500 shadow-teal-500/20",
+    },
+  },
   gray: {
     card: "bg-gray-500 text-white hover:brightness-110 border-none shadow-sm",
     icon: "text-white",
@@ -878,6 +918,31 @@ export const CATEGORY_STYLES = {
   },
 };
 
+// Static map for scanning shimmer — Tailwind cannot detect dynamic `via-${colorKey}-200`
+const SHIMMER_COLORS = {
+  cyan: "via-cyan-200",
+  blue: "via-blue-200",
+  indigo: "via-indigo-200",
+  violet: "via-violet-200",
+  purple: "via-purple-200",
+  fuchsia: "via-fuchsia-200",
+  pink: "via-pink-200",
+  amber: "via-amber-200",
+  emerald: "via-emerald-200",
+  green: "via-green-200",
+  teal: "via-teal-200",
+  rose: "via-rose-200",
+  red: "via-red-200",
+  orange: "via-orange-200",
+  lime: "via-lime-200",
+  yellow: "via-yellow-200",
+  sky: "via-sky-200",
+  slate: "via-slate-200",
+  gray: "via-gray-200",
+};
+export const getShimmerColor = (colorKey) =>
+  SHIMMER_COLORS[colorKey] || "via-slate-200";
+
 export const getTheme = (colorKey) =>
   CATEGORY_STYLES[colorKey] || CATEGORY_STYLES.slate;
 export const getNodeConfig = (nodeType) =>
@@ -904,13 +969,29 @@ const BACKEND_TO_FRONTEND_CATEGORY = {
   session: "test_execution",
   data: "file_data",
   testing: "execution_interface",
+  wait_timing: "dom_manipulation",
 };
 export const updateNodeDefinitions = (_categoriesData, definitionsData) => {
+  // Build a reverse lookup: nodeType → frontend category key from NODE_CATEGORIES
+  // This preserves the frontend's curated category assignments (e.g., find_element
+  // stays in dom_manipulation/cyan instead of being remapped to user_simulation/pink
+  // by the backend's user_interaction category).
+  const frontendNodeLookup = {};
+  for (const [catKey, catData] of Object.entries(NODE_CATEGORIES)) {
+    for (const nodeType of catData.nodes) {
+      frontendNodeLookup[nodeType] = catKey;
+    }
+  }
+
   // 1. Update NODE_TYPE_MAP from API definitions (the main value)
   Object.keys(NODE_TYPE_MAP).forEach((k) => delete NODE_TYPE_MAP[k]);
   for (const [nodeType, def] of Object.entries(definitionsData)) {
+    // Prefer the frontend's category if the node is already listed in NODE_CATEGORIES.
+    // Only fall back to the backend category mapping for new/unknown node types.
     const frontendCat =
-      BACKEND_TO_FRONTEND_CATEGORY[def.category] || def.category;
+      frontendNodeLookup[nodeType] ||
+      BACKEND_TO_FRONTEND_CATEGORY[def.category] ||
+      def.category;
     const category = NODE_CATEGORIES[frontendCat];
     NODE_TYPE_MAP[nodeType] = {
       category: frontendCat,

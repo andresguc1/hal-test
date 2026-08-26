@@ -7,6 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CLI_ROOT = path.resolve(__dirname, "..");
 const MONOREPO_ROOT = path.resolve(CLI_ROOT, "..", "..");
 const BACKEND_ROOT = path.join(MONOREPO_ROOT, "apps", "backend");
+const ESBUILD_BIN = path.join(CLI_ROOT, "node_modules", ".bin", "esbuild");
 
 const DIST_DIR = path.join(CLI_ROOT, "dist");
 const DIST_BACKEND = path.join(DIST_DIR, "backend");
@@ -73,7 +74,7 @@ const externalArgs = Object.keys(mergedDeps)
   .map((dep) => `--external:${dep}`)
   .join(" ");
 execSync(
-  `npx esbuild apps/backend/app.js --bundle --platform=node --target=node20 --format=esm --outfile=apps/cli/dist/backend/app.js ${externalArgs}`,
+  `"${ESBUILD_BIN}" apps/backend/app.js --bundle --platform=node --target=node20 --format=esm --outfile=apps/cli/dist/backend/app.js ${externalArgs}`,
   { cwd: MONOREPO_ROOT, stdio: "inherit" },
 );
 

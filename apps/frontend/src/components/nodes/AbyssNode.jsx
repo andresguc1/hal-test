@@ -25,6 +25,7 @@ import {
   NODE_TYPE_MAP,
   CATEGORY_STYLES,
   NODE_CATEGORIES,
+  getShimmerColor,
 } from "@/config/nodeConstants";
 import {
   validateNodeConfig,
@@ -378,7 +379,7 @@ const AbyssNode = ({ id, data, selected, type }) => {
           <div
             className={cn(
               "absolute inset-0 opacity-20 bg-gradient-to-r from-transparent via-white to-transparent -skew-x-12 translate-x-[-100%] animate-[shimmer_1.5s_infinite]",
-              `via-${colorKey}-200`,
+              getShimmerColor(colorKey),
             )}
           />
         </div>

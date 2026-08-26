@@ -3,19 +3,25 @@ import { nodeRegistry } from './NodeRegistry.js';
 /**
  * Registers all built-in plugin handlers into the NodeRegistry.
  * Called at app startup to make handlers available to ActionRouter.
- * Each handler is a standalone module imported from its plugin directory.
+ *
+ * IMPORTANT: Each plugin uses a loadModules() function with static import() calls
+ * (string-literal arguments) so that esbuild can resolve and bundle them.
+ * Dynamic import(plugin.handlerPath) with variable arguments is NOT bundled by esbuild,
+ * which breaks the npm-published CLI package where the plugins/ directory is not included.
  */
 
 const BUILTIN_PLUGINS = [
-    // ── Browser (4) ──
     {
         type: 'launch_browser',
         category: 'browser_management',
         label: 'Launch Browser',
         color: 'blue',
         icon: 'Globe',
-        handlerPath: '../plugins/core-browser/handlers/launch_browser.js',
-        schemaPath: '../plugins/core-browser/schemas/launch_browser.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-browser/handlers/launch_browser.js'),
+                import('../plugins/core-browser/schemas/launch_browser.js'),
+            ]),
     },
     {
         type: 'close_browser',
@@ -23,8 +29,11 @@ const BUILTIN_PLUGINS = [
         label: 'Close Browser',
         color: 'blue',
         icon: 'Globe',
-        handlerPath: '../plugins/core-browser/handlers/close_browser.js',
-        schemaPath: '../plugins/core-browser/schemas/close_browser.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-browser/handlers/close_browser.js'),
+                import('../plugins/core-browser/schemas/close_browser.js'),
+            ]),
     },
     {
         type: 'manage_tabs',
@@ -32,8 +41,11 @@ const BUILTIN_PLUGINS = [
         label: 'Manage Tabs',
         color: 'blue',
         icon: 'Globe',
-        handlerPath: '../plugins/core-browser/handlers/manage_tabs.js',
-        schemaPath: '../plugins/core-browser/schemas/manage_tabs.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-browser/handlers/manage_tabs.js'),
+                import('../plugins/core-browser/schemas/manage_tabs.js'),
+            ]),
     },
     {
         type: 'resize_viewport',
@@ -41,19 +53,23 @@ const BUILTIN_PLUGINS = [
         label: 'Resize Viewport',
         color: 'blue',
         icon: 'Globe',
-        handlerPath: '../plugins/core-browser/handlers/resize_viewport.js',
-        schemaPath: '../plugins/core-browser/schemas/resize_viewport.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-browser/handlers/resize_viewport.js'),
+                import('../plugins/core-browser/schemas/resize_viewport.js'),
+            ]),
     },
-
-    // ── Navigation (4) ──
     {
         type: 'open_url',
         category: 'navigation',
         label: 'Open URL',
         color: 'indigo',
         icon: 'Compass',
-        handlerPath: '../plugins/core-navigation/handlers/open_url.js',
-        schemaPath: '../plugins/core-navigation/schemas/open_url.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-navigation/handlers/open_url.js'),
+                import('../plugins/core-navigation/schemas/open_url.js'),
+            ]),
     },
     {
         type: 'go_back',
@@ -61,8 +77,11 @@ const BUILTIN_PLUGINS = [
         label: 'Go Back',
         color: 'indigo',
         icon: 'ArrowLeft',
-        handlerPath: '../plugins/core-navigation/handlers/go_back.js',
-        schemaPath: '../plugins/core-navigation/schemas/go_back.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-navigation/handlers/go_back.js'),
+                import('../plugins/core-navigation/schemas/go_back.js'),
+            ]),
     },
     {
         type: 'go_forward',
@@ -70,8 +89,11 @@ const BUILTIN_PLUGINS = [
         label: 'Go Forward',
         color: 'indigo',
         icon: 'ArrowRight',
-        handlerPath: '../plugins/core-navigation/handlers/go_forward.js',
-        schemaPath: '../plugins/core-navigation/schemas/go_forward.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-navigation/handlers/go_forward.js'),
+                import('../plugins/core-navigation/schemas/go_forward.js'),
+            ]),
     },
     {
         type: 'reload_page',
@@ -79,19 +101,23 @@ const BUILTIN_PLUGINS = [
         label: 'Reload Page',
         color: 'indigo',
         icon: 'RefreshCw',
-        handlerPath: '../plugins/core-navigation/handlers/reload_page.js',
-        schemaPath: '../plugins/core-navigation/schemas/reload_page.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-navigation/handlers/reload_page.js'),
+                import('../plugins/core-navigation/schemas/reload_page.js'),
+            ]),
     },
-
-    // ── Interaction (10) ──
     {
         type: 'click',
         category: 'user_interaction',
         label: 'Click Element',
         color: 'green',
         icon: 'MousePointerClick',
-        handlerPath: '../plugins/core-interaction/handlers/click.js',
-        schemaPath: '../plugins/core-interaction/schemas/click.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-interaction/handlers/click.js'),
+                import('../plugins/core-interaction/schemas/click.js'),
+            ]),
     },
     {
         type: 'type_text',
@@ -99,8 +125,11 @@ const BUILTIN_PLUGINS = [
         label: 'Type Text',
         color: 'green',
         icon: 'Keyboard',
-        handlerPath: '../plugins/core-interaction/handlers/type_text.js',
-        schemaPath: '../plugins/core-interaction/schemas/type_text.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-interaction/handlers/type_text.js'),
+                import('../plugins/core-interaction/schemas/type_text.js'),
+            ]),
     },
     {
         type: 'fill_form',
@@ -108,8 +137,11 @@ const BUILTIN_PLUGINS = [
         label: 'Fill Form',
         color: 'green',
         icon: 'FormInput',
-        handlerPath: '../plugins/core-interaction/handlers/fill_form.js',
-        schemaPath: '../plugins/core-interaction/schemas/fill_form.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-interaction/handlers/fill_form.js'),
+                import('../plugins/core-interaction/schemas/fill_form.js'),
+            ]),
     },
     {
         type: 'select_option',
@@ -117,8 +149,11 @@ const BUILTIN_PLUGINS = [
         label: 'Select Option',
         color: 'green',
         icon: 'List',
-        handlerPath: '../plugins/core-interaction/handlers/select_option.js',
-        schemaPath: '../plugins/core-interaction/schemas/select_option.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-interaction/handlers/select_option.js'),
+                import('../plugins/core-interaction/schemas/select_option.js'),
+            ]),
     },
     {
         type: 'scroll',
@@ -126,8 +161,11 @@ const BUILTIN_PLUGINS = [
         label: 'Scroll',
         color: 'green',
         icon: 'ArrowUpDown',
-        handlerPath: '../plugins/core-interaction/handlers/scroll.js',
-        schemaPath: '../plugins/core-interaction/schemas/scroll.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-interaction/handlers/scroll.js'),
+                import('../plugins/core-interaction/schemas/scroll.js'),
+            ]),
     },
     {
         type: 'hover',
@@ -135,8 +173,11 @@ const BUILTIN_PLUGINS = [
         label: 'Hover',
         color: 'green',
         icon: 'MousePointer2',
-        handlerPath: '../plugins/core-interaction/handlers/hover.js',
-        schemaPath: '../plugins/core-interaction/schemas/hover.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-interaction/handlers/hover.js'),
+                import('../plugins/core-interaction/schemas/hover.js'),
+            ]),
     },
     {
         type: 'drag_drop',
@@ -144,8 +185,11 @@ const BUILTIN_PLUGINS = [
         label: 'Drag & Drop',
         color: 'green',
         icon: 'Move',
-        handlerPath: '../plugins/core-interaction/handlers/drag_drop.js',
-        schemaPath: '../plugins/core-interaction/schemas/drag_drop.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-interaction/handlers/drag_drop.js'),
+                import('../plugins/core-interaction/schemas/drag_drop.js'),
+            ]),
     },
     {
         type: 'upload_file',
@@ -153,8 +197,11 @@ const BUILTIN_PLUGINS = [
         label: 'Upload File',
         color: 'green',
         icon: 'Upload',
-        handlerPath: '../plugins/core-interaction/handlers/upload_file.js',
-        schemaPath: '../plugins/core-interaction/schemas/upload_file.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-interaction/handlers/upload_file.js'),
+                import('../plugins/core-interaction/schemas/upload_file.js'),
+            ]),
     },
     {
         type: 'find_element',
@@ -162,8 +209,11 @@ const BUILTIN_PLUGINS = [
         label: 'Find Element',
         color: 'green',
         icon: 'Search',
-        handlerPath: '../plugins/core-interaction/handlers/find_element.js',
-        schemaPath: '../plugins/core-interaction/schemas/find_element.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-interaction/handlers/find_element.js'),
+                import('../plugins/core-interaction/schemas/find_element.js'),
+            ]),
     },
     {
         type: 'get_set_content',
@@ -171,19 +221,23 @@ const BUILTIN_PLUGINS = [
         label: 'Get/Set Content',
         color: 'green',
         icon: 'FileText',
-        handlerPath: '../plugins/core-interaction/handlers/get_set_content.js',
-        schemaPath: '../plugins/core-interaction/schemas/get_set_content.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-interaction/handlers/get_set_content.js'),
+                import('../plugins/core-interaction/schemas/get_set_content.js'),
+            ]),
     },
-
-    // ── Wait (8) ──
     {
         type: 'wait_for_element',
         category: 'wait_timing',
         label: 'Wait for Element',
         color: 'amber',
         icon: 'Clock',
-        handlerPath: '../plugins/core-wait/handlers/wait_for_element.js',
-        schemaPath: '../plugins/core-wait/schemas/wait_for_element.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-wait/handlers/wait_for_element.js'),
+                import('../plugins/core-wait/schemas/wait_for_element.js'),
+            ]),
     },
     {
         type: 'wait_visible',
@@ -191,8 +245,11 @@ const BUILTIN_PLUGINS = [
         label: 'Wait Visible',
         color: 'amber',
         icon: 'Eye',
-        handlerPath: '../plugins/core-wait/handlers/wait_visible.js',
-        schemaPath: '../plugins/core-wait/schemas/wait_visible.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-wait/handlers/wait_visible.js'),
+                import('../plugins/core-wait/schemas/wait_visible.js'),
+            ]),
     },
     {
         type: 'wait_navigation',
@@ -200,8 +257,11 @@ const BUILTIN_PLUGINS = [
         label: 'Wait Navigation',
         color: 'amber',
         icon: 'Loader',
-        handlerPath: '../plugins/core-wait/handlers/wait_navigation.js',
-        schemaPath: '../plugins/core-wait/schemas/wait_navigation.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-wait/handlers/wait_navigation.js'),
+                import('../plugins/core-wait/schemas/wait_navigation.js'),
+            ]),
     },
     {
         type: 'wait_network',
@@ -209,8 +269,11 @@ const BUILTIN_PLUGINS = [
         label: 'Wait Network',
         color: 'amber',
         icon: 'Wifi',
-        handlerPath: '../plugins/core-wait/handlers/wait_network.js',
-        schemaPath: '../plugins/core-wait/schemas/wait_network.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-wait/handlers/wait_network.js'),
+                import('../plugins/core-wait/schemas/wait_network.js'),
+            ]),
     },
     {
         type: 'wait_conditional',
@@ -218,8 +281,11 @@ const BUILTIN_PLUGINS = [
         label: 'Wait Conditional',
         color: 'amber',
         icon: 'Timer',
-        handlerPath: '../plugins/core-wait/handlers/wait_conditional.js',
-        schemaPath: '../plugins/core-wait/schemas/wait_conditional.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-wait/handlers/wait_conditional.js'),
+                import('../plugins/core-wait/schemas/wait_conditional.js'),
+            ]),
     },
     {
         type: 'pause',
@@ -227,8 +293,11 @@ const BUILTIN_PLUGINS = [
         label: 'Pause',
         color: 'amber',
         icon: 'Pause',
-        handlerPath: '../plugins/core-wait/handlers/pause.js',
-        schemaPath: '../plugins/core-wait/schemas/pause.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-wait/handlers/pause.js'),
+                import('../plugins/core-wait/schemas/pause.js'),
+            ]),
     },
     {
         type: 'wait_for_response',
@@ -236,8 +305,11 @@ const BUILTIN_PLUGINS = [
         label: 'Wait for Response',
         color: 'amber',
         icon: 'ArrowDownToLine',
-        handlerPath: '../plugins/core-wait/handlers/wait_for_response.js',
-        schemaPath: '../plugins/core-wait/schemas/wait_for_response.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-wait/handlers/wait_for_response.js'),
+                import('../plugins/core-wait/schemas/wait_for_response.js'),
+            ]),
     },
     {
         type: 'wait_for_request',
@@ -245,19 +317,23 @@ const BUILTIN_PLUGINS = [
         label: 'Wait for Request',
         color: 'amber',
         icon: 'ArrowUpFromLine',
-        handlerPath: '../plugins/core-wait/handlers/wait_for_request.js',
-        schemaPath: '../plugins/core-wait/schemas/wait_for_request.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-wait/handlers/wait_for_request.js'),
+                import('../plugins/core-wait/schemas/wait_for_request.js'),
+            ]),
     },
-
-    // ── Capture (4) ──
     {
         type: 'take_screenshot',
         category: 'capture',
         label: 'Take Screenshot',
         color: 'violet',
         icon: 'Camera',
-        handlerPath: '../plugins/core-capture/handlers/take_screenshot.js',
-        schemaPath: '../plugins/core-capture/schemas/take_screenshot.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-capture/handlers/take_screenshot.js'),
+                import('../plugins/core-capture/schemas/take_screenshot.js'),
+            ]),
     },
     {
         type: 'save_dom',
@@ -265,8 +341,11 @@ const BUILTIN_PLUGINS = [
         label: 'Save DOM',
         color: 'violet',
         icon: 'Download',
-        handlerPath: '../plugins/core-capture/handlers/save_dom.js',
-        schemaPath: '../plugins/core-capture/schemas/save_dom.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-capture/handlers/save_dom.js'),
+                import('../plugins/core-capture/schemas/save_dom.js'),
+            ]),
     },
     {
         type: 'log_errors',
@@ -274,8 +353,11 @@ const BUILTIN_PLUGINS = [
         label: 'Log Errors',
         color: 'violet',
         icon: 'Bug',
-        handlerPath: '../plugins/core-capture/handlers/log_errors.js',
-        schemaPath: '../plugins/core-capture/schemas/log_errors.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-capture/handlers/log_errors.js'),
+                import('../plugins/core-capture/schemas/log_errors.js'),
+            ]),
     },
     {
         type: 'listen_events',
@@ -283,19 +365,23 @@ const BUILTIN_PLUGINS = [
         label: 'Listen Events',
         color: 'violet',
         icon: 'Radio',
-        handlerPath: '../plugins/core-capture/handlers/listen_events.js',
-        schemaPath: '../plugins/core-capture/schemas/listen_events.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-capture/handlers/listen_events.js'),
+                import('../plugins/core-capture/schemas/listen_events.js'),
+            ]),
     },
-
-    // ── Network (9) ──
     {
         type: 'mock_response',
         category: 'network',
         label: 'Mock Response',
         color: 'cyan',
         icon: 'Server',
-        handlerPath: '../plugins/core-network/handlers/mock_response.handler.js',
-        schemaPath: '../plugins/core-network/schemas/mock_response.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-network/handlers/mock_response.handler.js'),
+                import('../plugins/core-network/schemas/mock_response.js'),
+            ]),
     },
     {
         type: 'intercept_request',
@@ -303,8 +389,11 @@ const BUILTIN_PLUGINS = [
         label: 'Intercept Request',
         color: 'cyan',
         icon: 'Shield',
-        handlerPath: '../plugins/core-network/handlers/intercept_request.handler.js',
-        schemaPath: '../plugins/core-network/schemas/intercept_request.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-network/handlers/intercept_request.handler.js'),
+                import('../plugins/core-network/schemas/intercept_request.js'),
+            ]),
     },
     {
         type: 'manage_cookies',
@@ -312,8 +401,11 @@ const BUILTIN_PLUGINS = [
         label: 'Manage Cookies',
         color: 'cyan',
         icon: 'Cookie',
-        handlerPath: '../plugins/core-network/handlers/manage_cookies.handler.js',
-        schemaPath: '../plugins/core-network/schemas/manage_cookies.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-network/handlers/manage_cookies.handler.js'),
+                import('../plugins/core-network/schemas/manage_cookies.js'),
+            ]),
     },
     {
         type: 'set_network_conditions',
@@ -321,8 +413,11 @@ const BUILTIN_PLUGINS = [
         label: 'Set Network Conditions',
         color: 'cyan',
         icon: 'Gauge',
-        handlerPath: '../plugins/core-network/handlers/set_network_conditions.handler.js',
-        schemaPath: '../plugins/core-network/schemas/set_network_conditions.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-network/handlers/set_network_conditions.handler.js'),
+                import('../plugins/core-network/schemas/set_network_conditions.js'),
+            ]),
     },
     {
         type: 'configure_route',
@@ -330,8 +425,11 @@ const BUILTIN_PLUGINS = [
         label: 'Configure Route',
         color: 'cyan',
         icon: 'Route',
-        handlerPath: '../plugins/core-network/handlers/configure_route.handler.js',
-        schemaPath: '../plugins/core-network/schemas/configure_route.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-network/handlers/configure_route.handler.js'),
+                import('../plugins/core-network/schemas/configure_route.js'),
+            ]),
     },
     {
         type: 'clear_all_mocks',
@@ -339,8 +437,11 @@ const BUILTIN_PLUGINS = [
         label: 'Clear All Mocks',
         color: 'cyan',
         icon: 'Trash2',
-        handlerPath: '../plugins/core-network/handlers/clear_all_mocks.handler.js',
-        schemaPath: '../plugins/core-network/schemas/clear_all_mocks.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-network/handlers/clear_all_mocks.handler.js'),
+                import('../plugins/core-network/schemas/clear_all_mocks.js'),
+            ]),
     },
     {
         type: 'wait_network_match',
@@ -348,8 +449,11 @@ const BUILTIN_PLUGINS = [
         label: 'Wait Network Match',
         color: 'cyan',
         icon: 'Target',
-        handlerPath: '../plugins/core-network/handlers/wait_network_match.handler.js',
-        schemaPath: '../plugins/core-network/schemas/wait_network_match.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-network/handlers/wait_network_match.handler.js'),
+                import('../plugins/core-network/schemas/wait_network_match.js'),
+            ]),
     },
     {
         type: 'block_resource',
@@ -357,8 +461,11 @@ const BUILTIN_PLUGINS = [
         label: 'Block Resource',
         color: 'cyan',
         icon: 'Ban',
-        handlerPath: '../plugins/core-network/handlers/block_resource.handler.js',
-        schemaPath: '../plugins/core-network/schemas/block_resource.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-network/handlers/block_resource.handler.js'),
+                import('../plugins/core-network/schemas/block_resource.js'),
+            ]),
     },
     {
         type: 'modify_headers',
@@ -366,19 +473,23 @@ const BUILTIN_PLUGINS = [
         label: 'Modify Headers',
         color: 'cyan',
         icon: 'Settings',
-        handlerPath: '../plugins/core-network/handlers/modify_headers.handler.js',
-        schemaPath: '../plugins/core-network/schemas/modify_headers.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-network/handlers/modify_headers.handler.js'),
+                import('../plugins/core-network/schemas/modify_headers.js'),
+            ]),
     },
-
-    // ── AI (6) ──
     {
         type: 'call_llm',
         category: 'ai_llm',
         label: 'Call LLM',
         color: 'rose',
         icon: 'Brain',
-        handlerPath: '../plugins/core-ai/handlers/call_llm.js',
-        schemaPath: '../plugins/core-ai/schemas/call_llm.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-ai/handlers/call_llm.js'),
+                import('../plugins/core-ai/schemas/call_llm.js'),
+            ]),
     },
     {
         type: 'generate_data',
@@ -386,8 +497,11 @@ const BUILTIN_PLUGINS = [
         label: 'Generate Data',
         color: 'rose',
         icon: 'Sparkles',
-        handlerPath: '../plugins/core-ai/handlers/generate_data.js',
-        schemaPath: '../plugins/core-ai/schemas/generate_data.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-ai/handlers/generate_data.js'),
+                import('../plugins/core-ai/schemas/generate_data.js'),
+            ]),
     },
     {
         type: 'validate_semantic',
@@ -395,8 +509,11 @@ const BUILTIN_PLUGINS = [
         label: 'Validate Semantic',
         color: 'rose',
         icon: 'CheckCircle',
-        handlerPath: '../plugins/core-ai/handlers/validate_semantic.js',
-        schemaPath: '../plugins/core-ai/schemas/validate_semantic.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-ai/handlers/validate_semantic.js'),
+                import('../plugins/core-ai/schemas/validate_semantic.js'),
+            ]),
     },
     {
         type: 'extract_dom_context',
@@ -404,8 +521,11 @@ const BUILTIN_PLUGINS = [
         label: 'Extract DOM Context',
         color: 'rose',
         icon: 'ScanSearch',
-        handlerPath: '../plugins/core-ai/handlers/extract_dom_context.js',
-        schemaPath: '../plugins/core-ai/schemas/extract_dom_context.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-ai/handlers/extract_dom_context.js'),
+                import('../plugins/core-ai/schemas/extract_dom_context.js'),
+            ]),
     },
     {
         type: 'chain_of_thought',
@@ -413,8 +533,11 @@ const BUILTIN_PLUGINS = [
         label: 'Chain of Thought',
         color: 'rose',
         icon: 'Lightbulb',
-        handlerPath: '../plugins/core-ai/handlers/chain_of_thought.js',
-        schemaPath: '../plugins/core-ai/schemas/chain_of_thought.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-ai/handlers/chain_of_thought.js'),
+                import('../plugins/core-ai/schemas/chain_of_thought.js'),
+            ]),
     },
     {
         type: 'smart_selector',
@@ -422,19 +545,23 @@ const BUILTIN_PLUGINS = [
         label: 'Smart Selector',
         color: 'rose',
         icon: 'ScanEye',
-        handlerPath: '../plugins/core-ai/handlers/smart_selector.js',
-        schemaPath: '../plugins/core-ai/schemas/smart_selector.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-ai/handlers/smart_selector.js'),
+                import('../plugins/core-ai/schemas/smart_selector.js'),
+            ]),
     },
-
-    // ── Flow Control (14) ──
     {
         type: 'variable',
         category: 'flow_logic',
         label: 'Variable',
         color: 'slate',
         icon: 'Variable',
-        handlerPath: '../plugins/core-flow-control/handlers/variable.js',
-        schemaPath: '../plugins/core-flow-control/schemas/variable.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-flow-control/handlers/variable.js'),
+                import('../plugins/core-flow-control/schemas/variable.js'),
+            ]),
     },
     {
         type: 'conditional',
@@ -442,8 +569,11 @@ const BUILTIN_PLUGINS = [
         label: 'Conditional',
         color: 'slate',
         icon: 'GitBranch',
-        handlerPath: '../plugins/core-flow-control/handlers/conditional.js',
-        schemaPath: '../plugins/core-flow-control/schemas/conditional.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-flow-control/handlers/conditional.js'),
+                import('../plugins/core-flow-control/schemas/conditional.js'),
+            ]),
     },
     {
         type: 'switch',
@@ -451,8 +581,11 @@ const BUILTIN_PLUGINS = [
         label: 'Switch',
         color: 'slate',
         icon: 'Shuffle',
-        handlerPath: '../plugins/core-flow-control/handlers/switch.js',
-        schemaPath: '../plugins/core-flow-control/schemas/switch.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-flow-control/handlers/switch.js'),
+                import('../plugins/core-flow-control/schemas/switch.js'),
+            ]),
     },
     {
         type: 'loop',
@@ -460,8 +593,11 @@ const BUILTIN_PLUGINS = [
         label: 'Loop',
         color: 'slate',
         icon: 'Repeat',
-        handlerPath: '../plugins/core-flow-control/handlers/loop.js',
-        schemaPath: '../plugins/core-flow-control/schemas/loop.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-flow-control/handlers/loop.js'),
+                import('../plugins/core-flow-control/schemas/loop.js'),
+            ]),
     },
     {
         type: 'branch',
@@ -469,8 +605,11 @@ const BUILTIN_PLUGINS = [
         label: 'Branch',
         color: 'slate',
         icon: 'GitMerge',
-        handlerPath: '../plugins/core-flow-control/handlers/branch.js',
-        schemaPath: '../plugins/core-flow-control/schemas/branch.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-flow-control/handlers/branch.js'),
+                import('../plugins/core-flow-control/schemas/branch.js'),
+            ]),
     },
     {
         type: 'flow_control',
@@ -478,8 +617,11 @@ const BUILTIN_PLUGINS = [
         label: 'Flow Control',
         color: 'slate',
         icon: 'Network',
-        handlerPath: '../plugins/core-flow-control/handlers/flow-control.js',
-        schemaPath: '../plugins/core-flow-control/schemas/flow-control.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-flow-control/handlers/flow-control.js'),
+                import('../plugins/core-flow-control/schemas/flow-control.js'),
+            ]),
     },
     {
         type: 'transform',
@@ -487,8 +629,11 @@ const BUILTIN_PLUGINS = [
         label: 'Transform',
         color: 'slate',
         icon: 'Shuffle',
-        handlerPath: '../plugins/core-flow-control/handlers/transform.js',
-        schemaPath: '../plugins/core-flow-control/schemas/transform.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-flow-control/handlers/transform.js'),
+                import('../plugins/core-flow-control/schemas/transform.js'),
+            ]),
     },
     {
         type: 'backend_js',
@@ -496,8 +641,11 @@ const BUILTIN_PLUGINS = [
         label: 'Backend JS',
         color: 'slate',
         icon: 'Code',
-        handlerPath: '../plugins/core-flow-control/handlers/backend-js.js',
-        schemaPath: '../plugins/core-flow-control/schemas/backend-js.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-flow-control/handlers/backend-js.js'),
+                import('../plugins/core-flow-control/schemas/backend-js.js'),
+            ]),
     },
     {
         type: 'fail_flow',
@@ -505,8 +653,11 @@ const BUILTIN_PLUGINS = [
         label: 'Fail Flow',
         color: 'slate',
         icon: 'AlertOctagon',
-        handlerPath: '../plugins/core-flow-control/handlers/fail-flow.js',
-        schemaPath: '../plugins/core-flow-control/schemas/fail-flow.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-flow-control/handlers/fail-flow.js'),
+                import('../plugins/core-flow-control/schemas/fail-flow.js'),
+            ]),
     },
     {
         type: 'handle_hooks',
@@ -514,8 +665,11 @@ const BUILTIN_PLUGINS = [
         label: 'Handle Hooks',
         color: 'slate',
         icon: 'Anchor',
-        handlerPath: '../plugins/core-flow-control/handlers/handle-hooks.js',
-        schemaPath: '../plugins/core-flow-control/schemas/handle-hooks.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-flow-control/handlers/handle-hooks.js'),
+                import('../plugins/core-flow-control/schemas/handle-hooks.js'),
+            ]),
     },
     {
         type: 'control_exceptions',
@@ -523,8 +677,11 @@ const BUILTIN_PLUGINS = [
         label: 'Control Exceptions',
         color: 'slate',
         icon: 'ShieldAlert',
-        handlerPath: '../plugins/core-flow-control/handlers/control-exceptions.js',
-        schemaPath: '../plugins/core-flow-control/schemas/control-exceptions.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-flow-control/handlers/control-exceptions.js'),
+                import('../plugins/core-flow-control/schemas/control-exceptions.js'),
+            ]),
     },
     {
         type: 'component',
@@ -532,8 +689,11 @@ const BUILTIN_PLUGINS = [
         label: 'Component',
         color: 'slate',
         icon: 'Puzzle',
-        handlerPath: '../plugins/core-flow-control/handlers/component.js',
-        schemaPath: '../plugins/core-flow-control/schemas/component.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-flow-control/handlers/component.js'),
+                import('../plugins/core-flow-control/schemas/component.js'),
+            ]),
     },
     {
         type: 'input',
@@ -541,8 +701,11 @@ const BUILTIN_PLUGINS = [
         label: 'Input',
         color: 'slate',
         icon: 'LogIn',
-        handlerPath: '../plugins/core-flow-control/handlers/input.js',
-        schemaPath: '../plugins/core-flow-control/schemas/input.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-flow-control/handlers/input.js'),
+                import('../plugins/core-flow-control/schemas/input.js'),
+            ]),
     },
     {
         type: 'output',
@@ -550,19 +713,23 @@ const BUILTIN_PLUGINS = [
         label: 'Output',
         color: 'slate',
         icon: 'LogOut',
-        handlerPath: '../plugins/core-flow-control/handlers/output.js',
-        schemaPath: '../plugins/core-flow-control/schemas/output.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-flow-control/handlers/output.js'),
+                import('../plugins/core-flow-control/schemas/output.js'),
+            ]),
     },
-
-    // ── Security (5) ──
     {
         type: 'csp_validator',
         category: 'security',
         label: 'CSP Validator',
         color: 'red',
         icon: 'Shield',
-        handlerPath: '../plugins/core-security/handlers/csp_validator.js',
-        schemaPath: '../plugins/core-security/schemas/csp_validator.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-security/handlers/csp_validator.js'),
+                import('../plugins/core-security/schemas/csp_validator.js'),
+            ]),
     },
     {
         type: 'header_auditor',
@@ -570,8 +737,11 @@ const BUILTIN_PLUGINS = [
         label: 'Header Auditor',
         color: 'red',
         icon: 'AlertTriangle',
-        handlerPath: '../plugins/core-security/handlers/header_auditor.js',
-        schemaPath: '../plugins/core-security/schemas/header_auditor.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-security/handlers/header_auditor.js'),
+                import('../plugins/core-security/schemas/header_auditor.js'),
+            ]),
     },
     {
         type: 'dom_sanitizer',
@@ -579,8 +749,11 @@ const BUILTIN_PLUGINS = [
         label: 'DOM Sanitizer',
         color: 'red',
         icon: 'Sparkles',
-        handlerPath: '../plugins/core-security/handlers/dom_sanitizer.js',
-        schemaPath: '../plugins/core-security/schemas/dom_sanitizer.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-security/handlers/dom_sanitizer.js'),
+                import('../plugins/core-security/schemas/dom_sanitizer.js'),
+            ]),
     },
     {
         type: 'audit_policy',
@@ -588,8 +761,11 @@ const BUILTIN_PLUGINS = [
         label: 'Audit Policy',
         color: 'red',
         icon: 'FileCheck',
-        handlerPath: '../plugins/core-security/handlers/audit_policy.js',
-        schemaPath: '../plugins/core-security/schemas/audit_policy.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-security/handlers/audit_policy.js'),
+                import('../plugins/core-security/schemas/audit_policy.js'),
+            ]),
     },
     {
         type: 'sensitive_data_monitor',
@@ -597,30 +773,35 @@ const BUILTIN_PLUGINS = [
         label: 'Sensitive Data Monitor',
         color: 'red',
         icon: 'EyeOff',
-        handlerPath: '../plugins/core-security/handlers/sensitive_data_monitor.js',
-        schemaPath: '../plugins/core-security/schemas/sensitive_data_monitor.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-security/handlers/sensitive_data_monitor.js'),
+                import('../plugins/core-security/schemas/sensitive_data_monitor.js'),
+            ]),
     },
-
-    // ── Assertion (1) ──
     {
         type: 'assert_page_text',
         category: 'assertion',
         label: 'Assert Page Text',
         color: 'emerald',
         icon: 'CheckCircle',
-        handlerPath: '../plugins/core-assertion/handlers/assert_page_text.handler.js',
-        schemaPath: '../plugins/core-assertion/schemas/assert_page_text.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-assertion/handlers/assert_page_text.handler.js'),
+                import('../plugins/core-assertion/schemas/assert_page_text.js'),
+            ]),
     },
-
-    // ── Session (7) ──
     {
         type: 'persist_session',
         category: 'session',
         label: 'Persist Session',
         color: 'orange',
         icon: 'Database',
-        handlerPath: '../plugins/core-session/handlers/persist_session.js',
-        schemaPath: '../plugins/core-session/schemas/persist_session.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-session/handlers/persist_session.js'),
+                import('../plugins/core-session/schemas/persist_session.js'),
+            ]),
     },
     {
         type: 'manage_session',
@@ -628,8 +809,11 @@ const BUILTIN_PLUGINS = [
         label: 'Manage Session',
         color: 'orange',
         icon: 'Key',
-        handlerPath: '../plugins/core-session/handlers/manage_session.js',
-        schemaPath: '../plugins/core-session/schemas/manage_session.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-session/handlers/manage_session.js'),
+                import('../plugins/core-session/schemas/manage_session.js'),
+            ]),
     },
     {
         type: 'create_context',
@@ -637,8 +821,11 @@ const BUILTIN_PLUGINS = [
         label: 'Create Context',
         color: 'orange',
         icon: 'Plus',
-        handlerPath: '../plugins/core-session/handlers/create_context.js',
-        schemaPath: '../plugins/core-session/schemas/create_context.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-session/handlers/create_context.js'),
+                import('../plugins/core-session/schemas/create_context.js'),
+            ]),
     },
     {
         type: 'cleanup_state',
@@ -646,8 +833,11 @@ const BUILTIN_PLUGINS = [
         label: 'Cleanup State',
         color: 'orange',
         icon: 'Trash2',
-        handlerPath: '../plugins/core-session/handlers/cleanup_state.js',
-        schemaPath: '../plugins/core-session/schemas/cleanup_state.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-session/handlers/cleanup_state.js'),
+                import('../plugins/core-session/schemas/cleanup_state.js'),
+            ]),
     },
     {
         type: 'close_context',
@@ -655,8 +845,11 @@ const BUILTIN_PLUGINS = [
         label: 'Close Context',
         color: 'orange',
         icon: 'X',
-        handlerPath: '../plugins/core-session/handlers/close_context.js',
-        schemaPath: '../plugins/core-session/schemas/close_context.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-session/handlers/close_context.js'),
+                import('../plugins/core-session/schemas/close_context.js'),
+            ]),
     },
     {
         type: 'manage_storage',
@@ -664,8 +857,11 @@ const BUILTIN_PLUGINS = [
         label: 'Manage Storage',
         color: 'orange',
         icon: 'HardDrive',
-        handlerPath: '../plugins/core-session/handlers/manage_storage.js',
-        schemaPath: '../plugins/core-session/schemas/manage_storage.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-session/handlers/manage_storage.js'),
+                import('../plugins/core-session/schemas/manage_storage.js'),
+            ]),
     },
     {
         type: 'inject_tokens',
@@ -673,19 +869,23 @@ const BUILTIN_PLUGINS = [
         label: 'Inject Tokens',
         color: 'orange',
         icon: 'Syringe',
-        handlerPath: '../plugins/core-session/handlers/inject_tokens.js',
-        schemaPath: '../plugins/core-session/schemas/inject_tokens.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-session/handlers/inject_tokens.js'),
+                import('../plugins/core-session/schemas/inject_tokens.js'),
+            ]),
     },
-
-    // ── Data (3) ──
     {
         type: 'read_file',
         category: 'data',
         label: 'Read File',
         color: 'slate',
         icon: 'FileInput',
-        handlerPath: '../plugins/core-data/handlers/read_data.js',
-        schemaPath: '../plugins/core-data/schemas/read_data.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-data/handlers/read_data.js'),
+                import('../plugins/core-data/schemas/read_data.js'),
+            ]),
     },
     {
         type: 'write_file',
@@ -693,8 +893,11 @@ const BUILTIN_PLUGINS = [
         label: 'Write File',
         color: 'slate',
         icon: 'FileOutput',
-        handlerPath: '../plugins/core-data/handlers/save_results.js',
-        schemaPath: '../plugins/core-data/schemas/save_results.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-data/handlers/save_results.js'),
+                import('../plugins/core-data/schemas/save_results.js'),
+            ]),
     },
     {
         type: 'download_file',
@@ -702,19 +905,23 @@ const BUILTIN_PLUGINS = [
         label: 'Download File',
         color: 'slate',
         icon: 'Download',
-        handlerPath: '../plugins/core-data/handlers/handle_downloads.js',
-        schemaPath: '../plugins/core-data/schemas/handle_downloads.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-data/handlers/handle_downloads.js'),
+                import('../plugins/core-data/schemas/handle_downloads.js'),
+            ]),
     },
-
-    // ── Testing (4) ──
     {
         type: 'run_tests',
         category: 'testing',
         label: 'Run Tests',
         color: 'teal',
         icon: 'Play',
-        handlerPath: '../plugins/core-testing/handlers/run_tests.js',
-        schemaPath: '../plugins/core-testing/schemas/run_tests.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-testing/handlers/run_tests.js'),
+                import('../plugins/core-testing/schemas/run_tests.js'),
+            ]),
     },
     {
         type: 'cli_params',
@@ -722,8 +929,11 @@ const BUILTIN_PLUGINS = [
         label: 'CLI Params',
         color: 'teal',
         icon: 'Terminal',
-        handlerPath: '../plugins/core-testing/handlers/cli_params.js',
-        schemaPath: '../plugins/core-testing/schemas/cli_params.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-testing/handlers/cli_params.js'),
+                import('../plugins/core-testing/schemas/cli_params.js'),
+            ]),
     },
     {
         type: 'return_code',
@@ -731,8 +941,11 @@ const BUILTIN_PLUGINS = [
         label: 'Return Code',
         color: 'teal',
         icon: 'Hash',
-        handlerPath: '../plugins/core-testing/handlers/return_code.js',
-        schemaPath: '../plugins/core-testing/schemas/return_code.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-testing/handlers/return_code.js'),
+                import('../plugins/core-testing/schemas/return_code.js'),
+            ]),
     },
     {
         type: 'integrate_ci',
@@ -740,8 +953,11 @@ const BUILTIN_PLUGINS = [
         label: 'Integrate CI',
         color: 'teal',
         icon: 'GitBranch',
-        handlerPath: '../plugins/core-testing/handlers/integrate_ci.js',
-        schemaPath: '../plugins/core-testing/schemas/integrate_ci.js',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-testing/handlers/integrate_ci.js'),
+                import('../plugins/core-testing/schemas/integrate_ci.js'),
+            ]),
     },
 ];
 
@@ -756,10 +972,7 @@ export async function bootstrapBuiltinPlugins() {
 
     for (const plugin of BUILTIN_PLUGINS) {
         try {
-            const [handlerModule, schemaModule] = await Promise.all([
-                import(plugin.handlerPath),
-                import(plugin.schemaPath),
-            ]);
+            const [handlerModule, schemaModule] = await plugin.loadModules();
 
             const handler = handlerModule.default || handlerModule;
             const schema = schemaModule.default || schemaModule;
@@ -786,7 +999,7 @@ export async function bootstrapBuiltinPlugins() {
     }
 
     console.log(
-        `[PluginBootstrap] ✅ Loaded ${loaded}/${BUILTIN_PLUGINS.length} built-in plugins (${failed} failed)`,
+        `[PluginBootstrap] Loaded ${loaded}/${BUILTIN_PLUGINS.length} built-in plugins (${failed} failed)`,
     );
 
     return { loaded, failed };
