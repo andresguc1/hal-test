@@ -137,7 +137,7 @@ export const NODE_CATEGORIES = {
   },
   database_ops: {
     icon: Database,
-    color: "amber",
+    color: "teal",
     label: "Databases",
     nodes: ["db_connect", "db_query", "db_assert_record"],
   },
@@ -943,6 +943,54 @@ const SHIMMER_COLORS = {
 export const getShimmerColor = (colorKey) =>
   SHIMMER_COLORS[colorKey] || "via-slate-200";
 
+// Centralized hex color map — single source of truth for components that need hex values
+// (MiniMap, flowStyles, etc.). All values MUST match CATEGORY_STYLES keys.
+export const CATEGORY_HEX = {
+  cyan: "#06b6d4",
+  blue: "#3b82f6",
+  indigo: "#6366f1",
+  violet: "#8b5cf6",
+  purple: "#a855f7",
+  fuchsia: "#d946ef",
+  pink: "#ec4899",
+  amber: "#f59e0b",
+  emerald: "#10b981",
+  green: "#22c55e",
+  teal: "#14b8a6",
+  rose: "#f43f5e",
+  red: "#ef4444",
+  orange: "#f97316",
+  lime: "#84cc16",
+  yellow: "#eab308",
+  sky: "#0ea5e9",
+  slate: "#64748b",
+  gray: "#6b7280",
+};
+
+// Centralized Tailwind text-*{-400} class map
+export const CATEGORY_TEXT_CLASS = Object.fromEntries(
+  Object.keys(CATEGORY_HEX).map((k) => [k, `text-${k}-400`]),
+);
+
+// Centralized Tailwind hover:text-*{-400} class map
+export const CATEGORY_HOVER_CLASS = Object.fromEntries(
+  Object.keys(CATEGORY_HEX).map((k) => [k, `hover:text-${k}-400`]),
+);
+
+// Centralized Tailwind group-hover:text-*{-400} class map
+export const CATEGORY_GROUP_HOVER_CLASS = Object.fromEntries(
+  Object.keys(CATEGORY_HEX).map((k) => [k, `group-hover:text-${k}-400`]),
+);
+
+export const getColorHex = (colorKey) =>
+  CATEGORY_HEX[colorKey] || CATEGORY_HEX.slate;
+export const getColorTextClass = (colorKey) =>
+  CATEGORY_TEXT_CLASS[colorKey] || CATEGORY_TEXT_CLASS.slate;
+export const getColorHoverClass = (colorKey) =>
+  CATEGORY_HOVER_CLASS[colorKey] || CATEGORY_HOVER_CLASS.slate;
+export const getColorGroupHoverClass = (colorKey) =>
+  CATEGORY_GROUP_HOVER_CLASS[colorKey] || CATEGORY_GROUP_HOVER_CLASS.slate;
+
 export const getTheme = (colorKey) =>
   CATEGORY_STYLES[colorKey] || CATEGORY_STYLES.slate;
 export const getNodeConfig = (nodeType) =>
@@ -958,6 +1006,7 @@ export const getNodeConfig = (nodeType) =>
 // NODE_CATEGORIES itself is NOT replaced — its labels, icons, colors
 // and i18n keys are curated by the frontend and must be preserved.
 const BACKEND_TO_FRONTEND_CATEGORY = {
+  browser_management: "browser_management",
   user_interaction: "user_simulation",
   navigation: "browser_management",
   capture: "diagnostics",

@@ -63,7 +63,7 @@ const BUILTIN_PLUGINS = [
         type: 'open_url',
         category: 'navigation',
         label: 'Open URL',
-        color: 'indigo',
+        color: 'blue',
         icon: 'Compass',
         loadModules: () =>
             Promise.all([
@@ -75,7 +75,7 @@ const BUILTIN_PLUGINS = [
         type: 'go_back',
         category: 'navigation',
         label: 'Go Back',
-        color: 'indigo',
+        color: 'blue',
         icon: 'ArrowLeft',
         loadModules: () =>
             Promise.all([
@@ -87,7 +87,7 @@ const BUILTIN_PLUGINS = [
         type: 'go_forward',
         category: 'navigation',
         label: 'Go Forward',
-        color: 'indigo',
+        color: 'blue',
         icon: 'ArrowRight',
         loadModules: () =>
             Promise.all([
@@ -99,7 +99,7 @@ const BUILTIN_PLUGINS = [
         type: 'reload_page',
         category: 'navigation',
         label: 'Reload Page',
-        color: 'indigo',
+        color: 'blue',
         icon: 'RefreshCw',
         loadModules: () =>
             Promise.all([
@@ -111,7 +111,7 @@ const BUILTIN_PLUGINS = [
         type: 'click',
         category: 'user_interaction',
         label: 'Click Element',
-        color: 'green',
+        color: 'pink',
         icon: 'MousePointerClick',
         loadModules: () =>
             Promise.all([
@@ -123,7 +123,7 @@ const BUILTIN_PLUGINS = [
         type: 'type_text',
         category: 'user_interaction',
         label: 'Type Text',
-        color: 'green',
+        color: 'pink',
         icon: 'Keyboard',
         loadModules: () =>
             Promise.all([
@@ -135,7 +135,7 @@ const BUILTIN_PLUGINS = [
         type: 'fill_form',
         category: 'user_interaction',
         label: 'Fill Form',
-        color: 'green',
+        color: 'pink',
         icon: 'FormInput',
         loadModules: () =>
             Promise.all([
@@ -147,7 +147,7 @@ const BUILTIN_PLUGINS = [
         type: 'select_option',
         category: 'user_interaction',
         label: 'Select Option',
-        color: 'green',
+        color: 'pink',
         icon: 'List',
         loadModules: () =>
             Promise.all([
@@ -159,7 +159,7 @@ const BUILTIN_PLUGINS = [
         type: 'scroll',
         category: 'user_interaction',
         label: 'Scroll',
-        color: 'green',
+        color: 'pink',
         icon: 'ArrowUpDown',
         loadModules: () =>
             Promise.all([
@@ -171,7 +171,7 @@ const BUILTIN_PLUGINS = [
         type: 'hover',
         category: 'user_interaction',
         label: 'Hover',
-        color: 'green',
+        color: 'pink',
         icon: 'MousePointer2',
         loadModules: () =>
             Promise.all([
@@ -183,7 +183,7 @@ const BUILTIN_PLUGINS = [
         type: 'drag_drop',
         category: 'user_interaction',
         label: 'Drag & Drop',
-        color: 'green',
+        color: 'pink',
         icon: 'Move',
         loadModules: () =>
             Promise.all([
@@ -195,7 +195,7 @@ const BUILTIN_PLUGINS = [
         type: 'upload_file',
         category: 'user_interaction',
         label: 'Upload File',
-        color: 'green',
+        color: 'pink',
         icon: 'Upload',
         loadModules: () =>
             Promise.all([
@@ -207,7 +207,7 @@ const BUILTIN_PLUGINS = [
         type: 'find_element',
         category: 'user_interaction',
         label: 'Find Element',
-        color: 'green',
+        color: 'pink',
         icon: 'Search',
         loadModules: () =>
             Promise.all([
@@ -219,7 +219,7 @@ const BUILTIN_PLUGINS = [
         type: 'get_set_content',
         category: 'user_interaction',
         label: 'Get/Set Content',
-        color: 'green',
+        color: 'pink',
         icon: 'FileText',
         loadModules: () =>
             Promise.all([
@@ -327,7 +327,7 @@ const BUILTIN_PLUGINS = [
         type: 'take_screenshot',
         category: 'capture',
         label: 'Take Screenshot',
-        color: 'violet',
+        color: 'rose',
         icon: 'Camera',
         loadModules: () =>
             Promise.all([
@@ -339,7 +339,7 @@ const BUILTIN_PLUGINS = [
         type: 'save_dom',
         category: 'capture',
         label: 'Save DOM',
-        color: 'violet',
+        color: 'rose',
         icon: 'Download',
         loadModules: () =>
             Promise.all([
@@ -351,7 +351,7 @@ const BUILTIN_PLUGINS = [
         type: 'log_errors',
         category: 'capture',
         label: 'Log Errors',
-        color: 'violet',
+        color: 'rose',
         icon: 'Bug',
         loadModules: () =>
             Promise.all([
@@ -363,7 +363,7 @@ const BUILTIN_PLUGINS = [
         type: 'listen_events',
         category: 'capture',
         label: 'Listen Events',
-        color: 'violet',
+        color: 'rose',
         icon: 'Radio',
         loadModules: () =>
             Promise.all([
@@ -375,7 +375,7 @@ const BUILTIN_PLUGINS = [
         type: 'mock_response',
         category: 'network',
         label: 'Mock Response',
-        color: 'cyan',
+        color: 'emerald',
         icon: 'Server',
         loadModules: () =>
             Promise.all([
@@ -387,7 +387,7 @@ const BUILTIN_PLUGINS = [
         type: 'intercept_request',
         category: 'network',
         label: 'Intercept Request',
-        color: 'cyan',
+        color: 'emerald',
         icon: 'Shield',
         loadModules: () =>
             Promise.all([
@@ -399,7 +399,7 @@ const BUILTIN_PLUGINS = [
         type: 'manage_cookies',
         category: 'network',
         label: 'Manage Cookies',
-        color: 'cyan',
+        color: 'emerald',
         icon: 'Cookie',
         loadModules: () =>
             Promise.all([
@@ -411,7 +411,7 @@ const BUILTIN_PLUGINS = [
         type: 'set_network_conditions',
         category: 'network',
         label: 'Set Network Conditions',
-        color: 'cyan',
+        color: 'emerald',
         icon: 'Gauge',
         loadModules: () =>
             Promise.all([
@@ -423,7 +423,7 @@ const BUILTIN_PLUGINS = [
         type: 'configure_route',
         category: 'network',
         label: 'Configure Route',
-        color: 'cyan',
+        color: 'emerald',
         icon: 'Route',
         loadModules: () =>
             Promise.all([
@@ -435,7 +435,7 @@ const BUILTIN_PLUGINS = [
         type: 'clear_all_mocks',
         category: 'network',
         label: 'Clear All Mocks',
-        color: 'cyan',
+        color: 'emerald',
         icon: 'Trash2',
         loadModules: () =>
             Promise.all([
@@ -447,7 +447,7 @@ const BUILTIN_PLUGINS = [
         type: 'wait_network_match',
         category: 'network',
         label: 'Wait Network Match',
-        color: 'cyan',
+        color: 'emerald',
         icon: 'Target',
         loadModules: () =>
             Promise.all([
@@ -459,7 +459,7 @@ const BUILTIN_PLUGINS = [
         type: 'block_resource',
         category: 'network',
         label: 'Block Resource',
-        color: 'cyan',
+        color: 'emerald',
         icon: 'Ban',
         loadModules: () =>
             Promise.all([
@@ -471,7 +471,7 @@ const BUILTIN_PLUGINS = [
         type: 'modify_headers',
         category: 'network',
         label: 'Modify Headers',
-        color: 'cyan',
+        color: 'emerald',
         icon: 'Settings',
         loadModules: () =>
             Promise.all([
@@ -483,7 +483,7 @@ const BUILTIN_PLUGINS = [
         type: 'call_llm',
         category: 'ai_llm',
         label: 'Call LLM',
-        color: 'rose',
+        color: 'violet',
         icon: 'Brain',
         loadModules: () =>
             Promise.all([
@@ -495,7 +495,7 @@ const BUILTIN_PLUGINS = [
         type: 'generate_data',
         category: 'ai_llm',
         label: 'Generate Data',
-        color: 'rose',
+        color: 'violet',
         icon: 'Sparkles',
         loadModules: () =>
             Promise.all([
@@ -507,7 +507,7 @@ const BUILTIN_PLUGINS = [
         type: 'validate_semantic',
         category: 'ai_llm',
         label: 'Validate Semantic',
-        color: 'rose',
+        color: 'violet',
         icon: 'CheckCircle',
         loadModules: () =>
             Promise.all([
@@ -519,7 +519,7 @@ const BUILTIN_PLUGINS = [
         type: 'extract_dom_context',
         category: 'ai_llm',
         label: 'Extract DOM Context',
-        color: 'rose',
+        color: 'violet',
         icon: 'ScanSearch',
         loadModules: () =>
             Promise.all([
@@ -531,7 +531,7 @@ const BUILTIN_PLUGINS = [
         type: 'chain_of_thought',
         category: 'ai_llm',
         label: 'Chain of Thought',
-        color: 'rose',
+        color: 'violet',
         icon: 'Lightbulb',
         loadModules: () =>
             Promise.all([
@@ -543,7 +543,7 @@ const BUILTIN_PLUGINS = [
         type: 'smart_selector',
         category: 'ai_llm',
         label: 'Smart Selector',
-        color: 'rose',
+        color: 'violet',
         icon: 'ScanEye',
         loadModules: () =>
             Promise.all([
@@ -555,7 +555,7 @@ const BUILTIN_PLUGINS = [
         type: 'variable',
         category: 'flow_logic',
         label: 'Variable',
-        color: 'slate',
+        color: 'purple',
         icon: 'Variable',
         loadModules: () =>
             Promise.all([
@@ -567,7 +567,7 @@ const BUILTIN_PLUGINS = [
         type: 'conditional',
         category: 'flow_logic',
         label: 'Conditional',
-        color: 'slate',
+        color: 'purple',
         icon: 'GitBranch',
         loadModules: () =>
             Promise.all([
@@ -579,7 +579,7 @@ const BUILTIN_PLUGINS = [
         type: 'switch',
         category: 'flow_logic',
         label: 'Switch',
-        color: 'slate',
+        color: 'purple',
         icon: 'Shuffle',
         loadModules: () =>
             Promise.all([
@@ -591,7 +591,7 @@ const BUILTIN_PLUGINS = [
         type: 'loop',
         category: 'flow_logic',
         label: 'Loop',
-        color: 'slate',
+        color: 'purple',
         icon: 'Repeat',
         loadModules: () =>
             Promise.all([
@@ -603,7 +603,7 @@ const BUILTIN_PLUGINS = [
         type: 'branch',
         category: 'flow_logic',
         label: 'Branch',
-        color: 'slate',
+        color: 'purple',
         icon: 'GitMerge',
         loadModules: () =>
             Promise.all([
@@ -615,7 +615,7 @@ const BUILTIN_PLUGINS = [
         type: 'flow_control',
         category: 'flow_logic',
         label: 'Flow Control',
-        color: 'slate',
+        color: 'purple',
         icon: 'Network',
         loadModules: () =>
             Promise.all([
@@ -627,7 +627,7 @@ const BUILTIN_PLUGINS = [
         type: 'transform',
         category: 'flow_logic',
         label: 'Transform',
-        color: 'slate',
+        color: 'purple',
         icon: 'Shuffle',
         loadModules: () =>
             Promise.all([
@@ -639,7 +639,7 @@ const BUILTIN_PLUGINS = [
         type: 'backend_js',
         category: 'flow_logic',
         label: 'Backend JS',
-        color: 'slate',
+        color: 'purple',
         icon: 'Code',
         loadModules: () =>
             Promise.all([
@@ -651,7 +651,7 @@ const BUILTIN_PLUGINS = [
         type: 'fail_flow',
         category: 'flow_logic',
         label: 'Fail Flow',
-        color: 'slate',
+        color: 'purple',
         icon: 'AlertOctagon',
         loadModules: () =>
             Promise.all([
@@ -663,7 +663,7 @@ const BUILTIN_PLUGINS = [
         type: 'handle_hooks',
         category: 'flow_logic',
         label: 'Handle Hooks',
-        color: 'slate',
+        color: 'purple',
         icon: 'Anchor',
         loadModules: () =>
             Promise.all([
@@ -675,7 +675,7 @@ const BUILTIN_PLUGINS = [
         type: 'control_exceptions',
         category: 'flow_logic',
         label: 'Control Exceptions',
-        color: 'slate',
+        color: 'purple',
         icon: 'ShieldAlert',
         loadModules: () =>
             Promise.all([
@@ -687,7 +687,7 @@ const BUILTIN_PLUGINS = [
         type: 'component',
         category: 'flow_logic',
         label: 'Component',
-        color: 'slate',
+        color: 'purple',
         icon: 'Puzzle',
         loadModules: () =>
             Promise.all([
@@ -699,7 +699,7 @@ const BUILTIN_PLUGINS = [
         type: 'input',
         category: 'flow_logic',
         label: 'Input',
-        color: 'slate',
+        color: 'purple',
         icon: 'LogIn',
         loadModules: () =>
             Promise.all([
@@ -711,7 +711,7 @@ const BUILTIN_PLUGINS = [
         type: 'output',
         category: 'flow_logic',
         label: 'Output',
-        color: 'slate',
+        color: 'purple',
         icon: 'LogOut',
         loadModules: () =>
             Promise.all([
@@ -783,7 +783,7 @@ const BUILTIN_PLUGINS = [
         type: 'assert_page_text',
         category: 'assertion',
         label: 'Assert Page Text',
-        color: 'emerald',
+        color: 'cyan',
         icon: 'CheckCircle',
         loadModules: () =>
             Promise.all([
@@ -879,7 +879,7 @@ const BUILTIN_PLUGINS = [
         type: 'read_file',
         category: 'data',
         label: 'Read File',
-        color: 'slate',
+        color: 'yellow',
         icon: 'FileInput',
         loadModules: () =>
             Promise.all([
@@ -891,7 +891,7 @@ const BUILTIN_PLUGINS = [
         type: 'write_file',
         category: 'data',
         label: 'Write File',
-        color: 'slate',
+        color: 'yellow',
         icon: 'FileOutput',
         loadModules: () =>
             Promise.all([
@@ -903,7 +903,7 @@ const BUILTIN_PLUGINS = [
         type: 'download_file',
         category: 'data',
         label: 'Download File',
-        color: 'slate',
+        color: 'yellow',
         icon: 'Download',
         loadModules: () =>
             Promise.all([
@@ -915,7 +915,7 @@ const BUILTIN_PLUGINS = [
         type: 'run_tests',
         category: 'testing',
         label: 'Run Tests',
-        color: 'teal',
+        color: 'slate',
         icon: 'Play',
         loadModules: () =>
             Promise.all([
@@ -927,7 +927,7 @@ const BUILTIN_PLUGINS = [
         type: 'cli_params',
         category: 'testing',
         label: 'CLI Params',
-        color: 'teal',
+        color: 'slate',
         icon: 'Terminal',
         loadModules: () =>
             Promise.all([
@@ -939,7 +939,7 @@ const BUILTIN_PLUGINS = [
         type: 'return_code',
         category: 'testing',
         label: 'Return Code',
-        color: 'teal',
+        color: 'slate',
         icon: 'Hash',
         loadModules: () =>
             Promise.all([
@@ -951,7 +951,7 @@ const BUILTIN_PLUGINS = [
         type: 'integrate_ci',
         category: 'testing',
         label: 'Integrate CI',
-        color: 'teal',
+        color: 'slate',
         icon: 'GitBranch',
         loadModules: () =>
             Promise.all([

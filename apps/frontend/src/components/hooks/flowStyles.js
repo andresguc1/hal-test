@@ -1,5 +1,6 @@
 // flowStyles.js
 import { NODE_LABELS } from "./constants";
+import { CATEGORY_HEX } from "@/config/nodeConstants";
 
 export { NODE_LABELS };
 
@@ -129,19 +130,22 @@ Para la animación de 'EXECUTING', necesitarás el siguiente CSS global:
 
 /**
  * Category colors for visual differentiation.
- * These are used as accents (left border strip) on the nodes.
+ * Derived from the centralized CATEGORY_HEX map in nodeConstants.js.
+ * Used as accents (left border strip) on the nodes.
  */
 export const CATEGORY_COLORS = {
-  browser_management: "#3b82f6", // Blue
-  dom_manipulation: "#8b5cf6", // Purple
-  user_simulation: "#f97316", // Orange
-  synchronization: "#06b6d4", // Cyan
-  diagnostics: "#ec4899", // Pink
-  network_control: "#64748b", // Slate
-  session_management: "#6366f1", // Indigo
-  test_execution: "#ef4444", // Red
-  file_data: "#10b981", // Emerald
-  llm_ai: "#7c3aed", // Violet
-  execution_interface: "#71717a", // Zinc
-  default: "#94a3b8", // Gray
+  browser_management: CATEGORY_HEX.blue,
+  dom_manipulation: CATEGORY_HEX.cyan,
+  user_simulation: CATEGORY_HEX.pink,
+  synchronization: CATEGORY_HEX.cyan,
+  diagnostics: CATEGORY_HEX.rose,
+  network_control: CATEGORY_HEX.emerald,
+  session_management: CATEGORY_HEX.orange,
+  test_execution: CATEGORY_HEX.orange,
+  file_data: CATEGORY_HEX.yellow,
+  llm_ai: CATEGORY_HEX.violet,
+  execution_interface: CATEGORY_HEX.slate,
+  flow_control: CATEGORY_HEX.purple,
+  composition: CATEGORY_HEX.gray,
+  default: CATEGORY_HEX.slate,
 };

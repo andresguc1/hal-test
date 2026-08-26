@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
-import { NODE_CATEGORIES } from "../config/nodeConstants";
+import { NODE_CATEGORIES, getColorTextClass } from "../config/nodeConstants";
 
 // ==========================================
 // 1. COMPONENT: CONTEXT MENU ITEM
@@ -501,22 +501,7 @@ const ContextMenu = ({
     return results;
   }, [searchTerm]);
 
-  const getColorClass = (colorName) => {
-    const map = {
-      blue: "text-blue-400",
-      cyan: "text-cyan-400",
-      emerald: "text-emerald-400",
-      rose: "text-rose-400",
-      orange: "text-orange-400",
-      purple: "text-purple-400",
-      yellow: "text-yellow-400",
-      lime: "text-lime-400",
-      pink: "text-pink-400",
-      indigo: "text-indigo-400",
-      slate: "text-slate-400",
-    };
-    return map[colorName] || "text-zinc-400";
-  };
+  const getColorClass = (colorName) => getColorTextClass(colorName);
 
   return createPortal(
     <div

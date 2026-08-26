@@ -18,33 +18,13 @@ import {
   Star,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { NODE_CATEGORIES, CATEGORY_STYLES } from "@/config/nodeConstants";
+import { NODE_CATEGORIES, CATEGORY_STYLES, getColorTextClass, getColorHoverClass, getColorGroupHoverClass } from "@/config/nodeConstants";
 import HALQuote from "./HALQuote";
 
 const ToolboxItem = ({ label, nodeId, color, onAdd }) => {
   // Select styles based on color theme, fallback to slate
   const theme = CATEGORY_STYLES[color] || CATEGORY_STYLES.slate;
-
-  // Helper for hover text color (similar to Category)
-  const getHoverText = () => {
-    if (color === "cyan") return "group-hover:text-cyan-400";
-    if (color === "blue") return "group-hover:text-blue-400";
-    if (color === "indigo") return "group-hover:text-indigo-400";
-    if (color === "violet") return "group-hover:text-violet-400";
-    if (color === "purple") return "group-hover:text-purple-400";
-    if (color === "fuchsia") return "group-hover:text-fuchsia-400";
-    if (color === "pink") return "group-hover:text-pink-400";
-    if (color === "rose") return "group-hover:text-rose-400";
-    if (color === "red") return "group-hover:text-red-400";
-    if (color === "orange") return "group-hover:text-orange-400";
-    if (color === "amber") return "group-hover:text-amber-400";
-    if (color === "yellow") return "group-hover:text-yellow-400";
-    if (color === "lime") return "group-hover:text-lime-400";
-    if (color === "green") return "group-hover:text-green-400";
-    if (color === "emerald") return "group-hover:text-emerald-400";
-    if (color === "teal") return "group-hover:text-teal-400";
-    return "group-hover:text-slate-200";
-  };
+  const hoverTextClass = getColorGroupHoverClass(color);
 
   return (
     <Motion.div
@@ -76,7 +56,7 @@ const ToolboxItem = ({ label, nodeId, color, onAdd }) => {
         className={cn(
           "flex-1 text-xs font-medium truncate select-none transition-colors duration-300",
           "text-[var(--text-main)]", // Theme-aware text
-          getHoverText(), // Apply color on hover
+          hoverTextClass, // Apply color on hover
         )}
       >
         {label}
@@ -101,127 +81,10 @@ const ToolboxCategory = ({
   t,
   onAdd,
 }) => {
-  // Helper to get text color for the header
-  const getHeaderColor = () => {
-    // Extract the text-color part from the icon style for consistency, or standard mapping
-    // Simply returning a hardcoded map for safety and brightness in headers
-    switch (color) {
-      case "cyan":
-        return "text-cyan-400";
-      case "blue":
-        return "text-blue-400";
-      case "indigo":
-        return "text-indigo-400";
-      case "violet":
-        return "text-violet-400";
-      case "purple":
-        return "text-purple-400";
-      case "fuchsia":
-        return "text-fuchsia-400";
-      case "pink":
-        return "text-pink-400";
-      case "rose":
-        return "text-rose-400";
-      case "red":
-        return "text-red-400";
-      case "orange":
-        return "text-orange-400";
-      case "amber":
-        return "text-amber-400";
-      case "yellow":
-        return "text-yellow-400";
-      case "lime":
-        return "text-lime-400";
-      case "green":
-        return "text-green-400";
-      case "emerald":
-        return "text-emerald-400";
-      case "teal":
-        return "text-teal-400";
-      default:
-        return "text-slate-300";
-    }
-  };
-
-  // Helper to get hover text color
-  const getHoverColor = () => {
-    switch (color) {
-      case "cyan":
-        return "hover:text-cyan-400";
-      case "blue":
-        return "hover:text-blue-400";
-      case "indigo":
-        return "hover:text-indigo-400";
-      case "violet":
-        return "hover:text-violet-400";
-      case "purple":
-        return "hover:text-purple-400";
-      case "fuchsia":
-        return "hover:text-fuchsia-400";
-      case "pink":
-        return "hover:text-pink-400";
-      case "rose":
-        return "hover:text-rose-400";
-      case "red":
-        return "hover:text-red-400";
-      case "orange":
-        return "hover:text-orange-400";
-      case "amber":
-        return "hover:text-amber-400";
-      case "yellow":
-        return "hover:text-yellow-400";
-      case "lime":
-        return "hover:text-lime-400";
-      case "green":
-        return "hover:text-green-400";
-      case "emerald":
-        return "hover:text-emerald-400";
-      case "teal":
-        return "hover:text-teal-400";
-      default:
-        return "hover:text-slate-300";
-    }
-  };
-
-  // Explicit group-hover classes for JIT
-  const getIconHoverClass = () => {
-    switch (color) {
-      case "cyan":
-        return "group-hover:text-cyan-400";
-      case "blue":
-        return "group-hover:text-blue-400";
-      case "indigo":
-        return "group-hover:text-indigo-400";
-      case "violet":
-        return "group-hover:text-violet-400";
-      case "purple":
-        return "group-hover:text-purple-400";
-      case "fuchsia":
-        return "group-hover:text-fuchsia-400";
-      case "pink":
-        return "group-hover:text-pink-400";
-      case "rose":
-        return "group-hover:text-rose-400";
-      case "red":
-        return "group-hover:text-red-400";
-      case "orange":
-        return "group-hover:text-orange-400";
-      case "amber":
-        return "group-hover:text-amber-400";
-      case "yellow":
-        return "group-hover:text-yellow-400";
-      case "lime":
-        return "group-hover:text-lime-400";
-      case "green":
-        return "group-hover:text-green-400";
-      case "emerald":
-        return "group-hover:text-emerald-400";
-      case "teal":
-        return "group-hover:text-teal-400";
-      default:
-        return "group-hover:text-slate-300";
-    }
-  };
+  // Use centralized color utilities — no hardcoded switch statements
+  const headerColorClass = getColorTextClass(color);
+  const hoverColorClass = getColorHoverClass(color);
+  const iconHoverClass = getColorGroupHoverClass(color);
 
   return (
     <div className="mb-3">
@@ -229,7 +92,7 @@ const ToolboxCategory = ({
         onClick={onToggle}
         className={cn(
           "w-full flex items-center justify-between px-2 py-1.5 mb-1 text-xs font-bold uppercase tracking-wider transition-all duration-300 rounded select-none group",
-          isOpen ? getHeaderColor() : `text-slate-500 ${getHoverColor()}`,
+          isOpen ? headerColorClass : `text-slate-500 ${hoverColorClass}`,
         )}
       >
         <div className="flex items-center gap-2">
@@ -238,8 +101,8 @@ const ToolboxCategory = ({
             className={cn(
               "transition-colors duration-300",
               isOpen
-                ? getHeaderColor()
-                : `text-slate-600 ${getIconHoverClass()}`,
+                ? headerColorClass
+                : `text-slate-600 ${iconHoverClass}`,
             )}
           />
           <span>{t(`nodes.categories.${categoryKey}`)}</span>
@@ -330,27 +193,7 @@ export default function ToolboxPanel({ addNode, favoriteNodes = [] }) {
     setOpenCategories((prev) => ({ ...prev, [cat]: !prev[cat] }));
   };
 
-  const getHoverColor = (color) => {
-    const map = {
-      cyan: "hover:text-cyan-400",
-      blue: "hover:text-blue-400",
-      indigo: "hover:text-indigo-400",
-      violet: "hover:text-violet-400",
-      purple: "hover:text-purple-400",
-      fuchsia: "hover:text-fuchsia-400",
-      pink: "hover:text-pink-400",
-      rose: "hover:text-rose-400",
-      red: "hover:text-red-400",
-      orange: "hover:text-orange-400",
-      amber: "hover:text-amber-400",
-      yellow: "hover:text-yellow-400",
-      lime: "hover:text-lime-400",
-      green: "hover:text-green-400",
-      emerald: "hover:text-emerald-400",
-      teal: "hover:text-teal-400",
-    };
-    return map[color] || "hover:text-slate-300";
-  };
+  const getHoverColor = (c) => getColorHoverClass(c);
 
   const WIDTH_EXPANDED = 280;
   const WIDTH_COLLAPSED = 48;

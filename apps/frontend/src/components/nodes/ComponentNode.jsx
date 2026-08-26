@@ -16,7 +16,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { NODE_TYPE_MAP, CATEGORY_STYLES } from "@/config/nodeConstants";
+import { NODE_TYPE_MAP, CATEGORY_STYLES, getColorHex } from "@/config/nodeConstants";
 import { NODE_STATES } from "../hooks/flowStyles";
 
 const ComponentNode = ({ id, data, selected }) => {
@@ -80,6 +80,7 @@ const ComponentNode = ({ id, data, selected }) => {
       style={{
         borderColor: statusColor || undefined,
         boxShadow: statusShadow || undefined,
+        ...(isRunning ? { boxShadow: `0 0 0 4px ${getColorHex(colorKey)}33`, borderColor: getColorHex(colorKey) } : {}),
       }}
       className={cn(
         "group relative min-w-[160px] max-w-[300px] rounded-lg p-3 transition-[background,border,box-shadow,transform] duration-400 select-none border-[2px]",
@@ -87,7 +88,7 @@ const ComponentNode = ({ id, data, selected }) => {
         selected && statusColor ? "scale-[1.05] z-50 border-[3px]" : "",
         selected && !statusColor ? themeParams.selected : "",
         !selected && !statusColor && "shadow-lg",
-        isRunning && "ring-4 ring-blue-500/30 animate-pulse border-blue-400",
+        isRunning && "ring-4 animate-pulse",
         // Onboarding Glow (Matches AbyssNode)
         data.starterHint && "onboarding-glow border-sky-400/50",
       )}
