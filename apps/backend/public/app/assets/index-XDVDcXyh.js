@@ -62489,34 +62489,32 @@ function XDe() {
                   o.jsxs('div', {
                       style: { display: 'flex', marginRight: '4px' },
                       children: [
-                          t
-                              .slice(0, 4)
-                              .map((i, a) =>
-                                  o.jsx(
-                                      'div',
-                                      {
-                                          style: {
-                                              width: '24px',
-                                              height: '24px',
-                                              borderRadius: '50%',
-                                              background: i.user.color,
-                                              border: '2px solid var(--hal-surface, #1e1e28)',
-                                              display: 'flex',
-                                              alignItems: 'center',
-                                              justifyContent: 'center',
-                                              fontSize: '10px',
-                                              fontWeight: 600,
-                                              color: 'white',
-                                              marginLeft: a > 0 ? '-8px' : '0',
-                                              zIndex: 10 - a,
-                                              position: 'relative',
-                                          },
-                                          title: i.user.name,
-                                          children: i.user.name?.charAt(0)?.toUpperCase() || '?',
+                          t.slice(0, 4).map((i, a) =>
+                              o.jsx(
+                                  'div',
+                                  {
+                                      style: {
+                                          width: '24px',
+                                          height: '24px',
+                                          borderRadius: '50%',
+                                          background: i.user.color,
+                                          border: '2px solid var(--hal-surface, #1e1e28)',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          fontSize: '10px',
+                                          fontWeight: 600,
+                                          color: 'white',
+                                          marginLeft: a > 0 ? '-8px' : '0',
+                                          zIndex: 10 - a,
+                                          position: 'relative',
                                       },
-                                      i.clientId,
-                                  ),
+                                      title: i.user.name,
+                                      children: i.user.name?.charAt(0)?.toUpperCase() || '?',
+                                  },
+                                  i.clientId,
                               ),
+                          ),
                           e > 4 &&
                               o.jsxs('div', {
                                   style: {
@@ -88797,13 +88795,11 @@ var uze = class extends ip {
             const s = this.options;
             ((this.options = this.#e.defaultMutationOptions(e)),
                 sw(this.options, s) ||
-                    this.#e
-                        .getMutationCache()
-                        .notify({
-                            type: 'observerOptionsUpdated',
-                            mutation: this.#s,
-                            observer: this,
-                        }),
+                    this.#e.getMutationCache().notify({
+                        type: 'observerOptionsUpdated',
+                        mutation: this.#s,
+                        observer: this,
+                    }),
                 s?.mutationKey &&
                 this.options.mutationKey &&
                 hd(s.mutationKey) !== hd(this.options.mutationKey)
@@ -99854,14 +99850,12 @@ function C$e({
                             });
                         ((K = ve),
                             A(K),
-                            is
-                                .getState()
-                                .startExecution({
-                                    mode: P,
-                                    runId: K,
-                                    flowId: a,
-                                    totalNodes: t.length,
-                                }));
+                            is.getState().startExecution({
+                                mode: P,
+                                runId: K,
+                                flowId: a,
+                                totalNodes: t.length,
+                            }));
                     } catch (le) {
                         console.warn('Run creation failed', le);
                     }
@@ -104176,13 +104170,11 @@ const Iqe = () =>
                     P.on('flow-finished', (z) => {
                         console.log('Haltest Socket: 🏁 Flow finished', z);
                         const { status: W, error: q, failedNodeId: K, divePath: Z } = z;
-                        (is
-                            .getState()
-                            .finishExecution({
-                                status: W === 'failed' ? 'failed' : 'completed',
-                                error: q || null,
-                                summary: z,
-                            }),
+                        (is.getState().finishExecution({
+                            status: W === 'failed' ? 'failed' : 'completed',
+                            error: q || null,
+                            summary: z,
+                        }),
                             window.dispatchEvent(
                                 new CustomEvent('hal:run-completed', { detail: z }),
                             ),
@@ -110724,13 +110716,11 @@ function VUe(t) {
                     (!t || !j || String(j) === String(t)) &&
                         (l(A),
                         i('running'),
-                        is
-                            .getState()
-                            .startExecution({
-                                mode: 'performance',
-                                runId: A?.runId,
-                                flowId: A?.flowId,
-                            }));
+                        is.getState().startExecution({
+                            mode: 'performance',
+                            runId: A?.runId,
+                            flowId: A?.flowId,
+                        }));
                 }),
                 s.on('perf-metrics-update', (A) => {
                     const j = A?.flowId || A?.runConfig?.flowId;
