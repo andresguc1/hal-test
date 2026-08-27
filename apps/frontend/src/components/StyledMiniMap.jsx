@@ -1,7 +1,11 @@
 import React from "react";
 import { MiniMap } from "@xyflow/react";
 import "./styles/StyledMiniMap.css";
-import { NODE_TYPE_MAP, NODE_CATEGORIES, getColorHex } from "@/config/nodeConstants";
+import {
+  NODE_TYPE_MAP,
+  NODE_CATEGORIES,
+  getColorHex,
+} from "@/config/nodeConstants";
 import { useTheme } from "next-themes";
 
 export default function StyledMiniMap() {

@@ -18,12 +18,18 @@ const InputNode = ({ selected }) => {
       )}
     >
       <div className="flex items-center gap-2 p-2 bg-black/10 rounded-lg">
-        <div className={cn("p-1.5 rounded-md border border-white/20 bg-white/10")}>
+        <div
+          className={cn("p-1.5 rounded-md border border-white/20 bg-white/10")}
+        >
           <ArrowRightFromLine size={16} className="text-white" />
         </div>
         <div className="flex flex-col min-w-0">
-          <span className="text-xs font-bold text-white truncate tracking-wide">INPUT</span>
-          <span className="text-[9px] text-white/60 font-medium uppercase">FROM PARENT</span>
+          <span className="text-xs font-bold text-white truncate tracking-wide">
+            INPUT
+          </span>
+          <span className="text-[9px] text-white/60 font-medium uppercase">
+            FROM PARENT
+          </span>
         </div>
       </div>
       <Handle

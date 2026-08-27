@@ -18,7 +18,13 @@ import {
   Star,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { NODE_CATEGORIES, CATEGORY_STYLES, getColorTextClass, getColorHoverClass, getColorGroupHoverClass } from "@/config/nodeConstants";
+import {
+  NODE_CATEGORIES,
+  CATEGORY_STYLES,
+  getColorTextClass,
+  getColorHoverClass,
+  getColorGroupHoverClass,
+} from "@/config/nodeConstants";
 import HALQuote from "./HALQuote";
 
 const ToolboxItem = ({ label, nodeId, color, onAdd }) => {
@@ -100,9 +106,7 @@ const ToolboxCategory = ({
             size={14}
             className={cn(
               "transition-colors duration-300",
-              isOpen
-                ? headerColorClass
-                : `text-slate-600 ${iconHoverClass}`,
+              isOpen ? headerColorClass : `text-slate-600 ${iconHoverClass}`,
             )}
           />
           <span>{t(`nodes.categories.${categoryKey}`)}</span>

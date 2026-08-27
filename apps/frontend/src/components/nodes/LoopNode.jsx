@@ -12,7 +12,11 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
-import { CATEGORY_STYLES, NODE_TYPE_MAP, getColorHex } from "@/config/nodeConstants";
+import {
+  CATEGORY_STYLES,
+  NODE_TYPE_MAP,
+  getColorHex,
+} from "@/config/nodeConstants";
 import { NODE_STATES } from "../hooks/flowStyles";
 
 const LoopNode = ({ id, data, selected }) => {
@@ -25,7 +29,8 @@ const LoopNode = ({ id, data, selected }) => {
   const isError = state === NODE_STATES.ERROR;
 
   const colorKey = NODE_TYPE_MAP.loop?.color || "purple";
-  const themeParams = CATEGORY_STYLES[colorKey]?.node || CATEGORY_STYLES.purple.node;
+  const themeParams =
+    CATEGORY_STYLES[colorKey]?.node || CATEGORY_STYLES.purple.node;
 
   // 2. Loop Config Info
   const config = data?.configuration || {};
@@ -73,7 +78,12 @@ const LoopNode = ({ id, data, selected }) => {
       style={{
         borderColor: statusColor || undefined,
         boxShadow: statusShadow || undefined,
-        ...(isRunning ? { boxShadow: `0 0 0 4px ${getColorHex(colorKey)}33`, borderColor: getColorHex(colorKey) } : {}),
+        ...(isRunning
+          ? {
+              boxShadow: `0 0 0 4px ${getColorHex(colorKey)}33`,
+              borderColor: getColorHex(colorKey),
+            }
+          : {}),
       }}
       className={cn(
         "group relative min-w-[180px] max-w-[320px] rounded-lg p-3 transition-[background,border,box-shadow,transform] duration-400 select-none border-[2px]",

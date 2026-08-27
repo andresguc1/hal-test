@@ -24,10 +24,16 @@ const OutputNode = ({ selected }) => {
       />
       <div className="flex items-center gap-2 p-2 bg-black/10 rounded-lg justify-end text-right">
         <div className="flex flex-col min-w-0">
-          <span className="text-xs font-bold text-white truncate tracking-wide">OUTPUT</span>
-          <span className="text-[9px] text-white/60 font-medium uppercase">TO PARENT</span>
+          <span className="text-xs font-bold text-white truncate tracking-wide">
+            OUTPUT
+          </span>
+          <span className="text-[9px] text-white/60 font-medium uppercase">
+            TO PARENT
+          </span>
         </div>
-        <div className={cn("p-1.5 rounded-md border border-white/20 bg-white/10")}>
+        <div
+          className={cn("p-1.5 rounded-md border border-white/20 bg-white/10")}
+        >
           <ArrowLeftToLine size={16} className="text-white" />
         </div>
       </div>
