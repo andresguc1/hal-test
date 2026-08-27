@@ -139,6 +139,20 @@ function buildChainedLocator(page, selector) {
                 locator = locator.filter({ hasText: value });
                 break;
             }
+            case 'nth': {
+                const content = call.slice(method.length + 1, -1).trim();
+                const index = parseInt(content, 10);
+                locator = locator.nth(index);
+                break;
+            }
+            case 'first': {
+                locator = locator.first();
+                break;
+            }
+            case 'last': {
+                locator = locator.last();
+                break;
+            }
             default:
                 return page.locator(selector);
         }

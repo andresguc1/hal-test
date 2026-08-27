@@ -335,6 +335,28 @@ export const useElementPicker = ({
 
         const trimmedSelector = finalSelector.trim();
 
+        let matchWarning = null;
+        if (
+          !data.ambiguous &&
+          activeBrowserId &&
+          !trimmedSelector.startsWith("getBy")
+        ) {
+          try {
+            const matchResult = await api.post("/inspector/count-matches", {
+              browserId: activeBrowserId,
+              selector: trimmedSelector,
+            });
+            if (matchResult.data?.warning) {
+              matchWarning = matchResult.data.warning;
+            }
+          } catch (matchErr) {
+            console.warn(
+              "[useElementPicker] Failed to validate selector uniqueness:",
+              matchErr,
+            );
+          }
+        }
+
         setNodes((currNodes) => {
           return currNodes.map((node) => {
             if (node.id !== targetNodeId) return node;
@@ -356,6 +378,9 @@ export const useElementPicker = ({
                   aiOptimized: data.aiOptimized || false,
                   capturedAt: data.timestamp || new Date().toISOString(),
                   originalSelector: trimmedSelector,
+                  ambiguous: data.ambiguous || false,
+                  cardinality: data.cardinality || false,
+                  contextChain: data.contextChain || null,
                 },
               },
             };
@@ -363,6 +388,19 @@ export const useElementPicker = ({
         });
 
         toast.success(t("common.selector_captured"));
+
+        if (matchWarning) {
+          toast.warning(
+            t("common.selector_ambiguous_warning", matchWarning),
+          );
+        } else if (data.ambiguous) {
+          toast.warning(
+            t(
+              "common.selector_ambiguous_pick",
+              "⚠ Multiple elements match this selector. Consider using context or a unique attribute.",
+            ),
+          );
+        }
       } catch (err) {
         console.error(
           "[useElementPicker] Error processing picked element:",

@@ -20,6 +20,7 @@ import {
     stopInspectorAction,
     launchRemoteAction,
     getActiveSessionsAction,
+    countSelectorMatchesAction,
 } from '../controllers/inspector.controller.js';
 
 const router = Router();
@@ -29,6 +30,7 @@ router.post('/inspector/start', startInspectorAction);
 router.post('/inspector/stop', stopInspectorAction);
 router.post('/inspector/launch-remote', launchRemoteAction);
 router.get('/inspector/sessions', getActiveSessionsAction);
+router.post('/inspector/count-matches', countSelectorMatchesAction);
 router.get('/variables', actions.getVariables);
 router.post('/variables', actions.updateVariablesAction);
 router.delete('/variables', actions.deleteVariableAction);

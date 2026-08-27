@@ -155,6 +155,7 @@ export const SelectorResultPanel = ({ selectorMeta, onApplyAlternative }) => {
     TYPE_META[selectorMeta.selectorType]?.label || selectorMeta.selectorType;
   const alternativeCount = candidates.length - 1;
   const isAmbiguous = selectorMeta.ambiguous || false;
+  const isCardinality = selectorMeta.cardinality || false;
 
   return (
     <div className="mt-1.5 rounded-lg border border-indigo-500/20 bg-indigo-500/5 overflow-hidden text-xs">
@@ -179,8 +180,12 @@ export const SelectorResultPanel = ({ selectorMeta, onApplyAlternative }) => {
             &middot; {typeLabel}
           </span>
           {isAmbiguous && (
-            <span className="text-[9px] text-amber-400 shrink-0">
-              ⚠ Ambiguous
+            <span className="text-[9px] text-amber-400 shrink-0 flex items-center gap-0.5">
+              {isCardinality ? (
+                <span title="Selector uses positional index (nth) - may break if element order changes">⚠ IDX</span>
+              ) : (
+                <span title="Multiple elements match this selector">⚠ Ambiguous</span>
+              )}
             </span>
           )}
           {!isAmbiguous && alternativeCount > 0 && (

@@ -1,5 +1,5 @@
 import { emitElementPicked, emitElementSanitized } from '../socket.js';
-/* global window, document, Element, Node */
+/* global window, document, Element, Node, CSS */
 import ollamaService from './OllamaService.js';
 
 /**
@@ -191,19 +191,53 @@ const injectInspectorUI = () => {
             };
         }
         if (candidates.playwrightRole) {
-            const matchCount = countRoleMatches(
-                candidates.playwrightRole.match(/getByRole\('([^']+)'/)?.[1],
-                candidates.playwrightRole.match(/name:\s*['"]([^'"]+)['"]/)?.[1],
-            );
+            const role = candidates.playwrightRole.match(/getByRole\('([^']+)'/)?.[1];
+            const name = candidates.playwrightRole.match(/name:\s*['"]([^'"]+)['"]/)?.[1];
+            const matchCount = countRoleMatches(role, name);
             if (matchCount > 1) {
-                const context = findStableContext(el);
-                if (context) {
-                    candidates.playwrightRole = wrapWithContext(
-                        candidates.playwrightRole.replace('page.', ''),
-                        context,
+                const contextChain = findStableContextChain(el);
+                if (contextChain.length > 0) {
+                    const resolved = countRoleMatchesInChain(role, name, contextChain);
+                    if (resolved <= 1) {
+                        candidates.playwrightRole = wrapWithContextChain(
+                            candidates.playwrightRole.replace('page.', ''),
+                            contextChain,
+                        );
+                        candidates.ambiguous = true;
+                        candidates.context = contextChain[0];
+                        candidates.contextChain = contextChain;
+                    } else {
+                        const cardinality = getCardinalitySelector(
+                            el,
+                            candidates.playwrightRole,
+                            (child) => matchesRoleAndName(child, role, name),
+                        );
+                        if (cardinality) {
+                            candidates.playwrightRole = wrapWithContextChain(
+                                cardinality,
+                                contextChain,
+                            );
+                            candidates.ambiguous = true;
+                            candidates.context = contextChain[0];
+                            candidates.contextChain = contextChain;
+                            candidates.cardinality = true;
+                        } else {
+                            candidates.ambiguous = true;
+                        }
+                    }
+                } else {
+                    const cardinality = getCardinalitySelector(
+                        el,
+                        candidates.playwrightRole,
+                        (child) => matchesRoleAndName(child, role, name),
                     );
-                    candidates.ambiguous = true;
-                    candidates.context = context;
+                    if (cardinality) {
+                        candidates.playwrightRole = cardinality;
+                        candidates.ambiguous = true;
+                        candidates.cardinality = true;
+                    } else {
+                        candidates.ambiguous = true;
+                    }
                 }
             }
             return { best: candidates.playwrightRole, type: 'playwright_role', all: candidates };
@@ -214,14 +248,28 @@ const injectInspectorUI = () => {
             )?.[1];
             const matchCount = countLabelMatches(labelValue);
             if (matchCount > 1) {
-                const context = findStableContext(el);
-                if (context) {
-                    candidates.playwrightLabel = wrapWithContext(
+                const contextChain = findStableContextChain(el);
+                if (contextChain.length > 0) {
+                    candidates.playwrightLabel = wrapWithContextChain(
                         candidates.playwrightLabel.replace('page.', ''),
-                        context,
+                        contextChain,
                     );
                     candidates.ambiguous = true;
-                    candidates.context = context;
+                    candidates.context = contextChain[0];
+                    candidates.contextChain = contextChain;
+                } else {
+                    const cardinality = getCardinalitySelector(
+                        el,
+                        candidates.playwrightLabel,
+                        (child) => matchesLabel(child, labelValue),
+                    );
+                    if (cardinality) {
+                        candidates.playwrightLabel = cardinality;
+                        candidates.ambiguous = true;
+                        candidates.cardinality = true;
+                    } else {
+                        candidates.ambiguous = true;
+                    }
                 }
             }
             return { best: candidates.playwrightLabel, type: 'playwright_label', all: candidates };
@@ -392,6 +440,40 @@ const injectInspectorUI = () => {
         return count;
     }
 
+    function countRoleMatchesInChain(role, name, contextChain) {
+        if (!role || !name || !contextChain || contextChain.length === 0)
+            return countRoleMatches(role, name);
+
+        const outerCtx = contextChain[0];
+        let scope;
+        if (outerCtx.name) {
+            scope =
+                document.querySelector(
+                    `[role="${outerCtx.role}"][aria-label="${CSS.escape(outerCtx.name)}"]`,
+                ) || document.querySelector(outerCtx.role);
+        } else {
+            scope = document.querySelector(`[role="${outerCtx.role}"]`);
+        }
+        if (!scope) return countRoleMatches(role, name);
+
+        const lowerName = name.toLowerCase();
+        const elements = scope.querySelectorAll('*');
+        let count = 0;
+        for (const el of elements) {
+            if (!isElementVisible(el)) continue;
+            const elRole =
+                el.getAttribute('role') ||
+                IMPLICIT_ROLE_MAP[el.tagName] ||
+                el.tagName.toLowerCase();
+            if (elRole !== role) continue;
+            const accessibleName = getAccessibleName(el);
+            if (accessibleName.toLowerCase() === lowerName) {
+                count++;
+            }
+        }
+        return count;
+    }
+
     function countTextMatches(text) {
         if (!text) return 0;
         const elements = document.querySelectorAll('*');
@@ -482,8 +564,8 @@ const injectInspectorUI = () => {
         return count;
     }
 
-    function findStableContext(el) {
-        if (!el) return null;
+    function findStableContextChain(el) {
+        if (!el) return [];
         const contextRoles = [
             'dialog',
             'form',
@@ -492,31 +574,95 @@ const injectInspectorUI = () => {
             'main',
             'header',
             'footer',
+            'section',
+            'aside',
+            'article',
+            'table',
+            'list',
         ];
+        const chain = [];
         let current = el.parentElement;
-        while (current && current !== document.body) {
+        while (current && current !== document.body && chain.length < 3) {
             const role =
                 current.getAttribute('role') ||
                 IMPLICIT_ROLE_MAP[current.tagName] ||
                 current.tagName.toLowerCase();
             if (contextRoles.includes(role)) {
                 const contextName = getAccessibleName(current);
-                if (contextName) {
-                    return { role, name: contextName };
-                }
-                return { role, name: null };
+                chain.push({ role, name: contextName || null });
             }
             current = current.parentElement;
         }
-        return null;
+        return chain;
     }
 
-    function wrapWithContext(locator, context) {
-        if (!context) return locator;
-        if (context.name) {
-            return `page.getByRole('${context.role}', { name: '${escapeSelectorValue(context.name)}' }).${locator}`;
+    function wrapWithContextChain(locator, contextChain) {
+        if (!contextChain || contextChain.length === 0) return locator;
+        let result = 'page';
+        for (const ctx of contextChain) {
+            if (ctx.name) {
+                result += `.getByRole('${ctx.role}', { name: '${escapeSelectorValue(ctx.name)}' })`;
+            } else {
+                result += `.locator('[role="${ctx.role}"]')`;
+            }
         }
-        return `page.locator('[role="${context.role}"]').${locator}`;
+        result += `.${locator}`;
+        return result;
+    }
+
+    function getCardinalitySelector(el, baseSelector, matchFn) {
+        const parent = el.parentElement;
+        if (!parent) return null;
+
+        const siblings = Array.from(parent.children).filter((child) => {
+            try {
+                return matchFn(child);
+            } catch {
+                return false;
+            }
+        });
+
+        if (siblings.length <= 1) return null;
+
+        const index = siblings.indexOf(el);
+        if (index === -1) return null;
+
+        const tag = el.tagName.toLowerCase();
+        return `page.locator('${tag}').nth(${index})`;
+    }
+
+    function matchesRoleAndName(el, role, name) {
+        if (!role || !name) return false;
+        const elRole =
+            el.getAttribute('role') || IMPLICIT_ROLE_MAP[el.tagName] || el.tagName.toLowerCase();
+        if (elRole !== role) return false;
+        const accessibleName = getAccessibleName(el);
+        return accessibleName.toLowerCase() === name.toLowerCase();
+    }
+
+    function matchesLabel(el, label) {
+        if (!label) return false;
+        const lowerLabel = label.toLowerCase();
+        const elId = el.getAttribute('id');
+        if (elId) {
+            try {
+                const labelEl = document.querySelector(`label[for="${window.CSS.escape(elId)}"]`);
+                if (labelEl && labelEl.innerText.trim().toLowerCase() === lowerLabel) {
+                    return true;
+                }
+            } catch {
+                /* label lookup failed — fall through */
+            }
+        }
+        const parentLabel = el.closest?.('label');
+        if (parentLabel) {
+            const labelText = parentLabel.innerText
+                .trim()
+                .replace(el.value || el.innerText || '', '')
+                .trim();
+            if (labelText.toLowerCase() === lowerLabel) return true;
+        }
+        return false;
     }
 
     function onMouseOver(e) {
@@ -579,6 +725,8 @@ const injectInspectorUI = () => {
                 semanticContext,
                 ambiguous: result.ambiguous || false,
                 locatorContext: result.context || null,
+                contextChain: result.contextChain || null,
+                cardinality: result.cardinality || false,
                 timestamp: new Date().toISOString(),
             });
         } else {

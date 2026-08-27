@@ -171,6 +171,46 @@ describe('buildPlaywrightLocator', () => {
         expect(dialogLocator.getByRole).toHaveBeenCalledWith('button', { name: 'Save' });
         expect(locator).toBeDefined();
     });
+
+    it('should parse page.locator().nth() chain', () => {
+        const page = createMockPage();
+        const innerLocator = { nth: vi.fn(() => ({ click: vi.fn() })) };
+        page.locator = vi.fn(() => innerLocator);
+        const locator = buildPlaywrightLocator(page, "page.locator('button').nth(1)");
+        expect(page.locator).toHaveBeenCalledWith('button');
+        expect(innerLocator.nth).toHaveBeenCalledWith(1);
+        expect(locator).toBeDefined();
+    });
+
+    it('should parse page.locator().first() chain', () => {
+        const page = createMockPage();
+        const innerLocator = { first: vi.fn(() => ({ click: vi.fn() })) };
+        page.locator = vi.fn(() => innerLocator);
+        const locator = buildPlaywrightLocator(page, "page.locator('.card').first()");
+        expect(page.locator).toHaveBeenCalledWith('.card');
+        expect(innerLocator.first).toHaveBeenCalled();
+        expect(locator).toBeDefined();
+    });
+
+    it('should parse page.locator().last() chain', () => {
+        const page = createMockPage();
+        const innerLocator = { last: vi.fn(() => ({ click: vi.fn() })) };
+        page.locator = vi.fn(() => innerLocator);
+        const locator = buildPlaywrightLocator(page, "page.locator('.item').last()");
+        expect(page.locator).toHaveBeenCalledWith('.item');
+        expect(innerLocator.last).toHaveBeenCalled();
+        expect(locator).toBeDefined();
+    });
+
+    it('should parse page.getByRole().nth() chain', () => {
+        const page = createMockPage();
+        const innerLocator = { nth: vi.fn(() => ({ click: vi.fn() })) };
+        page.getByRole = vi.fn(() => innerLocator);
+        const locator = buildPlaywrightLocator(page, "page.getByRole('button').nth(2)");
+        expect(page.getByRole).toHaveBeenCalledWith('button');
+        expect(innerLocator.nth).toHaveBeenCalledWith(2);
+        expect(locator).toBeDefined();
+    });
 });
 
 describe('convertPlaywrightLocator', () => {

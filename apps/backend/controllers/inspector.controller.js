@@ -1,6 +1,8 @@
 import { browserService } from '../services/browser.service.js';
 import { startInspector, stopInspector } from '../services/inspector.service.js';
 
+/* global document */
+
 export const startInspectorAction = async (req, res) => {
     try {
         const { browserId, url } = req.body;
@@ -132,6 +134,95 @@ export const stopInspectorAction = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Failed to stop inspector',
+            error: error.message || String(error),
+        });
+    }
+};
+
+export const countSelectorMatchesAction = async (req, res) => {
+    try {
+        const { browserId, selector } = req.body;
+
+        if (!selector) {
+            return res.status(400).json({
+                success: false,
+                message: 'Selector is required',
+            });
+        }
+
+        const entry = browserService.get(browserId);
+        if (!entry) {
+            return res.status(404).json({
+                success: false,
+                message: 'Browser not found',
+            });
+        }
+
+        const browser = entry.browser || entry;
+        const contexts = browser.contexts();
+        let page = null;
+
+        for (const ctx of contexts) {
+            const pages = ctx.pages();
+            if (pages.length > 0) {
+                page = pages[pages.length - 1];
+                break;
+            }
+        }
+
+        if (!page || page.isClosed()) {
+            return res.status(404).json({
+                success: false,
+                message: 'No active page',
+            });
+        }
+
+        const result = await page.evaluate((sel) => {
+            try {
+                const isPlaywrightLocator =
+                    /^(getByTestId|getByLabel|getByRole|getByText|getByPlaceholder|getByAltText|getByTitle)\s*\(/i.test(
+                        sel,
+                    );
+
+                if (isPlaywrightLocator) {
+                    return { count: -1, isPlaywrightLocator: true };
+                }
+
+                const elements = document.querySelectorAll(sel);
+                const matches = Array.from(elements).map((el) => {
+                    const rect = el.getBoundingClientRect();
+                    return {
+                        tag: el.tagName.toLowerCase(),
+                        text: el.textContent?.trim().substring(0, 50) || '',
+                        id: el.id || '',
+                        ariaLabel: el.getAttribute('aria-label') || '',
+                        visible: rect.width > 0 && rect.height > 0,
+                    };
+                });
+                return { count: matches.length, matches, isPlaywrightLocator: false };
+            } catch (e) {
+                return { count: -1, error: e.message };
+            }
+        }, selector);
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                selector,
+                matchCount: result.count,
+                matches: result.matches || [],
+                isPlaywrightLocator: result.isPlaywrightLocator || false,
+                warning:
+                    result.count > 1
+                        ? `${result.count} elements match this selector. Use context or positional index to disambiguate.`
+                        : null,
+            },
+        });
+    } catch (error) {
+        console.error('[InspectorController] Count Matches Error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to count matches',
             error: error.message || String(error),
         });
     }
