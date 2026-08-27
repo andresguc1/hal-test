@@ -7,31 +7,13 @@ import { deepClone } from "../../utils/flowUtils";
 export const updateNodeRecursively = (nodes, nodeId, updaterFn) => {
   if (!Array.isArray(nodes)) return nodes;
   let hasChanges = false;
-  const recursiveMap = (list) => {
-    return list.map((node) => {
-      if (node.id === nodeId) {
-        hasChanges = true;
-        return updaterFn(deepClone(node));
-      }
-      if (
-        (node.type === "component" || node.data?.type === "component") &&
-        node.data?.subFlow?.nodes
-      ) {
-        const oldSubNodes = node.data.subFlow.nodes;
-        const newSubNodes = recursiveMap(oldSubNodes);
-        if (oldSubNodes !== newSubNodes) {
-          hasChanges = true;
-          const clonedNode = deepClone(node);
-          clonedNode.data = clonedNode.data || {};
-          clonedNode.data.subFlow = clonedNode.data.subFlow || {};
-          clonedNode.data.subFlow.nodes = newSubNodes;
-          return clonedNode;
-        }
-      }
-      return node;
-    });
-  };
-  const result = recursiveMap(nodes);
+  const result = nodes.map((node) => {
+    if (node.id === nodeId) {
+      hasChanges = true;
+      return updaterFn(deepClone(node));
+    }
+    return node;
+  });
   return hasChanges ? result : nodes;
 };
 
@@ -41,7 +23,6 @@ export const updateNodeRecursively = (nodes, nodeId, updaterFn) => {
 export const resetExecutionStatesRecursively = (list) => {
   if (!Array.isArray(list)) return list;
   return list.map((node) => {
-    // Perform deep clone to avoid mutating live reference objects in nodesRef.current or subFlow
     const newNode = deepClone(node);
 
     newNode.data = {
@@ -54,22 +35,6 @@ export const resetExecutionStatesRecursively = (list) => {
     };
     newNode.style = getNodeStyle(NODE_STATES.DEFAULT, newNode.style);
 
-    if (newNode.data?.subFlow?.edges) {
-      newNode.data.subFlow.edges = newNode.data.subFlow.edges.map((e) => ({
-        ...e,
-        animated: false,
-        data: { ...(e.data || {}), executionState: "default" },
-      }));
-    }
-
-    const isContainer = ["component", "loop", "for_each"].includes(
-      newNode.type || newNode.data?.type,
-    );
-    if (isContainer && newNode.data?.subFlow?.nodes) {
-      newNode.data.subFlow.nodes = resetExecutionStatesRecursively(
-        newNode.data.subFlow.nodes,
-      );
-    }
     return newNode;
   });
 };

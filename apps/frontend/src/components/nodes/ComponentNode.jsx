@@ -16,7 +16,11 @@ import {
   Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { NODE_TYPE_MAP, CATEGORY_STYLES, getColorHex } from "@/config/nodeConstants";
+import {
+  NODE_TYPE_MAP,
+  CATEGORY_STYLES,
+  getColorHex,
+} from "@/config/nodeConstants";
 import { NODE_STATES } from "../hooks/flowStyles";
 
 const ComponentNode = ({ id, data, selected }) => {
@@ -63,7 +67,7 @@ const ComponentNode = ({ id, data, selected }) => {
   const showDetails = zoom > 0.5;
 
   // 4. Sub-flow Stats
-  const subNodeCount = data.nodeCount ?? (data.subFlow?.nodes?.length || 0);
+  const subNodeCount = data.nodeCount || 0;
 
   const { color: statusColor, shadow: statusShadow } =
     isSuccess || isError
@@ -80,7 +84,12 @@ const ComponentNode = ({ id, data, selected }) => {
       style={{
         borderColor: statusColor || undefined,
         boxShadow: statusShadow || undefined,
-        ...(isRunning ? { boxShadow: `0 0 0 4px ${getColorHex(colorKey)}33`, borderColor: getColorHex(colorKey) } : {}),
+        ...(isRunning
+          ? {
+              boxShadow: `0 0 0 4px ${getColorHex(colorKey)}33`,
+              borderColor: getColorHex(colorKey),
+            }
+          : {}),
       }}
       className={cn(
         "group relative min-w-[160px] max-w-[300px] rounded-lg p-3 transition-[background,border,box-shadow,transform] duration-400 select-none border-[2px]",
@@ -222,8 +231,7 @@ function arePropsEqual(prevProps, nextProps) {
     prevProps.data?.state === nextProps.data?.state &&
     prevProps.data?.label === nextProps.data?.label &&
     prevProps.data?.customLabel === nextProps.data?.customLabel &&
-    prevProps.data?.nodeCount === nextProps.data?.nodeCount &&
-    prevProps.data?.subFlow === nextProps.data?.subFlow
+    prevProps.data?.nodeCount === nextProps.data?.nodeCount
   );
 }
 

@@ -3,6 +3,7 @@ import { logger } from "../../utils/logger";
 import { api } from "../../utils/api";
 import { useExecutionStore } from "../../stores/useExecutionStore";
 import { projectManager } from "../../utils/ProjectManager";
+import { subFlowCache } from "../../utils/subFlowCache";
 import { useSettings } from "../../context/SettingsContext";
 import {
   NODE_LABELS,
@@ -25,7 +26,6 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 export const resetExecutionStatesRecursively = (list) => {
   if (!Array.isArray(list)) return list;
   return list.map((node) => {
-    // Perform deep clone to avoid mutating live reference objects in nodesRef.current or subFlow
     const newNode = deepClone(node);
 
     newNode.data = {
@@ -38,22 +38,6 @@ export const resetExecutionStatesRecursively = (list) => {
     };
     newNode.style = getNodeStyle(NODE_STATES.DEFAULT, newNode.style);
 
-    if (newNode.data?.subFlow?.edges) {
-      newNode.data.subFlow.edges = newNode.data.subFlow.edges.map((e) => ({
-        ...e,
-        animated: false,
-        data: { ...(e.data || {}), executionState: "default" },
-      }));
-    }
-
-    const isContainer = ["component", "loop", "for_each"].includes(
-      newNode.type || newNode.data?.type,
-    );
-    if (isContainer && newNode.data?.subFlow?.nodes) {
-      newNode.data.subFlow.nodes = resetExecutionStatesRecursively(
-        newNode.data.subFlow.nodes,
-      );
-    }
     return newNode;
   });
 };
@@ -85,7 +69,7 @@ export function useFlowExecution({
   const [activeBrowserId, setActiveBrowserId] = useState(null);
   const [activeRunId, setActiveRunId] = useState(null);
 
-  const { autoHealingEnabled } = useSettings();
+  const { effectiveAutoHealingEnabled } = useSettings();
 
   const isReadOnly = useMemo(
     () => apiStatus.state === "running",
@@ -345,7 +329,7 @@ export function useFlowExecution({
       });
 
       const startTime = Date.now();
-      const maxActionAttempts = autoHealingEnabled ? MAX_RETRIES : 1;
+      const maxActionAttempts = effectiveAutoHealingEnabled ? MAX_RETRIES : 1;
       for (let attempt = 0; attempt < maxActionAttempts; attempt++) {
         if (executionAbortController.current?.signal.aborted) {
           updateNodeState(nodeId, NODE_STATES.SKIPPED);
@@ -480,7 +464,7 @@ export function useFlowExecution({
       updateNodeScreenshot,
       captureScreenshot,
       addLog,
-      autoHealingEnabled,
+      effectiveAutoHealingEnabled,
     ],
   );
 
@@ -654,6 +638,7 @@ export function useFlowExecution({
       try {
         executionAbortController.current = new AbortController();
         resetExecutionStates();
+        subFlowCache.invalidateAll(currentProject.id);
 
         if (!options.nodes) {
           const draftMode = useExecutionStore.getState().draftMode;
@@ -710,14 +695,12 @@ export function useFlowExecution({
 
         setApiStatus({ state: "loading", message: "Preparing execution..." });
 
-        // Cache for subflows fetched during this execution run
-        const subFlowCache = new Map();
         const getSubFlowCached = async (projectId, flowId) => {
-          if (!subFlowCache.has(flowId)) {
-            const flow = await projectManager.getFlow(projectId, flowId);
-            subFlowCache.set(flowId, flow);
-          }
-          return subFlowCache.get(flowId);
+          return subFlowCache.get(
+            projectId,
+            flowId,
+            (pId, fId) => projectManager.getFlow(pId, fId),
+          );
         };
 
         const executeGraph = async (

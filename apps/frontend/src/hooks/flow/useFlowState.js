@@ -14,6 +14,7 @@ import { wouldCreateCycle } from "../../utils/flowUtils";
 import { calculateDesignTimeContext } from "../../utils/graphPropagation";
 import { getLayoutedElements } from "../../utils/layoutUtils";
 import { projectManager } from "../../utils/ProjectManager";
+import { subFlowCache } from "../../utils/subFlowCache";
 import { logger } from "../../utils/logger";
 import {
   useCollaboration,
@@ -50,26 +51,6 @@ export const updateNodeRecursively = (nodes, nodeId, updater) => {
     if (node.id === targetId) {
       hasChanges = true;
       return updater(node);
-    }
-    if (node.data?.subFlow?.nodes) {
-      const nextSubNodes = updateNodeRecursively(
-        node.data.subFlow.nodes,
-        nodeId,
-        updater,
-      );
-      if (nextSubNodes !== node.data.subFlow.nodes) {
-        hasChanges = true;
-        return {
-          ...node,
-          data: {
-            ...node.data,
-            subFlow: {
-              ...node.data.subFlow,
-              nodes: nextSubNodes,
-            },
-          },
-        };
-      }
     }
     return node;
   });
@@ -450,6 +431,52 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
     [setNodes],
   );
 
+  // Adds a component node that references an EXISTING flow (reuse, not new copy).
+  const addComponentRef = useCallback(
+    (existingFlowId, position, existingFlow = {}) => {
+      if (!existingFlowId) return null;
+      // Guard: prevent re-adding a reference to a flow already on screen
+      const alreadyPresent = nodesRef.current.some(
+        (n) =>
+          (n.type === "component" || n.data?.type === "component") &&
+          (n.data?.flowId === existingFlowId ||
+            n.data?.configuration?.flowId === existingFlowId),
+      );
+      if (alreadyPresent) return null;
+
+      const componentName =
+        existingFlow.name || `Component ${new Date().toLocaleTimeString()}`;
+      const componentId = generateNodeId();
+      const nodeCount = existingFlow.nodeCount ?? 0;
+
+      const componentNode = {
+        id: componentId,
+        type: "component",
+        position: position || { x: 0, y: 0 },
+        data: {
+          label: componentName,
+          type: "component",
+          flowId: existingFlowId,
+          configuration: {
+            flowId: existingFlowId,
+          },
+          nodeCount,
+          hasInput: existingFlow.hasInput ?? false,
+          hasOutput: existingFlow.hasOutput ?? false,
+        },
+        style: getNodeStyle ? getNodeStyle(NODE_STATES.DEFAULT) : {},
+      };
+
+      setNodes((nds) => [...nds, componentNode]);
+      setHasUnsavedChanges(true);
+      if (currentProject?.id) {
+        subFlowCache.invalidate(currentProject.id, currentFlowId);
+      }
+      return componentNode;
+    },
+    [setNodes, currentProject, currentFlowId],
+  );
+
   const deleteNode = useCallback(
     (nodeId) => {
       saveToHistory();
@@ -707,6 +734,8 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
         if (!newFlow || !newFlow.id)
           throw new Error("Failed to create component flow");
 
+        subFlowCache.invalidate(activeProject.id, activeFlowId);
+
         // REFRESH PROJECT DATA (Optimistic Update for Instant UI)
         if (activeQueryClient) {
           if (response?.project) {
@@ -751,7 +780,6 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
             nodeCount: subNodes.length,
             hasInput: subNodes.some((n) => n.type === "input"),
             hasOutput: subNodes.some((n) => n.type === "output"),
-            subFlow: { nodes: subNodes, edges: finalSubEdges }, // Include edges for stats and restoration
           },
           style: getNodeStyle ? getNodeStyle(NODE_STATES.DEFAULT) : {},
         };
@@ -972,6 +1000,8 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
         if (!newFlow || !newFlow.id)
           throw new Error("Failed to create loop flow");
 
+        subFlowCache.invalidate(activeProject.id, activeFlowId);
+
         // REFRESH PROJECT DATA
         if (activeQueryClient) {
           if (response?.project) {
@@ -1014,7 +1044,6 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
             nodeCount: subNodes.length,
             hasInput: subNodes.some((n) => n.type === "input"),
             hasOutput: subNodes.some((n) => n.type === "output"),
-            subFlow: { nodes: subNodes, edges: finalSubEdges },
           },
           style: getNodeStyle ? getNodeStyle(NODE_STATES.DEFAULT) : {},
         };
@@ -1145,30 +1174,42 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
       const node = processedNodes[i];
       if (
         (node.type === "component" || node.data?.type === "component") &&
-        node.data?.subFlow &&
         !node.data?.flowId
       ) {
         try {
           const flowName = node.data.label || "Sub Flow";
-          const response = await projectManager.createFlow(projectId, flowName);
+          // V2 fallback: if the export embedded the sub-flow content inline
+          // (data.subFlow.nodes/edges), materialize it into a real Flow row
+          // instead of creating an empty flow.
+          const embeddedSubFlow = node.data.subFlow;
+          const createOpts = {};
+          if (
+            embeddedSubFlow &&
+            (Array.isArray(embeddedSubFlow.nodes) ||
+              Array.isArray(embeddedSubFlow.edges))
+          ) {
+            createOpts.nodes = embeddedSubFlow.nodes || [];
+            createOpts.edges = embeddedSubFlow.edges || [];
+          }
+          const response = await projectManager.createFlow(
+            projectId,
+            flowName,
+            createOpts,
+          );
           const newFlowId = response.flow?.id || response.id;
 
-          await projectManager.updateFlow(projectId, newFlowId, {
-            nodes: node.data.subFlow.nodes || [],
-            edges: node.data.subFlow.edges || [],
-            viewport: node.data.subFlow.viewport || { x: 0, y: 0, zoom: 1 },
-          });
+          const cleanData = { ...node.data };
+          delete cleanData.subFlow;
 
           processedNodes[i] = {
             ...node,
             data: {
-              ...node.data,
+              ...cleanData,
               flowId: newFlowId,
               configuration: {
-                ...node.data?.configuration,
+                ...cleanData?.configuration,
                 flowId: newFlowId,
               },
-              subFlow: undefined,
             },
           };
         } catch (err) {
@@ -1363,14 +1404,18 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
 
       saveToHistory();
 
-      let subFlow = componentNode.data?.subFlow;
       const flowId = componentNode.data?.flowId;
+      let subFlow = null;
 
-      if (
-        (!subFlow || !subFlow.nodes || subFlow.nodes.length === 0) &&
-        flowId &&
-        currentProject?.flows
-      ) {
+      if (flowId && currentProject?.id) {
+        subFlow = await subFlowCache.get(
+          currentProject.id,
+          flowId,
+          (projectId, fId) => projectManager.getFlow(projectId, fId),
+        );
+      }
+
+      if (!subFlow && flowId && currentProject?.flows) {
         const matchingFlow = currentProject.flows.find((f) => f.id === flowId);
         if (matchingFlow) {
           subFlow = {
@@ -1850,6 +1895,7 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
     onConnect,
     onNodeClick,
     addNode,
+    addComponentRef,
     deleteNode,
     canUndo: history.past.length > 0,
     canRedo: history.future.length > 0,

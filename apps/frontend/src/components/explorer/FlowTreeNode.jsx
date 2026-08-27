@@ -113,6 +113,15 @@ export default function FlowTreeNode({
   const handleDragStart = (e) => {
     e.dataTransfer.setData("application/flow-id", flow.id);
     e.dataTransfer.setData("application/flow-parent-id", flow.parentId || "");
+    e.dataTransfer.setData(
+      "application/reactflow",
+      JSON.stringify({
+        nodeType: "component",
+        flowId: flow.id,
+        flowName: flow.name,
+        flowNodeCount: flow.nodeCount ?? 0,
+      }),
+    );
     e.dataTransfer.effectAllowed = "move";
     setIsDragging(true);
   };

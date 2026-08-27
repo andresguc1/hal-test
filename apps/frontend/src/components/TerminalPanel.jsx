@@ -401,11 +401,7 @@ export default function TerminalPanel({
           const nodeType = node.data?.type || node.type;
           const subNodes = node.data?.subNodes || [];
 
-          // Try to get subNodes from: canvas children → subFlow snapshot
           let effectiveSubNodes = subNodes;
-          if (subNodes.length === 0 && node.data?.subFlow?.nodes) {
-            effectiveSubNodes = node.data.subFlow.nodes;
-          }
 
           const flowId = node.data?.configuration?.flowId || node.data?.flowId;
 
@@ -424,7 +420,6 @@ export default function TerminalPanel({
             isContainer: isContainer(nodeType),
           });
 
-          // Container node without subNodes but with flowId → needs DB resolution
           if (
             isContainer(nodeType) &&
             effectiveSubNodes.length === 0 &&

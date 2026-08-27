@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { projectManager } from "../../utils/ProjectManager";
+import { subFlowCache } from "../../utils/subFlowCache";
 import { api } from "../../utils/api";
 import { logger } from "../../utils/logger";
 
@@ -109,6 +110,7 @@ export function useProjectManager() {
       projectManager.createFlow(projectId, name, options),
     onSuccess: (response, { projectId }) => {
       const newFlow = response.flow || response;
+      subFlowCache.invalidateAll(projectId);
 
       // 1. Instant UI Update with response data
       if (response && response.project) {
@@ -147,6 +149,7 @@ export function useProjectManager() {
     mutationFn: ({ projectId, flowId, updates }) =>
       projectManager.updateFlow(projectId, flowId, updates),
     onSuccess: (updatedFlow, { projectId, flowId }) => {
+      subFlowCache.invalidate(projectId, flowId);
       // 1. Instant UI Update for nested item
       if (updatedFlow) {
         queryClient.setQueryData(["project", projectId], (oldProject) => {

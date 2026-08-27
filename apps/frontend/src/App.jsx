@@ -27,6 +27,7 @@ import StyledMiniMap from "./components/StyledMiniMap";
 import { nodeTypes } from "./components/nodes";
 import CustomConnectionLine from "./components/CustomConnectionLine";
 import CustomEdge from "./components/edges/CustomEdge";
+import { subFlowCache } from "./utils/subFlowCache";
 // import ApiKeysModal from "./components/APIKeysModal"; // Deprecated
 import SettingsModal from "./components/SettingsModal";
 import { useSettings } from "./context/SettingsContext";
@@ -194,6 +195,7 @@ function Dashboard({
     setNodes,
     setEdges,
     addNode,
+    addComponentRef,
     copyElements,
     pasteElements,
     cutElements,
@@ -1239,7 +1241,51 @@ function Dashboard({
             );
           }
 
-          if (flowData && (flowData.nodes || flowData.edges)) {
+          if (flowData && (flowData.nodes || flowData.edges || flowData.flow)) {
+            // V3 PACKAGE IMPORT: flow + dependencies (self-contained components)
+            if (
+              flowData.meta?.version?.startsWith("3.") ||
+              (flowData.flow && flowData.dependencies)
+            ) {
+              const projectId = currentProject?.id;
+              if (!projectId) {
+                toast.error(
+                  t("common.no_active_project", "No active project."),
+                );
+                return;
+              }
+              try {
+                const result = await api.post(
+                  `/import/flow-package/${projectId}`,
+                  {
+                    flow: flowData.flow,
+                    dependencies: flowData.dependencies,
+                  },
+                );
+                if (result?.success && result?.flow) {
+                  setNodes(result.flow.nodes || []);
+                  setEdges(result.flow.edges || []);
+                  if (result.flow.viewport) setViewport(result.flow.viewport);
+                  subFlowCache.invalidateAll(projectId);
+                  if (result.flow.id) switchFlow(result.flow.id);
+                  toast.success(
+                    `✓ Imported flow with ${result.components?.length || 0} component(s)`,
+                  );
+                } else {
+                  throw new Error(result?.message || "Import failed");
+                }
+              } catch (err) {
+                console.error("[Import] V3 package import failed:", err);
+                toast.error(
+                  `Import failed: ${
+                    err.message || "Could not restore components"
+                  }`,
+                );
+              }
+              setIsImportDialogOpen(false);
+              return;
+            }
+
             // VERSION CHECK
             if (flowData.meta && flowData.meta.version) {
               const version = flowData.meta.version;
@@ -1314,6 +1360,8 @@ function Dashboard({
                 edges: flowEdges,
               });
 
+              subFlowCache.invalidateAll(projectId);
+
               const newFlowId = newFlow.id || newFlow.flow?.id;
               if (newFlowId) {
                 switchFlow(newFlowId);
@@ -1378,6 +1426,8 @@ function Dashboard({
           toast.success(
             `✓ Successfully imported and persisted ${successCount} flows.`,
           );
+
+          subFlowCache.invalidateAll(projectId);
 
           if (firstFlowId) {
             switchFlow(firstFlowId);
@@ -1633,20 +1683,49 @@ function Dashboard({
     (event) => {
       event.preventDefault();
 
-      const type = event.dataTransfer.getData("application/reactflow");
-      if (!type) return;
+      const rawType = event.dataTransfer.getData("application/reactflow");
+      if (!rawType) return;
 
-      // Convert screen coordinates to flow coordinates
       const flowPosition = screenToFlowPosition({
         x: event.clientX,
         y: event.clientY,
       });
 
-      // Add node at the drop position
-      addNode(type, flowPosition);
-      trackNodeUsage(type);
+      // Explorer -> Canvas: existing flow as reusable component reference
+      let componentDrop = null;
+      if (rawType.startsWith("{")) {
+        try {
+          componentDrop = JSON.parse(rawType);
+        } catch {
+          componentDrop = null;
+        }
+      }
+      if (componentDrop && componentDrop.nodeType === "component") {
+        const existingFlow = currentProject?.flows?.find(
+          (f) => f.id === componentDrop.flowId,
+        );
+        const node = addComponentRef(
+          componentDrop.flowId,
+          flowPosition,
+          existingFlow || {
+            name: componentDrop.flowName,
+            nodeCount: componentDrop.flowNodeCount,
+          },
+        );
+        if (!node) return;
+        toast.info(
+          existingFlow
+            ? `Reusing component: ${existingFlow.name}`
+            : "Component reference added",
+        );
+        return;
+      }
+
+      // Toolbox -> Canvas: brand new node
+      addNode(rawType, flowPosition);
+      trackNodeUsage(rawType);
     },
-    [addNode, screenToFlowPosition, trackNodeUsage],
+    [addNode, addComponentRef, currentProject, screenToFlowPosition, toast],
   );
 
   const onNodeDragStop = useCallback((_event, node) => {
@@ -1783,11 +1862,9 @@ function Dashboard({
                 ? subFlow.nodeCount
                 : subFlow.nodes?.length || 0;
             const hasInput =
-              subFlow.nodes?.some((n) => n.type === "input") ||
-              node.data?.hasInput;
+              subFlow.hasInput ?? node.data?.hasInput;
             const hasOutput =
-              subFlow.nodes?.some((n) => n.type === "output") ||
-              node.data?.hasOutput;
+              subFlow.hasOutput ?? node.data?.hasOutput;
 
             if (
               node.data?.nodeCount !== nodeCount ||
@@ -2491,6 +2568,7 @@ function Dashboard({
           nodes={nodes}
           edges={edges}
           projectId={currentProject?.id}
+          flowId={currentFlowId}
         />
 
         <MetricsDashboardModal

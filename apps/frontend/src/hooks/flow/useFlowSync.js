@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import { useQueryClient } from "@tanstack/react-query";
 import { logger } from "../../utils/logger";
 import { projectManager } from "../../utils/ProjectManager";
+import { subFlowCache } from "../../utils/subFlowCache";
 import { debounce, deepClone } from "../../utils/flowUtils";
 import { STARTER_TEMPLATE } from "../../config/starterTemplate";
 import { useCollaboration } from "../../collaboration";
@@ -115,6 +116,8 @@ export function useFlowSync({
           targetFlowId,
           flowData,
         );
+
+        subFlowCache.invalidate(targetProjectId, targetFlowId);
 
         // Invalidate query to keep global project state (and derived flow names) in sync
         queryClient.invalidateQueries({
@@ -419,9 +422,8 @@ export function useFlowSync({
         }
 
         await saveFlow(true);
+        subFlowCache.invalidate(currentProject?.id, currentFlowId);
         const flowName =
-          currentProject?.flows?.find((f) => f.id === currentFlowId)?.name ||
-          "Flow";
 
         setViewStack((prev) => [
           ...prev,
@@ -459,6 +461,7 @@ export function useFlowSync({
       try {
         if (viewStack.length === 0) return;
         await saveFlow(true);
+        subFlowCache.invalidate(currentProject?.id, currentFlowId);
         // Support indexed exit: if targetIndex provided, truncate stack to that point
         const newLength =
           typeof targetIndex === "number" ? targetIndex : viewStack.length - 1;
