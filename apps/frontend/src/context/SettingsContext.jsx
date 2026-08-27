@@ -177,11 +177,10 @@ export const SettingsProvider = ({ children }) => {
   // Auto Save
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
 
-  useEffect(() => {
-    if (!isAIConfigured && autoHealingEnabled) {
-      setAutoHealingEnabled(false);
-    }
-  }, [isAIConfigured, autoHealingEnabled]);
+  // Effective auto-healing gated by AI configuration.
+  // The raw autoHealingEnabled above is the USER'S persisted preference and is
+  // never mutated here, so it survives restarts without being clobbered to false.
+  const effectiveAutoHealingEnabled = isAIConfigured && autoHealingEnabled;
 
   useEffect(() => {
     localStorage.setItem(
@@ -230,6 +229,7 @@ export const SettingsProvider = ({ children }) => {
         loadVaultKeys,
         autoHealingEnabled,
         setAutoHealingEnabled,
+        effectiveAutoHealingEnabled,
         autoHealingRetryLimit,
         setAutoHealingRetryLimit,
         autoSaveEnabled,
