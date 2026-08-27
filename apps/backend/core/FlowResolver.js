@@ -105,7 +105,7 @@ class FlowResolver {
             const flow = await Flow.findOne({
                 where: { id: flowRef, projectId },
                 include: [
-                    { model: Node, as: 'nodes' },
+                    { model: Node, as: 'nodes', order: [['order', 'ASC']] },
                     { model: Edge, as: 'edges' },
                 ],
             });

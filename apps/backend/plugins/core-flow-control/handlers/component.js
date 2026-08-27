@@ -27,7 +27,7 @@ const componentAction = async (req, res) => {
 
         const subflow = await Flow.findByPk(flowId, {
             include: [
-                { model: Node, as: 'nodes' },
+                { model: Node, as: 'nodes', order: [['order', 'ASC']] },
                 { model: Edge, as: 'edges' },
             ],
         });

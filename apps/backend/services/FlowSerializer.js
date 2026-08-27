@@ -20,7 +20,7 @@ class FlowSerializer {
         const flow = await Flow.findOne({
             where: whereClause,
             include: [
-                { model: Node, as: 'nodes' },
+                { model: Node, as: 'nodes', order: [['order', 'ASC']] },
                 { model: Edge, as: 'edges' },
             ],
         });
@@ -61,16 +61,21 @@ class FlowSerializer {
             await Edge.destroy({ where: { flowId: flow.id }, transaction });
 
             if (flowJson.nodes && flowJson.nodes.length > 0) {
-                const nodeRecords = flowJson.nodes.map((n) => ({
+                const nodeRecords = flowJson.nodes.map((n, idx) => ({
                     nodeId: n.id,
                     type: n.type,
                     data: n.data || {},
                     position: n.position || { x: 0, y: 0 },
                     flowId: flow.id,
                     parentId: n.parentId || null,
+                    order: idx,
                 }));
 
                 await Node.bulkCreate(nodeRecords, { transaction });
+
+                const hasInput = flowJson.nodes.some((n) => n.type === 'input');
+                const hasOutput = flowJson.nodes.some((n) => n.type === 'output');
+                await flow.update({ hasInput, hasOutput }, { transaction });
             }
 
             if (flowJson.edges && flowJson.edges.length > 0) {
@@ -163,7 +168,7 @@ class FlowSerializer {
         const dbFlows = await Flow.findAll({
             where: { projectId },
             include: [
-                { model: Node, as: 'nodes' },
+                { model: Node, as: 'nodes', order: [['order', 'ASC']] },
                 { model: Edge, as: 'edges' },
             ],
         });

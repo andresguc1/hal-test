@@ -35,6 +35,11 @@ const Node = sequelize.define(
             type: DataTypes.STRING,
             allowNull: true,
         },
+        order: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            defaultValue: 0,
+        },
     },
 
     {

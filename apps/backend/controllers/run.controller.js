@@ -581,6 +581,7 @@ export const startPerformanceRunAction = async (req, res) => {
                         position: n.position || { x: 0, y: 0 },
                         flowId,
                         parentId: n.parentId || null,
+                        order: idx,
                     })),
                 );
                 if (edges && Array.isArray(edges)) {
@@ -610,7 +611,7 @@ export const startPerformanceRunAction = async (req, res) => {
         // Fetch flow with updated nodes and edges for the runner
         const fetchedFlow = await Flow.findByPk(flowId, {
             include: [
-                { model: Node, as: 'nodes' },
+                { model: Node, as: 'nodes', order: [['order', 'ASC']] },
                 { model: Edge, as: 'edges' },
             ],
         });

@@ -40,6 +40,16 @@ const Flow = sequelize.define(
             type: DataTypes.STRING,
             allowNull: true,
         },
+        hasInput: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: false,
+        },
+        hasOutput: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: false,
+        },
     },
     {
         timestamps: true,

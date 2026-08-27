@@ -310,7 +310,7 @@ router.post('/flows/:flowId/resolve', async (req, res) => {
         const flow = await Flow.findOne({
             where: { id: flowId, projectId },
             include: [
-                { model: Node, as: 'nodes' },
+                { model: Node, as: 'nodes', order: [['order', 'ASC']] },
                 { model: Edge, as: 'edges' },
             ],
         });

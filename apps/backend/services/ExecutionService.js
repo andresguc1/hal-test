@@ -46,7 +46,7 @@ export class ExecutionService {
         const flow = await Flow.findOne({
             where: whereClause,
             include: [
-                { model: Node, as: 'nodes' },
+                { model: Node, as: 'nodes', order: [['order', 'ASC']] },
                 { model: Edge, as: 'edges' },
             ],
         });
@@ -412,7 +412,7 @@ export class ExecutionService {
                 const subFlow = await Flow.findOne({
                     where: { id: flowId },
                     include: [
-                        { model: Node, as: 'nodes' },
+                        { model: Node, as: 'nodes', order: [['order', 'ASC']] },
                         { model: Edge, as: 'edges' },
                     ],
                 });
@@ -1348,7 +1348,7 @@ export class ExecutionService {
             const subFlow = await Flow.findOne({
                 where: { id: flowId },
                 include: [
-                    { model: Node, as: 'nodes' },
+                    { model: Node, as: 'nodes', order: [['order', 'ASC']] },
                     { model: Edge, as: 'edges' },
                 ],
             });
@@ -1769,7 +1769,7 @@ export class ExecutionService {
             const subFlow = await Flow.findOne({
                 where: { id: flowId },
                 include: [
-                    { model: Node, as: 'nodes' },
+                    { model: Node, as: 'nodes', order: [['order', 'ASC']] },
                     { model: Edge, as: 'edges' },
                 ],
             });

@@ -105,12 +105,35 @@ const safeSync = async (options) => {
 
 // Health Check to detect missing columns in production (Render/Postgres)
 const checkSchemaHealth = async () => {
+    const isSqlite = sequelize.getDialect() === 'sqlite';
+
+    const ensureColumns = async (table, columns) => {
+        for (const col of columns) {
+            try {
+                if (isSqlite) {
+                    await sequelize.query(
+                        `ALTER TABLE "${table}" ADD COLUMN "${col.name}" ${col.definition}`,
+                        { logging: false },
+                    );
+                    console.log(` [DB_INIT] ➕ Added missing column: ${table}.${col.name}`);
+                } else {
+                    await sequelize.query(
+                        `ALTER TABLE "${table}" ADD COLUMN IF NOT EXISTS "${col.name}" ${col.definition}`,
+                        { logging: false },
+                    );
+                    console.log(` [DB_INIT] ➕ Ensured column: ${table}.${col.name}`);
+                }
+            } catch (e) {
+                // Column already exists — ignore
+            }
+        }
+    };
+
     try {
         console.log(' [DB_INIT] Running schema health check...');
+
         // Check critical new columns that often cause 500s if missing
-        await sequelize.query('SELECT "parentId" FROM "Nodes" LIMIT 1', {
-            logging: false,
-        });
+        await sequelize.query('SELECT "parentId" FROM "Nodes" LIMIT 1', { logging: false });
         await sequelize.query('SELECT "batch_id" FROM "execution_runs" LIMIT 1', {
             logging: false,
         });
@@ -120,18 +143,15 @@ const checkSchemaHealth = async () => {
         await sequelize.query('SELECT "nodeId" FROM "ExperienceVaults" LIMIT 1', {
             logging: false,
         });
-        await sequelize.query('SELECT "createdAt" FROM "step_results" LIMIT 1', {
-            logging: false,
-        });
+        await sequelize.query('SELECT "createdAt" FROM "step_results" LIMIT 1', { logging: false });
         await sequelize.query('SELECT "collaborationEnabled" FROM "Projects" LIMIT 1', {
             logging: false,
         });
-        await sequelize.query('SELECT "role" FROM "CollaboratorRoles" LIMIT 1', {
-            logging: false,
-        });
-        await sequelize.query('SELECT "flowId" FROM "execution_locks" LIMIT 1', {
-            logging: false,
-        });
+        await sequelize.query('SELECT "role" FROM "CollaboratorRoles" LIMIT 1', { logging: false });
+        await sequelize.query('SELECT "flowId" FROM "execution_locks" LIMIT 1', { logging: false });
+        await sequelize.query('SELECT "hasInput" FROM "Flows" LIMIT 1', { logging: false });
+        await sequelize.query('SELECT "hasOutput" FROM "Flows" LIMIT 1', { logging: false });
+        await sequelize.query('SELECT "order" FROM "Nodes" LIMIT 1', { logging: false });
         await sequelize.query('SELECT "data_leak_score" FROM "security_compliance_runs" LIMIT 1', {
             logging: false,
         });
@@ -148,9 +168,40 @@ const checkSchemaHealth = async () => {
 
         if (isMissingColumn) {
             console.warn(
-                ' [DB_INIT] ⚠️ Schema mismatch detected via health check. Attempting auto-fix with { alter: true }...',
+                ' [DB_INIT] ⚠️ Schema mismatch detected via health check. Adding missing columns via raw SQL...',
             );
-            await safeSync({ alter: true });
+            await ensureColumns('Nodes', [
+                { name: 'parentId', definition: 'VARCHAR(255)' },
+                { name: 'order', definition: 'INTEGER NOT NULL DEFAULT 0' },
+            ]);
+            await ensureColumns('Flows', [
+                { name: 'hasInput', definition: 'BOOLEAN NOT NULL DEFAULT 0' },
+                { name: 'hasOutput', definition: 'BOOLEAN NOT NULL DEFAULT 0' },
+            ]);
+            await ensureColumns('execution_runs', [
+                { name: 'batch_id', definition: 'VARCHAR(255)' },
+                { name: 'project_id', definition: 'VARCHAR(255)' },
+            ]);
+            await ensureColumns('ExperienceVaults', [
+                { name: 'nodeId', definition: 'VARCHAR(255)' },
+            ]);
+            await ensureColumns('step_results', [{ name: 'createdAt', definition: 'DATETIME' }]);
+            await ensureColumns('Projects', [
+                { name: 'collaborationEnabled', definition: 'BOOLEAN DEFAULT 0' },
+            ]);
+            await ensureColumns('CollaboratorRoles', [
+                { name: 'role', definition: "VARCHAR(50) DEFAULT 'editor'" },
+            ]);
+            await ensureColumns('execution_locks', [
+                { name: 'flowId', definition: 'VARCHAR(255)' },
+            ]);
+            await ensureColumns('security_compliance_runs', [
+                { name: 'data_leak_score', definition: 'INTEGER DEFAULT 0' },
+            ]);
+            await ensureColumns('security_compliance_results', [
+                { name: 'rule_id_code', definition: 'VARCHAR(255)' },
+            ]);
+
             console.log(' [DB_INIT] ✅ Database schema auto-corrected successfully.');
         } else {
             console.error(' [DB_INIT] ❌ Schema health check failed with unexpected error:', error);
@@ -206,6 +257,31 @@ export const initDb = async (_force = false) => {
 
         // Pre-flight Schema Health Check (especially for PostgreSQL/Production)
         await checkSchemaHealth();
+
+        // Backfill Node.order for existing rows (new column added with defaultValue: 0)
+        try {
+            await sequelize.query('UPDATE "Nodes" SET "order" = "id" - 1 WHERE "order" = 0', {
+                logging: false,
+            });
+        } catch (e) {
+            // Ignore if column doesn't exist yet (will be created by sync)
+        }
+
+        // Backfill Flow.hasInput/hasOutput for existing rows
+        try {
+            await sequelize.query(
+                `
+                UPDATE "Flows" SET "hasInput" = (
+                    SELECT COUNT(*) > 0 FROM "Nodes" WHERE "Nodes"."flowId" = "Flows"."id" AND "Nodes"."type" = 'input'
+                ), "hasOutput" = (
+                    SELECT COUNT(*) > 0 FROM "Nodes" WHERE "Nodes"."flowId" = "Flows"."id" AND "Nodes"."type" = 'output'
+                )
+            `,
+                { logging: false },
+            );
+        } catch (e) {
+            // Ignore if columns don't exist yet (will be created by sync)
+        }
 
         // Seed initial project if empty
         const count = await Project.count();

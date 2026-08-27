@@ -167,7 +167,7 @@ class TestRunnerService {
         const { executionLogger } = await import('./ExecutionLogger.js');
         const flow = await Flow.findByPk(flowId, {
             include: [
-                { model: Node, as: 'nodes' },
+                { model: Node, as: 'nodes', order: [['order', 'ASC']] },
                 { model: Edge, as: 'edges' },
             ],
         });
