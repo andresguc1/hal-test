@@ -1861,10 +1861,8 @@ function Dashboard({
               subFlow.nodeCount !== undefined
                 ? subFlow.nodeCount
                 : subFlow.nodes?.length || 0;
-            const hasInput =
-              subFlow.hasInput ?? node.data?.hasInput;
-            const hasOutput =
-              subFlow.hasOutput ?? node.data?.hasOutput;
+            const hasInput = subFlow.hasInput ?? node.data?.hasInput;
+            const hasOutput = subFlow.hasOutput ?? node.data?.hasOutput;
 
             if (
               node.data?.nodeCount !== nodeCount ||

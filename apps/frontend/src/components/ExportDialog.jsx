@@ -21,14 +21,7 @@ import JSZip from "jszip";
  *
  * Provides a comprehensive UI for exporting flows
  */
-const ExportDialog = ({
-  isOpen,
-  onClose,
-  nodes,
-  edges,
-  projectId,
-  flowId,
-}) => {
+const ExportDialog = ({ isOpen, onClose, nodes, edges, projectId, flowId }) => {
   const { t } = useTranslation();
   const [exportMode, setExportMode] = useState("json"); // 'json', 'code'
   const [framework, setFramework] = useState("playwright");

@@ -33,7 +33,10 @@ export const NODE_INPUTS = {
         { label: "📱 iPhone 14 Pro Max", value: "iPhone 14 Pro Max" },
         { label: "🤖 Pixel 7", value: "Pixel 7" },
         { label: "📱 Samsung Galaxy S22", value: "Samsung Galaxy S22" },
-        { label: "📱 Samsung Galaxy S20 Ultra", value: "Samsung Galaxy S20 Ultra" },
+        {
+          label: "📱 Samsung Galaxy S20 Ultra",
+          value: "Samsung Galaxy S20 Ultra",
+        },
         { label: "📱 iPad Mini", value: "iPad Mini" },
         { label: "📱 iPad Air", value: "iPad Air" },
         { label: "🖥️ iPad Pro", value: "iPad Pro" },

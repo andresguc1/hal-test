@@ -233,9 +233,11 @@ function CustomNode({ data, selected }) {
               "absolute flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-500 text-[10px] font-bold text-white shadow-lg border border-amber-400 z-10",
               isHealed ? "top-2 right-9" : "top-2 right-2",
             )}
-            title={data.selectorMeta.cardinality
-              ? "Selector uses positional index (may break if element order changes)"
-              : "Multiple elements match this selector - may cause strict mode violations"}
+            title={
+              data.selectorMeta.cardinality
+                ? "Selector uses positional index (may break if element order changes)"
+                : "Multiple elements match this selector - may cause strict mode violations"
+            }
           >
             <AlertTriangle size={10} fill="currentColor" />
             <span>{data.selectorMeta.cardinality ? "IDX" : "?"}</span>

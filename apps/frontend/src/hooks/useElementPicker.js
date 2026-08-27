@@ -390,9 +390,7 @@ export const useElementPicker = ({
         toast.success(t("common.selector_captured"));
 
         if (matchWarning) {
-          toast.warning(
-            t("common.selector_ambiguous_warning", matchWarning),
-          );
+          toast.warning(t("common.selector_ambiguous_warning", matchWarning));
         } else if (data.ambiguous) {
           toast.warning(
             t(

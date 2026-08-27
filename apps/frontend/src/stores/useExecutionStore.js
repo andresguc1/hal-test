@@ -76,7 +76,8 @@ export const useExecutionStore = create(
           currentNode: null,
           error: error || null,
           lastRunSummary: summary !== null ? summary : state.lastRunSummary,
-          lastPerfReport: perfReport !== null ? perfReport : state.lastPerfReport,
+          lastPerfReport:
+            perfReport !== null ? perfReport : state.lastPerfReport,
           lastSecurityReport:
             securityReport !== null ? securityReport : state.lastSecurityReport,
         })),

@@ -182,9 +182,13 @@ export const SelectorResultPanel = ({ selectorMeta, onApplyAlternative }) => {
           {isAmbiguous && (
             <span className="text-[9px] text-amber-400 shrink-0 flex items-center gap-0.5">
               {isCardinality ? (
-                <span title="Selector uses positional index (nth) - may break if element order changes">⚠ IDX</span>
+                <span title="Selector uses positional index (nth) - may break if element order changes">
+                  ⚠ IDX
+                </span>
               ) : (
-                <span title="Multiple elements match this selector">⚠ Ambiguous</span>
+                <span title="Multiple elements match this selector">
+                  ⚠ Ambiguous
+                </span>
               )}
             </span>
           )}

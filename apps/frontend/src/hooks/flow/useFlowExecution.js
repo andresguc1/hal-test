@@ -696,10 +696,8 @@ export function useFlowExecution({
         setApiStatus({ state: "loading", message: "Preparing execution..." });
 
         const getSubFlowCached = async (projectId, flowId) => {
-          return subFlowCache.get(
-            projectId,
-            flowId,
-            (pId, fId) => projectManager.getFlow(pId, fId),
+          return subFlowCache.get(projectId, flowId, (pId, fId) =>
+            projectManager.getFlow(pId, fId),
           );
         };
 
