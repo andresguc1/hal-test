@@ -184,7 +184,7 @@ const syncActiveFlowToDisk = async (nodes, edges, projectId) => {
                         const flow = await Flow.findOne({
                             where: { id: flowId, projectId },
                             include: [
-                                { model: Node, as: 'nodes' },
+                                { model: Node, as: 'nodes', order: [['order', 'ASC']] },
                                 { model: Edge, as: 'edges' },
                             ],
                         });
@@ -357,16 +357,21 @@ router.post('/projects', async (req, res) => {
 
         if (nodes && Array.isArray(nodes) && nodes.length > 0) {
             await Node.bulkCreate(
-                nodes.map((n) => ({
+                nodes.map((n, idx) => ({
                     nodeId: n.id,
                     type: n.type,
                     data: n.data,
                     position: n.position,
                     flowId: flow.id,
                     parentId: n.parentId || null,
+                    order: idx,
                 })),
                 { transaction },
             );
+
+            const hasInput = nodes.some((n) => n.type === 'input');
+            const hasOutput = nodes.some((n) => n.type === 'output');
+            await flow.update({ hasInput, hasOutput }, { transaction });
         }
 
         if (edges && Array.isArray(edges) && edges.length > 0) {
@@ -420,7 +425,7 @@ router.post('/projects/:projectId/flows/import-subflow', async (req, res) => {
         if (sourceFlowId) {
             const sourceFlow = await Flow.findByPk(sourceFlowId, {
                 include: [
-                    { model: Node, as: 'nodes' },
+                    { model: Node, as: 'nodes', order: [['order', 'ASC']] },
                     { model: Edge, as: 'edges' },
                 ],
             });
@@ -454,15 +459,20 @@ router.post('/projects/:projectId/flows/import-subflow', async (req, res) => {
 
         if (sourceNodes.length > 0) {
             await Node.bulkCreate(
-                sourceNodes.map((n) => ({
+                sourceNodes.map((n, idx) => ({
                     nodeId: n.nodeId || n.id,
                     type: n.type,
                     data: n.data,
                     position: n.position,
                     flowId: newFlow.id,
+                    order: idx,
                 })),
                 { transaction },
             );
+
+            const hasInput = sourceNodes.some((n) => n.type === 'input');
+            const hasOutput = sourceNodes.some((n) => n.type === 'output');
+            await newFlow.update({ hasInput, hasOutput }, { transaction });
         }
 
         if (sourceEdges.length > 0) {
@@ -842,16 +852,21 @@ router.post('/projects/:projectId/flows', async (req, res) => {
 
         if (nodes && Array.isArray(nodes)) {
             await Node.bulkCreate(
-                nodes.map((n) => ({
+                nodes.map((n, idx) => ({
                     nodeId: n.id,
                     type: n.type,
                     data: n.data,
                     position: n.position,
                     flowId: flow.id,
                     parentId: n.parentId || null,
+                    order: idx,
                 })),
                 { transaction },
             );
+
+            const hasInput = nodes.some((n) => n.type === 'input');
+            const hasOutput = nodes.some((n) => n.type === 'output');
+            await flow.update({ hasInput, hasOutput }, { transaction });
         }
 
         if (edges && Array.isArray(edges)) {
@@ -877,7 +892,7 @@ router.post('/projects/:projectId/flows', async (req, res) => {
         const createdFlowWithContent = await Flow.findOne({
             where: { id: flow.id },
             include: [
-                { model: Node, as: 'nodes' },
+                { model: Node, as: 'nodes', order: [['order', 'ASC']] },
                 { model: Edge, as: 'edges' },
             ],
         });
@@ -901,7 +916,7 @@ router.get('/projects/:projectId/flows/:flowId', async (req, res) => {
         const flow = await Flow.findOne({
             where: { id: flowId, projectId: projectId },
             include: [
-                { model: Node, as: 'nodes' },
+                { model: Node, as: 'nodes', order: [['order', 'ASC']] },
                 { model: Edge, as: 'edges' },
             ],
         });
@@ -934,7 +949,7 @@ router.get('/projects/:projectId/flows/:flowId/export', async (req, res) => {
         const mainFlow = await Flow.findOne({
             where: { id: flowId, projectId },
             include: [
-                { model: Node, as: 'nodes' },
+                { model: Node, as: 'nodes', order: [['order', 'ASC']] },
                 { model: Edge, as: 'edges' },
             ],
         });
@@ -963,10 +978,10 @@ router.get('/projects/:projectId/flows/:flowId/export', async (req, res) => {
             shouldSanitize,
         );
 
-        // 4. Construct V2 Package
+        // 4. Construct Self-Contained Package (v3)
         const exportPackage = {
             meta: {
-                version: '2.0',
+                version: '3.0.0',
                 exportedAt: new Date().toISOString(),
                 origin: 'Haltest-Enterprise',
                 author: 'User', // TODO: Get from Auth middleware
@@ -1065,7 +1080,7 @@ router.put('/projects/:projectId/flows/:flowId', async (req, res) => {
             // Strictly filter and sanitize incoming nodes to ensure they belong to this flowId
             const sanitizedNodes = nodes
                 .filter((n) => n && (n.id || n.nodeId))
-                .map((n) => {
+                .map((n, idx) => {
                     const nodeId = n.id || n.nodeId;
                     const nodeData = deepClonePayload(n.data || {});
 
@@ -1083,11 +1098,16 @@ router.put('/projects/:projectId/flows/:flowId', async (req, res) => {
                         position: n.position || { x: 0, y: 0 },
                         flowId: flow.id, // Strictly bind to route flow ID
                         parentId: n.parentId || null,
+                        order: idx,
                     };
                 });
 
             await Node.destroy({ where: { flowId: flow.id }, transaction });
             await Node.bulkCreate(sanitizedNodes, { transaction });
+
+            const hasInput = sanitizedNodes.some((n) => n.type === 'input');
+            const hasOutput = sanitizedNodes.some((n) => n.type === 'output');
+            await flow.update({ hasInput, hasOutput }, { transaction });
         }
 
         if (edges !== undefined) {
@@ -1117,7 +1137,7 @@ router.put('/projects/:projectId/flows/:flowId', async (req, res) => {
 
         const updatedFlow = await Flow.findByPk(flow.id, {
             include: [
-                { model: Node, as: 'nodes' },
+                { model: Node, as: 'nodes', order: [['order', 'ASC']] },
                 { model: Edge, as: 'edges' },
             ],
         });

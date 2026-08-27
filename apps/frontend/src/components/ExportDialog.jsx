@@ -21,7 +21,14 @@ import JSZip from "jszip";
  *
  * Provides a comprehensive UI for exporting flows
  */
-const ExportDialog = ({ isOpen, onClose, nodes, edges, projectId }) => {
+const ExportDialog = ({
+  isOpen,
+  onClose,
+  nodes,
+  edges,
+  projectId,
+  flowId,
+}) => {
   const { t } = useTranslation();
   const [exportMode, setExportMode] = useState("json"); // 'json', 'code'
   const [framework, setFramework] = useState("playwright");
@@ -158,76 +165,101 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges, projectId }) => {
     return roots;
   }, [nodes, edges]);
 
-  // Handle JSON export (Client-Side)
+  // Handle JSON export (Client-Side with server-side dependency resolution when available)
   const handleJsonExport = useCallback(async () => {
     setIsProcessing(true);
     setError(null);
     setProgress({ stage: "preparing", message: t("dialogs.export.preparing") });
 
     try {
-      // Deep Process Nodes: Fetch sub-flows
-      const processedNodes = await Promise.all(
-        nodes.map(async (n) => {
-          // Deep copy
-          const node = JSON.parse(JSON.stringify(n));
+      let exportData;
 
-          // If component, fetch its latest flow data from API to embed
-          if (
-            (node.type === "component" || node.data?.type === "component") &&
-            node.data?.flowId
-          ) {
-            try {
-              const subFlow = await api.get(
-                `/projects/${node.data.projectId || "active"}/flows/${node.data.flowId}`,
-              );
-              if (subFlow) {
-                node.data.subFlow = {
-                  name: subFlow.name,
-                  nodes: subFlow.nodes || [],
-                  edges: subFlow.edges || [],
-                };
+      // Preferred: use the server-side V3 package export which resolves
+      // component dependencies recursively (self-contained package).
+      if (projectId && flowId) {
+        try {
+          const pkg = await api.get(
+            `/projects/${projectId}/flows/${flowId}/export?sanitize=true`,
+          );
+          if (pkg && pkg.flow && pkg.dependencies) {
+            exportData = {
+              meta: {
+                version: "3.0.0",
+                timestamp: new Date().toISOString(),
+                source: "hal-9001",
+                flowName: pkg.flow.name || "Untitled Flow",
+              },
+              flow: pkg.flow,
+              dependencies: pkg.dependencies,
+            };
+          }
+        } catch (err) {
+          console.warn(
+            "[ExportDialog] Server export unavailable, falling back to client export",
+            err,
+          );
+        }
+      }
+
+      // Fallback: client-side V2 export with one-level-deep subFlow embedding
+      if (!exportData) {
+        const processedNodes = await Promise.all(
+          nodes.map(async (n) => {
+            const node = JSON.parse(JSON.stringify(n));
+
+            if (
+              (node.type === "component" || node.data?.type === "component") &&
+              node.data?.flowId
+            ) {
+              try {
+                const subFlow = await api.get(
+                  `/projects/${node.data.projectId || "active"}/flows/${node.data.flowId}`,
+                );
+                if (subFlow) {
+                  node.data.subFlow = {
+                    name: subFlow.name,
+                    nodes: subFlow.nodes || [],
+                    edges: subFlow.edges || [],
+                  };
+                }
+              } catch (err) {
+                console.warn(
+                  `Failed to fetch sub-flow ${node.data.flowId} for export`,
+                  err,
+                );
               }
-            } catch (err) {
-              console.warn(
-                `Failed to fetch sub-flow ${node.data.flowId} for export`,
-                err,
-              );
             }
-          }
 
-          // Sanitization: Remove API Keys if they exist in configuration
-          if (node.data?.configuration?.apiKey) {
-            delete node.data.configuration.apiKey;
-          }
-          // Remove execution state
-          if (node.data?.state) delete node.data.state;
-          if (node.data?.replayData) delete node.data.replayData;
+            if (node.data?.configuration?.apiKey) {
+              delete node.data.configuration.apiKey;
+            }
+            if (node.data?.state) delete node.data.state;
+            if (node.data?.replayData) delete node.data.replayData;
 
-          return node;
-        }),
-      );
+            return node;
+          }),
+        );
 
-      // Create the full export payload
-      const exportData = {
-        meta: {
-          version: "2.2.0", // Bumped version for Deep Export
-          timestamp: new Date().toISOString(),
-          source: "hal-9001",
-          flowName:
-            nodes.find((n) => n.type === "launch_browser")?.data?.label ||
-            "Untitled Flow",
-        },
-        nodes: processedNodes,
-        edges: edges,
-        viewport: { x: 0, y: 0, zoom: 1 },
-      };
+        exportData = {
+          meta: {
+            version: "2.2.0",
+            timestamp: new Date().toISOString(),
+            source: "hal-9001",
+            flowName:
+              nodes.find((n) => n.type === "launch_browser")?.data?.label ||
+              "Untitled Flow",
+          },
+          nodes: processedNodes,
+          edges,
+          viewport: { x: 0, y: 0, zoom: 1 },
+        };
+      }
 
       setProgress({
         stage: "complete",
         message: t("common.flow_save_success"),
       });
 
-      // Create blob and download
       const jsonString = JSON.stringify(exportData, null, 2);
       const blob = new Blob([jsonString], { type: "application/json" });
       const url = URL.createObjectURL(blob);
@@ -248,7 +280,7 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges, projectId }) => {
     } finally {
       setIsProcessing(false);
     }
-  }, [nodes, edges, handleClose, t]);
+  }, [nodes, edges, projectId, flowId, handleClose, t]);
 
   // Handle code export
   const handleCodeExport = useCallback(async () => {

@@ -1,5 +1,8 @@
 import { Router } from 'express';
+import crypto from 'crypto';
 import { importService } from '../services/importer/index.js';
+import sequelize from '../database/index.js';
+import { Flow, Node, Edge } from '../database/init.js';
 import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
@@ -367,5 +370,215 @@ router.post('/directory-pom', upload.any(), async (req, res) => {
         });
     }
 });
+
+// Import a HalTest flow package (v3) that contains component dependencies.
+// Persists each dependency as a new Flow, remaps flowId references, and
+// returns the hydrated root flow so the frontend can render it.
+router.post('/flow-package/:projectId', async (req, res) => {
+    let transaction;
+    try {
+        const { projectId } = req.params;
+        const flow = req.body?.flow;
+        const components = req.body?.dependencies?.components || [];
+
+        if (!flow || !Array.isArray(flow.nodes)) {
+            return res
+                .status(400)
+                .json({ success: false, message: 'flow (with nodes) is required' });
+        }
+
+        transaction = await sequelize.transaction();
+
+        // 1. Create new Flows for every component dependency with fresh IDs.
+        //    Build a mapping from the exported (source) flow id -> new id.
+        const idMap = new Map();
+        const createdComponents = [];
+
+        for (const comp of components) {
+            const sourceId = comp.id;
+            const newNodeIds = new Map(); // source component-node id -> new node id
+
+            const newFlow = await Flow.create(
+                {
+                    name: comp.name || 'Imported Component',
+                    projectId,
+                    type: comp.type || 'component',
+                    parentId: null,
+                },
+                { transaction },
+            );
+
+            idMap.set(sourceId, newFlow.id);
+
+            // Create nodes for this component, remapping nested flowIds recursively
+            const compNodes = Array.isArray(comp.nodes) ? comp.nodes : [];
+            if (compNodes.length > 0) {
+                const nodeRecords = compNodes.map((n, idx) => {
+                    const oldNodeId = n.nodeId || n.id;
+                    const newNodeId = oldNodeId ? oldNodeId : `${n.type}_${idx}`;
+                    newNodeIds.set(oldNodeId, newNodeId);
+                    return {
+                        nodeId: newNodeId,
+                        type: n.type,
+                        data: remapDeep(n.data || {}, idMap),
+                        position: n.position || { x: 0, y: 0 },
+                        flowId: newFlow.id,
+                        parentId: n.parentId || null,
+                        order: idx,
+                    };
+                });
+
+                await Node.bulkCreate(nodeRecords, { transaction });
+
+                const hasInput = compNodes.some((n) => n.type === 'input');
+                const hasOutput = compNodes.some((n) => n.type === 'output');
+                await newFlow.update({ hasInput, hasOutput }, { transaction });
+            }
+
+            // Create edges for this component
+            const compEdges = Array.isArray(comp.edges) ? comp.edges : [];
+            if (compEdges.length > 0) {
+                await Edge.bulkCreate(
+                    compEdges.map((e) => ({
+                        edgeId: e.edgeId || e.id || `${e.source}->${e.target}`,
+                        source: newNodeIds.get(e.source) || e.source,
+                        target: newNodeIds.get(e.target) || e.target,
+                        sourceHandle: e.sourceHandle || null,
+                        targetHandle: e.targetHandle || null,
+                        flowId: newFlow.id,
+                    })),
+                    { transaction },
+                );
+            }
+
+            createdComponents.push({
+                sourceId,
+                newId: newFlow.id,
+                name: newFlow.name,
+            });
+        }
+
+        // 2. Persist the main flow, remapping its component flowId references.
+        const mainFlowId = `flow_${crypto.randomUUID()}`;
+        const mainFlow = await Flow.create(
+            {
+                id: mainFlowId,
+                name: flow.name || 'Imported Flow',
+                projectId,
+                type: flow.type || 'main',
+                parentId: null,
+                viewport: flow.viewport || { x: 0, y: 0, zoom: 1 },
+            },
+            { transaction },
+        );
+
+        const mainNodeIdMap = new Map();
+        const mainNodes = (flow.nodes || []).map((n, idx) => {
+            const oldNodeId = n.nodeId || n.id;
+            const newNodeId = oldNodeId || `${n.type}_main_${idx}`;
+            mainNodeIdMap.set(oldNodeId, newNodeId);
+            return {
+                nodeId: newNodeId,
+                type: n.type,
+                data: remapDeep(n.data || {}, idMap),
+                position: n.position || { x: 0, y: 0 },
+                flowId: mainFlow.id,
+                parentId: n.parentId || null,
+                order: idx,
+            };
+        });
+
+        if (mainNodes.length > 0) {
+            await Node.bulkCreate(mainNodes, { transaction });
+
+            const hasInput = mainNodes.some((n) => n.type === 'input');
+            const hasOutput = mainNodes.some((n) => n.type === 'output');
+            await mainFlow.update({ hasInput, hasOutput }, { transaction });
+        }
+
+        const mainEdges = Array.isArray(flow.edges) ? flow.edges : [];
+        if (mainEdges.length > 0) {
+            await Edge.bulkCreate(
+                mainEdges.map((e) => ({
+                    edgeId: e.edgeId || e.id || `${e.source}->${e.target}`,
+                    source: mainNodeIdMap.get(e.source) || e.source,
+                    target: mainNodeIdMap.get(e.target) || e.target,
+                    sourceHandle: e.sourceHandle || null,
+                    targetHandle: e.targetHandle || null,
+                    flowId: mainFlow.id,
+                })),
+                { transaction },
+            );
+        }
+
+        await transaction.commit();
+
+        // 3. Return the hydrated main flow + created component mapping
+        const hydrated = await Flow.findByPk(mainFlow.id, {
+            include: [
+                { model: Node, as: 'nodes', order: [['order', 'ASC']] },
+                { model: Edge, as: 'edges' },
+            ],
+        });
+
+        res.status(201).json({
+            success: true,
+            flow: mapFlowPackage(hydrated),
+            idMap: Object.fromEntries(idMap),
+            components: createdComponents,
+        });
+    } catch (err) {
+        if (transaction && !transaction.finished) await transaction.rollback();
+        console.error('[ImportRouter] flow-package failed:', err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// Recursively remap any node.data.flowId / configuration.flowId that references
+// a source component id present in the idMap (sourceId -> newId).
+function remapDeep(data, idMap) {
+    if (!data || typeof data !== 'object') return data;
+    if (Array.isArray(data)) return data.map((item) => remapDeep(item, idMap));
+
+    const out = {};
+    for (const [key, value] of Object.entries(data)) {
+        if (key === 'flowId' && typeof value === 'string' && idMap.has(value)) {
+            out[key] = idMap.get(value);
+        } else if (key === 'ref' && typeof value === 'string' && idMap.has(value)) {
+            out[key] = idMap.get(value);
+        } else {
+            out[key] = remapDeep(value, idMap);
+        }
+    }
+    return out;
+}
+
+function mapFlowPackage(flow) {
+    if (!flow) return null;
+    const f = flow.toJSON();
+    return {
+        id: f.id,
+        name: f.name,
+        type: f.type,
+        parentId: f.parentId,
+        viewport: f.viewport,
+        hasInput: f.hasInput,
+        hasOutput: f.hasOutput,
+        nodeCount: (f.nodes || []).length,
+        nodes: (f.nodes || []).map((n) => ({
+            id: n.nodeId,
+            type: n.type,
+            data: n.data,
+            position: n.position,
+        })),
+        edges: (f.edges || []).map((e) => ({
+            id: e.edgeId,
+            source: e.source,
+            target: e.target,
+            sourceHandle: e.sourceHandle,
+            targetHandle: e.targetHandle,
+        })),
+    };
+}
 
 export default router;
