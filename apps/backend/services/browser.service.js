@@ -215,17 +215,18 @@ class BrowserManager {
         // 4. Inject Stability Flags for Chromium
         if (browserType === 'chromium') {
             const stabilityArgs = [
-                '--disable-gpu',
                 '--no-sandbox',
                 '--disable-dev-shm-usage',
                 '--disable-setuid-sandbox',
                 '--disable-blink-features=AutomationControlled',
-                '--disable-software-rasterizer',
                 '--disable-extensions',
             ];
 
             if (headless) {
-                // Additional headless specific flags if any
+                // Headless has no visible window: disabling GPU/rasterizer is safe
+                // and avoids GPU init hangs. In headful these flags would prevent
+                // the window from rendering, so they are only applied here.
+                stabilityArgs.push('--disable-gpu', '--disable-software-rasterizer');
             }
 
             launchArgs.push(...stabilityArgs);
