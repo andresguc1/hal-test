@@ -424,6 +424,14 @@ export function useFlowSync({
         await saveFlow(true);
         subFlowCache.invalidate(currentProject?.id, currentFlowId);
         const flowName =
+          componentNode.data?.customLabel ||
+          componentNode.data?.label ||
+          (componentNode.type === "loop" ||
+          componentNode.type === "for_each" ||
+          componentNode.data?.type === "loop" ||
+          componentNode.data?.type === "for_each"
+            ? "Loop Sub-flow"
+            : "Sub Flow");
 
         setViewStack((prev) => [
           ...prev,
