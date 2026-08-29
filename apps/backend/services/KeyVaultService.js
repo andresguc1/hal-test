@@ -5,21 +5,33 @@ import { STORAGE_DIR } from '../config/paths.js';
 
 // Configuration
 const KEYS_FILE = path.join(STORAGE_DIR, 'secure_keys.json');
-// In production, this MUST come from process.env. For dev, we use a fallback (with warning).
-const MASTER_KEY_HEX =
-    process.env.HALTEST_MASTER_ENCRYPTION_KEY ||
-    '000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f'; // 32 bytes hex
+const MASTER_KEY_FILE = path.join(STORAGE_DIR, '.master.key');
 
-if (!process.env.HALTEST_MASTER_ENCRYPTION_KEY) {
-    console.warn(
-        '[KeyVault] WARNING: HALTEST_MASTER_ENCRYPTION_KEY not set. Using insecure default key.',
-    );
+function loadOrCreateMasterKey() {
+    if (process.env.HALTEST_MASTER_ENCRYPTION_KEY) {
+        // Explicit override for multi-instance/backup deployments.
+        const key = Buffer.from(process.env.HALTEST_MASTER_ENCRYPTION_KEY, 'hex');
+        if (key.length === 32) return key;
+    }
+    if (fs.existsSync(MASTER_KEY_FILE)) {
+        const key = fs.readFileSync(MASTER_KEY_FILE);
+        if (key.length === 32) return key;
+    }
+    const key = crypto.randomBytes(32);
+    try {
+        const dir = path.dirname(MASTER_KEY_FILE);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(MASTER_KEY_FILE, key, { mode: 0o600 });
+    } catch (e) {
+        console.error('[KeyVault] Failed to persist master key:', e);
+    }
+    return key;
 }
 
 class KeyVaultService {
     constructor() {
         this.cache = null;
-        this.masterKey = Buffer.from(MASTER_KEY_HEX, 'hex');
+        this.masterKey = loadOrCreateMasterKey();
         this.ensureFile();
     }
 
