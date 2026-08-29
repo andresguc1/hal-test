@@ -257,6 +257,36 @@
             "logToFile": "Registrar a Archivo",
             "filePath": "Ruta de Archivo",
             "args": "Argumentos Extra del Navegador"
+        },
+        "categories": {
+            "browser_management": "Navegador",
+            "navigation": "Navegación",
+            "element": "Elementos",
+            "interaction": "Interacción",
+            "wait": "Esperas",
+            "tabs": "Pestañas",
+            "viewport": "Viewport",
+            "screenshot": "Capturas",
+            "network": "Red",
+            "session": "Sesión",
+            "llm_ai": "Operaciones de IA",
+            "exec": "Ejecutar",
+            "flow_control": "Motor Lógico",
+            "composition": "Composición"
+        },
+        "labels": {
+            "variable": "Variable",
+            "conditional": "Condicional",
+            "switch": "Switch",
+            "loop": "Bucle",
+            "branch": "Bifurcación",
+            "flow_control": "Control de Flujo",
+            "transform": "Transformar",
+            "wait_conditional": "Esperar Condición",
+            "pause": "Pausa (Sueño)",
+            "component": "Componente",
+            "input": "Entrada de Módulo",
+            "output": "Salida de Módulo"
         }
     },
     "errors": {

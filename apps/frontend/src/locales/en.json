@@ -12,7 +12,8 @@
   "header": {
     "select_flow": "Select a flow",
     "no_project": "-- No Project --",
-    "switch_theme": "Switch Theme"
+    "switch_theme": "Switch Theme",
+    "unknown": "Unknown"
   },
   "common": {
     "save": "Save",
@@ -86,7 +87,35 @@
     "false": "False",
     "optional_label": "Optional label",
     "select": "Select",
-    "pick": "Pick"
+    "pick": "Pick",
+    "ai_repair_applied": "AI automatically repaired {{count}} selector(s)",
+    "confirm_close_debug": "Active debug session detected. Close it to ensure a clean E2E run?",
+    "dataset_error": "Dataset run failed",
+    "dataset_error_msg": "Dataset run failed: {{message}}",
+    "dataset_processing": "Preparing dataset run...",
+    "dataset_started": "Dataset batch started successfully",
+    "fallback": "Else",
+    "flow_exec_error_msg": "Flow execution failed: {{message}}",
+    "inspector_started": "Pick an element on the page...",
+    "new_project_name": "New project name",
+    "no_active_project": "No active project.",
+    "owner_execute_only": "🔒 Only the owner can execute the flow.",
+    "picker_replay": "Preparing page... replaying previous steps",
+    "picker_replay_failed": "Could not reach target node: failed at step {{step}} — {{label}}",
+    "remote_executing": "🔒 {{user}} is currently executing this flow...",
+    "rule": "rule",
+    "rules": "rules",
+    "save_before_dataset": "Save the flow before running the dataset.",
+    "save_before_execute": "You must save the flow before executing it.",
+    "save_flow_first": "Please name and save this new flow.",
+    "selector_ai_optimized": "Selector optimized by AI",
+    "selector_ai_skipped": "AI optimization skipped: selector was manually edited",
+    "selector_ambiguous_pick": "⚠ Multiple elements match this selector. Consider using context or a unique attribute.",
+    "selector_ambiguous_warning": "Selector is ambiguous — multiple elements match",
+    "selector_captured": "Element captured",
+    "selector_empty": "No valid selector found",
+    "template_error": "Failed to load template",
+    "template_loaded": "Starter template loaded!"
   },
   "api_status": {
     "status": "API Status",
@@ -136,7 +165,12 @@
     "confirm_sync_title": "Synchronization Disabled",
     "confirm_sync_description": "Reverse synchronization from code to workflow is currently experimental and has been temporarily disabled to prevent workflow corruption.",
     "confirm_sync_btn": "Got it",
-    "sync_disabled_toast": "Synchronization disabled."
+    "sync_disabled_toast": "Synchronization disabled.",
+    "enter_edit_mode": "Advanced Edit Mode",
+    "exit_edit_mode": "View Mode",
+    "sync_failed": "Failed to sync code to canvas.",
+    "sync_parse_error": "Could not parse code back into flow actions.",
+    "sync_success": "Code synced to canvas successfully"
   },
   "nodes": {
     "labels": {
@@ -253,7 +287,8 @@
       "composition": "Module Composition",
       "collaboration": "UI Annotation",
       "session_management": "Session",
-      "database_ops": "Databases"
+      "database_ops": "Databases",
+      "llm_ai_locked_tooltip": "Configure AI & Integrations in settings to unlock this category"
     },
     "fields": {
       "browserType": "Browser Type",
@@ -427,7 +462,8 @@
         "resolves": "Resolves:",
         "waiting_data": "Waiting for data...",
         "match": "MATCH",
-        "no_match": "NO MATCH"
+        "no_match": "NO MATCH",
+        "suggested_values": "Suggested Values"
       }
     },
     "hints": {
@@ -462,7 +498,12 @@
       "no_captures": "No catch available",
       "alt_text": "Execution result",
       "before": "Before",
-      "after": "After"
+      "after": "After",
+      "comparison_contains": "Contains substring",
+      "comparison_ends": "Ends with",
+      "comparison_equals": "Exact match",
+      "comparison_regex": "Regex pattern",
+      "comparison_starts": "Starts with"
     },
     "validation": {
       "width_number": "Width must be a number",
@@ -554,7 +595,8 @@
       "defaultValue": "staging",
       "args": "Ex: ['value1', 123, true] (must be JSON serializable)",
       "slowMo": "Ex: 50. Delays each action for debugging.",
-      "executablePath": "Ex: /path/to/chrome.exe. Use custom browser executable."
+      "executablePath": "Ex: /path/to/chrome.exe. Use custom browser executable.",
+      "no_source": "No source"
     },
     "options": {
       "mode": {
@@ -588,6 +630,10 @@
       "double_click_edit": "Double-click to edit",
       "contains_logic": "Contains Logic",
       "guide": "GUIDE"
+    },
+    "warnings": {
+      "duplicate_case": "Duplicate value — only the first match will execute",
+      "empty_case": "Empty value — this case will never match"
     }
   },
   "settings": {
@@ -709,7 +755,11 @@
       "key_deleted": "Key deleted",
       "test_success": "Connection Successful!",
       "test_failed": "Connection Failed",
-      "key_placeholder": "sk-..."
+      "key_placeholder": "sk-...",
+      "delete_failed": "Failed to delete key",
+      "error_saving_key": "Error saving key",
+      "failed_to_save_key": "Failed to save key",
+      "validation_error": "Validation error. Please check the key."
     },
     "title": "Settings",
     "close": "To close",
@@ -771,7 +821,8 @@
       "error_file": "Error importing file",
       "error_directory": "Error importing directory",
       "help_text": "Supports: Playwright, Cypress, Selenium, TestCafe, Puppeteer, WebdriverIO, Nightwatch, Katalon, TestRigor",
-      "files_count": "{{count}} files"
+      "files_count": "{{count}} files",
+      "no_flows_converted": "No flows could be imported from the directory."
     },
     "export": {
       "title": "Export Flow",
@@ -956,7 +1007,8 @@
     "median": "Median",
     "failures": "Failures",
     "completed": "Completed",
-    "samples": "Samples"
+    "samples": "Samples",
+    "toast_engine_error_msg": "Engine error: {{message}}"
   },
   "perf_results": {
     "latency_profiling_tag": "LATENCY PROFILING (1 VU)",
@@ -1549,5 +1601,13 @@
   },
   "hal_quote": {
     "refresh": "Ask HAL for a new quote"
+  },
+  "ai": {
+    "error": "AI generation failed",
+    "generating": "Generating flow with AI... ✨",
+    "success": "Flow generated successfully! 🧠"
+  },
+  "projects": {
+    "default_name": "General Project"
   }
 }

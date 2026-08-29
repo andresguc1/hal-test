@@ -12,7 +12,8 @@
   "header": {
     "select_flow": "Sélectionner un flux",
     "no_project": "-- Aucun Projet --",
-    "switch_theme": "Changer de Thème"
+    "switch_theme": "Changer de Thème",
+    "unknown": "Inconnu"
   },
   "common": {
     "save": "Sauvegarder",
@@ -86,7 +87,35 @@
     "false": "Faux",
     "optional_label": "Libellé optionnel",
     "select": "Sélectionner",
-    "pick": "Capturer"
+    "pick": "Capturer",
+    "ai_repair_applied": "L'IA a réparé automatiquement {{count}} sélecteur(s)",
+    "confirm_close_debug": "Session de débogage active détectée. La fermer pour garantir une exécution E2E propre ?",
+    "dataset_error": "Échec de l'exécution du dataset",
+    "dataset_error_msg": "Échec de l'exécution du dataset : {{message}}",
+    "dataset_processing": "Préparation de l'exécution du dataset...",
+    "dataset_started": "Lot de dataset démarré avec succès",
+    "fallback": "Sinon",
+    "flow_exec_error_msg": "Échec de l'exécution du flux : {{message}}",
+    "inspector_started": "Sélectionnez un élément sur la page...",
+    "new_project_name": "Nom du nouveau projet",
+    "no_active_project": "Aucun projet actif.",
+    "owner_execute_only": "🔒 Seul le propriétaire peut exécuter le flux.",
+    "picker_replay": "Préparation de la page... relecture des étapes précédentes",
+    "picker_replay_failed": "Impossible d'atteindre le nœud cible : échec à l'étape {{step}} — {{label}}",
+    "remote_executing": "🔒 {{user}} exécute actuellement ce flux...",
+    "rule": "règle",
+    "rules": "règles",
+    "save_before_dataset": "Enregistrez le flux avant d'exécuter le dataset.",
+    "save_before_execute": "Vous devez enregistrer le flux avant de l'exécuter.",
+    "save_flow_first": "Veuillez nommer et enregistrer ce nouveau flux.",
+    "selector_ai_optimized": "Sélecteur optimisé par IA",
+    "selector_ai_skipped": "Optimisation IA ignorée : le sélecteur a été modifié manuellement",
+    "selector_ambiguous_pick": "⚠ Plusieurs éléments correspondent à ce sélecteur. Utilisez le contexte ou un attribut unique.",
+    "selector_ambiguous_warning": "Le sélecteur est ambigu : plusieurs éléments correspondent",
+    "selector_captured": "Élément capturé",
+    "selector_empty": "Aucun sélecteur valide trouvé",
+    "template_error": "Échec du chargement du modèle",
+    "template_loaded": "Modèle initial chargé !"
   },
   "api_status": {
     "status": "Statut de l'API",
@@ -136,7 +165,12 @@
     "confirm_sync_title": "Synchronisation désactivée",
     "confirm_sync_description": "La synchronisation inverse du code vers le flux de travail est actuellement expérimentale et a été temporairement désactivée pour éviter la corruption du flux.",
     "confirm_sync_btn": "Compris",
-    "sync_disabled_toast": "Synchronisation désactivée."
+    "sync_disabled_toast": "Synchronisation désactivée.",
+    "enter_edit_mode": "Mode Édition Avancée",
+    "exit_edit_mode": "Mode Vue",
+    "sync_failed": "Échec de la synchronisation du code avec le canevas.",
+    "sync_parse_error": "Impossible de réinterpréter le code en actions de flux.",
+    "sync_success": "Code synchronisé avec le canevas avec succès"
   },
   "nodes": {
     "labels": {
@@ -231,7 +265,10 @@
       "sub_flow_loop": "Boucle de sous-flux",
       "audit_policy": "Audit de la politique de sécurité",
       "sensitive_data_monitor": "Moniteur de données sensibles",
-      "fuzz_input": "Fuzzing des entrées (XSS/SQLi)"
+      "fuzz_input": "Fuzzing des entrées (XSS/SQLi)",
+      "db_connect": "Se connecter à la BD",
+      "db_query": "Exécuter la requête",
+      "db_assert_record": "Valider l'enregistrement"
     },
     "categories": {
       "favorites": "Favoris",
@@ -249,7 +286,9 @@
       "flow_control": "Moteur Logique",
       "composition": "Composition de Module",
       "collaboration": "Annotation d'interface",
-      "session_management": "Session"
+      "session_management": "Session",
+      "database_ops": "Bases de données",
+      "llm_ai_locked_tooltip": "Configurez IA et Intégrations dans les paramètres pour débloquer cette catégorie"
     },
     "fields": {
       "browserType": "Type de Navigateur",
@@ -423,7 +462,8 @@
         "resolves": "Résout :",
         "waiting_data": "En attente de données...",
         "match": "CORRESPONDANCE",
-        "no_match": "PAS DE CORRESPONDANCE"
+        "no_match": "PAS DE CORRESPONDANCE",
+        "suggested_values": "Valeurs suggérées"
       }
     },
     "hints": {
@@ -458,7 +498,12 @@
       "no_captures": "Aucune prise disponible",
       "alt_text": "Résultat de l'exécution",
       "before": "Avant",
-      "after": "Après"
+      "after": "Après",
+      "comparison_contains": "Contient la sous-chaîne",
+      "comparison_ends": "Se termine par",
+      "comparison_equals": "Correspondance exacte",
+      "comparison_regex": "Motif regex",
+      "comparison_starts": "Commence par"
     },
     "validation": {
       "width_number": "La largeur doit être un nombre",
@@ -550,7 +595,8 @@
       "defaultValue": "staging",
       "args": "Ex : ['valeur1', 123, true] (doit être sérialisable en JSON)",
       "slowMo": "Ex : 50. Ralentit chaque action pour le débogage.",
-      "executablePath": "Ex : /chemin/vers/chrome.exe. Utilisez un navigateur personnalisé."
+      "executablePath": "Ex : /chemin/vers/chrome.exe. Utilisez un navigateur personnalisé.",
+      "no_source": "Sans source"
     },
     "options": {
       "mode": {
@@ -584,6 +630,10 @@
       "double_click_edit": "Double-cliquez pour modifier",
       "contains_logic": "Contient de la logique",
       "guide": "GUIDE"
+    },
+    "warnings": {
+      "duplicate_case": "Valeur en double : seule la première correspondance sera exécutée",
+      "empty_case": "Valeur vide : ce cas ne correspondra jamais"
     }
   },
   "settings": {
@@ -705,7 +755,11 @@
       "key_deleted": "Clé supprimée",
       "test_success": "Connexion Réussie !",
       "test_failed": "Connexion Échouée",
-      "key_placeholder": "sk-..."
+      "key_placeholder": "sk-...",
+      "delete_failed": "Échec de la suppression de la clé",
+      "error_saving_key": "Erreur lors de l'enregistrement de la clé",
+      "failed_to_save_key": "Impossible d'enregistrer la clé",
+      "validation_error": "Erreur de validation. Vérifiez la clé."
     },
     "title": "Paramètres",
     "close": "Pour fermer",
@@ -767,7 +821,8 @@
       "error_file": "Erreur lors de l'importation du fichier",
       "error_directory": "Erreur lors de l'importation du dossier",
       "help_text": "Supporte : Playwright, Cypress, Selenium, TestCafe, Puppeteer, WebdriverIO, Nightwatch, Katalon, TestRigor",
-      "files_count": "{{count}} fichiers"
+      "files_count": "{{count}} fichiers",
+      "no_flows_converted": "Aucun flux n'a pu être importé depuis le répertoire."
     },
     "export": {
       "title": "Exporter le Flux",
@@ -940,7 +995,8 @@
     "median": "Médian",
     "failures": "Échecs",
     "completed": "Complété",
-    "samples": "Échantillons"
+    "samples": "Échantillons",
+    "toast_engine_error_msg": "Erreur du moteur : {{message}}"
   },
   "perf_results": {
     "latency_profiling_tag": "PROFILAGE DE LATENCE (1 VU)",
@@ -1530,7 +1586,28 @@
     "output": "Sortir",
     "exception": "Exception"
   },
+  "picker": {
+    "ai_optimized": "Sélecteur optimisé par IA",
+    "captured": "Sélecteur capturé",
+    "use_this": "Utiliser",
+    "copy": "Copier",
+    "alternatives_short": "alt",
+    "badge_pw_best": "⚡ PW Best",
+    "badge_pw": "⚡ PW",
+    "badge_stable": "✓ Stable",
+    "badge_form": "Formulaire",
+    "badge_a11y": "A11y",
+    "badge_fragile": "⚠ Fragile"
+  },
   "hal_quote": {
     "refresh": "Demander une nouvelle citation à HAL"
+  },
+  "ai": {
+    "error": "Échec de la génération IA",
+    "generating": "Génération du flux avec IA... ✨",
+    "success": "Flux généré avec succès ! 🧠"
+  },
+  "projects": {
+    "default_name": "Projet Général"
   }
 }

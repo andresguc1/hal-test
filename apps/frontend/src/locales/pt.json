@@ -12,7 +12,8 @@
   "header": {
     "select_flow": "Selecione um fluxo",
     "no_project": "-- Sem Projeto --",
-    "switch_theme": "Alterar Tema"
+    "switch_theme": "Alterar Tema",
+    "unknown": "Desconhecido"
   },
   "common": {
     "save": "Salvar",
@@ -86,7 +87,35 @@
     "optional_label": "Etiqueta visível (opcional)",
     "select": "Selecionar",
     "pick": "Capturar",
-    "toolbox": "CAIXA DE FERRAMENTAS"
+    "toolbox": "CAIXA DE FERRAMENTAS",
+    "ai_repair_applied": "A IA reparou automaticamente {{count}} seletor(es)",
+    "confirm_close_debug": "Sessão de depuração ativa detectada. Fechá-la para garantir uma execução E2E limpa?",
+    "dataset_error": "Falha na execução do dataset",
+    "dataset_error_msg": "Falha na execução do dataset: {{message}}",
+    "dataset_processing": "Preparando a execução do dataset...",
+    "dataset_started": "Lote de dataset iniciado com sucesso",
+    "fallback": "Senão",
+    "flow_exec_error_msg": "Falha na execução do fluxo: {{message}}",
+    "inspector_started": "Selecione um elemento na página...",
+    "new_project_name": "Nome do novo projeto",
+    "no_active_project": "Nenhum projeto ativo.",
+    "owner_execute_only": "🔒 Somente o proprietário pode executar o fluxo.",
+    "picker_replay": "Preparando página... reproduzindo etapas anteriores",
+    "picker_replay_failed": "Não foi possível chegar ao nó alvo: falha na etapa {{step}} — {{label}}",
+    "remote_executing": "🔒 {{user}} está executando este fluxo atualmente...",
+    "rule": "regra",
+    "rules": "regras",
+    "save_before_dataset": "Salve o fluxo antes de executar o dataset.",
+    "save_before_execute": "Você deve salvar o fluxo antes de executá-lo.",
+    "save_flow_first": "Por favor, nomeie e salve este novo fluxo.",
+    "selector_ai_optimized": "Seletor otimizado por IA",
+    "selector_ai_skipped": "Otimização de IA ignorada: o seletor foi editado manualmente",
+    "selector_ambiguous_pick": "⚠ Vários elementos correspondem a este seletor. Considere usar contexto ou um atributo único.",
+    "selector_ambiguous_warning": "O seletor é ambíguo: vários elementos correspondem",
+    "selector_captured": "Elemento capturado",
+    "selector_empty": "Nenhum seletor válido encontrado",
+    "template_error": "Falha ao carregar o modelo",
+    "template_loaded": "Modelo inicial carregado!"
   },
   "api_status": {
     "status": "Status da API",
@@ -136,7 +165,12 @@
     "confirm_sync_title": "Sincronização desabilitada",
     "confirm_sync_description": "A sincronização inversa do código para o fluxo de trabalho é experimental e foi desabilitada temporariamente para evitar a corrupção do fluxo.",
     "confirm_sync_btn": "Entendido",
-    "sync_disabled_toast": "Sincronização desabilitada."
+    "sync_disabled_toast": "Sincronização desabilitada.",
+    "enter_edit_mode": "Modo Edição Avançada",
+    "exit_edit_mode": "Modo Exibição",
+    "sync_failed": "Falha ao sincronizar o código com o canvas.",
+    "sync_parse_error": "Não foi possível reinterpretar o código em ações de fluxo.",
+    "sync_success": "Código sincronizado com o canvas com sucesso"
   },
   "nodes": {
     "labels": {
@@ -231,7 +265,10 @@
       "generate_data": "Dados Gerados (IA)",
       "extract_dom_context": "Extrair contexto DOM",
       "chain_of_thought": "Cadeia de Pensamento",
-      "smart_selector": "Seletor Inteligente"
+      "smart_selector": "Seletor Inteligente",
+      "db_connect": "Conectar ao BD",
+      "db_query": "Executar consulta",
+      "db_assert_record": "Validar registro"
     },
     "categories": {
       "favorites": "Favoritos",
@@ -249,7 +286,9 @@
       "execution_interface": "Execução",
       "flow_control": "Motor Lógico",
       "composition": "Composição de Módulos",
-      "collaboration": "Anotação de UI"
+      "collaboration": "Anotação de UI",
+      "database_ops": "Bases de Dados",
+      "llm_ai_locked_tooltip": "Configure IA e Integrações nas configurações para desbloquear esta categoria"
     },
     "fields": {
       "browserType": "Tipo de navegador",
@@ -423,7 +462,8 @@
         "resolves": "Resolve:",
         "waiting_data": "Aguardando dados...",
         "match": "CORRESPONDER",
-        "no_match": "SEM CORRESPONDÊNCIA"
+        "no_match": "SEM CORRESPONDÊNCIA",
+        "suggested_values": "Valores sugeridos"
       }
     },
     "hints": {
@@ -458,7 +498,12 @@
       "no_captures": "Nenhuma captura disponível",
       "alt_text": "Resultado da execução",
       "before": "Antes",
-      "after": "Depois"
+      "after": "Depois",
+      "comparison_contains": "Contém substring",
+      "comparison_ends": "Termina com",
+      "comparison_equals": "Correspondência exata",
+      "comparison_regex": "Padrão regex",
+      "comparison_starts": "Começa com"
     },
     "validation": {
       "width_number": "A largura deve ser um número",
@@ -550,7 +595,8 @@
       "defaultValue": "encenação",
       "args": "Ex: ['valor1', 123, verdadeiro] (deve ser serializável em JSON)",
       "slowMo": "Ex: 50. Atrasa cada ação para depuração.",
-      "executablePath": "Ex: /caminho/para/chrome.exe.  Use um executável de navegador personalizado."
+      "executablePath": "Ex: /caminho/para/chrome.exe.  Use um executável de navegador personalizado.",
+      "no_source": "Sem fonte"
     },
     "options": {
       "mode": {
@@ -584,6 +630,10 @@
       "double_click_edit": "Clique duas vezes para editar",
       "contains_logic": "Contém Lógica",
       "guide": "GUIA"
+    },
+    "warnings": {
+      "duplicate_case": "Valor duplicado: apenas a primeira correspondência será executada",
+      "empty_case": "Valor vazio: este caso nunca corresponderá"
     }
   },
   "settings": {
@@ -714,7 +764,11 @@
       "key_deleted": "Chave excluída",
       "test_success": "Conexão bem-sucedida!",
       "test_failed": "Falha na conexão",
-      "key_placeholder": "sk-..."
+      "key_placeholder": "sk-...",
+      "delete_failed": "Falha ao excluir chave",
+      "error_saving_key": "Erro ao salvar chave",
+      "failed_to_save_key": "Não foi possível salvar a chave",
+      "validation_error": "Erro de validação. Verifique a chave."
     }
   },
   "canvas": {
@@ -835,7 +889,8 @@
     "median": "Mediana",
     "failures": "Falhas",
     "completed": "Concluídos",
-    "samples": "Amostras"
+    "samples": "Amostras",
+    "toast_engine_error_msg": "Erro do motor: {{message}}"
   },
   "scenario_builder": {
     "test_type": "Tipo de Teste",
@@ -1335,7 +1390,8 @@
       "error_file": "Erro ao importar arquivo",
       "error_directory": "Erro ao importar diretório",
       "help_text": "Suporta: Playwright, Cypress, Selenium, TestCafe, Puppeteer, WebdriverIO, Nightwatch, Katalon, TestRigor",
-      "files_count": "{{contar}} arquivos"
+      "files_count": "{{contar}} arquivos",
+      "no_flows_converted": "Nenhum fluxo pôde ser importado do diretório."
     },
     "export": {
       "title": "Fluxo de exportação",
@@ -1530,7 +1586,28 @@
     "output": "Saída",
     "exception": "Exceção"
   },
+  "picker": {
+    "ai_optimized": "Seletor otimizado por IA",
+    "captured": "Seletor capturado",
+    "use_this": "Usar",
+    "copy": "Copiar",
+    "alternatives_short": "alt",
+    "badge_pw_best": "⚡ PW Best",
+    "badge_pw": "⚡ PW",
+    "badge_stable": "✓ Estável",
+    "badge_form": "Formulário",
+    "badge_a11y": "A11y",
+    "badge_fragile": "⚠ Frágil"
+  },
   "hal_quote": {
     "refresh": "Pedir ao HAL uma nova frase"
+  },
+  "ai": {
+    "error": "Falha na geração com IA",
+    "generating": "Gerando fluxo com IA... ✨",
+    "success": "Fluxo gerado com sucesso! 🧠"
+  },
+  "projects": {
+    "default_name": "Projeto Geral"
   }
 }
