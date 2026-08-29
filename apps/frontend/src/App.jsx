@@ -28,7 +28,6 @@ import { nodeTypes } from "./components/nodes";
 import CustomConnectionLine from "./components/CustomConnectionLine";
 import CustomEdge from "./components/edges/CustomEdge";
 import { subFlowCache } from "./utils/subFlowCache";
-// import ApiKeysModal from "./components/APIKeysModal"; // Deprecated
 import SettingsModal from "./components/SettingsModal";
 import { useSettings } from "./context/SettingsContext";
 import ProgressBar from "./components/ProgressBar";
@@ -41,7 +40,6 @@ import CreationModal from "./components/CreationModal";
 import StarterOverlay from "./components/StarterOverlay";
 import ErrorBoundary from "./components/ErrorBoundary";
 
-// import { colors } from "./components/styles/colors"; // Unused
 import { useFlowManager } from "./components/hooks/useFlowManager.js";
 import { useProjectManager } from "./components/hooks/useProjectManager.js";
 import { migrateFromLegacy } from "./utils/migration";
@@ -1236,9 +1234,7 @@ function Dashboard({
           try {
             flowData = JSON.parse(importData.content);
           } catch {
-            console.log(
-              "[DEBUG] File content is not JSON, parsing as test code script...",
-            );
+            // File content is not JSON, parsing as test code script
           }
 
           if (flowData && (flowData.nodes || flowData.edges || flowData.flow)) {
@@ -1947,7 +1943,6 @@ function Dashboard({
           enterComponent(node.id);
         } else {
           // Open Step Details Modal on double-click
-          console.log("[DEBUG] Node double-clicked:", node.id, node.data);
           setStepDetailsModal({
             isOpen: true,
             nodeData: node.data,
@@ -2024,8 +2019,6 @@ function Dashboard({
         }
       });
     });
-
-    console.log("[DEBUG] overrideNames:", Array.from(overrideNames.entries()));
 
     // 2. Override with live canvas nodes (in case of unsaved edits in current flow)
     nodes.forEach((n) => {
@@ -2551,7 +2544,6 @@ function Dashboard({
             onClose={closeSettings}
             initialTab={settingsTab}
           />
-          {/* <ApiKeysModal /> deprecated - moved to SettingsHub */}
         </div>
         {/* Modals/Dialogs */}
         <ImportDialog

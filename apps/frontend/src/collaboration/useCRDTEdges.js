@@ -182,7 +182,6 @@ export function useCRDTEdges({ enabled = false } = {}) {
               existing.set("markerEnd", edge.markerEnd);
             if (edge.label !== undefined) existing.set("label", edge.label);
           } else {
-            console.log("[DEBUG-CRDTEDGES] plainToYEdge called for:", edge.id);
             yEdges.set(edge.id, plainToYEdge(edge));
           }
         }
