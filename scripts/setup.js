@@ -46,7 +46,10 @@ async function setup() {
         console.log('\n[3/3] Installing Playwright and system dependencies...');
         try {
             // Try to find playwright in the backend's node_modules or globalily via pnpm
-            execSync('pnpm --filter @halt-test/backend exec playwright install --with-deps', { stdio: 'inherit', cwd: rootDir });
+            execSync(
+                'pnpm --filter @halt-test/backend exec playwright install --with-deps chromium firefox webkit',
+                { stdio: 'inherit', cwd: rootDir },
+            );
         } catch (e) {
             console.warn('Playwright installation failed or was partially successful. You might need to run it with sudo.');
         }

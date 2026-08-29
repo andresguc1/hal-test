@@ -10,6 +10,7 @@ import cors from 'cors';
 import fs from 'fs';
 import { createServer } from 'http';
 import { storageCleanupService } from './services/StorageCleanupService.js';
+import { doctorService } from './services/DoctorService.js';
 import { STORAGE_DIR, PUBLIC_DIR } from './config/paths.js';
 import { migrateStorageIfNecessary } from './config/migrateStorage.js';
 
@@ -177,6 +178,12 @@ app.get('/api/status', (req, res) => {
     });
 });
 
+// Public Browser/OS Compatibility Doctor (detects missing or incompatible Playwright/browsers)
+app.get('/api/doctor', (req, res) => {
+    const report = doctorService.check();
+    res.status(200).json(report);
+});
+
 // Protected API Routes
 // Apply Auth to all subsequent /api routes
 app.use('/api', authenticated);
@@ -321,6 +328,7 @@ const startServer = async () => {
     }
 
     await storageCleanupService.run();
+    await doctorService.runStartupCheck();
     if (process.env.NODE_ENV !== 'test') {
         serverInstance = server.listen(PORT, '0.0.0.0', () => {
             const baseUrl = `http://localhost:${PORT}`;

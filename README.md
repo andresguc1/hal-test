@@ -81,11 +81,25 @@ pnpm install
 ```
 
 ### 2. Install Playwright browsers
-Browser binaries are not downloaded by `pnpm install` automatically:
+Browser binaries are **not** downloaded by `pnpm install` automatically. Install all supported engines (Chromium, Firefox, WebKit):
 
 ```bash
-pnpm --filter backend exec playwright install chromium
+# Installs the browser binaries + OS system dependencies
+pnpm --filter @halt-test/backend exec playwright install --with-deps chromium firefox webkit
+
+# Alternative from the backend directory
+cd apps/backend && npx playwright install --with-deps
 ```
+
+> **ℹ️ OS ↔ Playwright compatibility**: each browser engine maps to a minimum Playwright version by OS.
+> For example, **Ubuntu 26.04** (and derivatives) requires **Playwright ≥ 1.61.0** to run Firefox/WebKit;
+> older versions fail with `Playwright does not support firefox/webkit on ubuntu26.04-x64`.
+> Keep `playwright` and `@playwright/test` aligned in `apps/backend/package.json`.
+
+> **🩺 Compatibility doctor**: on startup the backend runs a cheap check and, if any browser/version is
+> missing or incompatible, prints the exact command to fix it. You can also query it anytime:
+> `curl http://localhost:2001/api/doctor` (reports OS, Playwright version, installed browsers, and the
+> recommended install/update commands).
 
 ### 3. Configure Guest Mode
 For quick local testing without Supabase:
