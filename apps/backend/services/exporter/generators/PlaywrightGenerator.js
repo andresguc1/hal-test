@@ -212,23 +212,26 @@ export class PlaywrightGenerator extends BaseGenerator {
         }
 
         // Generate Playwright Config
-        files['playwright.config.js'] =
-            `/** @type {import('@playwright/test').PlaywrightTestConfig} */
-const config = {
+        files['playwright.config.js'] = `const { defineConfig } = require('@playwright/test');
+
+module.exports = defineConfig({
   testDir: './tests',
   timeout: 30000,
+  fullyParallel: true,
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 2 : undefined,
+  reporter: [['list'], ['html', { open: 'never' }]],
   expect: {
-    timeout: 5000
+    timeout: 5000,
   },
   use: {
     actionTimeout: 0,
     trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
     headless: false,
     viewport: { width: 1280, height: 720 },
   },
-};
-
-module.exports = config;
+});
 `;
 
         // Generate package.json
@@ -241,7 +244,7 @@ module.exports = config;
     "test:headed": "playwright test --headed"
   },
   "devDependencies": {
-    "@playwright/test": "^1.40.0"
+    "@playwright/test": "^1.62.1"
   }
 }
 `;
@@ -282,7 +285,7 @@ jobs:
 
 playwright_tests:
   stage: test
-  image: mcr.microsoft.com/playwright:v1.40.0-jammy
+  image: mcr.microsoft.com/playwright:v1.62.1-jammy
   script:
     - npm install
     - npx playwright test
@@ -330,9 +333,9 @@ playwright_tests:
         }
 
         files['playwright.config.js'] =
-            `const { defineConfig } = require('@playwright/test');\nmodule.exports = defineConfig({ testDir: './tests', timeout: 60000 });\n`;
+            `const { defineConfig } = require('@playwright/test');\nmodule.exports = defineConfig({ testDir: './tests', timeout: 60000, fullyParallel: true, use: { trace: 'on-first-retry', screenshot: 'only-on-failure' } });\n`;
         files['package.json'] =
-            `{\n  "name": "hal-test-generated",\n  "devDependencies": {\n    "@playwright/test": "^1.40.0"\n  }\n}\n`;
+            `{\n  "name": "hal-test-generated",\n  "devDependencies": {\n    "@playwright/test": "^1.62.1"\n  }\n}\n`;
 
         return { files, warnings: this.warnings };
     }
