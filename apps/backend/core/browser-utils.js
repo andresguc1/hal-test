@@ -13,6 +13,16 @@ import { DEVICE_PRESETS } from '../utils/constants.js';
 import * as fsp from 'fs/promises';
 import * as path from 'path';
 
+function getHttpCredentials(browserId, service) {
+    if (!browserId) return null;
+    const entry = service.get(browserId);
+    const creds = entry?.options?.httpCredentials;
+    if (creds && typeof creds.username === 'string' && creds.username !== '') {
+        return { username: creds.username, password: creds.password || '' };
+    }
+    return null;
+}
+
 const NETWORK_PRESETS = {
     'No throttling': {
         offline: false,
@@ -387,6 +397,12 @@ async function getOrCreateContext(req, browser, browserId) {
                 }
             }
 
+            const httpCredentials = getHttpCredentials(browserId, browserService);
+            if (httpCredentials) {
+                contextOptions.httpCredentials = httpCredentials;
+                console.log(`[AUDIT] HTTP Basic Auth enabled for: ${httpCredentials.username}`);
+            }
+
             const newContext = await browser.newContext(contextOptions);
             console.log('[SUCCESS] Context created successfully');
 
@@ -644,7 +660,10 @@ async function getActivePage(req, browserId) {
     if (validation.error) {
         try {
             console.log('[getActivePage] No active browser session. Auto-launching browser...');
-            const launchOpts = { headless: req.body?.headless !== false };
+            const launchOpts = {
+                ...req.body,
+                headless: req.body?.headless === true || req.body?.headless === 'true',
+            };
             const { browserId: newId } = await browserService.launchBrowser(launchOpts);
             validation = validateBrowser(req, newId);
         } catch (e) {

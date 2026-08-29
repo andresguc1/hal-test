@@ -1,10 +1,10 @@
 import { variableManager } from '../../../services/VariableManager.js';
 import { browserService } from '../../../services/browser.service.js';
-import { traceService } from '../../../services/trace.service.js';
 import { executionLogger } from '../../../services/ExecutionLogger.js';
 import { emitExecutionStatus } from '../../../socket.js';
 import { Run } from '../../../database/init.js';
 import { smartEmitLog } from '../../../core/ActionExecutor.js';
+import { getOrCreateContext } from '../../../core/browser-utils.js';
 
 const launchBrowserAction = async (req, res) => {
     const nodeId = req.body.nodeId;
@@ -83,7 +83,9 @@ const launchBrowserAction = async (req, res) => {
                     oldOpts.height !== newOpts.height ||
                     oldOpts.isMobile !== newOpts.isMobile ||
                     oldOpts.maximizeWindow !== newOpts.maximizeWindow ||
-                    oldOpts.headless !== newOpts.headless;
+                    oldOpts.headless !== newOpts.headless ||
+                    (oldOpts.httpCredentials?.username || '') !==
+                        (newOpts.httpCredentials?.username || '');
 
                 if (!hasChanges) {
                     console.log('[ACTION] Reusing existing browser (Debug Mode)');
@@ -98,7 +100,7 @@ const launchBrowserAction = async (req, res) => {
                         message: 'Browser reused (Debug Mode)',
                         browserId: latestId,
                         reused: true,
-                        headless: !!latestBrowser.options.headless,
+                        headless: latestBrowser.options.headless ?? false,
                     });
                 } else {
                     console.log(
@@ -121,6 +123,22 @@ const launchBrowserAction = async (req, res) => {
         );
         const { browserId, version } = await browserService.launchBrowser(resolvedBody);
         launchedBrowserId = browserId;
+
+        // Ensure a visual page/window exists if launching in visible mode
+        if (!resolvedBody.headless) {
+            try {
+                const entry = browserService.get(browserId);
+                if (entry && entry.browser) {
+                    const context = await getOrCreateContext(req, entry.browser, browserId);
+                    const pages = context.pages();
+                    if (pages.length === 0) {
+                        await context.newPage();
+                    }
+                }
+            } catch (pageErr) {
+                console.warn('[ACTION] Could not create initial page on launch:', pageErr.message);
+            }
+        }
 
         // Update Run record with browser version if we are in a run
         if (runId) {
@@ -164,13 +182,14 @@ const launchBrowserAction = async (req, res) => {
         }
         // ------------------------------------
 
-        traceService.add({ action: 'launch_browser', browserId, status: 'success' });
+        const launchedSession = browserService.get(browserId);
+        const actualHeadless = launchedSession?.options?.headless ?? resolvedBody.headless;
 
         return res.status(200).json({
             success: true,
             message: req.t('actions.launch_browser.success'),
             browserId,
-            headless: !!resolvedBody.headless,
+            headless: actualHeadless,
         });
     } catch (error) {
         if (launchedBrowserId) {

@@ -110,6 +110,9 @@ const parseJsonArray = (value, fieldName = "fields") => {
 // ---------------------------------------------
 
 export const launch_browser = (payload) => {
+  const httpUsername = asString(payload?.httpCredentialsUsername, "");
+  const httpPassword = asString(payload?.httpCredentialsPassword, "");
+
   return {
     browserType: asString(payload?.browserType, "chromium"),
     headless: asBoolean(payload?.headless, false),
@@ -127,6 +130,9 @@ export const launch_browser = (payload) => {
     latency: asNumber(payload?.latency, 0),
     downloadThroughput: asNumber(payload?.downloadThroughput, 0),
     uploadThroughput: asNumber(payload?.uploadThroughput, 0),
+    ...(httpUsername
+      ? { httpCredentials: { username: httpUsername, password: httpPassword } }
+      : {}),
   };
 };
 

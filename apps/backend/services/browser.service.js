@@ -278,7 +278,7 @@ class BrowserManager {
         this.set(browserId, {
             browser,
             launchMethod,
-            options: { ...options, launchArgs, maximizeWindow, recordVideo },
+            options: { ...options, headless, launchArgs, maximizeWindow, recordVideo },
         });
 
         const version = browser.version();

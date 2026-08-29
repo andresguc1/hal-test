@@ -61,7 +61,10 @@ const openUrlAction = async (req, res) => {
         if (validation.error) {
             try {
                 console.log('[openUrlAction] No active browser session. Auto-launching browser...');
-                const launchOpts = { headless: req.body?.headless !== false };
+                const launchOpts = {
+                    ...req.body,
+                    headless: req.body?.headless === true || req.body?.headless === 'true',
+                };
                 const { browserId: newId } = await browserService.launchBrowser(launchOpts);
                 validation = validateBrowser(req, newId);
             } catch (e) {

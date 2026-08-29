@@ -72,6 +72,20 @@ const launchBrowserBodySchema = Joi.object({
     isMobile: Joi.boolean().optional().default(false),
     hasTouch: Joi.boolean().optional().default(false),
 
+    // --- HTTP Basic Authentication (Optional) ---
+    // Applies to every navigation context created from this browser.
+    httpCredentials: Joi.object({
+        username: Joi.string().allow('').default(''),
+        password: Joi.string().allow('').default(''),
+    })
+        .optional()
+        .custom((value, helpers) => {
+            if (value && value.username === '' && value.password === '') {
+                return helpers.message('httpCredentials requires a username');
+            }
+            return value;
+        }, 'http-basic-credentials validation'),
+
     // --- Network Conditions (Optional) ---
     networkProfile: Joi.string()
         .valid(

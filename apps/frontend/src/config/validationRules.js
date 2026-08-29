@@ -50,6 +50,18 @@ export const NODE_INPUTS = {
       ],
     },
     { key: "slowMo", label: "Slow Mo (ms)", type: "number", placeholder: "50" },
+    {
+      key: "httpCredentialsUsername",
+      label: "🔐 HTTP Basic Username",
+      type: "text",
+      placeholder: "admin",
+    },
+    {
+      key: "httpCredentialsPassword",
+      label: "🔐 HTTP Basic Password",
+      type: "text",
+      placeholder: "••••••••",
+    },
   ],
   open_url: [
     {
