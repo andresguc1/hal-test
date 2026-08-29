@@ -20,7 +20,12 @@ export const NODE_INPUTS = {
       defaultValue: "chromium",
       required: true,
     },
-    { key: "headless", label: "Headless Mode", type: "checkbox" },
+    {
+      key: "headless",
+      label: "Headless Mode",
+      type: "checkbox",
+      defaultValue: false,
+    },
     {
       key: "devicePreset",
       label: "📱 Device Template",

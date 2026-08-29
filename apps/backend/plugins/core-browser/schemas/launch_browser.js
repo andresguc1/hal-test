@@ -1,7 +1,11 @@
 import Joi from 'joi';
 
 const launchBrowserSchema = Joi.object({
-    browser: Joi.string().valid('chromium', 'firefox', 'webkit').optional().default('chromium'),
+    browserType: Joi.string()
+        .valid('chromium', 'firefox', 'webkit', 'lightpanda')
+        .optional()
+        .default('chromium'),
+    browser: Joi.string().valid('chromium', 'firefox', 'webkit', 'lightpanda').optional(), // legacy alias
     headless: Joi.alternatives().try(Joi.boolean(), Joi.string()).optional().default(false),
     slowMo: Joi.alternatives().try(Joi.number(), Joi.string()).optional(),
     timeout: Joi.alternatives().try(Joi.number(), Joi.string()).optional(),

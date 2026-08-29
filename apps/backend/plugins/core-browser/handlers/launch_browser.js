@@ -98,7 +98,7 @@ const launchBrowserAction = async (req, res) => {
                         message: 'Browser reused (Debug Mode)',
                         browserId: latestId,
                         reused: true,
-                        headless: latestBrowser.options.headless || false,
+                        headless: !!latestBrowser.options.headless,
                     });
                 } else {
                     console.log(
@@ -170,7 +170,7 @@ const launchBrowserAction = async (req, res) => {
             success: true,
             message: req.t('actions.launch_browser.success'),
             browserId,
-            headless: resolvedBody.headless || false,
+            headless: !!resolvedBody.headless,
         });
     } catch (error) {
         if (launchedBrowserId) {

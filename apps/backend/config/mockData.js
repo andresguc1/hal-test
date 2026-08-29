@@ -160,7 +160,7 @@ export const mockProjectData = {
         {
             id: 'n1',
             type: 'launch_browser',
-            data: { browser: 'chromium', headless: true },
+            data: { browserType: 'chromium', headless: true },
             position: { x: 50, y: 50 },
         },
         {

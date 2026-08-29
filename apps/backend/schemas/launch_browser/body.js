@@ -3,7 +3,7 @@
 import Joi from 'joi';
 
 // Array de valores permitidos para browserType
-const allowedBrowserTypes = ['chromium', 'firefox', 'webkit'];
+const allowedBrowserTypes = ['chromium', 'firefox', 'webkit', 'lightpanda'];
 
 const launchBrowserBodySchema = Joi.object({
     // 1. browserType (Obligatorio)
@@ -17,7 +17,7 @@ const launchBrowserBodySchema = Joi.object({
         }),
 
     // 2. headless (Opcional)
-    headless: Joi.boolean().default(true).optional().messages({
+    headless: Joi.boolean().default(false).optional().messages({
         'boolean.base': 'El campo headless debe ser un valor booleano (true/false).',
     }),
 

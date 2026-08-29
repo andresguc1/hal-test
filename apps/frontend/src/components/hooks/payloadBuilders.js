@@ -116,6 +116,7 @@ export const launch_browser = (payload) => {
     devicePreset: asString(payload?.devicePreset, "Desktop"),
     slowMo: asNumber(payload?.slowMo, 0, 0),
     args: asString(payload?.args, ""),
+    executablePath: asString(payload?.executablePath, ""),
     maximizeWindow: asBoolean(payload?.maximizeWindow, false),
     width: asNumber(payload?.width),
     height: asNumber(payload?.height),

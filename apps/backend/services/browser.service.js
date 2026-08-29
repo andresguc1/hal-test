@@ -90,6 +90,7 @@ class BrowserManager {
             devicePreset = 'Desktop',
             timeout,
             recordVideo = true, // Default to true if not specified
+            executablePath,
         } = options;
 
         if (slowMo !== undefined && slowMo !== null && slowMo !== '') {
@@ -198,6 +199,8 @@ class BrowserManager {
             } else if (browserType === 'firefox') {
                 launchArgs.push('-width', String(winWidth));
                 launchArgs.push('-height', String(winHeight));
+            } else if (browserType === 'webkit') {
+                launchArgs.push(`--window-size=${winWidth},${winHeight}`);
             }
         }
 
@@ -249,6 +252,7 @@ class BrowserManager {
             args: launchArgs,
             ...(slowMo && { slowMo }),
             ...(timeout && { timeout }),
+            ...(executablePath && { executablePath }),
         };
 
         let browser;
