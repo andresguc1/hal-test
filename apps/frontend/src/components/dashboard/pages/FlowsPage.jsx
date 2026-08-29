@@ -12,7 +12,9 @@ import {
   CheckCircle2,
   Filter,
 } from "lucide-react";
-import { useProjects } from "../hooks/useDashboardData";
+import { useProjects, dashboardKeys } from "../hooks/useDashboardData";
+import { useQueryClient } from "@tanstack/react-query";
+import { api } from "../../../utils/api";
 import EmptyState from "../components/EmptyState";
 
 function timeAgo(d) {
@@ -40,7 +42,30 @@ export default function FlowsPage({ onOpenFlow, onRunFlow, onNavigate }) {
   const { data: projects = [], isLoading } = useProjects();
   const [search, setSearch] = useState("");
   const [selectedProject, setSelectedProject] = useState("all");
+  const [deletingId, setDeletingId] = useState(null);
+  const queryClient = useQueryClient();
   const rowVariant = useMotionVariants(ROW_FULL, ROW_REDUCED);
+
+  const handleDelete = async (flow) => {
+    if (!flow?.id || !flow?.projectId) return;
+    if (
+      !window.confirm(
+        `Delete flow "${flow.name}"? This cannot be undone.`,
+      )
+    )
+      return;
+    setDeletingId(flow.id);
+    try {
+      await api.delete(`/projects/${flow.projectId}/flows/${flow.id}`);
+      await queryClient.invalidateQueries({
+        queryKey: dashboardKeys.projects(),
+      });
+    } catch (err) {
+      console.error("[FlowsPage] Failed to delete flow:", err);
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const allFlows = useMemo(
     () =>
@@ -306,14 +331,15 @@ export default function FlowsPage({ onOpenFlow, onRunFlow, onNavigate }) {
                       <button
                         className="dash-row-action-btn"
                         title="Duplicate"
-                        onClick={() => {}}
+                        disabled
                       >
                         <Copy size={12} />
                       </button>
                       <button
                         className="dash-row-action-btn danger"
                         title="Delete"
-                        onClick={() => {}}
+                        disabled={deletingId === flow.id}
+                        onClick={() => handleDelete(flow)}
                       >
                         <Trash2 size={12} />
                       </button>
