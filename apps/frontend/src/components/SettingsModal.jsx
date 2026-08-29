@@ -19,14 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Settings,
-  Layout,
-  Cpu,
-  HardDrive,
-  Monitor,
-  AlertTriangle,
-} from "lucide-react";
+import { Settings, Cpu, Monitor, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import providersData from "@/data/providers.json";
@@ -132,19 +125,9 @@ export default function SettingsModal({
             label={t("settings.sidebar.general")}
           />
           <SidebarItem
-            id="canvas"
-            icon={Layout}
-            label={t("settings.sidebar.canvas")}
-          />
-          <SidebarItem
             id="integrations"
             icon={Cpu}
             label={t("settings.sidebar.integrations")}
-          />
-          <SidebarItem
-            id="system"
-            icon={HardDrive}
-            label={t("settings.sidebar.system")}
           />
         </div>
 
@@ -292,22 +275,6 @@ export default function SettingsModal({
                 })()}
 
                 {/* Save button moved inside form */}
-              </div>
-            )}
-
-            {/* CANVAS TAB (Placeholder) */}
-            {activeTab === "canvas" && (
-              <div className="flex flex-col items-center justify-center h-full text-slate-500">
-                <Layout size={48} className="mb-4 opacity-20" />
-                <p>{t("settings.sidebar.canvas_coming_soon")}</p>
-              </div>
-            )}
-
-            {/* SYSTEM TAB (Placeholder) */}
-            {activeTab === "system" && (
-              <div className="flex flex-col items-center justify-center h-full text-slate-500">
-                <HardDrive size={48} className="mb-4 opacity-20" />
-                <p>{t("settings.sidebar.system_coming_soon")}</p>
               </div>
             )}
           </div>

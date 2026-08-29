@@ -162,7 +162,9 @@ export function AIPage({ onOpenSettings }) {
           gap: 14,
         }}
       >
-        {cards.map(({ icon, title, desc, badge, onClick }) => (
+        {cards
+          .filter((card) => card.onClick)
+          .map(({ icon, title, desc, badge, onClick }) => (
           <div
             key={title}
             onClick={onClick}
