@@ -21,10 +21,16 @@ export const AuthProvider = ({ children }) => {
           status.mode === "local" ||
           import.meta.env.VITE_HALTEST_MODE === "local";
 
-        setAuthMode(isLocal ? "local" : "cloud");
+        // Backend reports auth disabled, or Supabase is not configured on the client.
+        // Silently fall back to a guest session instead of hanging on a Supabase call.
+        const backendAuthDisabled = status.auth_enabled === false;
+        const clientSupabaseMissing =
+          !import.meta.env.VITE_SUPABASE_URL ||
+          !import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-        if (isLocal) {
-          console.log("[Auth] Local Mode Detected - Enabling Guest Session");
+        if (isLocal || backendAuthDisabled || clientSupabaseMissing) {
+          console.log("[Auth] Guest session enabled (backend auth disabled or not configured).");
+          setAuthMode("local");
           setUser({
             id: "guest-user",
             email: "guest@haltest.dev",
@@ -35,6 +41,8 @@ export const AuthProvider = ({ children }) => {
           setLoading(false);
           return;
         }
+
+        setAuthMode("cloud");
 
         // 2. Cloud Mode - Regular Supabase Auth
         const isAuthEnabled = import.meta.env.VITE_AUTH_ENABLED !== "false";

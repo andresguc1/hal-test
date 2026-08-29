@@ -13,10 +13,5 @@ export const supabase =
       );
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn(
-    "⚠️ [AUTH] Supabase credentials missing (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).",
-  );
-  console.warn(
-    "⚠️ [AUTH] Frontend authentication functionality will be disabled.",
-  );
+  console.log("[AUTH] Supabase not configured; running in guest mode.");
 }
