@@ -13,6 +13,7 @@ describe('HalTest Node Mappers Code Generation', () => {
         expect(registered).toContain('manage_session');
         expect(registered).toContain('variable');
         expect(registered).toContain('input');
+        expect(registered).toContain('browser_dialog');
     });
 
     describe('NavigationMapper', () => {
@@ -172,6 +173,28 @@ describe('HalTest Node Mappers Code Generation', () => {
             const params = { actionType: 'pause', ms: 5000 };
             const jsCode = mapper.getCode(params, 'javascript');
             expect(jsCode).toBe('await page.waitForTimeout(5000);');
+        });
+    });
+
+    describe('BrowserActionMapper (browser_dialog)', () => {
+        const mapper = NodeMapperRegistry.getMapper('browser_dialog');
+
+        it('generates an accept dialog handler with expectation', () => {
+            const params = {
+                actionType: 'browser_dialog',
+                expectText: 'context menu',
+                action: 'accept',
+            };
+            const jsCode = mapper.getCode(params, 'javascript');
+            expect(jsCode).toContain("page.once('dialog', async (dialog) =>");
+            expect(jsCode).toContain("dialog.message().includes('context menu')");
+            expect(jsCode).toContain('await dialog.accept()');
+        });
+
+        it('generates a dismiss dialog handler', () => {
+            const params = { actionType: 'browser_dialog', action: 'dismiss' };
+            const jsCode = mapper.getCode(params, 'javascript');
+            expect(jsCode).toContain('await dialog.dismiss()');
         });
     });
 });
