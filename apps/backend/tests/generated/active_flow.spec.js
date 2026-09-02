@@ -25,6 +25,21 @@ test(`Flujo Generado Hal-Test`, async ({ page }) => {
         await page.click(`getByRole('link', { name: 'Context Menu' })`);
     });
 
+    // [node_id: node_bf2f174a-2fdd-4668-b524-48fe1ed83ac0]
+    await test.step(`Click`, async () => {
+        await page.click(`#hot-spot`);
+    });
+
+    // [node_id: node_e5e94a96-73fb-417c-8d52-46f5df5aedcb]
+    await test.step(`Click`, async () => {
+        await page.click(`html > body`);
+    });
+
+    // [node_id: node_42fc7cdf-55c3-485d-bbed-9578ecdea0f3]
+    await test.step(`Go Back`, async () => {
+        await page.goBack();
+    });
+
     // [node_id: node_16c64892-a3a4-4b6c-9363-9e508afdff89]
     await test.step(`Close Browser`, async () => {
         // Browser managed by runner

@@ -185,6 +185,47 @@ export const NODE_INPUTS = {
       defaultValue: false,
     },
   ],
+  browser_dialog: [
+    {
+      key: "action",
+      label: "Dialog Action",
+      type: "select",
+      options: [
+        { label: "Accept (OK)", value: "accept" },
+        { label: "Dismiss (Cancel)", value: "dismiss" },
+      ],
+      defaultValue: "accept",
+    },
+    {
+      key: "expectText",
+      label: "Expected Message",
+      type: "text",
+      placeholder: "e.g. You selected: internet (leave empty to skip assertion)",
+    },
+    {
+      key: "matchType",
+      label: "Match Type",
+      type: "select",
+      options: [
+        { label: "Contains", value: "contains" },
+        { label: "Exact", value: "exact" },
+        { label: "Regex", value: "regex" },
+      ],
+      defaultValue: "contains",
+    },
+    {
+      key: "timeout",
+      label: "Wait for Dialog (ms)",
+      type: "number",
+      placeholder: "5000",
+    },
+    {
+      key: "continueOnError",
+      label: "🛡️ Continue on failure (Soft Fail)",
+      type: "checkbox",
+      defaultValue: false,
+    },
+  ],
   type_text: [
     {
       key: "selector",

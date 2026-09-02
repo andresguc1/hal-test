@@ -225,6 +225,9 @@
         "resize_viewport": {
             "success": "Janela de visualização redimensionada para {{width}}x{{height}}."
         },
+        "browser_dialog": {
+            "success": "Diálogo {{type}} do navegador tratado ({{action}}): \"{{message}}\""
+        },
         "drag_drop": {
             "success": "Elemento {{source}} arrastado e solto corretamente em {{target}}."
         },
@@ -310,6 +313,7 @@
         "session_load_error": "Não foi possível ler o arquivo da sessão em: {{path}}",
         "invalid_persistence_action": "Ação de persistência inválida: {{action}}.",
         "width_height_required": "Os parâmetros largura e altura são obrigatórios.",
+        "browser_dialog_not_found": "Nenhum diálogo do navegador foi capturado.",
         "error_dragging": "Erro ao executar a ação de arrastar e soltar.",
         "source_target_required": "sourceSelector e targetSelector são obrigatórios.",
         "text_required": "O parâmetro 'texto' é obrigatório.",

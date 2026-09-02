@@ -225,6 +225,9 @@
         "resize_viewport": {
             "success": "Fenêtre redimensionnée à {{width}}x{{height}}."
         },
+        "browser_dialog": {
+            "success": "Boîte de dialogue {{type}} traitée ({{action}}) : \"{{message}}\""
+        },
         "drag_drop": {
             "success": "Élément {{source}} glissé et déposé correctement dans {{target}}."
         },
@@ -310,6 +313,7 @@
         "session_load_error": "Impossible de lire le fichier de session à : {{path}}",
         "invalid_persistence_action": "Action de persistance non valide : {{action}}.",
         "width_height_required": "Les paramètres largeur et hauteur sont obligatoires.",
+        "browser_dialog_not_found": "Aucune boîte de dialogue du navigateur capturée.",
         "error_dragging": "Erreur lors de l'exécution de l'action glisser-déposer.",
         "source_target_required": "sourceSelector et targetSelector sont requis.",
         "text_required": "Le paramètre 'text' est obligatoire.",

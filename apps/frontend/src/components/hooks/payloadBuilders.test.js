@@ -1,5 +1,67 @@
 import { describe, it, expect } from "vitest";
-import { select_option } from "./payloadBuilders.js";
+import { select_option, click, browser_dialog } from "./payloadBuilders.js";
+
+describe("click payload builder", () => {
+  it("defaults to a single left click", () => {
+    const payload = click({ selector: "#btn" });
+    expect(payload).toMatchObject({
+      selector: "#btn",
+      button: "left",
+      timeout: 30000,
+      takeScreenshot: true,
+    });
+    expect(payload.clickCount).toBeUndefined();
+  });
+
+  it("maps clickType right/middle to the mouse button", () => {
+    expect(click({ selector: "#s", clickType: "right" }).button).toBe("right");
+    expect(click({ selector: "#s", clickType: "middle" }).button).toBe("middle");
+  });
+
+  it("maps clickType double to a left double click", () => {
+    const payload = click({ selector: "#s", clickType: "double" });
+    expect(payload).toMatchObject({ button: "left", clickCount: 2 });
+  });
+
+  it("falls back to the legacy button key", () => {
+    expect(click({ selector: "#s", button: "right" }).button).toBe("right");
+  });
+
+  it("normalizes an invalid clickType to left single", () => {
+    const payload = click({ selector: "#s", clickType: "nonsense" });
+    expect(payload).toMatchObject({ button: "left" });
+    expect(payload.clickCount).toBeUndefined();
+  });
+
+  it("throws when selector is missing", () => {
+    expect(() => click({})).toThrow(/selector/);
+  });
+});
+
+describe("browser_dialog payload builder", () => {
+  it("emits accept by default", () => {
+    const payload = browser_dialog({});
+    expect(payload.action).toBe("accept");
+    expect(payload.matchType).toBe("contains");
+    expect(payload.caseSensitive).toBe(false);
+  });
+
+  it("maps dismiss action and includes expectText", () => {
+    const payload = browser_dialog({ action: "dismiss", expectText: "internet" });
+    expect(payload.action).toBe("dismiss");
+    expect(payload.expectText).toBe("internet");
+  });
+
+  it("omits expectText when empty", () => {
+    const payload = browser_dialog({ action: "accept" });
+    expect("expectText" in payload).toBe(false);
+  });
+
+  it("falls back to accept for invalid action", () => {
+    const payload = browser_dialog({ action: "banana" });
+    expect(payload.action).toBe("accept");
+  });
+});
 
 describe("select_option payload builder", () => {
   it("emits auto-detected mode when containerSelector is present", () => {

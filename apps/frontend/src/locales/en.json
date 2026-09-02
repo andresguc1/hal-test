@@ -187,6 +187,7 @@
       "go_forward": "Go Forward",
       "refresh": "Refresh Page",
       "resize_viewport": "Resize Viewport",
+      "browser_dialog": "Browser Dialog",
       "launch_browser": "Launch Browser",
       "reload_page": "Reload Page",
       "manage_tabs": "Manage Tabs",

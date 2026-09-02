@@ -46,6 +46,7 @@ export const NODE_CATEGORIES = {
       "close_browser",
       "manage_tabs",
       "resize_viewport",
+      "browser_dialog",
       "go_back",
       "go_forward",
       "wait_navigation",
@@ -247,6 +248,12 @@ export const NODE_OUTPUTS = {
     success: "boolean",
     width: "number",
     height: "number",
+  },
+  browser_dialog: {
+    success: "boolean",
+    dialog: "object",
+    action: "string",
+    matched: "boolean",
   },
   go_back: {
     success: "boolean",

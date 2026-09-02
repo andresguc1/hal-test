@@ -45,6 +45,16 @@ export const NODE_SIMULATORS = {
     selector: config.selector,
   }),
 
+  browser_dialog: (config) => ({
+    success: true,
+    dialog: {
+      type: "alert",
+      message: config.expectText || "Dialog message",
+    },
+    action: config.action || "accept",
+    matched: true,
+  }),
+
   type_text: (config) => ({
     success: true,
     selector: config.selector,

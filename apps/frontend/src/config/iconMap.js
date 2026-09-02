@@ -73,6 +73,7 @@ import {
   Compass,
   ArrowLeft,
   ArrowRight,
+  MessageSquareWarning,
 } from "lucide-react";
 
 const ICON_MAP = {
@@ -150,6 +151,7 @@ const ICON_MAP = {
   Compass,
   ArrowLeft,
   ArrowRight,
+  MessageSquareWarning,
 };
 
 export const resolveIcon = (name) => {

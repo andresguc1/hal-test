@@ -225,6 +225,9 @@
         "resize_viewport": {
             "success": "Viewport resized to {{width}}x{{height}}."
         },
+        "browser_dialog": {
+            "success": "Browser {{type}} dialog handled ({{action}}): \"{{message}}\""
+        },
         "drag_drop": {
             "success": "Element {{source}} dragged and dropped correctly in {{target}}."
         },
@@ -310,6 +313,7 @@
         "session_load_error": "Could not read session file at: {{path}}",
         "invalid_persistence_action": "Invalid persistence action: {{action}}.",
         "width_height_required": "Parameters width and height are required.",
+        "browser_dialog_not_found": "No browser dialog was captured.",
         "error_dragging": "Error executing drag and drop action.",
         "source_target_required": "sourceSelector and targetSelector are required.",
         "text_required": "The 'text' parameter is required.",

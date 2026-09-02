@@ -10,6 +10,7 @@ export { default as launchBrowserBodySchema } from './launch_browser/body.js';
 export { default as closeBrowserBodySchema } from './close_browser/body.js';
 export { default as openUrlBodySchema } from './open_url/body.js';
 export { default as resizeViewportBodySchema } from './resize_viewport/body.js';
+export { default as browserDialogBodySchema } from './browser_dialog/body.js';
 export { default as manageTabsBodySchema } from './manage_tabs/body.js';
 export { default as backForwardBodySchema } from './back_forward/body.js';
 

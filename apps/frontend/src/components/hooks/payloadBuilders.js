@@ -324,15 +324,54 @@ export const click = (payload = {}) => {
     throw new Error("'selector' is required.");
   }
 
-  const button = asString(payload.button, "left").toLowerCase();
+  // The UI exposes the mouse-button as `clickType` (left|right|middle|double).
+  // Map it to Playwright's `button` + `clickCount`. The legacy `button` key is
+  // still honored as a fallback for backward compatibility.
+  const clickType = asString(payload?.clickType, "left").toLowerCase();
+  const mappedByClickType =
+    clickType === "double" ? { button: "left", clickCount: 2 } : { button: clickType };
+
+  const rawButton = asString(payload?.button ?? mappedByClickType.button, "left").toLowerCase();
   const allowedButtons = ["left", "right", "middle"];
-  const finalButton = allowedButtons.includes(button) ? button : "left";
+  const finalButton = allowedButtons.includes(rawButton) ? rawButton : "left";
+  const clickCount = clickType === "double"
+      ? 2
+      : asNumber(payload?.clickCount, undefined, 1) || undefined;
 
   return {
     selector: selector,
     button: finalButton,
+    clickCount,
     browserId: asString(payload?.browserId),
     timeout: asNumber(payload?.timeout, 30000, 1),
+    takeScreenshot: asBoolean(payload?.takeScreenshot, true),
+    continueOnError: asBoolean(
+      payload?.continueOnError ?? payload?.continueOnFailure,
+      false,
+    ),
+  };
+};
+
+export const browser_dialog = (payload = {}) => {
+  const action = asString(payload.action, "accept").toLowerCase().trim();
+  const allowed = ["accept", "dismiss"];
+  const act = allowed.includes(action) ? action : "accept";
+
+  const expectText = asString(payload.expectText);
+  const body = {
+    action: act,
+    matchType: asString(payload.matchType, "contains"),
+    caseSensitive: asBoolean(payload.caseSensitive, false),
+    timeout: asNumber(payload.timeout, 5000, 1),
+    browserId: asString(payload?.browserId),
+  };
+
+  if (expectText !== "") {
+    body.expectText = expectText;
+  }
+
+  return {
+    ...body,
     takeScreenshot: asBoolean(payload?.takeScreenshot, true),
     continueOnError: asBoolean(
       payload?.continueOnError ?? payload?.continueOnFailure,

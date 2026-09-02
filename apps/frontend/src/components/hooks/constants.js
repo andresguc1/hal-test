@@ -16,6 +16,7 @@ export const NODE_LABELS = {
 
   // Browser Configuration
   resize_viewport: "Resize Viewport",
+  browser_dialog: "Browser Dialog",
   launch_browser: "Launch Browser",
   manage_tabs: "Manage Tabs",
 
@@ -2986,6 +2987,7 @@ export const NODE_TYPE_TO_CATEGORY = {
   close_browser: "browser_management",
   manage_tabs: "browser_management",
   resize_viewport: "browser_management",
+  browser_dialog: "browser_management",
   go_back: "browser_management",
   go_forward: "browser_management",
 

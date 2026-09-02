@@ -228,6 +228,9 @@
         "resize_viewport": {
             "success": "Viewport redimensionado a {{width}}x{{height}}."
         },
+        "browser_dialog": {
+            "success": "Diálogo {{type}} del navegador gestionado ({{action}}): \"{{message}}\""
+        },
         "drag_drop": {
             "success": "Elemento {{source}} arrastrado y soltado correctamente en {{target}}."
         },
@@ -316,6 +319,7 @@
         "session_load_error": "No se pudo leer el archivo de sesión en: {{path}}",
         "invalid_persistence_action": "Acción de persistencia no válida: {{action}}.",
         "width_height_required": "Los parámetros width y height son obligatorios.",
+        "browser_dialog_not_found": "No se capturó ningún diálogo del navegador.",
         "error_dragging": "Error al ejecutar la acción de arrastrar y soltar.",
         "source_target_required": "sourceSelector y targetSelector son obligatorios.",
         "text_required": "El parámetro 'text' es obligatorio.",

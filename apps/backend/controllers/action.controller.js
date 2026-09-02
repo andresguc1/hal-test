@@ -197,6 +197,7 @@ export { default as launchBrowserAction } from '../plugins/core-browser/handlers
 export { default as closeBrowserAction } from '../plugins/core-browser/handlers/close_browser.js';
 export { default as manageTabsAction } from '../plugins/core-browser/handlers/manage_tabs.js';
 export { default as resizeViewportAction } from '../plugins/core-browser/handlers/resize_viewport.js';
+export { default as browserDialogAction } from '../plugins/core-browser/handlers/browser_dialog.js';
 
 // ──── Navigation Plugin ────
 export { default as openUrlAction } from '../plugins/core-navigation/handlers/open_url.js';

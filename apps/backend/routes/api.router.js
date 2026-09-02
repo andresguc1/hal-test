@@ -54,6 +54,7 @@ const ROUTE_REGISTRY = {
     close_browser: { schema: 'closeBrowserBodySchema', category: 'browser' },
     manage_tabs: { schema: 'manageTabsBodySchema', category: 'tabs' },
     resize_viewport: { schema: 'resizeViewportBodySchema', category: 'viewport' },
+    browser_dialog: { schema: 'browserDialogBodySchema', category: 'browser' },
     // Navigation
     open_url: { schema: 'openUrlBodySchema', category: 'navigation' },
     go_back: { schema: 'backForwardBodySchema', category: 'navigation' },

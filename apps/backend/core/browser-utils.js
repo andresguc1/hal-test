@@ -296,6 +296,7 @@ async function getOrCreateContext(req, browser, browserId) {
                 const ctx = contexts[0];
                 try {
                     await ctx.pages();
+                    attachDialogListener(ctx);
                     if (req.body?.securityObservability) {
                         await attachSecurityContextListeners(ctx);
                     }
@@ -639,6 +640,8 @@ async function getOrCreateContext(req, browser, browserId) {
 
             networkHistoryService.track(browserId, newContext);
 
+            attachDialogListener(newContext);
+
             if (req.body?.securityObservability) {
                 await attachSecurityContextListeners(newContext);
             }
@@ -751,11 +754,63 @@ function isCIEnvironment() {
     );
 }
 
+/**
+ * Attaches a JavaScript dialog listener to every page of a context/frame so
+ * native browser dialogs (alert/confirm/prompt/beforeunload) are recorded in
+ * page._dialogQueue. Installed unconditionally (independent of security
+ * observability) so the "browser_dialog" node always has deterministic capture.
+ */
+function attachDialogListener(target) {
+    const attachToPage = (page) => {
+        if (page._dialogListenerAttached) return;
+        page._dialogListenerAttached = true;
+        page._dialogQueue = page._dialogQueue || [];
+        page.on('dialog', async (dialog) => {
+            const entry = {
+                type: dialog.type(),
+                message: dialog.message(),
+                at: Date.now(),
+            };
+            page._dialogQueue.push(entry);
+            const action = page._dialogDefaultAction || 'accept';
+            try {
+                if (action === 'dismiss') {
+                    await dialog.dismiss().catch(() => {});
+                } else {
+                    await dialog.accept().catch(() => {});
+                }
+            } catch (err) {
+                // dialog was already handled
+            }
+        });
+    };
+
+    if (target && target.pages && typeof target.pages === 'function') {
+        // target is a BrowserContext
+        try {
+            if (!target._dialogListenerAttached) {
+                target._dialogListenerAttached = true;
+                target.on('page', (page) => {
+                    page._dialogQueue = page._dialogQueue || [];
+                    attachToPage(page);
+                });
+            }
+            for (const page of target.pages()) attachToPage(page);
+        } catch (err) {
+            // context not listenable
+        }
+    } else if (target) {
+        // target is a Page
+        attachToPage(target);
+    }
+}
+
 export {
     NETWORK_PRESETS,
     applyNetworkConditions,
     validateBrowser,
     attachSecurityContextListeners,
+    attachDialogListener,
     getOrCreateContext,
     getActivePage,
     fetchContext,
