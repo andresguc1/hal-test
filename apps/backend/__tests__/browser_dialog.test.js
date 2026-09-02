@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import browserDialogAction from '../plugins/core-browser/handlers/browser_dialog.js';
 import { browserService } from '../services/browser.service.js';
-import { attachDialogListener } from '../core/browser-utils.js';
+import { attachDialogListener, getOrCreateContext } from '../core/browser-utils.js';
 
 vi.mock('../services/browser.service.js', () => ({
     browserService: {
@@ -195,5 +195,26 @@ describe('attachDialogListener', () => {
         dialogHandler(dlg);
 
         expect(dlg.dismiss).toHaveBeenCalled();
+    });
+});
+
+describe('getOrCreateContext wiring', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mockPage._dialogQueue = [];
+        mockPage._dialogListenerAttached = false;
+        delete mockPage._dialogPromptText;
+        delete mockPage._dialogDefaultAction;
+        browserService.keys.mockReturnValue(['mock-browser-id']);
+        browserService.get.mockReturnValue({ browser: mockBrowser });
+    });
+
+    it('installs the dialog listener on an existing context', async () => {
+        const req = { body: {}, t: (k, fb) => fb ?? k };
+        const ctx = await getOrCreateContext(req, mockBrowser, 'mock-browser-id');
+
+        expect(ctx).toBe(mockContext);
+        expect(mockPage._dialogListenerAttached).toBe(true);
+        expect(mockPage.on).toHaveBeenCalledWith('dialog', expect.any(Function));
     });
 });
