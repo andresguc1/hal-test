@@ -19,6 +19,12 @@ apps/backend/storages/error_logs/*
 apps/backend/storages/traces/*
 !apps/backend/storages/.gitkeep
 
+# Generated code artifacts
+apps/backend/tests/generated/
+
+# Developer scratch / debug scripts
+apps/backend/scratch/
+
 # Logs
 *.log
 npm-debug.log*
@@ -37,7 +43,6 @@ yarn-error.log*
 .idea/
 *.swp
 *.swo
-.DS_Store
 
 # Testing
 apps/backend/test-results/
@@ -46,16 +51,14 @@ apps/frontend/playwright-report/
 coverage/
 .nyc_output/
 
-# System
+# System / OS
 .DS_Store
 Thumbs.db
 .gemini/
 temp/
 tmp/
+
+# Misc local-only files
 Issues.md
-.gitignore
 apps/prod_variables.env
 apps/frontend/public/images/haltest_pricing.jpg
-.gitignore
-.gitignore
-.gitignore
