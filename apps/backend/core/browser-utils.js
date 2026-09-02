@@ -773,9 +773,12 @@ function attachDialogListener(target) {
             };
             page._dialogQueue.push(entry);
             const action = page._dialogDefaultAction || 'accept';
+            const promptText = page._dialogPromptText;
             try {
                 if (action === 'dismiss') {
                     await dialog.dismiss().catch(() => {});
+                } else if (dialog.type() === 'prompt' && promptText !== undefined) {
+                    await dialog.accept(String(promptText)).catch(() => {});
                 } else {
                     await dialog.accept().catch(() => {});
                 }

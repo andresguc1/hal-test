@@ -18,6 +18,7 @@ import {
   AlertTriangle,
   Lock,
   MessageSquare,
+  MessageSquareWarning,
   OctagonX,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -446,6 +447,33 @@ const NodeConfigurationPanel = ({
                 )}
               </span>
             ))}
+          </div>
+        );
+      }
+
+      // Specialized render for browser_dialog evidence.
+      if (
+        keyName === "dialog" &&
+        value &&
+        typeof value === "object" &&
+        !isArray &&
+        typeof value.type === "string"
+      ) {
+        return (
+          <div className="w-full rounded-lg border border-indigo-500/20 bg-indigo-500/[0.05] p-2.5">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="inline-flex items-center gap-1 text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300">
+                {value.type}
+              </span>
+              {value.message ? (
+                <MessageSquareWarning size={12} className="text-indigo-400" />
+              ) : null}
+            </div>
+            {value.message && (
+              <div className="mt-1.5 text-[11px] text-slate-200 font-medium leading-relaxed">
+                "{value.message}"
+              </div>
+            )}
           </div>
         );
       }

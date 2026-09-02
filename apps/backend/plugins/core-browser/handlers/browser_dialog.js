@@ -18,8 +18,21 @@ const browserDialogAction = (req, res) =>
             expectText = '',
             matchType = 'contains',
             caseSensitive = false,
+            promptText,
             timeout = 5000,
         } = opts;
+
+        // Configure how the engine answers future native dialogs on this page.
+        // Playwright requires dialogs to be answered from the event that triggers
+        // them, so these flags are read by the engine-level listener at fire time.
+        // @browser_dialog typically runs *before* the dialogs it answers; when it
+        // runs after a dialog was already auto-handled, the queue is used for assertion.
+        page._dialogDefaultAction = action === 'dismiss' ? 'dismiss' : 'accept';
+        if (promptText !== undefined && promptText !== null && String(promptText) !== '') {
+            page._dialogPromptText = String(promptText);
+        } else if (typeof promptText === 'string') {
+            delete page._dialogPromptText;
+        }
 
         const waitMs = Math.min(Number(timeout) || 5000, 15000);
         const deadline = Date.now() + waitMs;
@@ -84,12 +97,14 @@ const browserDialogAction = (req, res) =>
                 matched,
                 expectText: expectText || '',
                 matchType,
+                promptText: page._dialogPromptText,
             },
             traceDetails: {
                 dialogType: dlg.type,
                 message: dlg.message,
                 action,
                 matched,
+                promptText: page._dialogPromptText,
             },
         };
     });

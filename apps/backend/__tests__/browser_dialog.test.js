@@ -56,6 +56,8 @@ describe('browser_dialog handler', () => {
         vi.clearAllMocks();
         mockPage._dialogQueue = [];
         mockPage._dialogListenerAttached = false;
+        delete mockPage._dialogPromptText;
+        delete mockPage._dialogDefaultAction;
         browserService.keys.mockReturnValue(['mock-browser-id']);
         browserService.get.mockReturnValue({ browser: mockBrowser });
     });
@@ -108,6 +110,16 @@ describe('browser_dialog handler', () => {
 
         expect(status).toBe(400);
     });
+
+    it('reports the configured promptText and keeps default accept', async () => {
+        mockPage._dialogQueue.push({ type: 'prompt', message: 'Enter name', at: Date.now() });
+
+        const { status, json } = await callHandler(mockReq({ promptText: 'Alice', timeout: 300 }));
+
+        expect(status).toBe(200);
+        expect(json.data.promptText).toBe('Alice');
+        expect(json.data.action).toBe('accept');
+    });
 });
 
 describe('attachDialogListener', () => {
@@ -115,6 +127,8 @@ describe('attachDialogListener', () => {
         vi.clearAllMocks();
         mockPage._dialogQueue = [];
         mockPage._dialogListenerAttached = false;
+        delete mockPage._dialogPromptText;
+        delete mockPage._dialogDefaultAction;
     });
 
     it('captures a dialog event and auto-accepts it', async () => {
@@ -149,5 +163,37 @@ describe('attachDialogListener', () => {
         dialogHandler(dlg);
 
         expect(dlg.accept).toHaveBeenCalled();
+    });
+
+    it('answers a prompt with the configured promptText', async () => {
+        attachDialogListener(mockPage);
+        mockPage._dialogPromptText = 'my input';
+
+        const dialogHandler = mockPage.on.mock.calls.find((c) => c[0] === 'dialog')[1];
+        const dlg = {
+            type: () => 'prompt',
+            message: () => 'Enter value',
+            dismiss: vi.fn(),
+            accept: vi.fn(),
+        };
+        dialogHandler(dlg);
+
+        expect(dlg.accept).toHaveBeenCalledWith('my input');
+    });
+
+    it('dismisses the dialog when default action is dismiss', async () => {
+        attachDialogListener(mockPage);
+        mockPage._dialogDefaultAction = 'dismiss';
+
+        const dialogHandler = mockPage.on.mock.calls.find((c) => c[0] === 'dialog')[1];
+        const dlg = {
+            type: () => 'confirm',
+            message: () => 'OK?',
+            dismiss: vi.fn(),
+            accept: vi.fn(),
+        };
+        dialogHandler(dlg);
+
+        expect(dlg.dismiss).toHaveBeenCalled();
     });
 });
