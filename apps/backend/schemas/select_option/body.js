@@ -9,25 +9,56 @@ const allowedCriteria = [
     'index', // Por índice (Posición numérica)
 ];
 
+const allowedActions = ['NO_CHANGE', 'CHECK', 'UNCHECK'];
+
 const selectOptionBodySchema = Joi.object({
-    // 1. selector (Requerido)
-    selector: Joi.string().trim().required().messages({
-        'any.required': 'El selector del dropdown (<select>) es obligatorio.',
+    // 1. selector (Opcional en modo legacy; requerido si no se usa containerSelector)
+    selector: Joi.string().trim().optional().messages({
+        'string.base': 'El selector debe ser una cadena de texto.',
     }),
 
-    // 2. selectionCriteria (Requerido, Select)
+    // 1b. containerSelector (NUEVO modo): locator del contenedor de opciones
+    containerSelector: Joi.string().trim().optional().allow('').messages({
+        'string.base': 'containerSelector debe ser una cadena de texto.',
+    }),
+
+    // 1c. selectedOptions (NUEVO modo): lista de acciones por opción a aplicar
+    selectedOptions: Joi.array()
+        .items(
+            Joi.object({
+                label: Joi.string().optional().allow(''),
+                value: Joi.alternatives().try(Joi.string(), Joi.number()).optional().allow(''),
+                action: Joi.string()
+                    .valid(...allowedActions)
+                    .default('CHECK')
+                    .optional()
+                    .messages({
+                        'any.only': 'La acción debe ser NO_CHANGE, CHECK o UNCHECK.',
+                    }),
+            }).unknown(true),
+        )
+        .optional()
+        .messages({
+            'array.base': 'selectedOptions debe ser un arreglo de opciones.',
+        }),
+
+    // 1d. expandMenu (NUEVO): expandir menú/combobox antes de detectar
+    expandMenu: Joi.boolean().optional().default(false).messages({
+        'boolean.base': 'expandMenu debe ser un booleano.',
+    }),
+
+    // 2. selectionCriteria (Requerido, Select) - modo legacy
     selectionCriteria: Joi.string()
         .valid(...allowedCriteria)
         .default('value')
-        .required()
+        .optional()
         .messages({
-            'any.required': 'El criterio de selección (value, label, index) es obligatorio.',
             'any.only': 'El criterio de selección debe ser value, label o index.',
         }),
 
-    // 3. selectionValue (Requerido, String)
-    selectionValue: Joi.string().trim().allow('').required().messages({
-        'any.required': 'El valor, etiqueta o índice a seleccionar es obligatorio.',
+    // 3. selectionValue (Requerido, String) - modo legacy
+    selectionValue: Joi.string().trim().allow('').optional().messages({
+        'string.base': 'selectionValue debe ser una cadena de texto.',
     }),
 
     // 4. timeout (Número, Mínimo 1)
@@ -39,6 +70,7 @@ const selectOptionBodySchema = Joi.object({
     browserId: Joi.string().allow(null, '').optional().messages({
         'string.base': 'browserId debe ser una cadena de texto (el ID único del navegador).',
     }),
-});
-// Bloquea cualquier campo extra que no esté definido.
+}).unknown(true);
+// unknown(true) permite extender la configuración sin romper flujos existentes.
+
 export default selectOptionBodySchema;

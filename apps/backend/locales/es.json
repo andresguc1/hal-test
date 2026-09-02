@@ -320,6 +320,8 @@
         "source_target_required": "sourceSelector y targetSelector son obligatorios.",
         "text_required": "El parámetro 'text' es obligatorio.",
         "value_required_for_set": "El parámetro 'value' es obligatorio para la acción 'set'.",
-        "url_pattern_required": "El patrón de URL (urlPattern) es obligatorio para acciones de red."
+        "url_pattern_required": "El patrón de URL (urlPattern) es obligatorio para acciones de red.",
+        "select_option_container_required": "Se requiere un selector de contenedor al usar opciones auto-detectadas.",
+        "select_option_no_options": "No se encontraron opciones seleccionables dentro de \"{{selector}}\". {{message}}"
     }
 }

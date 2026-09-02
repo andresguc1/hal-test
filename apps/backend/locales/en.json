@@ -314,6 +314,8 @@
         "source_target_required": "sourceSelector and targetSelector are required.",
         "text_required": "The 'text' parameter is required.",
         "value_required_for_set": "The 'value' parameter is required for the 'set' action.",
-        "url_pattern_required": "The URL pattern (urlPattern) is required for network actions."
+        "url_pattern_required": "The URL pattern (urlPattern) is required for network actions.",
+        "select_option_container_required": "A container selector is required when using auto-detected options.",
+        "select_option_no_options": "No selectable options found inside \"{{selector}}\". {{message}}"
     }
 }
