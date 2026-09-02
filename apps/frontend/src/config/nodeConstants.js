@@ -276,6 +276,7 @@ export const NODE_OUTPUTS = {
     success: "boolean",
     value: "string",
     selector: "string",
+    selectedOptions: "array",
   },
 
   scroll: {

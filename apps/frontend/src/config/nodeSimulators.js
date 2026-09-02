@@ -53,8 +53,27 @@ export const NODE_SIMULATORS = {
 
   select_option: (config) => ({
     success: true,
-    selector: config.selector,
-    value: config.selectionValue,
+    selector: config.containerSelector || config.selector,
+    value: Array.isArray(config.selectedOptions)
+      ? config.selectedOptions
+          .map((o) => o.label || o.value)
+          .join(", ")
+      : config.selectionValue,
+    selectedOptions: config.selectedOptions || [],
+    actionCount: Array.isArray(config.selectedOptions)
+      ? config.selectedOptions.filter((o) => o.action && o.action !== "NO_CHANGE").length
+      : 0,
+    optionCount: Array.isArray(config.selectedOptions) ? config.selectedOptions.length : 0,
+    evidence: (Array.isArray(config.selectedOptions) ? config.selectedOptions : []).map(
+      (o) => ({
+        label: o.label,
+        value: o.value,
+        action: o.action || "CHECK",
+        before: "Unknown",
+        after: "Unknown",
+        result: "PASS",
+      }),
+    ),
   }),
 
   // --- DOM / Code ---

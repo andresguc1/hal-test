@@ -224,7 +224,12 @@ export function runPolicyEnforcer(nodes, edges) {
     }
 
     // --- RULE 2: Dynamic CSS / XPath Selectors ---
-    const selectorFields = ["selector", "sourceSelector", "targetSelector"];
+    const selectorFields = [
+      "selector",
+      "containerSelector",
+      "sourceSelector",
+      "targetSelector",
+    ];
     for (const field of selectorFields) {
       const sel = config[field] || node.data?.[field];
       if (sel && typeof sel === "string") {

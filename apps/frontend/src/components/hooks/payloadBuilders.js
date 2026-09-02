@@ -369,12 +369,76 @@ export const type_text = (payload = {}) => {
 };
 
 export const select_option = (payload) => {
+  const containerSelector = asString(payload?.containerSelector);
+
+  const normalizeAction = (a) => {
+    const u = String((a ?? "CHECK").toUpperCase().trim());
+    return ["NO_CHANGE", "CHECK", "UNCHECK"].includes(u) ? u : "CHECK";
+  };
+  const mapOption = (o) => ({
+    label: asString(o?.label),
+    value: o?.value != null ? String(o.value).trim() : "",
+    action: normalizeAction(o?.action),
+  });
+
+  const selectedOptionsRaw = payload?.selectedOptions;
+  let selectedOptions = [];
+  if (Array.isArray(selectedOptionsRaw)) {
+    selectedOptions = selectedOptionsRaw
+      .filter(Boolean)
+      .map(mapOption)
+      .filter((o) => o.label || o.value);
+  } else if (typeof selectedOptionsRaw === "string" && selectedOptionsRaw.trim()) {
+    try {
+      const parsed = JSON.parse(selectedOptionsRaw);
+      if (Array.isArray(parsed)) {
+        selectedOptions = parsed
+          .filter(Boolean)
+          .map(mapOption)
+          .filter((o) => o.label || o.value);
+      }
+    } catch {
+      // ignore malformed JSON string
+    }
+  }
+
+  const expandMenu = asBoolean(payload?.expandMenu, false);
+  const browserId = asString(payload?.browserId);
+
+  // Auto-detected mode (container + selected options)
+  if (containerSelector) {
+    const result = {
+      containerSelector,
+      selectedOptions,
+      timeout: asNumber(payload?.timeout, 30000, 1),
+      browserId,
+    };
+    if (expandMenu) result.expandMenu = true;
+    return result;
+  }
+
+  // Legacy mode: plain <select>
+  let selectionCriteria = asString(payload?.selectionCriteria, "label");
+  let selectionValue = asString(payload?.selectionValue);
+  // Accept importer-style `value`/`label` fields as fallback.
+  if (!selectionValue) {
+    const importerValue = asString(payload?.value);
+    const importerLabel = asString(payload?.label);
+    if (importerValue) {
+      selectionCriteria = "value";
+      selectionValue = importerValue;
+    } else if (importerLabel) {
+      selectionCriteria = "label";
+      selectionValue = importerLabel;
+    }
+  }
+
   return {
     selector: asString(payload?.selector),
-    selectionCriteria: asString(payload?.selectionCriteria, "label"),
-    selectionValue: asString(payload?.selectionValue),
+    selectionCriteria,
+    selectionValue,
     timeout: asNumber(payload?.timeout, 30000, 1),
-    browserId: asString(payload?.browserId),
+    browserId,
   };
 };
 

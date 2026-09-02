@@ -222,18 +222,22 @@ export const NODE_INPUTS = {
   ],
   select_option: [
     {
-      key: "selector",
-      label: "Target Dropdown / Select",
+      key: "containerSelector",
+      label: "Container or Dropdown Selector",
       type: "selector",
-      placeholder: "e.g. select.country-picker",
+      placeholder: "#payment-options, select#country, [role=listbox]",
       required: true,
     },
     {
-      key: "selectionValue",
-      label: "Value / Label / Index",
-      type: "text",
-      placeholder: "US",
-      required: true,
+      key: "selectedOptions",
+      label: "Options",
+      type: "select_option_picker",
+    },
+    {
+      key: "expandMenu",
+      label: "Expand menu before selecting",
+      type: "boolean",
+      defaultValue: false,
     },
     {
       key: "takeScreenshot",

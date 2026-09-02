@@ -23,6 +23,7 @@
     "loading": "Carregando...",
     "success": "Sucesso",
     "error": "Erro",
+    "warning": "Aviso",
     "hide_panel": "Ocultar painel",
     "show_panel": "Mostrar painel",
     "close_panel": "Fechar painel",
@@ -173,6 +174,12 @@
     "sync_success": "Código sincronizado com o canvas com sucesso"
   },
   "nodes": {
+    "select_option": {
+      "container_required": "É necessário um seletor de contêiner.",
+      "none_found": "Nenhuma opção foi detectada.",
+      "detect_failed": "Falha na detecção.",
+      "detect_hint": "Informe um seletor de contêiner e pressione \"Detect Options\" para escanear checkboxes, radios, selects, listboxes ou opções personalizadas."
+    },
     "labels": {
       "open_url": "Abrir URL",
       "close_browser": "Fechar navegador",
@@ -446,6 +453,26 @@
       "no_cases": "Nenhum caso definido.  Adicione um para começar.",
       "add_mapping": "Adicionar mapeamento",
       "no_mappings": "Nenhum mapeamento definido",
+      "select_options": "Opções",
+      "refresh": "Atualizar",
+      "detect": "Detectar Opções",
+      "detected_options": "Opções Detectadas",
+      "all": "Todas",
+      "clear": "Limpar",
+      "option": "Opção",
+      "option_selected": "selecionada(s)",
+      "currently_selected": "atualmente selecionada",
+      "disabled": "desabilitada",
+      "options_count": "opções",
+      "actions_count": "ações",
+      "current_label": "Atual",
+      "action_label": "Ação",
+      "action_no_change": "Sem mudança",
+      "action_check": "Marcar",
+      "action_uncheck": "Desmarcar",
+      "current_checked": "Marcada",
+      "current_unchecked": "Desmarcada",
+      "current_unknown": "Desconhecida",
       "conditional": {
         "control_logic": "Controle de Fluxo",
         "if": "Quando",

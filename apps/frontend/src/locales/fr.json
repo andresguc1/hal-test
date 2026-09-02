@@ -23,6 +23,7 @@
     "loading": "Chargement...",
     "success": "Succès",
     "error": "Erreur",
+    "warning": "Avertissement",
     "toolbox": "BOÎTE À OUTILS",
     "coming_soon": "Bientôt Disponible",
     "hide_panel": "Masquer le panneau",
@@ -173,6 +174,12 @@
     "sync_success": "Code synchronisé avec le canevas avec succès"
   },
   "nodes": {
+    "select_option": {
+      "container_required": "Un sélecteur de conteneur est requis.",
+      "none_found": "Aucune option détectée.",
+      "detect_failed": "La détection a échoué.",
+      "detect_hint": "Saisissez un sélecteur de conteneur et appuyez sur « Detect Options » pour analyser les cases à cocher, boutons radio, listes déroulantes, listboxes ou options personnalisées."
+    },
     "labels": {
       "open_url": "Ouvrir l'URL",
       "close_browser": "Fermer le Navigateur",
@@ -446,6 +453,26 @@
       "no_cases": "Aucun cas défini. Ajoutez-en un pour commencer.",
       "add_mapping": "Ajouter un Mappage",
       "no_mappings": "Aucun mappage défini",
+      "select_options": "Options",
+      "refresh": "Actualiser",
+      "detect": "Détecter les Options",
+      "detected_options": "Options Détectées",
+      "all": "Tout",
+      "clear": "Effacer",
+      "option": "Option",
+      "option_selected": "sélectionnée(s)",
+      "currently_selected": "actuellement sélectionnée",
+      "disabled": "désactivée",
+      "options_count": "options",
+      "actions_count": "actions",
+      "current_label": "État",
+      "action_label": "Action",
+      "action_no_change": "Aucun changement",
+      "action_check": "Cocher",
+      "action_uncheck": "Décocher",
+      "current_checked": "Cochée",
+      "current_unchecked": "Décochée",
+      "current_unknown": "Inconnu",
       "conditional": {
         "control_logic": "Contrôle de Flux",
         "if": "Quand",

@@ -23,6 +23,7 @@
     "loading": "Cargando...",
     "success": "Éxito",
     "error": "Error",
+    "warning": "Advertencia",
     "hide_panel": "Ocultar panel",
     "show_panel": "Mostrar panel",
     "close_panel": "Cerrar panel",
@@ -173,6 +174,12 @@
     "sync_success": "Código sincronizado con el lienzo correctamente"
   },
   "nodes": {
+    "select_option": {
+      "container_required": "Se requiere un selector de contenedor.",
+      "none_found": "No se detectaron opciones.",
+      "detect_failed": "Falló la detección.",
+      "detect_hint": "Ingresa un selector de contenedor y presiona \"Detect Options\" para escanear checkboxes, radios, selects, listboxes u opciones personalizadas."
+    },
     "labels": {
       "open_url": "Abrir URL",
       "close_browser": "Cerrar navegador",
@@ -446,6 +453,26 @@
       "no_cases": "No hay casos definidos. Agrega uno para empezar.",
       "add_mapping": "Agregar Mapeo",
       "no_mappings": "Sin mapeos definidos",
+      "select_options": "Opciones",
+      "refresh": "Actualizar",
+      "detect": "Detectar Opciones",
+      "detected_options": "Opciones Detectadas",
+      "all": "Todas",
+      "clear": "Limpiar",
+      "option": "Opción",
+      "option_selected": "seleccionada(s)",
+      "currently_selected": "actualmente seleccionada",
+      "disabled": "deshabilitada",
+      "options_count": "opciones",
+      "actions_count": "acciones",
+      "current_label": "Actual",
+      "action_label": "Acción",
+      "action_no_change": "Sin cambio",
+      "action_check": "Marcar",
+      "action_uncheck": "Desmarcar",
+      "current_checked": "Marcada",
+      "current_unchecked": "Desmarcada",
+      "current_unknown": "Desconocida",
       "conditional": {
         "control_logic": "Lógica de Control",
         "if": "Si",

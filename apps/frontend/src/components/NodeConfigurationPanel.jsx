@@ -35,6 +35,7 @@ import { NODE_INPUTS } from "@/config/validationRules";
 import ConditionalBranchesEditor from "./editors/ConditionalBranchesEditor";
 import SwitchCasesEditor from "./editors/SwitchCasesEditor";
 import FormFillEditor from "./editors/FormFillEditor";
+import OptionPickerEditor from "./editors/OptionPickerEditor";
 import { SelectorResultPanel } from "./SelectorResultPanel";
 import { useTranslation } from "react-i18next";
 import { useForm, Controller } from "react-hook-form";
@@ -239,6 +240,10 @@ const NodeConfigurationPanel = ({
         "takeScreenshot",
         "url",
         "flowId",
+        // Legacy select_option keys preserved so existing flows are not stripped
+        "selector",
+        "selectionValue",
+        "selectionCriteria",
       ]);
 
       // Add inputs defined in NODE_INPUTS schema for this node type
@@ -408,6 +413,43 @@ const NodeConfigurationPanel = ({
           <span className="text-slate-600 italic">{isArray ? "[]" : "{}"}</span>
         );
 
+      // Specialized render for select_option execution evidence.
+      if (
+        keyName === "evidence" &&
+        isArray &&
+        value.length > 0 &&
+        value[0] &&
+        typeof value[0] === "object" &&
+        ("result" in value[0] || "action" in value[0])
+      ) {
+        return <div className="flex flex-col gap-1.5">{value.map(renderEvidenceOption)}</div>;
+      }
+
+      if (
+        keyName === "selected" &&
+        isArray &&
+        value.length > 0 &&
+        value[0] &&
+        typeof value[0] === "object" &&
+        "label" in value[0]
+      ) {
+        return (
+          <div className="flex flex-wrap gap-1.5">
+            {value.map((sel, i) => (
+              <span
+                key={i}
+                className="inline-flex items-center gap-1 text-[9px] px-2 py-1 rounded-md bg-indigo-500/10 text-indigo-300 border border-indigo-500/20"
+              >
+                {sel.label || sel.value}
+                {sel.action && (
+                  <span className="uppercase opacity-70">{sel.action}</span>
+                )}
+              </span>
+            ))}
+          </div>
+        );
+      }
+
       return (
         <div
           className={cn(
@@ -528,6 +570,46 @@ const NodeConfigurationPanel = ({
       <span className="text-slate-200 font-medium selection:bg-indigo-500/30">
         {stringValue}
       </span>
+    );
+  };
+
+  const renderEvidenceOption = (ev, i) => {
+    const pass = ev.result === "PASS";
+    return (
+      <div
+        key={i}
+        className={cn(
+          "flex items-start gap-2 px-2.5 py-1.5 rounded-lg border",
+          pass
+            ? "bg-emerald-500/[0.06] border-emerald-500/15"
+            : "bg-rose-500/[0.06] border-rose-500/20",
+        )}
+      >
+        <span
+          className={cn(
+            "mt-0.5 shrink-0 text-[8px] font-black tracking-widest px-1.5 py-0.5 rounded",
+            pass ? "bg-emerald-500/20 text-emerald-300" : "bg-rose-500/20 text-rose-300",
+          )}
+        >
+          {ev.result}
+        </span>
+        <div className="flex flex-col min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[10px] font-semibold text-slate-200">
+              {ev.label || ev.value || `Option ${i + 1}`}
+            </span>
+            {ev.type && (
+              <span className="text-[8px] uppercase text-slate-500">{ev.type}</span>
+            )}
+          </div>
+          <div className="text-[9px] text-slate-400 font-mono">
+            {ev.before} → <span className="text-indigo-300">{ev.action}</span> → {ev.after}
+          </div>
+          {ev.message && (
+            <div className="text-[9px] text-amber-400/90">{ev.message}</div>
+          )}
+        </div>
+      </div>
     );
   };
 
@@ -776,6 +858,21 @@ const NodeConfigurationPanel = ({
                   }
                 />
               </div>
+            )}
+          />
+        );
+      case "select_option_picker":
+        return (
+          <Controller
+            key={reactKey}
+            name={dataKey}
+            control={control}
+            render={({ field: { value, onChange } }) => (
+              <OptionPickerEditor
+                value={value}
+                onChange={onChange}
+                containerSelector={watch("containerSelector") || ""}
+              />
             )}
           />
         );
