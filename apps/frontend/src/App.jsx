@@ -41,7 +41,10 @@ import StarterOverlay from "./components/StarterOverlay";
 import ErrorBoundary from "./components/ErrorBoundary";
 
 import { useFlowManager } from "./components/hooks/useFlowManager.js";
-import { useProjectManager } from "./components/hooks/useProjectManager.js";
+import {
+  useProjectManager,
+  resolveDefaultFlowId,
+} from "./components/hooks/useProjectManager.js";
 import { migrateFromLegacy } from "./utils/migration";
 import { runPolicyEnforcer } from "./utils/policyEnforcer";
 
@@ -733,17 +736,22 @@ function Dashboard({
 
   React.useEffect(() => {
     if (projects.length > 0 && !currentProject) {
-      loadProject(projects[0].id);
+      let targetProjectId = projects[0].id;
+      try {
+        const lastProjectId = localStorage.getItem("hal_last_project_id");
+        if (lastProjectId && projects.some((p) => p.id === lastProjectId)) {
+          targetProjectId = lastProjectId;
+        }
+      } catch (e) {}
+      loadProject(targetProjectId);
     }
   }, [projects, currentProject, loadProject]);
 
   React.useEffect(() => {
     if (currentProject?.flows?.length > 0 && !currentFlowId) {
-      const mainFlow =
-        currentProject.flows.find((f) => f.name === "Main Flow") ||
-        currentProject.flows[0];
-      if (mainFlow) {
-        switchFlow(mainFlow.id);
+      const targetFlowId = resolveDefaultFlowId(currentProject);
+      if (targetFlowId) {
+        switchFlow(targetFlowId);
         setIsStarterDismissed(false);
       }
     }

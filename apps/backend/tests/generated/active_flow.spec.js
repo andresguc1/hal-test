@@ -20,25 +20,14 @@ test(`Flujo Generado Hal-Test`, async ({ page }) => {
         });
     });
 
-    // [node_id: node_5cb1029e-3211-4a6c-b30e-c1b5b31250e8]
-    await test.step(`Click Challenging DOM Link`, async () => {
-        await page.click(`getByRole('link', { name: 'Challenging DOM' })`);
-    });
-
-    // [node_id: node_6c494301-8580-4206-b6f3-947891c280bc]
-    await test.step(`Find Element`, async () => {
-        const elementCount = await page.locator(`#canvas`).count();
-        console.log(`Found ${elementCount} element(s) matching: #canvas`);
+    // [node_id: node_f2dfd779-3054-42c6-b30a-556804a75834]
+    await test.step(`Click`, async () => {
+        await page.click(`getByRole('link', { name: 'Context Menu' })`);
     });
 
     // [node_id: node_16c64892-a3a4-4b6c-9363-9e508afdff89]
     await test.step(`Close Browser`, async () => {
         // Browser managed by runner
-    });
-
-    // [node_id: node_03347693-5891-4937-81f5-0b4806f9b536]
-    await test.step(`Go Back`, async () => {
-        await page.goBack();
     });
     console.log(`✅ Flujo completado con éxito.`);
 });

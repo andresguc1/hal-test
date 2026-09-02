@@ -399,16 +399,43 @@ export const NODE_FIELD_CONFIGS = {
 
   select_option: [
     {
-      name: "selector",
-      label: "Dropdown Selector (<select>)",
+      name: "containerSelector",
+      label: "Container or Dropdown Selector",
       type: "text",
-      placeholder: "Ex: #country-dropdown or select[name='country']",
+      placeholder: "Ex: #payment-options or select[name='country']",
       required: true,
       validation: (value, allParams, t) => {
         if (!value) return t("nodes.validation.select_selector_required");
         return null;
       },
-      hint: "Must be the selector of the main <select> element, not the <option> elements.",
+      hint: "Locator of the container that holds the options (form, fieldset, <select>, listbox...).",
+    },
+    {
+      name: "selectedOptions",
+      label: "Options to Select",
+      type: "select_option_picker",
+      required: false,
+      hint: "Detect options automatically and choose which ones to select. Supports multiple.",
+    },
+    {
+      name: "expandMenu",
+      label: "Expand menu before selecting",
+      type: "boolean",
+      defaultValue: false,
+      required: false,
+      hint: "Click the trigger to expand a custom combobox/dropdown before selecting.",
+    },
+    {
+      name: "selector",
+      label: "Dropdown Selector (<select>) [legacy]",
+      type: "text",
+      placeholder: "Ex: #country-dropdown or select[name='country']",
+      required: false,
+      validation: (value, allParams, t) => {
+        if (!value) return null;
+        return null;
+      },
+      hint: "Legacy: the selector of the main <select> element, not the <option> elements.",
     },
     {
       name: "selectionCriteria",
@@ -420,7 +447,7 @@ export const NODE_FIELD_CONFIGS = {
         { value: "index", label: "By Index (position, starting at 0)" },
       ],
       defaultValue: "value",
-      required: true,
+      required: false,
       hint: "Defines how Playwright should search for the option to select.",
     },
     {
@@ -429,9 +456,9 @@ export const NODE_FIELD_CONFIGS = {
       type: "text",
       placeholder:
         "Ex: 'EN' if criteria is Value, or 'English' if Label, or '2' if Index.",
-      required: true,
+      required: false,
       validation: (value, allParams, t) => {
-        if (!value) return t("nodes.validation.selection_value_required");
+        if (!value) return null;
         return null;
       },
     },

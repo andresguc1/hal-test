@@ -303,7 +303,7 @@ const SELECTOR_FIELDS_BY_ACTION = {
     fill_form: ['formSelector', 'submitSelector'],
     find_element: ['selector'],
     wait_visible: ['selector'],
-    select_option: ['selector'],
+    select_option: ['selector', 'containerSelector'],
     hover: ['selector'],
     scroll: ['selector'],
     drag_drop: ['sourceSelector', 'targetSelector'],

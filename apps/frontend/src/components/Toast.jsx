@@ -6,6 +6,7 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
+  AlertTriangle,
   Info,
   X,
   Loader2,
@@ -32,6 +33,12 @@ const TOAST_STYLES = {
     iconColor: "text-blue-500",
     icon: Info,
     titleKey: "common.info",
+  },
+  warning: {
+    border: "border-l-amber-500",
+    iconColor: "text-amber-500",
+    icon: AlertTriangle,
+    titleKey: "common.warning",
   },
   loading: {
     border: "border-l-amber-500",
@@ -108,6 +115,7 @@ export const ToastProvider = ({ children }) => {
   const toastApi = {
     success: (msg) => showToast(msg, "success"),
     error: (msg) => showToast(msg, "error"),
+    warning: (msg) => showToast(msg, "warning"),
     info: (msg) => showToast(msg, "info"),
     loading: (msg) => showToast(msg, "loading"),
     custom: showToast,

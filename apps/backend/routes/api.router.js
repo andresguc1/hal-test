@@ -22,6 +22,7 @@ import {
     getActiveSessionsAction,
     countSelectorMatchesAction,
 } from '../controllers/inspector.controller.js';
+import { detectOptionsAction } from '../controllers/select-options.controller.js';
 
 const router = Router();
 
@@ -31,6 +32,7 @@ router.post('/inspector/stop', stopInspectorAction);
 router.post('/inspector/launch-remote', launchRemoteAction);
 router.get('/inspector/sessions', getActiveSessionsAction);
 router.post('/inspector/count-matches', countSelectorMatchesAction);
+router.post('/actions/select_option/detect', detectOptionsAction);
 router.get('/variables', actions.getVariables);
 router.post('/variables', actions.updateVariablesAction);
 router.delete('/variables', actions.deleteVariableAction);

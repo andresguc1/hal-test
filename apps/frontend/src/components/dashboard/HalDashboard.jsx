@@ -125,7 +125,12 @@ export default function HalDashboard() {
   // ── Flows ─────────────────────────────────────────────────────
   const handleOpenFlow = useCallback(
     (flow) => {
-      if (flow.projectId) loadProject(flow.projectId);
+      if (flow.projectId) {
+        try {
+          localStorage.setItem(`hal_last_flow_${flow.projectId}`, flow.id);
+        } catch (e) {}
+        loadProject(flow.projectId, flow.id);
+      }
       navigate("/");
     },
     [loadProject, navigate],

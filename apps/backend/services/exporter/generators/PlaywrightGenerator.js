@@ -425,6 +425,7 @@ playwright_tests:
             // Validate selector before code generation
             const selectorFields = [
                 'selector',
+                'containerSelector',
                 'sourceSelector',
                 'targetSelector',
                 'formSelector',

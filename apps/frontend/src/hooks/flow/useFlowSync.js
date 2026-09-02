@@ -119,6 +119,15 @@ export function useFlowSync({
 
         subFlowCache.invalidate(targetProjectId, targetFlowId);
 
+        if (targetProjectId && targetFlowId) {
+          try {
+            localStorage.setItem(
+              `hal_last_flow_${targetProjectId}`,
+              targetFlowId,
+            );
+          } catch (e) {}
+        }
+
         // Invalidate query to keep global project state (and derived flow names) in sync
         queryClient.invalidateQueries({
           queryKey: ["project", targetProjectId],

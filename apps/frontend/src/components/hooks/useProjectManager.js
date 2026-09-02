@@ -5,6 +5,47 @@ import { subFlowCache } from "../../utils/subFlowCache";
 import { api } from "../../utils/api";
 import { logger } from "../../utils/logger";
 
+/**
+ * Resolves the default flow ID for a given project.
+ * Preference hierarchy:
+ * 1. Last workflow or component edited or selected by the user in this project (stored in localStorage).
+ * 2. The activeFlowId persisted in the project data on the backend.
+ * 3. The "Main Flow" (named "Main Flow" or with type "main").
+ * 4. The first flow available in the project.
+ */
+export const resolveDefaultFlowId = (project) => {
+  if (!project?.flows || project.flows.length === 0) return null;
+
+  // 1. Last workflow or component edited/accessed by user (persisted in localStorage)
+  try {
+    const savedLastFlowId = localStorage.getItem(`hal_last_flow_${project.id}`);
+    if (
+      savedLastFlowId &&
+      project.flows.some((f) => f.id === savedLastFlowId)
+    ) {
+      return savedLastFlowId;
+    }
+  } catch (e) {
+    // Ignore localStorage access errors
+  }
+
+  // 2. Project activeFlowId from backend if present
+  if (
+    project.activeFlowId &&
+    project.flows.some((f) => f.id === project.activeFlowId)
+  ) {
+    return project.activeFlowId;
+  }
+
+  // 3. Main Flow (by name or type)
+  const mainFlow =
+    project.flows.find((f) => f.name === "Main Flow") ||
+    project.flows.find((f) => f.type === "main") ||
+    project.flows[0];
+
+  return mainFlow?.id || null;
+};
+
 export function useProjectManager() {
   const queryClient = useQueryClient();
   const [currentProjectId, setCurrentProjectId] = useState(null);
@@ -34,17 +75,14 @@ export function useProjectManager() {
   );
 
   useEffect(() => {
-    // Auto-select first flow if none selected
+    // Auto-select preferred flow (last edited flow/component or Main Flow)
     if (
       currentProject &&
       (!currentFlowId ||
-        !currentProject.flows.find((f) => f.id === currentFlowId))
+        !currentProject.flows.some((f) => f.id === currentFlowId))
     ) {
-      if (currentProject.flows && currentProject.flows.length > 0) {
-        setCurrentFlowId(currentProject.flows[0].id);
-      } else {
-        setCurrentFlowId(null);
-      }
+      const defaultFlowId = resolveDefaultFlowId(currentProject);
+      setCurrentFlowId(defaultFlowId);
     }
   }, [currentProject, currentFlowId]);
 
@@ -119,8 +157,13 @@ export function useProjectManager() {
       queryClient.invalidateQueries({ queryKey: ["project", projectId] });
       queryClient.invalidateQueries({ queryKey: ["projects"] }); // Sync projects list
 
-      // 2. Auto-Select
+      // 2. Auto-Select & Persist
       setCurrentFlowId(newFlow.id);
+      if (newFlow?.id && projectId) {
+        try {
+          localStorage.setItem(`hal_last_flow_${projectId}`, newFlow.id);
+        } catch (e) {}
+      }
     },
   });
 
@@ -131,7 +174,13 @@ export function useProjectManager() {
       // 1. Clear or switch active flow if we just deleted it (do this BEFORE query updates to avoid race conditions)
       setCurrentFlowId((prevFlowId) => {
         if (prevFlowId === flowId) {
-          return response?.project?.flows?.[0]?.id || null;
+          const nextFlowId = response?.project?.flows?.[0]?.id || null;
+          if (nextFlowId) {
+            try {
+              localStorage.setItem(`hal_last_flow_${projectId}`, nextFlowId);
+            } catch (e) {}
+          }
+          return nextFlowId;
         }
         return prevFlowId;
       });
@@ -150,6 +199,11 @@ export function useProjectManager() {
       projectManager.updateFlow(projectId, flowId, updates),
     onSuccess: (updatedFlow, { projectId, flowId }) => {
       subFlowCache.invalidate(projectId, flowId);
+      if (projectId && flowId) {
+        try {
+          localStorage.setItem(`hal_last_flow_${projectId}`, flowId);
+        } catch (e) {}
+      }
       // 1. Instant UI Update for nested item
       if (updatedFlow) {
         queryClient.setQueryData(["project", projectId], (oldProject) => {
@@ -209,6 +263,11 @@ export function useProjectManager() {
       if (!currentProjectId) return;
       try {
         setCurrentFlowId(flowId);
+        if (flowId) {
+          try {
+            localStorage.setItem(`hal_last_flow_${currentProjectId}`, flowId);
+          } catch (e) {}
+        }
         await updateProjectMutation.mutateAsync({
           projectId: currentProjectId,
           updates: { activeFlowId: flowId },
@@ -232,9 +291,26 @@ export function useProjectManager() {
       queryClient.invalidateQueries({ queryKey: ["projects"] }),
     createProject: (name, description, options = {}) =>
       createProjectMutation.mutateAsync({ name, description, options }),
-    loadProject: (projectId) => {
+    loadProject: (projectId, preferredFlowId = null) => {
       setCurrentProjectId(projectId);
-      setCurrentFlowId(null); // Reset flow when switching projects
+      if (projectId) {
+        try {
+          localStorage.setItem("hal_last_project_id", projectId);
+          if (preferredFlowId) {
+            localStorage.setItem(`hal_last_flow_${projectId}`, preferredFlowId);
+          }
+        } catch (e) {}
+
+        let savedFlowId = preferredFlowId;
+        if (!savedFlowId) {
+          try {
+            savedFlowId = localStorage.getItem(`hal_last_flow_${projectId}`);
+          } catch (e) {}
+        }
+        setCurrentFlowId(savedFlowId || null);
+      } else {
+        setCurrentFlowId(null);
+      }
     },
     deleteProject: (projectId) => deleteProjectMutation.mutateAsync(projectId),
     renameProject: (projectId, newName) =>
