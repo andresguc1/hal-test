@@ -20,6 +20,7 @@ import {
   Link2,
   X,
   Maximize2,
+  MessageSquareWarning,
   ArrowLeft,
   ArrowRight,
   Search,
@@ -73,6 +74,7 @@ export const NODE_TYPE_ICONS = {
   close_browser: X,
   manage_tabs: Package,
   resize_viewport: Maximize2,
+  browser_dialog: MessageSquareWarning,
   go_back: ArrowLeft,
   go_forward: ArrowRight,
 

@@ -115,7 +115,7 @@ export const NODE_CATEGORIES = {
   browser: {
     label: "Browser",
     icon: "🌐",
-    nodes: ["launch_browser", "resize_viewport", "manage_tabs"],
+    nodes: ["launch_browser", "resize_viewport", "manage_tabs", "browser_dialog"],
   },
   interaction: {
     label: "Interaction",

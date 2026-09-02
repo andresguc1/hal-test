@@ -9,7 +9,14 @@ export const mockCategories = {
     browser_management: {
         label: 'Navegador',
         icon: '🌐',
-        nodes: ['launch_browser', 'open_url', 'close_browser', 'manage_tabs', 'resize_viewport'],
+        nodes: [
+            'launch_browser',
+            'open_url',
+            'close_browser',
+            'manage_tabs',
+            'resize_viewport',
+            'browser_dialog',
+        ],
     },
     dom_manipulation: {
         label: 'DOM',

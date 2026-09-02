@@ -60,6 +60,18 @@ const BUILTIN_PLUGINS = [
             ]),
     },
     {
+        type: 'browser_dialog',
+        category: 'browser_management',
+        label: 'Browser Dialog',
+        color: 'blue',
+        icon: 'Globe',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-browser/handlers/browser_dialog.js'),
+                import('../plugins/core-browser/schemas/browser_dialog.js'),
+            ]),
+    },
+    {
         type: 'open_url',
         category: 'navigation',
         label: 'Open URL',

@@ -36,6 +36,7 @@ const NODE_CATEGORIES = {
       { id: "close_browser" },
       { id: "manage_tabs" },
       { id: "resize_viewport" },
+      { id: "browser_dialog" },
       { id: "go_back" },
       { id: "go_forward" },
     ],

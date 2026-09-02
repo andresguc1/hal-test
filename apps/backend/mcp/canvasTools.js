@@ -8,6 +8,7 @@ const VALID_NODE_TYPES = [
     'wait_visible',
     'take_screenshot',
     'close_browser',
+    'browser_dialog',
 ];
 
 /**

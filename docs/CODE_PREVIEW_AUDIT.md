@@ -99,7 +99,7 @@ Canvas (nodes + edges)
 | Mapper | Tipos Soportados | Archivo |
 |--------|-----------------|---------|
 | OpenUrlMapper | `open_url`, `navigate` | `nodes/OpenUrlMapper.js` |
-| BrowserActionMapper | `reload`, `reload_page`, `resize_viewport`, `close_browser`, `launch_browser` | `nodes/BrowserActionMapper.js` |
+| BrowserActionMapper | `reload`, `reload_page`, `resize_viewport`, `close_browser`, `launch_browser`, `browser_dialog` | `nodes/BrowserActionMapper.js` |
 | InteractionMapper | `click`, `type_text`, `type`, `hover`, `scroll`, `press_key` | `nodes/InteractionMapper.js` |
 | WaitMapper | `wait_fixed`, `wait_visible`, `wait_for_element`, `wait_network`, `wait_network_match` | `nodes/WaitMapper.js` |
 | UtilityMapper | `take_screenshot`, `save_dom`, `log_errors`, `execute_js` | `nodes/UtilityMapper.js` |
