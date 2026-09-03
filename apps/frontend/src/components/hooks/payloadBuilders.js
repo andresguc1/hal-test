@@ -112,6 +112,7 @@ const parseJsonArray = (value, fieldName = "fields") => {
 export const launch_browser = (payload) => {
   const httpUsername = asString(payload?.httpCredentialsUsername, "");
   const httpPassword = asString(payload?.httpCredentialsPassword, "");
+  const httpOrigin = asString(payload?.httpCredentialsOrigin, "");
 
   return {
     browserType: asString(payload?.browserType, "chromium"),
@@ -131,7 +132,13 @@ export const launch_browser = (payload) => {
     downloadThroughput: asNumber(payload?.downloadThroughput, 0),
     uploadThroughput: asNumber(payload?.uploadThroughput, 0),
     ...(httpUsername
-      ? { httpCredentials: { username: httpUsername, password: httpPassword } }
+      ? {
+          httpCredentials: {
+            username: httpUsername,
+            password: httpPassword,
+            ...(httpOrigin ? { origin: httpOrigin } : {}),
+          },
+        }
       : {}),
   };
 };

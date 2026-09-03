@@ -18,7 +18,10 @@ function getHttpCredentials(browserId, service) {
     const entry = service.get(browserId);
     const creds = entry?.options?.httpCredentials;
     if (creds && typeof creds.username === 'string' && creds.username !== '') {
-        return { username: creds.username, password: creds.password || '' };
+        const result = { username: creds.username, password: creds.password || '' };
+        if (creds.origin) result.origin = creds.origin;
+        if (creds.send) result.send = creds.send;
+        return result;
     }
     return null;
 }
@@ -401,7 +404,9 @@ async function getOrCreateContext(req, browser, browserId) {
             const httpCredentials = getHttpCredentials(browserId, browserService);
             if (httpCredentials) {
                 contextOptions.httpCredentials = httpCredentials;
-                console.log(`[AUDIT] HTTP Basic Auth enabled for: ${httpCredentials.username}`);
+                console.log(
+                    `[AUDIT] HTTP Auth enabled for: ${httpCredentials.username}${httpCredentials.origin ? ` (origin: ${httpCredentials.origin})` : ''}`,
+                );
             }
 
             const newContext = await browser.newContext(contextOptions);
@@ -814,6 +819,7 @@ export {
     validateBrowser,
     attachSecurityContextListeners,
     attachDialogListener,
+    getHttpCredentials,
     getOrCreateContext,
     getActivePage,
     fetchContext,

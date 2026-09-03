@@ -2876,6 +2876,27 @@ export const NODE_FIELD_CONFIGS = {
       type: "text",
       placeholder: "Ex: /path/to/chrome.exe. Use custom browser executable.",
     },
+    {
+      name: "httpCredentialsUsername",
+      label: "HTTP Username",
+      type: "text",
+      placeholder: "admin",
+      hint: "Username for HTTP authentication (Basic or Digest). The browser handles the challenge-response automatically.",
+    },
+    {
+      name: "httpCredentialsPassword",
+      label: "HTTP Password",
+      type: "text",
+      placeholder: "••••••••",
+      hint: "Password for HTTP authentication.",
+    },
+    {
+      name: "httpCredentialsOrigin",
+      label: "Auth Origin (optional)",
+      type: "text",
+      placeholder: "https://example.com",
+      hint: "Restrict credentials to this origin (scheme://host:port). Leave blank to send to all origins.",
+    },
     // Se podrían añadir más como 'timeout', 'devtools', o 'downloadsPath' si son necesarios.
   ],
 

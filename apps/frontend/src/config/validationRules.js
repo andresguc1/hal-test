@@ -52,15 +52,25 @@ export const NODE_INPUTS = {
     { key: "slowMo", label: "Slow Mo (ms)", type: "number", placeholder: "50" },
     {
       key: "httpCredentialsUsername",
-      label: "🔐 HTTP Basic Username",
+      label: "🔐 HTTP Username",
       type: "text",
       placeholder: "admin",
+      description: "Username for HTTP authentication (Basic or Digest)",
     },
     {
       key: "httpCredentialsPassword",
-      label: "🔐 HTTP Basic Password",
+      label: "🔐 HTTP Password",
       type: "text",
       placeholder: "••••••••",
+      description: "Password for HTTP authentication",
+    },
+    {
+      key: "httpCredentialsOrigin",
+      label: "Auth Origin (optional)",
+      type: "text",
+      placeholder: "https://example.com",
+      description:
+        "Restrict credentials to this origin (scheme://host:port). Supports Basic and Digest authentication — the browser handles the challenge-response automatically.",
     },
   ],
   open_url: [

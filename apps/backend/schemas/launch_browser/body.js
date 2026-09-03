@@ -72,11 +72,16 @@ const launchBrowserBodySchema = Joi.object({
     isMobile: Joi.boolean().optional().default(false),
     hasTouch: Joi.boolean().optional().default(false),
 
-    // --- HTTP Basic Authentication (Optional) ---
-    // Applies to every navigation context created from this browser.
+    // --- HTTP Authentication (Optional) ---
+    // Supports both Basic and Digest authentication.
+    // The browser handles the challenge-response natively.
     httpCredentials: Joi.object({
         username: Joi.string().allow('').default(''),
         password: Joi.string().allow('').default(''),
+        origin: Joi.string().uri().optional().messages({
+            'string.uri': 'origin must be a valid URL (e.g., https://example.com)',
+        }),
+        send: Joi.string().valid('unauthorized', 'always').default('unauthorized').optional(),
     })
         .optional()
         .custom((value, helpers) => {
@@ -84,7 +89,7 @@ const launchBrowserBodySchema = Joi.object({
                 return helpers.message('httpCredentials requires a username');
             }
             return value;
-        }, 'http-basic-credentials validation'),
+        }, 'http-credentials validation'),
 
     // --- Network Conditions (Optional) ---
     networkProfile: Joi.string()
