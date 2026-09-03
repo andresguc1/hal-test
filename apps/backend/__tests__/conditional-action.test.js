@@ -176,7 +176,7 @@ describe('conditionalAction - Branch Evaluation', () => {
 // DEFAULT BRANCH
 // =============================================================================
 describe('conditionalAction - Default Branch', () => {
-    it('should match a branch with no expression as default catch-all', async () => {
+    it('should route to the explicit "false" branch when no other branch matches', async () => {
         variableManager.initRun('run-1');
         variableManager.set('val', 'unexpected', 'run-1');
 
@@ -189,9 +189,37 @@ describe('conditionalAction - Default Branch', () => {
                     expression: { left: '{{val}}', operator: '==', right: 'expected' },
                 },
                 {
-                    id: 'branch-default',
-                    label: 'Default',
-                    expression: '', // Empty expression = default
+                    id: 'false',
+                    label: 'Else',
+                    expression: '',
+                },
+            ],
+            fallbackPath: 'false',
+        });
+
+        await conditionalAction(req, res);
+        const response = res.getResponse();
+
+        expect(response.data.data.path).toBe('false');
+        expect(response.data.data.result).toBe(true);
+    });
+
+    it('should NOT treat a non-fallback branch with empty expression as an implicit catch-all', async () => {
+        variableManager.initRun('run-1');
+        variableManager.set('val', 'unexpected', 'run-1');
+
+        const { req, res } = createMockReqRes({
+            runId: 'run-1',
+            branches: [
+                {
+                    id: 'branch-specific',
+                    label: 'Specific',
+                    expression: { left: '{{val}}', operator: '==', right: 'expected' },
+                },
+                {
+                    id: 'branch-empty',
+                    label: 'Empty',
+                    expression: '', // NOT a fallback branch — must not swallow the match
                 },
             ],
             fallbackPath: 'fallback',
@@ -200,8 +228,9 @@ describe('conditionalAction - Default Branch', () => {
         await conditionalAction(req, res);
         const response = res.getResponse();
 
-        expect(response.data.data.path).toBe('branch-default');
-        expect(response.data.data.result).toBe(true);
+        // 'branch-empty' has no real expression -> must not be selected as catch-all
+        expect(response.data.data.path).toBe('fallback');
+        expect(response.data.data.trace['branch-empty'].status).toBe('not_matched');
     });
 });
 
@@ -307,9 +336,9 @@ describe('conditionalAction - Error Handling', () => {
                     expression: 'this is not valid JS +++',
                 },
                 {
-                    id: 'branch-default',
-                    label: 'Default',
-                    expression: '', // catch-all
+                    id: 'false',
+                    label: 'Else',
+                    expression: '',
                 },
             ],
             fallbackPath: 'fallback',
@@ -318,8 +347,34 @@ describe('conditionalAction - Error Handling', () => {
         await conditionalAction(req, res);
         const response = res.getResponse();
 
-        // Should not crash; should route to default or fallback
+        // Should not crash; should surface the evaluation error and route to fallback
         expect(response.status).toBe(200);
         expect(response.data.success).toBe(true);
+        expect(response.data.data.path).toBe('false');
+        expect(response.data.data.trace['branch-bad'].status).toBe('error');
+        expect(response.data.data.evaluationErrors).toHaveLength(1);
+        expect(response.data.data.evaluationErrors[0].branch).toBe('Bad Expression');
+    });
+
+    it('should surface multiple evaluation errors in the response', async () => {
+        variableManager.initRun('run-1');
+
+        const { req, res } = createMockReqRes({
+            runId: 'run-1',
+            branches: [
+                { id: 'bad-1', label: 'Bad One', expression: 'this is not valid JS +++' },
+                { id: 'bad-2', label: 'Bad Two', expression: 'also not valid JS +++' },
+                { id: 'false', label: 'Else', expression: '' },
+            ],
+            fallbackPath: 'false',
+        });
+
+        await conditionalAction(req, res);
+        const response = res.getResponse();
+
+        expect(response.data.data.path).toBe('false');
+        expect(response.data.data.evaluationErrors).toHaveLength(2);
+        expect(response.data.data.trace['bad-1'].status).toBe('error');
+        expect(response.data.data.trace['bad-2'].status).toBe('error');
     });
 });

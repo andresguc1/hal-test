@@ -67,6 +67,14 @@ const conditionalAction = async (req, res) => {
         if (branches && Array.isArray(branches) && branches.length > 0) {
             let matchedBranch = null;
             const trace = {};
+            const evaluationErrors = [];
+
+            const isEmptyExpression = (expr) => {
+                if (expr === null || expr === undefined) return true;
+                if (typeof expr === 'string') return expr.trim() === '';
+                if (typeof expr === 'object') return Object.keys(expr).length === 0;
+                return false;
+            };
 
             for (const branch of branches) {
                 if (branch.isFallback || branch.id === 'false' || branch.id === 'Else') continue;
@@ -80,25 +88,32 @@ const conditionalAction = async (req, res) => {
                     rR = variableManager.resolveValue(expr.right, runId);
 
                     let exprResult = false;
-                    if (typeof branch.expression === 'string') {
-                        exprResult = variableManager.evaluate(branch.expression, runId, {}, true);
-                    } else {
-                        exprResult = variableManager.evaluateStructured(
-                            branch.expression,
-                            runId,
-                            true,
-                        );
+                    if (!isEmptyExpression(branch.expression)) {
+                        if (typeof branch.expression === 'string') {
+                            exprResult = variableManager.evaluate(
+                                branch.expression,
+                                runId,
+                                {},
+                                true,
+                            );
+                        } else {
+                            exprResult = variableManager.evaluateStructured(
+                                branch.expression,
+                                runId,
+                                true,
+                            );
+                        }
                     }
 
-                    branchMatched =
-                        !branch.expression ||
-                        Object.keys(branch.expression).length === 0 ||
-                        exprResult === true;
+                    // A branch only matches if it carries a real expression that
+                    // evaluates to true. Empty expressions are NOT implicit
+                    // catch-alls — only explicit fallback branches route on empty.
+                    branchMatched = exprResult === true;
 
                     const logLabel = branch.label || branch.id;
-                    const comparison = branch.expression
-                        ? `Comparing [${expr.left || '?'}] (${JSON.stringify(rL)}) with [${expr.right || '?'}] (${JSON.stringify(rR)})`
-                        : 'Default Catch-all (No expression)';
+                    const comparison = isEmptyExpression(branch.expression)
+                        ? 'Empty expression (skipped)'
+                        : `Comparing [${expr.left || '?'}] (${JSON.stringify(rL)}) with [${expr.right || '?'}] (${JSON.stringify(rR)})`;
                     const statusIcon = branchMatched ? 'MATCH' : 'NO MATCH';
 
                     smartEmitLog(
@@ -107,6 +122,10 @@ const conditionalAction = async (req, res) => {
                         req.body.nodeId,
                     );
                 } catch (e) {
+                    evaluationErrors.push({
+                        branch: branch.label || branch.id,
+                        error: e.message,
+                    });
                     smartEmitLog(
                         `[Conditional] Error evaluating branch "${branch.label}": ${e.message}`,
                         'error',
@@ -147,12 +166,11 @@ const conditionalAction = async (req, res) => {
                 configuration?.fallbackPath || req.body.fallbackPath || 'false';
 
             if (!matchedBranch) {
+                // Only route to EXPLICIT fallback branches (isFallback / 'false' / 'Else').
+                // A branch with an empty expression but no fallback marker does NOT
+                // act as an implicit catch-all.
                 matchedBranch = branches.find(
-                    (b) =>
-                        b.isFallback ||
-                        b.id === 'false' ||
-                        b.id === 'Else' ||
-                        (!b.expression && b.id !== requestedFallback),
+                    (b) => b.isFallback || b.id === 'false' || b.id === 'Else',
                 );
                 if (matchedBranch) {
                     smartEmitLog(
@@ -170,6 +188,14 @@ const conditionalAction = async (req, res) => {
                 : requestedFallback;
             const finalResult = !!matchedBranch;
 
+            if (evaluationErrors.length > 0) {
+                smartEmitLog(
+                    `[Conditional] ${evaluationErrors.length} branch(es) failed to evaluate. Routing to: ${matchedBranch?.label || finalPath}`,
+                    'warning',
+                    req.body.nodeId,
+                );
+            }
+
             smartEmitLog(
                 `[Conditional] Final Decision: ${matchedBranch?.label || finalPath}`,
                 'success',
@@ -183,6 +209,7 @@ const conditionalAction = async (req, res) => {
                     path: finalPath,
                     branchLabel: matchedBranch?.label,
                     trace,
+                    ...(evaluationErrors.length > 0 ? { evaluationErrors } : {}),
                 },
             });
         }

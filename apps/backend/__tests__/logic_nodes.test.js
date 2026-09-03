@@ -251,12 +251,12 @@ describe('Logic Engine Nodes Validation', () => {
             expect(result.data.path).toBe('guest');
         });
 
-        it('debe usar rama con expresión vacía como Default/Else', async () => {
+        it('debe usar la rama explícita Else como Default cuando ninguna coincide', async () => {
             const req = {
                 body: {
                     branches: [
                         { id: 'admin', label: 'Admin', expression: 'false' },
-                        { id: 'default', label: 'Others', expression: '' },
+                        { id: 'false', label: 'Else', expression: '' },
                     ],
                     fallbackPath: 'error',
                 },
@@ -274,8 +274,35 @@ describe('Logic Engine Nodes Validation', () => {
             await actions.conditionalAction(req, res);
 
             expect(result.success).toBe(true);
-            expect(result.data.path).toBe('default');
-            expect(result.data.trace.default.status).toBe('matched');
+            expect(result.data.path).toBe('false');
+            expect(result.data.trace.false.status).toBe('matched');
+        });
+
+        it('debe usar fallbackPath si hay una rama vacía NO marcada como Else', async () => {
+            const req = {
+                body: {
+                    branches: [
+                        { id: 'admin', label: 'Admin', expression: 'false' },
+                        { id: 'default', label: 'Others', expression: '', isFallback: false },
+                    ],
+                    fallbackPath: 'error',
+                },
+                t: (k) => k,
+            };
+            let result = null;
+            const res = {
+                status: () => res,
+                json: (d) => {
+                    result = d;
+                    return res;
+                },
+            };
+
+            await actions.conditionalAction(req, res);
+
+            expect(result.success).toBe(true);
+            expect(result.data.path).toBe('error');
+            expect(result.data.trace.default.status).toBe('not_matched');
         });
 
         it('debe reportar errores de evaluación en el trace', async () => {
