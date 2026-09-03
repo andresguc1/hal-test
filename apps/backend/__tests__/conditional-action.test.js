@@ -378,3 +378,187 @@ describe('conditionalAction - Error Handling', () => {
         expect(response.data.data.trace['bad-2'].status).toBe('error');
     });
 });
+
+// =============================================================================
+// ADVANCED MODE (JS STRING EXPRESSIONS)
+// =============================================================================
+describe('conditionalAction - Advanced JS Expressions', () => {
+    it('should evaluate an advanced JS string expression', async () => {
+        variableManager.initRun('run-js-1');
+        variableManager.set('code', 403, 'run-js-1');
+
+        const { req, res } = createMockReqRes({
+            runId: 'run-js-1',
+            branches: [
+                {
+                    id: 'forbidden',
+                    label: 'Forbidden',
+                    expression: '${code} > 400',
+                    mode: 'advanced',
+                },
+                {
+                    id: 'false',
+                    label: 'Else',
+                    expression: '',
+                },
+            ],
+            fallbackPath: 'false',
+        });
+
+        await conditionalAction(req, res);
+        const response = res.getResponse();
+
+        expect(response.data.data.path).toBe('forbidden');
+        expect(response.data.data.trace.forbidden.matched).toBe(true);
+    });
+
+    it('should not match an advanced expression evaluating to false', async () => {
+        variableManager.initRun('run-js-2');
+        variableManager.set('code', 200, 'run-js-2');
+
+        const { req, res } = createMockReqRes({
+            runId: 'run-js-2',
+            branches: [
+                {
+                    id: 'forbidden',
+                    label: 'Forbidden',
+                    expression: '${code} > 400',
+                    mode: 'advanced',
+                },
+                {
+                    id: 'false',
+                    label: 'Else',
+                    expression: '',
+                },
+            ],
+            fallbackPath: 'false',
+        });
+
+        await conditionalAction(req, res);
+        const response = res.getResponse();
+
+        expect(response.data.data.path).toBe('false');
+        expect(response.data.data.trace.forbidden.matched).toBe(false);
+    });
+
+    it('should allow using context-safe globals (Math, String) in advanced expressions', async () => {
+        variableManager.initRun('run-js-3');
+        variableManager.set('total', 8, 'run-js-3');
+
+        const { req, res } = createMockReqRes({
+            runId: 'run-js-3',
+            branches: [
+                {
+                    id: 'big',
+                    label: 'Big',
+                    expression: 'Math.pow(${total}, 2) > 50',
+                    mode: 'advanced',
+                },
+                {
+                    id: 'false',
+                    label: 'Else',
+                    expression: '',
+                },
+            ],
+            fallbackPath: 'false',
+        });
+
+        await conditionalAction(req, res);
+        const response = res.getResponse();
+
+        expect(response.data.data.path).toBe('big');
+        expect(response.data.data.result).toBe(true);
+    });
+});
+
+// =============================================================================
+// TYPE COERCION & UNDEFINED HANDLING
+// =============================================================================
+describe('conditionalAction - Type Coercion & Undefined', () => {
+    it('should coerce numeric-string comparison to number', async () => {
+        variableManager.initRun('run-type-1');
+        variableManager.set('count', '12', 'run-type-1');
+
+        const { req, res } = createMockReqRes({
+            runId: 'run-type-1',
+            branches: [
+                {
+                    id: 'match',
+                    label: 'Match',
+                    expression: { left: '{{count}}', operator: '>', right: 10 },
+                },
+                {
+                    id: 'false',
+                    label: 'Else',
+                    expression: '',
+                },
+            ],
+            fallbackPath: 'false',
+        });
+
+        await conditionalAction(req, res);
+        const response = res.getResponse();
+
+        expect(response.data.data.path).toBe('match');
+    });
+
+    it('should not match when the left variable is undefined (except exists)', async () => {
+        variableManager.initRun('run-type-2');
+
+        const { req, res } = createMockReqRes({
+            runId: 'run-type-2',
+            branches: [
+                {
+                    id: 'match',
+                    label: 'Match',
+                    expression: { left: '{{nonexistent}}', operator: '==', right: 'value' },
+                },
+                {
+                    id: 'false',
+                    label: 'Else',
+                    expression: '',
+                },
+            ],
+            fallbackPath: 'false',
+        });
+
+        await conditionalAction(req, res);
+        const response = res.getResponse();
+
+        expect(response.data.data.path).toBe('false');
+        expect(response.data.data.trace.match.matched).toBe(false);
+    });
+
+    it('should support the exists operator', async () => {
+        variableManager.initRun('run-type-3');
+        variableManager.set('present', 'yes', 'run-type-3');
+
+        const { req, res } = createMockReqRes({
+            runId: 'run-type-3',
+            branches: [
+                {
+                    id: 'present-branch',
+                    label: 'Present',
+                    expression: { left: '{{present}}', operator: 'exists' },
+                },
+                {
+                    id: 'absent-branch',
+                    label: 'Absent',
+                    expression: { left: '{{missing}}', operator: 'exists' },
+                },
+                {
+                    id: 'false',
+                    label: 'Else',
+                    expression: '',
+                },
+            ],
+            fallbackPath: 'false',
+        });
+
+        await conditionalAction(req, res);
+        const response = res.getResponse();
+
+        expect(response.data.data.path).toBe('present-branch');
+        expect(response.data.data.trace['present-branch'].matched).toBe(true);
+    });
+});

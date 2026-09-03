@@ -491,7 +491,10 @@
         "waiting_data": "Waiting for data...",
         "match": "MATCH",
         "no_match": "NO MATCH",
-        "suggested_values": "Suggested Values"
+        "suggested_values": "Suggested Values",
+        "toggle_mode": "Toggle between rule and JS mode",
+        "remove_rule": "Remove rule",
+        "operator": "Comparison operator"
       }
     },
     "hints": {

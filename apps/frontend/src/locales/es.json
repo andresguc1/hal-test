@@ -491,7 +491,10 @@
         "waiting_data": "Esperando datos...",
         "match": "CUMPLE",
         "no_match": "NO CUMPLE",
-        "suggested_values": "Valores Sugeridos"
+        "suggested_values": "Valores Sugeridos",
+        "toggle_mode": "Cambiar modo de regla a JS / viceversa",
+        "remove_rule": "Eliminar regla",
+        "operator": "Operador de comparación"
       }
     },
     "hints": {

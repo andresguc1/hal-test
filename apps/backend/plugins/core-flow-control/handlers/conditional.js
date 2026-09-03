@@ -21,23 +21,26 @@ const conditionalAction = async (req, res) => {
         const runId = bodyRunId || 'global';
         const debugMode = req.body.debugMode || configuration?.debugMode || false;
 
-        console.log(`[Conditional] Starting evaluation for node: ${req.body.nodeId || 'unknown'}`);
+        if (debugMode) {
+            smartEmitLog(
+                `[Conditional] Starting evaluation for node: ${req.body.nodeId || 'unknown'}`,
+                'info',
+                req.body.nodeId,
+            );
+        }
 
         if (variables && typeof variables === 'object') {
-            console.log(
-                `[Conditional] Seeding ${Object.keys(variables).length} variables into runId: ${runId}`,
-            );
             Object.entries(variables).forEach(([k, v]) => {
                 variableManager.set(k, v, runId);
             });
+            if (debugMode) {
+                smartEmitLog(
+                    `[Conditional] Seeded ${Object.keys(variables).length} variables into runId: ${runId}`,
+                    'info',
+                    req.body.nodeId,
+                );
+            }
         }
-
-        const allVars = variableManager.getAll(runId);
-        const varKeys = Object.keys(allVars);
-        console.log(
-            `[Conditional] Available variables (${varKeys.length}):`,
-            varKeys.slice(0, 10).join(', ') + (varKeys.length > 10 ? '...' : ''),
-        );
 
         if (branches && Array.isArray(branches)) {
             branches.forEach((branch, idx) => {
@@ -46,14 +49,34 @@ const conditionalAction = async (req, res) => {
                         const { left, right } = branch.expression;
                         const valL = variableManager.resolveValue(left, runId);
                         const valR = variableManager.resolveValue(right, runId);
-                        console.log(
-                            `[Conditional][Branch ${idx}] Data Check: "${left}" -> ${JSON.stringify(valL)} | "${right}" -> ${JSON.stringify(valR)}`,
-                        );
+                        if (debugMode) {
+                            smartEmitLog(
+                                `[Conditional][Branch ${idx}] Data Check: "${left}" -> ${JSON.stringify(valL)} | "${right}" -> ${JSON.stringify(valR)}`,
+                                'debug',
+                                req.body.nodeId,
+                            );
+                        }
                     }
                 } catch (e) {
-                    console.log(`[Conditional] Diagnostic skip for branch ${idx}: ${e.message}`);
+                    if (debugMode) {
+                        smartEmitLog(
+                            `[Conditional] Diagnostic skip for branch ${idx}: ${e.message}`,
+                            'debug',
+                            req.body.nodeId,
+                        );
+                    }
                 }
             });
+        }
+
+        if (debugMode) {
+            const allVars = variableManager.getAll(runId);
+            const varKeys = Object.keys(allVars);
+            smartEmitLog(
+                `[Conditional] Available variables (${varKeys.length}): ${varKeys.slice(0, 10).join(', ') + (varKeys.length > 10 ? '...' : '')}`,
+                'info',
+                req.body.nodeId,
+            );
         }
 
         if (debugMode) {

@@ -337,6 +337,12 @@ const ConditionalBranchesEditor = React.memo(
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => toggleMode(index)}
+                        type="button"
+                        aria-label={t(
+                          "nodes.config.conditional.toggle_mode",
+                          isAdvanced ? "Cambiar a modo regla" : "Cambiar a modo JS",
+                        )}
+                        title={isAdvanced ? "Modo JS" : "Modo regla"}
                         className={cn(
                           "text-[8px] font-black px-1.5 py-0.5 rounded border transition-colors",
                           isAdvanced
@@ -350,7 +356,13 @@ const ConditionalBranchesEditor = React.memo(
                       </button>
                       <button
                         onClick={() => removeBranch(index)}
-                        className="p-1 text-slate-600 hover:text-red-400 transition-colors"
+                        type="button"
+                        aria-label={t(
+                          "nodes.config.conditional.remove_rule",
+                          "Eliminar regla",
+                        )}
+                        title={t("nodes.config.conditional.remove_rule", "Eliminar regla")}
+                        className="p-1.5 min-w-[28px] min-h-[28px] inline-flex items-center justify-center text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
                       >
                         <Trash2 size={12} />
                       </button>
@@ -429,6 +441,10 @@ const ConditionalBranchesEditor = React.memo(
                                 e.target.value,
                               )
                             }
+                            aria-label={t(
+                              "nodes.config.conditional.operator",
+                              "Operador de comparación",
+                            )}
                             className="w-full bg-slate-800/80 border-white/5 rounded-lg text-[11px] font-black text-sky-400 h-8 text-center appearance-none cursor-pointer focus:ring-1 focus:ring-sky-500/50 outline-none"
                           >
                             {operators.map((op) => (
@@ -467,6 +483,8 @@ const ConditionalBranchesEditor = React.memo(
 
           <button
             onClick={addBranch}
+            type="button"
+            aria-label={t("nodes.config.conditional.add_rule", "Agregar Nueva Regla")}
             className="w-full py-3 bg-sky-500/5 hover:bg-sky-500/10 border border-dashed border-sky-500/20 rounded-2xl text-[10px] font-black uppercase tracking-widest text-sky-400 flex items-center justify-center gap-2 transition-all active:scale-[0.98] group"
           >
             <Plus
