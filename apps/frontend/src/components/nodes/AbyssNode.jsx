@@ -19,6 +19,8 @@ import {
   Sparkles,
   XCircle,
   Lock,
+  ChevronDown,
+  CircleDot,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -108,6 +110,13 @@ const AbyssNode = ({ id, data, selected, type }) => {
 
   const isConditional = nodeKey === "conditional";
   const isSwitch = nodeKey === "switch";
+
+  // 1.6 Decision trace panel (collapsible, conditional-only)
+  const [showDecisionTrace, setShowDecisionTrace] = React.useState(false);
+  const decisionTrace =
+    data?.result?.trace || data?.result?.data?.trace || null;
+  const showDecisionPanel =
+    isConditional && data.state === "success" && !!decisionTrace;
 
   const branches = isConditional
     ? (() => {
@@ -497,6 +506,89 @@ const AbyssNode = ({ id, data, selected, type }) => {
                   </span>
                 </div>
               )}
+            {/* 1.6 Conditional Decision Trace Panel */}
+            {showDecisionPanel && (
+              <div className="mt-1.5 rounded-md border border-slate-700/60 bg-slate-950/40 overflow-hidden">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowDecisionTrace((v) => !v);
+                  }}
+                  className="w-full flex items-center gap-1.5 px-2 py-1 text-left hover:bg-slate-800/40 transition-colors"
+                >
+                  <CircleDot size={11} className="text-emerald-400 shrink-0" />
+                  <span className="text-[9px] font-black tracking-wider uppercase text-white/80">
+                    Decision
+                  </span>
+                  <ChevronDown
+                    size={11}
+                    className={cn(
+                      "ml-auto shrink-0 text-slate-400 transition-transform duration-200",
+                      showDecisionTrace && "rotate-180",
+                    )}
+                  />
+                </button>
+                {showDecisionTrace && (
+                  <div className="px-2 pb-1.5 space-y-0.5">
+                    {Object.entries(decisionTrace).map(
+                      ([branchKey, entry]) => {
+                        const st = entry?.status || "not_matched";
+                        const label =
+                          branches.find(
+                            (b) => (b.id || b.label) === branchKey,
+                          )?.label || branchKey;
+                        const badge =
+                          st === "matched"
+                            ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+                            : st === "error"
+                              ? "bg-rose-500/20 text-rose-300 border-rose-500/40"
+                              : st === "skipped"
+                                ? "bg-slate-600/30 text-slate-400 border-slate-600/50"
+                                : "bg-slate-700/30 text-slate-300 border-slate-600/40";
+                        const badgeLabel =
+                          st === "matched"
+                            ? "MATCH"
+                            : st === "error"
+                              ? "ERROR"
+                              : st === "skipped"
+                                ? "SKIP"
+                                : "NO";
+                        return (
+                          <div
+                            key={branchKey}
+                            className="flex items-center gap-1.5 text-[9px] font-mono"
+                          >
+                            <span
+                              className={cn(
+                                "shrink-0 w-11 text-center px-1 py-0.5 rounded border font-black tracking-wide",
+                                badge,
+                              )}
+                            >
+                              {badgeLabel}
+                            </span>
+                            <span
+                              className="text-white/80 truncate"
+                              title={label}
+                            >
+                              {truncate(label || branchKey, 16)}
+                            </span>
+                            {entry?.resolvedLeft !== undefined && (
+                              <span
+                                className="text-slate-500 truncate max-w-[70px]"
+                                title={String(entry.resolvedLeft)}
+                              >
+                                = {truncate(JSON.stringify(entry.resolvedLeft), 14)}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      },
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
