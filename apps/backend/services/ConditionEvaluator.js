@@ -11,6 +11,8 @@
  * - No implicit boolean coercion beyond JS standard coercion
  */
 
+import { coerceComparisonPair } from '../core/compare.js';
+
 class ConditionEvaluator {
     /**
      * Evaluate a single structured condition { left, operator, right }.
@@ -41,7 +43,7 @@ class ConditionEvaluator {
         }
 
         // Phase 4: Type normalization for comparisons
-        ({ left: rL, right: rR } = this._normalizeTypes(rL, rR));
+        ({ left: rL, right: rR } = coerceComparisonPair(rL, rR));
 
         // Phase 5: Operator dispatch
         return this._compare(rL, rR, operator, left, hasVar);
@@ -120,39 +122,6 @@ class ConditionEvaluator {
      */
     _isUnresolved(v) {
         return typeof v === 'string' && (v.includes('{{') || v.includes('${'));
-    }
-
-    /**
-     * Normalize types for comparison. Rules:
-     * - If one operand is a number and the other is a numeric string, convert to number
-     * - If one operand is boolean, normalize common boolean strings
-     */
-    _normalizeTypes(left, right) {
-        let rL = left;
-        let rR = right;
-
-        // Numeric normalization
-        if (typeof rL === 'number' && typeof rR === 'string' && rR !== '' && !isNaN(rR)) {
-            rR = Number(rR);
-        } else if (typeof rR === 'number' && typeof rL === 'string' && rL !== '' && !isNaN(rL)) {
-            rL = Number(rL);
-        }
-
-        // Boolean normalization
-        const isTrueStr = (val) =>
-            typeof val === 'string' && ['true', 'success'].includes(val.toLowerCase());
-        const isFalseStr = (val) =>
-            typeof val === 'string' && ['false', 'error', 'fail'].includes(val.toLowerCase());
-
-        if (typeof rL === 'boolean') {
-            if (isTrueStr(rR)) rR = true;
-            else if (isFalseStr(rR)) rR = false;
-        } else if (typeof rR === 'boolean') {
-            if (isTrueStr(rL)) rL = true;
-            else if (isFalseStr(rL)) rL = false;
-        }
-
-        return { left: rL, right: rR };
     }
 
     /**

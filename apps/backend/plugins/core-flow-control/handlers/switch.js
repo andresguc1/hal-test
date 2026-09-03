@@ -1,5 +1,6 @@
 import { variableManager } from '../../../services/VariableManager.js';
 import { emitLog } from '../../../socket.js';
+import { normalizeValue } from '../../../core/compare.js';
 
 const smartEmitLog = (message, type = 'info', nodeId = null) => {
     emitLog({ message, type, nodeId });
@@ -53,17 +54,6 @@ const switchAction = async (req, res) => {
             nodeId,
         );
 
-        const normalize = (val) => {
-            if (val === null || val === undefined) return val;
-            if (typeof val === 'boolean') return val;
-            if (typeof val === 'string') {
-                const s = val.trim();
-                if (s !== '' && /^-?(\d+\.?\d*|\.\d+)$/.test(s)) return Number(s);
-                return s;
-            }
-            return val;
-        };
-
         const compare = (resolved, caseVal) => {
             switch (comparisonType) {
                 case 'contains':
@@ -91,7 +81,7 @@ const switchAction = async (req, res) => {
                 }
                 case 'equals':
                 default:
-                    return normalize(resolved) === normalize(caseVal);
+                    return normalizeValue(resolved) === normalizeValue(caseVal);
             }
         };
 
@@ -116,8 +106,8 @@ const switchAction = async (req, res) => {
                 trace[c.id] = {
                     value: c.value,
                     resolvedCaseValue: rawCaseValue,
-                    normalizedResolved: normalize(resolvedValue),
-                    normalizedCase: normalize(rawCaseValue),
+                    normalizedResolved: normalizeValue(resolvedValue),
+                    normalizedCase: normalizeValue(rawCaseValue),
                     comparisonType,
                     matched: isMatch,
                 };
