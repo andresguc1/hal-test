@@ -42,7 +42,15 @@ class FlowResolver {
                     node.data?.configuration?.ref ||
                     node.data?.flowId;
 
-                if (flowRef && !visited.has(flowRef)) {
+                const nodeId = node.id || node.nodeId || '?';
+                const inlineCount = node.data?.subNodes?.length || 0;
+
+                if (!flowRef) {
+                    console.warn(
+                        `[FlowResolver] Container node ${nodeId} (type: ${type}) has no flowId/ref. ` +
+                            `${inlineCount > 0 ? `Using ${inlineCount} inline subNode(s).` : 'No subNodes — component will generate as empty.'}`,
+                    );
+                } else if (flowRef && !visited.has(flowRef)) {
                     visited.add(flowRef);
 
                     const subFlow = await this._loadSubFlow(flowRef, projectId);
@@ -59,6 +67,17 @@ class FlowResolver {
                             ),
                             subEdges: subFlow.edges || [],
                         };
+                    } else {
+                        // Sub-flow could not be resolved. Preserve any inline
+                        // subNodes that the caller (e.g. frontend Code Preview)
+                        // may have already attached, so the generator still has
+                        // something to work with instead of producing an empty
+                        // block.  Log a detailed warning so the issue is visible
+                        // in server logs.
+                        console.warn(
+                            `[FlowResolver] Could not resolve sub-flow "${flowRef}" for container node ${nodeId} (project: ${projectId}). ` +
+                                `${inlineCount > 0 ? `Preserving ${inlineCount} inline subNode(s).` : 'No inline subNodes available — component will generate as empty.'}`,
+                        );
                     }
                 }
             }

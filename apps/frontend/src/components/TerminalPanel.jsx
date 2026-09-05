@@ -448,8 +448,11 @@ export default function TerminalPanel({
                   mapped.data.subNodes = subFlow.nodes;
                 }
               }
-            } catch {
-              // Sub-flow not found — leave subNodes empty, backend will try too
+            } catch (fetchErr) {
+              console.warn(
+                `[CodePreview] Failed to resolve sub-flow for component node ${node.id} (flowId: ${flowId}):`,
+                fetchErr?.message || fetchErr,
+              );
             }
           });
           await Promise.allSettled(fetches);

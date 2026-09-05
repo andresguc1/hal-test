@@ -393,7 +393,25 @@ playwright_tests:
 
         // Handle recursive components/sub-flows
         const subNodes = step.data?.subNodes || step.subNodes || [];
+        const flowId = step.data?.configuration?.flowId || step.data?.flowId;
         if (type === 'component' || subNodes.length > 0) {
+            // Emit a visible warning when a composite/component node could not
+            // be resolved (empty subNodes and no flowId reference).  This
+            // prevents the silent "empty test.step block" that previously
+            // made components like "Disappearing Elements" vanish from the
+            // generated code without any indication.
+            if (type === 'component' && subNodes.length === 0 && !flowId) {
+                const emptyWarning = this.isEn
+                    ? `Component "${label}" could not be resolved (no flowId or subNodes). Skipped.`
+                    : `Componente "${label}" no pudo resolverse (sin flowId ni subNodes). Omitido.`;
+                this.addWarning(type, label, index);
+
+                if (lang === 'javascript' || lang === 'typescript') {
+                    return `${indent}${nodeIdComment ? nodeIdComment + '\n' : ''}${indent}// ⚠️ ${emptyWarning}`;
+                }
+                return `${indent}${nodeIdComment ? nodeIdComment + '\n' : ''}${indent}${commentChar} ⚠️ ${emptyWarning}`;
+            }
+
             if (this.usePOM) {
                 const flowId = step.data?.configuration?.flowId || step.data?.flowId || step.id;
                 const po = this.pageObjectsMap?.get(flowId);
