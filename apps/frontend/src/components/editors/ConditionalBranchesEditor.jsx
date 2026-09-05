@@ -17,6 +17,10 @@ import {
 import * as Tooltip from "@radix-ui/react-tooltip";
 import { cn } from "@/lib/utils";
 import VariableInput from "../VariableInput";
+import {
+  buildVariableTypeLookup,
+  resolveVariableType,
+} from "@/utils/conditionTypeUtils";
 
 const ConditionalBranchesEditor = React.memo(
   ({ value, onChange, variables, allVariables, suggestions }) => {
@@ -82,6 +86,18 @@ const ConditionalBranchesEditor = React.memo(
     }, [value]);
 
     const availableVariablePaths = suggestions || [];
+
+    // Lookup map: template path -> { type, label } so the editor can adapt the
+    // Value field to the type of the variable selected on the left.
+    const variableTypeLookup = useMemo(
+      () => buildVariableTypeLookup(suggestions),
+      [suggestions],
+    );
+
+    const resolveLeftType = useCallback(
+      (leftRef) => resolveVariableType(leftRef, variableTypeLookup),
+      [variableTypeLookup],
+    );
 
     const updateBranch = useCallback(
       (index, field, val) => {
@@ -421,6 +437,7 @@ const ConditionalBranchesEditor = React.memo(
                             variables={variables}
                             allVariables={allVariables}
                             suggestions={availableVariablePaths}
+                            autoOpen
                             placeholder={t(
                               "nodes.config.conditional.placeholder_var",
                               "Variable...",
@@ -455,23 +472,66 @@ const ConditionalBranchesEditor = React.memo(
                           </select>
                         </div>
                         <div className="flex-1 min-w-[100px]">
-                          <VariableInput
-                            value={branch.expression?.right || ""}
-                            variables={allVariables || variables}
-                            contextualVariables={variables}
-                            suggestions={[
-                              ...getValueSuggestions(branch.expression?.left),
-                              ...availableVariablePaths,
-                            ]}
-                            placeholder={t(
-                              "nodes.config.conditional.placeholder_val",
-                              "Valor...",
-                            )}
-                            onChange={(e) =>
-                              updateBranch(index, "expr_right", e.target.value)
+                          {(() => {
+                            const leftType = resolveLeftType(
+                              branch.expression?.left,
+                            );
+                            const isBooleanLeft = leftType === "boolean";
+
+                            if (isBooleanLeft) {
+                              const currentRight = String(
+                                branch.expression?.right || "",
+                              );
+                              const boolValue =
+                                currentRight.trim() === "true";
+                              return (
+                                <select
+                                  value={boolValue ? "true" : "false"}
+                                  onChange={(e) =>
+                                    updateBranch(
+                                      index,
+                                      "expr_right",
+                                      e.target.value,
+                                    )
+                                  }
+                                  aria-label={t(
+                                    "nodes.config.conditional.value",
+                                    "Valor de comparación",
+                                  )}
+                                  className="w-full bg-slate-800/80 border-white/5 rounded-lg text-[11px] font-black text-emerald-400 h-8 text-center appearance-none cursor-pointer focus:ring-1 focus:ring-emerald-500/50 outline-none"
+                                >
+                                  <option value="true">true</option>
+                                  <option value="false">false</option>
+                                </select>
+                              );
                             }
-                            className="bg-slate-800/40 border-transparent text-[11px] h-8 rounded-lg focus:bg-slate-800 focus:border-sky-500/30"
-                          />
+
+                            return (
+                              <VariableInput
+                                value={branch.expression?.right || ""}
+                                variables={allVariables || variables}
+                                contextualVariables={variables}
+                                suggestions={[
+                                  ...getValueSuggestions(
+                                    branch.expression?.left,
+                                  ),
+                                  ...availableVariablePaths,
+                                ]}
+                                placeholder={t(
+                                  "nodes.config.conditional.placeholder_val",
+                                  "Valor...",
+                                )}
+                                onChange={(e) =>
+                                  updateBranch(
+                                    index,
+                                    "expr_right",
+                                    e.target.value,
+                                  )
+                                }
+                                className="bg-slate-800/40 border-transparent text-[11px] h-8 rounded-lg focus:bg-slate-800 focus:border-sky-500/30"
+                              />
+                            );
+                          })()}
                         </div>
                       </div>
                     </div>

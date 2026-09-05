@@ -274,6 +274,7 @@ const SwitchCasesEditor = React.memo(
                       variables={variables}
                       allVariables={allVariables}
                       suggestions={suggestions}
+                      autoOpen
                       placeholder={t(
                         "nodes.placeholders.switch_value",
                         "Value (e.g., admin, true, 200)",

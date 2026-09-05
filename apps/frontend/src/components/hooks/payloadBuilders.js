@@ -1373,6 +1373,7 @@ export const switch_node = (payload) => {
   return {
     browserId: asString(payload?.browserId),
     variableName: asString(payload?.variableName),
+    comparisonType: asString(payload?.comparisonType, "equals"),
     cases: Array.isArray(payload?.cases) ? payload.cases : [],
     scope: asString(payload?.scope, "flow"),
   };

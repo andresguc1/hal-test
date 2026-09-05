@@ -12,6 +12,7 @@ import {
   Globe,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Eye,
   EyeOff,
   Trash2,
@@ -99,6 +100,7 @@ const NodeConfigurationPanel = ({
   ]);
   const [liveVariables, setLiveVariables] = useState({});
   const [allWorkspaceProjects, setAllWorkspaceProjects] = useState([]);
+  const [minimized, setMinimized] = useState(false);
 
   useEffect(() => {
     const fetchAllProjects = async () => {
@@ -700,6 +702,13 @@ const NodeConfigurationPanel = ({
     const fieldPlaceholder = field.placeholder
       ? t("nodes.placeholders." + field.key, field.placeholder)
       : "";
+    // Auto-open the variable dropdown on focus only for flow-control decision
+    // fields (conditional/switch generic "text"/"number" inputs), so the
+    // available upstream variables are surfaced directly without typing "{{".
+    const activeNodeType = activeNode?.data?.type || activeNode?.type || "";
+    const isDecisionVariableField =
+      (activeNodeType === "conditional" || activeNodeType === "switch") &&
+      (field.type === "text" || field.type === "number");
 
     switch (field.type) {
       case "subflow_select":
@@ -758,23 +767,20 @@ const NodeConfigurationPanel = ({
                           matched.nodes?.some((n) => n.type === "output") ||
                           false;
 
-                        activeNode.data = {
-                          ...(activeNode.data || {}),
+                        // RHF already wrote configuration.flowId via onChange().
+                        // Persist flowId + container metadata (label + counts)
+                        // without mutating the node in place, so state updates
+                        // correctly and runtime resolvers see the new sub-flow.
+                        setLocalLabel(newLabel);
+
+                        updateNodeConfiguration(activeNode.id, {
+                          flowId: selectedId,
                           label: newLabel,
                           customLabel: newLabel,
-                          flowId: selectedId,
                           nodeCount,
                           hasInput,
                           hasOutput,
-                          configuration: {
-                            ...(activeNode.data?.configuration || {}),
-                            flowId: selectedId,
-                          },
-                        };
-
-                        setLocalLabel(newLabel);
-
-                        updateNodeConfiguration(activeNode.id, activeNode.data);
+                        });
                         window.dispatchEvent(
                           new CustomEvent("node-data-updated", {
                             detail: { nodeId: activeNode.id },
@@ -1139,6 +1145,7 @@ const NodeConfigurationPanel = ({
                   type={field.type}
                   variables={variablesMap}
                   suggestions={availableVariablePaths}
+                  autoOpen={isDecisionVariableField}
                   onChange={onChange}
                   className="w-full text-xs font-mono px-3 py-2"
                 />
@@ -1413,6 +1420,21 @@ const NodeConfigurationPanel = ({
             </>
           )}
           <button
+            onClick={() => setMinimized((v) => !v)}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+            title={
+              minimized
+                ? t("common.expand_panel", "Expand Panel")
+                : t("common.collapse_panel", "Collapse Panel")
+            }
+          >
+            {minimized ? (
+              <ChevronRight size={16} />
+            ) : (
+              <ChevronDown size={16} />
+            )}
+          </button>
+          <button
             onClick={onClose}
             className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all"
           >
@@ -1629,8 +1651,12 @@ const NodeConfigurationPanel = ({
           className="w-full sm:w-80 md:w-[400px] h-full glass-panel z-[var(--z-popover)] flex flex-col relative shadow-2xl overflow-hidden"
         >
           {Header()}
-          {Body()}
-          {Footer()}
+          {!minimized && (
+            <>
+              {Body()}
+              {Footer()}
+            </>
+          )}
         </Motion.div>
       </AnimatePresence>
 

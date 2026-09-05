@@ -312,8 +312,11 @@ export const NODE_OUTPUTS = {
   // --- DOM / Code ---
   find_element: {
     found: "boolean",
+    visible: "boolean",
     count: "number",
     selector: "string",
+    selectorType: "string",
+    state: "string",
     success: "boolean",
   },
   get_set_content: {

@@ -50,6 +50,11 @@ export const VariableInput = ({
   type = "text",
   hasError = false,
   suggestions = [],
+  // When true, the dropdown opens automatically on focus/click without the
+  // user having to type "{{" first. Plain-text typing filters the list by
+  // label, so selecting a variable is direct and visual. The "{{" syntax is
+  // still honored on the same field for advanced multi-variable expressions.
+  autoOpen = false,
   ...props
 }) => {
   const containerRef = useRef(null);
@@ -277,22 +282,27 @@ export const VariableInput = ({
       {(() => {
         const lastOpen = stringValue.lastIndexOf("{{");
         const lastClose = stringValue.lastIndexOf("}}");
-        const isInsideVar = lastOpen > lastClose;
-        return showSuggestions && isInsideVar && suggestions?.length > 0;
+        const insideVar = lastOpen > lastClose;
+        const qualify =
+          showSuggestions &&
+          suggestions?.length > 0 &&
+          (autoOpen || insideVar);
+        return qualify;
       })() && (
         <div className="absolute top-full left-0 right-0 mt-2 p-1.5 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl z-[100] max-h-64 overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-top-2 duration-200">
           {(() => {
-            // Flatten and filter based on current input
-            // 1. Only filter if we are actually inside a variable tag
+            // Flatten and filter based on current input.
+            // Inside a {{...}} tag we filter by the text after the "{{".
+            // Otherwise (auto-open / plain search) we filter by the whole
+            // current value, so the user can just start typing a property
+            // name (e.g. "success") without typing any "{{".
             const lastOpen = stringValue.lastIndexOf("{{");
             const lastClose = stringValue.lastIndexOf("}}");
-            const isInsideVar = lastOpen > lastClose;
+            const insideVar = lastOpen > lastClose;
 
-            // If not inside {{ }}, show all or nothing based on preference.
-            // Here we show all if empty or nothing if typing normal text.
-            const filterText = isInsideVar
+            const filterText = insideVar
               ? stringValue.substring(lastOpen + 2)
-              : "";
+              : stringValue.trim();
 
             const filteredGroups = suggestions
               .map((group) => {
@@ -330,27 +340,40 @@ export const VariableInput = ({
                       key={iIdx}
                       onMouseDown={(e) => {
                         e.preventDefault();
-                        // Find where the last {{ started
-                        const lastOpen = stringValue.lastIndexOf("{{");
-                        const prefix = stringValue.substring(0, lastOpen);
-                        const closeIdx = stringValue.indexOf("}}", lastOpen);
-                        const suffix =
-                          closeIdx !== -1
-                            ? stringValue.substring(closeIdx + 2)
-                            : "";
                         const inserted = item.path || "";
-                        const newValue = prefix + inserted + suffix;
+                        const lastOpen = stringValue.lastIndexOf("{{");
+                        const lastClose = stringValue.lastIndexOf("}}");
+                        const insideVar = lastOpen > lastClose;
+                        let newValue;
+                        let cursorPos = inserted.length;
+
+                        if (insideVar) {
+                          // Advanced mode: replace only the open {{...}} token,
+                          // preserving any surrounding text (multi-variable
+                          // expressions).
+                          const prefix = stringValue.substring(0, lastOpen);
+                          const closeIdx = stringValue.indexOf("}}", lastOpen);
+                          const suffix =
+                            closeIdx !== -1
+                              ? stringValue.substring(closeIdx + 2)
+                              : "";
+                          newValue = prefix + inserted + suffix;
+                          cursorPos = prefix.length + inserted.length;
+                        } else {
+                          // Direct/visual mode: the whole value is the chosen
+                          // variable, so replace it entirely.
+                          newValue = inserted;
+                        }
+
                         onChange({ target: { value: newValue } });
                         setShowSuggestions(false);
 
                         setTimeout(() => {
                           if (inputRef.current) {
                             inputRef.current.focus();
-                            const newCursorPos =
-                              prefix.length + inserted.length;
                             inputRef.current.setSelectionRange(
-                              newCursorPos,
-                              newCursorPos,
+                              cursorPos,
+                              cursorPos,
                             );
                           }
                         }, 0);
