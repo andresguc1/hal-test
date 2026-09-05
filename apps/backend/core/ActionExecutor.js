@@ -3,6 +3,7 @@
 // ==========================================================
 
 import { browserService } from '../services/browser.service.js';
+import { activeRunManager } from '../services/ActiveRunManager.js';
 import { traceService } from '../services/trace.service.js';
 import { variableManager } from '../services/VariableManager.js';
 import experienceVaultService from '../services/ExperienceVaultService.js';
@@ -106,7 +107,15 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
         smartEmitLog(`Executing ${actionName}...`, 'info', nodeId);
     }
 
+    // Safety gate: never implicitly open a browser for an action that belongs
+    // to a run that has been cancelled. If the run was stopped (e.g. the user
+    // pressed "Stop" during a composite), each stray in-flight request would
+    // otherwise re-launch a fresh browser — one per exposed node — because the
+    // session's browser was already closed and browserService is empty.
+    const runAborted = activeRunManager.getSignal(runId)?.aborted === true;
+
     if (
+        !runAborted &&
         actionName !== 'launch_browser' &&
         opts.debugMode &&
         !opts.browserId &&
@@ -341,7 +350,19 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
             );
         }
 
-        if (useExperienceVault && !opts.isSubStep && opts.selector && opts.nodeId) {
+        // Only treat a node as a successful baseline when BOTH the transport
+        // and the handler payload confirm success. find_element returns
+        // { success: false } on not-found; storing that as a "successful"
+        // selector would poison the Experience Vault with failing selectors.
+        const actionSucceed = result?.success !== false && result?.data?.success !== false;
+
+        if (
+            useExperienceVault &&
+            actionSucceed &&
+            !opts.isSubStep &&
+            opts.selector &&
+            opts.nodeId
+        ) {
             let contextName = 'Global';
             if (opts.flowId) {
                 try {
@@ -402,14 +423,32 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
             console.warn(
                 `[Draft Mode] Execution error in node ${nodeId}. Skipping action gracefully. Error: ${errorMessage}`,
             );
+            // The Draft-Mode early return used to skip the stale-session cleanup
+            // below, so a dead/closed browser stayed registered and every later
+            // node kept tripping over it ("Target page... has been closed").
+            if (
+                targetBrowserId &&
+                (errorMessage.includes('disconnected') ||
+                    errorMessage.includes('closed') ||
+                    errorMessage.includes('desconectado') ||
+                    errorMessage.includes('cerrado'))
+            ) {
+                browserService.delete(targetBrowserId);
+            }
             if (nodeId) {
-                emitExecutionStatus({ stepId: nodeId, status: 'softfailed' });
+                emitExecutionStatus({
+                    stepId: nodeId,
+                    status: 'softfailed',
+                    error: errorMessage,
+                    message: `Acción omitida: Nodo incompleto (Draft Mode). Detalles: ${errorMessage.substring(0, 100)}`,
+                });
                 smartEmitLog(`Acción omitida: Nodo incompleto (Draft Mode)`, 'warning', nodeId);
             }
             return res.status(200).json({
                 success: true,
                 status: 'softfailed',
                 message: `Acción omitida: Nodo incompleto (Draft Mode). Detalles: ${errorMessage.substring(0, 100)}`,
+                error: errorMessage,
                 browserId: targetBrowserId,
             });
         }

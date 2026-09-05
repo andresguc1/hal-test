@@ -15,6 +15,7 @@ const closeBrowserAction = async (req, res) => {
         }
 
         if (browserId === '' || browserId === null) browserId = undefined;
+        const requestedId = browserId;
 
         const validation = validateBrowser(req, browserId);
         if (validation.error) {
@@ -36,6 +37,31 @@ const closeBrowserAction = async (req, res) => {
             return res
                 .status(validation.status)
                 .json({ success: false, message: validation.message });
+        }
+
+        // A SPECIFIC browserId was requested but validateBrowser resolved to a
+        // different (fallback "latest") session: the requested session is
+        // already dead. Closing the fallback here would kill an unrelated live
+        // browser (e.g. the one a sibling/sub-flow just launched) and cause the
+        // next node to fail with "Target page... has been closed". Treat the
+        // stale request as idempotent success instead.
+        if (requestedId && validation.browserId !== requestedId) {
+            const staleMsg = `Browser ID ${requestedId} not found. Assuming already closed (stale session resolved to ${validation.browserId}).`;
+            console.log(`[INFO] close_browser: ${staleMsg} Skipping close.`);
+            smartEmitLog(staleMsg, 'success', nodeId);
+            if (nodeId) emitExecutionStatus({ stepId: nodeId, status: 'success' });
+            traceService.add({
+                action: 'close_browser',
+                browserId: requestedId,
+                status: 'success',
+                skipped: 'stale',
+            });
+
+            return res.status(200).json({
+                success: true,
+                message: req.t('actions.close_browser.success_already_closed'),
+                browserId: requestedId,
+            });
         }
 
         browserId = validation.browserId;
