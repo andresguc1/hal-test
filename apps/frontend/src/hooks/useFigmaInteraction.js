@@ -25,7 +25,7 @@ export function useFigmaInteraction() {
       if (e.code === "Space" && !e.repeat) {
         setIsSpacePressed(true);
       }
-      if (e.key === "Control" || e.metaKey) {
+      if (e.key === "Control" || e.key === "Meta") {
         _setIsCtrlPressed(true);
       }
     };

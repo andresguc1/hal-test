@@ -1,11 +1,12 @@
-/* Fixed positioning for mini-map to prevent jumping */
+/* Positioning for mini-map to prevent jumping.
+   Uses fixed positioning so the minimap stays in viewport regardless of canvas pan/zoom. */
 .react-flow__minimap {
-  position: fixed;
+  position: fixed !important;
   bottom: 55px !important;
-  /* Above footer */
-  /* right property removed - let App.css handle dynamic positioning */
-  z-index: 5;
-  /* Below panels but above canvas */
+  right: 20px !important;
+  z-index: 50 !important;
+  width: 180px !important;
+  height: 120px !important;
 }
 
 /* Glow effect on hover */

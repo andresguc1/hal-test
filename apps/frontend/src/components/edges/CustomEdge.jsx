@@ -13,8 +13,8 @@ import "./CustomEdge.css";
  *   3. Drop FULLY down to targetY (in the gap, never through a node)
  *   4. Travel right the remaining distance to the target handle
  *
- * This is the correct approach because the ranksep gap (120px) between columns
- * is always empty — Dagre guarantees no node is placed there.
+ * This is correct because the ranksep gap between columns is always empty —
+ * the layout engine guarantees no node is placed there.
  *
  * @param {object} params
  * @returns {string} SVG path string
@@ -24,24 +24,19 @@ function buildOrthogonalBypassPath({
   sourceY,
   targetX,
   targetY,
-  edgeId,
+  parallelIndex = 0,
   borderRadius = 10,
 }) {
-  // Deterministic offset so parallel bypass lines don't overlap
-  const hash = edgeId
-    .split("")
-    .reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const laneOffset = 15 + (hash % 5) * 8; // 15, 23, 31, 39, 47 px — spread parallel lines
+  // Small, bounded deterministic offset so parallel bypass lines fan out
+  // without overlapping, while staying inside the (≈90px) empty ranksep gap.
+  const laneOffset = 16 + (parallelIndex % 3) * 10; // 16, 26, 36 px
+  const r = borderRadius;
 
-  // The vertical drop happens at sourceX + laneOffset.
-  // sourceX is the handle (right edge of source node).
-  // Adding laneOffset places us in the ranksep gap (120px wide).
+  // The vertical drop happens at sourceX + laneOffset (inside the empty gap).
   const pivotX = sourceX + laneOffset;
 
-  // Clamp pivot so it never overshoots the target (for short edges)
-  const clampedPivotX = Math.min(pivotX, targetX - laneOffset);
-
-  const r = borderRadius;
+  // Never let the pivot overshoot the midpoint of the edge (short edges).
+  const clampedPivotX = Math.max(sourceX, Math.min(pivotX, (sourceX + targetX) / 2 - 10));
 
   // Determine if we go down or up
   const goingDown = targetY > sourceY;
@@ -89,6 +84,14 @@ const CustomEdge = ({
   const distanceY = Math.abs(targetY - sourceY);
   const isBypass = distanceY > 30;
 
+  // Deterministic, bounded index used to fan out parallel bypass edges that
+  // share an approximate row. Kept small (0..2) so the drop stays inside the
+  // empty ranksep gap reserved by the layout engine.
+  const hash = String(id || "")
+    .split("")
+    .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const parallelIndex = hash % 3;
+
   let edgePath;
 
   if (isBypass) {
@@ -97,16 +100,12 @@ const CustomEdge = ({
       sourceY,
       targetX,
       targetY,
-      edgeId: id,
+      parallelIndex,
       borderRadius: 10,
     });
   } else {
-    // Short, same-row edge — simple SmoothStep is fine
-    const hash = id
-      .split("")
-      .reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const jitter = (hash % 20) - 10;
-
+    // Short, same-row edge — simple SmoothStep is fine (no artificial jitter,
+    // which previously made parallel edges look messy).
     [edgePath] = getSmoothStepPath({
       sourceX,
       sourceY,
@@ -115,7 +114,6 @@ const CustomEdge = ({
       targetY,
       targetPosition: targetPosition || "left",
       borderRadius: 10,
-      centerX: sourceX + (targetX - sourceX) / 2 + jitter,
     });
   }
 

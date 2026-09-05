@@ -11,6 +11,7 @@ import {
   Background,
   useReactFlow,
   useStoreApi,
+  useStore,
   MarkerType,
   ConnectionMode,
   useNodesInitialized,
@@ -25,6 +26,7 @@ import NodeConfigurationPanel from "./components/NodeConfigurationPanel";
 import AppFooter from "./components/AppFooter";
 import StyledMiniMap from "./components/StyledMiniMap";
 import { nodeTypes } from "./components/nodes";
+import { CanvasNodeInfoOverlay } from "./components/nodes/NodeTooltip";
 import CustomConnectionLine from "./components/CustomConnectionLine";
 import CustomEdge from "./components/edges/CustomEdge";
 import { subFlowCache } from "./utils/subFlowCache";
@@ -96,6 +98,7 @@ import {
   Info,
   ChevronDown,
   Wand2,
+  Maximize2,
   X,
 } from "lucide-react";
 import { useLogStore } from "./context/LogContext";
@@ -175,6 +178,9 @@ function Dashboard({
   window.rfGetEdges = getEdges;
   window.rfStore = store;
 
+  // Live canvas zoom (for zoom-aware tooltips)
+  const liveZoom = useStore((s) => s.transform[2]);
+
   // 3. Core Flow Management Hub
   const {
     nodes,
@@ -210,7 +216,7 @@ function Dashboard({
     enterComponent,
     exitComponent,
     deepNavigate,
-    setSelectedNodeId,
+    setActiveNodeId,
     selectedNodeId,
     validateFlowStructure,
     updateNodeState,
@@ -237,6 +243,29 @@ function Dashboard({
   } = useFlowManager(currentProject, currentFlowId, switchFlow);
   window.nodes = nodes;
   window.edges = edges;
+
+  // Zoom-aware contextual node tooltip (screen-space overlay)
+  const [infoNode, setInfoNode] = React.useState(null); // { id, rect, nodeKey, data, safeConfig, displayLabel, compact }
+  const infoAnchorRef = React.useRef(null);
+  const [canvasMousePos, setCanvasMousePos] = React.useState(null); // { x, y } for low-zoom cursor-following
+  const handleNodeInfoEnter = React.useCallback((node, rect) => {
+    infoAnchorRef.current = rect;
+    setInfoNode({
+      id: node.id,
+      data: node.data,
+      nodeKey: node.data?.subType || node.data?.type || node.type,
+    });
+  }, []);
+  const handleNodeInfoLeave = React.useCallback(() => {
+    infoAnchorRef.current = null;
+    setInfoNode(null);
+    setCanvasMousePos(null);
+  }, []);
+  const closeInfo = React.useCallback(() => {
+    infoAnchorRef.current = null;
+    setInfoNode(null);
+    setCanvasMousePos(null);
+  }, []);
 
   const { updateCursor, role, isCollaborative } = useCollaboration();
   const { isRemoteExecuting, remoteExecution } = useAwareness();
@@ -297,7 +326,7 @@ function Dashboard({
   const handleNavigateToNode = useCallback(
     (nodeId) => {
       if (!nodeId) return;
-      setSelectedNodeId(nodeId);
+      setActiveNodeId(nodeId);
       setNodes((nds) =>
         nds.map((n) => ({
           ...n,
@@ -314,7 +343,7 @@ function Dashboard({
         });
       }, 80);
     },
-    [setSelectedNodeId, reactFlowFitView, setNodes],
+    [setActiveNodeId, reactFlowFitView, setNodes],
   );
 
   const handleRunDataset = React.useCallback(
@@ -507,19 +536,39 @@ function Dashboard({
 
         // --- DEEP DIVE LOGIC (If execution failed inside a composite) ---
         if (result.success) {
-          addLog(
-            `[System] ✓ Flow execution completed successfully in ${
-              targetMode === "performance"
-                ? "performance"
-                : targetMode === "seguridad"
-                  ? "security"
-                  : "quality"
-            } mode.`,
-            "success",
-          );
-          toast.success(
-            t("common.flow_exec_success", "Flow executed successfully"),
-          );
+          const softfailedCount = result.stats?.softfailed || 0;
+          if (softfailedCount > 0) {
+            addLog(
+              `[System] ⚠ Flow execution completed in ${
+                targetMode === "performance"
+                  ? "performance"
+                  : targetMode === "seguridad"
+                    ? "security"
+                    : "quality"
+              } mode, but ${softfailedCount} node(s) were skipped (Draft Mode / soft failure).`,
+              "warning",
+            );
+            toast.warning(
+              t("common.flow_exec_with_skips", {
+                defaultValue: `Flow completed, but ${softfailedCount} node(s) failed silently and were skipped.`,
+                count: softfailedCount,
+              }),
+            );
+          } else {
+            addLog(
+              `[System] ✓ Flow execution completed successfully in ${
+                targetMode === "performance"
+                  ? "performance"
+                  : targetMode === "seguridad"
+                    ? "security"
+                    : "quality"
+              } mode.`,
+              "success",
+            );
+            toast.success(
+              t("common.flow_exec_success", "Flow executed successfully"),
+            );
+          }
 
           // Redirect to dashboard tab after 1.5 seconds
           setTimeout(() => {
@@ -1045,10 +1094,10 @@ function Dashboard({
   }, [currentFlowId]);
 
   const closeConfiguration = useCallback(() => {
-    if (setSelectedNodeId) {
-      setSelectedNodeId(null);
+    if (setActiveNodeId) {
+      setActiveNodeId(null);
     }
-  }, [setSelectedNodeId]);
+  }, [setActiveNodeId]);
 
   // Navigate to a node moved up.
   useEffect(() => {
@@ -1636,33 +1685,6 @@ function Dashboard({
   );
 
   // ========================================
-  // KEYBOARD SHORTCUTS (Moved here to access handlers)
-  // ========================================
-  useFlowShortcuts(
-    {
-      onSave: handleSaveFlow,
-      onUndo: undo,
-      onRedo: redo,
-      onExecute: handleExecuteFlow,
-      onDelete: handleDeleteSelected,
-      onSelectAll: handleSelectAll,
-      onDuplicate: handleDuplicateNodes,
-      onDeselect: () => {
-        /* Deselect logic handled by React Flow onClick */
-      },
-      onCopy: handleCopy,
-      onPaste: handlePaste,
-      onCut: handleCut,
-      onZoomIn: zoomIn,
-      onZoomOut: zoomOut,
-      onFitView: fitView,
-      onGroup: groupNodes, // Trigger group logic
-      onUngroup: handleUngroup,
-    },
-    !isSettingsOpen, // Disable shortcuts when modal is open
-  );
-
-  // ========================================
   // DRAG & DROP HANDLERS
   // ========================================
 
@@ -1783,8 +1805,28 @@ function Dashboard({
   );
 
   // Props estáticas que no cambian
-  const staticFlowProps = useMemo(
-    () => ({
+  const staticFlowProps = useMemo(() => {
+    // Compute dynamic translateExtent from current node positions so large
+    // workflows are always reachable (no hardcoded 10k px limit).
+    const NODE_MARGIN = 5000;
+    let minX = 0;
+    let minY = 0;
+    let maxX = 0;
+    let maxY = 0;
+    if (Array.isArray(nodes) && nodes.length > 0) {
+      for (const n of nodes) {
+        const px = n.position?.x ?? 0;
+        const py = n.position?.y ?? 0;
+        const w = n.measured?.width ?? 200;
+        const h = n.measured?.height ?? 100;
+        if (px < minX) minX = px;
+        if (py < minY) minY = py;
+        if (px + w > maxX) maxX = px + w;
+        if (py + h > maxY) maxY = py + h;
+      }
+    }
+
+    return {
       // Disable automatic fitView on mount – we will control zoom ourselves
       defaultViewport: { x: 0, y: 0, zoom: 0.6 },
       snapToGrid: true,
@@ -1798,28 +1840,27 @@ function Dashboard({
       selectionKeyCode: "Shift", // Shift para selección de área
       // Disable native delete to prevent conflicts with our custom handler
       deleteKeyCode: null,
-      // Mejorar interacción
-      selectNodesOnDrag: false, // No seleccionar al arrastrar
-      panOnDrag: [1, 2], // Pan con click medio o derecho
-      zoomOnScroll: true, // Zoom con scroll
-      zoomOnPinch: true, // Zoom con pinch en trackpad
-      zoomOnDoubleClick: false, // Deshabilitar zoom con doble click
+      // No seleccionar al arrastrar un nodo (distingue de la selección por marco de figmaConfig)
+      selectNodesOnDrag: false,
 
       // OPTIMIZATION: Performance Overhaul
-      minZoom: 0.4, // Standard zoom limits
-      maxZoom: 2.0, // Standard zoom limits
       connectionMode: ConnectionMode.Strict, // Strict connections so it only snaps to target (input) handles, fixing the visual jump bug
       onlyRenderVisibleElements: true, // Only render visible nodes/edges for performance
       defaultEdgeOptions: { type: "custom" }, // Force our custom edge (SmoothStep) globally
+      // Dynamic extent: always large enough to reach every node, with a comfortable margin
       translateExtent: [
-        [-5000, -5000],
-        [5000, 5000],
-      ], // Dynamic Extent (Large enough)
+        [minX - NODE_MARGIN, minY - NODE_MARGIN],
+        [maxX + NODE_MARGIN, maxY + NODE_MARGIN],
+      ],
 
+      // Interaction behavior (pan/zoom, space-key) is defined solely by figmaConfig
+      // below to avoid triple-spread conflicts, but the zoom LIMITS are authoritative
+      // here and re-asserted after the spread so figmaConfig cannot overrule them.
       ...figmaConfig, // Use Figma configuration
-    }),
-    [figmaConfig],
-  );
+      minZoom: 0.1, // Allow deep zoom-out for large/complex flows
+      maxZoom: 2.0,
+    };
+  }, [figmaConfig, nodes]);
 
   // -------------------------------------------------------------------------
   // NODE DATA ENRICHMENT
@@ -2313,9 +2354,32 @@ function Dashboard({
                   {...flowConfig}
                   onNodesDelete={onNodesDelete}
                   onMouseMove={handleMouseMove}
+                  onNodeMouseEnter={(e, node) => {
+                    const nodeEl =
+                      typeof e === "object" && e.target
+                        ? e.target.closest?.(".react-flow__node") ||
+                          e.currentTarget
+                        : null;
+                    const rect = nodeEl?.getBoundingClientRect?.() || null;
+                    handleNodeInfoEnter(node, rect);
+                  }}
+                  onNodeMouseMove={(e) => {
+                    if (liveZoom <= 0.5) {
+                      setCanvasMousePos({ x: e.clientX, y: e.clientY });
+                    }
+                  }}
+                  onNodeMouseLeave={handleNodeInfoLeave}
                 >
                   {showMinimap && <StyledMiniMap />}
                   <Controls>
+                    <ControlButton
+                      onClick={() =>
+                        reactFlowFitView({ duration: 300, padding: 0.2 })
+                      }
+                      title={t("common.fit_workflow", "Fit Workflow")}
+                    >
+                      <Maximize2 className="w-4 h-4" />
+                    </ControlButton>
                     <ControlButton
                       onClick={() => onLayout("LR")}
                       title={t("common.magic_organize", "Magic Organize")}
@@ -2453,6 +2517,13 @@ function Dashboard({
                   )}
                 </ReactFlow>
                 <RemoteCursors />
+                <CanvasNodeInfoOverlay
+                  infoNode={infoNode}
+                  anchorRect={infoNode ? infoAnchorRef.current : null}
+                  onClose={closeInfo}
+                  zoom={liveZoom}
+                  cursorPos={canvasMousePos}
+                />
               </ErrorBoundary>
             </div>
 
@@ -2464,7 +2535,7 @@ function Dashboard({
               setNodes={setNodes}
               setEdges={setEdges}
               selectedNodeId={selectedNodeId}
-              setSelectedNodeId={setSelectedNodeId}
+              setSelectedNodeId={setActiveNodeId}
               executionMode={canvasViewMode}
             />
 
@@ -2509,7 +2580,7 @@ function Dashboard({
               viewStack={viewStack}
               currentProject={currentProject}
               onClose={() => {
-                setSelectedNodeId(null);
+                setActiveNodeId(null);
               }}
               onExecute={executeSingleNode} // ATOMIC EXECUTION (Run Node)
               onRunNode={executeSingleNode} // Redundant but kept for safety if header used it
@@ -2671,12 +2742,6 @@ function Dashboard({
           onClose={() => setIsExecutionDashboardOpen(false)}
           currentProject={currentProject}
           onViewReport={(id) => setReportingRunId(id)}
-        />
-
-        <DatasetRunModal
-          isOpen={isDatasetModalOpen}
-          onClose={() => setIsDatasetModalOpen(false)}
-          onRun={handleRunDataset}
         />
 
         <StarterOverlay
