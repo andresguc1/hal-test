@@ -228,6 +228,62 @@ describe('ExecutionService - Graph Traversal & DPE', () => {
         expect(state.executedNodeIds.has('n3')).toBe(false);
     });
 
+    it('SHORT-CIRCUIT: a decision node with no winner path must not broadcast all branches', async () => {
+        // A switch/conditional that fails to report a winnerPath must converge
+        // on exactly one path (the fallback) — never activate every branch,
+        // which would execute non-selected branches.
+        const executionOrder = [];
+        const originalExecuteNode = ExecutionService.executeNode;
+        ExecutionService.executeNode = vi.fn().mockImplementation(async (node) => {
+            executionOrder.push(node.nodeId);
+            // Deliberately omits `path` to simulate a decision node that
+            // could not resolve a winner.
+            return { success: true };
+        });
+
+        const nodes = [
+            makeNode('n1', 'switch'),
+            makeNode('n2', 'click'), // case A
+            makeNode('n3', 'click'), // case B
+            makeNode('n4', 'click'), // default (fallback)
+        ];
+        const edges = [
+            makeEdge('n1', 'n2', 'caseA'),
+            makeEdge('n1', 'n3', 'caseB'),
+            makeEdge('n1', 'n4', 'default'),
+        ];
+
+        const state = {
+            runId: 'test-run',
+            browserId: null,
+            variables: {},
+            executedNodeIds: new Set(),
+            activatedNodeIds: new Set(['n1']),
+            nodeStates: {},
+            edgeStates: {},
+            overrides: {},
+            headers: {},
+            startTime: Date.now(),
+        };
+        variableManager.initRun('test-run');
+
+        await ExecutionService.runSequence([nodes[0]], nodes, edges, state);
+
+        // Only the fallback branch ('default') should be executed — never the
+        // non-selected cases (caseA/caseB). `executionOrder` reflects the
+        // nodes the executor actually ran; non-selected branches are merely
+        // marked as skipped (never invoked).
+        expect(executionOrder).toEqual(['n1', 'n4']);
+        expect(executionOrder).not.toContain('n2');
+        expect(executionOrder).not.toContain('n3');
+        // Non-selected branches are explicitly skipped, not activated.
+        expect(state.edgeStates['n1-n2']).toBe('skipped');
+        expect(state.edgeStates['n1-n3']).toBe('skipped');
+        expect(state.activatedNodeIds.has('n4')).toBe(true);
+
+        ExecutionService.executeNode = originalExecuteNode;
+    });
+
     it('should store node results in VariableManager after execution', async () => {
         const originalExecuteNode = ExecutionService.executeNode;
         ExecutionService.executeNode = vi.fn().mockImplementation(async (_node) => {
@@ -393,6 +449,177 @@ describe('ExecutionService - Graph Traversal & DPE', () => {
             await expect(ExecutionService.validateGraph([clickNode], [])).rejects.toThrow(
                 /Configuration Error in node "click": El botón debe ser/,
             );
+        });
+    });
+
+    // =========================================================================
+    // Task 1: Engine dispatcher — action-name overrides for go_back and friends
+    // =========================================================================
+    describe('getHandlerName — action-name overrides (engine dispatcher)', () => {
+        it('should map go_back to backAction (barrel export override)', () => {
+            expect(ExecutionService.getHandlerName('go_back')).toBe('backAction');
+        });
+
+        it('should map go_forward to forwardAction', () => {
+            expect(ExecutionService.getHandlerName('go_forward')).toBe('forwardAction');
+        });
+
+        it('should map reload_page to reloadAction', () => {
+            expect(ExecutionService.getHandlerName('reload_page')).toBe('reloadAction');
+        });
+
+        it('should keep convention-based names working', () => {
+            expect(ExecutionService.getHandlerName('click')).toBe('clickAction');
+            expect(ExecutionService.getHandlerName('launch_browser')).toBe('launchBrowserAction');
+            expect(ExecutionService.getHandlerName('open_url')).toBe('openUrlAction');
+            expect(ExecutionService.getHandlerName('custom_eval')).toBe('customEvalAction');
+        });
+    });
+
+    // =========================================================================
+    // Task 3: Deterministic traversal for grouped/composite sub-flows
+    // =========================================================================
+    describe('topologicalSortNodes & sortTopological execution', () => {
+        it('should return nodes in dependency order regardless of input array order', () => {
+            // De-ordered array on purpose: a->b->c and b->d
+            const nodes = [
+                makeNode('c', 'click'),
+                makeNode('a', 'open_url'),
+                makeNode('b', 'click'),
+                makeNode('d', 'close_browser'),
+            ];
+            const edges = [makeEdge('a', 'b'), makeEdge('b', 'c'), makeEdge('b', 'd')];
+
+            const sorted = ExecutionService.topologicalSortNodes(nodes, edges);
+            const ids = sorted.map((n) => n.nodeId);
+
+            expect(ids.indexOf('a')).toBeLessThan(ids.indexOf('b'));
+            expect(ids.indexOf('b')).toBeLessThan(ids.indexOf('c'));
+            expect(ids.indexOf('b')).toBeLessThan(ids.indexOf('d'));
+        });
+
+        it('should preserve original relative order for cyclic leftovers', () => {
+            const nodes = [makeNode('x', 'click'), makeNode('y', 'click')];
+            const edges = [makeEdge('y', 'x'), makeEdge('x', 'y')]; // pure cycle
+
+            const sorted = ExecutionService.topologicalSortNodes(nodes, edges);
+            expect(sorted.map((n) => n.nodeId)).toEqual(['x', 'y']);
+        });
+
+        it('runSequence should execute peers in dependency order when sortTopological is enabled', async () => {
+            const executionOrder = [];
+            const originalExecuteNode = ExecutionService.executeNode;
+            ExecutionService.executeNode = vi.fn().mockImplementation(async (node) => {
+                executionOrder.push(node.nodeId);
+                return { success: true, data: { status: 'success' } };
+            });
+
+            // Reversed array mimics DB order = canvas selection order when grouping.
+            const nodes = [
+                makeNode('n3', 'close_browser'),
+                makeNode('n1', 'open_url'),
+                makeNode('n4', 'click'),
+                makeNode('n2', 'click'),
+            ];
+            const edges = [makeEdge('n1', 'n2'), makeEdge('n2', 'n3'), makeEdge('n2', 'n4')];
+
+            const state = {
+                runId: 'topo-run',
+                browserId: null,
+                variables: {},
+                executedNodeIds: new Set(),
+                activatedNodeIds: new Set(['n1', 'n2', 'n3', 'n4']),
+                nodeStates: {},
+                edgeStates: {},
+                overrides: {},
+                headers: {},
+                startTime: Date.now(),
+            };
+            variableManager.initRun('topo-run');
+
+            await ExecutionService.runSequence(
+                [nodes[1]], // entry n1 (array index differs from topo order)
+                nodes,
+                edges,
+                state,
+                null,
+                { sortTopological: true },
+            );
+
+            expect(executionOrder).toEqual(['n1', 'n2', 'n3', 'n4']);
+
+            // Restore
+            ExecutionService.executeNode = originalExecuteNode;
+        });
+    });
+
+    // =========================================================================
+    // Task: Deterministic run ENTRY — the flow must start from the launch
+    // browser node, not from whatever row happens to come first in the DB.
+    // =========================================================================
+    describe('orderEntryNodes & sortEntry — deterministic run start', () => {
+        it('launch_browser entry runs FIRST regardless of DB row order', async () => {
+            const executionOrder = [];
+            const originalExecuteNode = ExecutionService.executeNode;
+            ExecutionService.executeNode = vi.fn().mockImplementation(async (node) => {
+                executionOrder.push(node.nodeId);
+                return { success: true, data: { status: 'success' } };
+            });
+
+            // DB order: orphan click first, launch second, open_url third.
+            const nodes = [
+                makeNode('orphan-click', 'click'),
+                makeNode('launch', 'launch_browser'),
+                makeNode('open-url', 'open_url'),
+            ];
+            const edges = [makeEdge('launch', 'open-url')];
+
+            const state = {
+                runId: 'order-run',
+                browserId: null,
+                variables: {},
+                executedNodeIds: new Set(),
+                activatedNodeIds: new Set(),
+                nodeStates: {},
+                edgeStates: {},
+                overrides: {},
+                headers: {},
+                startTime: Date.now(),
+            };
+            variableManager.initRun('order-run');
+
+            await ExecutionService.runSequence(
+                [nodes[1], nodes[0]], // entries: launch, orphan-click
+                nodes,
+                edges,
+                state,
+                null,
+                { sortEntry: true },
+            );
+
+            // launch executes first, then its child (open-url), then the orphan.
+            expect(executionOrder).toEqual(['launch', 'open-url', 'orphan-click']);
+
+            ExecutionService.executeNode = originalExecuteNode;
+        });
+
+        it('breaks entry ties by canvas position (top→bottom, left→right)', () => {
+            const nodes = [makeNode('bottom', 'click'), makeNode('top', 'click')];
+            nodes[0].position = { x: 10, y: 100 };
+            nodes[1].position = { x: 10, y: 20 };
+
+            const sorted = ExecutionService.orderEntryNodes(nodes);
+            expect(sorted.map((n) => n.nodeId)).toEqual(['top', 'bottom']);
+        });
+
+        it('keeps a stable order when positions tie', () => {
+            const nodes = [makeNode('b-node', 'click'), makeNode('a-node', 'click')];
+            nodes.forEach((n) => {
+                n.position = { x: 0, y: 0 };
+            });
+
+            const sorted = ExecutionService.orderEntryNodes(nodes);
+            expect(sorted.map((n) => n.nodeId)).toEqual(['a-node', 'b-node']);
         });
     });
 });

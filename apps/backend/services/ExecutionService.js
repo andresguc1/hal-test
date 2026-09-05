@@ -261,7 +261,9 @@ export class ExecutionService {
         try {
             // Use ExecutionManager to handle different execution modes
             const internalE2EExecute = async (f, s) => {
-                await this.runSequence(currentNodes, nodes, edges, s);
+                await this.runSequence(currentNodes, nodes, edges, s, null, {
+                    sortEntry: true,
+                });
                 return { success: true };
             };
 
@@ -429,6 +431,87 @@ export class ExecutionService {
     /**
      * Recursive runner for the graph
      */
+    /**
+     * Returns a deterministic dependency order (Kahn's algorithm) for a list of
+     * peer nodes, based on the edges that connect them (internal edges only).
+     * Unreachable or cyclic nodes keep their original relative order, so extra
+     * scope is never silently dropped.
+     *
+     * Grouped/composite sub-flows are persisted with the DB `order` column set
+     * from the canvas selection order at grouping time, which is arbitrary.
+     * Without a topological pre-sort, `runSequence` could traverse peers in a
+     * non-deterministic sequence — the "ungroup & regroup" workaround.
+     */
+    topologicalSortNodes(nodes = [], allEdges = []) {
+        if (nodes.length <= 1) return nodes;
+
+        const key = (n) => String(n.nodeId || n.id);
+        const nodeKeys = new Set(nodes.map(key));
+        const indexOf = new Map(nodes.map((n, idx) => [key(n), idx]));
+
+        const inDegree = new Map([...nodeKeys].map((k) => [k, 0]));
+        const adj = new Map([...nodeKeys].map((k) => [k, []]));
+
+        for (const edge of allEdges) {
+            const src = String(edge.source);
+            const dst = String(edge.target);
+            if (nodeKeys.has(src) && nodeKeys.has(dst)) {
+                adj.get(src).push(dst);
+                inDegree.set(dst, inDegree.get(dst) + 1);
+            }
+        }
+
+        // Stable tie-break: zero-in-degree nodes come out in original order.
+        const ready = [...nodeKeys]
+            .filter((k) => inDegree.get(k) === 0)
+            .sort((a, b) => indexOf.get(a) - indexOf.get(b));
+
+        const sortedKeys = [];
+        while (ready.length > 0) {
+            const u = ready.shift();
+            sortedKeys.push(u);
+            for (const v of adj.get(u)) {
+                inDegree.set(v, inDegree.get(v) - 1);
+                if (inDegree.get(v) === 0) ready.push(v);
+            }
+        }
+
+        // Order newly-ready nodes by original index for total determinism.
+        // (The queue above is processed FIFO; re-sorting keeps semantics obvious.)
+        const sorted = sortedKeys.map((k) => nodes[indexOf.get(k)]);
+        if (sorted.length !== nodes.length) {
+            const seen = new Set(sortedKeys);
+            for (const n of nodes) {
+                if (!seen.has(key(n))) sorted.push(n);
+            }
+        }
+        return sorted;
+    }
+
+    /**
+     * Deterministic order for the entry nodes of a run: a `launch_browser`
+     * entry always runs FIRST (the true "start" of a flow), then remaining
+     * entries in canvas order (top→bottom, left→right), with a stable
+     * nodeId tiebreak. Without this, grouping/ungrouping leaves the DB row
+     * order arbitrary, so a mid-flow or orphan node could execute first.
+     */
+    orderEntryNodes(nodes) {
+        const list = Array.isArray(nodes) ? [...nodes] : [];
+        const isLaunch = (n) => n?.type === 'launch_browser' || n?.data?.type === 'launch_browser';
+        return list.sort((a, b) => {
+            const al = isLaunch(a) ? 0 : 1;
+            const bl = isLaunch(b) ? 0 : 1;
+            if (al !== bl) return al - bl;
+            const ay = a?.position?.y || 0;
+            const ax = a?.position?.x || 0;
+            const by = b?.position?.y || 0;
+            const bx = b?.position?.x || 0;
+            if (ay !== by) return ay - by;
+            if (ax !== bx) return ax - bx;
+            return String(a?.nodeId || a?.id || '').localeCompare(String(b?.nodeId || b?.id || ''));
+        });
+    }
+
     async runSequence(currentNodes, allNodes, allEdges, state = {}, parentId = null, options = {}) {
         const { skipParentFilter = false } = options;
 
@@ -448,7 +531,16 @@ export class ExecutionService {
             ? currentNodes
             : currentNodes.filter((n) => (n.parentId || null) === (parentId || null));
 
-        for (const node of peerNodes) {
+        // Grouped/composite sub-flows are persisted in arbitrary (selection)
+        // order. When the caller opts in, traverse peers in a deterministic
+        // dependency order so execution never depends on DB row order.
+        const orderedPeers = options?.sortTopological
+            ? this.topologicalSortNodes(peerNodes, allEdges)
+            : options?.sortEntry
+              ? this.orderEntryNodes(peerNodes)
+              : peerNodes;
+
+        for (const node of orderedPeers) {
             // Check if cancelled
             if (state.signal?.aborted) {
                 console.log(
@@ -722,8 +814,33 @@ export class ExecutionService {
                     }
                 }
             } else if (allNextEdges.length > 0 && node.type !== 'branch') {
-                // For linear nodes with multiple outgoing edges (broadcast), all are active
-                // unless it's a branching node that failed to report a path.
+                // No winner path was reported. Only genuine linear/broadcast
+                // nodes are allowed to fan out into multiple branches. A
+                // branching decision node (switch/conditional) MUST converge
+                // on exactly one path — never broadcast — otherwise branches
+                // whose conditions never matched would be executed, producing
+                // side effects on non-selected branches.
+                const isDecisionNode =
+                    node.type === 'switch' ||
+                    node.type === 'conditional' ||
+                    node.type === 'wait_conditional';
+                if (isDecisionNode) {
+                    // Fail safe: route to the fallback handle if one exists,
+                    // otherwise kill every outgoing branch (nothing executes).
+                    const fallbackEdge = allNextEdges.find((e) =>
+                        ['default', 'false', 'else', 'fallback'].includes(
+                            String(e.sourceHandle || '').toLowerCase(),
+                        ),
+                    );
+                    activeEdges = fallbackEdge ? [fallbackEdge] : [];
+                    deadEdges = allNextEdges.filter((e) => e !== fallbackEdge);
+                    if (activeEdges.length === 0) {
+                        console.warn(
+                            `[DPE] Node ${node.nodeId}: decision node reported no path and no fallback edge; killing all ${allNextEdges.length} outgoing branch(es).`,
+                        );
+                    }
+                }
+                // else: linear/broadcast node intentionally keeps all edges active.
             }
 
             // 6.1 Kill Dead Paths Recursively
@@ -1473,6 +1590,12 @@ export class ExecutionService {
                 },
             );
 
+            // Propagate the iteration's live browser back into the loop container
+            // state so downstream nodes never target a stale sibling session.
+            if (iterationState.browserId) {
+                state.browserId = iterationState.browserId;
+            }
+
             // Extract results:
             // Find explicit output nodes inside the subflow graph
             const outputs = {};
@@ -1933,6 +2056,12 @@ export class ExecutionService {
                 },
             );
 
+            // Propagate the iteration's live browser back into the for-each
+            // container state so downstream nodes never target a stale session.
+            if (iterationState.browserId) {
+                state.browserId = iterationState.browserId;
+            }
+
             // Extract output node results
             const outputs = {};
             const outputNodes = subNodes.filter((sn) => sn.type === 'output');
@@ -2222,6 +2351,18 @@ export class ExecutionService {
     }
 
     getHandlerName(nodeType) {
+        // Explicit action-name overrides. These MUST mirror the
+        // ACTION_NAME_OVERRIDES used by api.router.js: the barrel file
+        // (action.controller.js) exports handlers whose names do not always
+        // follow the `${snake_type}Action` → `${camelType}Action` convention.
+        const overrides = {
+            go_back: 'backAction',
+            go_forward: 'forwardAction',
+            reload_page: 'reloadAction',
+        };
+
+        if (overrides[nodeType]) return overrides[nodeType];
+
         // Normalization map
         const map = {
             launch_browser: 'launchBrowserAction',
