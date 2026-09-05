@@ -382,3 +382,30 @@ export function resolveVariables(config, context) {
 
   return traverse(config);
 }
+
+// Short-circuit aware path-to-edge matcher used by the flow executor so the
+// winner branch of a decision node is resolved deterministically and the
+// non-selected branches are excluded from execution.
+// The set of "fallthrough" handles is unified: a decision returning
+// "false"/"else"/"default"/"fallback" must be able to match an edge carrying
+// any of those source handles (a common drift after nodes are reconnected).
+const NEGATIVE_PATHS = new Set(["false", "else", "default", "fallback"]);
+const POSITIVE_PATHS = new Set(["true", "success", "yes"]);
+
+/**
+ * Returns true when an edge's sourceHandle matches the winning path. Handles
+ * are compared case-insensitively, and the false/else/default/fallback (and
+ * true/success/yes) buckets are treated as mutually interchangeable. Returns
+ * false otherwise, so callers can rely on it to gate execution.
+ */
+export function matchesBranchPath(sourceHandle, path) {
+  const handle = String(sourceHandle != null ? sourceHandle : "")
+    .trim()
+    .toLowerCase();
+  const normalized = String(path).trim().toLowerCase();
+  if (!handle || !normalized) return false;
+  if (handle === normalized) return true;
+  if (POSITIVE_PATHS.has(normalized) && POSITIVE_PATHS.has(handle)) return true;
+  if (NEGATIVE_PATHS.has(normalized) && NEGATIVE_PATHS.has(handle)) return true;
+  return false;
+}

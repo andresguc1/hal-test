@@ -16,12 +16,43 @@ import { validateNodeConfig } from "../../config/validationRules";
 import { GraphValidator } from "../../utils/GraphValidator";
 import { SCREENSHOT_RECOMMENDATIONS } from "../../components/hooks/constants";
 import { updateNodeRecursively } from "./useFlowState";
-import { resolveVariables, deepClone } from "../../utils/flowUtils";
+import { getContainerFlowId } from "./utils";
+import {
+  resolveVariables,
+  deepClone,
+  matchesBranchPath,
+} from "../../utils/flowUtils";
 import { useCollaboration } from "../../collaboration/CollaborationProvider";
 
 const MAX_RETRIES = 3;
 const RETRY_BASE_MS = 1000;
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Deterministic order for the entry nodes of an execution: the `launch_browser`
+ * entry always runs FIRST (the real "start" of a flow), then remaining entries
+ * in canvas order (top→bottom, left→right), with a stable id tiebreak.
+ * Without this, the DB row order (arbitrary after grouping/ungrouping) decides
+ * which node runs first, so execution can start from a mid-flow node — opening
+ * a blank browser and running nodes out of sequence.
+ */
+export const orderStartNodes = (nodes) => {
+  if (!Array.isArray(nodes)) return nodes;
+  const isLaunch = (n) =>
+    n?.type === "launch_browser" || n?.data?.type === "launch_browser";
+  return [...nodes].sort((a, b) => {
+    const al = isLaunch(a) ? 0 : 1;
+    const bl = isLaunch(b) ? 0 : 1;
+    if (al !== bl) return al - bl;
+    const ap = a?.position || { x: 0, y: 0 };
+    const bp = b?.position || { x: 0, y: 0 };
+    if ((ap.y || 0) !== (bp.y || 0)) return (ap.y || 0) - (bp.y || 0);
+    if ((ap.x || 0) !== (bp.x || 0)) return (ap.x || 0) - (bp.x || 0);
+    return String(a?.id || a?.nodeId || "").localeCompare(
+      String(b?.id || b?.nodeId || ""),
+    );
+  });
+};
 
 export const resetExecutionStatesRecursively = (list) => {
   if (!Array.isArray(list)) return list;
@@ -114,8 +145,13 @@ export function useFlowExecution({
     }
 
     if (executionAbortController.current) {
+      // Abort the in-flight execution loop. Do NOT replace the controller
+      // here — the loop (executeFlow) reads `current.signal.aborted` on every
+      // iteration, and swapping in a fresh, non-aborted controller here would
+      // make the loop see aborted===false and keep dispatching actions (opening
+      // more browser windows) even though the user stopped the session. A new
+      // controller is created at the start of every executeFlow() call instead.
       executionAbortController.current.abort();
-      executionAbortController.current = new AbortController();
     }
 
     if (!activeBrowserId) {
@@ -439,6 +475,14 @@ export function useFlowExecution({
           setIsLoading(false);
           return { success: true, result, duration, instanceId };
         } catch (error) {
+          // A "browser has been closed/disconnected" failure usually means the
+          // tracked session (activeBrowserId) is stale. Invalidate it so later
+          // nodes stop targeting the dead session and the engine re-resolves.
+          if (
+            /closed|disconnected|cerrado|desconectado/i.test(error.message || "")
+          ) {
+            setActiveBrowserId(null);
+          }
           if (error.name !== "AbortError" && attempt < maxActionAttempts - 1) {
             await sleep(RETRY_BASE_MS * 2 ** attempt);
             continue;
@@ -654,6 +698,7 @@ export function useFlowExecution({
           successful: 0,
           failed: 0,
           skipped: 0,
+          softfailed: 0,
           duration: 0,
         };
 
@@ -719,7 +764,10 @@ export function useFlowExecution({
           if (activeNodes.length === 0) return { success: true };
 
           let startNodes = activeNodes;
-          if (depth === 0 && activeNodes.length > 1 && !options.nodes) {
+          // Find the true entry points: nodes with no incoming edges. Applied at
+          // EVERY depth (not just the root flow) so composite sub-flows also
+          // follow their internal edges instead of the arbitrary DB row order.
+          if (activeNodes.length > 1 && !options.nodes) {
             const incomingCount = new Map();
             activeNodes.forEach((n) => incomingCount.set(n.id, 0));
             activeEdges.forEach((e) => {
@@ -727,9 +775,10 @@ export function useFlowExecution({
                 incomingCount.set(e.target, incomingCount.get(e.target) + 1);
               }
             });
-            startNodes = activeNodes.filter(
+            const roots = activeNodes.filter(
               (n) => incomingCount.get(n.id) === 0,
             );
+            startNodes = roots.length > 0 ? orderStartNodes(roots) : [];
             if (startNodes.length === 0 && graphNodes.length > 0) {
               startNodes = [graphNodes[0]];
             }
@@ -738,7 +787,7 @@ export function useFlowExecution({
           }
 
           const internalExecuted = new Set();
-          const queue = [...startNodes];
+          const queue = [...orderStartNodes(startNodes)];
           globalStats.total = activeNodes.length;
           const healedNodes = [];
           let lastResult = { success: true };
@@ -758,7 +807,7 @@ export function useFlowExecution({
                 node.type === "component" ||
                 node.data?.type === "component"
               ) {
-                const { flowId } = node.data || {};
+                const flowId = getContainerFlowId(node);
                 if (flowId) {
                   if (visitedFlows.has(flowId)) {
                     updateNodeState(node.id, NODE_STATES.ERROR, {
@@ -790,7 +839,9 @@ export function useFlowExecution({
 
                     const isSoftFail =
                       result.status === "softfailed" ||
-                      result.data?.status === "softfailed";
+                      result.data?.status === "softfailed" ||
+                      result.result?.data?.status === "softfailed" ||
+                      result.result?.data?.data?.status === "softfailed";
                     const finalNodeState = result.success
                       ? isSoftFail
                         ? NODE_STATES.SOFTFAILED
@@ -810,10 +861,15 @@ export function useFlowExecution({
                     if (result.healedNodes?.length > 0) {
                       healedNodes.push(...result.healedNodes);
                     }
+                  } else {
+                    updateNodeState(node.id, NODE_STATES.ERROR, {
+                      message: `Sub-flow not found or empty: ${flowId}`,
+                    });
+                    result = { success: false, error: "Missing sub-flow" };
                   }
                 }
               } else if (node.type === "loop" || node.data?.type === "loop") {
-                const { flowId } = node.data || {};
+                const flowId = getContainerFlowId(node);
                 const config = node.data?.configuration || {};
                 updateNodeState(node.id, NODE_STATES.EXECUTING);
                 updateEdgeStatusBySource(node.id, NODE_STATES.EXECUTING);
@@ -838,6 +894,10 @@ export function useFlowExecution({
                   };
 
                   const stepResult = await executeStep(action);
+                  if (stepResult.instanceId) {
+                    browserId = stepResult.instanceId;
+                    flowContext.browserId = stepResult.instanceId;
+                  }
                   if (!stepResult.success) {
                     loopResult = stepResult;
                     finished = true;
@@ -896,7 +956,12 @@ export function useFlowExecution({
                         healedNodes.push(...subResult.healedNodes);
                       }
                     } else {
+                      updateNodeState(node.id, NODE_STATES.ERROR, {
+                        message: `Loop sub-flow not found or empty: ${flowId}`,
+                      });
+                      loopResult = { success: false, error: "Missing loop sub-flow" };
                       finished = true;
+                      break;
                     }
                   } else {
                     finished = true;
@@ -931,6 +996,10 @@ export function useFlowExecution({
 
                 const stepResult = await executeStep(action);
                 result = stepResult || { success: true };
+                if (stepResult.instanceId) {
+                  browserId = stepResult.instanceId;
+                  flowContext.browserId = stepResult.instanceId;
+                }
                 if (result.success) {
                   let logMsg = "";
                   if (executionMode === "performance") {
@@ -1000,9 +1069,25 @@ export function useFlowExecution({
                 updateEdgeStatusBySource(node.id, NODE_STATES.EXECUTING);
                 result = await executeStep(action);
 
+                const isSoftFailStep =
+                  result?.result?.data?.status === "softfailed" ||
+                  result?.result?.data?.data?.status === "softfailed";
+
                 if (result.skipped) {
                   globalStats.skipped++;
                 } else if (result.success) {
+                  if (isSoftFailStep) {
+                    globalStats.softfailed++;
+                    addLog(
+                      `[System] ⚠ Node "${node.data?.label || nodeType}" (ID: ${node.id}) skipped: ${
+                        result?.result?.data?.error ||
+                        result?.result?.data?.message ||
+                        "soft failure"
+                      }`,
+                      "warning",
+                      node.id,
+                    );
+                  }
                   globalStats.successful++;
                   let logMsg = "";
                   if (executionMode === "performance") {
@@ -1082,60 +1167,62 @@ export function useFlowExecution({
               const shouldEnforceStrictPath =
                 nodeKey === "switch" || nodeKey === "conditional";
 
-              if (path && path !== "undefined" && path !== "") {
-                let filtered = nextEdges.filter((e) => {
-                  const handle = String(e.sourceHandle || "").toLowerCase();
-                  const targetPath = String(path).toLowerCase();
-                  if (handle === targetPath) return true;
-                  if (
-                    targetPath === "false" &&
-                    (handle === "else" || handle === "fallback")
-                  )
-                    return true;
-                  if (targetPath === "else" && handle === "false") return true;
-                  return false;
-                });
+              const hasPath = !!path && path !== "undefined" && path !== "";
+
+              // 1. Resolve the winner edge(s) for this node. For strict
+              //    branching nodes (conditional/switch) only the edge whose
+              //    sourceHandle matches the winning path must survive; every
+              //    other outgoing edge belongs to a branch whose condition was
+              //    not satisfied and must be excluded from execution this cycle.
+              let winnerEdges = nextEdges;
+              if (hasPath) {
+                const matched = nextEdges.filter((e) =>
+                  matchesBranchPath(e.sourceHandle, path),
+                );
 
                 if (shouldEnforceStrictPath || isBranchingNode) {
-                  if (filtered.length === 0 && nextEdges.length > 0) {
+                  winnerEdges = matched;
+                  if (matched.length === 0 && nextEdges.length > 0) {
                     if (shouldEnforceStrictPath) {
                       updateNodeState(node.id, NODE_STATES.ERROR, {
                         message: `Path not found: ${path}`,
                       });
-                      nextEdges = [];
+                      winnerEdges = [];
                     } else {
-                      nextEdges = [];
+                      winnerEdges = [];
                     }
-                  } else {
-                    nextEdges = filtered;
                   }
-                } else if (filtered.length > 0) {
-                  nextEdges = filtered;
+                } else if (matched.length > 0) {
+                  winnerEdges = matched;
                 }
               } else if (shouldEnforceStrictPath && nextEdges.length > 0) {
                 updateNodeState(node.id, NODE_STATES.ERROR, {
                   message: "Could not resolve branching path",
                 });
-                nextEdges = [];
+                winnerEdges = [];
               }
 
-              nextEdges.forEach((e) => {
+              // 2. Explicitly short-circuit the non-selected branches so they
+              //    are never queued for execution in this cycle. Mark them as
+              //    skipped (visually and conceptually) — they carry the side
+              //    effects of branches whose conditions did not hold.
+              const skippedEdges = nextEdges.filter(
+                (e) => !winnerEdges.includes(e),
+              );
+              skippedEdges.forEach((e) => {
+                updateEdgeStatus(e.id, NODE_STATES.SKIPPED, false);
+              });
+
+              // 3. Paint winners, then enqueue only the winner branch targets.
+              winnerEdges.forEach((e) => {
                 if (result.success) {
-                  const hasPath = path && path !== "undefined" && path !== "";
-                  if (
-                    shouldEnforceStrictPath &&
-                    hasPath &&
-                    String(e.sourceHandle || "").toLowerCase() !== path
-                  ) {
-                    return;
-                  }
                   updateEdgeStatus(e.id, NODE_STATES.SUCCESS, false);
                 } else {
                   updateEdgeStatus(e.id, NODE_STATES.ERROR, false);
                 }
               });
 
-              nextEdges.forEach((e) => {
+              winnerEdges.forEach((e) => {
                 const targetNode = activeNodes.find((n) => n.id === e.target);
                 if (targetNode) queue.push(targetNode);
               });
@@ -1159,8 +1246,28 @@ export function useFlowExecution({
         };
 
         const finalResult = await executeGraph(options.nodes || nodes, edges);
+
+        const wasAborted = executionAbortController.current?.signal.aborted;
+
         if (runId)
-          await api.post(`/runs/${runId}/end`, { status: "completed" });
+          await api.post(`/runs/${runId}/end`, {
+            status: wasAborted ? "stopped" : "completed",
+          });
+
+        if (wasAborted) {
+          setApiStatus({ state: "idle", message: "Execution stopped" });
+          window.dispatchEvent(
+            new CustomEvent("hal:run-completed", {
+              detail: { runId, status: "stopped", executionMode },
+            }),
+          );
+          return {
+            ...finalResult,
+            stats: globalStats,
+            cancelled: true,
+          };
+        }
+
         setApiStatus({ state: "success", message: "Flow complete" });
         window.dispatchEvent(
           new CustomEvent("hal:run-completed", {

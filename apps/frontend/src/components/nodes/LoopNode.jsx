@@ -86,7 +86,7 @@ const LoopNode = ({ id, data, selected }) => {
           : {}),
       }}
       className={cn(
-        "group relative min-w-[180px] max-w-[320px] rounded-lg p-3 transition-[background,border,box-shadow,transform] duration-400 select-none border-[2px]",
+        "group relative min-w-[180px] max-w-[320px] rounded-lg p-3 transition-[background,border,box-shadow] duration-400 select-none border-[2px]",
         themeParams.base,
         selected && statusColor ? "scale-[1.05] z-50 border-[3px]" : "",
         selected && !statusColor ? themeParams.selected : "",
@@ -168,7 +168,10 @@ const LoopNode = ({ id, data, selected }) => {
             </span>
           </span>
           <button
-            onClick={() => data?.onEnterSubFlow?.(id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              data?.onEnterSubFlow?.(id);
+            }}
             className="px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 border border-white/20 font-bold text-white/90 shadow-sm transition-all active:scale-95 cursor-pointer shrink-0 uppercase text-[9px]"
           >
             {t("nodes.buttons.dive_in", "Dive In")}

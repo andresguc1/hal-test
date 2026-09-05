@@ -5,6 +5,7 @@ import { logger } from "../../utils/logger";
 import { projectManager } from "../../utils/ProjectManager";
 import { subFlowCache } from "../../utils/subFlowCache";
 import { debounce, deepClone } from "../../utils/flowUtils";
+import { getContainerFlowId } from "./utils";
 import { STARTER_TEMPLATE } from "../../config/starterTemplate";
 import { useCollaboration } from "../../collaboration";
 
@@ -24,7 +25,7 @@ export function useFlowSync({
   toast,
   t,
   switchFlow,
-  setSelectedNodeId,
+  setActiveNodeId,
   fitView,
   migrateNodes,
 }) {
@@ -329,7 +330,9 @@ export function useFlowSync({
         );
         if (!isContainer) return;
 
-        let flowId = componentNode.data?.flowId;
+        // Same precedence as the execution pipeline: top-level flowId first,
+        // then configuration.flowId.
+        let flowId = getContainerFlowId(componentNode);
 
         if (!flowId) {
           if (!currentProject) {
@@ -656,7 +659,7 @@ export function useFlowSync({
         }
 
         if (targetNodeId) {
-          setSelectedNodeId(targetNodeId);
+          setActiveNodeId(targetNodeId);
           let retries = 15;
           const attemptFocus = () => {
             const nodeExists = nodesRef.current.some(
@@ -677,7 +680,7 @@ export function useFlowSync({
           setTimeout(attemptFocus, 200);
         }
       },
-      [enterComponent, nodesRef, setSelectedNodeId, fitView],
+      [enterComponent, nodesRef, setActiveNodeId, fitView],
     ),
   };
 }

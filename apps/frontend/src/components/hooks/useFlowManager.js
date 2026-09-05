@@ -57,7 +57,7 @@ export function useFlowManager(currentProject, currentFlowId, switchFlow) {
     toast,
     t,
     switchFlow,
-    setSelectedNodeId: state.setSelectedNodeId,
+    setActiveNodeId: state.setActiveNodeId,
     fitView,
     migrateNodes: state.migrateNodes,
   });

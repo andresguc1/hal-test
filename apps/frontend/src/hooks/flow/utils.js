@@ -1,4 +1,8 @@
-import { NODE_STATES, getNodeStyle } from "../../components/hooks/flowStyles";
+import {
+  NODE_LABELS,
+  NODE_STATES,
+  getNodeStyle,
+} from "../../components/hooks/flowStyles";
 import { deepClone } from "../../utils/flowUtils";
 
 /**
@@ -74,3 +78,66 @@ export const detectOrphans = (nodes, edges) => {
 
   return nodes.filter((n) => !visited.has(n.id)).map((n) => n.id);
 };
+
+/**
+ * Deterministic merge of a configuration update into a node's data.
+ *
+ * Container metadata keys (flowId, nodeCount, hasInput, hasOutput) are promoted
+ * to the top-level `node.data` in ADDITION to being stored in
+ * `node.data.configuration`. This keeps the two layers in sync so runtime
+ * resolvers never read a stale sub-flow reference (the backend reads
+ * `configuration?.flowId || data?.flowId`, while the frontend executor reads
+ * `data.flowId || configuration?.flowId`).
+ */
+export const applyConfigurationUpdate = (node, newConfig) => {
+  const config = {
+    ...(node?.data?.configuration || {}),
+    ...newConfig,
+  };
+
+  const nextType = node?.data?.type || node?.type || "";
+  const label =
+    newConfig.label ||
+    node?.data?.label ||
+    NODE_LABELS[nextType] ||
+    nextType;
+
+  return {
+    ...node,
+    data: {
+      ...(node?.data || {}),
+      configuration: config,
+      label,
+      customLabel:
+        newConfig.customLabel !== undefined
+          ? newConfig.customLabel
+          : node?.data?.customLabel,
+      description:
+        newConfig.description !== undefined
+          ? newConfig.description
+          : node?.data?.description,
+      flowId:
+        newConfig.flowId !== undefined ? newConfig.flowId : node?.data?.flowId,
+      nodeCount:
+        newConfig.nodeCount !== undefined
+          ? newConfig.nodeCount
+          : node?.data?.nodeCount,
+      hasInput:
+        newConfig.hasInput !== undefined
+          ? newConfig.hasInput
+          : node?.data?.hasInput,
+      hasOutput:
+        newConfig.hasOutput !== undefined
+          ? newConfig.hasOutput
+          : node?.data?.hasOutput,
+    },
+  };
+};
+
+/**
+ * Resolve the sub-flow reference for a container node (component / loop /
+ * for_each), matching the backend precedence: top-level `data.flowId` first,
+ * then `data.configuration.flowId`.
+ */
+export const getContainerFlowId = (node) =>
+  node?.data?.flowId || node?.data?.configuration?.flowId || null;

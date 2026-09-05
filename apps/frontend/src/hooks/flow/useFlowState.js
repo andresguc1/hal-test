@@ -10,7 +10,7 @@ import {
   getNodeStyle,
 } from "../../components/hooks/flowStyles";
 import { CATEGORY_STYLES, NODE_TYPE_MAP } from "../../config/nodeConstants";
-import { wouldCreateCycle } from "../../utils/flowUtils";
+import { wouldCreateCycle, deepClone } from "../../utils/flowUtils";
 import { calculateDesignTimeContext } from "../../utils/graphPropagation";
 import { getLayoutedElements } from "../../utils/layoutUtils";
 import { projectManager } from "../../utils/ProjectManager";
@@ -23,6 +23,7 @@ import {
   useExecutionSync,
   useAwareness,
 } from "../../collaboration";
+import { applyConfigurationUpdate } from "./utils";
 
 const DEFAULT_EDGE_OPTIONS = {
   type: "custom",
@@ -82,7 +83,11 @@ export const sanitizeEdges = (edgesList, nodesList) => {
       seenEdgeIds.add(edge.id);
 
       // 3. Prevent duplicate connections between same source/sourceHandle and target/targetHandle
-      const connKey = `${edge.source}::${edge.sourceHandle || ""} -> ${edge.target}::${edge.targetHandle || ""}`;
+      //    Grouping rewires several same-source edges into ONE composite node,
+      //    collapsing targetHandle to null. Those rewired edges are distinct
+      //    logical connections and must survive, so include the preserved
+      //    original end (data.originalTarget / data.originalSource) in the key.
+      const connKey = `${edge.source}::${edge.sourceHandle || ""} -> ${edge.target}::${edge.targetHandle || ""}::orig=${edge.data?.originalTarget || edge.data?.originalSource || ""}`;
       if (seenConnections.has(connKey)) {
         return false;
       }
@@ -300,7 +305,7 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
   ]);
 
   const [history, setHistory] = useState({ past: [], future: [] });
-  const [selectedNodeId, setSelectedNodeId] = useState(null);
+  const [activeNodeId, setActiveNodeId] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [clipboard, setClipboard] = useState({ nodes: [], edges: [] });
 
@@ -337,21 +342,11 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
             .filter((n) => n.selected)
             .map((n) => n.id);
           collab.updateSelection(selectedNodeIds);
-          const newlySelected = changes.find(
-            (c) => c.type === "select" && c.selected,
-          );
-          setSelectedNodeId(newlySelected ? newlySelected.id : null);
         }
         return;
       }
       setNodes((nds) => {
         const nextNodes = applyNodeChanges(changes, nds);
-        // Special logic for selection
-        const hasSelectChange = changes.some((c) => c.type === "select");
-        if (hasSelectChange) {
-          const newlySelected = nextNodes.find((n) => n.selected);
-          setSelectedNodeId(newlySelected ? newlySelected.id : null);
-        }
         const hasRemoveChange = changes.some((c) => c.type === "remove");
         if (hasRemoveChange) {
           setEdges((eds) => sanitizeEdges(eds, nextNodes));
@@ -408,7 +403,7 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
   );
 
   const onNodeClick = useCallback((_, node) => {
-    setSelectedNodeId(node.id);
+    setActiveNodeId(node.id);
   }, []);
 
   const addNode = useCallback(
@@ -490,9 +485,9 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
       setNodes(nextNodes);
       setEdges(nextEdges);
       setHasUnsavedChanges(true);
-      if (selectedNodeId === nodeId) setSelectedNodeId(null);
+      if (activeNodeId === nodeId) setActiveNodeId(null);
     },
-    [saveToHistory, selectedNodeId, setNodes, setEdges],
+    [saveToHistory, activeNodeId, setNodes, setEdges],
   );
 
   const updateNodeState = useCallback(
@@ -537,7 +532,7 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
       saveToHistory();
       setNodes([]);
       setEdges([]);
-      setSelectedNodeId(null);
+      setActiveNodeId(null);
       if (setApiStatus)
         setApiStatus({ state: "idle", message: "Canvas cleared" });
     },
@@ -844,7 +839,7 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
 
         // AUTO-FOCUS: Select Node and Open Inspector
         setTimeout(() => {
-          setSelectedNodeId(componentId);
+          setActiveNodeId(componentId);
         }, 50);
 
         toastHook.success(tHook("groups.success", "Grouped into Component"));
@@ -860,7 +855,7 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
       saveToHistory,
       setNodes,
       setEdges,
-      setSelectedNodeId,
+      setActiveNodeId,
       toastHook,
       tHook,
     ],
@@ -1103,7 +1098,7 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
         }
 
         setTimeout(() => {
-          setSelectedNodeId(loopId);
+          setActiveNodeId(loopId);
         }, 50);
 
         toastHook.success(
@@ -1123,7 +1118,7 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
       saveToHistory,
       setNodes,
       setEdges,
-      setSelectedNodeId,
+      setActiveNodeId,
       toastHook,
       tHook,
     ],
@@ -1642,59 +1637,19 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
             }
           }
 
-          return updateNodeRecursively(nds, nodeId, (n) => {
-            return {
-              ...n,
-              data: {
-                ...n.data,
-                configuration: {
-                  ...n.data.configuration,
-                  ...newConfig,
-                },
-                customLabel:
-                  newConfig.customLabel !== undefined
-                    ? newConfig.customLabel
-                    : n.data.customLabel,
-                label:
-                  newConfig.label ||
-                  n.data.label ||
-                  NODE_LABELS[n.data.type] ||
-                  n.data.type,
-                description:
-                  newConfig.description !== undefined
-                    ? newConfig.description
-                    : n.data.description,
-              },
-            };
-          });
+          return updateNodeRecursively(
+            nds,
+            nodeId,
+            (n) => applyConfigurationUpdate(deepClone(n), newConfig),
+          );
         });
       } else {
         setNodes((nds) =>
-          updateNodeRecursively(nds, nodeId, (n) => {
-            return {
-              ...n,
-              data: {
-                ...n.data,
-                configuration: {
-                  ...n.data.configuration,
-                  ...newConfig,
-                },
-                customLabel:
-                  newConfig.customLabel !== undefined
-                    ? newConfig.customLabel
-                    : n.data.customLabel,
-                label:
-                  newConfig.label ||
-                  n.data.label ||
-                  NODE_LABELS[n.data.type] ||
-                  n.data.type,
-                description:
-                  newConfig.description !== undefined
-                    ? newConfig.description
-                    : n.data.description,
-              },
-            };
-          }),
+          updateNodeRecursively(
+            nds,
+            nodeId,
+            (n) => applyConfigurationUpdate(deepClone(n), newConfig),
+          ),
         );
       }
     },
@@ -1876,14 +1831,15 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
     edgesRef,
     setNodes,
     setEdges,
-    selectedNodeId,
-    setSelectedNodeId,
+    selectedNodeId: activeNodeId,
+    setActiveNodeId,
+    activeNodeId,
     selectedAction: useMemo(() => {
-      if (!selectedNodeId) return null;
-      const node = nodes.find((n) => n.id === selectedNodeId);
+      if (!activeNodeId) return null;
+      const node = nodes.find((n) => n.id === activeNodeId);
       if (!node) return null;
       return { ...node, nodeId: node.id };
-    }, [selectedNodeId, nodes]),
+    }, [activeNodeId, nodes]),
     history,
     saveToHistory,
     undo,
