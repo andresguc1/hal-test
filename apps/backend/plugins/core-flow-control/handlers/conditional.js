@@ -42,29 +42,25 @@ const conditionalAction = async (req, res) => {
             }
         }
 
-        if (branches && Array.isArray(branches)) {
+        if (debugMode && branches && Array.isArray(branches)) {
             branches.forEach((branch, idx) => {
                 try {
                     if (branch.expression && typeof branch.expression === 'object') {
                         const { left, right } = branch.expression;
                         const valL = variableManager.resolveValue(left, runId);
                         const valR = variableManager.resolveValue(right, runId);
-                        if (debugMode) {
-                            smartEmitLog(
-                                `[Conditional][Branch ${idx}] Data Check: "${left}" -> ${JSON.stringify(valL)} | "${right}" -> ${JSON.stringify(valR)}`,
-                                'debug',
-                                req.body.nodeId,
-                            );
-                        }
-                    }
-                } catch (e) {
-                    if (debugMode) {
                         smartEmitLog(
-                            `[Conditional] Diagnostic skip for branch ${idx}: ${e.message}`,
+                            `[Conditional][Branch ${idx}] Data Check: "${left}" -> ${JSON.stringify(valL)} | "${right}" -> ${JSON.stringify(valR)}`,
                             'debug',
                             req.body.nodeId,
                         );
                     }
+                } catch (e) {
+                    smartEmitLog(
+                        `[Conditional] Diagnostic skip for branch ${idx}: ${e.message}`,
+                        'debug',
+                        req.body.nodeId,
+                    );
                 }
             });
         }

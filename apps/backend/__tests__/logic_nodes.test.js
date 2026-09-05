@@ -794,4 +794,211 @@ describe('Logic Engine Nodes Validation', () => {
             expect(result.success).toBe(true);
         });
     });
+
+    // 8. SHORT-CIRCUITING: the decision engine must stop evaluating as soon as
+    //    the first valid condition/case matches, so later cases/branches are
+    //    never evaluated (preventing both delay and side effects on them).
+    describe('Short-Circuiting', () => {
+        it('switch deja de evaluar casos tras la primera coincidencia', async () => {
+            variableManager.set('status', 'ok');
+            const req = {
+                body: {
+                    nodeId: 'switch-1',
+                    variableName: '${status}',
+                    cases: [
+                        { value: 'ok', id: 'ok_path' },
+                        { value: 'maybe_matches', id: 'second_path' },
+                        { value: 'ok', id: 'dup_path' },
+                    ],
+                },
+                t: (k) => k,
+            };
+            let result = null;
+            const res = {
+                status: () => res,
+                json: (d) => {
+                    result = d;
+                    return res;
+                },
+            };
+
+            await actions.switchAction(req, res);
+
+            expect(result.path).toBe('ok_path');
+            // Only the first case was evaluated: the later cases are absent
+            // from the trace, proving they were skipped (short-circuited).
+            expect(Object.keys(result.data.trace)).toEqual(['ok_path']);
+        });
+
+        it('switch enruta al caso default sin evaluar todo cuando no hay match', async () => {
+            variableManager.set('status', 'unknown-value');
+            const req = {
+                body: {
+                    nodeId: 'switch-2',
+                    variableName: '${status}',
+                    cases: [
+                        { value: 'a', id: 'a_path' },
+                        { value: 'b', id: 'b_path' },
+                        { value: 'c', id: 'c_path' },
+                    ],
+                },
+                t: (k) => k,
+            };
+            let result = null;
+            const res = {
+                status: () => res,
+                json: (d) => {
+                    result = d;
+                    return res;
+                },
+            };
+
+            await actions.switchAction(req, res);
+
+            expect(result.path).toBe('default');
+        });
+
+        it('conditional deja de evaluar ramas tras la primera coincidencia', async () => {
+            variableManager.set('role', 'admin');
+            const req = {
+                body: {
+                    nodeId: 'cond-1',
+                    branches: [
+                        {
+                            id: 'admin',
+                            label: 'Admin',
+                            expression: {
+                                left: '${role}',
+                                operator: '===',
+                                right: 'admin',
+                            },
+                        },
+                        {
+                            id: 'guest',
+                            label: 'Guest',
+                            expression: {
+                                left: '${role}',
+                                operator: '===',
+                                right: 'guest',
+                            },
+                        },
+                    ],
+                },
+                t: (k) => k,
+            };
+            let result = null;
+            const res = {
+                status: () => res,
+                json: (d) => {
+                    result = d;
+                    return res;
+                },
+            };
+
+            await actions.conditionalAction(req, res);
+
+            expect(result.data.path).toBe('admin');
+            // The admin branch matched first (short-circuit). The guest branch
+            // was never evaluated — it is only marked as skipped in the trace,
+            // never as 'matched'/'not_matched' (which would indicate evaluation).
+            expect(result.data.trace.admin).toMatchObject({
+                matched: true,
+                status: 'matched',
+            });
+            expect(result.data.trace.guest).toMatchObject({
+                matched: false,
+                status: 'skipped',
+            });
+        });
+    });
+
+    // Regression: find_element must emit a consistent { found: true/false }
+    // payload so "{{<node>.found}}" resolves to the real boolean instead of
+    // staying as the literal "{{...}}" string. A not-found element used to
+    // throw (soft-failing the node in Draft Mode and skipping storeNodeResult),
+    // which left the placeholder unresolved in the downstream Conditional.
+    // This block validates that once a node stores a not-found payload, the
+    // Conditional resolves the interpolated variable correctly.
+    describe('Find Element -> Conditional variable resolution (regression)', () => {
+        it('resolves {{Find Element.found}} to the stored boolean (not the literal)', () => {
+            variableManager.storeNodeResult(
+                'node_find',
+                { label: 'Find Element', customLabel: 'Find Element' },
+                { found: false, visible: false, state: 'visible' },
+            );
+
+            expect(variableManager.resolveValue('{{Find Element.found}}')).toBe(false);
+            expect(variableManager.resolveValue('{{Find Element.result.found}}')).toBe(false);
+        });
+
+        it('resolves {{Find Element.found}} to true when the element exists', () => {
+            variableManager.storeNodeResult(
+                'node_find',
+                { label: 'Find Element', customLabel: 'Find Element' },
+                { found: true, visible: true, state: 'visible' },
+            );
+
+            expect(variableManager.resolveValue('{{Find Element.found}}')).toBe(true);
+        });
+
+        it('leaves the placeholder literal only when the upstream node is absent', () => {
+            expect(variableManager.resolveValue('{{Missing Node.found}}')).toBe(
+                '{{Missing Node.found}}',
+            );
+        });
+    });
+
+    // Task: typed evaluation without manual coercion. Once a variable resolves
+    // to a real boolean, comparing it against the "true"/"false" strings that
+    // the UI's adaptive Value field produces must work without the user having
+    // to type-cast anything.
+    describe('Typed boolean evaluation (no manual conversion)', () => {
+        it('matches a resolved boolean true against the string "true"', () => {
+            variableManager.storeNodeResult(
+                'node_find_1',
+                { label: 'Find Element', customLabel: 'Find Element' },
+                { found: true },
+            );
+
+            expect(
+                variableManager.evaluateStructured({
+                    left: '{{Find Element.found}}',
+                    operator: '==',
+                    right: 'true',
+                }),
+            ).toBe(true);
+        });
+
+        it('matches a resolved boolean false against the string "false"', () => {
+            variableManager.storeNodeResult(
+                'node_find_2',
+                { label: 'Find Element', customLabel: 'Find Element' },
+                { found: false },
+            );
+
+            expect(
+                variableManager.evaluateStructured({
+                    left: '{{Find Element.found}}',
+                    operator: '==',
+                    right: 'false',
+                }),
+            ).toBe(true);
+        });
+
+        it('does not match a boolean true against "false"', () => {
+            variableManager.storeNodeResult(
+                'node_find_3',
+                { label: 'Find Element', customLabel: 'Find Element' },
+                { found: true },
+            );
+
+            expect(
+                variableManager.evaluateStructured({
+                    left: '{{Find Element.found}}',
+                    operator: '==',
+                    right: 'false',
+                }),
+            ).toBe(false);
+        });
+    });
 });

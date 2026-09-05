@@ -50,7 +50,8 @@
             "error_no_tabs": "No hay pestañas activas para cerrar."
         },
         "find_element": {
-            "success": "Elemento encontrado: {{selector}}"
+            "success": "Elemento encontrado: {{selector}}",
+            "not_found": "Elemento no encontrado: {{selector}}"
         },
         "back": {
             "success": "Navegación 'Atrás' exitosa.",

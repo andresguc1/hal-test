@@ -584,10 +584,17 @@ class VariableManager {
     }
 
     evaluateConditions(conds, logic = 'AND', runId = null) {
-        const res = (Array.isArray(conds) ? conds : []).map((c) =>
-            this.evaluateCondition(c, runId),
-        );
-        return logic === 'AND' ? res.every((r) => r === true) : res.some((r) => r === true);
+        const arr = Array.isArray(conds) ? conds : [];
+        if (logic === 'AND') {
+            for (const c of arr) {
+                if (this.evaluateCondition(c, runId) !== true) return false;
+            }
+            return true;
+        }
+        for (const c of arr) {
+            if (this.evaluateCondition(c, runId) === true) return true;
+        }
+        return false;
     }
 
     // ─── Internal Helpers ────────────────────────────────────────────────

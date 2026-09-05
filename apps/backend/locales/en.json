@@ -50,7 +50,8 @@
             "error_no_tabs": "No active tabs to close."
         },
         "find_element": {
-            "success": "Element found: {{selector}}"
+            "success": "Element found: {{selector}}",
+            "not_found": "Element not found: {{selector}}"
         },
         "back": {
             "success": "Navigation 'Back' successful.",

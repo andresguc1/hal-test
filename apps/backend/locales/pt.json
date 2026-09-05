@@ -50,7 +50,8 @@
             "error_no_tabs": "Nenhuma guia ativa para fechar."
         },
         "find_element": {
-            "success": "Elemento encontrado: {{selector}}"
+            "success": "Elemento encontrado: {{selector}}",
+            "not_found": "Elemento não encontrado: {{selector}}"
         },
         "back": {
             "success": "Navegação 'Voltar' bem-sucedida.",

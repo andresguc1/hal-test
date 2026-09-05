@@ -59,10 +59,17 @@ class ConditionEvaluator {
      * @returns {boolean}
      */
     evaluateConditions(conditions, logic = 'AND', resolver, hasVar) {
-        const results = (Array.isArray(conditions) ? conditions : []).map((c) =>
-            this.evaluateCondition(c, resolver, hasVar),
-        );
-        return logic === 'AND' ? results.every((r) => r === true) : results.some((r) => r === true);
+        const arr = Array.isArray(conditions) ? conditions : [];
+        if (logic === 'AND') {
+            for (const c of arr) {
+                if (this.evaluateCondition(c, resolver, hasVar) !== true) return false;
+            }
+            return true;
+        }
+        for (const c of arr) {
+            if (this.evaluateCondition(c, resolver, hasVar) === true) return true;
+        }
+        return false;
     }
 
     /**

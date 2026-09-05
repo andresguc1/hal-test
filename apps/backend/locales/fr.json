@@ -50,7 +50,8 @@
             "error_no_tabs": "Aucun onglet actif à fermer."
         },
         "find_element": {
-            "success": "Élément trouvé : {{sélector}}"
+            "success": "Élément trouvé : {{sélector}}",
+            "not_found": "Élément introuvable : {{selector}}"
         },
         "back": {
             "success": "Navigation « Retour » réussie.",
