@@ -15,14 +15,14 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@1769ed05b9f39e9906194499b5c2b0bf8535a69b
       
-      - uses: pnpm/action-setup@v3
+      - uses: pnpm/action-setup@dc9f519e47a8b796aa19d9a9e5a5f11b696d5e8c
         with:
           version: 9.15.4
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@60edb5dd545a775178f192cb99c9b2d8661c5e89
         with:
           node-version: '20.x'
           cache: 'pnpm'
@@ -51,7 +51,7 @@ jobs:
         working-directory: apps/cli/dist
 
       - name: Upload SBOM Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@5d5d22a31266ced268874388604861cf4f7985a4
         with:
           name: sbom
           path: apps/cli/dist/bom.json

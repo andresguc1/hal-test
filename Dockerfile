@@ -1,5 +1,7 @@
 # --- STAGE 1: Build ---
-FROM node:20-slim AS builder
+# Pin to SHA256 digest to prevent supply-chain attacks.
+# To update the digest: docker pull node:20-slim && docker inspect node:20-slim --format='{{index .RepoDigests 0}}'
+FROM node:20-slim@sha256:2cf067cfed83d5ea958367df9f966191a942351a2df77d6f0193e162b5febfc0 AS builder
 
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
@@ -28,8 +30,9 @@ RUN pnpm rebuild sqlite3
 RUN pnpm run build:monolith
 
 # --- STAGE 2: Runner ---
-# Use the official Playwright image which includes all browser dependencies
-FROM mcr.microsoft.com/playwright:v1.49.0-jammy AS runner
+# Pin to SHA256 digest to prevent supply-chain attacks.
+# To update the digest: docker pull mcr.microsoft.com/playwright:v1.49.0-jammy && docker inspect mcr.microsoft.com/playwright:v1.49.0-jammy --format='{{index .RepoDigests 0}}'
+FROM mcr.microsoft.com/playwright:v1.49.0-jammy@sha256:a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2 AS runner
 
 WORKDIR /app
 

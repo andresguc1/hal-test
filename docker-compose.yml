@@ -4,7 +4,8 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: hal-test-app
-    network_mode: host
+    networks:
+      - hal-test-net
     volumes:
       - hal-test-storage:/app/apps/backend/storage
     environment:
@@ -20,6 +21,10 @@ services:
     dns:
       - 8.8.8.8
       - 1.1.1.1
+
+networks:
+  hal-test-net:
+    driver: bridge
 
 volumes:
   hal-test-storage:

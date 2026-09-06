@@ -1,0 +1,62 @@
+# Dependabot configuration for HalTest
+# Automates dependency updates across npm, GitHub Actions, and Docker
+# See: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+
+version: 2
+
+updates:
+  # --- npm dependencies ---
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "daily"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "developers"
+    labels:
+      - "dependencies"
+      - "security"
+    allow:
+      - dependency-type: "production"
+      - dependency-type: "development"
+    ignore:
+      # Ignore major version bumps for stability
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  # --- GitHub Actions ---
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "developers"
+    labels:
+      - "ci"
+      - "security"
+    versions:
+      # Only update to stable releases (no pre-releases)
+      - dependency-name: "*"
+        update-types: ["semver:major", "semver:minor", "semver:patch"]
+    # Pin actions to SHAs (already done manually, but Dependabot keeps them fresh)
+
+  # --- Docker ---
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "developers"
+    labels:
+      - "docker"
+      - "security"
