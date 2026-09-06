@@ -35,7 +35,6 @@ vi.mock('../services/ExecutionLogger.js', () => ({
 
 import { executionService } from '../services/ExecutionService.js';
 import { PlaywrightGenerator } from '../services/exporter/generators/PlaywrightGenerator.js';
-import { generatePlaywrightCode } from '../services/exporter/generators/playwright.generator.js';
 
 describe('Collaborative Nodes Integration', () => {
     describe('ExecutionService and Graph Validation', () => {
@@ -153,7 +152,9 @@ describe('Collaborative Nodes Integration', () => {
                 },
             ];
 
-            const code = generatePlaywrightCode(steps, 'javascript', 'en');
+            const generator = new PlaywrightGenerator('javascript', 'en');
+            const result = generator.generate(steps);
+            const code = result.code;
 
             expect(code).toContain('page.goto');
             expect(code).not.toContain('sticky_note');
