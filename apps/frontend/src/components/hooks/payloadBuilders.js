@@ -351,6 +351,10 @@ export const click = (payload = {}) => {
     clickCount,
     browserId: asString(payload?.browserId),
     timeout: asNumber(payload?.timeout, 30000, 1),
+    // Right-click context menu: text name / locator of the option to click and
+    // optional click-outside (blur) close verification.
+    contextMenuItem: asString(payload?.contextMenuItem),
+    clickOutside: asBoolean(payload?.clickOutside, false),
     takeScreenshot: asBoolean(payload?.takeScreenshot, true),
     continueOnError: asBoolean(
       payload?.continueOnError ?? payload?.continueOnFailure,
@@ -621,6 +625,11 @@ export const drag_drop = (payload) => {
     force: asBoolean(payload?.force, false),
     timeout: asNumber(payload?.timeout, 30000, 1),
     browserId: asString(payload?.browserId),
+    // Only emit the flag when explicitly set so legacy flows keep their native
+    // fast (dragTo) behavior. Runtime: true → smooth on-screen animation.
+    ...(payload?.visualAnimation === undefined
+      ? {}
+      : { visualAnimation: asBoolean(payload?.visualAnimation, false) }),
     takeScreenshot: asBoolean(payload?.takeScreenshot, true),
     continueOnError: asBoolean(
       payload?.continueOnError ?? payload?.continueOnFailure,

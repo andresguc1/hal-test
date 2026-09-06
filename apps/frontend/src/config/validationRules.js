@@ -177,6 +177,18 @@ export const NODE_INPUTS = {
       defaultValue: "left",
     },
     {
+      key: "contextMenuItem",
+      label: "Context Menu Option (Right-Click)",
+      type: "text",
+      placeholder: "e.g. Delete or page.getByRole('menuitem', { name: 'Delete' })",
+    },
+    {
+      key: "clickOutside",
+      label: "Verify close by clicking outside (Right-Click)",
+      type: "checkbox",
+      defaultValue: false,
+    },
+    {
       key: "timeout",
       label: "Timeout (ms)",
       type: "number",
@@ -435,6 +447,19 @@ export const NODE_INPUTS = {
       type: "selector",
       placeholder: "#bin",
       required: true,
+    },
+    {
+      key: "steps",
+      label: "Animation Steps",
+      type: "number",
+      placeholder: "12",
+      defaultValue: 12,
+    },
+    {
+      key: "visualAnimation",
+      label: "Visual Animation (smooth drag)",
+      type: "checkbox",
+      defaultValue: true,
     },
     {
       key: "takeScreenshot",

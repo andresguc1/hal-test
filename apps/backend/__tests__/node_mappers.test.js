@@ -197,4 +197,91 @@ describe('HalTest Node Mappers Code Generation', () => {
             expect(jsCode).toContain('await dialog.dismiss()');
         });
     });
+
+    describe('InteractionMapper click (right-click context menus)', () => {
+        const mapper = NodeMapperRegistry.getMapper('click');
+
+        it('keeps plain left / double clicks unchanged', () => {
+            const left = mapper.getCode(
+                { actionType: 'click', selector: '#btn', clickType: 'left' },
+                'typescript',
+                undefined,
+                'playwright',
+            );
+            expect(left).toBe('await page.click(`#btn`);');
+
+            const dbl = mapper.getCode(
+                { actionType: 'click', selector: '#btn', clickType: 'double' },
+                'typescript',
+                undefined,
+                'playwright',
+            );
+            expect(dbl).toBe('await page.dblclick(`#btn`);');
+        });
+
+        it('generates right-click + role-aware menuitem + click-outside', () => {
+            const code = mapper.getCode(
+                {
+                    actionType: 'click',
+                    selector: '#ctx',
+                    clickType: 'right',
+                    contextMenuItem: 'Delete',
+                    clickOutside: true,
+                },
+                'typescript',
+                undefined,
+                'playwright',
+            );
+            expect(code).toContain("await page.click(`#ctx`, { button: 'right' });");
+            expect(code).toContain("page.getByRole('menuitem', { name: `Delete` })");
+            expect(code).toContain("page.getByRole('menuitemradio', { name: `Delete` })");
+            expect(code).toContain('await page.mouse.click(4, 4);');
+            expect(code).toContain('did not close after clicking outside');
+        });
+
+        it('keeps a raw locator expression verbatim', () => {
+            const code = mapper.getCode(
+                {
+                    actionType: 'click',
+                    selector: '#ctx',
+                    clickType: 'right',
+                    contextMenuItem: "page.getByRole('menuitem', { name: 'Copy' })",
+                },
+                'typescript',
+                undefined,
+                'playwright',
+            );
+            expect(code).toContain("page.getByRole('menuitem', { name: 'Copy' }).click();");
+        });
+    });
+
+    describe('FormMapper drag_drop (visualAnimation)', () => {
+        const mapper = NodeMapperRegistry.getMapper('drag_drop');
+
+        it('keeps native dragAndDrop when visualAnimation is unset', () => {
+            const code = mapper.getCode(
+                { actionType: 'drag_drop', sourceSelector: '#a', targetSelector: '#b' },
+                'typescript',
+            );
+            expect(code).toBe('await page.dragAndDrop(`#a`, `#b`);');
+        });
+
+        it('emits the animated mouse sequence when visualAnimation is true', () => {
+            const code = mapper.getCode(
+                {
+                    actionType: 'drag_drop',
+                    sourceSelector: '#a',
+                    targetSelector: '#b',
+                    visualAnimation: true,
+                    steps: 20,
+                },
+                'typescript',
+            );
+            expect(code).toContain('.boundingBox()');
+            expect(code).toContain('page.mouse.down()');
+            expect(code).toContain('page.mouse.up()');
+            expect(code).toContain('i <= 20');
+            expect(code).not.toContain('dragAndDrop');
+        });
+    });
 });

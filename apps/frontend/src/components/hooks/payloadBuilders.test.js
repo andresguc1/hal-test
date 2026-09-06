@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { select_option, click, browser_dialog } from "./payloadBuilders.js";
+import { select_option, click, browser_dialog, drag_drop } from "./payloadBuilders.js";
 
 describe("click payload builder", () => {
   it("defaults to a single left click", () => {
@@ -35,6 +35,25 @@ describe("click payload builder", () => {
 
   it("throws when selector is missing", () => {
     expect(() => click({})).toThrow(/selector/);
+  });
+
+  it("passes context menu options for right-click nodes", () => {
+    const payload = click({
+      selector: "#item",
+      clickType: "right",
+      contextMenuItem: "Delete",
+      clickOutside: true,
+    });
+    expect(payload).toMatchObject({
+      button: "right",
+      contextMenuItem: "Delete",
+      clickOutside: true,
+    });
+  });
+
+  it("omits context menu options when not configured", () => {
+    const payload = click({ selector: "#btn" });
+    expect(payload).toMatchObject({ contextMenuItem: "", clickOutside: false });
   });
 });
 
@@ -150,5 +169,30 @@ describe("select_option payload builder", () => {
     const labelPayload = select_option({ selector: "#dd", label: "Spain" });
     expect(labelPayload.selectionCriteria).toBe("label");
     expect(labelPayload.selectionValue).toBe("Spain");
+  });
+});
+
+describe("drag_drop payload builder", () => {
+  it("emits source/target and keeps legacy flows flag-free", () => {
+    const payload = drag_drop({ sourceSelector: "#a", targetSelector: "#b" });
+    expect(payload.sourceSelector).toBe("#a");
+    expect(payload.targetSelector).toBe("#b");
+    expect(payload).not.toHaveProperty("visualAnimation");
+  });
+
+  it("passes visualAnimation when explicitly set", () => {
+    const animated = drag_drop({
+      sourceSelector: "#a",
+      targetSelector: "#b",
+      visualAnimation: true,
+    });
+    expect(animated.visualAnimation).toBe(true);
+
+    const native = drag_drop({
+      sourceSelector: "#a",
+      targetSelector: "#b",
+      visualAnimation: false,
+    });
+    expect(native.visualAnimation).toBe(false);
   });
 });

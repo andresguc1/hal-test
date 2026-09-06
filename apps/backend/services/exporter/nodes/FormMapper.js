@@ -157,6 +157,83 @@ function generateMultiOptionCode(params, lang) {
     return lines.join('\n');
 }
 
+/**
+ * Generates an animated (visually smooth) drag-and-drop sequence via granular
+ * mouse movement. Mirrors apps/backend/plugins/core-interaction/handlers/drag_drop.js.
+ * `src` / `tgt` are already escaped selector strings (quotes are added here).
+ */
+function animatedDragCode(lang, src, tgt, params) {
+    const n = Math.max(2, Number(params.steps) || 12);
+
+    if (lang === 'javascript' || lang === 'typescript') {
+        return (
+            `const sb = await page.locator(\`${src}\`).boundingBox(); ` +
+            `const tb = await page.locator(\`${tgt}\`).boundingBox(); ` +
+            `if (!sb || !tb) throw new Error('Unable to resolve drag positions for visual animation'); ` +
+            `const sx = sb.x + sb.width / 2, sy = sb.y + sb.height / 2, ex = tb.x + tb.width / 2, ey = tb.y + tb.height / 2; ` +
+            `await page.locator(\`${src}\`).hover(); ` +
+            `await page.mouse.move(sx, sy); ` +
+            `await page.mouse.down(); ` +
+            `await page.waitForTimeout(50); ` +
+            `for (let i = 1; i <= ${n}; i++) { const t = i / ${n}; await page.mouse.move(sx + (ex - sx) * t, sy + (ey - sy) * t, { steps: 1 }); await page.waitForTimeout(12); } ` +
+            `await page.mouse.move(ex, ey, { steps: 1 }); ` +
+            `await page.waitForTimeout(40); ` +
+            `await page.mouse.up();`
+        );
+    }
+
+    if (lang === 'python') {
+        return (
+            `sb = await page.locator("${src}").bounding_box(); ` +
+            `tb = await page.locator("${tgt}").bounding_box(); ` +
+            `if not sb or not tb: raise RuntimeError('Unable to resolve drag positions for visual animation') ` +
+            `sx = sb.x + sb.width / 2; sy = sb.y + sb.height / 2; ex = tb.x + tb.width / 2; ey = tb.y + tb.height / 2; ` +
+            `await page.locator("${src}").hover(); ` +
+            `await page.mouse.move(sx, sy); ` +
+            `await page.mouse.down(); ` +
+            `await page.wait_for_timeout(50); ` +
+            `for i in range(1, ${n} + 1): pr = i / ${n}; await page.mouse.move(sx + (ex - sx) * pr, sy + (ey - sy) * pr, steps=1); await page.wait_for_timeout(12) ` +
+            `await page.mouse.move(ex, ey, steps=1); ` +
+            `await page.wait_for_timeout(40); ` +
+            `await page.mouse.up()`
+        );
+    }
+
+    if (lang === 'java') {
+        return (
+            `var sb = page.locator("${src}").boundingBox(); if (sb == null) throw new RuntimeException("Unable to resolve drag positions for visual animation"); ` +
+            `var tb = page.locator("${tgt}").boundingBox(); if (tb == null) throw new RuntimeException("Unable to resolve drag positions for visual animation"); ` +
+            `double sx = sb.x + sb.width / 2, sy = sb.y + sb.height / 2, ex = tb.x + tb.width / 2, ey = tb.y + tb.height / 2; ` +
+            `page.locator("${src}").hover(); ` +
+            `page.mouse().move(sx, sy); ` +
+            `page.mouse().down(); ` +
+            `page.waitForTimeout(50); ` +
+            `for (int i = 1; i <= ${n}; i++) { double pr = (double) i / ${n}; page.mouse().move(sx + (ex - sx) * pr, sy + (ey - sy) * pr, new Mouse.MoveOptions().setSteps(1)); page.waitForTimeout(12); } ` +
+            `page.mouse().move(ex, ey, new Mouse.MoveOptions().setSteps(1)); ` +
+            `page.waitForTimeout(40); ` +
+            `page.mouse().up();`
+        );
+    }
+
+    if (lang === 'csharp') {
+        return (
+            `var sb = await page.Locator("${src}").BoundingBoxAsync(); if (sb == null) throw new Exception("Unable to resolve drag positions for visual animation"); ` +
+            `var tb = await page.Locator("${tgt}").BoundingBoxAsync(); if (tb == null) throw new Exception("Unable to resolve drag positions for visual animation"); ` +
+            `double sx = sb.X + sb.Width / 2, sy = sb.Y + sb.Height / 2, ex = tb.X + tb.Width / 2, ey = tb.Y + tb.Height / 2; ` +
+            `await page.Locator("${src}").HoverAsync(); ` +
+            `await page.Mouse.MoveAsync(sx, sy); ` +
+            `await page.Mouse.DownAsync(); ` +
+            `await page.WaitForTimeoutAsync(50); ` +
+            `for (int i = 1; i <= ${n}; i++) { double pr = (double) i / ${n}; await page.Mouse.MoveAsync(sx + (ex - sx) * pr, sy + (ey - sy) * pr, new MouseMoveOptions { Steps = 1 }); await page.WaitForTimeoutAsync(12); } ` +
+            `await page.Mouse.MoveAsync(ex, ey, new MouseMoveOptions { Steps = 1 }); ` +
+            `await page.WaitForTimeoutAsync(40); ` +
+            `await page.Mouse.UpAsync();`
+        );
+    }
+
+    return null;
+}
+
 export const FormMapper = {
     type: ['select_option', 'drag_drop'],
 
@@ -186,7 +263,10 @@ export const FormMapper = {
                 const tgt = q(params.targetSelector || params.target || '');
                 return {
                     select_option: `await page.selectOption(\`${s}\`, \`${v}\`);`,
-                    drag_drop: `await page.dragAndDrop(\`${src}\`, \`${tgt}\`);`,
+                    drag_drop:
+                        params.visualAnimation === true
+                            ? animatedDragCode('javascript', src, tgt, params)
+                            : `await page.dragAndDrop(\`${src}\`, \`${tgt}\`);`,
                 }[action];
             }
 
@@ -197,7 +277,10 @@ export const FormMapper = {
                 const tgt = q(params.targetSelector || params.target || '');
                 return {
                     select_option: `await page.select_option("${s}", "${v}")`,
-                    drag_drop: `await page.drag_and_drop("${src}", "${tgt}")`,
+                    drag_drop:
+                        params.visualAnimation === true
+                            ? animatedDragCode('python', src, tgt, params)
+                            : `await page.drag_and_drop("${src}", "${tgt}")`,
                 }[action];
             }
 
@@ -208,7 +291,10 @@ export const FormMapper = {
                 const tgt = q(params.targetSelector || params.target || '');
                 return {
                     select_option: `page.selectOption("${s}", "${v}");`,
-                    drag_drop: `page.dragAndDrop("${src}", "${tgt}");`,
+                    drag_drop:
+                        params.visualAnimation === true
+                            ? animatedDragCode('java', src, tgt, params)
+                            : `page.dragAndDrop("${src}", "${tgt}");`,
                 }[action];
             }
 
@@ -219,7 +305,10 @@ export const FormMapper = {
                 const tgt = q(params.targetSelector || params.target || '');
                 return {
                     select_option: `await page.SelectOptionAsync("${s}", "${v}");`,
-                    drag_drop: `await page.DragAndDropAsync("${src}", "${tgt}");`,
+                    drag_drop:
+                        params.visualAnimation === true
+                            ? animatedDragCode('csharp', src, tgt, params)
+                            : `await page.DragAndDropAsync("${src}", "${tgt}");`,
                 }[action];
             }
 
