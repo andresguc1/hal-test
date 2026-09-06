@@ -1,5 +1,7 @@
 import { chromium, firefox, webkit } from 'playwright';
 import { createHash, randomUUID } from 'crypto';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 import { DEVICE_PRESETS } from '../utils/constants.js';
 import { STORAGE_DIR, STORAGE_RUNS_DIR } from '../config/paths.js';
 import fs from 'fs';
@@ -13,6 +15,18 @@ if (!fs.existsSync(BROWSER_TMP_DIR)) {
 process.env.TMPDIR = BROWSER_TMP_DIR;
 
 const MAX_BROWSERS = parseInt(process.env.HAL_MAX_BROWSERS || '5', 10);
+
+// -----------------------------------------------------------------------------
+// SESSION SEAL (Fase 6)
+// -- Marker written into the browser process cmdline (`--hal-session=<id>`).
+//    Lets us identify OUR orphaned OS processes in `ps` and kill exactly them
+//    (never a stranger's browser). Injected for Chromium only: Chromium ignores
+//    unknown `--flag` switches safely, while Firefox/WebKit launch configs do
+//    not tolerate arbitrary flags.
+// -----------------------------------------------------------------------------
+export const SESSION_SEAL_PREFIX = '--hal-session=';
+
+const execFileAsync = promisify(execFile);
 
 // -----------------------------------------------------------------------------
 // SESSION PROFILE HASH (Fase 1)
@@ -128,6 +142,11 @@ class BrowserManager {
         this.browsers = new Map();
         this.lastAccessed = new Map();
         this._acquireQueue = []; // Pending browser slot requests (for PerformanceRunner)
+
+        // --- SESSION SEAL (Fase 6) ---
+        // Set to true once any Chromium session is stamped with --hal-session=,
+        // so orphan detection avoids useless `ps` scans before that.
+        this._hasSealedSessions = false;
 
         // --- SESSION REGISTRY (Fase 2) ---
         // runId -> latest browserId owned by that run; browserId -> runId (reverse)
@@ -356,6 +375,15 @@ class BrowserManager {
             launchArgs.push(...stabilityArgs);
         }
 
+        // 5. Session Seal (Fase 6): stamp the process cmdline with our id so
+        //    orphan reaping can find EXACTLY our browser OS processes later,
+        //    even if we lose the Playwright handle (crash/GC). Chromium only.
+        const browserId = randomUUID().split('-')[0];
+        if (browserType === 'chromium') {
+            launchArgs.push(`${SESSION_SEAL_PREFIX}${browserId}`);
+            this._hasSealedSessions = true;
+        }
+
         console.log(`[BrowserService] Final Launch Args: ${JSON.stringify(launchArgs)}`);
 
         console.log('---------------------------------------------------------');
@@ -392,8 +420,6 @@ class BrowserManager {
         } else {
             browser = await browserEngine.launch(launchOptions);
         }
-
-        const browserId = randomUUID().split('-')[0];
 
         // --- SESSION PROFILE FINGERPRINT (Fase 1) ---
         const profileHash = computeProfileHash(options);
@@ -614,7 +640,9 @@ class BrowserManager {
     /**
      * Scans registered sessions whose OS process died (crash/SIGKILL) but whose
      * Playwright handle is still registered, and drops them. Does NOT touch
-     * external/unknown processes (no global pkill — local-first safety).
+     * external/unknown processes initially — unless a process carries OUR
+     * --hal-session= seal (Fase 6), in which case it is killed by pid exactly.
+     * @returns {Promise<number>} count of removed registered sessions.
      */
     async reapOrphans() {
         let reaped = 0;
@@ -633,11 +661,89 @@ class BrowserManager {
     }
 
     /**
+     * Fase 6 — finds our own orphaned OS processes via the session seal.
+     * Cross-platform process-table scan (POSIX `ps`; safe no-op elsewhere).
+     * @returns {Promise<Array<{pid:number, sessionId:string}>>} sealed
+     *          processes whose session id is NOT registered (we lost the handle).
+     */
+    async _scanProcessTable() {
+        if (process.platform === 'win32') return [];
+        try {
+            const { stdout } = await execFileAsync('ps', ['-axo', 'pid=,command='], {
+                timeout: 5000,
+            });
+            const strays = [];
+            const sealRe = new RegExp(`${SESSION_SEAL_PREFIX}([\\w]+)`);
+            for (const line of stdout.split('\n')) {
+                if (!line.includes(SESSION_SEAL_PREFIX)) continue;
+                const pidMatch = line.trim().match(/^(\d+)\s+/);
+                const idMatch = line.match(sealRe);
+                if (pidMatch && idMatch) {
+                    strays.push({ pid: Number(pidMatch[1]), sessionId: idMatch[1] });
+                }
+            }
+            return strays;
+        } catch {
+            return []; // ps unavailable or no permission — degrades gracefully
+        }
+    }
+
+    /**
+     * Fase 6 — kills orphaned OS processes stamped with our seal, but only if
+     * their session id is no longer registered (real orphans: we lost/never had
+     * the handle, yet the browser process is still running).
+     * @returns {Promise<number>} number of orphan OS processes killed.
+     */
+    async killOrphans() {
+        if (!this._hasSealedSessions) return 0;
+        const sealed = await this._scanProcessTable();
+        let killed = 0;
+        for (const { pid, sessionId } of sealed) {
+            if (this.browsers.has(sessionId)) continue; // still owned — ignore
+            try {
+                process.kill(pid, 'SIGTERM');
+                console.log(
+                    `[SESSION] Killed orphan OS process pid=${pid} (seal=${sessionId}) — no live session owns it.`,
+                );
+                killed++;
+            } catch {
+                // Already gone or not ours anymore
+            }
+        }
+        return killed;
+    }
+
+    /**
+     * Sanitized, serializable snapshot of every active session — for the
+     * inspector "Sessions" panel and observability. Never exposes the browser
+     * handle itself.
+     */
+    listSessions() {
+        const list = [];
+        for (const [id, entry] of this.browsers.entries()) {
+            list.push({
+                browserId: id,
+                browserType: entry.options?.browserType || 'chromium',
+                headless: !!entry.options?.headless,
+                launchMethod: entry.launchMethod || 'launch',
+                runId: entry.runId || null,
+                nodeId: entry.nodeId || null,
+                profileHash: entry.profileHash || null,
+                startedAt: entry.startedAt || null,
+                uptimeMs: entry.startedAt ? Date.now() - entry.startedAt : null,
+                pid: entry.process?.pid ?? null,
+            });
+        }
+        return list;
+    }
+
+    /**
      * Full lifecycle drain: reap orphans, close every registered session and
      * reset all registries. Used by graceful shutdown and manual sanitize.
      */
     async drain() {
         await this.reapOrphans();
+        await this.killOrphans();
         await this.sanitize();
         this.runContext.clear();
     }

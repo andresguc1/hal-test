@@ -13,7 +13,9 @@
     "select_flow": "Sélectionner un flux",
     "no_project": "-- Aucun Projet --",
     "switch_theme": "Changer de Thème",
-    "unknown": "Inconnu"
+    "unknown": "Inconnu",
+    "sessions": "Sessions navigateur actives",
+    "reap": "Récolter les orphelins"
   },
   "common": {
     "save": "Sauvegarder",

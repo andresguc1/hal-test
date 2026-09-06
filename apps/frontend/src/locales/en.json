@@ -13,7 +13,9 @@
     "select_flow": "Select a flow",
     "no_project": "-- No Project --",
     "switch_theme": "Switch Theme",
-    "unknown": "Unknown"
+    "unknown": "Unknown",
+    "sessions": "Active browser sessions",
+    "reap": "Reap orphans"
   },
   "common": {
     "save": "Save",

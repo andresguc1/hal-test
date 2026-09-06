@@ -91,12 +91,36 @@ export const startInspectorAction = async (req, res) => {
 export const getActiveSessionsAction = async (req, res) => {
     try {
         const ids = Array.from(browserService.keys());
+        const details = browserService.listSessions();
         return res.status(200).json({
             success: true,
             sessions: ids,
+            details,
         });
     } catch (error) {
         console.error('[Inspector Controller] Error fetching sessions:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Internal Server Error',
+        });
+    }
+};
+
+/**
+ * Fase 6 — manually trigger orphan reaping: drops dead registered sessions and
+ * kills sealed (--hal-session=) browser processes whose handle was lost.
+ */
+export const reapSessionsAction = async (req, res) => {
+    try {
+        const reaped = await browserService.reapOrphans();
+        const killed = await browserService.killOrphans();
+        return res.status(200).json({
+            success: true,
+            reaped,
+            killed,
+        });
+    } catch (error) {
+        console.error('[Inspector Controller] Error reaping sessions:', error);
         return res.status(500).json({
             success: false,
             message: 'Internal Server Error',

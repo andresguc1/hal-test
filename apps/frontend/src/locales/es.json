@@ -13,7 +13,9 @@
     "select_flow": "Selecciona un flujo",
     "no_project": "-- Sin Proyecto --",
     "switch_theme": "Cambiar Tema",
-    "unknown": "Desconocido"
+    "unknown": "Desconocido",
+    "sessions": "Sesiones de navegador activas",
+    "reap": "Recolectar huérfanos"
   },
   "common": {
     "save": "Guardar",

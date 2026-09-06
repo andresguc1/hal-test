@@ -26,6 +26,7 @@ import HalLogo from "./HalLogo";
 import { useAuth } from "../context/AuthContext";
 import PresenceIndicator from "../collaboration/PresenceIndicator";
 import { useCollaboration } from "../collaboration/CollaborationProvider";
+import BrowserSessionsChip from "./BrowserSessionsChip";
 
 const HeaderButton = ({ onClick, children, title, className }) => (
   <Motion.button
@@ -307,6 +308,9 @@ function AppHeader({
 
         {/* SESSION INDICATOR */}
         {renderIndicator()}
+
+        {/* LIVE BROWSER SESSIONS (Fase 6) */}
+        <BrowserSessionsChip />
       </div>
 
       {/* CENTER - ABSOLUTE (The Fix) */}

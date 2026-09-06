@@ -1,27 +1,29 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-vi.mock('playwright', () => ({
-    chromium: {
-        launch: vi.fn().mockResolvedValue({
-            newContext: vi.fn().mockResolvedValue({
-                newPage: vi.fn().mockResolvedValue({
-                    goto: vi.fn(),
-                    close: vi.fn(),
-                    isClosed: vi.fn().mockReturnValue(false),
-                }),
+const { makeBrowserMock } = vi.hoisted(() => ({
+    makeBrowserMock: () => ({
+        newContext: vi.fn().mockResolvedValue({
+            newPage: vi.fn().mockResolvedValue({
+                goto: vi.fn(),
                 close: vi.fn(),
-                pages: vi.fn().mockReturnValue([]),
                 isClosed: vi.fn().mockReturnValue(false),
             }),
             close: vi.fn(),
-            isConnected: vi.fn().mockReturnValue(true),
-            contexts: vi.fn().mockReturnValue([]),
-            version: vi.fn().mockReturnValue('mock-version'),
-            process: vi.fn().mockReturnValue(null),
+            pages: vi.fn().mockReturnValue([]),
+            isClosed: vi.fn().mockReturnValue(false),
         }),
-    },
-    firefox: { launch: vi.fn() },
-    webkit: { launch: vi.fn() },
+        close: vi.fn(),
+        isConnected: vi.fn().mockReturnValue(true),
+        contexts: vi.fn().mockReturnValue([]),
+        version: vi.fn().mockReturnValue('mock-version'),
+        process: vi.fn().mockReturnValue(null),
+    }),
+}));
+
+vi.mock('playwright', () => ({
+    chromium: { launch: vi.fn().mockResolvedValue(makeBrowserMock()) },
+    firefox: { launch: vi.fn().mockResolvedValue(makeBrowserMock()) },
+    webkit: { launch: vi.fn().mockResolvedValue(makeBrowserMock()) },
 }));
 
 vi.mock('../config/paths.js', () => ({
@@ -251,11 +253,12 @@ describe('Fase 4 - drain', () => {
         browserService.runContext.clear();
     });
 
-    it('closes every session and clears registries', async () => {
+    it('Fase 4 - drain closes every session and clears registries', async () => {
         const { browserId: a } = await launchProfile({ runId: 'run-1' });
         const { browserId: b } = await launchProfile();
         browserService.bindRunContext(a, 'run-1', 'h', { isClosed: () => false, close: vi.fn() });
 
+        browserService._hasSealedSessions = false; // hermetic: no real `ps` scan
         await browserService.drain();
 
         expect(browserService.has(a)).toBe(false);
@@ -295,5 +298,78 @@ describe('Fase 5 - unified headless policy', () => {
         process.env.NODE_ENV = 'production';
         process.env.HAL_CLI_MODE = 'true';
         expect(resolveEffectiveHeadless({})).toBe(false);
+    });
+});
+
+describe('Fase 6 - Session Seal & Orphan Kill', () => {
+    let killSpy;
+
+    beforeEach(() => {
+        killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true);
+    });
+
+    afterEach(() => {
+        killSpy.mockRestore();
+        for (const id of Array.from(browserService.keys())) {
+            browserService.browsers.delete(id);
+            browserService.lastAccessed.delete(id);
+        }
+        browserService.sessionsByRun.clear();
+        browserService.runByBrowser.clear();
+        browserService._hasSealedSessions = false;
+    });
+
+    it('stamps chromium launches with --hal-session=<browserId>', async () => {
+        const { browserId } = await launchProfile();
+        const stored = browserService.get(browserId);
+        expect(stored.options.launchArgs).toContain(`--hal-session=${browserId}`);
+        expect(browserService._hasSealedSessions).toBe(true);
+    });
+
+    it('does not stamp firefox sessions', async () => {
+        const { browserId } = await browserService.launchBrowser({
+            browserType: 'firefox',
+            headless: true,
+        });
+        const stored = browserService.get(browserId);
+        expect(stored.options.launchArgs.some((a) => a.startsWith('--hal-session='))).toBe(false);
+        expect(browserService._hasSealedSessions).toBe(false);
+    });
+
+    it('listSessions exposes a sanitized snapshot without handles', async () => {
+        const { browserId } = await launchProfile({ runId: 'run-1', nodeId: 'n7' });
+        const list = browserService.listSessions();
+        expect(list).toHaveLength(1);
+        expect(list[0]).toMatchObject({
+            browserId,
+            browserType: 'chromium',
+            runId: 'run-1',
+            nodeId: 'n7',
+            pid: null,
+        });
+        expect(list[0]).not.toHaveProperty('browser');
+    });
+
+    it('kills sealed orphan processes whose session is no longer registered', async () => {
+        const { browserId } = await launchProfile();
+        browserService._hasSealedSessions = true;
+        const scanSpy = vi.spyOn(browserService, '_scanProcessTable').mockResolvedValue([
+            { pid: 90001, sessionId: 'ghost-1' },
+            { pid: 90002, sessionId: browserId }, // still owned → must be skipped
+        ]);
+
+        const killed = await browserService.killOrphans();
+        expect(killed).toBe(1);
+        expect(killSpy).toHaveBeenCalledWith(90001, 'SIGTERM');
+        expect(killSpy).not.toHaveBeenCalledWith(90002, 'SIGTERM');
+        scanSpy.mockRestore();
+    });
+
+    it('skips the OS scan when no session was ever sealed', async () => {
+        browserService._hasSealedSessions = false;
+        const scanSpy = vi.spyOn(browserService, '_scanProcessTable');
+        expect(await browserService.killOrphans()).toBe(0);
+        expect(scanSpy).not.toHaveBeenCalled();
+        scanSpy.mockRestore();
     });
 });
