@@ -1,5 +1,5 @@
 import { chromium, firefox, webkit } from 'playwright';
-import { randomUUID } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import { DEVICE_PRESETS } from '../utils/constants.js';
 import { STORAGE_DIR, STORAGE_RUNS_DIR } from '../config/paths.js';
 import fs from 'fs';
@@ -14,11 +14,129 @@ process.env.TMPDIR = BROWSER_TMP_DIR;
 
 const MAX_BROWSERS = parseInt(process.env.HAL_MAX_BROWSERS || '5', 10);
 
+// -----------------------------------------------------------------------------
+// SESSION PROFILE HASH (Fase 1)
+// -- Canonical fingerprint of the options that define a browser PROCESS.
+//    Reuse in Debug Mode is decided by comparing this hash, not by manually
+//    diffing options (which missed `browserType`, mixing engines silently).
+// -----------------------------------------------------------------------------
+
+// Fields that directly affect the OS process identity (viewport → window-size
+// args, user-agent, flags). Context-only concerns (network throttling, touch)
+// belong to a future ContextPool and intentionally do NOT restart here.
+const SCALAR_PROFILE_FIELDS = [
+    'browserType',
+    'headless',
+    'devicePreset',
+    'width',
+    'height',
+    'slowMo',
+    'args',
+    'executablePath',
+    'recordVideo',
+];
+
+// Booleans whose default is `false`/absent: absent and false are equivalent.
+const OPTIONAL_BOOLEAN_FIELDS = ['maximizeWindow', 'isMobile', 'hasTouch'];
+
+const normalizeProfileValue = (value) => {
+    if (
+        value === undefined ||
+        value === null ||
+        value === '' ||
+        value === 0 || // 0 = "use default"
+        value === false
+    ) {
+        return undefined;
+    }
+    return value;
+};
+
+/**
+ * Computes a canonical hash for the browser launch options.
+ * Equal hashes ⇒ the running browser process is safe to reuse.
+ * Different hashes (engine, headless, viewport, preset, credentials, args…)
+ * ⇒ the existing process must be closed and a new one launched.
+ *
+ * @param {Object} [options={}] - Raw launch options (pre-coercion is fine).
+ * @returns {string} - Stable, short sha256 fingerprint.
+ */
+export function computeProfileHash(options = {}) {
+    const parts = [];
+
+    for (const field of SCALAR_PROFILE_FIELDS) {
+        parts.push(`${field}:${JSON.stringify(normalizeProfileValue(options[field]))}`);
+    }
+
+    for (const field of OPTIONAL_BOOLEAN_FIELDS) {
+        parts.push(`${field}:${options[field] === true ? 'true' : 'false'}`);
+    }
+
+    const creds = options.httpCredentials;
+    const credKey = creds
+        ? `httpCredentials:${normalizeProfileValue(creds.username) ?? ''}:${
+              normalizeProfileValue(creds.origin) ?? ''
+          }`
+        : 'httpCredentials:none';
+    parts.push(credKey);
+
+    return createHash('sha256').update(parts.join('|')).digest('hex').slice(0, 20);
+}
+
+// Best-effort reference to the OS process backing the browser (for future
+// orphan reaping). Returns null when Playwright does not expose it.
+function captureProcessRef(browser) {
+    try {
+        return typeof browser.process === 'function' ? (browser.process() ?? null) : null;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Single source of truth for the effective `headless` value of a launch.
+ * Unifies the two auto-launch paths (ActionExecutor implicit launch and
+ * browser-utils.getActivePage) so explicit node configuration always wins,
+ * interactive/debug sessions default to a visible window and production
+ * (non-CLI) sessions default to headless.
+ *
+ * @returns {boolean}
+ */
+export function resolveEffectiveHeadless({ explicitHeadless, debugMode } = {}) {
+    if (explicitHeadless !== undefined && explicitHeadless !== null) {
+        return explicitHeadless === true || explicitHeadless === 'true';
+    }
+    if (debugMode) return false; // interactive debugging → visible window
+    const isProduction = process.env.NODE_ENV === 'production';
+    const isCliMode = process.env.HAL_CLI_MODE === 'true';
+    return isProduction && !isCliMode;
+}
+
+function isProcessAlive(pid) {
+    if (!pid || typeof pid !== 'number' || pid <= 0) return null; // unknown
+    try {
+        process.kill(pid, 0);
+        return true;
+    } catch (e) {
+        // EPERM means the process exists but belongs to another user → alive.
+        return e?.code === 'EPERM' ? true : false;
+    }
+}
+
 class BrowserManager {
     constructor() {
         this.browsers = new Map();
         this.lastAccessed = new Map();
         this._acquireQueue = []; // Pending browser slot requests (for PerformanceRunner)
+
+        // --- SESSION REGISTRY (Fase 2) ---
+        // runId -> latest browserId owned by that run; browserId -> runId (reverse)
+        this.sessionsByRun = new Map();
+        this.runByBrowser = new Map();
+
+        // --- CONTEXT POOL (Fase 3) ---
+        // browserId -> { runId, profileHash, context } (profile-aware context reuse)
+        this.runContext = new Map();
 
         // --- Idle Garbage Collector ---
         // Sweeps frequently to close sessions idle for > 2 minutes
@@ -27,10 +145,13 @@ class BrowserManager {
             const now = Date.now();
             for (const [id, lastTime] of this.lastAccessed.entries()) {
                 if (now - lastTime > IDLE_TIMEOUT) {
-                    console.log(`[GC] Browser ${id} closed due to idle timeout`);
+                    const owner = this.browsers.get(id)?.runId || 'n/a';
+                    console.log(`[GC] Browser ${id} closed due to idle timeout (owner=${owner})`);
                     this.delete(id).catch(() => {});
                 }
             }
+            // Also drop stale/dead sessions whose OS process already crashed.
+            this.reapOrphans().catch(() => {});
         }, 30 * 1000); // 30 seconds sweep (faster)
     }
 
@@ -274,14 +395,35 @@ class BrowserManager {
 
         const browserId = randomUUID().split('-')[0];
 
+        // --- SESSION PROFILE FINGERPRINT (Fase 1) ---
+        const profileHash = computeProfileHash(options);
+
         // We also save if maximize was requested to use it when creating contexts/pages
         this.set(browserId, {
             browser,
             launchMethod,
             options: { ...options, headless, launchArgs, maximizeWindow, recordVideo },
+            // --- SESSION OWNERSHIP (Fase 0) ---
+            profileHash,
+            runId: options.runId || null,
+            nodeId: options.nodeId || null,
+            startedAt: Date.now(),
+            process: captureProcessRef(browser),
         });
 
         const version = browser.version();
+
+        console.log(
+            `[SESSION] Opened ${browserId} (${browserType}) owner=${options.runId || 'n/a'}:${
+                options.nodeId || 'n/a'
+            } profile=${profileHash}`,
+        );
+
+        // Bind the run to this session immediately so the pipeline can resolve
+        // it strictly by runId even before the handler returns (Fase 2).
+        if (options.runId) {
+            this.registerRunSession(options.runId, browserId);
+        }
 
         return { browserId, browser, version };
     }
@@ -302,7 +444,10 @@ class BrowserManager {
 
     getLatest() {
         const ids = Array.from(this.browsers.keys());
-        return ids.length > 0 ? this.browsers.get(ids[ids.length - 1]) : null;
+        if (ids.length === 0) return null;
+        const latestId = ids[ids.length - 1];
+        this.touch(latestId);
+        return this.browsers.get(latestId);
     }
 
     touch(id) {
@@ -323,9 +468,35 @@ class BrowserManager {
             } catch (e) {
                 console.error(`[BrowserService] Error closing browser ${id}: ${e.message}`);
             }
+            const uptime = entry.startedAt
+                ? `${Math.round((Date.now() - entry.startedAt) / 1000)}s`
+                : 'n/a';
+            console.log(
+                `[SESSION] Closed ${id} owner=${entry.runId || 'n/a'}:${entry.nodeId || 'n/a'} uptime=${uptime}`,
+            );
         }
         this.browsers.delete(id);
         this.lastAccessed.delete(id);
+
+        // Unbind from the run registry (Fase 2)
+        const boundRun = this.runByBrowser.get(id);
+        if (boundRun) {
+            this.runByBrowser.delete(id);
+            if (this.sessionsByRun.get(boundRun) === id) {
+                this.sessionsByRun.delete(boundRun);
+            }
+        }
+
+        // Drop any bound context record (Fase 3)
+        const ctxRecord = this.runContext.get(id);
+        if (ctxRecord?.context) {
+            try {
+                await ctxRecord.context.close().catch(() => {});
+            } catch {
+                /* already closed */
+            }
+        }
+        this.runContext.delete(id);
 
         // Release slot to next waiting worker (performance runner semaphore)
         if (this._acquireQueue.length > 0) {
@@ -353,6 +524,122 @@ class BrowserManager {
 
     has(id) {
         return this.browsers.has(id);
+    }
+
+    // =========================================================================
+    // SESSION REGISTRY (Fase 2) — strict per-run session ownership
+    // =========================================================================
+
+    /**
+     * Binds a browserId to a runId. Called by ExecutionService after any
+     * handler returns a live browserId, and automatically after launchBrowser.
+     * @returns {boolean}
+     */
+    registerRunSession(runId, browserId) {
+        if (!runId || !browserId || !this.browsers.has(browserId)) return false;
+        const prev = this.sessionsByRun.get(runId);
+        if (prev && prev !== browserId) {
+            // Re-ownership: the run switched sessions (e.g. component launched
+            // its own browser). The previous entry is NOT closed here — the
+            // caller may still be using it; the idle GC covers orphans.
+            this.runByBrowser.delete(prev);
+        }
+        this.sessionsByRun.set(runId, browserId);
+        this.runByBrowser.set(browserId, runId);
+        const entry = this.browsers.get(browserId);
+        if (entry) entry.runId = runId;
+        return true;
+    }
+
+    /**
+     * Strict per-run resolution: the browserId a run owns, or null.
+     * @returns {string|null}
+     */
+    getRunSessionBrowserId(runId) {
+        if (!runId) return null;
+        const id = this.sessionsByRun.get(runId);
+        return id && this.browsers.has(id) ? id : null;
+    }
+
+    /**
+     * Closes the browser owned by a run and unbinds it from the registry.
+     * Idempotent: returns null if the run has no session.
+     * @returns {Promise<string|null>}
+     */
+    async releaseRun(runId) {
+        const browserId = this.getRunSessionBrowserId(runId);
+        if (!browserId) return null;
+        this.sessionsByRun.delete(runId);
+        this.runByBrowser.delete(browserId);
+        await this.delete(browserId).catch(() => {});
+        return browserId;
+    }
+
+    // =========================================================================
+    // CONTEXT POOL (Fase 3) — profile-aware, per-browser context reuse
+    // =========================================================================
+
+    /**
+     * Stores the context bound to a browser under its run + profile signature.
+     * An older bound context with a different profile is closed (profile drift).
+     */
+    bindRunContext(browserId, runId, profileHash, context) {
+        const existing = this.runContext.get(browserId);
+        if (existing?.context && existing.context !== context && !existing.context.isClosed?.()) {
+            existing.context.close().catch(() => {});
+        }
+        this.runContext.set(browserId, { runId, profileHash, context });
+    }
+
+    /**
+     * Returns the stored context for a browser IF it matches the requested
+     * profile and is still alive. Otherwise null (caller creates a new one).
+     */
+    getRunContext(browserId, profileHash) {
+        const record = this.runContext.get(browserId);
+        if (!record?.context) return null;
+        if (record.profileHash !== profileHash) return null; // profile drift
+        try {
+            if (record.context.isClosed?.()) return null;
+        } catch {
+            return null;
+        }
+        return record.context;
+    }
+
+    // =========================================================================
+    // ORPHAN REAPING (Fase 4) — dead-process detection + drain
+    // =========================================================================
+
+    /**
+     * Scans registered sessions whose OS process died (crash/SIGKILL) but whose
+     * Playwright handle is still registered, and drops them. Does NOT touch
+     * external/unknown processes (no global pkill — local-first safety).
+     */
+    async reapOrphans() {
+        let reaped = 0;
+        for (const id of Array.from(this.browsers.keys())) {
+            const entry = this.browsers.get(id);
+            const pid = entry?.process?.pid;
+            if (pid && isProcessAlive(pid) === false) {
+                console.log(
+                    `[SESSION] Stale session ${id} (pid ${pid}) dead — removing. owner=${entry.runId || 'n/a'}`,
+                );
+                await this.delete(id).catch(() => {});
+                reaped++;
+            }
+        }
+        return reaped;
+    }
+
+    /**
+     * Full lifecycle drain: reap orphans, close every registered session and
+     * reset all registries. Used by graceful shutdown and manual sanitize.
+     */
+    async drain() {
+        await this.reapOrphans();
+        await this.sanitize();
+        this.runContext.clear();
     }
 
     async sanitize() {

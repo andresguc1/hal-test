@@ -2,7 +2,7 @@
 // Extracted from action.controller.js for reuse across plugins
 // ==========================================================
 
-import { browserService } from '../services/browser.service.js';
+import { browserService, resolveEffectiveHeadless } from '../services/browser.service.js';
 import { activeRunManager } from '../services/ActiveRunManager.js';
 import { traceService } from '../services/trace.service.js';
 import { variableManager } from '../services/VariableManager.js';
@@ -127,7 +127,12 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
         try {
             const { browserId } = await browserService.launchBrowser({
                 ...opts,
-                headless: false,
+                // Fase 5: unified headless policy — explicit node config wins,
+                // otherwise interactive (debug) sessions stay visible.
+                headless: resolveEffectiveHeadless({
+                    explicitHeadless: opts.headless,
+                    debugMode: true,
+                }),
             });
             opts.browserId = browserId;
             req.body.browserId = browserId;

@@ -2,7 +2,11 @@
 // Extracted from action.controller.js for reuse across plugins
 // ==========================================================
 
-import { browserService } from '../services/browser.service.js';
+import {
+    browserService,
+    computeProfileHash,
+    resolveEffectiveHeadless,
+} from '../services/browser.service.js';
 import { networkHistoryService } from '../services/NetworkHistoryService.js';
 import { SecurityAuditor } from '../services/SecurityAuditor.js';
 import { DataLeakEngine } from '../services/security/DataLeakEngine.js';
@@ -137,6 +141,23 @@ function validateBrowser(req, browserId) {
 
     let id = browserId;
     let entry = browserId ? browserService.get(browserId) : null;
+
+    // Strict per-run resolution (Fase 2): if the requested id is missing/absent
+    // inside a run, prefer the browser owned by THAT run — never a stranger's
+    // session. UI/debug fallback to "latest" remains only as last resort.
+    if (!entry && req?.body?.runId && browserService.getRunSessionBrowserId(req.body.runId)) {
+        const boundId = browserService.getRunSessionBrowserId(req.body.runId);
+        const boundEntry = browserService.get(boundId);
+        if (boundEntry) {
+            id = boundId;
+            entry = boundEntry;
+            if (browserId) {
+                console.log(
+                    `[SESSION] Browser ID ${browserId} not found for run ${req.body.runId} — bound to owned session ${id}`,
+                );
+            }
+        }
+    }
 
     if (!entry && ids.length > 0) {
         id = ids[ids.length - 1];
@@ -293,6 +314,32 @@ async function getOrCreateContext(req, browser, browserId) {
     }
 
     try {
+        // --- CONTEXT POOL (Fase 3): reuse the context bound to this browser
+        //     only if its launch profile is unchanged and it is still alive. ---
+        if (browserId) {
+            const entry = browserService.get(browserId);
+            if (entry?.options) {
+                const ctxProfileHash = computeProfileHash(entry.options);
+                const pooled = browserService.getRunContext(browserId, ctxProfileHash);
+                if (pooled) {
+                    try {
+                        await pooled.pages();
+                        attachDialogListener(pooled);
+                        if (req.body?.securityObservability) {
+                            await attachSecurityContextListeners(pooled);
+                        }
+                        return pooled;
+                    } catch (err) {
+                        console.log(
+                            '[WARN] Pooled context unhealthy, closing and creating new:',
+                            err.message,
+                        );
+                        await pooled.close().catch(() => {});
+                    }
+                }
+            }
+        }
+
         if (typeof browser.contexts === 'function') {
             const contexts = browser.contexts();
             if (Array.isArray(contexts) && contexts.length > 0) {
@@ -651,6 +698,20 @@ async function getOrCreateContext(req, browser, browserId) {
                 await attachSecurityContextListeners(newContext);
             }
 
+            // Register in the Context Pool (Fase 3) so future lookups reuse it
+            // while the launch profile remains unchanged.
+            if (browserId) {
+                const entry = browserService.get(browserId);
+                if (entry?.options) {
+                    browserService.bindRunContext(
+                        browserId,
+                        req.body?.runId || entry.runId || null,
+                        computeProfileHash(entry.options),
+                        newContext,
+                    );
+                }
+            }
+
             return newContext;
         } catch (err) {
             console.error('[ERROR] Could not create context:', err.message);
@@ -670,7 +731,10 @@ async function getActivePage(req, browserId) {
             console.log('[getActivePage] No active browser session. Auto-launching browser...');
             const launchOpts = {
                 ...req.body,
-                headless: req.body?.headless === true || req.body?.headless === 'true',
+                headless: resolveEffectiveHeadless({
+                    explicitHeadless: req.body?.headless,
+                    debugMode: req.body?.debugMode,
+                }),
             };
             const { browserId: newId } = await browserService.launchBrowser(launchOpts);
             validation = validateBrowser(req, newId);
@@ -719,6 +783,57 @@ async function getActivePage(req, browserId) {
     }
 
     return { page: pageInstance, browserId: targetBrowserId, context };
+}
+
+/**
+ * Creates a FRESH, isolated context (clean cookies/storage) on an existing
+ * browser, reusing the launch profile for viewport/device shape. Used when a
+ * node needs per-node state isolation (e.g. conditional/switch branches) without
+ * contaminating the shared page. NOT recorded in the Context Pool.
+ *
+ * @returns {Promise<{ context, page, browserId }>}
+ */
+async function createIsolatedContext(req, browserId) {
+    const validation = validateBrowser(req, browserId);
+    if (validation.error) throw new Error(validation.message);
+
+    const targetBrowserId = validation.browserId;
+    const browserInstance = validation.entry.browser || validation.entry;
+
+    if (typeof browserInstance.isConnected === 'function' && !browserInstance.isConnected()) {
+        throw new Error(req.t('common.browser_disconnected'));
+    }
+
+    const entryOptions = validation.entry.options || {};
+    const device = entryOptions.devicePreset || 'Desktop';
+    const preset = DEVICE_PRESETS[device] || {};
+    const isMaximize = entryOptions.maximizeWindow && device === 'Desktop';
+
+    const contextOptions = {};
+    if (isMaximize) {
+        contextOptions.viewport = null;
+    } else {
+        const w = Number(device === 'Custom' ? entryOptions.width || 1280 : preset.width || 1280);
+        const h = Number(device === 'Custom' ? entryOptions.height || 720 : preset.height || 720);
+        contextOptions.viewport = { width: w, height: h };
+        contextOptions.screen = { width: w, height: h };
+        contextOptions.isMobile = device === 'Custom' ? !!entryOptions.isMobile : !!preset.isMobile;
+        contextOptions.hasTouch = device === 'Custom' ? !!entryOptions.hasTouch : !!preset.hasTouch;
+        const userAgent = device === 'Custom' ? null : preset.userAgent;
+        if (userAgent) contextOptions.userAgent = userAgent;
+    }
+
+    const creds = getHttpCredentials(targetBrowserId, browserService);
+    if (creds) contextOptions.httpCredentials = creds;
+
+    const fresh = await browserInstance.newContext(contextOptions);
+    attachDialogListener(fresh);
+    if (req.body?.securityObservability) {
+        await attachSecurityContextListeners(fresh);
+    }
+    let page = fresh.pages()[0];
+    if (!page) page = await fresh.newPage();
+    return { context: fresh, page, browserId: targetBrowserId };
 }
 
 async function fetchContext(req, browserId) {
@@ -823,5 +938,6 @@ export {
     getOrCreateContext,
     getActivePage,
     fetchContext,
+    createIsolatedContext,
     isCIEnvironment,
 };

@@ -1,5 +1,5 @@
 import { variableManager } from '../../../services/VariableManager.js';
-import { browserService } from '../../../services/browser.service.js';
+import { browserService, computeProfileHash } from '../../../services/browser.service.js';
 import { executionLogger } from '../../../services/ExecutionLogger.js';
 import { emitExecutionStatus } from '../../../socket.js';
 import { Run } from '../../../database/init.js';
@@ -73,24 +73,17 @@ const launchBrowserAction = async (req, res) => {
 
             // Reuse if exists and is connected, AND options match
             if (latestBrowser && latestBrowser.browser.isConnected()) {
-                const oldOpts = latestBrowser.options || {};
-                const newOpts = resolvedBody || {};
-
-                // Detect changes that require a browser restart
-                const hasChanges =
-                    oldOpts.devicePreset !== newOpts.devicePreset ||
-                    oldOpts.width !== newOpts.width ||
-                    oldOpts.height !== newOpts.height ||
-                    oldOpts.isMobile !== newOpts.isMobile ||
-                    oldOpts.maximizeWindow !== newOpts.maximizeWindow ||
-                    oldOpts.headless !== newOpts.headless ||
-                    (oldOpts.httpCredentials?.username || '') !==
-                        (newOpts.httpCredentials?.username || '');
+                // Profile-hash comparison (Fase 1): replaces the manual option
+                // diff that silently failed to detect engine changes
+                // (chromium -> firefox -> webkit), mixing browser processes.
+                const oldProfileHash = latestBrowser.profileHash;
+                const newProfileHash = computeProfileHash(resolvedBody);
+                const hasChanges = oldProfileHash !== newProfileHash;
 
                 if (!hasChanges) {
                     console.log('[ACTION] Reusing existing browser (Debug Mode)');
                     smartEmitLog(
-                        `Reusing browser (${oldOpts.devicePreset || 'Desktop'})`,
+                        `Reusing browser (${resolvedBody.devicePreset || 'Desktop'})`,
                         'info',
                         nodeId,
                     );
@@ -104,13 +97,9 @@ const launchBrowserAction = async (req, res) => {
                     });
                 } else {
                     console.log(
-                        `[ACTION] Options changed (${oldOpts.devicePreset} -> ${newOpts.devicePreset}), restarting browser...`,
+                        `[ACTION] Profile changed (${oldProfileHash} -> ${newProfileHash}), restarting browser...`,
                     );
-                    smartEmitLog(
-                        `Preset changed to ${newOpts.devicePreset}, restarting...`,
-                        'info',
-                        nodeId,
-                    );
+                    smartEmitLog(`Browser profile changed, restarting...`, 'info', nodeId);
                     await browserService.delete(latestId).catch(() => {});
                 }
             }

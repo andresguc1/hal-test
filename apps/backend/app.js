@@ -10,6 +10,7 @@ import cors from 'cors';
 import fs from 'fs';
 import { createServer } from 'http';
 import { storageCleanupService } from './services/StorageCleanupService.js';
+import { browserService } from './services/browser.service.js';
 import { doctorService } from './services/DoctorService.js';
 import { STORAGE_DIR, PUBLIC_DIR } from './config/paths.js';
 import { migrateStorageIfNecessary } from './config/migrateStorage.js';
@@ -371,6 +372,16 @@ const gracefulShutdown = async () => {
         if (io) io.close();
     } catch (e) {
         // socket not initialized
+    }
+
+    // 2.5 Drain every browser session (Fase 4): reap dead processes, close
+    // registered sessions and clear run/context registries so no orphaned
+    // browser processes survive a restart.
+    try {
+        console.log('[INIT] Draining browser sessions...');
+        await browserService.drain();
+    } catch (e) {
+        console.error('[INIT] Error draining browser sessions:', e);
     }
 
     // 3. Shutdown collaboration server

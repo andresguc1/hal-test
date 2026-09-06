@@ -333,6 +333,11 @@ export class ExecutionService {
                     console.error(`[Cleanup] Error closing browser: ${e.message}`);
                 });
             }
+            // Fase 2: release any run-bound session (idempotent, protects against
+            // a bound browser that drifted from runState.browserId).
+            await browserService.releaseRun(runId).catch((e) => {
+                console.error(`[Cleanup] Error releasing run session: ${e.message}`);
+            });
         }
         if (options.variables && options.variables.__perfMode) {
             return { runId, nodeMetrics: runState.nodeMetrics };
@@ -1177,6 +1182,8 @@ export class ExecutionService {
             // if subsequent processing (telemetry, parent sync) throws.
             if (resultData?.browserId) {
                 state.browserId = resultData.browserId;
+                // Fase 2: bind the run to its live session for strict resolution.
+                browserService.registerRunSession(state.runId, resultData.browserId);
             }
         }
 
@@ -1594,6 +1601,7 @@ export class ExecutionService {
             // state so downstream nodes never target a stale sibling session.
             if (iterationState.browserId) {
                 state.browserId = iterationState.browserId;
+                browserService.registerRunSession(state.runId, iterationState.browserId);
             }
 
             // Extract results:
@@ -2060,6 +2068,7 @@ export class ExecutionService {
             // container state so downstream nodes never target a stale session.
             if (iterationState.browserId) {
                 state.browserId = iterationState.browserId;
+                browserService.registerRunSession(state.runId, iterationState.browserId);
             }
 
             // Extract output node results
