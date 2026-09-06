@@ -88,8 +88,8 @@ describe('Fase 2 - Session Registry', () => {
         expect(browserService.runByBrowser.has(first)).toBe(false);
     });
 
-    it('releaseRun closes the owned browser and unbinds both maps', async () => {
-        const { browserId } = await launchProfile({ runId: 'run-1' });
+    it('releaseRun closes a headless automation session and unbinds both maps', async () => {
+        const { browserId } = await launchProfile({ runId: 'run-1', headless: true });
         const spy = vi.spyOn(browserService, 'delete');
         const closedId = await browserService.releaseRun('run-1');
         expect(closedId).toBe(browserId);
@@ -97,6 +97,15 @@ describe('Fase 2 - Session Registry', () => {
         expect(browserService.getRunSessionBrowserId('run-1')).toBeNull();
         expect(browserService.runByBrowser.has(browserId)).toBe(false);
         expect(browserService.has(browserId)).toBe(false);
+    });
+
+    it('releaseRun keeps a visible workspace session open (Debug persistence)', async () => {
+        const { browserId } = await launchProfile({ runId: 'run-1' }); // headless: false
+        const closedId = await browserService.releaseRun('run-1');
+        expect(closedId).toBe(browserId);
+        expect(browserService.has(browserId)).toBe(true);
+        expect(browserService.getRunSessionBrowserId('run-1')).toBeNull();
+        expect(browserService.runByBrowser.has(browserId)).toBe(false);
     });
 
     it('releaseRun is idempotent for runs without a session', async () => {
@@ -243,6 +252,32 @@ describe('Fase 4 - Orphan Reaping', () => {
         const reaped = await browserService.reapOrphans();
         expect(reaped).toBe(0);
         expect(browserService.has(browserId)).toBe(true);
+    });
+});
+
+describe('Idle sweep - visible workspace persistence', () => {
+    afterEach(async () => {
+        for (const id of Array.from(browserService.keys())) {
+            await browserService.delete(id).catch(() => {});
+        }
+        browserService.sessionsByRun.clear();
+        browserService.runByBrowser.clear();
+        browserService._hasSealedSessions = false;
+    });
+
+    it('never idle-closes a visible (headful) session while the user edits', async () => {
+        const { browserId } = await launchProfile(); // headless: false
+        browserService.lastAccessed.set(browserId, Date.now() - 10 * 60 * 1000);
+        await browserService._idleSweep(Date.now());
+        expect(browserService.has(browserId)).toBe(true);
+    });
+
+    it('idle-reaps an unbound headless automation session', async () => {
+        const { browserId } = await launchProfile({ headless: true });
+        browserService._hasSealedSessions = false; // hermetic: no real `ps` scan
+        browserService.lastAccessed.set(browserId, Date.now() - 10 * 60 * 1000);
+        await browserService._idleSweep(Date.now());
+        expect(browserService.has(browserId)).toBe(false);
     });
 });
 

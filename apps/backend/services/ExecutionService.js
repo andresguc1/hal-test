@@ -277,15 +277,22 @@ export class ExecutionService {
             console.log(`✅ [ExecutionService] Flow ${flowId} completed successfully`);
 
             // Close browser BEFORE ending the run to allow video files to flush to disk
+            // (visible workspace sessions are kept open — Debug Mode persistence).
             if (runState.browserId) {
-                console.log(
-                    `[ExecutionService] Closing browser session ${runState.browserId} before endRun to finalize video`,
-                );
-                await browserService.delete(runState.browserId).catch((e) => {
-                    console.error(
-                        `[ExecutionService] Error closing browser before endRun: ${e.message}`,
+                if (browserService.isVisibleSession(runState.browserId)) {
+                    console.log(
+                        `[ExecutionService] Keeping visible session ${runState.browserId} open (debug workspace)`,
                     );
-                });
+                } else {
+                    console.log(
+                        `[ExecutionService] Closing browser session ${runState.browserId} before endRun to finalize video`,
+                    );
+                    await browserService.delete(runState.browserId).catch((e) => {
+                        console.error(
+                            `[ExecutionService] Error closing browser before endRun: ${e.message}`,
+                        );
+                    });
+                }
                 runState.browserId = null;
             }
 
@@ -303,14 +310,20 @@ export class ExecutionService {
 
             // Close browser BEFORE ending the run to allow video files to flush to disk on failure too
             if (runState.browserId) {
-                console.log(
-                    `[ExecutionService] Closing browser session ${runState.browserId} before endRun (on failure) to finalize video`,
-                );
-                await browserService.delete(runState.browserId).catch((e) => {
-                    console.error(
-                        `[ExecutionService] Error closing browser before endRun (failure path): ${e.message}`,
+                if (browserService.isVisibleSession(runState.browserId)) {
+                    console.log(
+                        `[ExecutionService] Keeping visible session ${runState.browserId} open after failure (debug workspace)`,
                     );
-                });
+                } else {
+                    console.log(
+                        `[ExecutionService] Closing browser session ${runState.browserId} before endRun (on failure) to finalize video`,
+                    );
+                    await browserService.delete(runState.browserId).catch((e) => {
+                        console.error(
+                            `[ExecutionService] Error closing browser before endRun (failure path): ${e.message}`,
+                        );
+                    });
+                }
                 runState.browserId = null;
             }
 
@@ -324,14 +337,21 @@ export class ExecutionService {
         } finally {
             activeRunManager.cleanup(runId);
             // --- AUTOMATIC RESOURCE CLEANUP ---
-            // Ensure the browser launched for this specific run is closed
+            // Ensure the browser launched for this specific run is closed —
+            // unless it is a visible workspace that must survive run boundaries.
             if (runState.browserId) {
-                console.log(
-                    `[Cleanup] Closing browser session ${runState.browserId} for run ${runId}`,
-                );
-                await browserService.delete(runState.browserId).catch((e) => {
-                    console.error(`[Cleanup] Error closing browser: ${e.message}`);
-                });
+                if (browserService.isVisibleSession(runState.browserId)) {
+                    console.log(
+                        `[Cleanup] Keeping visible session ${runState.browserId} open for run ${runId} (debug workspace)`,
+                    );
+                } else {
+                    console.log(
+                        `[Cleanup] Closing browser session ${runState.browserId} for run ${runId}`,
+                    );
+                    await browserService.delete(runState.browserId).catch((e) => {
+                        console.error(`[Cleanup] Error closing browser: ${e.message}`);
+                    });
+                }
             }
             // Fase 2: release any run-bound session (idempotent, protects against
             // a bound browser that drifted from runState.browserId).

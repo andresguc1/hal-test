@@ -162,32 +162,41 @@ class BrowserManager {
         // unref() so the timer never keeps the Node process alive on its own.
         this._orphanScanAt = 0;
         this.idleInterval = setInterval(() => {
-            const IDLE_TIMEOUT = 2 * 60 * 1000; // 2 minutes (reduced from 5)
-            const now = Date.now();
-
-            if (this.browsers.size > 0) {
-                for (const [id, lastTime] of this.lastAccessed.entries()) {
-                    if (now - lastTime > IDLE_TIMEOUT) {
-                        const owner = this.browsers.get(id)?.runId || 'n/a';
-                        console.log(
-                            `[GC] Browser ${id} closed due to idle timeout (owner=${owner})`,
-                        );
-                        this.delete(id).catch(() => {});
-                    }
-                }
-                // Also drop stale/dead sessions whose OS process already crashed.
-                this.reapOrphans().catch(() => {});
-            }
-
-            // Kill orphaned OS processes stamped with OUR seal, but only
-            // periodically (2 min) and only if a Chromium session was ever
-            // launched. A never-matching `ps` scan is ~10ms, so back off.
-            if (this._hasSealedSessions && now - this._orphanScanAt >= 2 * 60 * 1000) {
-                this._orphanScanAt = now;
-                this.killOrphans().catch(() => {});
-            }
+            this._idleSweep(Date.now()).catch(() => {});
         }, 30 * 1000); // 30 seconds sweep (faster)
         this.idleInterval.unref();
+    }
+
+    /**
+     * One garbage-collector sweep: idle-close headless automation, drop dead
+     * processes, and (periodically) kill sealed orphan OS processes.
+     * Visible (headful) sessions are the interactive workspace and are NEVER
+     * idle-closed — they persist until explicitly stopped.
+     */
+    async _idleSweep(now = Date.now()) {
+        const IDLE_TIMEOUT = 2 * 60 * 1000; // 2 minutes (reduced from 5)
+
+        if (this.browsers.size > 0) {
+            for (const [id, lastTime] of this.lastAccessed.entries()) {
+                if (now - lastTime > IDLE_TIMEOUT) {
+                    const entry = this.browsers.get(id);
+                    if (entry?.options?.headless === false) continue;
+                    const owner = entry?.runId || 'n/a';
+                    console.log(`[GC] Browser ${id} closed due to idle timeout (owner=${owner})`);
+                    await this.delete(id).catch(() => {});
+                }
+            }
+            // Also drop stale/dead sessions whose OS process already crashed.
+            await this.reapOrphans().catch(() => {});
+        }
+
+        // Kill orphaned OS processes stamped with OUR seal, but only
+        // periodically (2 min) and only if a Chromium session was ever
+        // launched. A never-matching `ps` scan is ~10ms, so back off.
+        if (this._hasSealedSessions && now - this._orphanScanAt >= 2 * 60 * 1000) {
+            this._orphanScanAt = now;
+            await this.killOrphans().catch(() => {});
+        }
     }
 
     /**
@@ -604,15 +613,32 @@ class BrowserManager {
     }
 
     /**
-     * Closes the browser owned by a run and unbinds it from the registry.
+     * True when the session is a visible (headful) interactive workspace that
+     * must survive run boundaries and idle GC — closed only on explicit Stop,
+     * sanitize or drain.
+     */
+    isVisibleSession(browserId) {
+        return this.browsers.get(browserId)?.options?.headless === false;
+    }
+
+    /**
+     * Unbinds a run's session and closes it — UNLESS it is a visible
+     * (headful) workspace, which is kept open so the user keeps their
+     * configured page between runs (Debug Mode persistence).
      * Idempotent: returns null if the run has no session.
-     * @returns {Promise<string|null>}
+     * @returns {Promise<string|null>} the released browserId.
      */
     async releaseRun(runId) {
         const browserId = this.getRunSessionBrowserId(runId);
         if (!browserId) return null;
         this.sessionsByRun.delete(runId);
         this.runByBrowser.delete(browserId);
+        if (this.isVisibleSession(browserId)) {
+            console.log(
+                `[SESSION] Kept visible session ${browserId} open after run ${runId} (debug workspace)`,
+            );
+            return browserId;
+        }
         await this.delete(browserId).catch(() => {});
         return browserId;
     }
