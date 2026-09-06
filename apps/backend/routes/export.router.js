@@ -54,6 +54,32 @@ router.post('/code', async (req, res) => {
             });
         }
 
+        // Validate enum fields against allowlists
+        const VALID_FRAMEWORKS = ['playwright', 'cypress', 'selenium'];
+        const VALID_LANGUAGES = ['javascript', 'typescript', 'python', 'java', 'csharp'];
+        const VALID_LOCALES = ['en', 'es', 'fr', 'pt'];
+        const VALID_PATTERNS = ['flat', 'pom'];
+
+        const fw = (framework || 'playwright').toLowerCase();
+        const lang = (language || 'javascript').toLowerCase();
+        const loc = (locale || 'es').toLowerCase();
+        const pattern = (designPattern || 'flat').toLowerCase();
+
+        if (!VALID_FRAMEWORKS.includes(fw)) {
+            return res.status(400).json({ success: false, message: `Invalid framework: ${fw}` });
+        }
+        if (!VALID_LANGUAGES.includes(lang)) {
+            return res.status(400).json({ success: false, message: `Invalid language: ${lang}` });
+        }
+        if (!VALID_LOCALES.includes(loc)) {
+            return res.status(400).json({ success: false, message: `Invalid locale: ${loc}` });
+        }
+        if (!VALID_PATTERNS.includes(pattern)) {
+            return res
+                .status(400)
+                .json({ success: false, message: `Invalid design pattern: ${pattern}` });
+        }
+
         // Resolve components recursively if projectId is provided
         const resolvedFlow = projectId
             ? await exportService.resolveSubFlows(flow, projectId)
@@ -61,12 +87,12 @@ router.post('/code', async (req, res) => {
 
         const result = exportService.generateCode(
             resolvedFlow,
-            framework || 'playwright',
-            language || 'javascript',
-            locale || 'es',
+            fw,
+            lang,
+            loc,
             !!usePOM,
             !!includeCICD,
-            designPattern || 'flat',
+            pattern,
         );
 
         if (result.success) {

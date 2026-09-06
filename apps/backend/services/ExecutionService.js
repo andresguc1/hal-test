@@ -4,6 +4,7 @@ import * as actions from '../controllers/action.controller.js';
 import { emitLog, emitFlowFinished, emitEdgeStatus, emitExecutionStatus } from '../socket.js';
 import i18n from '../config/i18n.js';
 import { variableManager } from './VariableManager.js';
+import { expressionEngine } from './ExpressionEngine.js';
 import { executionManager } from './ExecutionManager.js';
 import { activeRunManager } from './ActiveRunManager.js';
 import { yjsServer } from './collaboration/YjsServer.js';
@@ -1998,9 +1999,15 @@ export class ExecutionService {
                     itemsToProcess = [];
                 }
             } else if (singleMatch) {
-                // Match by expression
+                // Match by expression — routed through ExpressionEngine sandbox
                 try {
-                    const matchFn = new Function('item', 'index', `return ${singleMatch}`);
+                    const matchFn = (item, index) =>
+                        expressionEngine.evaluate(
+                            singleMatch,
+                            () => undefined,
+                            { item, index },
+                            true,
+                        );
                     const matchIdx = itemsToProcess.findIndex((item, idx) => matchFn(item, idx));
                     if (matchIdx >= 0) {
                         itemsToProcess = [itemsToProcess[matchIdx]];

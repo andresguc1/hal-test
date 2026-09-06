@@ -42,19 +42,27 @@ router.get('/evidence/:runId/:nodeId', async (req, res) => {
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     res.setHeader('Access-Control-Allow-Origin', '*'); // Optional dev convenience
 
-    // Sanitize check (basic)
-    if (runId.includes('..') || nodeId.includes('..')) {
-        return res.status(400).json({ error: 'Invalid parameters' });
+    // Strict format check: only allow safe characters in path params
+    const SAFE_ID_RE = /^[a-zA-Z0-9_\-.]+$/;
+    if (!SAFE_ID_RE.test(runId) || !SAFE_ID_RE.test(nodeId)) {
+        return res.status(400).json({ success: false, error: 'Invalid parameters' });
     }
 
-    const runDir = path.join(STORAGE_RUNS_DIR, runId);
+    // Resolve paths and verify they stay within STORAGE_RUNS_DIR
+    const runDir = path.resolve(STORAGE_RUNS_DIR, runId);
+    if (!runDir.startsWith(path.resolve(STORAGE_RUNS_DIR))) {
+        return res.status(400).json({ success: false, error: 'Invalid parameters' });
+    }
     if (!fs.existsSync(runDir)) {
         return res.status(404).json({ error: 'Run directory not found' });
     }
 
     // Strategy 1: Direct match (Standard Forensic) -> {nodeId}.png
     let filename = `${nodeId}.png`;
-    let filePath = path.join(runDir, filename);
+    let filePath = path.resolve(runDir, filename);
+    if (!filePath.startsWith(runDir)) {
+        return res.status(400).json({ success: false, error: 'Invalid parameters' });
+    }
 
     if (!fs.existsSync(filePath)) {
         // Strategy 2: Legacy/Fuzzy match (step_{timestamp}_{nodeId}.png)
@@ -63,7 +71,10 @@ router.get('/evidence/:runId/:nodeId', async (req, res) => {
             const files = await fs.promises.readdir(runDir);
             const found = files.find((f) => f.includes(nodeId) && f.endsWith('.png'));
             if (found) {
-                filePath = path.join(runDir, found);
+                filePath = path.resolve(runDir, found);
+                if (!filePath.startsWith(runDir)) {
+                    return res.status(400).json({ success: false, error: 'Invalid parameters' });
+                }
             } else {
                 return res.status(404).json({ error: 'Evidence not found', nodeId });
             }

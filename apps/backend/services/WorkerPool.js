@@ -6,6 +6,30 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const activePools = new Set();
 
+// Safe subset of environment variables for worker processes.
+// Strips secrets, tokens, and variables that could alter runtime behaviour.
+const WORKER_ENV_ALLOWLIST = new Set([
+    'NODE_ENV',
+    'PATH',
+    'HOME',
+    'USER',
+    'LANG',
+    'LC_ALL',
+    'TMPDIR',
+    'XDG_RUNTIME_DIR',
+    'HALTEST_MODE',
+    'HAL_CLI_MODE',
+    'PORT',
+]);
+
+function buildWorkerEnv() {
+    const env = {};
+    for (const key of WORKER_ENV_ALLOWLIST) {
+        if (process.env[key] !== undefined) env[key] = process.env[key];
+    }
+    return env;
+}
+
 /**
  * WorkerPool — Concurrency-Limited child_process Scheduler
  *
@@ -35,7 +59,7 @@ class WorkerPool {
 
     _spawnWorker(workerPath) {
         const worker = fork(workerPath, [], {
-            env: process.env,
+            env: buildWorkerEnv(),
             stdio: 'inherit',
         });
 

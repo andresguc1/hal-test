@@ -7,6 +7,26 @@ import { DEFAULT_LOCAL_MODEL } from '../services/LLMFactory.js';
 
 const router = express.Router();
 
+/**
+ * Validate that a base URL targets a local LLM endpoint (no SSRF).
+ * Allows http/https to 127.0.0.1, localhost, or the machine's own loopback.
+ */
+const ALLOWED_LOOPBACK = new Set(['127.0.0.1', '::1', 'localhost', '[::1]']);
+function sanitizeBaseUrl(raw) {
+    if (!raw || typeof raw !== 'string') return 'http://127.0.0.1:11434';
+    const trimmed = raw.trim();
+    let url;
+    try {
+        url = new URL(trimmed);
+    } catch {
+        return 'http://127.0.0.1:11434';
+    }
+    if (!['http:', 'https:'].includes(url.protocol)) return 'http://127.0.0.1:11434';
+    const hostname = url.hostname.toLowerCase().replace(/^\[|]$/g, '');
+    if (!ALLOWED_LOOPBACK.has(hostname)) return 'http://127.0.0.1:11434';
+    return url.origin;
+}
+
 // callOpenAI Removed - Now using AIService
 
 /**
@@ -16,7 +36,8 @@ const router = express.Router();
  *     summary: Validates API Key against the provider.
  */
 router.post('/validate', async (req, res) => {
-    const { provider, apiKey, baseUrl, model } = req.body;
+    const { provider, apiKey, model } = req.body;
+    const baseUrl = sanitizeBaseUrl(req.body.baseUrl);
 
     const providerLower = provider?.toLowerCase();
     const hasEnvKey =
@@ -66,9 +87,10 @@ router.post('/generate-flow', async (req, res) => {
     const provider = req.headers['x-ai-provider'] || 'openai'; // Allow provider override
 
     if (!apiKey && provider?.toLowerCase() !== 'ollama') {
-        return res
-            .status(401)
-            .json({ error: 'Missing API configuration. Please set up AI settings.' });
+        return res.status(401).json({
+            success: false,
+            error: 'Missing API configuration. Please set up AI settings.',
+        });
     }
 
     try {
@@ -81,7 +103,7 @@ router.post('/generate-flow', async (req, res) => {
         res.json(result);
     } catch (error) {
         console.error('AI Gen Error', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
@@ -110,7 +132,7 @@ router.post('/heal-selector', async (req, res) => {
     const browserId = req.headers['x-browser-id'] || req.body.browserId;
 
     if (!apiKey && provider !== 'ollama') {
-        return res.status(401).json({ error: 'Missing API Key' });
+        return res.status(401).json({ success: false, error: 'Missing API Key' });
     }
 
     let finalDomSnippet = domSnippet;
@@ -179,7 +201,7 @@ If no element is found, return {"correctedSelector": null, "confidence": 0, "rea
         res.json({ suggestion: result.correctedSelector, confidence: result.confidence });
     } catch (error) {
         console.error('AI Heal Error', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
@@ -201,8 +223,7 @@ If no element is found, return {"correctedSelector": null, "confidence": 0, "rea
  *         description: Model to check availability for
  */
 router.get('/health', async (req, res) => {
-    let baseUrl = req.query.baseUrl || 'http://127.0.0.1:11434';
-    if (baseUrl.includes('localhost')) baseUrl = baseUrl.replace('localhost', '127.0.0.1');
+    const baseUrl = sanitizeBaseUrl(req.query.baseUrl);
     const model = req.query.model || DEFAULT_LOCAL_MODEL;
 
     try {
@@ -246,15 +267,13 @@ router.post('/ask', async (req, res) => {
     const { prompt, messages, model, baseUrl, temperature } = req.body;
 
     if (!prompt && (!messages || messages.length === 0)) {
-        return res.status(400).json({ error: 'Prompt or messages is required' });
+        return res.status(400).json({ success: false, error: 'Prompt or messages is required' });
     }
 
     // Resolve provider/model from headers or body
     const provider = req.headers['x-ai-provider'] || 'ollama';
     const activeModel = model || req.headers['x-ai-model'] || DEFAULT_LOCAL_MODEL;
-    let activeBaseUrl = baseUrl || req.headers['x-ai-base-url'] || 'http://127.0.0.1:11434';
-    if (activeBaseUrl.includes('localhost'))
-        activeBaseUrl = activeBaseUrl.replace('localhost', '127.0.0.1');
+    const activeBaseUrl = sanitizeBaseUrl(baseUrl || req.headers['x-ai-base-url']);
     const apiKey = req.headers['x-ai-api-key'] || 'ollama';
     const temp = temperature !== undefined ? temperature : 0.7;
 
@@ -319,9 +338,7 @@ router.post('/ask', async (req, res) => {
 router.post('/hal-quote', async (req, res) => {
     const provider = req.headers['x-ai-provider'] || 'ollama';
     const activeModel = req.headers['x-ai-model'] || DEFAULT_LOCAL_MODEL;
-    let activeBaseUrl = req.headers['x-ai-base-url'] || 'http://127.0.0.1:11434';
-    if (activeBaseUrl.includes('localhost'))
-        activeBaseUrl = activeBaseUrl.replace('localhost', '127.0.0.1');
+    const activeBaseUrl = sanitizeBaseUrl(req.headers['x-ai-base-url']);
     const apiKey = req.headers['x-ai-api-key'] || 'ollama';
 
     const system = `You are HAL-9001, the AI brain behind a visual test automation tool called HalTest.

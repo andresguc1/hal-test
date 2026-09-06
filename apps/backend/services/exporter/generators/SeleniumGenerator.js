@@ -1,6 +1,7 @@
 import { BaseGenerator } from '../core/BaseGenerator.js';
 import { NodeMapperRegistry } from '../core/GeneratorRegistry.js';
 import { variableManager } from '../../VariableManager.js';
+import { escapeForDoubleQuotes } from '../core/escapeUtils.js';
 
 const CONTAINER_TYPES = ['component', 'loop', 'for_each'];
 
@@ -108,9 +109,10 @@ export class SeleniumGenerator extends BaseGenerator {
                 : `print("⚠️ ${this.msg.not_implemented} ${type}")`;
         }
 
+        const safeLabel = escapeForDoubleQuotes(label);
         const printStatement = isJava
-            ? `System.out.println("👉 Step: ${label}");`
-            : `print("👉 Step: ${label}")`;
+            ? `System.out.println("👉 Step: ${safeLabel}");`
+            : `print("👉 Step: ${safeLabel}")`;
 
         return `${indent}${nodeIdComment ? nodeIdComment + '\n' + indent : ''}${printStatement}\n${indent}${nodeCode}`;
     }

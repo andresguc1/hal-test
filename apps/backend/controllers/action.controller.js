@@ -85,7 +85,7 @@ export const resetEnvironment = async (req, res) => {
     try {
         console.log('[System] Resetting environment...');
         await browserService.sanitize();
-        res.json({ success: true, message: 'Environment cleaned and resetted' });
+        res.json({ success: true, message: 'Environment cleaned and reset' });
     } catch (error) {
         console.error('[Reset Error]', error.message);
         res.status(500).json({ success: false, message: error.message });

@@ -1,6 +1,7 @@
 import { BaseGenerator } from '../core/BaseGenerator.js';
 import { NodeMapperRegistry } from '../core/GeneratorRegistry.js';
 import { variableManager } from '../../VariableManager.js';
+import { escapeForSingleQuotes, escapeForTemplateLiteral } from '../core/escapeUtils.js';
 
 const CONTAINER_TYPES = ['component', 'loop', 'for_each'];
 
@@ -63,7 +64,8 @@ export class CypressGenerator extends BaseGenerator {
 
             if (type === 'component') {
                 // Component: group as a nested describe
-                return `${indent}${nodeIdComment ? nodeIdComment + '\n' + indent : ''}describe('${label}', () => {\n${subCode}\n${indent}});`;
+                const safeLabel = escapeForSingleQuotes(label);
+                return `${indent}${nodeIdComment ? nodeIdComment + '\n' + indent : ''}describe('${safeLabel}', () => {\n${subCode}\n${indent}});`;
             }
 
             if (type === 'for_each') {
@@ -90,7 +92,8 @@ export class CypressGenerator extends BaseGenerator {
             nodeCode = `cy.log('⚠️ ${this.msg.not_implemented} ${type}');`;
         }
 
-        return `${indent}${nodeIdComment ? nodeIdComment + '\n' + indent : ''}cy.log(\`👉 Step: ${label}\`);\n${indent}${nodeCode}`;
+        const safeLabel = escapeForTemplateLiteral(label);
+        return `${indent}${nodeIdComment ? nodeIdComment + '\n' + indent : ''}cy.log(\`👉 Step: ${safeLabel}\`);\n${indent}${nodeCode}`;
     }
 
     generateFooter() {
