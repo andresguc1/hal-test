@@ -158,20 +158,36 @@ class BrowserManager {
         this.runContext = new Map();
 
         // --- Idle Garbage Collector ---
-        // Sweeps frequently to close sessions idle for > 2 minutes
+        // Sweeps frequently to close sessions idle for > 2 minutes.
+        // unref() so the timer never keeps the Node process alive on its own.
+        this._orphanScanAt = 0;
         this.idleInterval = setInterval(() => {
             const IDLE_TIMEOUT = 2 * 60 * 1000; // 2 minutes (reduced from 5)
             const now = Date.now();
-            for (const [id, lastTime] of this.lastAccessed.entries()) {
-                if (now - lastTime > IDLE_TIMEOUT) {
-                    const owner = this.browsers.get(id)?.runId || 'n/a';
-                    console.log(`[GC] Browser ${id} closed due to idle timeout (owner=${owner})`);
-                    this.delete(id).catch(() => {});
+
+            if (this.browsers.size > 0) {
+                for (const [id, lastTime] of this.lastAccessed.entries()) {
+                    if (now - lastTime > IDLE_TIMEOUT) {
+                        const owner = this.browsers.get(id)?.runId || 'n/a';
+                        console.log(
+                            `[GC] Browser ${id} closed due to idle timeout (owner=${owner})`,
+                        );
+                        this.delete(id).catch(() => {});
+                    }
                 }
+                // Also drop stale/dead sessions whose OS process already crashed.
+                this.reapOrphans().catch(() => {});
             }
-            // Also drop stale/dead sessions whose OS process already crashed.
-            this.reapOrphans().catch(() => {});
+
+            // Kill orphaned OS processes stamped with OUR seal, but only
+            // periodically (2 min) and only if a Chromium session was ever
+            // launched. A never-matching `ps` scan is ~10ms, so back off.
+            if (this._hasSealedSessions && now - this._orphanScanAt >= 2 * 60 * 1000) {
+                this._orphanScanAt = now;
+                this.killOrphans().catch(() => {});
+            }
         }, 30 * 1000); // 30 seconds sweep (faster)
+        this.idleInterval.unref();
     }
 
     /**

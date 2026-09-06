@@ -4,7 +4,8 @@ import { Globe, Loader2, Recycle } from "lucide-react";
 import { api } from "../utils/api";
 import { useTranslation } from "react-i18next";
 
-const POLL_MS = 10_000;
+const POLL_MS_OPEN = 10_000;
+const POLL_MS_CLOSED = 60_000;
 
 const formatUptime = (ms) => {
   if (!ms) return "—";
@@ -19,6 +20,10 @@ const formatUptime = (ms) => {
  * Live snapshot of the backend browser sessions (Fase 2–6): shows the active
  * count and engine/owner per session, plus a manual "reap orphans" trigger
  * (kills sealed processes whose Playwright handle was lost).
+ *
+ * Polling is load-aware: 10s while the popover is open, 60s otherwise, paused
+ * entirely while the tab is hidden, and state is only committed when the
+ * snapshot actually changes — so the header stays silent between updates.
  */
 export default function BrowserSessionsChip({ className }) {
   const { t } = useTranslation();
@@ -27,21 +32,41 @@ export default function BrowserSessionsChip({ className }) {
   const [reaping, setReaping] = useState(false);
   const [error, setError] = useState(null);
   const popoverRef = useRef(null);
+  const lastSnapshotRef = useRef("");
 
   const refresh = useCallback(async () => {
     try {
       const res = await api.get("/inspector/sessions");
-      if (res?.success) setSessions(res.details ?? []);
+      if (!res?.success) return;
+      const next = res.details ?? [];
+      const serialized = JSON.stringify(next);
+      if (serialized !== lastSnapshotRef.current) {
+        lastSnapshotRef.current = serialized;
+        setSessions(next);
+      }
     } catch {
       /* backend offline — keep last known state */
     }
   }, []);
 
+  const hiddenRef = useRef(document.hidden);
+
+  useEffect(() => {
+    const onVisibility = () => {
+      hiddenRef.current = document.hidden;
+      if (!document.hidden) refresh();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [refresh]);
+
   useEffect(() => {
     refresh();
-    const timer = setInterval(refresh, POLL_MS);
+    const timer = setInterval(() => {
+      if (!hiddenRef.current) refresh();
+    }, open ? POLL_MS_OPEN : POLL_MS_CLOSED);
     return () => clearInterval(timer);
-  }, [refresh]);
+  }, [refresh, open]);
 
   useEffect(() => {
     if (!open) return;
