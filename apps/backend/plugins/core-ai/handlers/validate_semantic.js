@@ -72,6 +72,9 @@ const validateSemanticAction = async (req, res) => {
             apiKey,
             keys,
             maxTokens: Number(maxTokens),
+            taskType: 'validation',
+            nodeId,
+            runId: req.body.runId,
             parentSignal: req.signal,
         });
 

@@ -63,6 +63,9 @@ const callLlmAction = async (req, res) => {
             baseUrl: headerBaseUrl,
             maxTokens,
             temperature,
+            taskType: 'generation',
+            nodeId: req.body.nodeId,
+            runId: req.body.runId,
             parentSignal: req.signal,
         });
 

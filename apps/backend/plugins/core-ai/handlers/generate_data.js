@@ -106,6 +106,9 @@ ${fields ? `Fields: ${JSON.stringify(fields)}` : ''}`;
             maxTokens,
             temperature,
             expectedFormat,
+            taskType: 'generation',
+            nodeId: req.body.nodeId,
+            runId: req.body.runId,
             parentSignal: req.signal,
         });
 

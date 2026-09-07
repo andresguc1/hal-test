@@ -5,6 +5,8 @@ import { playwrightMcpServer } from './PlaywrightMCPServer.js';
 import { llmFactory, RECOMMENDED_LOCAL_MODELS, DEFAULT_LOCAL_MODEL } from './LLMFactory.js';
 import { repairJson, extractJson, parseToolCalls } from './AIServiceParsing.js';
 import { aiGenerationGuard } from '../core/AIGenerationGuard.js';
+import aiTaskOptimizer from './AITaskOptimizer.js';
+import aiUsageLogger from './AIUsageLogger.js';
 
 /**
  * Servicio Central de IA
@@ -47,18 +49,59 @@ class AIService {
         return { provider: 'ollama', model: ollamaModel };
     }
 
+    /**
+     * Fire-and-forget usage tracking. Must never throw or affect the AI response.
+     */
+    _trackUsage(taskType, provider, model, opts = {}) {
+        try {
+            const u = opts.usage;
+            const promptTokens =
+                u?.promptTokens ?? u?.prompt_tokens ?? u?.inputTokens ?? u?.input_tokens ?? 0;
+            const completionTokens =
+                u?.completionTokens ??
+                u?.completion_tokens ??
+                u?.outputTokens ??
+                u?.output_tokens ??
+                0;
+
+            aiUsageLogger
+                .log({
+                    taskType: taskType || 'unknown',
+                    provider: provider || null,
+                    model: model || null,
+                    promptTokens,
+                    completionTokens,
+                    latencyMs: opts.latencyMs,
+                    success: opts.success !== false,
+                    nodeId: opts.nodeId,
+                    runId: opts.runId,
+                    error: opts.error,
+                })
+                .catch(() => {
+                    // intentionally swallowed (logging must never break the call)
+                });
+        } catch (err) {
+            console.warn('[AIService] Usage tracking failed:', err?.message);
+        }
+    }
+
     async generateText({
         prompt,
         model,
         system,
         maxTokens,
-        temperature = 0.7,
+        temperature,
         provider,
         apiKey,
         baseUrl,
         taskType = 'reasoning',
         parentSignal,
+        nodeId,
+        runId,
     }) {
+        const startedAt = Date.now();
+        let activeProvider;
+        let activeModel;
         try {
             // Apply Matrix Logic if no specific model/provider forced
             let selected = { provider, model };
@@ -66,8 +109,16 @@ class AIService {
                 selected = this.selectBestModel(taskType, provider);
             }
 
-            let activeProvider = provider || selected.provider;
-            let activeModel = model || selected.model;
+            activeProvider = provider || selected.provider;
+            activeModel = model || selected.model;
+
+            // AI Task Optimization: per-task-type defaults (only when caller provides none)
+            const { effective } = aiTaskOptimizer.resolve(taskType, undefined, {
+                maxTokens,
+                temperature,
+            });
+            const effectiveMaxTokens = effective.maxTokens;
+            const effectiveTemperature = effective.temperature;
 
             // --- SMART RESOLUTION FOR OLLAMA ---
             if (activeProvider === 'ollama' && activeModel) {
@@ -95,18 +146,34 @@ class AIService {
                 model: modelRef,
                 prompt,
                 system,
-                maxTokens: maxTokens ? Number(maxTokens) : undefined,
-                temperature,
+                maxTokens: effectiveMaxTokens != null ? Number(effectiveMaxTokens) : undefined,
+                temperature: effectiveTemperature,
                 providerOptions: {
                     openai: {
-                        max_tokens: maxTokens ? Number(maxTokens) : undefined,
+                        max_tokens:
+                            effectiveMaxTokens != null ? Number(effectiveMaxTokens) : undefined,
                     },
                 },
                 abortSignal: combinedSignal, // 5 minute timeout for local models/slow requests
             });
 
+            this._trackUsage(taskType, activeProvider, activeModel, {
+                usage,
+                latencyMs: Date.now() - startedAt,
+                success: true,
+                nodeId,
+                runId,
+            });
+
             return { text, usage, finishReason };
         } catch (error) {
+            this._trackUsage(taskType, activeProvider, activeModel, {
+                latencyMs: Date.now() - startedAt,
+                success: false,
+                error,
+                nodeId,
+                runId,
+            });
             console.error('[AIService] Error generating text:', error);
             throw llmFactory.mapError(error);
         }
@@ -711,7 +778,22 @@ IMPORTANT DIRECTIONS:
      * Layer 2: Prefix Stabilization for Ollama (KV Cache optimization)
      * Layer 3: Tiered Prompt Escalation (Fast Pass -> Self-Correction -> Fuzzy Fallback)
      */
-    async healSelector({
+    async healSelector(opts = {}) {
+        const startedAt = Date.now();
+        const taskType = opts.taskType || 'healing';
+        const result = await this._healSelectorRaw(opts);
+
+        this._trackUsage(taskType, opts.provider || 'ollama', opts.model || null, {
+            latencyMs: Date.now() - startedAt,
+            success: !!result?.correctedSelector,
+            nodeId: opts.nodeId,
+            runId: opts.runId,
+        });
+
+        return result;
+    }
+
+    async _healSelectorRaw({
         _screenshotBase64,
         domSnippet,
         originalSelector,
@@ -1037,7 +1119,31 @@ Response Format: Return ONLY raw JSON: {"correctedSelector": "text=...", "confid
     /**
      * Genera datos estructurados basados en una descripción.
      */
-    async generateStructured({
+    async generateStructured(opts = {}) {
+        const startedAt = Date.now();
+        const taskType = opts.taskType || 'reasoning';
+        try {
+            const result = await this._generateStructuredRaw(opts);
+            this._trackUsage(taskType, opts.provider, opts.model, {
+                latencyMs: Date.now() - startedAt,
+                success: true,
+                nodeId: opts.nodeId,
+                runId: opts.runId,
+            });
+            return result;
+        } catch (error) {
+            this._trackUsage(taskType, opts.provider, opts.model, {
+                latencyMs: Date.now() - startedAt,
+                success: false,
+                error,
+                nodeId: opts.nodeId,
+                runId: opts.runId,
+            });
+            throw error;
+        }
+    }
+
+    async _generateStructuredRaw({
         description,
         schema,
         provider,
@@ -1045,12 +1151,12 @@ Response Format: Return ONLY raw JSON: {"correctedSelector": "text=...", "confid
         apiKey,
         keys,
         maxTokens,
-        temperature = 0.7,
+        temperature,
         expectedFormat = 'json',
         parentSignal,
+        taskType = 'reasoning',
     }) {
         try {
-            const taskType = 'reasoning';
             let selected = { provider, model };
             if (!model || !provider) {
                 selected = this.selectBestModel(taskType, provider);
@@ -1058,6 +1164,14 @@ Response Format: Return ONLY raw JSON: {"correctedSelector": "text=...", "confid
 
             let activeProvider = provider || selected.provider;
             let activeModel = model || selected.model;
+
+            // AI Task Optimization: per-task-type defaults (only when caller provides none)
+            const { effective } = aiTaskOptimizer.resolve(taskType, undefined, {
+                maxTokens,
+                temperature,
+            });
+            const effectiveMaxTokens = effective.maxTokens;
+            const effectiveTemperature = effective.temperature;
 
             // --- SMART RESOLUTION FOR OLLAMA ---
             if (activeProvider === 'ollama' && activeModel) {
@@ -1095,8 +1209,8 @@ Response Format: Return ONLY raw JSON: {"correctedSelector": "text=...", "confid
                 const { text } = await generateText({
                     model: modelRef,
                     prompt: description,
-                    temperature: Number(temperature),
-                    maxTokens: maxTokens ? Number(maxTokens) : undefined,
+                    temperature: Number(effectiveTemperature),
+                    maxTokens: effectiveMaxTokens != null ? Number(effectiveMaxTokens) : undefined,
                     abortSignal: combinedSignal,
                 });
                 return text ? text.trim() : '';
@@ -1110,11 +1224,12 @@ Response Format: Return ONLY raw JSON: {"correctedSelector": "text=...", "confid
                 const { text } = await generateText({
                     model: modelRef,
                     prompt,
-                    temperature: Number(temperature),
-                    maxTokens: maxTokens ? Number(maxTokens) : undefined,
+                    temperature: Number(effectiveTemperature),
+                    maxTokens: effectiveMaxTokens != null ? Number(effectiveMaxTokens) : undefined,
                     providerOptions: {
                         openai: {
-                            max_tokens: maxTokens ? Number(maxTokens) : undefined,
+                            max_tokens:
+                                effectiveMaxTokens != null ? Number(effectiveMaxTokens) : undefined,
                         },
                     },
                     abortSignal: combinedSignal,
@@ -1129,8 +1244,8 @@ Response Format: Return ONLY raw JSON: {"correctedSelector": "text=...", "confid
                 model: modelRef,
                 schema,
                 prompt: description,
-                temperature: Number(temperature),
-                maxTokens: maxTokens ? Number(maxTokens) : undefined,
+                temperature: Number(effectiveTemperature),
+                maxTokens: effectiveMaxTokens != null ? Number(effectiveMaxTokens) : undefined,
                 abortSignal: combinedSignal,
             });
 
@@ -1144,9 +1259,42 @@ Response Format: Return ONLY raw JSON: {"correctedSelector": "text=...", "confid
     /**
      * Valida contenido basado en criterios semánticos.
      */
-    async validate({ content, criteria, provider, model, apiKey, keys, maxTokens, parentSignal }) {
+    async validate(opts = {}) {
+        const startedAt = Date.now();
+        const taskType = opts.taskType || 'validation';
         try {
-            const taskType = 'reasoning';
+            const result = await this._validateRaw(opts);
+            this._trackUsage(taskType, opts.provider, opts.model, {
+                latencyMs: Date.now() - startedAt,
+                success: true,
+                nodeId: opts.nodeId,
+                runId: opts.runId,
+            });
+            return result;
+        } catch (error) {
+            this._trackUsage(taskType, opts.provider, opts.model, {
+                latencyMs: Date.now() - startedAt,
+                success: false,
+                error,
+                nodeId: opts.nodeId,
+                runId: opts.runId,
+            });
+            throw error;
+        }
+    }
+
+    async _validateRaw({
+        content,
+        criteria,
+        provider,
+        model,
+        apiKey,
+        keys,
+        maxTokens,
+        parentSignal,
+        taskType = 'validation',
+    }) {
+        try {
             let selected = { provider, model };
             if (!model || !provider) {
                 selected = this.selectBestModel(taskType, provider);
@@ -1154,6 +1302,14 @@ Response Format: Return ONLY raw JSON: {"correctedSelector": "text=...", "confid
 
             let activeProvider = provider || selected.provider;
             let activeModel = model || selected.model;
+
+            // AI Task Optimization: per-task-type defaults (only when caller provides none)
+            const { effective } = aiTaskOptimizer.resolve(taskType, undefined, {
+                maxTokens,
+                temperature: 0.1,
+            });
+            const effectiveMaxTokens = effective.maxTokens;
+            const effectiveTemperature = effective.temperature;
 
             // --- SMART RESOLUTION FOR OLLAMA ---
             if (activeProvider === 'ollama' && activeModel) {
@@ -1195,11 +1351,12 @@ Response Format: Return ONLY raw JSON: {"correctedSelector": "text=...", "confid
                 const { text } = await generateText({
                     model: modelRef,
                     prompt,
-                    temperature: 0.1,
-                    maxTokens: maxTokens ? Number(maxTokens) : undefined,
+                    temperature: Number(effectiveTemperature),
+                    maxTokens: effectiveMaxTokens != null ? Number(effectiveMaxTokens) : undefined,
                     providerOptions: {
                         openai: {
-                            max_tokens: maxTokens ? Number(maxTokens) : undefined,
+                            max_tokens:
+                                effectiveMaxTokens != null ? Number(effectiveMaxTokens) : undefined,
                         },
                     },
                     abortSignal: combinedSignal,
@@ -1221,7 +1378,7 @@ Response Format: Return ONLY raw JSON: {"correctedSelector": "text=...", "confid
                     confidence: z.number(),
                 }),
                 prompt,
-                maxTokens: maxTokens ? Number(maxTokens) : undefined,
+                maxTokens: effectiveMaxTokens != null ? Number(effectiveMaxTokens) : undefined,
                 abortSignal: combinedSignal,
             });
 

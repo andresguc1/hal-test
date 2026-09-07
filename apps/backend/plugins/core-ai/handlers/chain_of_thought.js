@@ -42,6 +42,8 @@ const chainOfThoughtAction = async (req, res) => {
             temperature: Number(temperature),
             maxTokens: Number(maxTokens),
             taskType: 'reasoning',
+            nodeId,
+            runId: req.body.runId,
             parentSignal: req.signal,
         });
 

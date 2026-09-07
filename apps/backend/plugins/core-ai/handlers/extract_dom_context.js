@@ -1,6 +1,7 @@
 import { validateBrowser, getOrCreateContext } from '../../../core/browser-utils.js';
 import aiService from '../../../services/AIService.js';
 import { DEFAULT_LOCAL_MODEL } from '../../../services/LLMFactory.js';
+import aiTaskOptimizer from '../../../services/AITaskOptimizer.js';
 import { variableManager } from '../../../services/VariableManager.js';
 import { emitLog } from '../../../socket.js';
 
@@ -64,6 +65,10 @@ const extractDomContextAction = async (req, res) => {
                 (activeProvider === 'openrouter' ? process.env.OPENROUTER_API_KEY : undefined) ||
                 (activeProvider === 'ollama' ? 'ollama' : undefined);
 
+            // AI Task Optimization: reduce input context before sending (extraction policy)
+            const { reducedContext } = aiTaskOptimizer.resolve('extraction', rawContent);
+            const aiContent = reducedContext && reducedContext.trim() ? reducedContext : rawContent;
+
             emitLog({
                 message: `Cleaning up content with AI (${activeModel})...`,
                 type: 'ai',
@@ -72,8 +77,8 @@ const extractDomContextAction = async (req, res) => {
 
             const prompt =
                 extractionType === 'markdown'
-                    ? `Convert the following content into clean, well-structured Markdown. Remove UI noise like navigation menus, footers, and ads. Focus on the main content.\n\nContent:\n${rawContent}`
-                    : `Extract and clean the main text from the following content. Remove boilerplate, UI artifacts, and repetitive elements. Retain only the actual information.\n\nContent:\n${rawContent}`;
+                    ? `Convert the following content into clean, well-structured Markdown. Remove UI noise like navigation menus, footers, and ads. Focus on the main content.\n\nContent:\n${aiContent}`
+                    : `Extract and clean the main text from the following content. Remove boilerplate, UI artifacts, and repetitive elements. Retain only the actual information.\n\nContent:\n${aiContent}`;
 
             const response = await aiService.generateText({
                 prompt,
@@ -82,6 +87,9 @@ const extractDomContextAction = async (req, res) => {
                 apiKey,
                 baseUrl: headerBaseUrl,
                 maxTokens: Number(maxTokens),
+                taskType: 'extraction',
+                nodeId,
+                runId: req.body.runId,
                 parentSignal: req.signal,
             });
 

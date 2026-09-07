@@ -13,6 +13,7 @@ import CollaboratorRole from './models/CollaboratorRole.js';
 import ExecutionLockModel from './models/ExecutionLockModel.js';
 import SecurityComplianceRun from './models/SecurityComplianceRun.js';
 import SecurityComplianceResult from './models/SecurityComplianceResult.js';
+import AIUsageLog from './models/AIUsageLog.js';
 
 // Define associations
 User.hasMany(Project, { as: 'projects', foreignKey: 'userId', onDelete: 'CASCADE', hooks: true });
@@ -404,6 +405,7 @@ export {
     ExecutionLockModel,
     SecurityComplianceRun,
     SecurityComplianceResult,
+    AIUsageLog,
 };
 
 // Allow running directly from CLI

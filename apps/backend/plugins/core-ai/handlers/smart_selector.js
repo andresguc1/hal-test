@@ -1,6 +1,7 @@
 import { validateBrowser, getOrCreateContext } from '../../../core/browser-utils.js';
 import aiService from '../../../services/AIService.js';
 import { DEFAULT_LOCAL_MODEL } from '../../../services/LLMFactory.js';
+import selectorHealer from '../../../services/SelectorHealer.js';
 import { variableManager } from '../../../services/VariableManager.js';
 import { emitLog } from '../../../socket.js';
 
@@ -44,8 +45,22 @@ const smartSelectorAction = async (req, res) => {
             nodeId,
         });
 
-        // Extract DOM snippet for context
-        const domSnippet = await page.content();
+        // Extract DOM snippet for context.
+        // AI Task Optimization: use the compact DOM-Crusher stream instead of the full page HTML.
+        let domSnippet = '';
+        try {
+            domSnippet = await page.evaluate(
+                selectorHealer.getCompressionScript(),
+                originalSelector,
+            );
+        } catch (compressErr) {
+            console.warn(
+                '[SmartSelector] DOM compression failed, falling back to truncated HTML:',
+                compressErr.message,
+            );
+            const html = await page.content();
+            domSnippet = html.substring(0, 12000);
+        }
 
         const resolvedIntent = variableManager.resolve(intent);
 
@@ -59,6 +74,9 @@ const smartSelectorAction = async (req, res) => {
             apiKey,
             baseUrl: headerBaseUrl,
             timeout: 60000, // 1 minute timeout for healer
+            taskType: 'healing',
+            nodeId,
+            runId: req.body.runId,
             parentSignal: req.signal,
         });
 
