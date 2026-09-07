@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Globe,
   Thermometer,
@@ -28,6 +28,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../utils/api";
 import { FineTuningDashboardModal } from "./FineTuningDashboardModal";
 import { AIUsageDashboardModal } from "./AIUsageDashboardModal";
+import { ModelDiscoveryCombobox } from "./ModelDiscoveryCombobox";
 
 /**
  * AISettingsPanel
@@ -43,6 +44,7 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
   const [showUsageDashboard, setShowUsageDashboard] = useState(false);
   const [datasetSize, setDatasetSize] = useState(0);
   const [startWithTraining, setStartWithTraining] = useState(false);
+  const modelDiscoveryRef = useRef(null);
 
   const fetchDatasetSize = async () => {
     try {
@@ -99,7 +101,9 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
   };
 
   const baseUrl = aiConfig.baseUrl || getDefaultBaseUrl(activeProvider);
+  const baseUrlInput = aiConfig.baseUrl ?? "";
   const model = aiConfig.selectedModel || getDefaultModel(activeProvider);
+  const modelInput = aiConfig.selectedModel ?? "";
   const temperature = aiConfig.temperature ?? 0.7;
   const apiKey = aiConfig.keys?.[activeProvider] || "";
 
@@ -154,6 +158,7 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
             model,
           }),
         );
+        modelDiscoveryRef.current?.discover();
       } else {
         toast.error(
           res.error ||
@@ -260,7 +265,7 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
         <div className="relative">
           <Globe size={14} className="absolute left-3 top-3 text-slate-500" />
           <Input
-            value={baseUrl}
+            value={baseUrlInput}
             onChange={(e) => updateConfig({ baseUrl: e.target.value })}
             className="bg-slate-950 border-slate-800 pl-9 font-mono text-sm"
             placeholder={getDefaultBaseUrl(activeProvider)}
@@ -268,20 +273,20 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
         </div>
       </div>
 
-      {/* Model Name */}
+{/* Model Name */}
       <div className="space-y-2">
         <Label className="text-xs text-slate-400">
           {t("settings.ai.custom_model_identifier")}
         </Label>
-        <div className="relative">
-          <Cpu size={14} className="absolute left-3 top-3 text-slate-500" />
-          <Input
-            value={model}
-            onChange={(e) => updateConfig({ selectedModel: e.target.value })}
-            className={`bg-slate-950 border-slate-800 pl-9 font-mono text-sm ${model ? "border-indigo-500/50 ring-1 ring-indigo-500/20" : ""}`}
-            placeholder={getDefaultModel(activeProvider)}
-          />
-        </div>
+        <ModelDiscoveryCombobox
+          ref={modelDiscoveryRef}
+          value={modelInput}
+          onChange={(nextModel) => updateConfig({ selectedModel: nextModel })}
+          provider={activeProvider}
+          baseUrl={baseUrlInput}
+          apiKey={apiKey}
+          defaultModel={getDefaultModel(activeProvider)}
+        />
         <p className="text-[10px] text-slate-500 leading-tight">
           {t("settings.ai.custom_model_desc")}
         </p>
