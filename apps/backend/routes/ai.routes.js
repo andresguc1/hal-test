@@ -9,6 +9,7 @@ import {
     getAiUsageLogs,
     clearAiUsage,
 } from '../controllers/aiUsage.controller.js';
+import { discoverAiModels } from '../controllers/aiDiscovery.controller.js';
 
 const router = express.Router();
 
@@ -17,6 +18,16 @@ const router = express.Router();
  * Allows http/https to 127.0.0.1, localhost, or the machine's own loopback.
  */
 const ALLOWED_LOOPBACK = new Set(['127.0.0.1', '::1', 'localhost', '[::1]']);
+
+// Extends the loopback-only policy for custom/remote servers (e.g. Tailscale).
+// Comma separated hosts, or '*' to allow any http(s) host.
+const ENV_ALLOWED_HOSTS = new Set(
+    (process.env.HALTEST_ALLOWED_AI_BASE_URLS || '')
+        .split(',')
+        .map((host) => host.trim().toLowerCase())
+        .filter(Boolean),
+);
+
 function sanitizeBaseUrl(raw) {
     if (!raw || typeof raw !== 'string') return 'http://127.0.0.1:11434';
     const trimmed = raw.trim();
@@ -28,11 +39,43 @@ function sanitizeBaseUrl(raw) {
     }
     if (!['http:', 'https:'].includes(url.protocol)) return 'http://127.0.0.1:11434';
     const hostname = url.hostname.toLowerCase().replace(/^\[|]$/g, '');
-    if (!ALLOWED_LOOPBACK.has(hostname)) return 'http://127.0.0.1:11434';
+    if (!ALLOWED_LOOPBACK.has(hostname)) {
+        if (ENV_ALLOWED_HOSTS.has(hostname) || ENV_ALLOWED_HOSTS.has('*')) {
+            return url.origin;
+        }
+        return 'http://127.0.0.1:11434';
+    }
     return url.origin;
 }
 
 // callOpenAI Removed - Now using AIService
+
+/**
+ * @swagger
+ * /api/ai/discover-models:
+ *   post:
+ *     summary: Lists models available for a provider
+ *     description: >
+ *       Ollama uses the native GET {base}/api/tags endpoint (with an
+ *       OpenAI-compatible /v1/models fallback). OpenAI/OpenRouter use
+ *       GET {base}/v1/models, Anthropic uses its Models API, and Google uses
+ *       GET {base}/models. Base URL hosts are restricted by an SSRF allowlist
+ *       extended via the HALTEST_ALLOWED_AI_BASE_URLS env var.
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               provider:
+ *                 type: string
+ *                 enum: [ollama, openai, openrouter, anthropic, google, custom]
+ *               apiKey:
+ *                 type: string
+ *               baseUrl:
+ *                 type: string
+ */
+router.post('/discover-models', discoverAiModels);
 
 /**
  * @swagger
