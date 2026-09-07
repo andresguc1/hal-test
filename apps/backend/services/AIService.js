@@ -7,6 +7,7 @@ import { repairJson, extractJson, parseToolCalls } from './AIServiceParsing.js';
 import { aiGenerationGuard } from '../core/AIGenerationGuard.js';
 import aiTaskOptimizer from './AITaskOptimizer.js';
 import aiUsageLogger from './AIUsageLogger.js';
+import modelDiscoveryService from './discovery/index.js';
 
 /**
  * Servicio Central de IA
@@ -634,6 +635,20 @@ IMPORTANT DIRECTIONS:
             }
             throw new Error(`Validation Failed: ${e.message}`);
         }
+    }
+
+    /**
+     * Delegates model listing to ModelDiscoveryService, wiring the Ollama
+     * native health check so local discovery reuses AIService.healthCheck.
+     * @param {{ provider: string, apiKey?: string, baseUrl?: string }} params
+     */
+    async discoverModels({ provider, apiKey, baseUrl }) {
+        return modelDiscoveryService.discoverModels({
+            provider,
+            apiKey,
+            baseUrl,
+            healthCheck: (opts) => this.healthCheck(opts),
+        });
     }
 
     /**
