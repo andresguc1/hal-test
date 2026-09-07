@@ -4,6 +4,11 @@ import aiService from '../services/AIService.js';
 import { browserService } from '../services/browser.service.js';
 import selectorHealer from '../services/SelectorHealer.js';
 import { DEFAULT_LOCAL_MODEL } from '../services/LLMFactory.js';
+import {
+    getAiUsageSummary,
+    getAiUsageLogs,
+    clearAiUsage,
+} from '../controllers/aiUsage.controller.js';
 
 const router = express.Router();
 
@@ -366,5 +371,24 @@ Vary your tone: sometimes helpful, sometimes ominous, sometimes bored.`;
         res.status(500).json({ success: false, error: error.message });
     }
 });
+
+/**
+ * @swagger
+ * /api/ai/usage/summary:
+ *   get:
+ *     summary: Aggregated AI usage metrics (calls, tokens, latency, breakdowns)
+ */
+router.get('/usage/summary', getAiUsageSummary);
+
+/**
+ * @swagger
+ * /api/ai/usage:
+ *   get:
+ *     summary: Recent AI usage log entries (paginable + curable por taskType/provider)
+ *   delete:
+ *     summary: Clears all AI usage metrics
+ */
+router.get('/usage', getAiUsageLogs);
+router.delete('/usage', clearAiUsage);
 
 export default router;

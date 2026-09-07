@@ -11,6 +11,7 @@ import {
   Key,
   Database,
   Play,
+  Gauge,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +27,7 @@ import { useToast } from "@/hooks/useToast";
 import { useTranslation } from "react-i18next";
 import { api } from "../../utils/api";
 import { FineTuningDashboardModal } from "./FineTuningDashboardModal";
+import { AIUsageDashboardModal } from "./AIUsageDashboardModal";
 
 /**
  * AISettingsPanel
@@ -38,6 +40,7 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
   const [isTesting, setIsTesting] = useState(false);
   const [healthResult, setHealthResult] = useState(null);
   const [showDashboard, setShowDashboard] = useState(false);
+  const [showUsageDashboard, setShowUsageDashboard] = useState(false);
   const [datasetSize, setDatasetSize] = useState(0);
   const [startWithTraining, setStartWithTraining] = useState(false);
 
@@ -408,6 +411,31 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
           </div>
         </div>
 
+        {/* HalTest AI Usage & Optimization Dashboard */}
+        <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/50 hover:bg-slate-900 transition-colors">
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-slate-800 text-emerald-400">
+              <Gauge size={18} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <Label className="text-sm font-semibold text-white">
+                {t("settings.ai.usage_dashboard.title")}
+              </Label>
+              <p className="text-[10px] text-slate-400 leading-relaxed mt-1">
+                {t("settings.ai.usage_dashboard.panel_desc")}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowUsageDashboard(true)}
+              className="flex-none text-xs border-indigo-500/30 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-950/30"
+            >
+              {t("settings.ai.usage_dashboard.open")}
+            </Button>
+          </div>
+        </div>
+
         {/* HalTest Fine-Tuning & Active Learning */}
         <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/50 hover:bg-slate-900 transition-colors space-y-4">
           <div className="flex items-center justify-between">
@@ -521,6 +549,13 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
           }}
           activeModel={model}
           startWithTraining={startWithTraining}
+        />
+      )}
+
+      {showUsageDashboard && (
+        <AIUsageDashboardModal
+          isOpen={showUsageDashboard}
+          onClose={() => setShowUsageDashboard(false)}
         />
       )}
     </div>

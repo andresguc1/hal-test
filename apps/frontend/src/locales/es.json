@@ -764,7 +764,36 @@
         "google": "Géminis / Google (Nube)",
         "openrouter": "OpenRouter (nube)"
       },
-      "api_key_placeholder": "sk-o-..."
+      "api_key_placeholder": "sk-o-...",
+      "usage_dashboard": {
+        "title": "AI Usage & Optimization",
+        "description": "Tokens, latencia y tareas consumidas por tus llamadas de IA. Mide el ahorro del optimizador por tipo de tarea.",
+        "panel_desc": "Consulta el consumo real de tus llamadas de IA: tokens entrada/salida, latencia, tasa de éxito y desglose por tipo de tarea/modelo.",
+        "open": "Abrir dashboard",
+        "refresh": "Actualizar",
+        "clear": "Vaciar métricas",
+        "clear_confirm": "¿Borrar todas las métricas de uso de IA? Esta acción no se puede deshacer.",
+        "loading": "Cargando métricas de IA...",
+        "no_data": "Aún no hay métricas de uso de IA",
+        "no_data_desc": "Ejecuta un flujo con extract_dom_context o smart_selector: cada llamada de IA quedará registrada aquí.",
+        "total_calls": "Llamadas totales",
+        "total_tokens": "Tokens totales",
+        "avg_latency": "Latencia media",
+        "success_rate": "Tasa de éxito",
+        "by_task_type": "Por tipo de tarea",
+        "by_model": "Modelos usados",
+        "daily_trend": "Tendencia (14 días)",
+        "no_trend": "Sin datos esta semana",
+        "recent_calls": "Últimas llamadas",
+        "filter_all": "Todas las tareas",
+        "empty": "No hay llamadas para este filtro.",
+        "col_time": "Fecha",
+        "col_task": "Tarea",
+        "col_model": "Modelo",
+        "col_tokens": "In/Out",
+        "col_latency": "Lat.",
+        "col_status": "Estado"
+      }
     },
     "vault": {
       "title": "Billetera Segura",

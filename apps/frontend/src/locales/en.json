@@ -764,7 +764,36 @@
         "google": "Gemini / Google (Cloud)",
         "openrouter": "OpenRouter (Cloud)"
       },
-      "api_key_placeholder": "sk-or-..."
+      "api_key_placeholder": "sk-or-...",
+      "usage_dashboard": {
+        "title": "AI Usage & Optimization",
+        "description": "Tokens, latency and tasks consumed by your AI calls. Measure optimizer savings per task type.",
+        "panel_desc": "Inspect real AI call consumption: input/output tokens, latency, success rate and breakdown by task type/model.",
+        "open": "Open dashboard",
+        "refresh": "Refresh",
+        "clear": "Clear metrics",
+        "clear_confirm": "Delete all AI usage metrics? This cannot be undone.",
+        "loading": "Loading AI metrics...",
+        "no_data": "No AI usage metrics yet",
+        "no_data_desc": "Run a flow with extract_dom_context or smart_selector: every AI call will be recorded here.",
+        "total_calls": "Total calls",
+        "total_tokens": "Total tokens",
+        "avg_latency": "Avg latency",
+        "success_rate": "Success rate",
+        "by_task_type": "By task type",
+        "by_model": "Models used",
+        "daily_trend": "Trend (14 days)",
+        "no_trend": "No data this week",
+        "recent_calls": "Recent calls",
+        "filter_all": "All tasks",
+        "empty": "No calls for this filter.",
+        "col_time": "Date",
+        "col_task": "Task",
+        "col_model": "Model",
+        "col_tokens": "In/Out",
+        "col_latency": "Lat.",
+        "col_status": "Status"
+      }
     },
     "vault": {
       "title": "Secure Wallet",
