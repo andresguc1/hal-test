@@ -12,6 +12,28 @@ class LLMFactory {
     static DEFAULT_LOCAL_MODEL = 'gemma3:2b';
 
     /**
+     * Dynamic "client-optimized" advisory based on the server's real model list.
+     * Returns the ids of the smallest installed models (by byte size), sorted
+     * ascending. Falls back to the static RECOMMENDED_LOCAL_MODELS list only
+     * when no size metadata is available (e.g. OpenAI-compatible listings).
+     * @param {Array<{id?: string, name?: string, size?: number}>} modelInfos
+     * @param {{ limit?: number }} [opts]
+     * @returns {string[]}
+     */
+    static smallestLocalModels(modelInfos = [], { limit = 3 } = {}) {
+        const sized = (Array.isArray(modelInfos) ? modelInfos : []).filter(
+            (m) => m && Number(m.size) > 0,
+        );
+        if (sized.length > 0) {
+            return [...sized]
+                .sort((a, b) => Number(a.size) - Number(b.size))
+                .slice(0, limit)
+                .map((m) => String(m.name ?? m.id));
+        }
+        return LLMFactory.RECOMMENDED_LOCAL_MODELS;
+    }
+
+    /**
      * Creates a provider instance for a specific Key Alias/ID
      * @param {string} keyAliasOrId - The alias, ID, OR raw API Key (Legacy)
      * @param {string} [fallbackProvider] - Provider string (e.g. 'openai') to use if raw key is detected
@@ -237,3 +259,4 @@ class LLMFactory {
 export const llmFactory = new LLMFactory();
 export const RECOMMENDED_LOCAL_MODELS = LLMFactory.RECOMMENDED_LOCAL_MODELS;
 export const DEFAULT_LOCAL_MODEL = LLMFactory.DEFAULT_LOCAL_MODEL;
+export const smallestLocalModels = LLMFactory.smallestLocalModels;

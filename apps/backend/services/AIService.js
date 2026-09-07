@@ -2,12 +2,32 @@
 import { generateText, generateObject } from 'ai';
 import { z } from 'zod';
 import { playwrightMcpServer } from './PlaywrightMCPServer.js';
-import { llmFactory, RECOMMENDED_LOCAL_MODELS, DEFAULT_LOCAL_MODEL } from './LLMFactory.js';
+import {
+    llmFactory,
+    RECOMMENDED_LOCAL_MODELS,
+    DEFAULT_LOCAL_MODEL,
+    smallestLocalModels,
+} from './LLMFactory.js';
 import { repairJson, extractJson, parseToolCalls } from './AIServiceParsing.js';
 import { aiGenerationGuard } from '../core/AIGenerationGuard.js';
 import aiTaskOptimizer from './AITaskOptimizer.js';
 import aiUsageLogger from './AIUsageLogger.js';
 import modelDiscoveryService from './discovery/index.js';
+
+/**
+ * Checks whether a selected model identifier refers to the same model family
+ * as an installed one, in either direction ('gemma3' vs 'gemma3:latest' and
+ * 'nomic-embed-text:latest' vs 'nomic-embed-text').
+ */
+function isModelVariant(selected, installed) {
+    return (
+        selected === installed ||
+        selected.startsWith(`${installed}:`) ||
+        selected.startsWith(`${installed}-`) ||
+        installed.startsWith(`${selected}:`) ||
+        installed.startsWith(`${selected}-`)
+    );
+}
 
 /**
  * Servicio Central de IA
@@ -742,35 +762,34 @@ IMPORTANT DIRECTIONS:
 
             const data = await response.json();
             result.ollamaRunning = true;
-            result.models = (data.models || []).map((m) => m.name);
+
+            const modelInfos = (data.models || []).map((m) => ({
+                id: m.name,
+                name: m.name,
+                size: Number(m.size) || 0,
+                parameterSize: m.details?.parameter_size || '',
+            }));
+            result.models = modelInfos.map((m) => m.name);
+            result.modelSizes = Object.fromEntries(modelInfos.map((m) => [m.name, m.size]));
+
+            // Dynamic "client-optimized" advisory based on the smallest installed
+            // models, so the warning reflects the server's real infrastructure.
+            const hasSizes = modelInfos.some((m) => m.size > 0);
+            const recommended = smallestLocalModels(modelInfos, { limit: 3 });
+            result.recommendedModels = recommended;
 
             // Check if target model is available (match by prefix, e.g. 'gemma3' matches 'gemma3:latest')
             result.modelLoaded = result.models.some(
                 (m) => m === model || m.startsWith(`${model}:`),
             );
 
-            // 1. Check if the currently selected/requested model is recommended/client-optimized
-            const isModelRecommended = RECOMMENDED_LOCAL_MODELS.some(
-                (optModel) =>
-                    model === optModel ||
-                    model.startsWith(`${optModel}:`) ||
-                    model.startsWith(`${optModel}-`),
-            );
-
-            // 2. Check if any recommended client-optimized models are installed
-            const installedOptimized = RECOMMENDED_LOCAL_MODELS.filter((optModel) =>
-                result.models.some(
-                    (m) =>
-                        m === optModel ||
-                        m.startsWith(`${optModel}:`) ||
-                        m.startsWith(`${optModel}-`),
-                ),
-            );
-
-            if (!isModelRecommended) {
-                result.warning = `The selected model '${model}' is not a recommended client-optimized model (e.g., ${RECOMMENDED_LOCAL_MODELS.join(', ')}). Running larger models locally may cause high latency or freeze your screen.`;
-            } else if (installedOptimized.length === 0) {
-                result.warning = `You do not have any recommended client-optimized models installed (e.g., ${RECOMMENDED_LOCAL_MODELS.join(', ')}). Running larger models locally may cause high latency or freeze your screen. We strongly suggest pulling one with 'ollama pull ${DEFAULT_LOCAL_MODEL}'`;
+            // Only advise when we actually know the server's model sizes; otherwise
+            // there is no basis to judge the infrastructure from the name alone.
+            if (hasSizes) {
+                const isModelRecommended = recommended.some((opt) => isModelVariant(model, opt));
+                if (!isModelRecommended) {
+                    result.warning = `The selected model '${model}' is larger than the smallest installed model (${recommended[0]}). Running larger models may increase latency.`;
+                }
             }
 
             return result;

@@ -36,10 +36,32 @@ const STATUS_META = {
   CUSTOM: "text-slate-400",
 };
 
-// Mirror of LLMFactory.RECOMMENDED_LOCAL_MODELS for auto-selection of local models.
+// Mirror of LLMFactory conditions for fallback auto-selection when the server
+// does not expose model sizes (OpenAI-compatible listings).
 const RECOMMENDED_LOCAL_MODELS = ["gemma3:2b", "phi4:mini"];
 
 const AUTO_DISCOVER_DEBOUNCE_MS = 600;
+
+function formatModelSize(bytes) {
+    const size = Number(bytes);
+    if (!size || size <= 0) return null;
+    const gb = size / 1024 / 1024 / 1024;
+    return gb >= 1 ? `${gb.toFixed(1)} GB` : `${Math.round(size / 1024 / 1024)} MB`;
+}
+
+function smallestModel(models) {
+    const bySize = [...models]
+        .filter((m) => Number(m.size) > 0)
+        .sort((a, b) => Number(a.size) - Number(b.size));
+    if (bySize.length > 0) return bySize[0];
+    return (
+        models.find((m) =>
+            RECOMMENDED_LOCAL_MODELS.some(
+                (r) => m.id === r || m.id.startsWith(`${r}:`) || m.id.startsWith(`${r}-`),
+            ),
+        ) || models[0]
+    );
+}
 
 function stateLabelKey(state) {
   switch (state) {
@@ -99,7 +121,7 @@ export const ModelDiscoveryCombobox = forwardRef(function ModelDiscoveryCombobox
     return () => clearTimeout(autoDiscoverTimer.current);
   }, [provider, baseUrl, discover]);
 
-  // Auto-select a recommended local model once the Ollama list arrives,
+  // Auto-select the smallest installed model once the Ollama list arrives,
   // but only when the user has not picked/typed a meaningful identifier yet.
   useEffect(() => {
     if (provider !== "ollama") return;
@@ -108,12 +130,7 @@ export const ModelDiscoveryCombobox = forwardRef(function ModelDiscoveryCombobox
     const current = String(value || "").trim();
     if (current && current !== String(defaultModel || "").trim()) return;
 
-    const preferred =
-      models.find((m) =>
-        RECOMMENDED_LOCAL_MODELS.some(
-          (r) => m.id === r || m.id.startsWith(`${r}:`) || m.id.startsWith(`${r}-`),
-        ),
-      ) || models[0];
+    const preferred = smallestModel(models);
     if (preferred && preferred.id !== current) {
       onChange(preferred.id);
     }
@@ -176,16 +193,22 @@ export const ModelDiscoveryCombobox = forwardRef(function ModelDiscoveryCombobox
               <DropdownMenuSeparator />
               {models.length > 0 ? (
                 <ScrollArea className="max-h-56">
-                  {models.map((model) => (
-                    <DropdownMenuItem
-                      key={model.id}
-                      onSelect={() => onChange(model.id)}
-                      className="flex items-center gap-2 text-xs font-mono"
-                    >
-                      <span className="flex-1 truncate">{model.label || model.id}</span>
-                      {value === model.id && <Check size={12} className="text-emerald-400" />}
-                    </DropdownMenuItem>
-                  ))}
+                  {models.map((model) => {
+                    const sizeLabel = formatModelSize(model.size);
+                    return (
+                      <DropdownMenuItem
+                        key={model.id}
+                        onSelect={() => onChange(model.id)}
+                        className="flex items-center gap-2 text-xs font-mono"
+                      >
+                        <span className="flex-1 truncate">{model.label || model.id}</span>
+                        {sizeLabel && (
+                          <span className="text-[10px] text-slate-500">{sizeLabel}</span>
+                        )}
+                        {value === model.id && <Check size={12} className="text-emerald-400" />}
+                      </DropdownMenuItem>
+                    );
+                  })}
                 </ScrollArea>
               ) : (
                 <div className="px-2 py-2 text-[10px] text-slate-500">

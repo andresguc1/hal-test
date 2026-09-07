@@ -60,6 +60,26 @@ describe('ModelDiscoveryService', () => {
         expect(result.models[0].source).toBe('native');
     });
 
+    it('ollama: native models carry byte size from healthCheck.modelSizes', async () => {
+        const healthCheck = async () => ({
+            ollamaRunning: true,
+            modelLoaded: false,
+            models: ['gemma4:26b', 'gemma3:2b'],
+            modelSizes: { 'gemma4:26b': 16_700_000_000, 'gemma3:2b': 1_700_000_000 },
+            error: null,
+        });
+        const result = await modelDiscoveryService.discoverModels({
+            provider: 'ollama',
+            apiKey: 'ollama',
+            baseUrl: 'http://127.0.0.1:11434',
+            healthCheck,
+        });
+        expect(result.state).toBe('SUCCESS');
+        const byId = Object.fromEntries(result.models.map((m) => [m.id, m]));
+        expect(byId['gemma3:2b'].size).toBe(1_700_000_000);
+        expect(byId['gemma4:26b'].size).toBe(16_700_000_000);
+    });
+
     it('ollama: falls back to OpenAI-compatible /v1/models when tags unavailable', async () => {
         let calledUrl = '';
         vi.stubGlobal(
@@ -256,6 +276,29 @@ describe('ModelDiscoveryService', () => {
             baseUrl: 'https://example.com',
         });
         expect(result.state).toBe('NOT_SUPPORTED');
+    });
+
+    it('smallestLocalModels: ranks installed models by byte size ascending', async () => {
+        const { smallestLocalModels } = await import('../services/LLMFactory.js');
+        const modelInfos = [
+            { id: 'gemma4:26b', name: 'gemma4:26b', size: 16_700_000_000 },
+            { id: 'phi4:mini', name: 'phi4:mini', size: 2_600_000_000 },
+            { id: 'gemma3:2b', name: 'gemma3:2b', size: 1_700_000_000 },
+            { id: 'qwen2.5:7b', name: 'qwen2.5:7b', size: 4_700_000_000 },
+        ];
+        expect(smallestLocalModels(modelInfos, { limit: 3 })).toEqual([
+            'gemma3:2b',
+            'phi4:mini',
+            'qwen2.5:7b',
+        ]);
+    });
+
+    it('smallestLocalModels: falls back to static list when no size metadata', async () => {
+        const { smallestLocalModels, RECOMMENDED_LOCAL_MODELS } =
+            await import('../services/LLMFactory.js');
+        expect(smallestLocalModels([{ id: 'foo', name: 'foo', size: 0 }])).toEqual(
+            RECOMMENDED_LOCAL_MODELS,
+        );
     });
 
     it('empty list → NO_MODELS_FOUND', async () => {

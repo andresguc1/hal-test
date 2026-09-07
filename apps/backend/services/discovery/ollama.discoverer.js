@@ -10,8 +10,9 @@ export const ollamaDiscoverer = {
     timeoutMs: 8000,
     async listModels({ key, baseUrl, signal, healthCheck }) {
         let nativeModels = null;
+        let health = null;
         try {
-            const health = await healthCheck?.({ baseUrl });
+            health = await healthCheck?.({ baseUrl });
             if (health?.ollamaRunning) {
                 nativeModels = health.models || [];
             }
@@ -20,9 +21,15 @@ export const ollamaDiscoverer = {
         }
 
         if (nativeModels) {
+            const sizes = health?.modelSizes || {};
             return nativeModels
                 .filter((name) => name)
-                .map((name) => ({ id: name, label: name, source: 'native' }));
+                .map((name) => ({
+                    id: name,
+                    label: name,
+                    source: 'native',
+                    size: Number(sizes[name]) || 0,
+                }));
         }
 
         return listOpenAICompatibleModels({
