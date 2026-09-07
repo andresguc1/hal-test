@@ -1,7 +1,8 @@
 import { executePlaywrightAction } from '../../../core/ActionExecutor.js';
 import { buildPlaywrightLocator, normalizeSelectorForDotId } from '../../../core/selector-utils.js';
-import { detectOptions } from '../../../services/OptionDetector.js';
+import { discoverOptions } from '../../../services/OptionDiscoveryService.js';
 import { writeOptions } from '../../../services/OptionWriter.js';
+import { getStrategy } from '../../../services/InteractionStrategy.js';
 
 const selectOption = (req, res) =>
     executePlaywrightAction(req, res, 'select_option', async (page, opts) => {
@@ -11,7 +12,7 @@ const selectOption = (req, res) =>
             selectionValue,
             containerSelector,
             selectedOptions,
-            expandMenu = false,
+            expandMenu,
         } = opts;
         const timeout = opts.timeout ? Number(opts.timeout) : 30000;
 
@@ -20,42 +21,55 @@ const selectOption = (req, res) =>
             (Array.isArray(selectedOptions) && selectedOptions.length > 0);
 
         // ---------------------------------------------------------------
-        // NEW MODE: container + auto-detected options + multi selection
+        // NEW MODE: containerSelector + auto-detected options + multi selection
         // ---------------------------------------------------------------
         if (hasNewMode) {
             if (!containerSelector || !containerSelector.trim()) {
                 throw new Error(req.t('errors.select_option_container_required'));
             }
 
-            if (expandMenu) {
-                // For custom comboboxes / menus: click the trigger to expand the
-                // options before detection.
-                try {
-                    const trigger = buildPlaywrightLocator(page, containerSelector).first();
-                    await trigger.waitFor({ state: 'attached', timeout });
-                    await trigger.click({ timeout });
-                    await page.waitForTimeout(200);
-                } catch (err) {
-                    console.warn('[select_option] expandMenu click failed:', err.message);
-                }
-            }
+            // 1. Detect options FIRST (before any clicks that might close the menu)
+            const detection = await discoverOptions(page, containerSelector, { timeout });
 
-            const detection = await detectOptions(page, containerSelector, { timeout });
-
-            if (!detection.found || detection.options.length === 0) {
+            if (!detection.options || detection.options.length === 0) {
                 throw new Error(
                     req.t('errors.select_option_no_options', {
                         selector: containerSelector,
-                        message: detection.message || '',
+                        message: detection.analysisNotes?.join(' ') || '',
                     }),
                 );
             }
 
+            // 2. Determine if menu needs to be opened based on strategy
+            const groupType = detection.groupType;
+            const strategy = getStrategy(groupType);
+            const shouldOpenMenu = expandMenu !== false && strategy.requiresMenuOpen;
+
+            let menuOpen = false;
+            if (shouldOpenMenu) {
+                try {
+                    const trigger = buildPlaywrightLocator(page, containerSelector).first();
+                    await trigger.waitFor({ state: 'attached', timeout });
+                    const isExpanded =
+                        (await trigger.getAttribute('aria-expanded').catch(() => 'false')) ===
+                        'true';
+                    if (!isExpanded) {
+                        await trigger.click({ timeout });
+                        await page.waitForTimeout(300);
+                    }
+                    menuOpen = true;
+                } catch (err) {
+                    console.warn('[select_option] trigger click failed:', err.message);
+                }
+            }
+
+            // 3. Write selections using strategy-based OptionWriter
             const result = await writeOptions(page, {
                 containerSelector,
                 selectedOptions,
                 options: detection.options,
                 timeout,
+                menuOpen,
             });
 
             const failures = (result.evidence || []).filter((e) => e.result === 'FAIL');
@@ -76,6 +90,9 @@ const selectOption = (req, res) =>
                     optionCount: result.optionCount,
                     value: Array.isArray(selectedOptions) ? selectedOptions.length : 0,
                     timeout,
+                    detectionNotes: detection.analysisNotes,
+                    strategyUsed: groupType,
+                    menuOpened: menuOpen,
                 },
                 ...(failures.length > 0
                     ? { warnings: failures.map((f) => f.message).filter(Boolean) }
@@ -85,6 +102,7 @@ const selectOption = (req, res) =>
 
         // ---------------------------------------------------------------
         // LEGACY MODE: single <select> via selector + selectionCriteria/Value
+        // Only used when NO containerSelector and NO selectedOptions provided
         // ---------------------------------------------------------------
         if (!selector) throw new Error(req.t('errors.selector_required'));
 
@@ -122,6 +140,7 @@ const selectOption = (req, res) =>
 
         let resolvedTarget = targetSelector;
         let resolvedTargetType = 'original_selector';
+        let isNativeSelect = false;
 
         try {
             const locator = buildPlaywrightLocator(page, targetSelector);
@@ -134,21 +153,51 @@ const selectOption = (req, res) =>
                 if (count > 0) {
                     resolvedTarget = selectLocator;
                     resolvedTargetType = 'parent_select';
+                    isNativeSelect = true;
 
                     if (!valueToSelect) {
                         valuesToSelect = await locator.evaluate((el) => el.value);
                     }
                 }
+            } else if (tagName === 'SELECT') {
+                isNativeSelect = true;
             }
         } catch (err) {
             console.warn('[WARN] Failed to inspect element in select_option:', err.message);
         }
 
         let result;
-        if (resolvedTargetType === 'parent_select' && typeof resolvedTarget !== 'string') {
-            result = await resolvedTarget.selectOption(valuesToSelect, runOptions);
+
+        if (isNativeSelect) {
+            // Native <select>: use Playwright's selectOption (the only correct API)
+            if (resolvedTargetType === 'parent_select' && typeof resolvedTarget !== 'string') {
+                result = await resolvedTarget.selectOption(valuesToSelect, runOptions);
+            } else {
+                result = await page.selectOption(resolvedTarget, valuesToSelect, runOptions);
+            }
         } else {
-            result = await page.selectOption(resolvedTarget, valuesToSelect, runOptions);
+            // Custom dropdown (div/button-based): open trigger, then click the option by text/label
+            const containerLocator = buildPlaywrightLocator(page, targetSelector).first();
+            await containerLocator.waitFor({ state: 'attached', timeout: timeout || 30000 });
+            await containerLocator.click({ timeout });
+            await page.waitForTimeout(300);
+
+            const optionText = valueToSelect || (criteria === 'label' ? selectionValue : undefined);
+            if (optionText) {
+                const optionLocator = containerLocator.getByText(String(optionText), {
+                    exact: true,
+                });
+                await optionLocator.waitFor({ state: 'visible', timeout });
+                await optionLocator.click({ timeout });
+            } else {
+                // Fallback: click first available option in the expanded menu
+                const firstOption = containerLocator
+                    .locator('role=option, [role="option"], li, div[data-option]')
+                    .first();
+                await firstOption.waitFor({ state: 'visible', timeout });
+                await firstOption.click({ timeout });
+            }
+            result = { selected: optionText || 'custom-option' };
         }
 
         return {
@@ -160,6 +209,7 @@ const selectOption = (req, res) =>
                 selectionValue: valueToSelect,
                 timeout,
                 resolvedTarget: resolvedTargetType,
+                isNativeSelect,
                 implicitSelection: !valueToSelect && resolvedTargetType === 'parent_select',
             },
         };

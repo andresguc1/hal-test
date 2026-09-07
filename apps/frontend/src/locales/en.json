@@ -473,9 +473,11 @@
       "action_no_change": "No change",
       "action_check": "Check",
       "action_uncheck": "Uncheck",
+      "action_select": "Select",
       "current_checked": "Checked",
       "current_unchecked": "Unchecked",
       "current_unknown": "Unknown",
+      "retry_detect": "Retry Detection",
       "conditional": {
         "control_logic": "Flow Control",
         "if": "When",

@@ -424,7 +424,7 @@ export const NODE_FIELD_CONFIGS = {
       type: "boolean",
       defaultValue: false,
       required: false,
-      hint: "Click the trigger to expand a custom combobox/dropdown before selecting.",
+      hint: "Only for custom dropdowns/comboboxes. Native <select> elements are handled automatically by Playwright.",
     },
     {
       name: "selector",

@@ -473,9 +473,11 @@
       "action_no_change": "Sem mudança",
       "action_check": "Marcar",
       "action_uncheck": "Desmarcar",
+      "action_select": "Selecionar",
       "current_checked": "Marcada",
       "current_unchecked": "Desmarcada",
       "current_unknown": "Desconhecida",
+      "retry_detect": "Tentar novamente",
       "conditional": {
         "control_logic": "Controle de Fluxo",
         "if": "Quando",

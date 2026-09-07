@@ -247,6 +247,10 @@ const NodeConfigurationPanel = ({
         "selector",
         "selectionValue",
         "selectionCriteria",
+        // New select_option keys
+        "containerSelector",
+        "selectedOptions",
+        "expandMenu",
       ]);
 
       // Add inputs defined in NODE_INPUTS schema for this node type

@@ -473,9 +473,11 @@
       "action_no_change": "Sin cambio",
       "action_check": "Marcar",
       "action_uncheck": "Desmarcar",
+      "action_select": "Seleccionar",
       "current_checked": "Marcada",
       "current_unchecked": "Desmarcada",
       "current_unknown": "Desconocida",
+      "retry_detect": "Reintentar detección",
       "conditional": {
         "control_logic": "Lógica de Control",
         "if": "Si",

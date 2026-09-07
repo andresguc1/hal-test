@@ -79,6 +79,14 @@ function detectOptionsScript(containerSelector) {
 
     function isElementVisible(el) {
         if (!(el instanceof Element)) return false;
+
+        // Native <option> elements inside a <select> are display:none by design when closed
+        // but are still selectable via Playwright's selectOption() - treat as visible
+        if (el.tagName === 'OPTION') {
+            const parentSelect = el.closest('select');
+            if (parentSelect) return true;
+        }
+
         const rect = el.getBoundingClientRect();
         if (rect.width <= 0 && rect.height <= 0) return false;
         if (el.hasAttribute('hidden')) return false;
@@ -443,6 +451,128 @@ function detectOptionsScript(containerSelector) {
                 }),
             );
         });
+
+        // CASE 3b: ARIA combobox - detect trigger and popup options
+        const comboboxTriggers = Array.from(
+            containerEl.querySelectorAll('[role="combobox"]'),
+        ).filter(isElementVisible);
+
+        comboboxTriggers.forEach((trigger) => {
+            const ariaControls = trigger.getAttribute('aria-controls');
+            const ariaExpanded = trigger.getAttribute('aria-expanded');
+            const hasPopup = trigger.getAttribute('aria-haspopup');
+
+            if (ariaControls) {
+                // Try to find the controlled popup element
+                const popup = document.getElementById(ariaControls);
+                if (popup) {
+                    const popupOptions = Array.from(
+                        popup.querySelectorAll('[role="option"]'),
+                    ).filter(isElementVisible);
+
+                    popupOptions.forEach((el, _i) => {
+                        const ariaSelected = el.getAttribute('aria-selected');
+                        const isSelected =
+                            ariaSelected === 'true' ||
+                            el.classList.contains('selected') ||
+                            el.classList.contains('active');
+
+                        indexCounter.aria_option = indexCounter.aria_option || 0;
+                        const idx = indexCounter.aria_option++;
+
+                        options.push(
+                            makeOption(el, {
+                                id: `combobox-option-${idx}`,
+                                label: getAccessibleName(el) || getText(el),
+                                value:
+                                    el.getAttribute('data-value') ||
+                                    el.getAttribute('value') ||
+                                    getText(el),
+                                type: 'option',
+                                index: idx,
+                                selected: isSelected,
+                                checked: isSelected,
+                            }),
+                        );
+                    });
+
+                    // Store combobox metadata on the trigger for strategy use
+                    if (!trigger.__comboboxMeta) {
+                        trigger.__comboboxMeta = {
+                            triggerSelector: buildLocator(trigger),
+                            popupSelector: buildLocator(popup),
+                            hasPopup: hasPopup === 'listbox' || hasPopup === 'menu',
+                            isExpanded: ariaExpanded === 'true',
+                        };
+                    }
+                }
+            }
+        });
+
+        // CASE 3c: Portal/overlay detection - look for options in document.body that might be
+        // associated with the container (e.g., dropdown menus rendered via portal)
+        if (containerEl.tagName !== 'SELECT') {
+            const portalSelectors = [
+                '[role="listbox"]',
+                '[role="menu"]',
+                '[role="tree"]',
+                '[role="dialog"]',
+                '.dropdown-menu',
+                '.select-options',
+                '[data-portal]',
+            ];
+
+            portalSelectors.forEach((selector) => {
+                const portals = Array.from(document.querySelectorAll(selector)).filter(
+                    isElementVisible,
+                );
+                portals.forEach((portal) => {
+                    // Check if this portal is related to our container
+                    const portalTrigger =
+                        portal.getAttribute('data-trigger-id') ||
+                        portal.getAttribute('aria-activedescendant');
+                    const containerId = containerEl.id;
+                    const isRelated =
+                        portalTrigger === containerId ||
+                        (containerId && portal.closest(`#${containerId}`)) ||
+                        portal.contains(containerEl);
+
+                    if (isRelated || portalSelectors.indexOf(selector) > 2) {
+                        const portalOptions = Array.from(
+                            portal.querySelectorAll(
+                                '[role="option"], [role="menuitem"], li, .option-item',
+                            ),
+                        ).filter(isElementVisible);
+
+                        portalOptions.forEach((el, _i) => {
+                            const ariaSelected = el.getAttribute('aria-selected');
+                            const isSelected =
+                                ariaSelected === 'true' ||
+                                el.classList.contains('selected') ||
+                                el.classList.contains('active');
+
+                            indexCounter.aria_option = indexCounter.aria_option || 0;
+                            const idx = indexCounter.aria_option++;
+
+                            options.push(
+                                makeOption(el, {
+                                    id: `portal-option-${idx}`,
+                                    label: getAccessibleName(el) || getText(el),
+                                    value:
+                                        el.getAttribute('data-value') ||
+                                        el.getAttribute('value') ||
+                                        getText(el),
+                                    type: 'option',
+                                    index: idx,
+                                    selected: isSelected,
+                                    checked: isSelected,
+                                }),
+                            );
+                        });
+                    }
+                });
+            });
+        }
 
         // CASE 4: list items (ul/ol > li) with option-like content
         const listItems = Array.from(

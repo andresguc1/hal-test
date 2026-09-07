@@ -1,83 +1,71 @@
 import { detectOptionsScript } from './OptionDetector.js';
+import {
+    enrichDetectionResult,
+    classifyOptionTypeRaw,
+    calculateConfidence,
+    buildRobustLocator,
+    computeReliableState,
+    determineGroupId,
+    determineFinalGroupType,
+    generateAnalysisNotes,
+} from './ComponentClassifier.js';
+import '../services/strategies/index.js';
 
 /**
  * OptionDiscoveryService
  *
- * Servicio mejorado de descubrimiento de opciones de selección dentro de un contenedor.
- * Extiende OptionDetector.js con clasificación de tipos, confidence scores,
- * locators robustos y cálculo de estado fiable.
- *
- * Filosofía: local-first, scripts self-contained en page.context,
- * sin dependencias externas pesadas. Todos los scripts de evaluación
- * se ejecutan vía page.evaluate() con funciones totalmente contenidas.
- */
-
-/**
- * Posibles tipos de opción detectada.
+ * Servicio de descubrimiento de opciones de selección dentro de un contenedor.
+ * Usa OptionDetector.js para detección bruta y ComponentClassifier para enriquecimiento.
  *
  * @typedef {('native_select' | 'native_select_multi' |
  *   'checkbox' | 'radio' | 'aria_option' | 'aria_checkbox' |
  *   'aria_radio' | 'list_item' | 'custom_component')} OptionType
- */
-
-/**
- * Estructura de una opción detectada y enriquecida.
  *
  * @typedef {Object} DetectedOption
- * @property {string} id - Identificador único (auto-generado si no existe)
- * @property {OptionType} type - Tipo de opción detectada
- * @property {string} label - Texto visible/accesible de la opción
- * @property {string|null} value - Valor del attribute 'value' (si existe)
- * @property {boolean} selected - Está seleccionada (computed reliable)
- * @property {boolean} checked - Está checkeada (computed reliable)
- * @property {boolean} enabled - Está habilitada (no disabled)
- * @property {boolean} visible - Es visible (no hidden, opacity>0)
- * @property {string} locator - Locator Playwright preferente
- * @property {number} confidence - Confianza 0-1 en robustez del locator
- * @property {string|null} groupId - ID de grupo para radios/checkboxes agrupados
- */
-
-/**
- * Resultado completo del descubrimiento de opciones.
+ * @property {string} id
+ * @property {OptionType} type
+ * @property {string} label
+ * @property {string|null} value
+ * @property {boolean} selected
+ * @property {boolean} checked
+ * @property {boolean} enabled
+ * @property {boolean} visible
+ * @property {string} locator
+ * @property {number} confidence
+ * @property {string|null} groupId
+ * @property {Object} actualState
  *
  * @typedef {Object} DiscoveryResult
- * @property {'select' | 'select-multi' | 'checkbox-group' | 'radio-group' | 'list' | 'unknown'} groupType -
- *   Tipo de grupo general detectado
- * @property {DetectedOption[]} options - Lista de opciones detectadas y enriquecidas
- * @property {string} containerSelector - El selector de contenedor analizado
- * @property {string[]} analysisNotes - Notas legibles para mostrar en la UI
+ * @property {'select' | 'select-multi' | 'checkbox-group' | 'radio-group' | 'listbox' | 'combobox' | 'list' | 'unknown'} groupType
+ * @property {DetectedOption[]} options
+ * @property {string} containerSelector
+ * @property {string[]} analysisNotes
  */
 
 /**
  * Ejecuta el descubrimiento de opciones dentro de un container selector.
- * Punto de entrada principal. Usa el script OptionDetector internally
- * y enriquece el resultado con clasificación, confidence y metadata.
  *
- * @param {import('../').Page} page - Instancia de página Playwright
- * @param {string} containerSelector - Selector CSS/role que apunta al contenedor
- * @param {Object} [options] - Opciones adicionales
- * @param {number} [options.timeout=30000] - Timeout en ms para las operaciones de página
- * @returns {Promise<DiscoveryResult>} Resultado enriquecido con tipos y confidence
- *
- * @example
- * ```javascript
- * import { discoverOptions } from '../services/OptionDiscoveryService.js';
- * const result = await discoverOptions(page, '#my-select', { timeout: 15000 });
- * if (result.groupType === 'select') {
- *   // Seleccionar la primera opción: await page.getByRole('option', { name: result.options[0].label }).click();
- * }
+ * @param {import('playwright').Page} page
+ * @param {string} containerSelector
+ * @param {Object} [options]
+ * @param {number} [options.timeout=30000]
+ * @returns {Promise<DiscoveryResult>}
  */
-export async function discoverOptions(page, containerSelector) {
-    if (!containerSelector || typeof containerSelector !== 'string') {
+export async function discoverOptions(page, containerSelector, options = {}) {
+    const _timeout = options.timeout || 30000;
+
+    if (!page || page.isClosed()) {
         return {
             groupType: 'unknown',
             options: [],
-            containerSelector: containerSelector || '',
-            analysisNotes: ['Selector de contenedor inválido o ausente.'],
+            containerSelector,
+            analysisNotes: [
+                'No active page available for option detection.',
+                'Verify the browser session is still running.',
+            ],
         };
     }
 
-    // 1. Ejecutar detector existente dentro del page context
     let rawResult;
     try {
         rawResult = await page.evaluate(detectOptionsScript, containerSelector);
@@ -90,8 +78,7 @@ export async function discoverOptions(page, containerSelector) {
         };
     }
 
-    // 2. Manejar caso "no encontrado"
-    if (!rawResult?.found || rawResult.options.length === 0) {
+    if (!rawResult?.found || !rawResult.options?.length) {
         return {
             groupType: 'unknown',
             options: [],
@@ -103,213 +90,88 @@ export async function discoverOptions(page, containerSelector) {
         };
     }
 
-    // 3. Enriquecer cada opción detectada
-    const enrichedOptions = rawResult.options.map((opt, idx) => {
-        // Determinar tipo con clasificación mejorada
-        const type = classifyOptionTypeRaw(opt);
-
-        // Calcular confidence score
-        const confidence = calculateConfidence(opt);
-
-        // Construir locator Playwright robusto
-        const locator = buildRobustLocator(opt);
-
-        // Computar selected/checked más confiable
-        const reliableSelected = computeReliableSelectedState(opt);
-        const reliableChecked = computeReliableCheckedState(opt);
-
-        // Determinar groupId si aplica
-        const groupId = determineGroupId(opt, rawResult.groupType);
-
-        return {
-            id: opt.id || `option-${idx}`,
-            type,
-            label: opt.label || `Option ${idx + 1}`,
-            value: opt.value ?? null,
-            selected: reliableSelected,
-            checked: reliableChecked,
-            enabled: opt.enabled !== false,
-            visible: opt.visible !== false,
-            locator,
-            confidence,
-            groupId,
-        };
-    });
-
-    // 3. Determinar groupType final (puede diferir al raw si hay mezclas)
-    const finalGroupType = determineFinalGroupType(enrichedOptions, rawResult.groupType);
-
-    // 4. Generar notas de análisis para UI
-    const notes = generateAnalysisNotes(rawResult, enrichedOptions);
+    const enriched = enrichDetectionResult(rawResult);
 
     return {
-        groupType: finalGroupType,
-        options: enrichedOptions,
+        groupType: enriched.groupType,
+        options: enriched.options,
         containerSelector,
-        analysisNotes: notes,
+        analysisNotes: enriched.analysisNotes,
     };
 }
 
 /**
- * Clasifica el tipo de opción basándose en las propiedades crudas detectadas
- * por el script de OptionDetector.
+ * Detects options using a specific strategy (for combobox, custom components that need menu open).
  *
- * @param {Object} opt - Opción individual tal como viene del script detector
- * @returns {OptionType} Tipo clasificado
- * @private
+ * @param {import('playwright').Page} page
+ * @param {string} containerSelector
+ * @param {Object} options
+ * @param {string} options.strategy - Strategy groupType to use for detection
+ * @param {number} [options.timeout=30000]
+ * @returns {Promise<DiscoveryResult>}
  */
-function classifyOptionTypeRaw(opt) {
-    if (opt.type === 'select' || opt.type === 'select-multi') {
-        return opt.multi === true ? 'native_select_multi' : 'native_select';
-    }
-    if (opt.type === 'checkbox' || opt.type.includes('checkbox')) return 'checkbox';
-    if (opt.type === 'radio' || opt.type.includes('radio')) return 'radio';
-    if (opt.type.includes('radio-role') || opt.type.includes('menuitemradio')) return 'aria_radio';
-    if (opt.type.includes('checkbox-role') || opt.type.includes('menuitemcheckbox'))
-        return 'aria_checkbox';
-    if (opt.type === 'option' || opt.type.includes('option')) return 'aria_option';
-    if (opt.type === 'list') return 'list_item';
-    return 'custom_component';
-}
+export async function discoverOptionsWithStrategy(page, containerSelector, options = {}) {
+    const { strategy, timeout = 30000 } = options;
 
-/** Calcula un score de confidence (0-1) basado en indicadores de robustez. */
-function calculateConfidence(opt) {
-    let score = 0.5;
-    if (opt.locator) {
-        if (opt.locator.startsWith('getByRole')) score += 0.2;
-        else if (opt.locator.startsWith('#')) score += 0.1;
-        else if (opt.locator.includes('data-test')) score += 0.15;
+    if (!page || page.isClosed()) {
+        return {
+            groupType: 'unknown',
+            options: [],
+            containerSelector,
+            analysisNotes: ['No active page available for option detection.'],
+        };
     }
-    if (opt.label && opt.label.trim().length > 0) score += 0.1;
-    if (opt.value !== null && opt.value !== undefined && opt.value !== '') score += 0.1;
-    if (opt.selected || opt.checked) score += 0.1;
-    if (opt.enabled !== undefined) score += 0.05;
-    if (opt.visible !== undefined) score += 0.05;
-    return Math.min(Math.max(score, 0.1), 1.0);
-}
 
-/** Escapa un valor para uso seguro en un selector CSS. */
-function escapeCss(value) {
-    return String(value).replace(/'/g, "\\'").replace(/"/g, '\\"');
-}
+    const { getStrategy } = await import('./InteractionStrategy.js');
+    const strategyInstance = getStrategy(strategy);
 
-/** Construye un locator Playwright robusto priorizando strategies. */
-function buildRobustLocator(opt) {
-    if (opt.locator && opt.locator.trim().length > 0) return opt.locator;
-    if (opt.id && !/\[\d{3,}|[a-f0-9]{8}-[a-f0-9]{4}/i.test(opt.id)) {
-        return `#${escapeCss(opt.id)}`;
+    let rawResult;
+    try {
+        rawResult = await strategyInstance.detect(page, containerSelector, timeout);
+    } catch (err) {
+        return {
+            groupType: 'unknown',
+            options: [],
+            containerSelector,
+            analysisNotes: [
+                `Error ejecutando detector de estrategia "${strategy}": ${err.message}`,
+            ],
+        };
     }
-    if (opt.label && opt.label.trim().length > 0) {
-        const safeLabel = escapeCss(opt.label);
-        return `getByRole('option', { name: '${safeLabel}' })`;
-    }
-    if (opt.label && opt.label.trim().length > 0) {
-        const safeLabel = escapeCss(opt.label);
-        return `getByText('${safeLabel}')`;
-    }
-    return `#${Math.random().toString(36).substr(2, 9)}`;
-}
 
-/** Computa el estado 'selected' más fiable mezclando attribute + class + ARIA. */
-function computeReliableSelectedState(opt) {
-    if (opt.selected !== undefined) return Boolean(opt.selected);
-    if (opt.actualState && opt.actualState.selected !== undefined)
-        return Boolean(opt.actualState.selected);
-    if (opt.classList) {
-        if (opt.classList.contains('selected')) return true;
-        if (opt.classList.contains('active')) return true;
+    if (!rawResult?.length) {
+        return {
+            groupType: 'unknown',
+            options: [],
+            containerSelector,
+            analysisNotes: [`No options found with strategy "${strategy}".`],
+        };
     }
-    if (opt.actualState && opt.actualState.aria_selected !== null)
-        return opt.actualState.aria_selected === 'true';
-    return false;
-}
 
-/** Mismo algoritmo que computeReliableSelectedState para checked. */
-function computeReliableCheckedState(opt) {
-    return computeReliableSelectedState(opt);
-}
+    const rawResultObj = {
+        found: true,
+        groupType: strategy,
+        options: rawResult,
+    };
 
-/** Determina el groupId para radios/checkboxes agrupados. */
-function determineGroupId(opt, rawGroup) {
-    if (opt.groupId) return opt.groupId;
-    if (rawGroup === 'radio-group' || rawGroup === 'checkbox-group') {
-        if (opt.label) {
-            const firstWord = opt.label
-                .split(' ')[0]
-                .toLowerCase()
-                .replace(/[^a-z0-9]/g, '');
-            if (firstWord.length > 0) return firstWord;
-        }
-        return opt.type;
-    }
-    return null;
-}
+    const enriched = enrichDetectionResult(rawResultObj);
 
-/** Determina el groupType final considerando las options enriquecidas. */
-function determineFinalGroupType(enrichedOptions, rawGroup) {
-    const types = new Set(enrichedOptions.map((o) => o.type));
-    if (types.has('native_select') || types.has('native_select_multi')) {
-        return types.has('native_select_multi') ? 'select-multi' : 'select';
-    }
-    if (types.has('radio') || types.has('aria_radio')) return 'radio-group';
-    if (types.has('checkbox') || types.has('aria_checkbox')) return 'checkbox-group';
-    if (types.has('list_item')) return 'list';
-    return rawGroup || 'unknown';
+    return {
+        groupType: enriched.groupType,
+        options: enriched.options,
+        containerSelector,
+        analysisNotes: enriched.analysisNotes,
+    };
 }
-
-/** Genera notas legibles para mostrar en la panel de la UI. */
-function generateAnalysisNotes(rawResult, enrichedOptions) {
-    const notes = [];
-    if (rawResult.options.length === 0) {
-        notes.push('No se detectaron elementos interactivos dentro del contenedor.');
-        return notes;
-    }
-    const typeCounts = {};
-    for (const opt of enrichedOptions) {
-        typeCounts[opt.type] = (typeCounts[opt.type] || 0) + 1;
-    }
-    for (const [type, count] of Object.entries(typeCounts)) {
-        notes.push(`Se detectaron ${count} opción(es) de tipo "${type}".`);
-    }
-    const lowConfidence = enrichedOptions.filter((o) => o.confidence < 0.5).length;
-    if (lowConfidence > 0) {
-        notes.push(
-            `⚠️ ${lowConfidence} opción(es) tienen baja confidence - los locators pueden no ser robustos.`,
-        );
-    }
-    const selectedCount = enrichedOptions.filter((o) => o.selected).length;
-    if (selectedCount > 0) {
-        notes.push(`${selectedCount} opción(nes) ya están seleccionadas/activadas.`);
-    }
-    const withStableId = enrichedOptions.filter(
-        (o) => o.locator && o.locator.startsWith('#'),
-    ).length;
-    if (withStableId < enrichedOptions.length) {
-        notes.push(
-            `${enrichedOptions.length - withStableId} opción(es) usan locators dinámicos - se recomienda agregar data-testid para mayor estabilidad.`,
-        );
-    }
-    return notes;
-}
-
-/* ----------------------------------------------------------------
-   Exportaciones nombradas (API principal)
-   ---------------------------------------------------------------- */
 
 export {
     classifyOptionTypeRaw,
     calculateConfidence,
     buildRobustLocator,
-    computeReliableSelectedState,
-    computeReliableCheckedState,
+    computeReliableState,
     determineGroupId,
     determineFinalGroupType,
     generateAnalysisNotes,
+    enrichDetectionResult,
+    detectOptionsScript,
 };
-
-/* ----------------------------------------------------------------
-   Re-exportar script self-contained de OptionDetector.js
-   para mantener compatibilidad absoluta hacia atrás.
-   ---------------------------------------------------------------- */
-
-export { detectOptionsScript };

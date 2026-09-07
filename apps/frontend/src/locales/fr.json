@@ -473,9 +473,11 @@
       "action_no_change": "Aucun changement",
       "action_check": "Cocher",
       "action_uncheck": "Décocher",
+      "action_select": "Sélectionner",
       "current_checked": "Cochée",
       "current_unchecked": "Décochée",
       "current_unknown": "Inconnu",
+      "retry_detect": "Réessayer la détection",
       "conditional": {
         "control_logic": "Contrôle de Flux",
         "if": "Quand",

@@ -1,28 +1,25 @@
 /**
  * OptionWriter
  *
- * Applies a set of "actions" to a group of options on the page, using a
- * diff-based strategy. For each detected option it reads the CURRENT state from
- * the DOM, compares it with the DESIRED action (NO_CHANGE / CHECK / UNCHECK) and
- * only interacts when a real change is needed. After interacting it re-reads the
- * DOM to verify the outcome and reports per-option evidence.
- *
- * This avoids indiscriminate clicks (never toggles a control that already has the
- * desired state) and produces detailed PASS/FAIL evidence.
+ * High-level orchestrator that delegates to InteractionStrategy implementations.
+ * Handles diff logic (NO_CHANGE/CHECK/UNCHECK/SELECT) and evidence collection,
+ * while strategies handle the actual Playwright interactions per component type.
  */
 
-import { buildPlaywrightLocator, normalizeSelectorForDotId } from '../core/selector-utils.js';
+import { getStrategy } from './InteractionStrategy.js';
+import './strategies/index.js';
 
 const ACTION_NO_CHANGE = 'NO_CHANGE';
 const ACTION_CHECK = 'CHECK';
 const ACTION_UNCHECK = 'UNCHECK';
-const VALID_ACTIONS = new Set([ACTION_NO_CHANGE, ACTION_CHECK, ACTION_UNCHECK]);
+const ACTION_SELECT = 'SELECT';
+const VALID_ACTIONS = new Set([ACTION_NO_CHANGE, ACTION_CHECK, ACTION_UNCHECK, ACTION_SELECT]);
 
 function normalizeAction(action) {
     const a = String(action || '')
         .toUpperCase()
         .trim();
-    return VALID_ACTIONS.has(a) ? a : ACTION_CHECK; // legacy items default to CHECK
+    return VALID_ACTIONS.has(a) ? a : ACTION_CHECK;
 }
 
 function findOption(options, selection) {
@@ -37,162 +34,33 @@ function findOption(options, selection) {
     );
 }
 
-function isCheckedState(opt) {
-    if (opt.actualState) return Boolean(opt.actualState.checked);
-    return Boolean(opt.checked || opt.selected);
-}
-
-async function buildTargetLocator(page, option, containerSelector, options) {
-    if (option.locator) {
-        try {
-            if (containerSelector) {
-                const container = await normalizeSelectorForDotId(page, containerSelector);
-                const containerLocator = buildPlaywrightLocator(page, container).first();
-                await containerLocator.waitFor({
-                    state: 'attached',
-                    timeout: options.timeout || 30000,
-                });
-                return containerLocator.locator(option.locator).first();
-            }
-            return buildPlaywrightLocator(page, option.locator).first();
-        } catch (err) {
-            // locator failed to resolve; fall through to container-based scan
-        }
-    }
-    // Fallback: build a locator from the container + option index/type
-    if (containerSelector) {
-        const container = await normalizeSelectorForDotId(page, containerSelector);
-        const containerLocator = buildPlaywrightLocator(page, container).first();
-        await containerLocator.waitFor({ state: 'attached', timeout: options.timeout || 30000 });
-        const count = option.index ?? 0;
-        if (option.type === 'select') {
-            return containerLocator.locator('select option').nth(count);
-        }
-        if (option.type === 'checkbox' || option.type === 'radio') {
-            return containerLocator.locator(`input[type="${option.type}"]`).nth(count);
-        }
-        return containerLocator.locator('*').nth(count);
-    }
-    return null;
-}
-
-/**
- * Performs a single interaction on an already-resolved locator for the given
- * option + desired action. Returns true if any DOM mutation was requested.
- */
-async function interact(page, target, option, action, runOptions) {
-    const selectParent = (loc) => loc.locator('xpath=ancestor::select').first();
-    const isSelect = option.type === 'select' || option.type === 'select-multi';
-
-    if (isSelect) {
-        // Resolve to the parent <select> (we detect <option> elements).
-        let selectLocator = target;
-        try {
-            const candidate = selectParent(target);
-            if ((await candidate.count()) > 0) selectLocator = candidate;
-        } catch {
-            /* keep target */
-        }
-        if (action === ACTION_UNCHECK) {
-            throw new Error(
-                `UNCHECK is not supported for the <select> option "${option.label}". Use CHECK to choose a different option.`,
-            );
-        }
-        const values = {
-            label: String(option.label),
-        };
-        await selectLocator.selectOption(values, runOptions).catch(async () => {
-            await selectLocator.selectOption({ value: String(option.value) }, runOptions);
-        });
-        return true;
-    }
-
-    if (action === ACTION_UNCHECK) {
-        if (option.type === 'radio') {
-            throw new Error(
-                `UNCHECK is not supported for the radio option "${option.label}". Radio options are mutually exclusive and are cleared by checking another option.`,
-            );
-        }
-        try {
-            await target.uncheck(runOptions);
-            return true;
-        } catch (err) {
-            // Fall back to a click for custom/ARIA controls that don't support uncheck().
-            await target.click(runOptions);
-            return true;
-        }
-    }
-
-    // CHECK
-    switch (option.type) {
-        case 'checkbox':
-        case 'radio':
-            await target.check(runOptions);
-            break;
-        case 'list':
-        case 'checkbox-role':
-        case 'radio-role':
-        case 'option-role':
-        case 'list-option':
-        default:
-            await target.click(runOptions);
-            break;
-    }
-    return true;
-}
-
-/**
- * Reads the post-interaction checked/selected state of an option from the DOM.
- * Returns a boolean or null when it cannot be determined.
- */
-async function readState(page, option, containerSelector, timeout) {
-    try {
-        const target = await buildTargetLocator(page, option, containerSelector, { timeout });
-        if (!target) return null;
-        if (option.type === 'select' || option.type === 'select-multi') {
-            try {
-                return await target.evaluate((el) => el.selected);
-            } catch {
-                return null;
-            }
-        }
-        if (option.type === 'checkbox' || option.type === 'radio') {
-            try {
-                return await target.isChecked();
-            } catch {
-                return null;
-            }
-        }
-        // ARIA / custom
-        try {
-            return await target.evaluate((el) => {
-                if (el.matches('input[type="checkbox"], input[type="radio"]')) return el.checked;
-                const ariaChecked = el.getAttribute('aria-checked');
-                if (ariaChecked !== null) return ariaChecked === 'true';
-                const ariaSelected = el.getAttribute('aria-selected');
-                if (ariaSelected !== null) return ariaSelected === 'true';
-                return (
-                    el.classList.contains('selected') ||
-                    el.classList.contains('active') ||
-                    el.classList.contains('is-selected')
-                );
-            });
-        } catch {
-            return null;
-        }
-    } catch {
-        return null;
-    }
-}
-
 const stateLabel = (state) =>
     state === true ? 'Checked' : state === false ? 'Unchecked' : 'Unknown';
 
+/**
+ * Executes selection actions using the appropriate strategy for the detected group type.
+ *
+ * @param {import('playwright').Page} page
+ * @param {Object} params
+ * @param {string} params.containerSelector
+ * @param {Object[]} params.selectedOptions - User configured actions [{label, value, action}]
+ * @param {Object[]} params.options - All detected options from discovery
+ * @param {number} [params.timeout=30000]
+ * @param {boolean} [params.verify=true]
+ * @param {boolean} [params.menuOpen=false] - Whether menu is already open
+ * @returns {Promise<{applied: Object[], evidence: Object[], actionCount: number, optionCount: number}>}
+ */
 export async function writeOptions(
     page,
-    { containerSelector, selectedOptions, options, timeout = 30000, verify = true },
+    {
+        containerSelector,
+        selectedOptions,
+        options,
+        timeout = 30000,
+        verify = true,
+        menuOpen = false,
+    },
 ) {
-    const runOptions = { timeout };
     const selections = Array.isArray(selectedOptions) ? selectedOptions : [];
     const allOptions = Array.isArray(options) ? options : [];
 
@@ -200,7 +68,13 @@ export async function writeOptions(
         return { applied: [], evidence: [], optionCount: allOptions.length, actionCount: 0 };
     }
 
-    // Normalize desired actions, keyed by the option identity (label/value).
+    if (!allOptions.length) {
+        throw new Error('No detected options available for selection');
+    }
+
+    const groupType = allOptions[0]?.groupType || determineGroupType(allOptions);
+    const strategy = getStrategy(groupType);
+
     const actions = new Map();
     for (const sel of selections) {
         if (!sel) continue;
@@ -209,7 +83,6 @@ export async function writeOptions(
         actions.set(key, normalizeAction(sel.action));
     }
 
-    // Validate that every requested selection maps to a detected option.
     for (const sel of selections) {
         if (!sel) continue;
         if (!findOption(allOptions, sel)) {
@@ -222,129 +95,75 @@ export async function writeOptions(
         }
     }
 
-    const evidence = [];
-    const applied = [];
-    let appliedCount = 0;
+    const ctx = {
+        page,
+        containerSelector,
+        selectedOptions: selections,
+        detectedOptions: allOptions,
+        timeout,
+        menuOpen,
+    };
 
-    // Phase 1: execute required interactions (diff strategy).
-    for (const option of allOptions) {
-        const key = String(option.label ?? option.value).toLowerCase();
-        const action = actions.get(key) || ACTION_NO_CHANGE;
-        if (action === ACTION_NO_CHANGE) continue;
+    let result;
+    try {
+        result = await strategy.execute(ctx);
+    } catch (err) {
+        throw new Error(`Strategy "${groupType}" execution failed: ${err.message}`);
+    }
 
-        const isSelect = option.type === 'select' || option.type === 'select-multi';
-        // Reject unsupported UNCHECK semantics up front with a specific error.
-        if (action === ACTION_UNCHECK) {
-            if (isSelect) {
-                throw new Error(
-                    `UNCHECK is not supported for the <select> option "${option.label}". Use CHECK to choose a different option.`,
-                );
+    if (verify && result.evidence) {
+        const verifiedOptions = await strategy.verify(ctx);
+        result.evidence = result.evidence.map((ev) => {
+            // Skip verification for actions that were already in desired state (no interaction performed)
+            if (ev.message && ev.message.includes('Already in desired state')) {
+                return ev;
             }
-            if (option.type === 'radio' || option.type === 'radio-role') {
-                throw new Error(
-                    `UNCHECK is not supported for the radio option "${option.label}". Radio options are mutually exclusive and are cleared by checking another option.`,
-                );
-            }
-        }
-
-        const before = isCheckedState(option);
-
-        // Skip when the current state already matches the desired outcome.
-        if (action === ACTION_CHECK && before === true) {
-            evidence.push({
-                label: option.label,
-                value: option.value,
-                type: option.type,
-                before: stateLabel(before),
-                action,
-                after: stateLabel(before),
-                result: 'PASS',
-                message: 'Already in desired state. No interaction performed.',
-            });
-            continue;
-        }
-        if (action === ACTION_UNCHECK && before === false) {
-            evidence.push({
-                label: option.label,
-                value: option.value,
-                type: option.type,
-                before: stateLabel(before),
-                action,
-                after: stateLabel(before),
-                result: 'PASS',
-                message: 'Already in desired state. No interaction performed.',
-            });
-            continue;
-        }
-
-        if (option.enabled === false) {
-            throw new Error(`Option "${option.label}" is disabled and cannot be selected.`);
-        }
-        if (option.visible === false) {
-            throw new Error(`Option "${option.label}" is hidden and cannot be interacted with.`);
-        }
-
-        const target = await buildTargetLocator(page, option, containerSelector, { timeout });
-        if (!target) {
-            throw new Error(`Could not resolve a locator for option "${option.label}".`);
-        }
-
-        try {
-            await interact(page, target, option, action, runOptions);
-        } catch (err) {
-            evidence.push({
-                label: option.label,
-                value: option.value,
-                type: option.type,
-                before: stateLabel(before),
-                action,
-                after: null,
-                result: 'FAIL',
-                message: err.message || 'Interaction failed.',
-            });
-            throw new Error(
-                `Failed to apply ${action} to option "${option.label}": ${err.message}`,
+            const verified = verifiedOptions.find(
+                (o) => o.label === ev.label && o.value === ev.value,
             );
-        }
-        applied.push({
-            label: option.label,
-            value: option.value,
-            type: option.type,
-            action,
-            selected: action === ACTION_CHECK,
-        });
-        appliedCount += 1;
-
-        // Verification: re-read the DOM state after interacting.
-        let after = null;
-        if (verify) {
-            if (typeof page.waitForTimeout === 'function') {
-                await page.waitForTimeout(50).catch(() => {});
+            if (verified && verified._verified && verified._verifiedState !== null) {
+                const targetState = ev.action === ACTION_CHECK || ev.action === ACTION_SELECT;
+                const pass = verified._verifiedState === targetState;
+                return {
+                    ...ev,
+                    after: stateLabel(verified._verifiedState),
+                    result: pass ? 'PASS' : 'FAIL',
+                    message: pass
+                        ? null
+                        : `Expected ${stateLabel(targetState)} but found ${stateLabel(verified._verifiedState)}.`,
+                };
             }
-            after = await readState(page, option, containerSelector, timeout);
-        }
-        const targetState = action === ACTION_CHECK;
-        const pass = after === null || after === targetState;
-        evidence.push({
-            label: option.label,
-            value: option.value,
-            type: option.type,
-            before: stateLabel(before),
-            action,
-            after: after === null ? stateLabel(after) : stateLabel(after),
-            result: pass ? 'PASS' : 'FAIL',
-            message: pass
-                ? null
-                : `Expected ${stateLabel(targetState)} but found ${stateLabel(after)}.`,
+            return ev;
         });
     }
 
     return {
-        applied,
-        actionCount: appliedCount,
-        evidence,
-        optionCount: allOptions.length,
+        applied: result.applied || [],
+        evidence: result.evidence || [],
+        actionCount: result.actionCount || 0,
+        optionCount: result.optionCount || allOptions.length,
     };
+}
+
+function determineGroupType(options) {
+    const types = new Set(options.map((o) => o.type));
+    // Handle canonical types from ComponentClassifier
+    if (types.has('native_select') || types.has('native_select_multi')) {
+        return types.has('native_select_multi') ? 'select-multi' : 'select';
+    }
+    if (types.has('radio') || types.has('aria_radio')) return 'radio-group';
+    if (types.has('checkbox') || types.has('aria_checkbox')) return 'checkbox-group';
+    if (types.has('aria_option')) return 'listbox';
+    if (types.has('list_item')) return 'list';
+    if (types.has('custom_component')) return 'custom';
+    // Handle legacy type names from older tests
+    if (types.has('select') || types.has('select-multi')) {
+        return types.has('select-multi') ? 'select-multi' : 'select';
+    }
+    if (types.has('list')) return 'list';
+    if (types.has('checkbox')) return 'checkbox-group';
+    if (types.has('radio')) return 'radio-group';
+    return 'unknown';
 }
 
 export default { writeOptions };

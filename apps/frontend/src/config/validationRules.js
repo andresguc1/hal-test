@@ -301,6 +301,7 @@ export const NODE_INPUTS = {
       label: "Expand menu before selecting",
       type: "boolean",
       defaultValue: false,
+      hint: "Only for custom dropdowns/comboboxes. Native <select> elements are handled automatically by Playwright.",
     },
     {
       key: "takeScreenshot",

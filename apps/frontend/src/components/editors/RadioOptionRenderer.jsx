@@ -1,0 +1,155 @@
+import React from 'react';
+import { cn } from '@/lib/utils';
+import { Circle } from 'lucide-react';
+import {
+    ACTION_CHECK,
+    ACTION_NO_CHANGE,
+    getActionFor,
+    setActionFor as setActionForHelper,
+    countActions,
+} from './optionActions.js';
+
+const TYPE_BADGE = {
+    radio: { label: 'Radio', cls: 'bg-fuchsia-500/15 text-fuchsia-400 border-fuchsia-500/30' },
+    'aria_radio': { label: 'Radio', cls: 'bg-fuchsia-500/15 text-fuchsia-400 border-fuchsia-500/30' },
+};
+
+const ACTION_BADGE = {
+    NO_CHANGE: { labelKey: 'nodes.config.action_no_change', cls: 'bg-slate-600/20 text-slate-400 border-slate-600/40' },
+    CHECK: { labelKey: 'nodes.config.action_check', cls: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' },
+};
+
+const CURRENT_BADGE = {
+    checked: { labelKey: 'nodes.config.current_checked', cls: 'bg-emerald-500/10 text-emerald-400' },
+    unchecked: { labelKey: 'nodes.config.current_unchecked', cls: 'bg-slate-600/20 text-slate-500' },
+    unknown: { labelKey: 'nodes.config.current_unknown', cls: 'bg-amber-500/10 text-amber-400' },
+};
+
+export const RadioOptionRenderer = React.memo(({ detectedOptions, config, onChange, t }) => {
+    const getAction = React.useCallback((opt) => getActionFor(config, opt), [config]);
+    const isCurrentState = React.useCallback((opt) => {
+        if (opt.actualState) return opt.actualState.checked;
+        return Boolean(opt.checked || opt.selected);
+    }, []);
+
+    const setActionFor = React.useCallback((opt, action) => {
+        onChange(setActionForHelper(config, opt, action));
+    }, [config, onChange]);
+
+    const actionCount = countActions(config);
+
+    // For radio groups, only one can be selected at a time
+    const selectedOption = detectedOptions.find((o) => getAction(o) === 'CHECK');
+
+    return (
+        <div className="space-y-2">
+            {/* Toolbar */}
+            <div className="flex items-center justify-between px-3 py-2 bg-slate-800/60 rounded-xl border border-slate-700/60">
+                <span className="text-xs uppercase tracking-wider font-semibold text-slate-400">
+                    {t('nodes.config.detected_options', 'Detected Options')} ({detectedOptions.length})
+                </span>
+                <div className="flex items-center gap-1">
+                    {actionCount > 0 && (
+                        <button
+                            type="button"
+                            onClick={() => onChange([])}
+                            disabled={actionCount === 0}
+                            className="px-2 py-0.5 rounded text-[9px] font-semibold text-slate-400 hover:bg-slate-500/15 transition-colors disabled:opacity-40"
+                        >
+                            <Circle size={10} className="inline mr-0.5" />
+                            {t('nodes.config.clear', 'Clear')}
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {/* Options list */}
+            <div className="border border-slate-700/60 rounded-xl overflow-hidden max-h-48 overflow-y-auto custom-scrollbar divide-y divide-slate-800/60">
+                {detectedOptions.map((opt, idx) => {
+                    const current = isCurrentState(opt);
+                    const badge = TYPE_BADGE[opt.type] || TYPE_BADGE.radio;
+                    const currentBadge = CURRENT_BADGE[current ? 'checked' : 'unchecked'];
+                    const action = getAction(opt);
+
+                    return (
+                        <div
+                            key={opt.id || idx}
+                            className={cn(
+                                'flex items-center gap-3 px-3 py-2 hover:bg-slate-800/40 transition-colors',
+                                opt.enabled === false && 'opacity-45',
+                            )}
+                        >
+                            {/* Radio visual */}
+                            <div className="flex items-center gap-2 shrink-0">
+                                <span className={cn(
+                                    'w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors',
+                                    current
+                                        ? 'bg-fuchsia-500 border-fuchsia-500'
+                                        : 'border-slate-600',
+                                )}>
+                                    {current && <span className="w-2 h-2 rounded-full bg-white" />}
+                                </span>
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-slate-200 truncate">
+                                        {opt.label || `${t('nodes.config.option', 'Option')} ${idx + 1}`}
+                                    </span>
+                                    <span className={cn('text-[8px] px-1 py-px rounded border leading-none shrink-0', badge.cls)}>
+                                        {badge.label}
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-1.5 mt-1">
+                                    <span className={cn('text-[8px] px-1.5 py-px rounded-full leading-none', currentBadge.cls)}>
+                                        {t('nodes.config.current_label', 'Current')}:{' '}
+                                        {t(currentBadge.labelKey, current ? 'Checked' : 'Unchecked')}
+                                    </span>
+                                    {opt.actualState && opt.actualState.enabled === false ? (
+                                        <span className="text-[8px] text-rose-400 px-1 py-px rounded-full bg-rose-500/10">
+                                            {t('nodes.config.disabled', 'disabled')}
+                                        </span>
+                                    ) : null}
+                                </div>
+                                <div className="text-[8px] text-slate-600 font-mono truncate mt-0.5">
+                                    {opt.locator || `#${opt.containerSelector || 'container'} [index ${opt.index}]`}
+                                </div>
+                            </div>
+
+                            {/* Action selector - for radio, only NO_CHANGE/CHECK, and only one can be CHECK */}
+                            <div className="shrink-0 flex items-center">
+                                <div className="flex items-center gap-0.5">
+                                    {[ACTION_NO_CHANGE, ACTION_CHECK].map((a) => {
+                                        const active = action === a;
+                                        const badge = ACTION_BADGE[a];
+                                        const disabledForCheck = a === ACTION_CHECK && selectedOption && selectedOption.id !== opt.id;
+                                        const isDisabled = opt.enabled === false || disabledForCheck;
+                                        return (
+                                            <button
+                                                key={a}
+                                                type="button"
+                                                disabled={isDisabled}
+                                                onClick={() => setActionFor(opt, a)}
+                                                title={t(badge.labelKey, a)}
+                                                className={cn(
+                                                    'px-1.5 py-px rounded text-[9px] font-bold border leading-none transition-colors',
+                                                    active ? badge.cls : 'bg-transparent text-slate-600 border-transparent',
+                                                    isDisabled && 'opacity-35 cursor-not-allowed',
+                                                )}
+                                            >
+                                                {t(badge.labelKey, a)}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+});
+
+RadioOptionRenderer.displayName = 'RadioOptionRenderer';
+export default RadioOptionRenderer;
