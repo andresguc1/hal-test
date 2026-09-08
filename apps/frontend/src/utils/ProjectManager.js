@@ -92,6 +92,89 @@ class ProjectManager {
     }
   }
 
+  /**
+   * Delete multiple projects atomically.
+   * @param {string[]} projectIds
+   * @returns {Promise<{ deleted: number, deletedIds: string[], notFoundIds: string[], stats: object }>}
+   */
+  async bulkDeleteProjects(projectIds) {
+    try {
+      const result = await api.delete(`/projects/bulk`, { projectIds });
+      logger.info(
+        "Projects bulk-deleted",
+        { count: result?.deleted || 0 },
+        "ProjectManager",
+      );
+      return result;
+    } catch (err) {
+      logger.error("Failed to bulk-delete projects", err, "ProjectManager");
+      throw err;
+    }
+  }
+
+  /**
+   * Search + paginate projects.
+   * @param {{ search?: string, page?: number, limit?: number, sort?: string, order?: string }} [params]
+   */
+  async searchProjects(params = {}) {
+    try {
+      const qs = new URLSearchParams();
+      if (params.search) qs.set("search", params.search);
+      if (params.page) qs.set("page", String(params.page));
+      if (params.limit) qs.set("limit", String(params.limit));
+      if (params.sort) qs.set("sort", params.sort);
+      if (params.order) qs.set("order", params.order);
+      const query = qs.toString();
+      return await api.get(query ? `/projects?${query}` : "/projects");
+    } catch (err) {
+      logger.error("Failed to search projects", err, "ProjectManager");
+      throw err;
+    }
+  }
+
+  /**
+   * Download the entire project as a ZIP.
+   * @param {string} projectId
+   * @param {boolean} [includeSecrets]
+   */
+  async exportProject(projectId, includeSecrets = false) {
+    try {
+      const query = includeSecrets ? "?sanitize=false" : "?sanitize=true";
+      const blob = await api.download(`/projects/${projectId}/export${query}`);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `hal_project_${projectId}_${Date.now()}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      return blob;
+    } catch (err) {
+      logger.error("Failed to export project", err, "ProjectManager");
+      throw err;
+    }
+  }
+
+  /**
+   * Import a project from a HAL zip file.
+   * @param {File|Blob} file
+   * @param {{ name?: string }} [options]
+   */
+  async importProject(file, options = {}) {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      if (options.name) formData.append("name", options.name);
+
+      const result = await api.upload(`/projects/import`, formData);
+      return result;
+    } catch (err) {
+      logger.error("Failed to import project", err, "ProjectManager");
+      throw err;
+    }
+  }
+
   async listProjects() {
     try {
       return await api.get("/projects");

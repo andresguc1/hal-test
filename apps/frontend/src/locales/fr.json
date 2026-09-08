@@ -118,7 +118,10 @@
     "selector_captured": "Élément capturé",
     "selector_empty": "Aucun sélecteur valide trouvé",
     "template_error": "Échec du chargement du modèle",
-    "template_loaded": "Modèle initial chargé !"
+    "template_loaded": "Modèle initial chargé !",
+    "select_projects": "Sélectionner les projets",
+    "no_projects_found": "Aucun projet trouvé",
+    "import_project": "Importer un projet"
   },
   "api_status": {
     "status": "Statut de l'API",
@@ -857,7 +860,10 @@
       "error_directory": "Erreur lors de l'importation du dossier",
       "help_text": "Supporte : Playwright, Cypress, Selenium, TestCafe, Puppeteer, WebdriverIO, Nightwatch, Katalon, TestRigor",
       "files_count": "{{count}} fichiers",
-      "no_flows_converted": "Aucun flux n'a pu être importé depuis le répertoire."
+      "no_flows_converted": "Aucun flux n'a pu être importé depuis le répertoire.",
+      "project_file_placeholder": "Sélectionner un fichier .hal.zip",
+      "project_name_label": "Nom du projet (facultatif)",
+      "project_help": "Importez un projet complet (.hal.zip) avec tous ses flux, nœuds et connexions."
     },
     "export": {
       "title": "Exporter le Flux",
@@ -865,6 +871,7 @@
       "mode_json_desc": "Sauvegarde du flux",
       "mode_code_label": "Code",
       "mode_code_desc": "Script exécutable",
+      "mode_project_label": "Projet",
       "json_title": "Exporter au format JSON",
       "json_desc": "Génère un fichier JSON contenant la configuration complète du flux. Idéal pour les sauvegardes ou le partage de flux.",
       "nodes_label": "Nœuds :",
@@ -886,6 +893,15 @@
       "pom_label": "Modèle d'Objets de Page (POM)",
       "pom_desc": "Structurer le code en classes de page basées sur des sous-flux",
       "project_files": "Fichiers du Projet",
+      "project_title": "Paquet de Projet",
+      "project_desc": "Téléchargez ce projet complet sous forme de paquet .hal.zip avec tous ses flux, nœuds et connexions. Les secrets sont exclus par défaut.",
+      "project_name_label": "Projet",
+      "project_flows_label": "Flux",
+      "project_pkg_label": "Paquet",
+      "no_project_hint": "Sélectionnez ou créez d'abord un projet pour l'exporter.",
+      "project_generating": "Génération du paquet .hal.zip...",
+      "project_ready_msg": "Paquet .hal.zip téléchargé",
+      "project_error": "Échec de l'exportation du projet",
       "cicd_label": "Inclure des modèles CI/CD",
       "cicd_desc": "Ajouter des fichiers de pipeline (.github/workflows, .gitlab-ci) pour exécuter des tests automatiquement"
     }
@@ -1644,5 +1660,34 @@
   },
   "projects": {
     "default_name": "Projet Général"
+  },
+  "export": {
+    "title": "Exporter le Projet",
+    "project": "Projet",
+    "flows": "Flux",
+    "components": "Composants",
+    "include_secrets": "Inclure les secrets",
+    "include_secrets_hint": "Exporter les clés API et mots de passe (dangereux)",
+    "secrets_warning": "Attention : ce fichier contiendra des informations d'identification sensibles.",
+    "success": "Exportation terminée",
+    "done": "Terminé",
+    "download": "Télécharger .hal.zip"
+  },
+  "import": {
+    "title": "Importer un Projet",
+    "no_file": "Veuillez sélectionner un fichier .hal.zip",
+    "failed": "L'importation a échoué",
+    "choose_file": "Choisir un fichier .hal.zip",
+    "supported": "Pris en charge : ZIP de projet Haltest (.hal.zip)",
+    "project_name": "Nom du projet (facultatif)",
+    "name_hint": "Laissez vide pour utiliser le nom d'origine",
+    "success": "Projet importé avec succès",
+    "start": "Démarrer l'importation"
+  },
+  "bulk_delete": {
+    "title": "Supprimer les projets",
+    "confirm": "Supprimer les projets",
+    "description": "Vous êtes sur le point de supprimer définitivement {{count}} projet(s) contenant {{flows}} flux. Cela supprimera tous les flux, nœuds et connexions. Cette action est irréversible.",
+    "typed_description": "Vous êtes sur le point de supprimer définitivement {{count}} projet(s) contenant {{flows}} flux. Cette action est irréversible. Tapez DELETE pour confirmer."
   }
 }

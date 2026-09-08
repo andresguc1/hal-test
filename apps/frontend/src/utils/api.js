@@ -230,6 +230,55 @@ export const api = {
     return await response.json();
   },
 
+  /**
+   * Download a resource as a Blob (e.g. project ZIP export).
+   */
+  async download(endpoint, customConfig = {}) {
+    const headers = {
+      ...(await getHeaders()),
+      ...(customConfig.headers || {}),
+    };
+    const response = await fetch(normalizeUrl(API_BASE_URL, endpoint), {
+      headers,
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.error ||
+          errorData.message ||
+          `HTTP error! status: ${response.status}`,
+      );
+    }
+    return response.blob();
+  },
+
+  /**
+   * Upload a file via multipart/form-data.
+   */
+  async upload(endpoint, formData, customConfig = {}) {
+    const baseHeaders = await getHeaders();
+    // Remove Content-Type so the browser sets the multipart boundary
+    delete baseHeaders["Content-Type"];
+    const headers = {
+      ...baseHeaders,
+      ...(customConfig.headers || {}),
+    };
+    const response = await fetch(normalizeUrl(API_BASE_URL, endpoint), {
+      method: "POST",
+      headers,
+      body: formData,
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.error ||
+          errorData.message ||
+          `HTTP error! status: ${response.status}`,
+      );
+    }
+    return await response.json();
+  },
+
   getFileUrl(filePath) {
     if (!filePath) return "";
     if (filePath.startsWith("http")) return filePath;

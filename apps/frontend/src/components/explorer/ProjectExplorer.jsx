@@ -28,6 +28,10 @@ export default function ProjectExplorer({
   onMoveFlowType,
   _onMoveFlowToFolder,
   onRunFlow,
+  onBulkDeleteProjects,
+  onExportProject,
+  onExportProjects,
+  onImportProjectFile,
 }) {
   const { isOpen, togglePanel } = useExplorerStore();
   const { t } = useTranslation();
@@ -53,6 +57,10 @@ export default function ProjectExplorer({
             onDeleteProject={onDeleteProject}
             onNewProject={onNewProject}
             onNewFlow={onNewFlow}
+            onBulkDeleteProjects={onBulkDeleteProjects}
+            onExportProject={onExportProject}
+            onExportProjects={onExportProjects}
+            onImportProjectFile={onImportProjectFile}
           />
 
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">

@@ -3,6 +3,7 @@ import {
   Upload,
   FolderOpen,
   FileCode,
+  Archive,
   X,
   AlertCircle,
   CheckCircle,
@@ -18,11 +19,13 @@ import { api } from "../utils/api";
  *
  * Provides a comprehensive UI for importing test files and directories
  */
-const ImportDialog = ({ isOpen, onClose, onImport }) => {
+const ImportDialog = ({ isOpen, onClose, onImport, onImportProject }) => {
   const { t } = useTranslation();
-  const [importMode, setImportMode] = useState("file"); // 'file', 'directory', 'directory-pom'
+  const [importMode, setImportMode] = useState("file"); // 'file', 'directory', 'directory-pom', 'project'
   const [selectedFile, setSelectedFile] = useState(null);
   const [selectedDirectory, setSelectedDirectory] = useState(null);
+  const [selectedProjectFile, setSelectedProjectFile] = useState(null);
+  const [projectName, setProjectName] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(null);
   const [error, setError] = useState(null);
@@ -31,6 +34,8 @@ const ImportDialog = ({ isOpen, onClose, onImport }) => {
   const resetState = useCallback(() => {
     setSelectedFile(null);
     setSelectedDirectory(null);
+    setSelectedProjectFile(null);
+    setProjectName("");
     setIsProcessing(false);
     setProgress(null);
     setError(null);
@@ -171,13 +176,51 @@ const ImportDialog = ({ isOpen, onClose, onImport }) => {
     }
   }, [selectedDirectory, importMode, onImport, handleClose]);
 
+  const handleProjectImport = useCallback(async () => {
+    if (!selectedProjectFile) return;
+
+    setIsProcessing(true);
+    setError(null);
+    setProgress({
+      stage: "uploading",
+      message: "Importando proyecto...",
+    });
+
+    try {
+      await onImportProject(selectedProjectFile, {
+        name: projectName || undefined,
+      });
+
+      setProgress({
+        stage: "complete",
+        message: "✓ Proyecto importado exitosamente",
+      });
+
+      setTimeout(() => {
+        handleClose();
+      }, 1500);
+    } catch (err) {
+      setError(err.message || "Error al importar el proyecto");
+      setProgress(null);
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [selectedProjectFile, projectName, onImportProject, handleClose]);
+
   const handleImportClick = useCallback(() => {
     if (importMode === "file") {
       handleFileImport();
+    } else if (importMode === "project") {
+      handleProjectImport();
     } else {
       handleDirectoryImport();
     }
-  }, [importMode, handleFileImport, handleDirectoryImport]);
+  }, [
+    importMode,
+    handleFileImport,
+    handleDirectoryImport,
+    handleProjectImport,
+  ]);
 
   return (
     <AnimatePresence>
@@ -206,15 +249,16 @@ const ImportDialog = ({ isOpen, onClose, onImport }) => {
             {/* Content Container */}
             <div className="flex-1 flex flex-col p-6 overflow-hidden">
               {/* Mode Selector */}
-              <div className="grid grid-cols-3 gap-3 mb-6">
+              <div className="grid grid-cols-4 gap-3 mb-6">
                 {[
-                  { id: "file", label: "Archivo Individual", icon: FileCode },
+                  { id: "file", label: "Archivo", icon: FileCode },
                   { id: "directory", label: "Directorio", icon: FolderOpen },
                   {
                     id: "directory-pom",
-                    label: "Directorio + POM",
+                    label: "Dir + POM",
                     icon: FolderOpen,
                   },
+                  { id: "project", label: "Proyecto", icon: Archive },
                 ].map((mode) => (
                   <button
                     key={mode.id}
@@ -360,6 +404,85 @@ const ImportDialog = ({ isOpen, onClose, onImport }) => {
                   </div>
                 )}
 
+                {importMode === "project" && (
+                  <div className="space-y-4">
+                    <label
+                      className={cn(
+                        "flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-xl cursor-pointer transition-colors group",
+                        selectedProjectFile
+                          ? "border-emerald-500/50 bg-emerald-500/5"
+                          : "border-slate-700 hover:border-indigo-500/50 hover:bg-indigo-500/5",
+                      )}
+                    >
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept=".zip,.hal.zip"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          setSelectedProjectFile(file);
+                          setError(null);
+                          if (!projectName) {
+                            const base = file.name
+                              .replace(/\.hal\.zip$/i, "")
+                              .replace(/\.zip$/i, "");
+                            setProjectName(base);
+                          }
+                        }}
+                        disabled={isProcessing}
+                      />
+                      {selectedProjectFile ? (
+                        <>
+                          <Archive
+                            size={32}
+                            className="text-emerald-400 mb-2"
+                          />
+                          <span className="text-sm font-medium text-emerald-200">
+                            {selectedProjectFile.name}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <Archive
+                            size={32}
+                            className="text-slate-500 group-hover:text-indigo-400 mb-2 transition-colors"
+                          />
+                          <span className="text-sm text-slate-400 group-hover:text-indigo-200 transition-colors">
+                            {t(
+                              "dialogs.import.project_file_placeholder",
+                              "Selecciona un archivo .hal.zip",
+                            )}
+                          </span>
+                        </>
+                      )}
+                    </label>
+
+                    <div>
+                      <label className="text-xs text-slate-400 font-medium mb-1 block">
+                        {t(
+                          "dialogs.import.project_name_label",
+                          "Nombre del proyecto (opcional)",
+                        )}
+                      </label>
+                      <input
+                        type="text"
+                        value={projectName}
+                        onChange={(e) => setProjectName(e.target.value)}
+                        disabled={isProcessing}
+                        className="w-full px-3 py-2 bg-slate-900 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-500 disabled:opacity-50"
+                      />
+                    </div>
+
+                    <p className="text-xs text-slate-500 text-center">
+                      {t(
+                        "dialogs.import.project_help",
+                        "Importa un proyecto completo (.hal.zip) con todos sus flujos, nodos y conexiones.",
+                      )}
+                    </p>
+                  </div>
+                )}
+
                 {/* Progress State */}
                 {progress && (
                   <div
@@ -405,7 +528,10 @@ const ImportDialog = ({ isOpen, onClose, onImport }) => {
                 disabled={
                   isProcessing ||
                   (importMode === "file" && !selectedFile) ||
-                  (importMode !== "file" && !selectedDirectory)
+                  (importMode === "project" && !selectedProjectFile) ||
+                  (importMode !== "file" &&
+                    importMode !== "project" &&
+                    !selectedDirectory)
                 }
                 className="px-6 py-2 rounded-lg text-sm font-medium bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-lg shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
               >

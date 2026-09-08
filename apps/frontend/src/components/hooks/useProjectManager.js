@@ -313,6 +313,18 @@ export function useProjectManager() {
       }
     },
     deleteProject: (projectId) => deleteProjectMutation.mutateAsync(projectId),
+    bulkDeleteProjects: async (projectIds) => {
+      const res = await projectManager.bulkDeleteProjects(projectIds);
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      return res;
+    },
+    exportProject: (projectId, includeSecrets = false) =>
+      projectManager.exportProject(projectId, includeSecrets),
+    importProject: async (file, options = {}) => {
+      const res = await projectManager.importProject(file, options);
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      return res;
+    },
     renameProject: (projectId, newName) =>
       updateProjectMutation.mutateAsync({
         projectId,

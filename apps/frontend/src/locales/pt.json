@@ -118,7 +118,10 @@
     "selector_captured": "Elemento capturado",
     "selector_empty": "Nenhum seletor válido encontrado",
     "template_error": "Falha ao carregar o modelo",
-    "template_loaded": "Modelo inicial carregado!"
+    "template_loaded": "Modelo inicial carregado!",
+    "select_projects": "Selecionar projetos",
+    "no_projects_found": "Nenhum projeto encontrado",
+    "import_project": "Importar projeto"
   },
   "api_status": {
     "status": "Status da API",
@@ -1426,7 +1429,10 @@
       "error_directory": "Erro ao importar diretório",
       "help_text": "Suporta: Playwright, Cypress, Selenium, TestCafe, Puppeteer, WebdriverIO, Nightwatch, Katalon, TestRigor",
       "files_count": "{{contar}} arquivos",
-      "no_flows_converted": "Nenhum fluxo pôde ser importado do diretório."
+      "no_flows_converted": "Nenhum fluxo pôde ser importado do diretório.",
+      "project_file_placeholder": "Selecione um arquivo .hal.zip",
+      "project_name_label": "Nome do projeto (opcional)",
+      "project_help": "Importe um projeto completo (.hal.zip) com todos os seus fluxos, nós e conexões."
     },
     "export": {
       "title": "Fluxo de exportação",
@@ -1434,6 +1440,7 @@
       "mode_json_desc": "Backup de fluxo",
       "mode_code_label": "Código",
       "mode_code_desc": "Script executável",
+      "mode_project_label": "Projeto",
       "json_title": "Exportar como JSON",
       "json_desc": "Gera um arquivo JSON com a configuração completa do fluxo.  Ideal para backups ou compartilhamento de fluxos.",
       "nodes_label": "Nós:",
@@ -1455,6 +1462,15 @@
       "pom_label": "Modelo de objeto de página (POM)",
       "pom_desc": "Estruture o código em classes de páginas com base em subfluxos",
       "project_files": "Arquivos de projeto",
+      "project_title": "Pacote de Projeto",
+      "project_desc": "Baixe este projeto completo como um pacote .hal.zip com todos os seus fluxos, nós e conexões. Os segredos são excluídos por padrão.",
+      "project_name_label": "Projeto",
+      "project_flows_label": "Fluxos",
+      "project_pkg_label": "Pacote",
+      "no_project_hint": "Selecione ou crie um projeto primeiro para exportá-lo.",
+      "project_generating": "Gerando pacote .hal.zip...",
+      "project_ready_msg": "Pacote .hal.zip baixado",
+      "project_error": "Falha ao exportar o projeto",
       "cicd_label": "Incluir modelos de CI/CD",
       "cicd_desc": "Adicione arquivos de pipeline (.github/workflows, .gitlab-ci) para executar testes automaticamente"
     }
@@ -1644,5 +1660,34 @@
   },
   "projects": {
     "default_name": "Projeto Geral"
+  },
+  "export": {
+    "title": "Exportar Projeto",
+    "project": "Projeto",
+    "flows": "Fluxos",
+    "components": "Componentes",
+    "include_secrets": "Incluir Segredos",
+    "include_secrets_hint": "Exportar chaves de API e senhas (Inseguro)",
+    "secrets_warning": "Aviso: este arquivo conterá credenciais sensíveis.",
+    "success": "Exportação concluída",
+    "done": "Concluído",
+    "download": "Baixar .hal.zip"
+  },
+  "import": {
+    "title": "Importar Projeto",
+    "no_file": "Selecione um arquivo .hal.zip",
+    "failed": "A importação falhou",
+    "choose_file": "Escolher um arquivo .hal.zip",
+    "supported": "Suportado: ZIP de Projeto Haltest (.hal.zip)",
+    "project_name": "Nome do projeto (opcional)",
+    "name_hint": "Deixe vazio para usar o nome original",
+    "success": "Projeto importado com sucesso",
+    "start": "Iniciar Importação"
+  },
+  "bulk_delete": {
+    "title": "Excluir projetos",
+    "confirm": "Excluir projetos",
+    "description": "Você está prestes a excluir permanentemente {{count}} projeto(s) contendo {{flows}} fluxos. Isso excluirá todos os fluxos, nós e conexões. Esta ação não pode ser desfeita.",
+    "typed_description": "Você está prestes a excluir permanentemente {{count}} projeto(s) contendo {{flows}} fluxos. Isso não pode ser desfeito. Digite DELETE para confirmar."
   }
 }

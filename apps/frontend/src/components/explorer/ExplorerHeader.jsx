@@ -1,7 +1,6 @@
 import {
   FolderGit2,
   Plus,
-  ChevronDown,
   ChevronRight,
   FolderPlus,
   GitBranch,
@@ -14,8 +13,9 @@ import { useExplorerStore } from "@/stores/useExplorerStore";
 import { useToast } from "@/hooks/useToast";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion as Motion, AnimatePresence } from "framer-motion";
-import { cn } from "@/lib/utils";
 import ConfirmDialog from "@/components/ui-custom/ConfirmDialog";
+import ProjectSelectorDropdown from "@/components/ProjectSelectorDropdown";
+import BulkDeleteConfirm from "@/components/BulkDeleteConfirm";
 
 export default function ExplorerHeader({
   projects = [],
@@ -25,18 +25,22 @@ export default function ExplorerHeader({
   onDeleteProject,
   onNewProject,
   onNewFlow,
+  onBulkDeleteProjects,
+  onExportProject,
+  onExportProjects,
+  onImportProjectFile,
 }) {
   const { isOpen, toggleExplorer } = useExplorerStore();
   const toast = useToast();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [projectDropdownOpen, setProjectDropdownOpen] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState("");
   const [projectCtxMenu, setProjectCtxMenu] = useState(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState(null);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkDeleteIds, setBulkDeleteIds] = useState([]);
   const menuRef = useRef(null);
-  const dropdownRef = useRef(null);
   const renameInputRef = useRef(null);
   const ctxMenuRef = useRef(null);
 
@@ -44,8 +48,6 @@ export default function ExplorerHeader({
     const handleClickOutside = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target))
         setMenuOpen(false);
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target))
-        setProjectDropdownOpen(false);
       if (ctxMenuRef.current && !ctxMenuRef.current.contains(e.target))
         setProjectCtxMenu(null);
     };
@@ -59,13 +61,6 @@ export default function ExplorerHeader({
       renameInputRef.current.select();
     }
   }, [isRenaming]);
-
-  const handleStartRename = useCallback(() => {
-    setRenameValue(currentProject?.name || "");
-    setIsRenaming(true);
-    setProjectDropdownOpen(false);
-    setProjectCtxMenu(null);
-  }, [currentProject]);
 
   const handleSaveRename = useCallback(async () => {
     const trimmed = renameValue.trim();
@@ -90,7 +85,6 @@ export default function ExplorerHeader({
     setProjectToDelete(project);
     setDeleteConfirmOpen(true);
     setProjectCtxMenu(null);
-    setProjectDropdownOpen(false);
   }, []);
 
   const handleConfirmDelete = useCallback(async () => {
@@ -105,6 +99,52 @@ export default function ExplorerHeader({
     setDeleteConfirmOpen(false);
     setProjectToDelete(null);
   }, [projectToDelete, onDeleteProject, toast]);
+
+  // Bulk operations
+  const handleBulkDelete = useCallback(async (projectIds) => {
+    setBulkDeleteIds(projectIds || []);
+    setBulkDeleteOpen(true);
+  }, []);
+
+  const handleConfirmBulkDelete = useCallback(async () => {
+    if (bulkDeleteIds.length > 0) {
+      try {
+        await onBulkDeleteProjects?.(bulkDeleteIds);
+        toast.success(`${bulkDeleteIds.length} project(s) deleted`);
+      } catch (error) {
+        toast.error(error?.message || "Failed to delete projects");
+      }
+    }
+    setBulkDeleteOpen(false);
+    setBulkDeleteIds([]);
+  }, [bulkDeleteIds, onBulkDeleteProjects, toast]);
+
+  const handleExportSelected = useCallback(
+    async (projectIds) => {
+      try {
+        await onExportProjects?.(projectIds);
+      } catch (error) {
+        toast.error(error?.message || "Failed to export projects");
+      }
+    },
+    [onExportProjects, toast],
+  );
+
+  const handleExportSingle = useCallback(
+    async (projectId) => {
+      try {
+        await onExportProject?.(projectId);
+      } catch (error) {
+        toast.error(error?.message || "Failed to export project");
+      }
+    },
+    [onExportProject, toast],
+  );
+
+  // Compute bulk impact stats for the confirmation
+  const bulkFlowCount = projects
+    .filter((p) => bulkDeleteIds.includes(p.id))
+    .reduce((sum, p) => sum + (p.flows?.length || 0), 0);
 
   if (!isOpen) {
     return (
@@ -125,7 +165,7 @@ export default function ExplorerHeader({
       {/* Top row: Project switcher + actions */}
       <div className="flex items-center justify-between px-2 py-1.5">
         {/* Project Switcher / Name */}
-        <div className="relative flex-1 min-w-0" ref={dropdownRef}>
+        <div className="relative flex-1 min-w-0">
           {isRenaming ? (
             <div className="flex items-center gap-1 px-1">
               <input
@@ -154,109 +194,20 @@ export default function ExplorerHeader({
             </div>
           ) : (
             <>
-              <button
-                onClick={() => setProjectDropdownOpen((p) => !p)}
-                onDoubleClick={(e) => {
-                  e.stopPropagation();
-                  handleStartRename();
+              <ProjectSelectorDropdown
+                projects={projects}
+                currentProject={currentProject}
+                onSelectProject={onSwitchProject}
+                onCreateProject={onNewProject}
+                onBulkDelete={handleBulkDelete}
+                onExportProject={handleExportSelected}
+                onImportFile={onImportProjectFile}
+                onRenameProject={(p) => {
+                  setRenameValue(p.name);
+                  setIsRenaming(true);
                 }}
-                onContextMenu={handleProjectCtxMenu}
-                className={cn(
-                  "flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs w-full min-w-0 group",
-                  "hover:bg-white/5 transition-colors",
-                  projectDropdownOpen
-                    ? "bg-white/5 text-white"
-                    : "text-slate-300",
-                )}
-              >
-                <FolderGit2 size={12} className="text-indigo-400 shrink-0" />
-                <span className="truncate font-medium">
-                  {currentProject?.name || "No Project"}
-                </span>
-                <Pencil
-                  size={9}
-                  className="shrink-0 text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                />
-                <ChevronDown
-                  size={10}
-                  className={cn(
-                    "shrink-0 text-slate-500 transition-transform",
-                    projectDropdownOpen && "rotate-180",
-                  )}
-                />
-              </button>
-
-              <AnimatePresence>
-                {projectDropdownOpen && (
-                  <Motion.div
-                    initial={{ opacity: 0, y: -4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -4 }}
-                    className="absolute top-full left-0 mt-1 w-56 bg-[#0f172a]/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl py-1 z-[var(--z-modal)]"
-                  >
-                    <div className="px-3 py-1.5 border-b border-white/5">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                        Projects
-                      </span>
-                    </div>
-                    {projects.map((p) => (
-                      <button
-                        key={p.id}
-                        onClick={() => {
-                          onSwitchProject?.(p);
-                          setProjectDropdownOpen(false);
-                        }}
-                        onDoubleClick={(e) => {
-                          e.stopPropagation();
-                          setRenameValue(p.name);
-                          setIsRenaming(true);
-                          setProjectDropdownOpen(false);
-                        }}
-                        onContextMenu={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setProjectCtxMenu({
-                            x: e.clientX,
-                            y: e.clientY,
-                            project: p,
-                          });
-                          setProjectDropdownOpen(false);
-                        }}
-                        className={cn(
-                          "w-full flex items-center gap-2 px-3 py-1.5 text-xs transition-colors group/item",
-                          p.id === currentProject?.id
-                            ? "bg-indigo-500/10 text-indigo-400"
-                            : "text-slate-300 hover:bg-white/5 hover:text-white",
-                        )}
-                      >
-                        <FolderGit2 size={12} />
-                        <span className="flex-1 text-left truncate">
-                          {p.name}
-                        </span>
-                        {p.id === currentProject?.id && (
-                          <span className="text-[10px] text-indigo-400 font-mono">
-                            active
-                          </span>
-                        )}
-                        <span className="text-[10px] text-slate-600 font-mono">
-                          {p.flows?.length || 0}
-                        </span>
-                      </button>
-                    ))}
-                    <div className="mx-2 my-0.5 border-t border-white/5" />
-                    <button
-                      onClick={() => {
-                        onNewProject?.();
-                        setProjectDropdownOpen(false);
-                      }}
-                      className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-slate-300 hover:bg-white/5 hover:text-white transition-colors"
-                    >
-                      <Plus size={12} />
-                      <span>New Project</span>
-                    </button>
-                  </Motion.div>
-                )}
-              </AnimatePresence>
+                onProjectContextMenu={(e, p) => handleProjectCtxMenu(e, p)}
+              />
             </>
           )}
         </div>
@@ -373,6 +324,18 @@ export default function ExplorerHeader({
                 <span>Rename</span>
               </button>
 
+              <button
+                onClick={() => {
+                  const target = projectCtxMenu.project || currentProject;
+                  setProjectCtxMenu(null);
+                  if (target) handleExportSingle(target.id);
+                }}
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-slate-300 hover:bg-white/5 hover:text-white transition-colors"
+              >
+                <FolderGit2 size={12} className="text-indigo-400" />
+                <span>Export</span>
+              </button>
+
               <div className="mx-2 my-0.5 border-t border-white/5" />
 
               {/* Delete action */}
@@ -402,6 +365,19 @@ export default function ExplorerHeader({
         onCancel={() => {
           setDeleteConfirmOpen(false);
           setProjectToDelete(null);
+        }}
+      />
+
+      {/* Bulk delete confirmation */}
+      <BulkDeleteConfirm
+        isOpen={bulkDeleteOpen}
+        projectCount={bulkDeleteIds.length}
+        flowCount={bulkFlowCount}
+        requireTyping={bulkDeleteIds.length > 5}
+        onConfirm={handleConfirmBulkDelete}
+        onCancel={() => {
+          setBulkDeleteOpen(false);
+          setBulkDeleteIds([]);
         }}
       />
     </div>

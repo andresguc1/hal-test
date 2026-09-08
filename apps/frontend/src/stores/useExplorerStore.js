@@ -14,6 +14,10 @@ export const useExplorerStore = create((set) => ({
 
   contextMenu: null,
 
+  // Bulk project selection state
+  selectionMode: false,
+  selectedProjectIds: new Set(),
+
   togglePanel: () => set((s) => ({ isOpen: !s.isOpen })),
   setWidth: (w) => set({ width: w }),
 
@@ -41,4 +45,24 @@ export const useExplorerStore = create((set) => ({
 
   showContextMenu: (x, y, item) => set({ contextMenu: { x, y, item } }),
   hideContextMenu: () => set({ contextMenu: null }),
+
+  // ---- Bulk selection ----
+  enterSelectionMode: () =>
+    set({ selectionMode: true, selectedProjectIds: new Set() }),
+  exitSelectionMode: () =>
+    set({ selectionMode: false, selectedProjectIds: new Set() }),
+  toggleProjectSelected: (projectId) =>
+    set((s) => {
+      const next = new Set(s.selectedProjectIds);
+      if (next.has(projectId)) {
+        next.delete(projectId);
+      } else {
+        next.add(projectId);
+      }
+      return { selectedProjectIds: next };
+    }),
+  selectAllProjects: (projectIds) =>
+    set({ selectedProjectIds: new Set(projectIds) }),
+  clearSelectedProjects: () => set({ selectedProjectIds: new Set() }),
+  setSelectionMode: (active) => set({ selectionMode: active }),
 }));

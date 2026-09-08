@@ -4,6 +4,7 @@ import {
   Download,
   FileCode,
   FileJson,
+  Archive,
   X,
   AlertCircle,
   CheckCircle,
@@ -21,9 +22,18 @@ import JSZip from "jszip";
  *
  * Provides a comprehensive UI for exporting flows
  */
-const ExportDialog = ({ isOpen, onClose, nodes, edges, projectId, flowId }) => {
+const ExportDialog = ({
+  isOpen,
+  onClose,
+  nodes,
+  edges,
+  projectId,
+  projectName = "",
+  flowCount = 0,
+  flowId,
+}) => {
   const { t } = useTranslation();
-  const [exportMode, setExportMode] = useState("json"); // 'json', 'code'
+  const [exportMode, setExportMode] = useState("json"); // 'json', 'code', 'project'
   const [framework, setFramework] = useState("playwright");
   const [language, setLanguage] = useState("javascript");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -339,6 +349,42 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges, projectId, flowId }) => {
     t,
   ]);
 
+  const handleProjectExport = useCallback(async () => {
+    if (!projectId) return;
+
+    setIsProcessing(true);
+    setError(null);
+    setProgress({
+      stage: "generating",
+      message: t("dialogs.export.project_generating"),
+    });
+
+    try {
+      const blob = await api.download(
+        `/projects/${projectId}/export?sanitize=true`,
+      );
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `hal_project_${projectName || projectId}_${Date.now()}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      setProgress({
+        stage: "complete",
+        message: t("dialogs.export.project_ready_msg"),
+      });
+      setTimeout(handleClose, 1000);
+    } catch (err) {
+      setError(err.message || t("dialogs.export.project_error"));
+      setProgress(null);
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [projectId, projectName, t, handleClose]);
+
   // Download generated code
   const handleDownloadCode = useCallback(async () => {
     if (generatedFiles) {
@@ -396,12 +442,14 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges, projectId, flowId }) => {
   }, [generatedCode, t]);
 
   const handleExportClick = useCallback(() => {
-    if (exportMode === "json") {
+    if (exportMode === "project") {
+      handleProjectExport();
+    } else if (exportMode === "json") {
       handleJsonExport();
     } else {
       handleCodeExport();
     }
-  }, [exportMode, handleJsonExport, handleCodeExport]);
+  }, [exportMode, handleJsonExport, handleCodeExport, handleProjectExport]);
 
   return (
     <AnimatePresence>
@@ -437,7 +485,7 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges, projectId, flowId }) => {
             {/* Content */}
             <div className="flex-1 flex flex-col p-6 overflow-hidden">
               {/* Mode Selector */}
-              <div className="grid grid-cols-2 gap-3 mb-6">
+              <div className="grid grid-cols-3 gap-3 mb-6">
                 {[
                   {
                     id: "json",
@@ -448,6 +496,11 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges, projectId, flowId }) => {
                     id: "code",
                     label: t("dialogs.export.mode_code_label"),
                     icon: Code2,
+                  },
+                  {
+                    id: "project",
+                    label: t("dialogs.export.mode_project_label"),
+                    icon: Archive,
                   },
                 ].map((mode) => (
                   <button
@@ -647,6 +700,57 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges, projectId, flowId }) => {
                 </div>
               )}
 
+              {/* Project Panel */}
+              {exportMode === "project" && !generatedCode && (
+                <div className="relative flex flex-col items-center text-center p-8 bg-white/5 rounded-xl border border-white/5 overflow-hidden">
+                  <Archive size={48} className="text-indigo-400 mb-4" />
+                  <h3 className="text-white font-medium mb-2">
+                    {t("dialogs.export.project_title")}
+                  </h3>
+                  <p className="text-sm text-slate-400 max-w-md mb-6">
+                    {t("dialogs.export.project_desc")}
+                  </p>
+
+                  <div className="w-full max-w-xs text-left flex flex-col gap-4">
+                    <div className="bg-slate-900/40 border border-white/5 rounded-lg p-3 flex items-center justify-between">
+                      <span className="text-sm text-slate-400">
+                        {t("dialogs.export.project_name_label")}
+                      </span>
+                      <span className="text-sm font-medium text-white truncate ml-3">
+                        {projectName || "(sin proyecto)"}
+                      </span>
+                    </div>
+
+                    <div className="flex gap-3 justify-around bg-slate-900/40 border border-white/5 rounded-lg p-3">
+                      <div className="text-center">
+                        <div className="text-xl font-bold text-indigo-400">
+                          {flowCount}
+                        </div>
+                        <div className="text-[10px] uppercase tracking-wider text-slate-500">
+                          {t("dialogs.export.project_flows_label")}
+                        </div>
+                      </div>
+                      <div className="w-px bg-white/10" />
+                      <div className="text-center">
+                        <div className="text-xl font-bold text-slate-300">
+                          {projectId ? "√" : "—"}
+                        </div>
+                        <div className="text-[10px] uppercase tracking-wider text-slate-500">
+                          {t("dialogs.export.project_pkg_label")}
+                        </div>
+                      </div>
+                    </div>
+
+                    {!projectId && (
+                      <div className="flex items-center gap-2 text-amber-400 text-xs bg-amber-500/10 p-2 rounded border border-amber-500/20">
+                        <AlertTriangle className="w-4 h-4 shrink-0" />
+                        {t("dialogs.export.no_project_hint")}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Generated Code Preview */}
               {generatedFiles ? (
                 <div className="flex-1 flex min-h-0 bg-slate-950 border border-white/10 rounded-xl overflow-hidden">
@@ -772,7 +876,11 @@ const ExportDialog = ({ isOpen, onClose, nodes, edges, projectId, flowId }) => {
               ) : (
                 <button
                   onClick={handleExportClick}
-                  disabled={isProcessing || nodes.length === 0}
+                  disabled={
+                    isProcessing ||
+                    (exportMode !== "project" && nodes.length === 0) ||
+                    (exportMode === "project" && !projectId)
+                  }
                   className="px-6 py-2 rounded-lg text-sm font-medium bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-lg shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
                 >
                   {isProcessing ? (

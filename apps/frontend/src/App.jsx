@@ -70,7 +70,8 @@ import { useElementPicker } from "./hooks/useElementPicker";
 import { AnimatePresence, motion } from "framer-motion";
 import GuestModeModal from "./components/modals/GuestModeModal";
 import DatasetRunModal from "./components/modals/DatasetRunModal";
-import PerformanceRunModal from "./components/performance/PerformanceRunModal";
+import { ProjectExportModal } from "./components/modals/ProjectExportModal";
+import { ProjectImportModal } from "./components/modals/ProjectImportModal";import PerformanceRunModal from "./components/performance/PerformanceRunModal";
 import SecurityRunModal from "./components/security/SecurityRunModal";
 import { useExecutionStore } from "./stores/useExecutionStore";
 
@@ -132,6 +133,9 @@ function Dashboard({
   moveFlowToFolder,
   renameProject,
   updateProject,
+  bulkDeleteProjects,
+  exportProject,
+  importProject,
 }) {
   // 1. Utility Hooks
   const { t } = useTranslation();
@@ -733,6 +737,10 @@ function Dashboard({
     isOpen: false,
     type: "project",
   });
+  const [projectExportOpen, setProjectExportOpen] = useState(false);
+  const [projectExportIds, setProjectExportIds] = useState([]);
+  const [projectImportOpen, setProjectImportOpen] = useState(false);
+  const [isImportingProject, setIsImportingProject] = useState(false);
   const [executionProgress, setExecutionProgress] = useState({
     current: 0,
     total: 0,
@@ -2277,6 +2285,17 @@ function Dashboard({
               onSwitchProject={(p) => loadProject(p.id)}
               onRenameProject={(id, newName) => renameProject(id, newName)}
               onDeleteProject={(id) => deleteProject(id)}
+              onBulkDeleteProjects={(ids) => bulkDeleteProjects(ids)}
+              onExportProject={(id) => {
+                setProjectExportIds([id]);
+                setProjectExportOpen(true);
+              }}
+              onExportProjects={async (ids) => {
+                for (const id of ids) {
+                  await exportProject(id, false);
+                }
+              }}
+              onImportProjectFile={() => setProjectImportOpen(true)}
               onSwitchFlow={(f) => {
                 setViewStack([]);
                 switchFlow(f.id);
@@ -2629,6 +2648,13 @@ function Dashboard({
           isOpen={isImportDialogOpen}
           onClose={handleImportDialogClose}
           onImport={handleImport}
+          onImportProject={async (file, options) => {
+            const res = await importProject(file, options);
+            if (res?.project?.id) {
+              loadProject(res.project.id);
+            }
+            return res;
+          }}
         />
 
         <ExportDialog
@@ -2637,6 +2663,8 @@ function Dashboard({
           nodes={nodes}
           edges={edges}
           projectId={currentProject?.id}
+          projectName={currentProject?.name}
+          flowCount={currentProject?.flows?.length || 0}
           flowId={currentFlowId}
         />
 
@@ -2800,6 +2828,42 @@ function Dashboard({
                     : {};
                 createProject(result, "", options);
               }
+            }
+          }}
+        />
+
+        <ProjectExportModal
+          isOpen={projectExportOpen}
+          projectName={
+            projects.find((p) => p.id === projectExportIds[0])?.name || ""
+          }
+          flowCount={
+            projects.find((p) => p.id === projectExportIds[0])?.flows
+              ?.length || 0
+          }
+          componentCount={0}
+          onClose={() => setProjectExportOpen(false)}
+          onExport={async (includeSecrets) => {
+            for (const id of projectExportIds) {
+              await exportProject(id, includeSecrets);
+            }
+          }}
+        />
+
+        <ProjectImportModal
+          isOpen={projectImportOpen}
+          onClose={() => setProjectImportOpen(false)}
+          isImporting={isImportingProject}
+          onImport={async (file, options) => {
+            setIsImportingProject(true);
+            try {
+              const res = await importProject(file, options);
+              if (res?.project?.id) {
+                loadProject(res.project.id);
+              }
+              return res;
+            } finally {
+              setIsImportingProject(false);
             }
           }}
         />

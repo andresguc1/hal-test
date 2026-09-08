@@ -118,7 +118,10 @@
     "selector_captured": "Element captured",
     "selector_empty": "No valid selector found",
     "template_error": "Failed to load template",
-    "template_loaded": "Starter template loaded!"
+    "template_loaded": "Starter template loaded!",
+    "select_projects": "Select projects",
+    "no_projects_found": "No projects found",
+    "import_project": "Import project"
   },
   "api_status": {
     "status": "API Status",
@@ -901,7 +904,10 @@
       "error_directory": "Error importing directory",
       "help_text": "Supports: Playwright, Cypress, Selenium, TestCafe, Puppeteer, WebdriverIO, Nightwatch, Katalon, TestRigor",
       "files_count": "{{count}} files",
-      "no_flows_converted": "No flows could be imported from the directory."
+      "no_flows_converted": "No flows could be imported from the directory.",
+      "project_file_placeholder": "Select a .hal.zip file",
+      "project_name_label": "Project name (optional)",
+      "project_help": "Import a complete project (.hal.zip) with all its flows, nodes and connections."
     },
     "export": {
       "title": "Export Flow",
@@ -909,6 +915,7 @@
       "mode_json_desc": "Flow backup",
       "mode_code_label": "Code",
       "mode_code_desc": "Executable script",
+      "mode_project_label": "Project",
       "json_title": "Export as JSON",
       "json_desc": "Generates a JSON file with the complete flow configuration. Ideal for backups or sharing flows.",
       "nodes_label": "Nodes:",
@@ -930,6 +937,15 @@
       "pom_label": "Page Object Model (POM)",
       "pom_desc": "Structure code into page classes based on sub-flows",
       "project_files": "Project Files",
+      "project_title": "Project Package",
+      "project_desc": "Download this entire project as a .hal.zip package with all its flows, nodes and connections. Secrets are excluded by default.",
+      "project_name_label": "Project",
+      "project_flows_label": "Flows",
+      "project_pkg_label": "Package",
+      "no_project_hint": "Select or create a project first to export it.",
+      "project_generating": "Generating .hal.zip package...",
+      "project_ready_msg": ".hal.zip package downloaded",
+      "project_error": "Failed to export project",
       "cicd_label": "Include CI/CD Templates",
       "cicd_desc": "Add pipeline files (.github/workflows, .gitlab-ci) to run tests automatically"
     }
@@ -1688,5 +1704,34 @@
   },
   "projects": {
     "default_name": "General Project"
+  },
+  "export": {
+    "title": "Export Project",
+    "project": "Project",
+    "flows": "Flows",
+    "components": "Components",
+    "include_secrets": "Include Secrets",
+    "include_secrets_hint": "Export API keys and passwords (Unsafe)",
+    "secrets_warning": "Warning: This file will contain sensitive credentials.",
+    "success": "Export complete",
+    "done": "Done",
+    "download": "Download .hal.zip"
+  },
+  "import": {
+    "title": "Import Project",
+    "no_file": "Please select a .hal.zip file",
+    "failed": "Import failed",
+    "choose_file": "Choose a .hal.zip file",
+    "supported": "Supported: Haltest Project ZIP (.hal.zip)",
+    "project_name": "Project name (optional)",
+    "name_hint": "Leave empty to use the original name",
+    "success": "Project imported successfully",
+    "start": "Start Import"
+  },
+  "bulk_delete": {
+    "title": "Delete projects",
+    "confirm": "Delete projects",
+    "description": "You are about to permanently delete {{count}} project(s) containing {{flows}} flows. This will delete all flows, nodes, and connections. This action cannot be undone.",
+    "typed_description": "You are about to permanently delete {{count}} project(s) containing {{flows}} flows. This cannot be undone. Type DELETE to confirm."
   }
 }
