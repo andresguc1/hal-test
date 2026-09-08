@@ -33,6 +33,16 @@ const Project = sequelize.define(
     },
     {
         timestamps: true,
+        indexes: [
+            {
+                name: 'idx_projects_user_updated',
+                fields: ['userId', 'updatedAt'],
+            },
+            {
+                name: 'idx_projects_user_name',
+                fields: ['userId', 'name'],
+            },
+        ],
     },
 );
 

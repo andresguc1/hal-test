@@ -10,12 +10,27 @@ import {
     Run,
 } from '../database/init.js';
 import sequelize from '../database/index.js';
+import { Op } from 'sequelize';
 import { exportService } from '../services/exporter/index.js';
 import { projectStorageService } from '../services/ProjectStorageService.js';
+import { projectExportService } from '../services/ProjectExportService.js';
+import { projectImportService } from '../services/ProjectImportService.js';
+import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
 
 const router = Router();
+
+// Configure multer for project ZIP uploads
+const upload = multer({
+    dest: '/tmp/hal_test_project_imports',
+    limits: { fileSize: 100 * 1024 * 1024 }, // 100MB max
+});
+
+// Ensure upload dir exists
+if (!fs.existsSync('/tmp/hal_test_project_imports')) {
+    fs.mkdirSync('/tmp/hal_test_project_imports', { recursive: true });
+}
 
 // Helper to map flow with its nodes and edges to React Flow format
 const mapFlowData = (flow) => {
@@ -246,8 +261,15 @@ const syncActiveFlowToDisk = async (nodes, edges, projectId) => {
 // ========================================
 
 // List all projects with flows (and canvases)
+// Supports optional search/pagination: ?search=&page=&limit=&sort=&order=
 router.get('/projects', async (req, res) => {
     try {
+        // If search params are present, use paginated search mode
+        const hasQuery = req.query.search || req.query.page || req.query.limit;
+        if (hasQuery) {
+            return handleProjectSearch(req, res);
+        }
+
         const where = {};
         if (req.user && req.user.id) {
             where.userId = req.user.id;
@@ -409,6 +431,383 @@ router.post('/projects', async (req, res) => {
         res.status(400).json({ error: error.message });
     }
 });
+// ========================================
+// BULK PROJECT OPERATIONS
+// ========================================
+
+// Bulk delete multiple projects atomically
+// Body: { projectIds: string[] }
+router.delete('/projects/bulk', async (req, res) => {
+    let transaction;
+    try {
+        const { projectIds } = req.body || {};
+
+        if (!Array.isArray(projectIds) || projectIds.length === 0) {
+            return res.status(400).json({ error: 'projectIds array is required' });
+        }
+
+        const uniqueIds = [...new Set(projectIds)];
+        if (uniqueIds.length > 1000) {
+            return res.status(400).json({ error: 'Cannot delete more than 1000 projects at once' });
+        }
+
+        transaction = await sequelize.transaction();
+
+        // Fetch all projects to verify they exist and gather stats
+        const projects = await Project.findAll({
+            where: { id: { [Op.in]: uniqueIds } },
+            include: [{ model: Flow, as: 'flows' }],
+            transaction,
+        });
+
+        if (projects.length === 0) {
+            await transaction.rollback();
+            return res.status(404).json({ error: 'No projects found with the provided IDs' });
+        }
+
+        // Count total flows, canvas, nodes, edges that will be affected
+        const totalFlows = projects.reduce((sum, p) => sum + (p.flows?.length || 0), 0);
+
+        const deletedIds = projects.map((p) => p.id);
+        const notFoundIds = uniqueIds.filter((id) => !deletedIds.includes(id));
+
+        // Delete each project (cascade handles children)
+        for (const project of projects) {
+            await project.destroy({ transaction });
+        }
+
+        await transaction.commit();
+
+        res.json({
+            message: `${deletedIds.length} project(s) deleted`,
+            deleted: deletedIds.length,
+            deletedIds,
+            notFoundIds,
+            stats: {
+                projects: deletedIds.length,
+                flows: totalFlows,
+            },
+        });
+    } catch (error) {
+        if (transaction && !transaction.finished) await transaction.rollback();
+        console.error(`[ProjectRouter] Bulk delete error:`, error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Delete many projects (query-param based, for simpler clients)
+// ?ids=id1,id2,id3
+router.delete('/projects/bulk/query', async (req, res) => {
+    try {
+        const idsParam = req.query.ids || '';
+        const projectIds = idsParam
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean);
+
+        if (projectIds.length === 0) {
+            return res.status(400).json({ error: 'ids query parameter is required' });
+        }
+
+        // Forward to the same bulk handler logic by using an internal reference
+        req.body = { projectIds };
+        // Invoke the handler directly
+        return handleBulkDelete(req, res);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Delete many projects (query-param based, for simpler clients)
+// ?ids=id1,id2,id3
+const handleBulkDelete = async (req, res) => {
+    let transaction;
+    try {
+        const { projectIds } = req.body;
+
+        if (!Array.isArray(projectIds) || projectIds.length === 0) {
+            return res.status(400).json({ error: 'projectIds array is required' });
+        }
+
+        const uniqueIds = [...new Set(projectIds)];
+        transaction = await sequelize.transaction();
+
+        const projects = await Project.findAll({
+            where: { id: { [Op.in]: uniqueIds } },
+            include: [{ model: Flow, as: 'flows' }],
+            transaction,
+        });
+
+        const totalFlows = projects.reduce((sum, p) => sum + (p.flows?.length || 0), 0);
+        const deletedIds = projects.map((p) => p.id);
+        const notFoundIds = uniqueIds.filter((id) => !deletedIds.includes(id));
+
+        for (const project of projects) {
+            await project.destroy({ transaction });
+        }
+
+        await transaction.commit();
+
+        res.json({
+            message: `${deletedIds.length} project(s) deleted`,
+            deleted: deletedIds.length,
+            deletedIds,
+            notFoundIds,
+            stats: {
+                projects: deletedIds.length,
+                flows: totalFlows,
+            },
+        });
+    } catch (error) {
+        if (transaction && !transaction.finished) await transaction.rollback();
+        console.error(`[ProjectRouter] Bulk delete error:`, error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+// ========================================
+// PROJECT EXPORT
+// ========================================
+
+// Export entire project as a self-contained ZIP
+// GET /projects/:id/export?sanitize=true
+router.get('/projects/:id/export', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const sanitize = req.query.sanitize !== 'false';
+
+        const result = await projectExportService.exportProject(id, { sanitize });
+
+        res.setHeader('Content-Type', 'application/zip');
+        res.setHeader('Content-Disposition', `attachment; filename="${result.fileName}"`);
+        res.send(result.buffer);
+    } catch (error) {
+        console.error(`[ProjectRouter] Export error:`, error);
+        res.status(error.message.includes('not found') ? 404 : 500).json({
+            error: error.message,
+        });
+    }
+});
+
+// Export project as JSON (API-friendly alternative to ZIP)
+// GET /projects/:id/export/json?sanitize=true
+router.get('/projects/:id/export/json', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const sanitize = req.query.sanitize !== 'false';
+
+        const { zip } = await projectExportService.exportProject(id, { sanitize });
+
+        // Extract the important parts as a plain JSON object
+        const manifest = JSON.parse(await zip.file('manifest.json').async('string'));
+        const projectJson = JSON.parse(await zip.file('project.json').async('string'));
+
+        // Build a single self-contained JSON document
+        const flows = {};
+        const components = {};
+
+        for (const file of Object.values(zip.files)) {
+            if (file.name.startsWith('flows/') && file.name.endsWith('.json') && !file.dir) {
+                const key = file.name.replace('flows/', '').replace('.json', '');
+                flows[key] = JSON.parse(await file.async('string'));
+            }
+            if (file.name.startsWith('components/') && file.name.endsWith('.json') && !file.dir) {
+                const key = file.name.replace('components/', '').replace('.json', '');
+                components[key] = JSON.parse(await file.async('string'));
+            }
+        }
+
+        let externalRefs = null;
+        const extFile = zip.file('external-refs.json');
+        if (extFile) {
+            externalRefs = JSON.parse(await extFile.async('string'));
+        }
+
+        res.json({
+            formatVersion: manifest.formatVersion,
+            exportedAt: manifest.exportedAt,
+            project: projectJson,
+            flows,
+            components,
+            externalRefs,
+            sanitized: manifest.sanitized,
+        });
+    } catch (error) {
+        console.error(`[ProjectRouter] Export JSON error:`, error);
+        res.status(error.message.includes('not found') ? 404 : 500).json({
+            error: error.message,
+        });
+    }
+});
+
+// ========================================
+// PROJECT IMPORT
+// ========================================
+
+// Import a project from a HAL zip package
+// POST /projects/import  (multipart/form-data: file=<zip>)
+router.post('/projects/import', upload.single('file'), async (req, res) => {
+    let uploadedFile = req.file;
+    try {
+        if (!uploadedFile) {
+            return res.status(400).json({ error: 'File is required (field name: file)' });
+        }
+
+        const buffer = fs.readFileSync(uploadedFile.path);
+
+        const userId = req.user?.id || null;
+        const targetProjectId = req.body?.targetProjectId || null;
+        const targetName = req.body?.name || null;
+
+        const result = await projectImportService.importProject(buffer, {
+            targetProjectId: targetProjectId || null,
+            targetName,
+            userId,
+        });
+
+        // Cleanup temp file
+        try {
+            fs.unlinkSync(uploadedFile.path);
+        } catch (e) {
+            /* already gone */
+        }
+
+        res.status(result.project?.id && !targetProjectId ? 201 : 200).json({
+            success: true,
+            project: result.project,
+            idMap: result.idMap,
+            createdFlows: result.createdFlows,
+            warnings: result.warnings || [],
+            stats: result.stats,
+        });
+    } catch (error) {
+        if (uploadedFile) {
+            try {
+                fs.unlinkSync(uploadedFile.path);
+            } catch (e) {
+                /* already gone */
+            }
+        }
+        console.error(`[ProjectRouter] Import error:`, error);
+        res.status(400).json({ error: error.message, success: false });
+    }
+});
+
+// Import a project from JSON body (non-file alternative for API clients)
+// POST /projects/import/json
+router.post('/projects/import/json', async (req, res) => {
+    try {
+        const { name, project, flows, components, targetProjectId } = req.body || {};
+        if (!project || !flows) {
+            return res.status(400).json({
+                error: 'project and flows objects are required',
+            });
+        }
+
+        // Build a minimal manifest for the import service
+        const manifest = {
+            formatVersion: 1,
+            exportedAt: new Date().toISOString(),
+            projectId: project.id || null,
+            projectName: project.name,
+        };
+
+        // We can't easily pass a JSON body to the ZIP-based service, so
+        // we construct a minimal zip in memory.
+        const JSZip = (await import('jszip')).default;
+        const zip = new JSZip();
+        zip.file('manifest.json', JSON.stringify(manifest));
+        zip.file('project.json', JSON.stringify(project));
+        for (const [flowId, flow] of Object.entries(flows || {})) {
+            zip.file(`flows/${flowId}.json`, JSON.stringify(flow));
+        }
+        for (const [compId, comp] of Object.entries(components || {})) {
+            zip.file(`components/${compId}.json`, JSON.stringify(comp));
+        }
+
+        const buffer = await zip.generateAsync({ type: 'nodebuffer' });
+
+        const userId = req.user?.id || null;
+        const result = await projectImportService.importProject(buffer, {
+            targetProjectId: targetProjectId || null,
+            targetName: name || project.name,
+            userId,
+        });
+
+        res.status(201).json({
+            success: true,
+            project: result.project,
+            idMap: result.idMap,
+            createdFlows: result.createdFlows,
+            warnings: result.warnings || [],
+            stats: result.stats,
+        });
+    } catch (error) {
+        console.error(`[ProjectRouter] JSON Import error:`, error);
+        res.status(400).json({ error: error.message, success: false });
+    }
+});
+
+// ========================================
+// PROJECT SEARCH / PAGINATION
+// ========================================
+
+// Search/paginate projects with the same response shape as the list endpoint
+const handleProjectSearch = async (req, res) => {
+    try {
+        const { search = '', page = 1, limit = 50, sort = 'updatedAt', order = 'DESC' } = req.query;
+
+        const pageNum = Math.max(1, parseInt(page) || 1);
+        const limitNum = Math.min(500, Math.max(1, parseInt(limit) || 50));
+
+        const where = {};
+        if (req.user && req.user.id) {
+            where.userId = req.user.id;
+        }
+
+        if (search) {
+            const dialect = sequelize.getDialect();
+            if (dialect === 'postgres') {
+                where.name = { [Op.iLike]: `%${search}%` };
+            } else {
+                // SQLite: LIKE is case-insensitive for ASCII by default
+                where.name = { [Op.like]: `%${search}%` };
+            }
+        }
+
+        // Validate sort field to prevent injection
+        const allowedSort = ['name', 'createdAt', 'updatedAt'];
+        const sortField = allowedSort.includes(sort) ? sort : 'updatedAt';
+        const sortOrder = order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+
+        const { count, rows } = await Project.findAndCountAll({
+            where,
+            limit: limitNum,
+            offset: (pageNum - 1) * limitNum,
+            order: [[sortField, sortOrder]],
+            include: [
+                {
+                    model: Flow,
+                    as: 'flows',
+                    attributes: ['id', 'name', 'type', 'order', 'createdAt'],
+                },
+            ],
+        });
+
+        const totalPages = Math.ceil(count / limitNum);
+
+        // Match legacy shape but also add pagination metadata
+        res.json({
+            projects: rows,
+            total: count,
+            page: pageNum,
+            limit: limitNum,
+            totalPages,
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
 
 // Import / Clone flow from another project as a Subflow Component
 router.post('/projects/:projectId/flows/import-subflow', async (req, res) => {
@@ -726,7 +1125,6 @@ router.delete('/projects/:id', async (req, res) => {
     }
 });
 
-// ========================================
 // COLLABORATORS
 // ========================================
 

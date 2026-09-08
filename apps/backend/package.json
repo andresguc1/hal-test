@@ -48,6 +48,7 @@
     "i18next-http-middleware": "^3.9.7",
     "joi": "^18.2.1",
     "joi-to-swagger": "^6.2.0",
+    "jszip": "^3.10.1",
     "lib0": "^0.2.117",
     "morgan": "^1.11.0",
     "multer": "^2.2.0",

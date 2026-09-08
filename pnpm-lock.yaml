@@ -93,6 +93,9 @@ importers:
       joi-to-swagger:
         specifier: ^6.2.0
         version: 6.2.0(joi@18.2.3)
+      jszip:
+        specifier: ^3.10.1
+        version: 3.10.1
       lib0:
         specifier: ^0.2.117
         version: 0.2.117
