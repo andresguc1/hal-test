@@ -100,7 +100,8 @@ export class PlaywrightGenerator extends BaseGenerator {
             if (
                 action === 'assertion' ||
                 action === 'assert_page_text' ||
-                action === 'validate_semantic'
+                action === 'validate_semantic' ||
+                action === 'assert'
             )
                 return true;
             if (data.subNodes && this.hasAssertions(data.subNodes)) return true;
