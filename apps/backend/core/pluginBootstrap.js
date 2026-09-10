@@ -840,6 +840,18 @@ const BUILTIN_PLUGINS = [
             ]),
     },
     {
+        type: 'assert',
+        category: 'assertion',
+        label: 'Assert',
+        color: 'emerald',
+        icon: 'CheckCircle2',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-assertion/handlers/assert.handler.js'),
+                import('../plugins/core-assertion/schemas/assert.js'),
+            ]),
+    },
+    {
         type: 'persist_session',
         category: 'session',
         label: 'Persist Session',

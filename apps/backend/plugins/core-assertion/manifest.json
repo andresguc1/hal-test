@@ -14,6 +14,15 @@
       "icon": "CheckCircle",
       "handler": "./handlers/assert_page_text.handler.js",
       "schema": "./schemas/assert_page_text.schema.js"
+    },
+    {
+      "type": "assert",
+      "label": "Assert",
+      "category": "assertion",
+      "color": "emerald",
+      "icon": "CheckCircle2",
+      "handler": "./handlers/assert.handler.js",
+      "schema": "./schemas/assert.js"
     }
   ]
 }

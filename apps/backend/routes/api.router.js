@@ -153,6 +153,7 @@ const ROUTE_REGISTRY = {
     audit_policy: { schema: 'auditPolicyBodySchema', category: 'security' },
     sensitive_data_monitor: { schema: 'sensitiveDataMonitorBodySchema', category: 'security' },
     assert_page_text: { schema: 'assertPageTextBodySchema', category: 'element' },
+    assert: { schema: 'assertBodySchema', category: 'assertion' },
 };
 // Route aliases: alternative paths → existing nodeType
 const ROUTE_ALIASES = {

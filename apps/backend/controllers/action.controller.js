@@ -300,6 +300,7 @@ export { default as sensitiveDataMonitorAction } from '../plugins/core-security/
 
 // ──── Assertion Plugin ────
 export { default as assertPageTextAction } from '../plugins/core-assertion/handlers/assert_page_text.handler.js';
+export { default as assertAction } from '../plugins/core-assertion/handlers/assert.handler.js';
 
 // ──── Interaction dispatcher (legacy) ────
 import _clickAction from '../plugins/core-interaction/handlers/click.js';
