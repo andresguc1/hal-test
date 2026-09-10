@@ -64,6 +64,7 @@ export const NODE_CATEGORIES = {
       "wait_for_element",
       "wait_visible",
       "assert_page_text",
+      "assert",
     ],
   },
   user_simulation: {
@@ -355,6 +356,14 @@ export const NODE_OUTPUTS = {
     success: "boolean",
     matched: "boolean",
     textToFind: "string",
+  },
+  assert: {
+    success: "boolean",
+    passed: "number",
+    failed: "number",
+    total: "number",
+    softFailed: "boolean",
+    assertions: "array",
   },
 
   // --- Waits ---

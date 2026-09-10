@@ -24,6 +24,7 @@ export const NODE_LABELS = {
   find_element: "Find Element",
   get_set_content: "Modify Text/Attr",
   assert_page_text: "Assert Page Contains Text",
+  assert: "Assert",
   click: "Click",
   type_text: "Type Text",
   fill_form: "Fill Form",

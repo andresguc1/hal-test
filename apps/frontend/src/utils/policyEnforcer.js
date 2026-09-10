@@ -61,7 +61,8 @@ export function runPolicyEnforcer(nodes, edges) {
       type === "wait_visible" ||
       type === "wait_for_element" ||
       type === "wait_network_match" ||
-      type === "wait_conditional"
+      type === "wait_conditional" ||
+      type === "assert"
     );
   };
 

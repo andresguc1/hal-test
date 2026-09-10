@@ -673,6 +673,49 @@ export const NODE_INPUTS = {
       defaultValue: false,
     },
   ],
+  assert: [
+    {
+      key: "target.selector",
+      label: "Target Selector",
+      type: "selector",
+      placeholder: ".element, #id, [data-test-id]",
+      required: true,
+      description: "CSS/XPath selector or Playwright locator for the target element(s)",
+    },
+    {
+      key: "target.scope",
+      label: "Scope",
+      type: "select",
+      options: [
+        { label: "Single Element", value: "element" },
+        { label: "Collection (Multiple)", value: "collection" },
+        { label: "Page (URL/Title)", value: "page" },
+      ],
+      defaultValue: "element",
+      description: "Whether to assert on a single element, multiple elements, or page-level properties",
+    },
+    {
+      key: "assertions",
+      label: "Assertions",
+      type: "assertionList",
+      required: true,
+      description: "List of assertions to evaluate",
+    },
+    {
+      key: "timeout",
+      label: "Timeout (ms)",
+      type: "number",
+      placeholder: "5000",
+      defaultValue: 5000,
+    },
+    {
+      key: "softFail",
+      label: "🛡️ Continue on failure (Soft Fail)",
+      type: "checkbox",
+      defaultValue: false,
+      description: "If enabled, failed assertions won't stop the flow",
+    },
+  ],
   get_set_content: [
     {
       key: "selector",
@@ -1488,6 +1531,34 @@ export const NODE_INPUTS = {
 export const validateNodeConfig = (nodeType, config = {}) => {
   const rules = NODE_INPUTS[nodeType] || NODE_INPUTS.default;
 
+  // Special validation for assert node
+  if (nodeType === "assert") {
+    if (!config.target?.selector) {
+      return { isValid: false, missingField: "Target Selector", fieldKey: "target.selector" };
+    }
+    if (!config.assertions || !Array.isArray(config.assertions) || config.assertions.length === 0) {
+      return { isValid: false, missingField: "Assertions", fieldKey: "assertions" };
+    }
+    // Validate each assertion has required fields
+    for (const assertion of config.assertions) {
+      if (!assertion.type) {
+        return { isValid: false, missingField: "Assertion Type", fieldKey: "assertions[].type" };
+      }
+      // Some operators require expected value
+      if (assertion.operator && !["empty", "not_empty"].includes(assertion.operator)) {
+        if (assertion.expected === undefined || assertion.expected === null || assertion.expected === "") {
+          return { isValid: false, missingField: "Expected Value", fieldKey: "assertions[].expected" };
+        }
+      }
+      if (assertion.type === "attribute" && !assertion.attribute) {
+        return { isValid: false, missingField: "Attribute Name", fieldKey: "assertions[].attribute" };
+      }
+      if (assertion.type === "css_property" && !assertion.cssProperty) {
+        return { isValid: false, missingField: "CSS Property", fieldKey: "assertions[].cssProperty" };
+      }
+    }
+  }
+
   for (const rule of rules) {
     if (rule.required) {
       if (typeof rule.isVisible === "function" && !rule.isVisible(config)) {
@@ -1591,6 +1662,12 @@ export const getSmartLabel = (nodeType, config = {}) => {
       return config.textToFind
         ? `Assert Text: ${truncate(config.textToFind, 15)}`
         : "Assert Page Text";
+    case "assert":
+      if (config.assertions && config.assertions.length > 0) {
+        const first = config.assertions[0];
+        return `Assert ${first.type}:${first.operator} ${config.assertions.length > 1 ? `+${config.assertions.length - 1} more` : ""}`;
+      }
+      return "Assert";
     default:
       return null;
   }

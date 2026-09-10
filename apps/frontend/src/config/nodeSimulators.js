@@ -163,6 +163,17 @@ export const NODE_SIMULATORS = {
     matched: true,
     textToFind: config.textToFind || "",
   }),
+  assert: (config) => {
+    const assertions = config.assertions || [];
+    return {
+      success: true,
+      passed: assertions.length,
+      failed: 0,
+      total: assertions.length,
+      softFailed: false,
+      assertions: assertions.map((a) => ({ ...a, passed: true, actual: "simulated", expected: a.expected })),
+    };
+  },
 
   conditional: (config, _incoming) => {
     const branches = config.branches || [];
