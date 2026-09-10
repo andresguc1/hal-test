@@ -78,7 +78,47 @@ export class CheckboxGroupStrategy extends BaseStrategy {
                 continue;
             }
 
-            const before = option.checked;
+            const target = await this.buildTargetLocator(page, option, containerSelector, {
+                timeout,
+            });
+            if (!target) {
+                evidence.push({
+                    label: option.label,
+                    value: option.value,
+                    type: option.type,
+                    before: option.checked ? 'Checked' : 'Unchecked',
+                    action,
+                    after: null,
+                    result: 'FAIL',
+                    message: 'Could not resolve locator for option',
+                });
+                throw new Error(`Could not resolve locator for option "${option.label}"`);
+            }
+
+            // Fail fast with a descriptive error instead of letting check()/uncheck()
+            // block for the full timeout on a locator that cannot resolve.
+            try {
+                await target.waitFor({ state: 'attached', timeout: Math.min(timeout, 5000) });
+            } catch {
+                const message = `Checkbox "${option.label}" (locator "${option.locator || ''}") not found in container "${containerSelector}". Verify the container selector or re-detect options.`;
+                evidence.push({
+                    label: option.label,
+                    value: option.value,
+                    type: option.type,
+                    before: option.checked ? 'Checked' : 'Unchecked',
+                    action,
+                    after: null,
+                    result: 'FAIL',
+                    message,
+                });
+                throw new Error(message);
+            }
+
+            // The detected/persisted `checked` flag is a snapshot from detection time
+            // and can be stale at execution time (page reloaded, earlier nodes in the
+            // flow changed state, user interaction). Read the LIVE state from the DOM
+            // so the "already in desired state" skip never suppresses a real action.
+            const before = await this.readState(target, option);
 
             if (
                 (action === 'CHECK' && before === true) ||
@@ -97,26 +137,15 @@ export class CheckboxGroupStrategy extends BaseStrategy {
                 continue;
             }
 
-            const target = await this.buildTargetLocator(page, option, containerSelector, {
-                timeout,
-            });
-            if (!target) {
-                evidence.push({
-                    label: option.label,
-                    value: option.value,
-                    type: option.type,
-                    before: before ? 'Checked' : 'Unchecked',
-                    action,
-                    after: null,
-                    result: 'FAIL',
-                    message: 'Could not resolve locator for option',
-                });
-                throw new Error(`Could not resolve locator for option "${option.label}"`);
-            }
-
             try {
+                // check()/uncheck() only work on native checkbox inputs; checkbox
+                // containers built as ARIA [role=checkbox] elements must be toggled
+                // via click. Since the live state was already read above, a click
+                // toggles in the correct direction either way.
                 if (action === 'CHECK') {
-                    await target.check(runOptions);
+                    await target.check(runOptions).catch(async () => {
+                        await target.click(runOptions);
+                    });
                 } else {
                     await target.uncheck(runOptions).catch(async () => {
                         await target.click(runOptions);

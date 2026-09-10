@@ -47,6 +47,30 @@ const selectOptionBodySchema = Joi.object({
         'boolean.base': 'expandMenu debe ser un booleano.',
     }),
 
+    // 1e. detectedOptions (PERSISTED): full detected options from discovery (for persistence across sessions)
+    detectedOptions: Joi.array()
+        .items(
+            Joi.object({
+                id: Joi.string().optional().allow(''),
+                label: Joi.string().optional().allow(''),
+                value: Joi.alternatives().try(Joi.string(), Joi.number()).optional().allow(''),
+                type: Joi.string().optional().allow(''),
+                index: Joi.number().optional(),
+                selected: Joi.boolean().optional(),
+                checked: Joi.boolean().optional(),
+                enabled: Joi.boolean().optional(),
+                visible: Joi.boolean().optional(),
+                locator: Joi.string().optional().allow(''),
+                confidence: Joi.number().optional(),
+                groupId: Joi.string().optional().allow(''),
+                actualState: Joi.object().optional(),
+            }).unknown(true),
+        )
+        .optional()
+        .messages({
+            'array.base': 'detectedOptions debe ser un arreglo de opciones detectadas.',
+        }),
+
     // 2. selectionCriteria (Requerido, Select) - modo legacy
     selectionCriteria: Joi.string()
         .valid(...allowedCriteria)

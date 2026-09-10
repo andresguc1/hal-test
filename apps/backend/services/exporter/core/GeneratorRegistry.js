@@ -5,6 +5,7 @@ import { WaitMapper } from '../nodes/WaitMapper.js';
 import { UtilityMapper } from '../nodes/UtilityMapper.js';
 import { NavigationMapper } from '../nodes/NavigationMapper.js';
 import { FormMapper } from '../nodes/FormMapper.js';
+import { SelectionMapper } from '../nodes/SelectionMapper.js';
 import { FillFormMapper } from '../nodes/FillFormMapper.js';
 import { AssertionMapper } from '../nodes/AssertionMapper.js';
 import { NetworkMapper } from '../nodes/NetworkMapper.js';
@@ -58,6 +59,7 @@ NodeMapperRegistry.register(UtilityMapper);
 // ── Extended Mappers ──
 NodeMapperRegistry.register(NavigationMapper);
 NodeMapperRegistry.register(FormMapper);
+NodeMapperRegistry.register(SelectionMapper);
 NodeMapperRegistry.register(FillFormMapper);
 NodeMapperRegistry.register(AssertionMapper);
 NodeMapperRegistry.register(NetworkMapper);

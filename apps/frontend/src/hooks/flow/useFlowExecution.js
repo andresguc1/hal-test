@@ -415,10 +415,20 @@ export function useFlowExecution({
                 : isSoftFail
                   ? NODE_STATES.SOFTFAILED
                   : NODE_STATES.SUCCESS;
+
+              // Extract detectedOptions from select_option response and persist to node configuration
+              const nodeType = node.data?.type || node.type;
+              const detectedOptionsFromResult = result?.data?.detectedOptions;
+              const updatedConfiguration = { ...(node.data?.configuration || {}) };
+              if (nodeType === 'select_option' && detectedOptionsFromResult && detectedOptionsFromResult.length > 0) {
+                updatedConfiguration.detectedOptions = detectedOptionsFromResult;
+              }
+
               return {
                 ...node,
                 data: {
                   ...node.data,
+                  configuration: updatedConfiguration,
                   executed: true,
                   state: finalState,
                   result,

@@ -52,6 +52,39 @@
       "handler": "./handlers/select_option.js"
     },
     {
+      "type": "set_checkbox",
+      "category": "user_interaction",
+      "label": "Set Checkbox",
+      "description": "Check or uncheck a checkbox",
+      "color": "pink",
+      "icon": "CheckSquare",
+      "version": "1.0.0",
+      "schema": "./schemas/set_checkbox.js",
+      "handler": "./handlers/set_checkbox.js"
+    },
+    {
+      "type": "set_radio",
+      "category": "user_interaction",
+      "label": "Select Radio",
+      "description": "Select a radio button",
+      "color": "pink",
+      "icon": "Radio",
+      "version": "1.0.0",
+      "schema": "./schemas/set_radio.js",
+      "handler": "./handlers/set_radio.js"
+    },
+    {
+      "type": "pick_list_option",
+      "category": "user_interaction",
+      "label": "Pick List Option",
+      "description": "Click an item in a custom dropdown or menu",
+      "color": "pink",
+      "icon": "List",
+      "version": "1.0.0",
+      "schema": "./schemas/pick_list_option.js",
+      "handler": "./handlers/pick_list_option.js"
+    },
+    {
       "type": "scroll",
       "category": "user_interaction",
       "label": "Scroll",

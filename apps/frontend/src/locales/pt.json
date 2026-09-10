@@ -183,7 +183,11 @@
       "container_required": "É necessário um seletor de contêiner.",
       "none_found": "Nenhuma opção foi detectada.",
       "detect_failed": "Falha na detecção.",
-      "detect_hint": "Informe um seletor de contêiner e pressione \"Detect Options\" para escanear checkboxes, radios, selects, listboxes ou opções personalizadas."
+      "detect_hint": "Informe o seletor do contêiner e pressione Scan para ler as opções disponíveis e, em seguida, escolha uma ação para cada uma. Sua configuração é salva com o nó.",
+      "scan": "Scan",
+      "scan_title": "Lê as opções disponíveis do contêiner.",
+      "scan_notice": "Não foi possível ler a página agora. Pressione Scan novamente quando o navegador estiver aberto; suas ações configuradas são preservadas.",
+      "no_options_notice": "Nenhuma opção pôde ser lida agora. Certifique-se de que o navegador esteja aberto na página e pressione Scan novamente. Suas ações configuradas são preservadas."
     },
     "labels": {
       "open_url": "Abrir URL",
@@ -225,6 +229,9 @@
       "click": "Clique",
       "type_text": "Digite texto",
       "select_option": "Selecione Opções",
+      "set_checkbox": "Marcar Checkbox",
+      "set_radio": "Selecionar Radio",
+      "pick_list_option": "Escolher Opção da Lista",
       "fill_form": "Preencher Formulário",
       "scroll": "Rolar",
       "hover": "Passe o mouse",
@@ -463,6 +470,7 @@
       "refresh": "Atualizar",
       "detect": "Detectar Opções",
       "detected_options": "Opções Detectadas",
+      "checkbox_rows": "Checkboxes",
       "all": "Todas",
       "clear": "Limpar",
       "option": "Opção",
@@ -579,7 +587,9 @@
       "key_required": "A chave é obrigatória",
       "value_required": "O valor é obrigatório",
       "session_path_required": "O caminho é obrigatório para salvar ou carregar a sessão",
-      "browser_id_required": "O ID do navegador é obrigatório"
+      "browser_id_required": "O ID do navegador é obrigatório",
+      "pick_option_required": "Forneça o texto da opção (optionText) ou seu índice (optionIndex)",
+      "index_min": "O índice não pode ser negativo"
     },
     "placeholders": {
       "url": "https://example.com",

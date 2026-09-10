@@ -104,7 +104,46 @@ export class RadioGroupStrategy extends BaseStrategy {
             return { applied, evidence, actionCount, optionCount: detectedOptions.length };
         }
 
-        const before = option.checked;
+        const target = await this.buildTargetLocator(page, option, containerSelector, {
+            timeout,
+        });
+        if (!target) {
+            evidence.push({
+                label: option.label,
+                value: option.value,
+                type: option.type,
+                before: option.checked ? 'Checked' : 'Unchecked',
+                action,
+                after: null,
+                result: 'FAIL',
+                message: 'Could not resolve locator for option',
+            });
+            throw new Error(`Could not resolve locator for option "${option.label}"`);
+        }
+
+        // Fail fast with a descriptive error instead of letting check() block for
+        // the full timeout on a locator that cannot resolve.
+        try {
+            await target.waitFor({ state: 'attached', timeout: Math.min(timeout, 5000) });
+        } catch {
+            const message = `Radio "${option.label}" (locator "${option.locator || ''}") not found in container "${containerSelector}". Verify the container selector or re-detect options.`;
+            evidence.push({
+                label: option.label,
+                value: option.value,
+                type: option.type,
+                before: option.checked ? 'Checked' : 'Unchecked',
+                action,
+                after: null,
+                result: 'FAIL',
+                message,
+            });
+            throw new Error(message);
+        }
+
+        // The detected/persisted `checked` flag is a snapshot from detection time
+        // and can be stale at execution time. Read the LIVE state from the DOM so
+        // an already-checked radio is only skipped when it ACTUALLY is checked.
+        const before = await this.readState(target, option);
 
         if (before === true) {
             evidence.push({
@@ -120,23 +159,13 @@ export class RadioGroupStrategy extends BaseStrategy {
             return { applied, evidence, actionCount, optionCount: detectedOptions.length };
         }
 
-        const target = await this.buildTargetLocator(page, option, containerSelector, { timeout });
-        if (!target) {
-            evidence.push({
-                label: option.label,
-                value: option.value,
-                type: option.type,
-                before: 'Unchecked',
-                action,
-                after: null,
-                result: 'FAIL',
-                message: 'Could not resolve locator for option',
-            });
-            throw new Error(`Could not resolve locator for option "${option.label}"`);
-        }
-
         try {
-            await target.check(runOptions);
+            // check() only works on native radio inputs; radios built as ARIA
+            // [role=radio] elements must be selected via click. Since the live
+            // state was already verified above, a click is the correct action.
+            await target.check(runOptions).catch(async () => {
+                await target.click(runOptions);
+            });
 
             // Add to applied immediately (matching old behavior)
             applied.push({
@@ -157,7 +186,7 @@ export class RadioGroupStrategy extends BaseStrategy {
                 label: option.label,
                 value: option.value,
                 type: option.type,
-                before: 'Unchecked',
+                before: before ? 'Checked' : 'Unchecked',
                 action,
                 after: after ? 'Checked' : 'Unchecked',
                 result: pass ? 'PASS' : 'FAIL',
@@ -170,7 +199,7 @@ export class RadioGroupStrategy extends BaseStrategy {
                 label: option.label,
                 value: option.value,
                 type: option.type,
-                before: 'Unchecked',
+                before: before ? 'Checked' : 'Unchecked',
                 action,
                 after: null,
                 result: 'FAIL',

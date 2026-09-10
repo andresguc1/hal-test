@@ -75,6 +75,9 @@ export const NODE_CATEGORIES = {
       "type_text",
       "fill_form",
       "select_option",
+      "set_checkbox",
+      "set_radio",
+      "pick_list_option",
       "scroll",
       "drag_drop",
       "hover",
@@ -284,6 +287,25 @@ export const NODE_OUTPUTS = {
     value: "string",
     selector: "string",
     selectedOptions: "array",
+  },
+  set_checkbox: {
+    success: "boolean",
+    selector: "string",
+    action: "string",
+    checked: "boolean",
+    selected: "boolean",
+  },
+  set_radio: {
+    success: "boolean",
+    selector: "string",
+    checked: "boolean",
+    selected: "boolean",
+  },
+  pick_list_option: {
+    success: "boolean",
+    selector: "string",
+    selected: "string",
+    menuOpened: "boolean",
   },
 
   scroll: {

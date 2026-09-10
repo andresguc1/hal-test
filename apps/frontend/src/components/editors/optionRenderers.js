@@ -101,6 +101,39 @@ export function isSingleSelect(groupType) {
 }
 
 /**
+ * Infers the groupType from a list of detected options, mirroring the backend's
+ * OptionWriter.determineGroupType. Used to restore the correct renderer when
+ * only persisted option objects are available.
+ *
+ * @param {Object[]} options
+ * @returns {string}
+ */
+export function inferGroupType(options) {
+    if (!Array.isArray(options) || options.length === 0) return '';
+    if (options[0] && options[0].groupType) return options[0].groupType;
+
+    const types = new Set(options.map((o) => o.type));
+    // Canonical types from ComponentClassifier
+    if (types.has('native_select') || types.has('native_select_multi')) {
+        return types.has('native_select_multi') ? 'select-multi' : 'select';
+    }
+    if (types.has('radio') || types.has('aria_radio')) return 'radio-group';
+    if (types.has('checkbox') || types.has('aria_checkbox')) return 'checkbox-group';
+    if (types.has('aria_option')) return 'listbox';
+    if (types.has('list_item')) return 'list';
+    if (types.has('custom_component')) return 'custom';
+    // Legacy type names from older tests
+    if (types.has('select') || types.has('select-multi')) {
+        return types.has('select-multi') ? 'select-multi' : 'select';
+    }
+    if (types.has('list')) return 'list';
+    if (types.has('combobox')) return 'combobox';
+    if (types.has('checkbox')) return 'checkbox-group';
+    if (types.has('radio')) return 'radio-group';
+    return options[0]?.type || 'custom';
+}
+
+/**
  * Gets the action label for a groupType and action.
  *
  * @param {string} groupType
@@ -124,5 +157,6 @@ export default {
     getDefaultAction,
     supportsMultiSelect,
     isSingleSelect,
+    inferGroupType,
     getActionLabel,
 };

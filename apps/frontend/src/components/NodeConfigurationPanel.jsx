@@ -38,6 +38,7 @@ import ConditionalBranchesEditor from "./editors/ConditionalBranchesEditor";
 import SwitchCasesEditor from "./editors/SwitchCasesEditor";
 import FormFillEditor from "./editors/FormFillEditor";
 import OptionPickerEditor from "./editors/OptionPickerEditor";
+import CheckboxListEditor from "./editors/CheckboxListEditor";
 import { SelectorResultPanel } from "./SelectorResultPanel";
 import { useTranslation } from "react-i18next";
 import { useForm, Controller } from "react-hook-form";
@@ -198,7 +199,7 @@ const NodeConfigurationPanel = ({
     return merged;
   }, [activeNode, definedInputs]);
 
-  const { control, handleSubmit, reset, watch } = useForm({
+  const { control, handleSubmit, reset, watch, setValue } = useForm({
     defaultValues,
   });
 
@@ -251,6 +252,8 @@ const NodeConfigurationPanel = ({
         "containerSelector",
         "selectedOptions",
         "expandMenu",
+        "detectedOptions",
+        "staticHtml",
       ]);
 
       // Add inputs defined in NODE_INPUTS schema for this node type
@@ -303,7 +306,34 @@ const NodeConfigurationPanel = ({
 
   const updateTimeoutRef = React.useRef(null);
 
+  // Track the node/view being edited so we can flush unsynced values when the
+  // panel is deselected or the active node switches (otherwise the pending
+  // debounced save is cancelled and the typed values are lost).
+  const activeNodeRef = React.useRef(activeNode);
+  activeNodeRef.current = activeNode;
+  const pendingSyncRef = React.useRef(null);
+
+  const flushPendingSync = React.useCallback(() => {
+    const pending = pendingSyncRef.current;
+    if (!pending) return;
+    pendingSyncRef.current = null;
+    if (updateTimeoutRef.current) {
+      clearTimeout(updateTimeoutRef.current);
+      updateTimeoutRef.current = null;
+    }
+    const cleanedConfig = cleanConfiguration(pending.values, pending.type);
+    updateNodeConfiguration(pending.nodeId, cleanedConfig);
+    lastSyncedConfigRef.current.config = pending.values;
+  }, [cleanConfiguration, updateNodeConfiguration]);
+
   React.useEffect(() => {
+    // When a different node (or nothing) is selected, flush any pending edits
+    // that are still inside the debounce window.
+    const pending = pendingSyncRef.current;
+    if (pending && pending.nodeId !== activeNode?.id) {
+      flushPendingSync();
+    }
+
     if (!activeNode) return;
     const currentConfigStr = JSON.stringify(watchedValues);
     const lastSyncedStr = JSON.stringify(lastSyncedConfigRef.current.config);
@@ -318,8 +348,13 @@ const NodeConfigurationPanel = ({
 
     if (currentConfigStr !== lastSyncedStr) {
       if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+      pendingSyncRef.current = {
+        nodeId: activeNode.id,
+        type: activeNode.data?.type || activeNode.type,
+        values: watchedValues,
+      };
       updateTimeoutRef.current = setTimeout(() => {
-        if (activeNode.id !== lastSyncedConfigRef.current.nodeId) return;
+        if (activeNodeRef.current?.id !== activeNode.id) return;
 
         const cleanedConfig = cleanConfiguration(
           watchedValues,
@@ -328,9 +363,16 @@ const NodeConfigurationPanel = ({
 
         updateNodeConfiguration(activeNode.id, cleanedConfig);
         lastSyncedConfigRef.current.config = watchedValues;
+        pendingSyncRef.current = null;
       }, 200);
     }
-  }, [watchedValues, activeNode, updateNodeConfiguration, cleanConfiguration]);
+  }, [
+    watchedValues,
+    activeNode,
+    updateNodeConfiguration,
+    cleanConfiguration,
+    flushPendingSync,
+  ]);
 
   const lastActiveNodeIdRef = React.useRef(activeNode?.id);
   const labelTimeoutRef = React.useRef(null);
@@ -899,6 +941,29 @@ const NodeConfigurationPanel = ({
             )}
           />
         );
+      case "checkbox_list":
+        return (
+          <Controller
+            key={reactKey}
+            name={dataKey}
+            control={control}
+            render={({ field: { value, onChange } }) => (
+              <div className="space-y-1.5">
+                <CheckboxListEditor
+                  value={value}
+                  onChange={onChange}
+                  onStartPick={onStartPick}
+                  onCancelPick={onCancelPick}
+                  pickingField={
+                    activeNode.data?.state === "picking"
+                      ? activeNode.data?.pickingField
+                      : null
+                  }
+                />
+              </div>
+            )}
+          />
+        );
       case "select_option_picker":
         return (
           <Controller
@@ -910,6 +975,16 @@ const NodeConfigurationPanel = ({
                 value={value}
                 onChange={onChange}
                 containerSelector={watch("containerSelector") || ""}
+                detectedOptions={watch("detectedOptions") || []}
+                onDetectedOptionsChange={(opts) => {
+                  // Update the detectedOptions field in the form
+                  setValue("detectedOptions", opts, { shouldValidate: false, shouldDirty: true });
+                }}
+                staticHtml={watch("staticHtml") || ""}
+                onStaticHtmlChange={(html) => {
+                  // Update the staticHtml field in the form
+                  setValue("staticHtml", html, { shouldValidate: false, shouldDirty: true });
+                }}
               />
             )}
           />

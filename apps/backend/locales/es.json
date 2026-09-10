@@ -74,6 +74,15 @@
         "select_option": {
             "success": "Opción seleccionada correctamente."
         },
+        "set_checkbox": {
+            "success": "Checkbox '{{selector}}' establecido a '{{action}}'."
+        },
+        "set_radio": {
+            "success": "Radio '{{selector}}' seleccionado."
+        },
+        "pick_list_option": {
+            "success": "Opción '{{option}}' del menú seleccionada."
+        },
         "submit_form": {
             "success": "Formulario enviado exitosamente."
         },
@@ -327,6 +336,9 @@
         "value_required_for_set": "El parámetro 'value' es obligatorio para la acción 'set'.",
         "url_pattern_required": "El patrón de URL (urlPattern) es obligatorio para acciones de red.",
         "select_option_container_required": "Se requiere un selector de contenedor al usar opciones auto-detectadas.",
-        "select_option_no_options": "No se encontraron opciones seleccionables dentro de \"{{selector}}\". {{message}}"
+        "select_option_no_options": "No se encontraron opciones seleccionables dentro de \"{{selector}}\". {{message}}",
+        "select_option_value_required": "El valor, etiqueta o índice a seleccionar es obligatorio.",
+        "select_option_not_native": "El selector \"{{selector}}\" no apunta a un elemento <select> nativo ni a una de sus <option>.",
+        "pick_option_required": "Es obligatorio proporcionar optionText (texto de la opción) u optionIndex (posición numérica)."
     }
 }

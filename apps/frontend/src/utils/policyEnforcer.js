@@ -280,6 +280,9 @@ export function runPolicyEnforcer(nodes, edges) {
       "click",
       "type_text",
       "select_option",
+      "set_checkbox",
+      "set_radio",
+      "pick_list_option",
       "hover",
       "submit_form",
     ];

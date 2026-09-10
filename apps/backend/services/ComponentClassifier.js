@@ -119,33 +119,37 @@ function escapeCss(value) {
 export function buildRobustLocator(opt) {
     if (opt.locator && opt.locator.trim().length > 0) return opt.locator;
 
-    if (opt.id && !/\[\d{3,}|[a-f0-9]{8}-[a-f0-9]{4}/i.test(opt.id)) {
-        return `#${escapeCss(opt.id)}`;
+    // Only address a real, native element id. The detector also emits synthetic
+    // ids (`checkbox-0`, `select-0-option-2`, ...) used as internal keys; those
+    // never exist in the DOM, so fabricating `#checkbox-0` would yield locators
+    // that resolve to nothing at execution time.
+    const nativeId =
+        opt.nativeId && /^[\w-]+$/.test(String(opt.nativeId)) ? String(opt.nativeId) : null;
+    if (nativeId) {
+        return `#${escapeCss(nativeId)}`;
     }
 
     if (opt.label && opt.label.trim().length > 0) {
         const safeLabel = escapeCss(opt.label);
-        if (
-            [
-                'aria_option',
-                'aria_checkbox',
-                'aria_radio',
-                'native_select',
-                'native_select_multi',
-            ].includes(opt.type)
-        ) {
+        if (opt.type === 'native_select' || opt.type === 'native_select_multi') {
             return `getByRole('option', { name: '${safeLabel}' })`;
         }
-        if (opt.type === 'checkbox' || opt.type === 'aria_checkbox') {
-            return `getByRole('checkbox', { name: '${safeLabel}' })`;
+        if (opt.type === 'aria_option') {
+            return `getByRole('option', { name: '${safeLabel}' })`;
         }
-        if (opt.type === 'radio' || opt.type === 'aria_radio') {
-            return `getByRole('radio', { name: '${safeLabel}' })`;
-        }
+        // Native checkboxes/radios (and their aria roles) only reach this point
+        // when the detector found no real accessible/associated label (locator
+        // ''), so the label comes from adjacent text and getByRole would match
+        // nothing. Return '' to let the strategy fall back to a container-relative
+        // index locator.
+        if (opt.type === 'checkbox' || opt.type === 'aria_checkbox') return '';
+        if (opt.type === 'radio' || opt.type === 'aria_radio') return '';
         return `getByText('${safeLabel}')`;
     }
 
-    return `#${Math.random().toString(36).substr(2, 9)}`;
+    // No id, no label: '' -> container-relative index fallback. Never fabricate
+    // random/unknown locators.
+    return '';
 }
 
 /**
@@ -314,6 +318,7 @@ export function enrichDetectionResult(rawResult) {
 
         return {
             id: opt.id || `option-${idx}`,
+            nativeId: opt.nativeId ?? null,
             type,
             label: opt.label || `Option ${idx + 1}`,
             value: opt.value ?? null,

@@ -183,7 +183,11 @@
       "container_required": "Un sélecteur de conteneur est requis.",
       "none_found": "Aucune option détectée.",
       "detect_failed": "La détection a échoué.",
-      "detect_hint": "Saisissez un sélecteur de conteneur et appuyez sur « Detect Options » pour analyser les cases à cocher, boutons radio, listes déroulantes, listboxes ou options personnalisées."
+      "detect_hint": "Saisissez le sélecteur du conteneur et appuyez sur Scan pour lire les options disponibles, puis choisissez une action pour chacune. Votre configuration est enregistrée avec le nœud.",
+      "scan": "Scan",
+      "scan_title": "Lit les options disponibles depuis le conteneur.",
+      "scan_notice": "Impossible de lire la page pour le moment. Appuyez à nouveau sur Scan lorsque le navigateur est ouvert ; vos actions configurées sont conservées.",
+      "no_options_notice": "Aucune option n'a pu être lue pour le moment. Assurez-vous que le navigateur est ouvert sur la page, puis appuyez à nouveau sur Scan. Vos actions configurées sont conservées."
     },
     "labels": {
       "open_url": "Ouvrir l'URL",
@@ -202,6 +206,9 @@
       "click": "Cliquer",
       "type_text": "Saisir du Texte",
       "select_option": "Sélectionner des Options",
+      "set_checkbox": "Cocher une case",
+      "set_radio": "Sélectionner le Radio",
+      "pick_list_option": "Choisir une Option de Liste",
       "fill_form": "Remplir le formulaire",
       "scroll": "Défiler",
       "hover": "Survoler",
@@ -463,6 +470,7 @@
       "refresh": "Actualiser",
       "detect": "Détecter les Options",
       "detected_options": "Options Détectées",
+      "checkbox_rows": "Cases à cocher",
       "all": "Tout",
       "clear": "Effacer",
       "option": "Option",
@@ -579,7 +587,9 @@
       "key_required": "La clé est obligatoire",
       "value_required": "La valeur est obligatoire",
       "session_path_required": "Le chemin est obligatoire pour sauvegarder ou charger la session",
-      "browser_id_required": "L'ID du navigateur est obligatoire"
+      "browser_id_required": "L'ID du navigateur est obligatoire",
+      "pick_option_required": "Fournissez le texte de l'option (optionText) ou son index (optionIndex)",
+      "index_min": "L'index ne peut pas être négatif"
     },
     "placeholders": {
       "url": "https://exemple.fr",

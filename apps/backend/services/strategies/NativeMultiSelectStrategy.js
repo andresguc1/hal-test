@@ -1,4 +1,9 @@
 import { BaseStrategy, registerStrategy } from '../InteractionStrategy.js';
+import {
+    isNativeSelectElement,
+    selectFromCustomDropdown,
+    tryCustomDropdownRecovery,
+} from './custom-dropdown.js';
 
 export class NativeMultiSelectStrategy extends BaseStrategy {
     get supportsMultiSelect() {
@@ -54,6 +59,22 @@ export class NativeMultiSelectStrategy extends BaseStrategy {
             };
         }
 
+        // The resolved element may not be a native <select> at all (misclassified
+        // custom dropdown, e.g. a div/button-based component). selectOption() only
+        // works on native <select>, so fall back to a click-to-open + click-by-label
+        // interaction for those elements.
+        const isNativeSelect = await isNativeSelectElement(finalLocator);
+        if (isNativeSelect === false) {
+            return selectFromCustomDropdown(this, {
+                page,
+                containerSelector,
+                selections,
+                detectedOptions,
+                timeout,
+                runOptions,
+            });
+        }
+
         const evidence = [];
         const applied = [];
         let actionCount = 0;
@@ -72,6 +93,11 @@ export class NativeMultiSelectStrategy extends BaseStrategy {
                     message: `Option "${sel.label || sel.value}" not found in detected options`,
                 });
                 continue;
+            }
+
+            // Check disabled (matching old behavior)
+            if (option.enabled === false) {
+                throw new Error(`Option "${option.label}" is disabled and cannot be selected.`);
             }
 
             const before = await this.readState(finalLocator, option);
@@ -128,6 +154,38 @@ export class NativeMultiSelectStrategy extends BaseStrategy {
                         : `Expected Selected but found ${after ? 'Selected' : 'Unselected'}`,
                 });
             } catch (err) {
+                // selectOption() can still fail even on a native-looking element (element
+                // re-rendered, wrapped by a custom component, etc.). Before surfacing the
+                // error, try the click-to-open flow once as a last resort.
+                const recovered = await tryCustomDropdownRecovery(this, {
+                    page,
+                    containerSelector,
+                    option,
+                    timeout,
+                    runOptions,
+                });
+                if (recovered) {
+                    applied.push({
+                        label: option.label,
+                        value: option.value,
+                        type: option.type,
+                        action: 'SELECT',
+                        selected: true,
+                    });
+                    actionCount++;
+                    evidence.push({
+                        label: option.label,
+                        value: option.value,
+                        type: option.type,
+                        before: before ? 'Selected' : 'Unselected',
+                        action: 'SELECT',
+                        after: 'Selected',
+                        result: 'PASS',
+                        message: 'Recovered via custom dropdown click.',
+                    });
+                    continue;
+                }
+
                 evidence.push({
                     label: option.label,
                     value: option.value,

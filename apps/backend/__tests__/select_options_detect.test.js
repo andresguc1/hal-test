@@ -8,6 +8,7 @@ vi.mock('../services/browser.service.js', () => ({
 
 vi.mock('../services/OptionDetector.js', () => ({
     detectOptions: vi.fn(),
+    detectOptionsStatic: vi.fn(),
 }));
 
 import { browserService } from '../services/browser.service.js';

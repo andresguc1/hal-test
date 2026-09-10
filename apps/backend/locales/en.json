@@ -74,6 +74,15 @@
         "select_option": {
             "success": "Option selected successfully."
         },
+        "set_checkbox": {
+            "success": "Checkbox '{{selector}}' set to '{{action}}'."
+        },
+        "set_radio": {
+            "success": "Radio '{{selector}}' selected."
+        },
+        "pick_list_option": {
+            "success": "Menu option '{{option}}' selected."
+        },
         "submit_form": {
             "success": "Form submitted successfully."
         },
@@ -321,6 +330,9 @@
         "value_required_for_set": "The 'value' parameter is required for the 'set' action.",
         "url_pattern_required": "The URL pattern (urlPattern) is required for network actions.",
         "select_option_container_required": "A container selector is required when using auto-detected options.",
-        "select_option_no_options": "No selectable options found inside \"{{selector}}\". {{message}}"
+        "select_option_no_options": "No selectable options found inside \"{{selector}}\". {{message}}",
+        "select_option_value_required": "The value, label or index to select is required.",
+        "select_option_not_native": "The selector \"{{selector}}\" does not point to a native <select> element or one of its <option>.",
+        "pick_option_required": "You must provide optionText (option text) or optionIndex (numeric position)."
     }
 }

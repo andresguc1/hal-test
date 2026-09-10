@@ -181,9 +181,14 @@
   "nodes": {
     "select_option": {
       "container_required": "A container selector is required.",
+      "browser_required": "Launch a browser and load the page first, then retry detection.",
       "none_found": "No options detected.",
       "detect_failed": "Detection failed.",
-      "detect_hint": "Enter a container selector and press \"Detect Options\" to scan for checkboxes, radios, selects, listboxes or custom options."
+      "detect_hint": "Enter the container selector and press Scan to read the available options, then choose an action for each one. Your configuration is saved with the node.",
+      "scan": "Scan",
+      "scan_title": "Read the available options from the container.",
+      "scan_notice": "Could not read the page right now. Press Scan again when the browser is open; your configured actions are preserved.",
+      "no_options_notice": "No options could be read right now. Make sure the browser is open at the page and press Scan again. Your configured actions are preserved."
     },
     "labels": {
       "open_url": "Open URL",
@@ -203,6 +208,9 @@
       "type_text": "Type Text",
       "fill_form": "Fill Form",
       "select_option": "Select Options",
+      "set_checkbox": "Set Checkbox",
+      "set_radio": "Select Radio",
+      "pick_list_option": "Pick List Option",
       "scroll": "Scroll",
       "hover": "Hover",
       "drag_drop": "Drag & Drop",
@@ -463,6 +471,7 @@
       "refresh": "Refresh",
       "detect": "Detect Options",
       "detected_options": "Detected Options",
+      "checkbox_rows": "Checkboxes",
       "all": "All",
       "clear": "Clear",
       "option": "Option",
@@ -579,7 +588,9 @@
       "key_required": "Key is mandatory",
       "value_required": "Value is mandatory",
       "session_path_required": "Path is mandatory for saving or loading session",
-      "browser_id_required": "Browser ID is mandatory"
+      "browser_id_required": "Browser ID is mandatory",
+      "pick_option_required": "Provide the option text (optionText) or its index (optionIndex)",
+      "index_min": "Index cannot be negative"
     },
     "placeholders": {
       "url": "https://example.com",

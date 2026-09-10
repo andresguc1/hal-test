@@ -42,6 +42,10 @@ const asBoolean = (value, defaultValue) => {
  */
 const asNumber = (value, defaultValue, min = -Infinity, max = Infinity) => {
   if (isVariableTemplate(value)) return value;
+  // A blank/empty field (or explicit null/undefined) means "use the default":
+  // Number("") coerces to 0, which the min-clamp can then turn into e.g. a
+  // 1ms timeout on real runs.
+  if (value === "" || value === null || value === undefined) return defaultValue;
   const num = Number(value);
   if (!Number.isFinite(num)) return defaultValue;
   return Math.min(Math.max(Math.round(num), min), max);
@@ -490,6 +494,114 @@ export const select_option = (payload) => {
     timeout: asNumber(payload?.timeout, 30000, 1),
     browserId,
   };
+};
+
+export const set_checkbox = (payload = {}) => {
+  const action = ["check", "uncheck", "toggle"].includes(payload?.action)
+    ? payload.action
+    : "check";
+  const timeout = asNumber(payload?.timeout, 30000, 1);
+
+  if (payload?.multiple) {
+    const rawFields = Array.isArray(payload?.fields) ? payload.fields : [];
+
+    if (rawFields.length === 0) {
+      throw new Error("At least one checkbox is required.");
+    }
+
+    const fields = rawFields
+      .map((f) => {
+        const strategy = ["css", "label"].includes(f?.strategy) ? f.strategy : "css";
+        const target = asString(f?.target);
+        if (target === "") return null;
+        return {
+          strategy,
+          target,
+          action: ["check", "uncheck", "toggle"].includes(f?.action)
+            ? f.action
+            : "check",
+        };
+      })
+      .filter(Boolean);
+
+    if (fields.length === 0) {
+      throw new Error("At least one checkbox is required.");
+    }
+
+    return {
+      fields,
+      selector: asString(payload?.selector),
+      action,
+      timeout,
+      browserId: asString(payload?.browserId),
+    };
+  }
+
+  const selector = asString(payload?.selector);
+  if (selector === "") {
+    throw new Error("Checkbox selector is required.");
+  }
+  return {
+    selector,
+    action,
+    timeout,
+    browserId: asString(payload?.browserId),
+  };
+};
+
+export const set_radio = (payload = {}) => {
+  const selector = asString(payload?.selector);
+  if (selector === "") {
+    throw new Error("Radio selector is required.");
+  }
+  return {
+    selector,
+    timeout: asNumber(payload?.timeout, 30000, 1),
+    browserId: asString(payload?.browserId),
+  };
+};
+
+export const pick_list_option = (payload = {}) => {
+  const selector = asString(payload?.selector);
+  if (selector === "") {
+    throw new Error("Dropdown/menu trigger selector is required.");
+  }
+  const optionText = asString(payload?.optionText);
+  const rawIndex = payload?.optionIndex;
+  const numIndex =
+    rawIndex === "" || rawIndex === null || rawIndex === undefined
+      ? undefined
+      : Number(rawIndex);
+
+  const useIndex = payload?.mode === "index";
+  if (useIndex) {
+    if (numIndex === undefined || Number.isNaN(numIndex) || !Number.isInteger(numIndex)) {
+      throw new Error("Provide a valid optionIndex when using index mode.");
+    }
+  } else if (optionText === "" && (numIndex === undefined || Number.isNaN(numIndex))) {
+    throw new Error("Provide optionText or optionIndex.");
+  }
+
+  const result = {
+    selector,
+    timeout: asNumber(payload?.timeout, 30000, 1),
+    browserId: asString(payload?.browserId),
+    expandMenu: asBoolean(payload?.expandMenu, true),
+  };
+
+  const menuSelector = asString(payload?.menuSelector);
+  if (menuSelector !== "") {
+    result.menuSelector = menuSelector;
+  }
+
+  if (useIndex) {
+    result.optionIndex = numIndex;
+  } else if (optionText !== "") {
+    result.optionText = optionText;
+  } else if (numIndex !== undefined && !Number.isNaN(numIndex)) {
+    result.optionIndex = numIndex;
+  }
+  return result;
 };
 
 export const fill_form = (payload = {}) => {

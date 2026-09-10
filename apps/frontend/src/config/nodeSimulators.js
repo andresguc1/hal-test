@@ -86,6 +86,57 @@ export const NODE_SIMULATORS = {
     ),
   }),
 
+  set_checkbox: (config) => {
+    if (config.multiple && Array.isArray(config.fields) && config.fields.length > 0) {
+      const fields = config.fields.map((f) => ({
+        strategy: f.strategy || "css",
+        target: f.target,
+        action: f.action || "check",
+        checked: f.action !== "uncheck",
+      }));
+      return {
+        success: true,
+        mode: "multiple",
+        total: fields.length,
+        ok: fields.length,
+        fields,
+        evidence: { result: "PASS" },
+      };
+    }
+    return {
+      success: true,
+      selector: config.selector,
+      action: config.action || "check",
+      checked: config.action !== "uncheck",
+      selected: config.action !== "uncheck",
+      evidence: {
+        before: "Unknown",
+        after: config.action === "uncheck" ? "unchecked" : "checked",
+        result: "PASS",
+      },
+    };
+  },
+
+  set_radio: (config) => ({
+    success: true,
+    selector: config.selector,
+    checked: true,
+    selected: true,
+    evidence: { before: "Unknown", after: "selected", result: "PASS" },
+  }),
+
+  pick_list_option: (config) => ({
+    success: true,
+    selector: config.selector,
+    selected:
+      config.mode === "index" && config.optionIndex != null
+        ? `#${config.optionIndex}`
+        : config.optionText || `#${config.optionIndex}`,
+    menuOpened: config.expandMenu !== false,
+    menuClosed: true,
+    verified: true,
+  }),
+
   // --- DOM / Code ---
   get_set_content: (config) => ({
     success: true,

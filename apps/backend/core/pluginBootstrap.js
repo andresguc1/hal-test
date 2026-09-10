@@ -168,6 +168,42 @@ const BUILTIN_PLUGINS = [
             ]),
     },
     {
+        type: 'set_checkbox',
+        category: 'user_interaction',
+        label: 'Set Checkbox',
+        color: 'pink',
+        icon: 'CheckSquare',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-interaction/handlers/set_checkbox.js'),
+                import('../plugins/core-interaction/schemas/set_checkbox.js'),
+            ]),
+    },
+    {
+        type: 'set_radio',
+        category: 'user_interaction',
+        label: 'Select Radio',
+        color: 'pink',
+        icon: 'Radio',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-interaction/handlers/set_radio.js'),
+                import('../plugins/core-interaction/schemas/set_radio.js'),
+            ]),
+    },
+    {
+        type: 'pick_list_option',
+        category: 'user_interaction',
+        label: 'Pick List Option',
+        color: 'pink',
+        icon: 'List',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-interaction/handlers/pick_list_option.js'),
+                import('../plugins/core-interaction/schemas/pick_list_option.js'),
+            ]),
+    },
+    {
         type: 'scroll',
         category: 'user_interaction',
         label: 'Scroll',

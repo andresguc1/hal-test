@@ -28,6 +28,9 @@ export const NODE_LABELS = {
   type_text: "Type Text",
   fill_form: "Fill Form",
   select_option: "Select Options",
+  set_checkbox: "Set Checkbox",
+  set_radio: "Select Radio",
+  pick_list_option: "Pick List Option",
   scroll: "Scroll",
   hover: "Hover",
   drag_drop: "Drag & Drop",
@@ -124,6 +127,9 @@ export const NODE_CATEGORIES = {
       "click",
       "type_text",
       "select_option",
+      "set_checkbox",
+      "set_radio",
+      "pick_list_option",
       "scroll",
       "hover",
       "find_element",
@@ -176,6 +182,9 @@ export const VISUAL_CHANGE_NODES = new Set([
   "scroll",
   "manage_tabs", // Capture screenshot to show tab management result
   "select_option",
+  "set_checkbox",
+  "set_radio",
+  "pick_list_option",
   "wait_visible",
   "take_screenshot",
 ]);
@@ -197,6 +206,9 @@ export const SCREENSHOT_RECOMMENDATIONS = {
 
   // Medium priority - May cause visual changes
   select_option: { priority: "medium", delay: { after: 200 } },
+  set_checkbox: { priority: "medium", delay: { after: 200 } },
+  set_radio: { priority: "medium", delay: { after: 200 } },
+  pick_list_option: { priority: "medium", delay: { after: 300 } },
   execute_script: { priority: "medium", delay: { after: 300 } },
   hover: { priority: "medium", delay: { after: 200 } },
 
@@ -462,6 +474,180 @@ export const NODE_FIELD_CONFIGS = {
         if (!value) return null;
         return null;
       },
+    },
+    {
+      name: "timeout",
+      label: "Timeout (ms)",
+      type: "number",
+      placeholder: "Ex: 15000",
+      defaultValue: 30000,
+      min: 1,
+      validation: (value, allParams, t) => {
+        if (value !== undefined && value !== null && value < 1)
+          return t("nodes.validation.timeout_min_1");
+        return null;
+      },
+    },
+  ],
+
+  set_checkbox: [
+    {
+      name: "multiple",
+      label: "🟦 Select multiple checkboxes",
+      type: "boolean",
+      defaultValue: false,
+      hint: "Check several checkboxes in a single step.",
+    },
+    {
+      name: "selector",
+      label: "Checkbox Selector",
+      type: "text",
+      placeholder: "Ex: #accept-terms or input[name='agree']",
+      required: true,
+      validation: (value, allParams, t) => {
+        if (!allParams.multiple && !value) return t("nodes.validation.selector_required");
+        return null;
+      },
+      hint: "Selector of the checkbox element (native input, [role=checkbox] or its label).",
+      showIf: (params) => !params.multiple,
+    },
+    {
+      name: "action",
+      label: "Target State",
+      type: "select",
+      options: [
+        { value: "check", label: "✔ Check (set checked)" },
+        { value: "uncheck", label: "✖ Uncheck (set unchecked)" },
+        { value: "toggle", label: "🔄 Toggle (invert)" },
+      ],
+      defaultValue: "check",
+      required: true,
+      showIf: (params) => !params.multiple,
+    },
+    {
+      name: "fields",
+      label: "Checkboxes",
+      type: "checkbox_list",
+      showIf: (params) => !!params.multiple,
+    },
+    {
+      name: "timeout",
+      label: "Timeout (ms)",
+      type: "number",
+      placeholder: "Ex: 15000",
+      defaultValue: 30000,
+      min: 1,
+      validation: (value, allParams, t) => {
+        if (value !== undefined && value !== null && value < 1)
+          return t("nodes.validation.timeout_min_1");
+        return null;
+      },
+    },
+  ],
+
+  set_radio: [
+    {
+      name: "selector",
+      label: "Radio Selector",
+      type: "text",
+      placeholder: "Ex: input[name='plan'][value='pro']",
+      required: true,
+      validation: (value, allParams, t) => {
+        if (!value) return t("nodes.validation.selector_required");
+        return null;
+      },
+      hint: "Selector of the radio button (native input, [role=radio] or its label).",
+    },
+    {
+      name: "timeout",
+      label: "Timeout (ms)",
+      type: "number",
+      placeholder: "Ex: 15000",
+      defaultValue: 30000,
+      min: 1,
+      validation: (value, allParams, t) => {
+        if (value !== undefined && value !== null && value < 1)
+          return t("nodes.validation.timeout_min_1");
+        return null;
+      },
+    },
+  ],
+
+  pick_list_option: [
+    {
+      name: "selector",
+      label: "Dropdown / Menu Trigger Selector",
+      type: "text",
+      placeholder: "Ex: #lang-dropdown or [role=combobox]",
+      required: true,
+      validation: (value, allParams, t) => {
+        if (!value) return t("nodes.validation.selector_required");
+        return null;
+      },
+      hint: "Trigger button (or visible container) that opens the custom dropdown / menu.",
+    },
+    {
+      name: "mode",
+      label: "How do you pick the option",
+      type: "select",
+      options: [
+        { value: "text", label: "🔤 By visible text" },
+        { value: "index", label: "🔢 By position" },
+      ],
+      defaultValue: "text",
+      required: false,
+    },
+    {
+      name: "optionText",
+      label: "Option Text",
+      type: "text",
+      placeholder: "Ex: Español",
+      required: false,
+      showIf: (params) => params?.mode !== "index",
+      validation: (value, allParams, t) => {
+        if (allParams?.mode === "index") return null;
+        if (value) return null;
+        if (!value && allParams?.optionIndex === undefined) {
+          return t("nodes.validation.pick_option_required");
+        }
+        return null;
+      },
+      hint: "Exact text of the option to click. Leave empty to use Option Index.",
+    },
+    {
+      name: "optionIndex",
+      label: "Option Index",
+      type: "number",
+      placeholder: "0 = first option",
+      defaultValue: undefined,
+      min: 0,
+      required: false,
+      showIf: (params) => params?.mode === "index",
+      validation: (value, allParams, t) => {
+        if (allParams?.mode !== "index") return null;
+        if (value === undefined || value === null) {
+          return t("nodes.validation.pick_option_required");
+        }
+        if (value < 0) return t("nodes.validation.index_min");
+        return null;
+      },
+      hint: "Position of the option (0-based).",
+    },
+    {
+      name: "menuSelector",
+      label: "Options Panel / Menu Container (optional)",
+      type: "text",
+      placeholder: "Ex: [role=listbox] or .menu-open",
+      required: false,
+      hint: "Use when the options render outside the trigger (portal/overlay or virtualized list).",
+    },
+    {
+      name: "expandMenu",
+      label: "Expand menu before selecting",
+      type: "boolean",
+      defaultValue: true,
+      required: false,
+      hint: "Click the trigger to open the menu before picking the option. Disable if the menu is already open.",
     },
     {
       name: "timeout",
@@ -3023,6 +3209,9 @@ export const NODE_TYPE_TO_CATEGORY = {
   click: "user_simulation",
   type_text: "user_simulation",
   select_option: "user_simulation",
+  set_checkbox: "user_simulation",
+  set_radio: "user_simulation",
+  pick_list_option: "user_simulation",
   submit_form: "user_simulation",
   scroll: "user_simulation",
   drag_drop: "user_simulation",

@@ -316,6 +316,151 @@ export const NODE_INPUTS = {
       defaultValue: false,
     },
   ],
+  set_checkbox: [
+    {
+      key: "multiple",
+      label: "🟦 Select multiple checkboxes",
+      type: "boolean",
+      defaultValue: false,
+      hint: "Check several checkboxes in a single step.",
+    },
+    {
+      key: "selector",
+      label: "Checkbox Selector",
+      type: "selector",
+      placeholder: "#accept-terms, form input[type=checkbox]",
+      required: true,
+      isVisible: (c) => !c.multiple,
+    },
+    {
+      key: "action",
+      label: "Target State",
+      type: "select",
+      options: [
+        { value: "check", label: "✔ Check (set checked)" },
+        { value: "uncheck", label: "✖ Uncheck (set unchecked)" },
+        { value: "toggle", label: "🔄 Toggle (invert)" },
+      ],
+      defaultValue: "check",
+      isVisible: (c) => !c.multiple,
+    },
+    {
+      key: "fields",
+      label: "Checkboxes",
+      type: "checkbox_list",
+      isVisible: (c) => !!c.multiple,
+    },
+    {
+      key: "takeScreenshot",
+      label: "📸 Take Screenshot",
+      type: "checkbox",
+      defaultValue: true,
+    },
+    {
+      key: "continueOnError",
+      label: "🛡️ Continue on failure (Soft Fail)",
+      type: "checkbox",
+      defaultValue: false,
+    },
+    {
+      key: "timeout",
+      label: "Timeout (ms)",
+      type: "number",
+      placeholder: "30000",
+    },
+  ],
+  set_radio: [
+    {
+      key: "selector",
+      label: "Radio Selector",
+      type: "selector",
+      placeholder: "input[name=plan][value=pro], [role=radio]",
+      required: true,
+    },
+    {
+      key: "takeScreenshot",
+      label: "📸 Take Screenshot",
+      type: "checkbox",
+      defaultValue: true,
+    },
+    {
+      key: "continueOnError",
+      label: "🛡️ Continue on failure (Soft Fail)",
+      type: "checkbox",
+      defaultValue: false,
+    },
+    {
+      key: "timeout",
+      label: "Timeout (ms)",
+      type: "number",
+      placeholder: "30000",
+    },
+  ],
+  pick_list_option: [
+    {
+      key: "selector",
+      label: "Dropdown / Menu Trigger Selector",
+      type: "selector",
+      placeholder: "#lang-dropdown, [role=combobox]",
+      required: true,
+    },
+    {
+      key: "mode",
+      label: "How do you pick the option",
+      type: "select",
+      options: [
+        { value: "text", label: "🔤 By visible text" },
+        { value: "index", label: "🔢 By position" },
+      ],
+      defaultValue: "text",
+    },
+    {
+      key: "optionText",
+      label: "Option Text",
+      type: "text",
+      placeholder: "Ex: Español",
+      isVisible: (c) => c.mode !== "index",
+    },
+    {
+      key: "optionIndex",
+      label: "Option Index",
+      type: "number",
+      placeholder: "0 = first option",
+      isVisible: (c) => c.mode === "index",
+    },
+    {
+      key: "menuSelector",
+      label: "Options Panel / Menu Container (optional)",
+      type: "selector",
+      placeholder: "Optional: open overlay panel, e.g. [role=listbox], .menu-open",
+      hint: "Use when the options render outside the trigger (portal/overlay or virtualized list).",
+    },
+    {
+      key: "expandMenu",
+      label: "Expand menu before selecting",
+      type: "boolean",
+      defaultValue: true,
+      hint: "Click the trigger to open the menu before picking the option.",
+    },
+    {
+      key: "takeScreenshot",
+      label: "📸 Take Screenshot",
+      type: "checkbox",
+      defaultValue: true,
+    },
+    {
+      key: "continueOnError",
+      label: "🛡️ Continue on failure (Soft Fail)",
+      type: "checkbox",
+      defaultValue: false,
+    },
+    {
+      key: "timeout",
+      label: "Timeout (ms)",
+      type: "number",
+      placeholder: "30000",
+    },
+  ],
   fill_form: [
     {
       key: "formSelector",
@@ -1390,6 +1535,28 @@ export const getSmartLabel = (nodeType, config = {}) => {
       return config.selector
         ? `Select in: ${truncate(config.selector, 15)}`
         : null;
+    case "set_checkbox": {
+      if (config.multiple) {
+        const count = Array.isArray(config.fields) ? config.fields.length : 0;
+        return count > 0 ? `Set ${count} checkboxes` : "Set checkboxes";
+      }
+      const action = config.action === "uncheck" ? "Uncheck" : config.action === "toggle" ? "Toggle" : "Check";
+      return config.selector ? `${action}: ${truncate(config.selector, 15)}` : null;
+    }
+    case "set_radio":
+      return config.selector
+        ? `Select radio: ${truncate(config.selector, 15)}`
+        : null;
+    case "pick_list_option": {
+      const which = config.mode === "index"
+        ? config.optionIndex != null
+          ? `#${config.optionIndex}`
+          : "option"
+        : config.optionText || "option";
+      return config.selector
+        ? `Pick ${truncate(which, 12)} from ${truncate(config.selector, 12)}`
+        : null;
+    }
     case "hover":
       return config.selector ? `Hover: ${truncate(config.selector, 20)}` : null;
     case "wait_for_element":

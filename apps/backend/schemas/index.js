@@ -21,6 +21,9 @@ export { default as executeJsBodySchema } from './execute_js/body.js';
 export { default as clickBodySchema } from './click/body.js';
 export { default as typeTextBodySchema } from './type_text/body.js';
 export { default as selectOptionBodySchema } from './select_option/body.js';
+export { default as setCheckboxBodySchema } from './set_checkbox/body.js';
+export { default as setRadioBodySchema } from './set_radio/body.js';
+export { default as pickListOptionBodySchema } from './pick_list_option/body.js';
 export { default as fillFormBodySchema } from './fill_form/body.js';
 
 export { default as scrollBodySchema } from './scroll/body.js';

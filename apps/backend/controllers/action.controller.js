@@ -213,6 +213,9 @@ export { default as findElementAction } from '../plugins/core-interaction/handle
 export { default as hoverAction } from '../plugins/core-interaction/handlers/hover.js';
 export { default as scrollAction } from '../plugins/core-interaction/handlers/scroll.js';
 export { default as selectOptionAction } from '../plugins/core-interaction/handlers/select_option.js';
+export { default as setCheckboxAction } from '../plugins/core-interaction/handlers/set_checkbox.js';
+export { default as setRadioAction } from '../plugins/core-interaction/handlers/set_radio.js';
+export { default as pickListOptionAction } from '../plugins/core-interaction/handlers/pick_list_option.js';
 export { default as dragDropAction } from '../plugins/core-interaction/handlers/drag_drop.js';
 export { default as uploadFileAction } from '../plugins/core-interaction/handlers/upload_file.js';
 export { default as getSetContentAction } from '../plugins/core-interaction/handlers/get_set_content.js';

@@ -181,9 +181,14 @@
   "nodes": {
     "select_option": {
       "container_required": "Se requiere un selector de contenedor.",
+      "browser_required": "Primero lanza un navegador y carga la página, luego reintenta la detección.",
       "none_found": "No se detectaron opciones.",
       "detect_failed": "Falló la detección.",
-      "detect_hint": "Ingresa un selector de contenedor y presiona \"Detect Options\" para escanear checkboxes, radios, selects, listboxes u opciones personalizadas."
+      "detect_hint": "Ingresa el selector del contenedor y presiona Escanear para leer las opciones disponibles, luego elige la acción para cada una. Tu configuración se guarda con el nodo.",
+      "scan": "Escanear",
+      "scan_title": "Lee las opciones disponibles desde el contenedor.",
+      "scan_notice": "No se pudo leer la página en este momento. Presiona Escanear de nuevo cuando el navegador esté abierto; tus acciones configuradas se conservan.",
+      "no_options_notice": "No se pudieron leer opciones en este momento. Asegúrate de que el navegador esté abierto en la página y presiona Escanear de nuevo. Tus acciones configuradas se conservan."
     },
     "labels": {
       "open_url": "Abrir URL",
@@ -203,6 +208,9 @@
       "type_text": "Escribir Texto",
       "fill_form": "Rellenar Formulario",
       "select_option": "Seleccionar opciones",
+      "set_checkbox": "Marcar Checkbox",
+      "set_radio": "Seleccionar Radio",
+      "pick_list_option": "Elegir Opción de Lista",
       "scroll": "Desplazar",
       "hover": "Pasar mouse sobre elemento",
       "drag_drop": "Arrastrar",
@@ -463,6 +471,7 @@
       "refresh": "Actualizar",
       "detect": "Detectar Opciones",
       "detected_options": "Opciones Detectadas",
+      "checkbox_rows": "Checkboxes",
       "all": "Todas",
       "clear": "Limpiar",
       "option": "Opción",
@@ -579,7 +588,9 @@
       "key_required": "La clave es obligatoria",
       "value_required": "El valor es obligatorio",
       "session_path_required": "La ruta (path) es obligatoria para guardar o cargar una sesión",
-      "browser_id_required": "Browser ID es obligatorio"
+      "browser_id_required": "Browser ID es obligatorio",
+      "pick_option_required": "Debes proporcionar el texto de la opción (optionText) o su índice (optionIndex)",
+      "index_min": "El índice no puede ser negativo"
     },
     "placeholders": {
       "url": "https://example.com",

@@ -141,6 +141,42 @@ export class BaseStrategy {
     async buildTargetLocator(page, option, containerSelector, options = {}) {
         const timeout = options.timeout || 30000;
 
+        // Absolute-id locators (e.g. `#checkbox-1`) are unique in the document,
+        // so a container-relative chain (`#checkboxes >> #checkbox-1`) fails
+        // silently whenever the element is NOT a descendant of the container at
+        // execution time (portals/overlays, re-rendered lists, or a container
+        // `.first()` matching a different node). Resolve those globally with a
+        // clear error instead of letting check()/uncheck() block a whole timeout.
+        if (option.locator && /^#[\w-]+$/.test(option.locator.trim())) {
+            try {
+                return await this.#resolveAbsoluteId(
+                    page,
+                    option,
+                    containerSelector,
+                    option.locator.trim(),
+                    timeout,
+                );
+            } catch (err) {
+                // The absolute id may be synthetic/non-existent in the DOM while the
+                // option is still reachable by its position inside the container.
+                // Retry with a relative index locator before giving up, so actions
+                // on such options don't abort with an unresolvable id.
+                const fallback = await this.#resolveRelativeByIndex(
+                    page,
+                    option,
+                    containerSelector,
+                    timeout,
+                );
+                if (fallback) {
+                    console.warn(
+                        `[Strategy] Absolute locator "${option.locator}" failed (${err.message}); retrying by index.`,
+                    );
+                    return fallback;
+                }
+                throw err;
+            }
+        }
+
         if (option.locator) {
             try {
                 // Check if locator is a Playwright locator method string (getByRole, getByText, getByLabel, etc.)
@@ -218,30 +254,107 @@ export class BaseStrategy {
             }
         }
 
-        if (containerSelector) {
-            const container = await normalizeSelectorForDotId(page, containerSelector);
-            const containerLocator = buildPlaywrightLocator(page, container).first();
-            await containerLocator.waitFor({ state: 'attached', timeout });
+        return this.#resolveRelativeByIndex(page, option, containerSelector, timeout);
+    }
 
-            const count = option.index ?? 0;
-            if (option.type === 'native_select' || option.type === 'native_select_multi') {
-                return containerLocator.locator('option').nth(count);
+    /**
+     * Resolves an option by its position (index) inside the container using a
+     * type-appropriate relative chain. This is the most resilient fallback when
+     * no absolute id or named locator exists (e.g. "bare" checkboxes/radios or
+     * synthetic ids that never exist in the DOM).
+     *
+     * @param {import('playwright').Page} page
+     * @param {Object} option
+     * @param {string} containerSelector
+     * @param {number} timeout
+     * @returns {Promise<import('playwright').Locator|null>}
+     */
+    async #resolveRelativeByIndex(page, option, containerSelector, timeout = 30000) {
+        if (!containerSelector) return null;
+
+        const container = await normalizeSelectorForDotId(page, containerSelector);
+        const containerLocator = buildPlaywrightLocator(page, container).first();
+        await containerLocator.waitFor({ state: 'attached', timeout });
+
+        const count = option.index ?? 0;
+        if (option.type === 'native_select' || option.type === 'native_select_multi') {
+            return containerLocator.locator('option').nth(count);
+        }
+        if (option.type === 'checkbox' || option.type === 'aria_checkbox') {
+            return containerLocator.locator('input[type="checkbox"], [role="checkbox"]').nth(count);
+        }
+        if (option.type === 'radio' || option.type === 'aria_radio') {
+            return containerLocator.locator('input[type="radio"], [role="radio"]').nth(count);
+        }
+        if (option.type === 'aria_option') {
+            return containerLocator.locator('[role="option"]').nth(count);
+        }
+        return containerLocator.locator('*').nth(count);
+    }
+
+    /**
+     * Resolves an absolute-id locator (`#checkbox-1`) for an option.
+     *
+     * Prefers the container-relative locator (cheapest and most precise when the
+     * DOM matches detection). If the element is not a descendant of the container,
+     * falls back to a document-global resolution so portal/overlay/moved elements
+     * still work. Throws a descriptive error when the element cannot be found at
+     * either scope, so callers don't block a full action timeout on a useless chain.
+     *
+     * @param {import('playwright').Page} page
+     * @param {Object} option
+     * @param {string} containerSelector
+     * @param {string} idSelector
+     * @param {number} timeout
+     * @returns {Promise<import('playwright').Locator>}
+     */
+    async #resolveAbsoluteId(page, option, containerSelector, idSelector, timeout) {
+        const globalTarget = buildPlaywrightLocator(page, idSelector).first();
+
+        if (!containerSelector) {
+            try {
+                await globalTarget.waitFor({
+                    state: 'attached',
+                    timeout: Math.min(timeout, 5000),
+                });
+                return globalTarget;
+            } catch {
+                return null;
             }
-            if (option.type === 'checkbox' || option.type === 'aria_checkbox') {
-                return containerLocator
-                    .locator('input[type="checkbox"], [role="checkbox"]')
-                    .nth(count);
-            }
-            if (option.type === 'radio' || option.type === 'aria_radio') {
-                return containerLocator.locator('input[type="radio"], [role="radio"]').nth(count);
-            }
-            if (option.type === 'aria_option') {
-                return containerLocator.locator('[role="option"]').nth(count);
-            }
-            return containerLocator.locator('*').nth(count);
         }
 
-        return null;
+        let containerLocator = null;
+        try {
+            const container = await normalizeSelectorForDotId(page, containerSelector);
+            containerLocator = buildPlaywrightLocator(page, container).first();
+            await containerLocator.waitFor({ state: 'attached', timeout });
+        } catch (err) {
+            console.warn(
+                `[Strategy] Container "${containerSelector}" not found while resolving option "${option.label}": ${err.message}`,
+            );
+        }
+
+        if (containerLocator) {
+            const inContainer = containerLocator.locator(idSelector).first();
+            try {
+                await inContainer.waitFor({ state: 'attached', timeout: Math.min(timeout, 2000) });
+                return inContainer;
+            } catch {
+                // Element is not a descendant of the container - try globally.
+            }
+        }
+
+        try {
+            await globalTarget.waitFor({ state: 'attached', timeout: Math.min(timeout, 5000) });
+            console.warn(
+                `[Strategy] Option "${option.label}" locator "${idSelector}" resolved globally but is not a descendant of container "${containerSelector}"`,
+            );
+            return globalTarget;
+        } catch {
+            throw new Error(
+                `Option "${option.label}" locator "${idSelector}" not found inside container "${containerSelector}" nor globally in the page.`,
+            );
+        }
     }
 
     /**

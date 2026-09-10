@@ -23,7 +23,10 @@ import {
     reapSessionsAction,
     countSelectorMatchesAction,
 } from '../controllers/inspector.controller.js';
-import { detectOptionsAction } from '../controllers/select-options.controller.js';
+import {
+    detectOptionsAction,
+    getPageContentAction,
+} from '../controllers/select-options.controller.js';
 
 const router = Router();
 
@@ -35,6 +38,7 @@ router.get('/inspector/sessions', getActiveSessionsAction);
 router.post('/inspector/reap', reapSessionsAction);
 router.post('/inspector/count-matches', countSelectorMatchesAction);
 router.post('/actions/select_option/detect', detectOptionsAction);
+router.post('/actions/select_option/page_content', getPageContentAction);
 router.get('/variables', actions.getVariables);
 router.post('/variables', actions.updateVariablesAction);
 router.delete('/variables', actions.deleteVariableAction);
@@ -67,6 +71,9 @@ const ROUTE_REGISTRY = {
     type_text: { schema: 'typeTextBodySchema', category: 'interaction' },
     fill_form: { schema: 'fillFormBodySchema', category: 'interaction' },
     select_option: { schema: 'selectOptionBodySchema', category: 'interaction' },
+    set_checkbox: { schema: 'setCheckboxBodySchema', category: 'interaction' },
+    set_radio: { schema: 'setRadioBodySchema', category: 'interaction' },
+    pick_list_option: { schema: 'pickListOptionBodySchema', category: 'interaction' },
     scroll: { schema: 'scrollBodySchema', category: 'interaction' },
     hover: { schema: 'hoverBodySchema', category: 'interaction' },
     drag_drop: { schema: 'dragDropBodySchema', category: 'interaction' },

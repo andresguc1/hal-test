@@ -30,6 +30,8 @@ import {
   MousePointerClick,
   Keyboard,
   ListIcon,
+  CircleDot,
+  ListOrdered,
   SendIcon,
   MoveVertical,
   Upload,
@@ -89,6 +91,9 @@ export const NODE_TYPE_ICONS = {
   click: MousePointerClick,
   type_text: Keyboard,
   select_option: ListIcon,
+  set_checkbox: CheckSquare,
+  set_radio: CircleDot,
+  pick_list_option: ListOrdered,
 
   scroll: MoveVertical,
   drag_drop: MousePointer2,

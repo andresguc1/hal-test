@@ -30,6 +30,9 @@ export const mockCategories = {
             'click',
             'type_text',
             'select_option',
+            'set_checkbox',
+            'set_radio',
+            'pick_list_option',
             'submit_form',
             'scroll',
             'drag_drop',
@@ -104,6 +107,15 @@ export const allNodeFieldConfigs = {
     ],
     select_option: [
         /* ... configuración de select_option ... */
+    ],
+    set_checkbox: [
+        /* ... configuración de set_checkbox ... */
+    ],
+    set_radio: [
+        /* ... configuración de set_radio ... */
+    ],
+    pick_list_option: [
+        /* ... configuración de pick_list_option ... */
     ],
     submit_form: [
         /* ... configuración de submit_form ... */

@@ -10,6 +10,8 @@
  */
 /* global window, document, Element, Node, CSS */
 
+import * as cheerio from 'cheerio';
+
 // Self-contained script injected + executed inside the page context. It is a
 // single function (no factory) so that Playwright serializes it with its own
 // helpers in scope. It receives the container selector and returns a normalized
@@ -187,6 +189,7 @@ function detectOptionsScript(containerSelector) {
         const visible = isElementVisible(el);
         return {
             id: base.id || `${base.type}-${el.__hookIndex}`,
+            nativeId: el.id && !isDynamicId(el.id) ? el.id : null,
             label: base.label || getAccessibleName(el) || getText(el),
             value: base.value,
             type: base.type,
@@ -668,6 +671,109 @@ export async function detectOptions(page, containerSelector, _options = {}) {
     });
 
     return { found: true, groupType: result.groupType, options: result.options };
+}
+
+/**
+ * Static detection for native <select> elements from HTML string.
+ * Does not require a browser - uses cheerio to parse HTML.
+ *
+ * @param {string} html - Full page HTML or container HTML
+ * @param {string} containerSelector - CSS selector for the container (e.g., '#dropdown' or 'select')
+ * @returns {Promise<Object>} Detection result with groupType and options
+ */
+export async function detectOptionsStatic(html, containerSelector) {
+    if (!html || !containerSelector) {
+        return {
+            groupType: 'unknown',
+            options: [],
+            containerSelector,
+            analysisNotes: ['No HTML or container selector provided'],
+        };
+    }
+
+    try {
+        const $ = cheerio.load(html);
+
+        // Find the container element
+        const container = $(containerSelector).first();
+        if (!container.length) {
+            return {
+                groupType: 'unknown',
+                options: [],
+                containerSelector,
+                analysisNotes: [`Container "${containerSelector}" not found in HTML`],
+            };
+        }
+
+        // Check if it's a native <select>
+        const isSelect = container.is('select');
+        const selectEl = isSelect ? container : container.find('select').first();
+
+        if (!selectEl.length) {
+            return {
+                groupType: 'unknown',
+                options: [],
+                containerSelector,
+                analysisNotes: [
+                    'No native <select> element found in container. Static detection only supports native selects.',
+                ],
+            };
+        }
+
+        const isMultiple = selectEl.attr('multiple') !== undefined;
+        const groupType = isMultiple ? 'select-multi' : 'select';
+
+        const options = [];
+        selectEl.find('option').each((index, el) => {
+            const $el = $(el);
+            const value = $el.attr('value') || $el.text().trim();
+            const label = $el.text().trim();
+            const disabled = $el.attr('disabled') !== undefined;
+            const selected = $el.attr('selected') !== undefined;
+
+            if (!label && !value) return; // Skip empty options
+
+            options.push({
+                id: $el.attr('id') || `opt-${index}`,
+                label,
+                value,
+                type: isMultiple ? 'native_select_multi' : 'native_select',
+                index,
+                selected,
+                checked: selected,
+                enabled: !disabled,
+                visible: true,
+                locator: $el.attr('id')
+                    ? `#${$el.attr('id')}`
+                    : `getByRole('option', { name: '${label.replace(/'/g, "\\'")}' })`,
+                confidence: 1.0,
+                groupId: null,
+                actualState: {
+                    checked: selected,
+                    selected,
+                    enabled: !disabled,
+                    visible: true,
+                },
+            });
+        });
+
+        return {
+            groupType,
+            options,
+            containerSelector,
+            analysisNotes:
+                options.length > 0
+                    ? [`Static detection found ${options.length} option(s) in native <select>`]
+                    : ['Native <select> found but no options detected'],
+        };
+    } catch (err) {
+        return {
+            groupType: 'unknown',
+            options: [],
+            containerSelector,
+            analysisNotes: [`Static detection error: ${err.message}`],
+        };
+    }
 }
 
 export { detectOptionsScript };

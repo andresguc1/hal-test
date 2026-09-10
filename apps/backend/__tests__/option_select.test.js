@@ -128,7 +128,10 @@ describe('OptionWriter', () => {
     });
 
     it('applies CHECK to an unchecked checkbox with PASS evidence', async () => {
-        const s = withScoped(scoped({ isChecked: vi.fn(async () => true) }));
+        // Live state before = unchecked, after the check = checked.
+        const s = withScoped(
+            scoped({ isChecked: vi.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true) }),
+        );
         const check = s.check;
         const res = await writeOptions(
             {},
@@ -160,7 +163,8 @@ describe('OptionWriter', () => {
     });
 
     it('does NOT interact when current state already matches CHECK (diff strategy)', async () => {
-        const s = withScoped(scoped());
+        // Live state is already checked, so the strategy must skip interaction.
+        const s = withScoped(scoped({ isChecked: vi.fn(async () => true) }));
         const check = s.check;
         const res = await writeOptions(
             {},
@@ -188,7 +192,10 @@ describe('OptionWriter', () => {
     });
 
     it('applies UNCHECK to a checked checkbox', async () => {
-        const s = withScoped(scoped({ isChecked: vi.fn(async () => false) }));
+        // Live state before = checked, after the uncheck = unchecked.
+        const s = withScoped(
+            scoped({ isChecked: vi.fn().mockResolvedValueOnce(true).mockResolvedValueOnce(false) }),
+        );
         const uncheck = s.uncheck;
         const res = await writeOptions(
             {},
@@ -215,7 +222,10 @@ describe('OptionWriter', () => {
     });
 
     it('keeps NO_CHANGE options untouched (independence)', async () => {
-        const s = withScoped(scoped({ isChecked: vi.fn(async () => true) }));
+        // Live state before = unchecked, after the check = checked (for option A).
+        const s = withScoped(
+            scoped({ isChecked: vi.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true) }),
+        );
         const res = await writeOptions(
             {},
             {

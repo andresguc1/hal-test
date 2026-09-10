@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { select_option, click, browser_dialog, drag_drop } from "./payloadBuilders.js";
+import {
+  select_option,
+  set_checkbox,
+  set_radio,
+  pick_list_option,
+  click,
+  browser_dialog,
+  drag_drop,
+} from "./payloadBuilders.js";
 
 describe("click payload builder", () => {
   it("defaults to a single left click", () => {
@@ -169,6 +177,155 @@ describe("select_option payload builder", () => {
     const labelPayload = select_option({ selector: "#dd", label: "Spain" });
     expect(labelPayload.selectionCriteria).toBe("label");
     expect(labelPayload.selectionValue).toBe("Spain");
+  });
+});
+
+describe("set_checkbox payload builder", () => {
+  it("defaults to check action", () => {
+    const payload = set_checkbox({ selector: "#accept", action: "uncheck" });
+    expect(payload).toEqual({
+      selector: "#accept",
+      action: "uncheck",
+      timeout: 30000,
+      browserId: "",
+    });
+  });
+
+  it("normalizes invalid actions to check", () => {
+    const payload = set_checkbox({ selector: "#accept", action: "banana" });
+    expect(payload.action).toBe("check");
+  });
+
+  it("requires a selector", () => {
+    expect(() => set_checkbox({ selector: "" })).toThrow(/selector/);
+  });
+
+  it("supports toggle action", () => {
+    const payload = set_checkbox({ selector: "#accept", action: "toggle" });
+    expect(payload.action).toBe("toggle");
+  });
+
+  it("emits fields for multiple mode", () => {
+    const payload = set_checkbox({
+      multiple: true,
+      fields: [
+        { strategy: "label", target: "I accept the terms", action: "check" },
+        { strategy: "css", target: "#newsletter", action: "uncheck" },
+        { strategy: "label", target: "Subscribe" },
+      ],
+      timeout: 5000,
+    });
+    expect(payload).toEqual({
+      fields: [
+        { strategy: "label", target: "I accept the terms", action: "check" },
+        { strategy: "css", target: "#newsletter", action: "uncheck" },
+        { strategy: "label", target: "Subscribe", action: "check" },
+      ],
+      selector: "",
+      action: "check",
+      timeout: 5000,
+      browserId: "",
+    });
+  });
+
+  it("drops empty targets in multiple mode", () => {
+    const payload = set_checkbox({
+      multiple: true,
+      fields: [{ strategy: "css", target: "", action: "check" }, { strategy: "label", target: "News" }],
+    });
+    expect(payload.fields).toHaveLength(1);
+    expect(payload.fields[0].action).toBe("check");
+  });
+
+  it("requires at least one valid field in multiple mode", () => {
+    expect(() => set_checkbox({ multiple: true, fields: [] })).toThrow(/checkbox/);
+  });
+});
+
+describe("set_radio payload builder", () => {
+  it("emits selector and defaults", () => {
+    const payload = set_radio({ selector: 'input[name="plan"]' });
+    expect(payload).toEqual({
+      selector: 'input[name="plan"]',
+      timeout: 30000,
+      browserId: "",
+    });
+  });
+
+  it("requires a selector", () => {
+    expect(() => set_radio({})).toThrow(/selector/);
+  });
+});
+
+describe("pick_list_option payload builder", () => {
+  it("sends optionText and expandMenu by default", () => {
+    const payload = pick_list_option({ selector: "#lang", optionText: "Español" });
+    expect(payload).toMatchObject({
+      selector: "#lang",
+      optionText: "Español",
+      expandMenu: true,
+    });
+    expect(payload.optionIndex).toBeUndefined();
+  });
+
+  it("prefers optionText over optionIndex", () => {
+    const payload = pick_list_option({
+      selector: "#lang",
+      optionText: "Español",
+      optionIndex: 2,
+    });
+    expect(payload.optionText).toBe("Español");
+    expect(payload.optionIndex).toBeUndefined();
+  });
+
+  it("uses optionIndex when optionText is empty", () => {
+    const payload = pick_list_option({ selector: "#lang", optionText: "", optionIndex: 3 });
+    expect(payload.optionIndex).toBe(3);
+    expect(payload.optionText).toBeUndefined();
+  });
+
+  it("honours expandMenu=false", () => {
+    const payload = pick_list_option({ selector: "#lang", optionText: "EN", expandMenu: false });
+    expect(payload.expandMenu).toBe(false);
+  });
+
+  it("requires optionText or optionIndex", () => {
+    expect(() => pick_list_option({ selector: "#lang" })).toThrow(/optionText|optionIndex/);
+  });
+
+  it("passes menuSelector through", () => {
+    const payload = pick_list_option({
+      selector: "#lang",
+      optionText: "Español",
+      menuSelector: "[role=listbox]",
+    });
+    expect(payload.menuSelector).toBe("[role=listbox]");
+  });
+
+  it("index mode uses optionIndex even when optionText is present", () => {
+    const payload = pick_list_option({
+      selector: "#lang",
+      mode: "index",
+      optionText: "Español",
+      optionIndex: 2,
+    });
+    expect(payload.optionIndex).toBe(2);
+    expect(payload.optionText).toBeUndefined();
+  });
+
+  it("index mode requires a valid optionIndex", () => {
+    expect(() =>
+      pick_list_option({ selector: "#lang", mode: "index", optionIndex: "" }),
+    ).toThrow(/optionIndex/);
+  });
+
+  it("uses the default timeout when the field is left blank", () => {
+    const payload = pick_list_option({
+      selector: "#lang",
+      optionText: "Español",
+      timeout: "",
+    });
+    expect(payload.timeout).toBe(30000);
   });
 });
 

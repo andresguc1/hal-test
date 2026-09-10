@@ -74,6 +74,15 @@
         "select_option": {
             "success": "Option sélectionnée avec succès."
         },
+        "set_checkbox": {
+            "success": "Case '{{selector}}' définie sur '{{action}}'."
+        },
+        "set_radio": {
+            "success": "Bouton radio '{{selector}}' sélectionné."
+        },
+        "pick_list_option": {
+            "success": "Option de menu '{{option}}' sélectionnée."
+        },
         "submit_form": {
             "success": "Formulaire soumis avec succès."
         },
@@ -321,6 +330,9 @@
         "value_required_for_set": "Le paramètre 'value' est requis pour l'action 'set'.",
         "url_pattern_required": "Le modèle d'URL (urlPattern) est requis pour les actions réseau.",
         "select_option_container_required": "Un sélecteur de conteneur est requis lors de l'utilisation d'options auto-détectées.",
-        "select_option_no_options": "Aucune option sélectionnable trouvée dans \"{{selector}}\". {{message}}"
+        "select_option_no_options": "Aucune option sélectionnable trouvée dans \"{{selector}}\". {{message}}",
+        "select_option_value_required": "La valeur, l'étiquette ou l'index à sélectionner est obligatoire.",
+        "select_option_not_native": "Le sélecteur \"{{selector}}\" ne pointe pas vers un élément <select> natif ou l'une de ses <option>.",
+        "pick_option_required": "Vous devez fournir optionText (texte de l'option) ou optionIndex (position numérique)."
     }
 }
