@@ -15,6 +15,13 @@
     "clean": "rm -rf node_modules",
     "prepare": "husky",
     "db:init": "node database/init.js",
+    "db:migrate": "node database/migrate.js migrate",
+    "db:migrate:status": "node database/migrate.js status",
+    "db:migrate:create": "node database/migrate.js create",
+    "db:rollback": "node database/migrate.js rollback",
+    "db:backup": "node ../../scripts/db-backup.js create",
+    "db:backup:list": "node ../../scripts/db-backup.js list",
+    "db:backup:restore": "node ../../scripts/db-backup.js restore",
     "postinstall": "playwright install chromium firefox webkit"
   },
   "keywords": [],

@@ -14,6 +14,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@1769ed05b9f39e9906194499b5c2b0bf8535a69b
       
@@ -52,7 +53,7 @@ jobs:
           BUILD_ID: ${{ github.run_id }}
 
       - name: Generate CycloneDX SBOM
-        run: npx @cyclonedx/cyclonedx-npm --output-format JSON --output-file bom.json
+        run: npx @cyclonedx/cyclonedx-npm --output-format JSON --output-file bom.json --exclude-dev
         working-directory: apps/cli/dist
 
       - name: Upload SBOM Artifact
@@ -60,10 +61,19 @@ jobs:
         with:
           name: sbom
           path: apps/cli/dist/bom.json
+          retention-days: 30
 
       - name: Clean-room test of npm package
         run: |
           node scripts/clean-room-test.js
 
-      - name: Publish to npm
+      - name: Publish to npm with provenance
         run: cd apps/cli/dist && npm publish --provenance --access public
+
+      - name: Generate SLSA Provenance
+        if: success()
+        uses: slsa-framework/slsa-github-generator@main
+        with:
+          base64-subjects: ${{ toJson(format('{0}: {1}', github.repository, github.sha)) }}
+          provenance-name: slsa-provenance.intoto.jsonl
+          upload-assets: true

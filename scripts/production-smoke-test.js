@@ -5,7 +5,7 @@
  * Tests critical functionality against a deployed environment
  */
 
-const BASE_URL = process.env.SMOKE_TEST_URL || 'http://localhost:2001';
+const BASE_URL = process.env.SMOKE_TEST_URL || 'https://haltest.com';
 const TIMEOUT = 30000;
 
 async function sleep(ms) {

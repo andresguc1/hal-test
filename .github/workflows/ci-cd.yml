@@ -99,6 +99,52 @@ jobs:
           BUILD_ID: ${{ github.run_id }}
 
   # ========================================
+  # JOB 3: Database Migration Test
+  # ========================================
+  migration-test:
+    name: 🗄️ Migration Test
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@1769ed05b9f39e9906194499b5c2b0bf8535a69b
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@dc9f519e47a8b796aa19d9a9e5a5f11b696d5e8c
+        with:
+          version: 9.15.4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@60edb5dd545a775178f192cb99c9b2d8661c5e89
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: 📥 Install dependencies (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      - name: 🗄️ Test SQLite migrations (fresh DB)
+        run: |
+          cd apps/backend
+          DB_FORCE_MIGRATE=true pnpm db:migrate
+          pnpm db:migrate:status
+
+      - name: 🗄️ Test migration idempotency (run again)
+        run: |
+          cd apps/backend
+          pnpm db:migrate
+          pnpm db:migrate:status
+
+      - name: 🗄️ Test rollback
+        run: |
+          cd apps/backend
+          pnpm db:rollback 1
+          pnpm db:migrate:status
+          pnpm db:migrate
+          pnpm db:migrate:status
+
+  # ========================================
   # JOB 3: Deploy to Production
   # ========================================
   deploy:
@@ -114,15 +160,15 @@ jobs:
       - name: 🚀 Trigger Render Deploy
         run: |
           echo "Render auto-deploys on push to main"
-          echo "Public URL: https://hal-test-backend.onrender.com"
-          echo "App Dashboard: https://hal-test-backend.onrender.com/app/"
+          echo "Public URL: https://haltest.com"
+          echo "App Dashboard: https://haltest.com/app/"
 
       - name: ⏳ Wait for deployments & 🏥 Health check
         run: |
           echo "Checking application health (polling for up to 5 minutes)..."
           max_retries=30
           count=0
-          until curl -f -s https://hal-test-backend.onrender.com/api/status > /dev/null; do
+          until curl -f -s https://haltest.com/api/status > /dev/null; do
             count=$((count+1))
             if [ $count -ge $max_retries ]; then
               echo "Health check failed after 5 minutes."
@@ -136,7 +182,7 @@ jobs:
       - name: ✅ Verify Release Metadata in Production
         run: |
           echo "Verifying release metadata matches build..."
-          RESPONSE=$(curl -s https://hal-test-backend.onrender.com/api/status)
+          RESPONSE=$(curl -s https://haltest.com/api/status)
           echo "$RESPONSE" | jq '.'
           BUILD_COMMIT="${{ github.sha }}"
           DEPLOY_COMMIT=$(echo "$RESPONSE" | jq -r '.git.commit')
@@ -149,4 +195,4 @@ jobs:
       - name: ✅ Deployment successful
         run: |
           echo "::notice::✅ Deployment completed successfully!"
-          echo "Production URL: https://hal-test-backend.onrender.com"
+          echo "Production URL: https://haltest.com"

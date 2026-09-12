@@ -31,7 +31,11 @@
         "release": "gh workflow run release.yml -f version=v$(node -p \"require('./apps/cli/package.json').version\")",
         "release:patch": "gh workflow run release.yml -f version=v$(node -p \"require('./apps/cli/package.json').version\".replace(/\\d+$/, m => +m + 1))",
         "update:app": "git pull && pnpm install && pnpm build:monolith",
-        "setup": "pnpm install && node scripts/setup.js"
+        "setup": "pnpm install && node scripts/setup.js",
+        "sbom:all": "node scripts/generate-sbom.js all",
+        "sbom:single": "node scripts/generate-sbom.js single",
+        "verify:signatures": "node scripts/verify-signatures.js",
+        "audit:security": "node scripts/security-audit.js"
     },
     "devDependencies": {
         "husky": "^9.1.7",

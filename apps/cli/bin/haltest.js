@@ -321,7 +321,7 @@ const cliPkg = JSON.parse(
 if (args.includes("--version") || args.includes("-v") || args.includes("-V")) {
   const version = releaseMetadata?.version || cliPkg.version;
   const git = releaseMetadata?.git || {};
-  const buildId = releaseMetadata?.buildId || 'unknown';
+  const buildId = releaseMetadata?.buildId || "unknown";
   console.log(`haltest v${version}`);
   if (git.commit) {
     console.log(`  commit: ${git.shortCommit} (${git.branch})`);
@@ -354,7 +354,8 @@ if (args.includes("--help") || args.includes("-h")) {
     style(c.cyan, "    -V, --version           ") + "Output the version number",
   );
   console.log(
-    style(c.cyan, "    --info                  ") + "Output detailed release information",
+    style(c.cyan, "    --info                  ") +
+      "Output detailed release information",
   );
   console.log(
     style(c.cyan, "    -h, --help              ") + "Display help for command",

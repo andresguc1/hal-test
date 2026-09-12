@@ -72,148 +72,38 @@ User.hasMany(CollaboratorRole, {
 });
 CollaboratorRole.belongsTo(User, { as: 'user', foreignKey: 'userId' });
 
-const safeSync = async (options) => {
-    const isSqlite = sequelize.getDialect() === 'sqlite';
-    if (isSqlite && options.alter) {
-        try {
-            await sequelize.query('PRAGMA foreign_keys = OFF');
-            const [results] = await sequelize.query(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE '%_backup'",
-            );
-            for (const row of results) {
-                if (row.name) {
-                    await sequelize.query(`DROP TABLE IF EXISTS "${row.name}"`);
-                    console.log(` [DB_INIT] 🧹 Dropped orphaned backup table: ${row.name}`);
-                }
-            }
-        } catch (e) {
-            console.warn(' [DB_INIT] ⚠️ Error preparing SQLite for alter:', e.message);
-        }
-    }
-
-    try {
-        await sequelize.sync(options);
-    } finally {
-        if (isSqlite && options.alter) {
-            try {
-                await sequelize.query('PRAGMA foreign_keys = ON');
-            } catch (e) {
-                console.warn(' [DB_INIT] ⚠️ Error restoring SQLite foreign keys:', e.message);
-            }
-        }
-    }
-};
-
-// Health Check to detect missing columns in production (Render/Postgres)
-const checkSchemaHealth = async () => {
-    const isSqlite = sequelize.getDialect() === 'sqlite';
-
-    const ensureColumns = async (table, columns) => {
-        for (const col of columns) {
-            try {
-                if (isSqlite) {
-                    await sequelize.query(
-                        `ALTER TABLE "${table}" ADD COLUMN "${col.name}" ${col.definition}`,
-                        { logging: false },
-                    );
-                    console.log(` [DB_INIT] ➕ Added missing column: ${table}.${col.name}`);
-                } else {
-                    await sequelize.query(
-                        `ALTER TABLE "${table}" ADD COLUMN IF NOT EXISTS "${col.name}" ${col.definition}`,
-                        { logging: false },
-                    );
-                    console.log(` [DB_INIT] ➕ Ensured column: ${table}.${col.name}`);
-                }
-            } catch (e) {
-                // Column already exists — ignore
-            }
-        }
-    };
-
-    try {
-        console.log(' [DB_INIT] Running schema health check...');
-
-        // Check critical new columns that often cause 500s if missing
-        await sequelize.query('SELECT "parentId" FROM "Nodes" LIMIT 1', { logging: false });
-        await sequelize.query('SELECT "batch_id" FROM "execution_runs" LIMIT 1', {
-            logging: false,
-        });
-        await sequelize.query('SELECT "project_id" FROM "execution_runs" LIMIT 1', {
-            logging: false,
-        });
-        await sequelize.query('SELECT "nodeId" FROM "ExperienceVaults" LIMIT 1', {
-            logging: false,
-        });
-        await sequelize.query('SELECT "createdAt" FROM "step_results" LIMIT 1', { logging: false });
-        await sequelize.query('SELECT "collaborationEnabled" FROM "Projects" LIMIT 1', {
-            logging: false,
-        });
-        await sequelize.query('SELECT "role" FROM "CollaboratorRoles" LIMIT 1', { logging: false });
-        await sequelize.query('SELECT "flowId" FROM "execution_locks" LIMIT 1', { logging: false });
-        await sequelize.query('SELECT "hasInput" FROM "Flows" LIMIT 1', { logging: false });
-        await sequelize.query('SELECT "hasOutput" FROM "Flows" LIMIT 1', { logging: false });
-        await sequelize.query('SELECT "order" FROM "Nodes" LIMIT 1', { logging: false });
-        await sequelize.query('SELECT "data_leak_score" FROM "security_compliance_runs" LIMIT 1', {
-            logging: false,
-        });
-        await sequelize.query('SELECT "rule_id_code" FROM "security_compliance_results" LIMIT 1', {
-            logging: false,
-        });
-        console.log(' [DB_INIT] ✅ Schema health check passed.');
-    } catch (error) {
-        const isMissingColumn =
-            error.name === 'SequelizeDatabaseError' &&
-            ['42703', '42P01', 'SQLITE_ERROR'].some((code) =>
-                (error.original?.code || error.message).includes(code),
-            );
-
-        if (isMissingColumn) {
-            console.warn(
-                ' [DB_INIT] ⚠️ Schema mismatch detected via health check. Adding missing columns via raw SQL...',
-            );
-            await ensureColumns('Nodes', [
-                { name: 'parentId', definition: 'VARCHAR(255)' },
-                { name: 'order', definition: 'INTEGER NOT NULL DEFAULT 0' },
-            ]);
-            await ensureColumns('Flows', [
-                { name: 'hasInput', definition: 'BOOLEAN NOT NULL DEFAULT 0' },
-                { name: 'hasOutput', definition: 'BOOLEAN NOT NULL DEFAULT 0' },
-            ]);
-            await ensureColumns('execution_runs', [
-                { name: 'batch_id', definition: 'VARCHAR(255)' },
-                { name: 'project_id', definition: 'VARCHAR(255)' },
-            ]);
-            await ensureColumns('ExperienceVaults', [
-                { name: 'nodeId', definition: 'VARCHAR(255)' },
-            ]);
-            await ensureColumns('step_results', [{ name: 'createdAt', definition: 'DATETIME' }]);
-            await ensureColumns('Projects', [
-                { name: 'collaborationEnabled', definition: 'BOOLEAN DEFAULT 0' },
-            ]);
-            await ensureColumns('CollaboratorRoles', [
-                { name: 'role', definition: "VARCHAR(50) DEFAULT 'editor'" },
-            ]);
-            await ensureColumns('execution_locks', [
-                { name: 'flowId', definition: 'VARCHAR(255)' },
-            ]);
-            await ensureColumns('security_compliance_runs', [
-                { name: 'data_leak_score', definition: 'INTEGER DEFAULT 0' },
-            ]);
-            await ensureColumns('security_compliance_results', [
-                { name: 'rule_id_code', definition: 'VARCHAR(255)' },
-            ]);
-
-            console.log(' [DB_INIT] ✅ Database schema auto-corrected successfully.');
-        } else {
-            console.error(' [DB_INIT] ❌ Schema health check failed with unexpected error:', error);
-            // Don't throw here, let the main initDb handle it if it's fatal
-        }
-    }
-};
-
 let isInitializing = false;
 let isInitialized = false;
 
+/**
+ * Run database migrations
+ * Creates backup before running migrations in production
+ */
+export const runMigrations = async () => {
+    const isProduction = sequelize.getDialect() === 'postgres';
+    const isForced = process.env.DB_FORCE_MIGRATE === 'true';
+
+    // In production, create backup before migrations
+    if (isProduction && !isForced) {
+        try {
+            const { createBackup } = await import('../scripts/db-backup.js');
+            console.log('📦 Creating pre-migration backup...');
+            await createBackup();
+        } catch (error) {
+            console.warn('⚠️  Pre-migration backup failed:', error.message);
+            // Continue anyway - migrations should be safe
+        }
+    }
+
+    // Dynamic import to avoid circular dependencies
+    const { migrate } = await import('./migrate.js');
+    await migrate();
+};
+
+/**
+ * Initialize database - runs migrations and seeds data
+ * Replaces the old sync({ alter }) approach
+ */
 export const initDb = async (_force = false) => {
     if (isInitialized) return;
     if (isInitializing) {
@@ -230,34 +120,9 @@ export const initDb = async (_force = false) => {
         await sequelize.authenticate();
         console.log('Connection has been established successfully.');
 
-        // Note: SQLite has limited ALTER TABLE support.
-        // For schema changes, delete the database file and restart.
-
-        const shouldAlter = _force || process.env.DB_AUTO_MIGRATE === 'true';
-
-        try {
-            await safeSync({ alter: shouldAlter });
-            console.log(`Database synchronized (Alter: ${shouldAlter})`);
-        } catch (syncError) {
-            const isMissingColumn =
-                syncError.name === 'SequelizeDatabaseError' &&
-                ['42703', 'SQLITE_ERROR'].some((code) =>
-                    (syncError.original?.code || syncError.message).includes(code),
-                );
-
-            if (isMissingColumn && !shouldAlter) {
-                console.warn(
-                    ' [DB_INIT] ⚠️ Schema mismatch detected during sync. Attempting auto-fix with { alter: true }...',
-                );
-                await safeSync({ alter: true });
-                console.log(' [DB_INIT] ✅ Database schema auto-corrected successfully.');
-            } else {
-                throw syncError;
-            }
-        }
-
-        // Pre-flight Schema Health Check (especially for PostgreSQL/Production)
-        await checkSchemaHealth();
+        // Run migrations instead of sync({ alter })
+        // This replaces the old auto-migration approach
+        await runMigrations();
 
         // Backfill Node.order for existing rows (new column added with defaultValue: 0)
         try {
@@ -265,7 +130,7 @@ export const initDb = async (_force = false) => {
                 logging: false,
             });
         } catch (e) {
-            // Ignore if column doesn't exist yet (will be created by sync)
+            // Ignore if column doesn't exist yet (will be created by migration)
         }
 
         // Backfill Flow.hasInput/hasOutput for existing rows
@@ -281,7 +146,7 @@ export const initDb = async (_force = false) => {
                 { logging: false },
             );
         } catch (e) {
-            // Ignore if columns don't exist yet (will be created by sync)
+            // Ignore if columns don't exist yet (will be created by migration)
         }
 
         // Seed initial project if empty
@@ -357,7 +222,7 @@ export const initDb = async (_force = false) => {
         isInitialized = true;
     } catch (error) {
         // Detailed logging for connection failures
-        console.error(' [DB_INIT] Unable to connect to the database or sync:', {
+        console.error(' [DB_INIT] Unable to connect to the database or run migrations:', {
             name: error.name,
             message: error.message,
             code: error.original?.code || error.parent?.code,
@@ -371,17 +236,16 @@ export const initDb = async (_force = false) => {
 
         if (isPostgresSchemaError || process.env.DB_AUTO_MIGRATE === 'true') {
             console.warn(
-                ' [DB_INIT] ⚠️ Schema mismatch or missing tables detected. Attempting auto-fix with { alter: true }...',
+                ' [DB_INIT] ⚠️ Schema mismatch or missing tables detected. Attempting migration...',
             );
             try {
-                // In production, we use alter: true to add missing columns/tables without data loss
-                await safeSync({ alter: true });
-                console.log(' [DB_INIT] ✅ Database schema auto-corrected successfully.');
+                await runMigrations();
+                console.log(' [DB_INIT] ✅ Database migrations completed successfully.');
                 isInitialized = true;
                 return;
-            } catch (alterError) {
-                console.error(' [DB_INIT] ❌ Failed to auto-fix schema:', alterError);
-                throw alterError;
+            } catch (migrationError) {
+                console.error(' [DB_INIT] ❌ Failed to run migrations:', migrationError);
+                throw migrationError;
             }
         }
         throw error;
@@ -421,4 +285,3 @@ if (process.argv[1] && process.argv[1].endsWith('init.js')) {
             process.exit(1);
         });
 }
-// Watch reload comment 2

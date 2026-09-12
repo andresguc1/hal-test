@@ -1,0 +1,23 @@
+# Dependency Review Configuration
+# See: https://github.com/actions/dependency-review-action
+
+# Severity levels to fail on
+# Options: critical, high, medium, low
+fail-on-severity: high
+
+# Allow specific vulnerabilities by GHSA ID
+# allow-ghsas:
+#   - GHSA-xxxx-xxxx-xxxx
+
+# Allow specific packages by name
+allow-packages:
+  # Allow specific versions that are known safe
+  - package: "lodash"
+    reason: "Required by legacy dependency, no upgrade path available"
+
+# Scope of dependencies to check
+# Options: runtime, development, all
+scope: runtime
+
+# Configuration file for npm audit
+# audit-config: '.github/npm-audit-config.json'

@@ -15,10 +15,31 @@ on:
         required: false
         type: boolean
         default: false
+      rollback_type:
+        description: 'Type of rollback (full, app-only, db-only)'
+        required: false
+        type: choice
+        options:
+          - full
+          - app-only
+          - db-only
+      backup_name:
+        description: 'Backup name for database rollback (optional)'
+        required: false
+        type: string
+      dry_run:
+        description: 'Dry run (simulate without making changes)'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
   id-token: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   # ========================================
@@ -396,7 +417,7 @@ EOF
           echo "Checking production application health (polling for up to 10 minutes)..."
           max_retries=60
           count=0
-          until curl -f -s https://hal-test-backend.onrender.com/api/status > /dev/null; do
+          until curl -f -s https://haltest.com/api/status > /dev/null; do
             count=$((count+1))
             if [ $count -ge $max_retries ]; then
               echo "Health check failed after 10 minutes."
@@ -410,7 +431,7 @@ EOF
       - name: ✅ Verify Production Release Metadata
         run: |
           echo "Verifying production release metadata matches build..."
-          RESPONSE=$(curl -s https://hal-test-backend.onrender.com/api/status)
+          RESPONSE=$(curl -s https://haltest.com/api/status)
           echo "$RESPONSE" | jq '.'
           BUILD_COMMIT="${{ github.sha }}"
           DEPLOY_COMMIT=$(echo "$RESPONSE" | jq -r '.git.commit')
@@ -430,9 +451,9 @@ EOF
       - name: ✅ Run production smoke tests
         run: |
           echo "Running production smoke tests..."
-          SMOKE_TEST_URL=https://hal-test-backend.onrender.com node scripts/production-smoke-test.js
+          SMOKE_TEST_URL=https://haltest.com node scripts/production-smoke-test.js
         env:
-          SMOKE_TEST_URL: https://hal-test-backend.onrender.com
+          SMOKE_TEST_URL: https://haltest.com
 
   # ========================================
   # JOB 9: Emergency Production Deploy (skip staging)
@@ -458,7 +479,7 @@ EOF
           echo "Checking production application health (polling for up to 10 minutes)..."
           max_retries=60
           count=0
-          until curl -f -s https://hal-test-backend.onrender.com/api/status > /dev/null; do
+          until curl -f -s https://haltest.com/api/status > /dev/null; do
             count=$((count+1))
             if [ $count -ge $max_retries ]; then
               echo "Health check failed after 10 minutes."
@@ -471,15 +492,138 @@ EOF
 
       - name: ✅ Verify Production Release Metadata
         run: |
-          RESPONSE=$(curl -s https://hal-test-backend.onrender.com/api/status)
+          RESPONSE=$(curl -s https://haltest.com/api/status)
           echo "$RESPONSE" | jq '.'
 
       - name: ✅ Run production smoke tests
         run: |
           echo "Running production smoke tests..."
-          SMOKE_TEST_URL=https://hal-test-backend.onrender.com node scripts/production-smoke-test.js
+          SMOKE_TEST_URL=https://haltest.com node scripts/production-smoke-test.js
         env:
-          SMOKE_TEST_URL: https://hal-test-backend.onrender.com
+          SMOKE_TEST_URL: https://haltest.com
+
+  # ========================================
+  # JOB 9: Post-Deployment Monitoring & Auto-Rollback
+  # ========================================
+  post-deploy-monitor:
+    name: 📊 Post-Deploy Monitoring
+    runs-on: ubuntu-latest
+    needs: [deploy-production, deploy-production-emergency]
+    if: always() && (github.event_name == 'workflow_dispatch' || github.event_name == 'push')
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@1769ed05b9f39e9906194499b5c2b0bf8535a69b
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@60edb5dd545a775178f192cb99c9b2d8661c5e89
+        with:
+          node-version: '20.x'
+          cache: 'pnpm'
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@dc9f519e47a8b796aa19d9a9e5a5f11b696d5e8c
+        with:
+          version: 9.15.4
+
+      - name: 📥 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 📊 Monitor Release Health (30 min)
+        run: |
+          echo "Monitoring release health for 30 minutes..."
+          for i in {1..6}; do
+            echo "Check $i/6 - $(date)"
+            if ! node scripts/rollback.js health; then
+              echo "::warning::Health check failed on check $i"
+            fi
+            sleep 300
+          done
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_PRODUCTION_SERVICE_ID: ${{ secrets.RENDER_PRODUCTION_SERVICE_ID }}
+
+      - name: 🚨 Auto-Rollback on Sustained Failure
+        if: failure()
+        run: |
+          echo "::warning::🚨 Sustained health check failures detected - triggering auto-rollback"
+          node scripts/rollback.js rollback
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_PRODUCTION_SERVICE_ID: ${{ secrets.RENDER_PRODUCTION_SERVICE_ID }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: 📦 Deprecate npm Package on Rollback
+        if: failure()
+        run: |
+          VERSION=$(node -p "require('./apps/cli/package.json').version")
+          echo "Deprecating haltest@$VERSION due to rollback..."
+          node scripts/npm-deprecate.js deprecate haltest@$VERSION "Rolled back due to sustained production issues. Please use a previous version."
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  # ========================================
+  # JOB 10: Rollback Job (Manual Trigger)
+  # ========================================
+  rollback:
+    name: 🔄 Rollback
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.rollback_type != ''
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@1769ed05b9f39e9906194499b5c2b0bf8535a69b
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@60edb5dd545a775178f192cb99c9b2d8661c5e89
+        with:
+          node-version: '20.x'
+          cache: 'pnpm'
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@dc9f519e47a8b796aa19d9a9e5a5f11b696d5e8c
+        with:
+          version: 9.15.4
+
+      - name: 📥 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 🔄 Execute Rollback
+        run: |
+          case "${{ github.event.inputs.rollback_type }}" in
+            "full")
+              node scripts/rollback.js rollback "${{ github.event.inputs.backup_name }}"
+              ;;
+            "app-only")
+              node scripts/rollback.js app-rollback
+              ;;
+            "db-only")
+              if [ -z "${{ github.event.inputs.backup_name }}" ]; then
+                echo "❌ Backup name required for database-only rollback"
+                exit 1
+              fi
+              node scripts/rollback.js db-rollback "${{ github.event.inputs.backup_name }}"
+              ;;
+          esac
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_PRODUCTION_SERVICE_ID: ${{ secrets.RENDER_PRODUCTION_SERVICE_ID }}
+          DRY_RUN: ${{ github.event.inputs.dry_run }}
+
+      - name: 📦 Deprecate npm package (if full rollback)
+        if: github.event.inputs.rollback_type == 'full'
+        run: |
+          VERSION=$(node -p "require('./apps/cli/package.json').version")
+          echo "Deprecating haltest@$VERSION..."
+          node scripts/npm-deprecate.js deprecate haltest@$VERSION "This version was rolled back due to critical issues. Please use a previous version."
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: ✅ Rollback Complete
+        run: |
+          echo "::notice::✅ Rollback completed successfully!"
+          echo "Check production health at: https://hal-test-backend.onrender.com/api/status"
 
   # ========================================
   # JOB 10: Tag-based Release (for tag pushes)

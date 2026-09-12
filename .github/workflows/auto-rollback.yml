@@ -1,0 +1,184 @@
+name: Automated Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      rollback_type:
+        description: 'Type of rollback'
+        required: true
+        type: choice
+        options:
+          - full
+          - app-only
+          - db-only
+      backup_name:
+        description: 'Backup name for database rollback (optional)'
+        required: false
+        type: string
+      dry_run:
+        description: 'Dry run (simulate without making changes)'
+        required: false
+        type: boolean
+        default: false
+
+  schedule:
+    - cron: '*/15 * * * *'  # Every 15 minutes for health checks
+
+  # Trigger on failed deployment
+  workflow_run:
+    workflows: ["Release"]
+    types:
+      - completed
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  # ========================================
+  # JOB 1: Health Check & Auto-Rollback
+  # ========================================
+  health-check:
+    name: 🏥 Health Check & Auto-Rollback
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event.workflow_run.conclusion == 'failure'
+    permissions:
+      id-token: write
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@1769ed05b9f39e9906194499b5c2b0bf8535a69b
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@60edb5dd545a775178f192cb99c9b2d8661c5e89
+        with:
+          node-version: '20.x'
+          cache: 'pnpm'
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@dc9f519e47a8b796aa19d9a9e5a5f11b696d5e8c
+        with:
+          version: 9.15.4
+
+      - name: 📥 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 🏥 Run Health Check & Auto-Rollback
+        run: node scripts/rollback.js check
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_PRODUCTION_SERVICE_ID: ${{ secrets.RENDER_PRODUCTION_SERVICE_ID }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+
+      - name: 🚨 Alert on Rollback
+        if: failure()
+        run: |
+          echo "::warning::🚨 Automated rollback triggered! Check workflow logs."
+          # Could integrate with Slack, PagerDuty, etc. here
+
+  # ========================================
+  # JOB 2: Manual Rollback
+  # ========================================
+  manual-rollback:
+    name: 🔄 Manual Rollback
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@1769ed05b9f39e9906194499b5c2b0bf8535a69b
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@60edb5dd545a775178f192cb99c9b2d8661c5e89
+        with:
+          node-version: '20.x'
+          cache: 'pnpm'
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@dc9f519e47a8b796aa19d9a9e5a5f11b696d5e8c
+        with:
+          version: 9.15.4
+
+      - name: 📥 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 🔄 Execute Rollback
+        run: |
+          case "${{ github.event.inputs.rollback_type }}" in
+            "full")
+              node scripts/rollback.js rollback "${{ github.event.inputs.backup_name }}"
+              ;;
+            "app-only")
+              node scripts/rollback.js app-rollback
+              ;;
+            "db-only")
+              if [ -z "${{ github.event.inputs.backup_name }}" ]; then
+                echo "❌ Backup name required for database-only rollback"
+                exit 1
+              fi
+              node scripts/rollback.js db-rollback "${{ github.event.inputs.backup_name }}"
+              ;;
+          esac
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_PRODUCTION_SERVICE_ID: ${{ secrets.RENDER_PRODUCTION_SERVICE_ID }}
+          DRY_RUN: ${{ github.event.inputs.dry_run }}
+
+      - name: 📦 Deprecate npm package (if full rollback)
+        if: github.event.inputs.rollback_type == 'full'
+        run: |
+          # Get the version that was just rolled back
+          VERSION=$(node -p "require('./apps/cli/package.json').version")
+          echo "Deprecating haltest@$VERSION..."
+          node scripts/npm-deprecate.js deprecate haltest@$VERSION "This version was rolled back due to critical issues. Please use a previous version."
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: ✅ Rollback Complete
+        run: |
+          echo "::notice::✅ Rollback completed successfully!"
+          echo "Check production health at: https://haltest.com/api/status"
+
+  # ========================================
+  # JOB 3: Post-Release Monitoring
+  # ========================================
+  post-release-monitor:
+    name: 📊 Post-Release Monitor
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
+    needs: [health-check]
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@1769ed05b9f39e9906194499b5c2b0bf8535a69b
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@60edb5dd545a775178f192cb99c9b2d8661c5e89
+        with:
+          node-version: '20.x'
+          cache: 'pnpm'
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@dc9f519e47a8b796aa19d9a9e5a5f11b696d5e8c
+        with:
+          version: 9.15.4
+
+      - name: 📥 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 📊 Monitor Release Health (30 min)
+        run: |
+          echo "Monitoring release health for 30 minutes..."
+          for i in {1..6}; do
+            echo "Check $i/6 - $(date)"
+            node scripts/rollback.js health
+            sleep 300
+          done
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_PRODUCTION_SERVICE_ID: ${{ secrets.RENDER_PRODUCTION_SERVICE_ID }}
+
+      - name: 📈 Report Results
+        run: |
+          echo "✅ Post-release monitoring complete"
+          echo "Release appears stable after 30 minutes"
