@@ -164,18 +164,43 @@ if (process.env.NODE_ENV === 'production') {
 
 // --- 5. ROUTE MOUNTING ---
 
+// Load release metadata at startup
+let releaseMetadata = null;
+try {
+    const metadataPath = path.join(PUBLIC_DIR, 'RELEASE_METADATA.json');
+    if (fs.existsSync(metadataPath)) {
+        releaseMetadata = JSON.parse(fs.readFileSync(metadataPath, 'utf-8'));
+    }
+} catch (e) {
+    console.warn('[INIT] Could not load release metadata:', e.message);
+}
+
 // Public Status Route
 app.get('/api/status', (req, res) => {
     const collabEnabled = process.env.COLLAB_ENABLED !== 'false';
+    const version = releaseMetadata?.version || '1.0.0-NO-MCP';
+    const git = releaseMetadata?.git || {};
+    const buildId = releaseMetadata?.buildId || 'unknown';
+
     res.json({
         status: 'ok',
         message: 'HaltTest API is up and running 🚀',
-        version: '1.0.0-NO-MCP',
+        version,
+        git: {
+            commit: git.commit,
+            shortCommit: git.shortCommit,
+            branch: git.branch,
+            tag: git.tag,
+            isDirty: git.isDirty,
+            commitDate: git.commitDate,
+        },
+        buildId,
         mode: process.env.HALTEST_MODE || 'cloud',
         auth_enabled: process.env.AUTH_ENABLED !== 'false',
         collaboration_enabled: collabEnabled,
         collaboration_stats: collabEnabled ? yjsServer.getStats() : null,
         timestamp: new Date().toISOString(),
+        releaseTimestamp: releaseMetadata?.timestamp,
     });
 });
 

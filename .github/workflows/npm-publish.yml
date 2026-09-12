@@ -27,14 +27,14 @@ jobs:
           node-version: '20.x'
           cache: 'pnpm'
 
-      - name: Install dependencies
-        run: pnpm install
+      - name: Install dependencies (frozen lockfile)
+        run: pnpm install --frozen-lockfile
 
       - name: Format
         run: pnpm format
 
       - name: Lint
-        run: pnpm lint:fix
+        run: pnpm lint
 
       - name: Test
         run: pnpm test
@@ -46,6 +46,11 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Generate Release Metadata
+        run: node scripts/generate-release-metadata.js
+        env:
+          BUILD_ID: ${{ github.run_id }}
+
       - name: Generate CycloneDX SBOM
         run: npx @cyclonedx/cyclonedx-npm --output-format JSON --output-file bom.json
         working-directory: apps/cli/dist
@@ -55,6 +60,10 @@ jobs:
         with:
           name: sbom
           path: apps/cli/dist/bom.json
+
+      - name: Clean-room test of npm package
+        run: |
+          node scripts/clean-room-test.js
 
       - name: Publish to npm
         run: cd apps/cli/dist && npm publish --provenance --access public

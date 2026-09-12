@@ -29,10 +29,13 @@ RUN pnpm rebuild sqlite3
 # This will populate apps/backend/public/app and apps/backend/public/web
 RUN pnpm run build:monolith
 
+# Generate release metadata
+RUN node scripts/generate-release-metadata.js
+
 # --- STAGE 2: Runner ---
 # Pin to SHA256 digest to prevent supply-chain attacks.
-# To update the digest: docker pull mcr.microsoft.com/playwright:v1.49.0-jammy && docker inspect mcr.microsoft.com/playwright:v1.49.0-jammy --format='{{index .RepoDigests 0}}'
-FROM mcr.microsoft.com/playwright:v1.49.0-jammy@sha256:a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2 AS runner
+# To update the digest: docker pull mcr.microsoft.com/playwright:v1.62.1-jammy && docker inspect mcr.microsoft.com/playwright:v1.62.1-jammy --format='{{index .RepoDigests 0}}'
+FROM mcr.microsoft.com/playwright:v1.62.1-jammy@sha256:0b3c2c5b3e7c4f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6 AS runner
 
 WORKDIR /app
 

@@ -1,0 +1,549 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., v1.0.72)'
+        required: true
+        type: string
+      skip_staging:
+        description: 'Skip staging deployment (emergency only)'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  # ========================================
+  # JOB 1: Validate & Test
+  # ========================================
+  validate:
+    name: ✅ Validate & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@1769ed05b9f39e9906194499b5c2b0bf8535a69b
+        with:
+          fetch-depth: 0
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@dc9f519e47a8b796aa19d9a9e5a5f11b696d5e8c
+        with:
+          version: 9.15.4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@60edb5dd545a775178f192cb99c9b2d8661c5e89
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: 📥 Install dependencies (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      - name: 🔍 Run ESLint
+        run: pnpm run lint
+
+      - name: 🎨 Check Prettier formatting
+        run: pnpm exec prettier --check "**/*.{js,jsx,json,md}"
+
+      - name: 🛡️ Audit Dependencies
+        run: pnpm audit --prod
+
+      - name: 🧪 Run backend tests
+        run: cd apps/backend && pnpm test
+        env:
+          NODE_ENV: test
+          AUTH_ENABLED: 'false'
+          VITE_AUTH_ENABLED: 'false'
+
+      - name: 🧪 Run frontend tests
+        run: cd apps/frontend && pnpm test
+        env:
+          NODE_ENV: test
+
+      - name: 🏗️ Build Monolith
+        run: pnpm run build:monolith
+
+      - name: 📋 Generate Release Metadata
+        run: node scripts/generate-release-metadata.js
+        env:
+          BUILD_ID: ${{ github.run_id }}
+
+  # ========================================
+  # JOB 2: Version Bump & Changelog (workflow_dispatch only)
+  # ========================================
+  version:
+    name: 📝 Version Bump
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.event_name == 'workflow_dispatch'
+    outputs:
+      version: ${{ steps.set_version.outputs.version }}
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@1769ed05b9f39e9906194499b5c2b0bf8535a69b
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@dc9f519e47a8b796aa19d9a9e5a5f11b696d5e8c
+        with:
+          version: 9.15.4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@60edb5dd545a775178f192cb99c9b2d8661c5e89
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: 📥 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 🔖 Bump version
+        id: set_version
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          VERSION="${VERSION#v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          
+          # Update all package.json files
+          node -e "
+            const fs = require('fs');
+            const version = '$VERSION';
+            const files = [
+              'package.json',
+              'apps/cli/package.json',
+              'apps/frontend/package.json',
+              'apps/web/package.json',
+              'apps/backend/package.json'
+            ];
+            files.forEach(f => {
+              const pkg = JSON.parse(fs.readFileSync(f, 'utf8'));
+              pkg.version = version;
+              fs.writeFileSync(f, JSON.stringify(pkg, null, 2) + '\n');
+              console.log('Updated', f, 'to', version);
+            });
+          "
+
+      - name: 📝 Generate changelog entry
+        run: |
+          VERSION="${{ steps.set_version.outputs.version }}"
+          DATE=$(date +%Y-%m-%d)
+          cat >> CHANGELOG.md << EOF
+          
+## [$VERSION] - $DATE
+          
+### Changed
+- Release $VERSION
+          
+EOF
+
+      - name: 💾 Commit version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add package.json apps/*/package.json CHANGELOG.md
+          git commit -m "chore: release v${{ steps.set_version.outputs.version }}"
+          git tag -a "v${{ steps.set_version.outputs.version }}" -m "Release v${{ steps.set_version.outputs.version }}"
+          git push origin HEAD:${GITHUB_REF#refs/heads/} --tags
+
+  # ========================================
+  # JOB 3: Build CLI Package
+  # ========================================
+  build-cli:
+    name: 📦 Build CLI Package
+    runs-on: ubuntu-latest
+    needs: [validate, version]
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@1769ed05b9f39e9906194499b5c2b0bf8535a69b
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@dc9f519e47a8b796aa19d9a9e5a5f11b696d5e8c
+        with:
+          version: 9.15.4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@60edb5dd545a775178f192cb99c9b2d8661c5e89
+        with:
+          node-version: '20.x'
+          cache: 'pnpm'
+
+      - name: 📥 Install dependencies (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      - name: 🔨 Build CLI
+        run: pnpm build
+
+      - name: 📋 Generate Release Metadata
+        run: node scripts/generate-release-metadata.js
+        env:
+          BUILD_ID: ${{ github.run_id }}
+
+      - name: 📦 Upload CLI dist as artifact
+        uses: actions/upload-artifact@5d5d22a31266ced268874388604861cf4f7985a4
+        with:
+          name: cli-dist
+          path: apps/cli/dist/
+          retention-days: 7
+
+  # ========================================
+  # JOB 4: Clean-room Test & Publish npm
+  # ========================================
+  publish-npm:
+    name: 📤 Publish to npm
+    runs-on: ubuntu-latest
+    needs: [build-cli]
+    if: github.event_name == 'workflow_dispatch'
+    permissions:
+      id-token: write
+    steps:
+      - name: 📥 Download CLI dist
+        uses: actions/download-artifact@5d5d22a31266ced268874388604861cf4f7985a4
+        with:
+          name: cli-dist
+          path: apps/cli/dist
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@dc9f519e47a8b796aa19d9a9e5a5f11b696d5e8c
+        with:
+          version: 9.15.4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@60edb5dd545a775178f192cb99c9b2d8661c5e89
+        with:
+          node-version: '20.x'
+          cache: 'pnpm'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: 📥 Install dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: apps/cli/dist
+
+      - name: 🧪 Clean-room test
+        run: node ../../../scripts/clean-room-test.js
+
+      - name: 📦 Generate CycloneDX SBOM
+        run: npx @cyclonedx/cyclonedx-npm --output-format JSON --output-file bom.json
+        working-directory: apps/cli/dist
+
+      - name: 📤 Publish to npm
+        run: npm publish --provenance --access public
+        working-directory: apps/cli/dist
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: 📤 Upload SBOM Artifact
+        uses: actions/upload-artifact@5d5d22a31266ced268874388604861cf4f7985a4
+        with:
+          name: sbom
+          path: apps/cli/dist/bom.json
+
+  # ========================================
+  # JOB 5: Create GitHub Release
+  # ========================================
+  github-release:
+    name: 🏷️ GitHub Release
+    runs-on: ubuntu-latest
+    needs: [publish-npm]
+    if: github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: write
+    steps:
+      - name: 📥 Download CLI dist
+        uses: actions/download-artifact@5d5d22a31266ced268874388604861cf4f7985a4
+        with:
+          name: cli-dist
+          path: apps/cli/dist
+
+      - name: 📥 Download SBOM
+        uses: actions/download-artifact@5d5d22a31266ced268874388604861cf4f7985a4
+        with:
+          name: sbom
+          path: apps/cli/dist
+
+      - name: 🏷️ Create GitHub Release
+        uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf3019a6ddd5b1a8
+        with:
+          tag_name: v${{ needs.version.outputs.version }}
+          name: HalTest v${{ needs.version.outputs.version }}
+          body_path: CHANGELOG.md
+          files: |
+            apps/cli/dist/haltest-*.tgz
+            apps/cli/dist/bom.json
+          draft: false
+          prerelease: false
+
+  # ========================================
+  # JOB 6: Deploy to Staging
+  # ========================================
+  deploy-staging:
+    name: 🚀 Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [github-release]
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.skip_staging != 'true'
+    environment: staging
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@1769ed05b9f39e9906194499b5c2b0bf8535a69b
+
+      - name: 🚀 Trigger Staging Deploy
+        run: |
+          echo "Pushing to staging branch to trigger Render staging deploy..."
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Force push to staging branch (creates/updates it from current commit)
+          git push origin HEAD:refs/heads/staging --force
+          
+          echo "Staging deploy triggered. Render will build and deploy hal-test-backend-staging"
+          echo "Staging URL: https://hal-test-backend-staging.onrender.com"
+
+      - name: ⏳ Wait for staging deployment & health check
+        run: |
+          echo "Checking staging application health (polling for up to 10 minutes)..."
+          max_retries=60
+          count=0
+          until curl -f -s https://hal-test-backend-staging.onrender.com/api/status > /dev/null; do
+            count=$((count+1))
+            if [ $count -ge $max_retries ]; then
+              echo "Health check failed after 10 minutes."
+              exit 1
+            fi
+            echo "Waiting for Render staging to finish deploy... (Attempt $count/$max_retries)"
+            sleep 10
+          done
+          echo "Staging application is up and healthy!"
+
+      - name: ✅ Verify Staging Release Metadata
+        run: |
+          echo "Verifying staging release metadata matches build..."
+          RESPONSE=$(curl -s https://hal-test-backend-staging.onrender.com/api/status)
+          echo "$RESPONSE" | jq '.'
+          BUILD_COMMIT="${{ github.sha }}"
+          DEPLOY_COMMIT=$(echo "$RESPONSE" | jq -r '.git.commit')
+          if [ "$BUILD_COMMIT" != "$DEPLOY_COMMIT" ]; then
+            echo "⚠️ WARNING: Staging deploy commit ($DEPLOY_COMMIT) does not match build commit ($BUILD_COMMIT)"
+          else
+            echo "✅ Staging deploy commit matches build commit"
+          fi
+          DEPLOY_VERSION=$(echo "$RESPONSE" | jq -r '.version')
+          EXPECTED_VERSION="${{ needs.version.outputs.version }}"
+          if [ "$DEPLOY_VERSION" != "$EXPECTED_VERSION" ]; then
+            echo "⚠️ WARNING: Staging deploy version ($DEPLOY_VERSION) does not match expected ($EXPECTED_VERSION)"
+          else
+            echo "✅ Staging deploy version matches expected version"
+          fi
+
+      - name: ✅ Run staging smoke tests
+        run: |
+          echo "Running staging smoke tests..."
+          SMOKE_TEST_URL=https://hal-test-backend-staging.onrender.com node scripts/production-smoke-test.js
+        env:
+          SMOKE_TEST_URL: https://hal-test-backend-staging.onrender.com
+
+  # ========================================
+  # JOB 7: Manual Approval Gate
+  # ========================================
+  approval:
+    name: ⏸️ Manual Approval for Production
+    runs-on: ubuntu-latest
+    needs: [deploy-staging]
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.skip_staging != 'true'
+    environment: production
+    steps:
+      - name: ⏸️ Waiting for approval
+        run: |
+          echo "✅ Staging deployment successful and smoke tests passed!"
+          echo "🔗 Staging URL: https://hal-test-backend-staging.onrender.com"
+          echo "🔗 Production URL: https://hal-test-backend.onrender.com"
+          echo ""
+          echo "Please verify staging at: https://hal-test-backend-staging.onrender.com"
+          echo "Then approve this deployment to continue to production."
+          echo ""
+          echo "This workflow will pause here until approved."
+
+  # ========================================
+  # JOB 8: Deploy to Production
+  # ========================================
+  deploy-production:
+    name: 🚀 Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [approval]
+    if: github.event_name == 'workflow_dispatch'
+    environment: production
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@1769ed05b9f39e9906194499b5c2b0bf8535a69b
+
+      - name: 🚀 Trigger Production Deploy
+        run: |
+          echo "Production deploy triggered by main branch push (from version job)"
+          echo "Render auto-deploys hal-test-backend from main branch"
+          echo "Public URL: https://hal-test-backend.onrender.com"
+
+      - name: ⏳ Wait for production deployment & health check
+        run: |
+          echo "Checking production application health (polling for up to 10 minutes)..."
+          max_retries=60
+          count=0
+          until curl -f -s https://hal-test-backend.onrender.com/api/status > /dev/null; do
+            count=$((count+1))
+            if [ $count -ge $max_retries ]; then
+              echo "Health check failed after 10 minutes."
+              exit 1
+            fi
+            echo "Waiting for Render production to finish deploy... (Attempt $count/$max_retries)"
+            sleep 10
+          done
+          echo "Production application is up and healthy!"
+
+      - name: ✅ Verify Production Release Metadata
+        run: |
+          echo "Verifying production release metadata matches build..."
+          RESPONSE=$(curl -s https://hal-test-backend.onrender.com/api/status)
+          echo "$RESPONSE" | jq '.'
+          BUILD_COMMIT="${{ github.sha }}"
+          DEPLOY_COMMIT=$(echo "$RESPONSE" | jq -r '.git.commit')
+          if [ "$BUILD_COMMIT" != "$DEPLOY_COMMIT" ]; then
+            echo "⚠️ WARNING: Production deploy commit ($DEPLOY_COMMIT) does not match build commit ($BUILD_COMMIT)"
+          else
+            echo "✅ Production deploy commit matches build commit"
+          fi
+          DEPLOY_VERSION=$(echo "$RESPONSE" | jq -r '.version')
+          EXPECTED_VERSION="${{ needs.version.outputs.version }}"
+          if [ "$DEPLOY_VERSION" != "$EXPECTED_VERSION" ]; then
+            echo "⚠️ WARNING: Production deploy version ($DEPLOY_VERSION) does not match expected ($EXPECTED_VERSION)"
+          else
+            echo "✅ Production deploy version matches expected version"
+          fi
+
+      - name: ✅ Run production smoke tests
+        run: |
+          echo "Running production smoke tests..."
+          SMOKE_TEST_URL=https://hal-test-backend.onrender.com node scripts/production-smoke-test.js
+        env:
+          SMOKE_TEST_URL: https://hal-test-backend.onrender.com
+
+  # ========================================
+  # JOB 9: Emergency Production Deploy (skip staging)
+  # ========================================
+  deploy-production-emergency:
+    name: 🚨 Emergency Production Deploy
+    runs-on: ubuntu-latest
+    needs: [github-release]
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.skip_staging == 'true'
+    environment: production
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@1769ed05b9f39e9906194499b5c2b0bf8535a69b
+
+      - name: 🚀 Trigger Emergency Production Deploy
+        run: |
+          echo "⚠️ EMERGENCY DEPLOY - Skipping staging!"
+          echo "Render auto-deploys hal-test-backend from main branch"
+          echo "Public URL: https://hal-test-backend.onrender.com"
+
+      - name: ⏳ Wait for production deployment & health check
+        run: |
+          echo "Checking production application health (polling for up to 10 minutes)..."
+          max_retries=60
+          count=0
+          until curl -f -s https://hal-test-backend.onrender.com/api/status > /dev/null; do
+            count=$((count+1))
+            if [ $count -ge $max_retries ]; then
+              echo "Health check failed after 10 minutes."
+              exit 1
+            fi
+            echo "Waiting for Render production to finish deploy... (Attempt $count/$max_retries)"
+            sleep 10
+          done
+          echo "Production application is up and healthy!"
+
+      - name: ✅ Verify Production Release Metadata
+        run: |
+          RESPONSE=$(curl -s https://hal-test-backend.onrender.com/api/status)
+          echo "$RESPONSE" | jq '.'
+
+      - name: ✅ Run production smoke tests
+        run: |
+          echo "Running production smoke tests..."
+          SMOKE_TEST_URL=https://hal-test-backend.onrender.com node scripts/production-smoke-test.js
+        env:
+          SMOKE_TEST_URL: https://hal-test-backend.onrender.com
+
+  # ========================================
+  # JOB 10: Tag-based Release (for tag pushes)
+  # ========================================
+  release-from-tag:
+    name: 🚀 Release from Tag
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@1769ed05b9f39e9906194499b5c2b0bf8535a69b
+        with:
+          fetch-depth: 0
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@dc9f519e47a8b796aa19d9a9e5a5f11b696d5e8c
+        with:
+          version: 9.15.4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@60edb5dd545a775178f192cb99c9b2d8661c5e89
+        with:
+          node-version: '20.x'
+          cache: 'pnpm'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: 📥 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 🔨 Build CLI
+        run: pnpm build
+
+      - name: 📋 Generate Release Metadata
+        run: node scripts/generate-release-metadata.js
+        env:
+          BUILD_ID: ${{ github.run_id }}
+
+      - name: 🧪 Clean-room test
+        run: node scripts/clean-room-test.js
+
+      - name: 📦 Generate CycloneDX SBOM
+        run: npx @cyclonedx/cyclonedx-npm --output-format JSON --output-file bom.json
+        working-directory: apps/cli/dist
+
+      - name: 📤 Publish to npm
+        run: npm publish --provenance --access public
+        working-directory: apps/cli/dist
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: 🏷️ Create GitHub Release
+        uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf3019a6ddd5b1a8
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: HalTest ${{ github.ref_name }}
+          body: "Release ${{ github.ref_name }}"
+          files: |
+            apps/cli/dist/haltest-*.tgz
+            apps/cli/dist/bom.json
+          draft: false
+          prerelease: false
+
+      - name: 🚀 Trigger Production Deploy
+        run: |
+          echo "Tag pushed - Render will auto-deploy from main branch"
+          echo "Ensure main branch is up to date with this tag"

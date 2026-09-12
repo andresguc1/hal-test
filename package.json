@@ -28,7 +28,8 @@
         "clean": "turbo clean && rm -rf node_modules",
         "stop": "fuser -k 2001/tcp 3000/tcp || true",
         "prepare": "husky",
-        "release": "turbo run format lint:fix test && cd apps/cli && npm version patch && pnpm build && cd dist && npm publish",
+        "release": "gh workflow run release.yml -f version=v$(node -p \"require('./apps/cli/package.json').version\")",
+        "release:patch": "gh workflow run release.yml -f version=v$(node -p \"require('./apps/cli/package.json').version\".replace(/\\d+$/, m => +m + 1))",
         "update:app": "git pull && pnpm install && pnpm build:monolith",
         "setup": "pnpm install && node scripts/setup.js"
     },

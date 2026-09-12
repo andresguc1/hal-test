@@ -1,10 +1,11 @@
 services:
+  # Production service
   - type: web
     name: hal-test-backend
     runtime: node
     region: oregon
     plan: free
-    buildCommand: pnpm install --no-frozen-lockfile && pnpm build:monolith && npx playwright install chromium
+    buildCommand: pnpm install --frozen-lockfile && pnpm build:monolith && npx playwright install chromium
     startCommand: pnpm start
     envVars:
       - key: NODE_ENV
@@ -13,3 +14,29 @@ services:
         value: /opt/render/project/.cache/playwright
       - key: DATABASE_URL
         sync: false
+      - key: HALTEST_MODE
+        value: cloud
+      - key: AUTH_ENABLED
+        value: "true"
+
+  # Staging service
+  - type: web
+    name: hal-test-backend-staging
+    runtime: node
+    region: oregon
+    plan: free
+    buildCommand: pnpm install --frozen-lockfile && pnpm build:monolith && npx playwright install chromium
+    startCommand: pnpm start
+    envVars:
+      - key: NODE_ENV
+        value: staging
+      - key: PLAYWRIGHT_BROWSERS_PATH
+        value: /opt/render/project/.cache/playwright
+      - key: DATABASE_URL
+        sync: false
+      - key: HALTEST_MODE
+        value: staging
+      - key: AUTH_ENABLED
+        value: "true"
+      - key: ALLOWED_ORIGINS
+        value: "https://hal-test-backend-staging.onrender.com,http://localhost:5173"

@@ -25,7 +25,7 @@ export const resolveDefaultFlowId = (project) => {
     ) {
       return savedLastFlowId;
     }
-  } catch (e) {
+  } catch {
     // Ignore localStorage access errors
   }
 
@@ -162,7 +162,9 @@ export function useProjectManager() {
       if (newFlow?.id && projectId) {
         try {
           localStorage.setItem(`hal_last_flow_${projectId}`, newFlow.id);
-        } catch (e) {}
+        } catch {
+          // ignore
+        }
       }
     },
   });
@@ -178,7 +180,9 @@ export function useProjectManager() {
           if (nextFlowId) {
             try {
               localStorage.setItem(`hal_last_flow_${projectId}`, nextFlowId);
-            } catch (e) {}
+            } catch {
+          // ignore
+        }
           }
           return nextFlowId;
         }
@@ -202,7 +206,9 @@ export function useProjectManager() {
       if (projectId && flowId) {
         try {
           localStorage.setItem(`hal_last_flow_${projectId}`, flowId);
-        } catch (e) {}
+        } catch {
+          // ignore
+        }
       }
       // 1. Instant UI Update for nested item
       if (updatedFlow) {
@@ -266,7 +272,9 @@ export function useProjectManager() {
         if (flowId) {
           try {
             localStorage.setItem(`hal_last_flow_${currentProjectId}`, flowId);
-          } catch (e) {}
+          } catch {
+          // ignore
+        }
         }
         await updateProjectMutation.mutateAsync({
           projectId: currentProjectId,
@@ -299,13 +307,17 @@ export function useProjectManager() {
           if (preferredFlowId) {
             localStorage.setItem(`hal_last_flow_${projectId}`, preferredFlowId);
           }
-        } catch (e) {}
+        } catch {
+          // ignore
+        }
 
         let savedFlowId = preferredFlowId;
         if (!savedFlowId) {
           try {
             savedFlowId = localStorage.getItem(`hal_last_flow_${projectId}`);
-          } catch (e) {}
+          } catch {
+          // ignore
+        }
         }
         setCurrentFlowId(savedFlowId || null);
       } else {

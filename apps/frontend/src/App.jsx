@@ -49,6 +49,7 @@ import {
 } from "./components/hooks/useProjectManager.js";
 import { migrateFromLegacy } from "./utils/migration";
 import { runPolicyEnforcer } from "./utils/policyEnforcer";
+import { safeStringify } from "./utils/flowUtils";
 
 import { useFlowShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useToast } from "./hooks/useToast";
@@ -799,7 +800,9 @@ function Dashboard({
         if (lastProjectId && projects.some((p) => p.id === lastProjectId)) {
           targetProjectId = lastProjectId;
         }
-      } catch (e) {}
+      } catch {
+        // ignore
+      }
       loadProject(targetProjectId);
     }
   }, [projects, currentProject, loadProject]);
@@ -1881,7 +1884,7 @@ function Dashboard({
       nodes
         .map(
           (n) =>
-            `${n.id}:${n.type}:${JSON.stringify(n.data?.configuration || {})}`,
+            `${n.id}:${n.type}:${safeStringify(n.data?.configuration || {})}`,
         )
         .join(",") +
       "|" +

@@ -301,6 +301,17 @@ async function openBrowser(url) {
 
 // ── Main ───────────────────────────────────────────────────────────────────
 
+// Load release metadata if available
+let releaseMetadata = null;
+try {
+  const metadataPath = path.join(__dirname, "..", "RELEASE_METADATA.json");
+  if (fs.existsSync(metadataPath)) {
+    releaseMetadata = JSON.parse(fs.readFileSync(metadataPath, "utf8"));
+  }
+} catch {
+  // ignore
+}
+
 const args = process.argv.slice(2);
 const cliPkg = JSON.parse(
   fs.readFileSync(path.join(__dirname, "..", "package.json"), "utf8"),
@@ -308,7 +319,15 @@ const cliPkg = JSON.parse(
 
 // Handle --version / -v
 if (args.includes("--version") || args.includes("-v") || args.includes("-V")) {
-  console.log(`haltest v${cliPkg.version}`);
+  const version = releaseMetadata?.version || cliPkg.version;
+  const git = releaseMetadata?.git || {};
+  const buildId = releaseMetadata?.buildId || 'unknown';
+  console.log(`haltest v${version}`);
+  if (git.commit) {
+    console.log(`  commit: ${git.shortCommit} (${git.branch})`);
+    if (git.tag) console.log(`  tag: ${git.tag}`);
+    console.log(`  build: ${buildId}`);
+  }
   process.exit(0);
 }
 
@@ -335,6 +354,9 @@ if (args.includes("--help") || args.includes("-h")) {
     style(c.cyan, "    -V, --version           ") + "Output the version number",
   );
   console.log(
+    style(c.cyan, "    --info                  ") + "Output detailed release information",
+  );
+  console.log(
     style(c.cyan, "    -h, --help              ") + "Display help for command",
   );
   console.log("");
@@ -358,6 +380,17 @@ if (args.includes("--help") || args.includes("-h")) {
       "Execute a flow and stream real-time logs",
   );
   console.log("");
+  process.exit(0);
+}
+
+// Handle --info
+if (args.includes("--info")) {
+  if (releaseMetadata) {
+    console.log(JSON.stringify(releaseMetadata, null, 2));
+  } else {
+    console.log("No release metadata available (development mode)");
+    console.log(`Package version: ${cliPkg.version}`);
+  }
   process.exit(0);
 }
 

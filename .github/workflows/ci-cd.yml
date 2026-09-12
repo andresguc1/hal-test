@@ -37,19 +37,17 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
 
-      - name: 📥 Install dependencies
-        run: pnpm install
+      - name: 📥 Install dependencies (frozen lockfile)
+        run: pnpm install --frozen-lockfile
 
       - name: 🎭 Install Playwright browsers
         run: npx playwright install chromium --with-deps
 
       - name: 🔍 Run ESLint
         run: pnpm run lint
-        continue-on-error: true # Don't fail build on lint errors (for now)
 
       - name: 🎨 Check Prettier formatting
         run: pnpm exec prettier --check "**/*.{js,jsx,json,md}"
-        continue-on-error: true
 
       - name: 🛡️ Audit Dependencies
         run: pnpm audit --prod
@@ -89,11 +87,16 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
 
-      - name: 📥 Install dependencies
-        run: pnpm install
+      - name: 📥 Install dependencies (frozen lockfile)
+        run: pnpm install --frozen-lockfile
 
       - name: 🏗️ Build Monolith
         run: pnpm run build:monolith
+
+      - name: 📋 Generate Release Metadata
+        run: node scripts/generate-release-metadata.js
+        env:
+          BUILD_ID: ${{ github.run_id }}
 
   # ========================================
   # JOB 3: Deploy to Production
@@ -129,6 +132,19 @@ jobs:
             sleep 10
           done
           echo "Application is up and healthy!"
+
+      - name: ✅ Verify Release Metadata in Production
+        run: |
+          echo "Verifying release metadata matches build..."
+          RESPONSE=$(curl -s https://hal-test-backend.onrender.com/api/status)
+          echo "$RESPONSE" | jq '.'
+          BUILD_COMMIT="${{ github.sha }}"
+          DEPLOY_COMMIT=$(echo "$RESPONSE" | jq -r '.git.commit')
+          if [ "$BUILD_COMMIT" != "$DEPLOY_COMMIT" ]; then
+            echo "⚠️ WARNING: Deploy commit ($DEPLOY_COMMIT) does not match build commit ($BUILD_COMMIT)"
+          else
+            echo "✅ Deploy commit matches build commit"
+          fi
 
       - name: ✅ Deployment successful
         run: |

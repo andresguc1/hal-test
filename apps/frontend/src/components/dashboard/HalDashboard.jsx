@@ -128,8 +128,10 @@ export default function HalDashboard() {
       if (flow.projectId) {
         try {
           localStorage.setItem(`hal_last_flow_${flow.projectId}`, flow.id);
-        } catch (e) {}
-        loadProject(flow.projectId, flow.id);
+} catch {
+        // ignore
+      }
+      loadProject(flow.projectId, flow.id);
       }
       navigate("/");
     },

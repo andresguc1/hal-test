@@ -126,7 +126,9 @@ export function useFlowSync({
               `hal_last_flow_${targetProjectId}`,
               targetFlowId,
             );
-          } catch (e) {}
+          } catch {
+          // ignore
+        }
         }
 
         // Invalidate query to keep global project state (and derived flow names) in sync
