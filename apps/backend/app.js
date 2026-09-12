@@ -23,7 +23,7 @@ import { yjsServer } from './services/collaboration/YjsServer.js';
 
 // Express Modules and Middlewares
 import { apiLimiter, helmetMiddleware } from './middlewares/security.js';
-import { developmentLogger, productionLogger } from './middlewares/logger.js';
+import { developmentLogger, productionLogger, createRequestLogger } from './middlewares/logger.js';
 import errorHandler from './middlewares/errorHandler.js';
 import i18n, { middleware as i18nMiddleware } from './config/i18n.js';
 import { authenticated } from './middlewares/auth.middleware.js';
@@ -145,6 +145,9 @@ app.use('/api/storage', express.static(STORAGE_DIR, staticOptions));
 // Rate Limiter
 app.use('/api', apiLimiter);
 
+// Request Logger (Structured)
+app.use(createRequestLogger);
+
 // --- 3. SWAGGER DOCUMENTATION ---
 app.use(
     '/api/docs',
@@ -208,6 +211,29 @@ app.get('/api/status', (req, res) => {
 app.get('/api/doctor', (req, res) => {
     const report = doctorService.check();
     res.status(200).json(report);
+});
+
+// Prometheus Metrics Endpoint
+import { metricsCollector } from './services/metrics.js';
+app.get('/metrics', (req, res) => {
+    res.set('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
+    res.send(metricsCollector.formatPrometheus());
+});
+
+// Health Check Endpoint (more detailed)
+app.get('/api/health', (req, res) => {
+    res.json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        memory: {
+            heapUsed: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + ' MB',
+            heapTotal: Math.round(process.memoryUsage().heapTotal / 1024 / 1024) + ' MB',
+            rss: Math.round(process.memoryUsage().rss / 1024 / 1024) + ' MB',
+        },
+        version: releaseMetadata?.version || 'unknown',
+        commit: releaseMetadata?.git?.shortCommit || 'unknown',
+    });
 });
 
 // Protected API Routes

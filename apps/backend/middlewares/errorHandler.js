@@ -1,5 +1,7 @@
 // middlewares/errorHandler.js
 
+import { logError } from './logger.js';
+
 /**
  * Middleware for Centralized Error Handling (Custom Error Handler).
  * Captures errors thrown by routes or middlewares and sends a standardized JSON response.
@@ -22,8 +24,7 @@ const errorHandler = (err, req, res, _next) => {
             : err.message || t('common.error_unknown');
 
     // 3. Log the full error on the server (not to the client).
-    console.error(`[ERROR ${statusCode}]: ${err.message || message}`);
-    console.error(err.stack);
+    logError(err, req);
 
     // 4. Send the standardized JSON response.
     res.status(statusCode).json({
