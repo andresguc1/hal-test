@@ -2,11 +2,13 @@ import * as fsp from 'fs/promises';
 import * as path from 'path';
 import { variableManager } from '../../../services/VariableManager.js';
 import { buildPlaywrightLocator, normalizeSelectorForDotId } from '../../../core/selector-utils.js';
+import { normalizeTimeout, playTimeout } from '../../../core/timeout-utils.js';
 import { executePlaywrightAction } from '../../../core/ActionExecutor.js';
 
 const saveDomAction = (req, res) =>
     executePlaywrightAction(req, res, 'save_dom', async (page, opts) => {
-        const { path: savePath, variableName, selector, timeout = 30000 } = opts;
+        const { path: savePath, variableName, selector } = opts;
+        const timeout = normalizeTimeout(opts.timeout);
 
         if (!savePath && !variableName) {
             throw new Error(req.t('errors.save_dom_destination_required'));
@@ -24,7 +26,7 @@ const saveDomAction = (req, res) =>
         if (selector) {
             const targetSelector = await normalizeSelectorForDotId(page, selector);
             const locator = buildPlaywrightLocator(page, targetSelector);
-            await locator.waitFor({ state: 'attached', timeout });
+            await locator.waitFor({ state: 'attached', ...playTimeout(timeout) });
             content = await locator.evaluate((el) => el.outerHTML);
         } else {
             content = await page.content();

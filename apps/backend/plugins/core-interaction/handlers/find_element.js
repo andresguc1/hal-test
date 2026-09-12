@@ -1,9 +1,11 @@
 import { executePlaywrightAction } from '../../../core/ActionExecutor.js';
 import { buildPlaywrightLocator, normalizeSelectorForDotId } from '../../../core/selector-utils.js';
+import { normalizeTimeout, playTimeout } from '../../../core/timeout-utils.js';
 
 const findElement = (req, res) =>
     executePlaywrightAction(req, res, 'find_element', async (page, opts) => {
-        const { selector, selectorType = 'css', timeout = 10000, visible = true } = opts;
+        const { selector, selectorType = 'css', visible = true } = opts;
+        const timeout = normalizeTimeout(opts.timeout);
 
         if (!selector) throw new Error(req.t('errors.selector_required'));
 
@@ -13,7 +15,7 @@ const findElement = (req, res) =>
         const waitState = visible ? 'visible' : 'attached';
 
         try {
-            await locator.waitFor({ state: waitState, timeout });
+            await locator.waitFor({ state: waitState, ...playTimeout(timeout) });
             const isVisible = await locator.isVisible();
 
             return {

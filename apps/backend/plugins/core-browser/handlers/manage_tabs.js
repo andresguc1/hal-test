@@ -1,8 +1,10 @@
 import { executePlaywrightAction } from '../../../core/ActionExecutor.js';
+import { normalizeTimeout, playTimeout } from '../../../core/timeout-utils.js';
 
 const manageTabsAction = (req, res) =>
     executePlaywrightAction(req, res, 'manage_tabs', async (page, opts, browserId, context) => {
         const { action, url, tabIndex, closeAll } = opts;
+        const timeout = normalizeTimeout(opts.timeout);
         let message = '';
         let responseData = {};
 
@@ -21,7 +23,7 @@ const manageTabsAction = (req, res) =>
             // Create new tab
             const newPage = await context.newPage();
             if (url) {
-                await newPage.goto(url, { waitUntil: 'load', timeout: 30000 });
+                await newPage.goto(url, { waitUntil: 'load', ...playTimeout(timeout) });
                 responseData.url = newPage.url();
             } else {
                 responseData.url = 'about:blank';

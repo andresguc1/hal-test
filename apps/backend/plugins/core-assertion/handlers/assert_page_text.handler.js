@@ -1,9 +1,11 @@
 import { executePlaywrightAction } from '../../../core/ActionExecutor.js';
+import { normalizeTimeout, playTimeout } from '../../../core/timeout-utils.js';
 /* eslint-disable no-undef */
 
 const assertPageText = (req, res) =>
     executePlaywrightAction(req, res, 'assert_page_text', async (page, opts) => {
-        const { textToFind, matchType = 'contains', caseSensitive = false, timeout = 5000 } = opts;
+        const { textToFind, matchType = 'contains', caseSensitive = false } = opts;
+        const timeout = normalizeTimeout(opts.timeout);
 
         if (!textToFind) {
             throw new Error(
@@ -38,7 +40,7 @@ const assertPageText = (req, res) =>
                     }
                 },
                 { text: textToFind, type: matchType, caseSens: caseSensitive },
-                { timeout },
+                playTimeout(timeout),
             );
 
             return {

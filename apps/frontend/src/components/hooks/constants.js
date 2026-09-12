@@ -3205,6 +3205,7 @@ export const NODE_TYPE_TO_CATEGORY = {
   wait_for_element: "dom_manipulation",
   execute_js: "dom_manipulation",
   assert_page_text: "dom_manipulation",
+  assert: "dom_manipulation",
 
   // User Simulation
   click: "user_simulation",

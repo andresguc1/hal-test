@@ -5,6 +5,8 @@
  * logic can be unit-tested without a real browser.
  */
 
+import { playTimeout } from '../../../core/timeout-utils.js';
+
 export const actionLabel = (action) => (action === 'uncheck' ? 'unchecked' : 'checked');
 
 /** Escapes a string into a safe XPath string literal. */
@@ -41,8 +43,8 @@ export const waitSettle = (page) => {
  * Applies check/uncheck/toggle over a single checkbox locator with one retry.
  * Returns the final live state ('checked' | 'unchecked').
  */
-export const applyCheckbox = async (page, locator, action, { timeout }) => {
-    const runOptions = { timeout };
+export const applyCheckbox = async (page, locator, action, { timeout } = {}) => {
+    const runOptions = playTimeout(timeout);
 
     if (action === 'toggle') {
         await locator.click(runOptions);

@@ -45,7 +45,7 @@ export class PageStrategy extends BaseAssertionStrategy {
         ];
     }
 
-    async execute(page, _locator, assertion, { timeout: _timeout = 5000 } = {}) {
+    async execute(page, _locator, assertion, { timeout: _timeout = 0 } = {}) {
         const operator = assertion.operator || 'url_contains';
         const expected = this.resolveExpected(assertion);
         const caseSensitive = assertion.caseSensitive === true;

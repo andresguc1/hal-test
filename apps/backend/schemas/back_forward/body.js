@@ -12,7 +12,7 @@ const backForwardBodySchema = Joi.object({
     // Playwright soporta un timeout para goBack/goForward, aunque
     // la implementación en action.controller.js no lo usa actualmente,
     // es buena práctica incluirlo en el esquema si se va a añadir soporte.
-    timeout: Joi.number().integer().min(1).default(30000).optional().messages({
+    timeout: Joi.number().integer().min(0).default(0).optional().messages({
         'number.min': 'El tiempo de espera (timeout) debe ser al menos 1ms.',
     }),
 }).unknown(true);

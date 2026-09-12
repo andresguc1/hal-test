@@ -15,7 +15,7 @@ describe("click payload builder", () => {
     expect(payload).toMatchObject({
       selector: "#btn",
       button: "left",
-      timeout: 30000,
+      timeout: 0,
       takeScreenshot: true,
     });
     expect(payload.clickCount).toBeUndefined();
@@ -164,7 +164,7 @@ describe("select_option payload builder", () => {
       selector: "#dd",
       selectionCriteria: "label",
       selectionValue: "Spain",
-      timeout: 30000,
+      timeout: 0,
       browserId: "",
     });
   });
@@ -186,7 +186,7 @@ describe("set_checkbox payload builder", () => {
     expect(payload).toEqual({
       selector: "#accept",
       action: "uncheck",
-      timeout: 30000,
+      timeout: 0,
       browserId: "",
     });
   });
@@ -247,7 +247,7 @@ describe("set_radio payload builder", () => {
     const payload = set_radio({ selector: 'input[name="plan"]' });
     expect(payload).toEqual({
       selector: 'input[name="plan"]',
-      timeout: 30000,
+      timeout: 0,
       browserId: "",
     });
   });
@@ -319,13 +319,13 @@ describe("pick_list_option payload builder", () => {
     ).toThrow(/optionIndex/);
   });
 
-  it("uses the default timeout when the field is left blank", () => {
+  it("uses the platform default (0) when the timeout field is left blank", () => {
     const payload = pick_list_option({
       selector: "#lang",
       optionText: "Español",
       timeout: "",
     });
-    expect(payload.timeout).toBe(30000);
+    expect(payload.timeout).toBe(0);
   });
 });
 

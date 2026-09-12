@@ -152,11 +152,34 @@ export function safeJSONParse(jsonString, defaultValue = null) {
 }
 
 /**
- * Safely stringifies object to JSON with error handling
+ * Safely stringifies object to JSON with circular reference handling
+ *
+ * @param {*} value - Value to stringify
+ * @param {string} [defaultValue=''] - Default value if stringification fails
+ * @returns {string} JSON string or default value
+ */
+export function safeStringify(value, defaultValue = "") {
+  const seen = new WeakSet();
+  try {
+    return JSON.stringify(value, (key, val) => {
+      if (typeof val === "object" && val !== null) {
+        if (seen.has(val)) return "[Circular]";
+        seen.add(val);
+      }
+      return val;
+    });
+  } catch {
+    return defaultValue;
+  }
+}
+
+/**
+ * Safely stringifies object to JSON with error handling (legacy)
  *
  * @param {*} obj - Object to stringify
  * @param {string} [defaultValue='{}'] - Default value if stringification fails
  * @returns {string} JSON string or default value
+ * @deprecated Use safeStringify instead
  */
 export function safeJSONStringify(obj, defaultValue = "{}") {
   try {
@@ -207,8 +230,7 @@ export function formatBytes(bytes, decimals = 2) {
 }
 
 /**
- * Deep clone an object (simple implementation)
- * For complex objects with functions, use structuredClone or a library
+ * Deep clone an object with circular reference handling
  *
  * @param {*} obj - Object to clone
  * @returns {*} Cloned object
@@ -216,8 +238,40 @@ export function formatBytes(bytes, decimals = 2) {
 export function deepClone(obj) {
   if (obj === null || typeof obj !== "object") return obj;
 
+  // Use structuredClone if available (modern browsers)
+  if (typeof structuredClone === "function") {
+    try {
+      return structuredClone(obj);
+    } catch {
+      // Fall through to manual implementation
+    }
+  }
+
+  // Manual deep clone with circular reference handling
+  const seen = new WeakMap();
+  function clone(value) {
+    if (value === null || typeof value !== "object") return value;
+    if (seen.has(value)) return seen.get(value);
+
+    let result;
+    if (Array.isArray(value)) {
+      result = [];
+      seen.set(value, result);
+      for (let i = 0; i < value.length; i++) {
+        result[i] = clone(value[i]);
+      }
+    } else {
+      result = {};
+      seen.set(value, result);
+      for (const [key, val] of Object.entries(value)) {
+        result[key] = clone(val);
+      }
+    }
+    return result;
+  }
+
   try {
-    return JSON.parse(JSON.stringify(obj));
+    return clone(obj);
   } catch (error) {
     console.warn("Deep clone failed, returning original:", error);
     return obj;
@@ -360,24 +414,27 @@ export function resolveVariables(config, context) {
       const resolved = resolvePath(path);
       if (resolved !== undefined) {
         return typeof resolved === "object"
-          ? JSON.stringify(resolved)
+          ? safeStringify(resolved)
           : String(resolved);
       }
       return match;
     });
   };
 
-  const traverse = (obj) => {
+  const traverse = (obj, seen = new WeakSet()) => {
+    if (obj === null || typeof obj !== "object") return resolveValue(obj);
+    if (seen.has(obj)) return obj; // Circular reference - return as-is
+    seen.add(obj);
+
     if (Array.isArray(obj)) {
-      return obj.map(traverse);
-    } else if (obj !== null && typeof obj === "object") {
+      return obj.map((item) => traverse(item, seen));
+    } else {
       const newObj = {};
       for (const [key, val] of Object.entries(obj)) {
-        newObj[key] = traverse(val);
+        newObj[key] = traverse(val, seen);
       }
       return newObj;
     }
-    return resolveValue(obj);
   };
 
   return traverse(config);

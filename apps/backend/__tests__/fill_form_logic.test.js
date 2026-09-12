@@ -92,15 +92,13 @@ describe('fillFormAction Logic', () => {
         );
 
         expect(mockLocator.waitFor).toHaveBeenCalledTimes(3);
-        expect(mockLocator.fill).toHaveBeenCalledWith('', { timeout: 30000 });
+        expect(mockLocator.fill).toHaveBeenCalledWith('', {});
         expect(mockLocator.fill).toHaveBeenCalledTimes(2);
         expect(mockLocator.type).toHaveBeenCalledWith('test@example.com', {
             delay: 0,
-            timeout: 30000,
         });
-        expect(mockLocator.type).toHaveBeenCalledWith('secret', { delay: 0, timeout: 30000 });
+        expect(mockLocator.type).toHaveBeenCalledWith('secret', { delay: 0 });
         expect(mockPage.waitForNavigation).toHaveBeenCalledWith({
-            timeout: 30000,
             waitUntil: 'load',
         });
         expect(mockRes.status).toHaveBeenCalledWith(200);

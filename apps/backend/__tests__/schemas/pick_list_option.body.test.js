@@ -9,7 +9,7 @@ describe('pick_list_option body schema', () => {
         });
         expect(error).toBeUndefined();
         expect(value.expandMenu).toBe(true);
-        expect(value.timeout).toBe(30000);
+        expect(value.timeout).toBe(0);
     });
 
     it('should require selector', () => {

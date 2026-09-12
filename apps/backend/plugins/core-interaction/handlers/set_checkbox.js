@@ -1,5 +1,6 @@
 import { executePlaywrightAction } from '../../../core/ActionExecutor.js';
 import { buildPlaywrightLocator, normalizeSelectorForDotId } from '../../../core/selector-utils.js';
+import { normalizeTimeout, playTimeout } from '../../../core/timeout-utils.js';
 import { actionLabel, applyCheckbox, findLabelCheckboxLocator } from '../utils/checkboxUtils.js';
 
 /**
@@ -30,14 +31,14 @@ const resolveCheckboxLocator = async (page, { strategy, target }, timeout) => {
 
     const normalized = await normalizeSelectorForDotId(page, target);
     const locator = buildPlaywrightLocator(page, normalized);
-    await locator.waitFor({ state: 'attached', timeout });
+    await locator.waitFor({ state: 'attached', ...playTimeout(timeout) });
     return { locator, source: normalized };
 };
 
 const setCheckbox = (req, res) =>
     executePlaywrightAction(req, res, 'set_checkbox', async (page, opts) => {
         const { action = 'check', fields } = opts;
-        const timeout = opts.timeout ? Number(opts.timeout) : 30000;
+        const timeout = normalizeTimeout(opts.timeout);
         const targetRequired =
             req.t('errors.select_option_value_required') || 'Target is required.';
 
@@ -95,7 +96,7 @@ const setCheckbox = (req, res) =>
         const targetSelector = await normalizeSelectorForDotId(page, selector);
         const locator = buildPlaywrightLocator(page, targetSelector);
 
-        await locator.waitFor({ state: 'attached', timeout });
+        await locator.waitFor({ state: 'attached', ...playTimeout(timeout) });
 
         const state = await applyCheckbox(page, locator, action, { timeout });
         assertMatches(selector, action, state, targetSelector);

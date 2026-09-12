@@ -2,6 +2,21 @@ import React, { useState, useRef } from "react";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import { cn } from "@/lib/utils";
 
+const safeStringify = (value) => {
+  const seen = new WeakSet();
+  try {
+    return JSON.stringify(value, (key, val) => {
+      if (typeof val === "object" && val !== null) {
+        if (seen.has(val)) return "[Circular]";
+        seen.add(val);
+      }
+      return val;
+    });
+  } catch {
+    return "";
+  }
+};
+
 // Parses a string into an array of text segments and variable segments
 // Parses a string into an array of text segments and variable segments
 const parseValue = (value) => {
@@ -9,7 +24,7 @@ const parseValue = (value) => {
   // Coerce to string to handle objects consistently (prevents [object Object] in background layer)
   const str =
     typeof value === "object" && value !== null
-      ? JSON.stringify(value)
+      ? safeStringify(value)
       : value === undefined || value === null
         ? ""
         : String(value);
@@ -79,7 +94,7 @@ export const VariableInput = ({
       : value == null
         ? ""
         : typeof value === "object"
-          ? JSON.stringify(value)
+          ? safeStringify(value)
           : String(value);
 
   const renderBackgroundContent = () => {
@@ -171,7 +186,7 @@ export const VariableInput = ({
 
                   <div className="font-mono text-xs text-indigo-200 bg-black/30 p-2.5 rounded-lg border border-indigo-500/10 max-h-48 overflow-y-auto custom-scrollbar whitespace-pre-wrap">
                     {typeof displayValue === "object"
-                      ? JSON.stringify(displayValue, null, 2)
+                      ? safeStringify(displayValue)
                       : String(displayValue)}
                   </div>
 
@@ -246,8 +261,8 @@ export const VariableInput = ({
         id={props.id}
         type={isTextarea ? undefined : type}
         value={
-          typeof value === "object"
-            ? JSON.stringify(value)
+          typeof value === "object" && value !== null
+            ? safeStringify(value)
             : value === "[object Object]"
               ? ""
               : value

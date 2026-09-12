@@ -1,4 +1,5 @@
 import { BaseAssertionStrategy, registerAssertionStrategy } from '../AssertionBaseStrategy.js';
+import { playTimeout } from '../../../../core/timeout-utils.js';
 
 /**
  * CountStrategy
@@ -36,7 +37,7 @@ export class CountStrategy extends BaseAssertionStrategy {
         ];
     }
 
-    async execute(_page, locator, assertion, { timeout = 5000 } = {}) {
+    async execute(_page, locator, assertion, { timeout = 0 } = {}) {
         const operator = assertion.operator || 'equals';
         const expected = Number(assertion.expected);
         const min = assertion.min !== undefined ? Number(assertion.min) : expected;
@@ -51,7 +52,7 @@ export class CountStrategy extends BaseAssertionStrategy {
         let count = await locator.count();
         if (count === 0 && !zeroFriendly) {
             try {
-                await locator.first().waitFor({ state: 'attached', timeout });
+                await locator.first().waitFor({ state: 'attached', ...playTimeout(timeout) });
                 count = await locator.count();
             } catch (err) {
                 // Element collection never appeared; evaluate the operator with count 0.

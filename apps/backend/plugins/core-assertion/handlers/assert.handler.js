@@ -1,4 +1,5 @@
 import { executePlaywrightAction } from '../../../core/ActionExecutor.js';
+import { normalizeTimeout, playTimeout } from '../../../core/timeout-utils.js';
 import {
     buildPlaywrightLocator,
     normalizeSelectorForDotId,
@@ -22,7 +23,8 @@ import { assertionEngine } from '../engine/AssertionEngine.js';
  */
 const assertNode = (req, res) =>
     executePlaywrightAction(req, res, 'assert', async (page, opts) => {
-        const { target, assertion, assertions, timeout = 5000 } = opts;
+        const { target, assertion, assertions } = opts;
+        const timeout = normalizeTimeout(opts.timeout);
         const softFail =
             opts.softFail === true ||
             opts.softFail === 'true' ||
@@ -44,7 +46,10 @@ const assertNode = (req, res) =>
             );
         }
 
-        if (!target || !target.selector) {
+        const scope = (target && target.scope) || 'element';
+        const needsElementSelector = scope !== 'page';
+
+        if (!target || (needsElementSelector && !target.selector)) {
             throw new Error(
                 req.t(
                     'actions.assert.selector_required',
@@ -53,7 +58,6 @@ const assertNode = (req, res) =>
             );
         }
 
-        const scope = target.scope || 'element';
         let locator;
         if (scope === 'page') {
             locator = page.locator('body');
@@ -67,7 +71,7 @@ const assertNode = (req, res) =>
             page,
             locator,
             assertions: list,
-            options: { timeout },
+            options: { ...playTimeout(timeout) },
         });
 
         const totalCount = results.length;

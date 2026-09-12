@@ -10,7 +10,7 @@ import {
   getNodeStyle,
 } from "../../components/hooks/flowStyles";
 import { CATEGORY_STYLES, NODE_TYPE_MAP } from "../../config/nodeConstants";
-import { wouldCreateCycle, deepClone } from "../../utils/flowUtils";
+import { wouldCreateCycle, deepClone, safeStringify } from "../../utils/flowUtils";
 import { calculateDesignTimeContext } from "../../utils/graphPropagation";
 import { getLayoutedElements } from "../../utils/layoutUtils";
 import { projectManager } from "../../utils/ProjectManager";
@@ -1809,7 +1809,7 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
       nodes
         .map(
           (n) =>
-            `${n.id}:${n.type}:${JSON.stringify(n.data?.configuration || {})}`,
+            `${n.id}:${n.type}:${safeStringify(n.data?.configuration || {})}`,
         )
         .join(",") +
       "|" +

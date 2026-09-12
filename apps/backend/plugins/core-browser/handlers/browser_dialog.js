@@ -1,4 +1,5 @@
 import { executePlaywrightAction } from '../../../core/ActionExecutor.js';
+import { normalizeTimeout } from '../../../core/timeout-utils.js';
 
 /**
  * Handles a JavaScript native browser dialog (alert/confirm/prompt/beforeunload)
@@ -19,8 +20,8 @@ const browserDialogAction = (req, res) =>
             matchType = 'contains',
             caseSensitive = false,
             promptText,
-            timeout = 5000,
         } = opts;
+        const timeout = normalizeTimeout(opts.timeout);
 
         // Configure how the engine answers future native dialogs on this page.
         // Playwright requires dialogs to be answered from the event that triggers
@@ -34,20 +35,21 @@ const browserDialogAction = (req, res) =>
             delete page._dialogPromptText;
         }
 
-        const waitMs = Math.min(Number(timeout) || 5000, 15000);
+        const waitMs = timeout;
         const deadline = Date.now() + waitMs;
 
         // A dialog might still be arriving right now (e.g. triggered by the
         // previous asynchronous action). Poll the engine-level queue deterministically.
         let dlg = null;
-        while (Date.now() < deadline) {
+        do {
             const q = page._dialogQueue || [];
             if (q.length > 0) {
                 dlg = q[q.length - 1];
                 break;
             }
+            if (Date.now() >= deadline) break;
             await new Promise((r) => setTimeout(r, 50));
-        }
+        } while (Date.now() < deadline);
 
         if (!dlg) {
             const error = new Error(

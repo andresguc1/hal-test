@@ -6,6 +6,7 @@ import { emitExecutionStatus, emitScreenshotReady } from '../../../socket.js';
 import { STORAGE_RUNS_DIR } from '../../../config/paths.js';
 import { validateBrowser, getOrCreateContext } from '../../../core/browser-utils.js';
 import { smartEmitLog } from '../../../core/ActionExecutor.js';
+import { normalizeTimeout, playTimeout } from '../../../core/timeout-utils.js';
 import * as fsp from 'fs/promises';
 import * as path from 'path';
 /* eslint-disable no-undef */
@@ -31,25 +32,9 @@ const openUrlAction = async (req, res) => {
         if (opts.takeScreenshot === 'false' || opts.takeScreenshot === '0')
             opts.takeScreenshot = false;
 
-        // Coerce timeout if string
-        if (opts.timeout !== undefined && opts.timeout !== null && opts.timeout !== '') {
-            const parsed = Number(opts.timeout);
-            if (!isNaN(parsed)) {
-                opts.timeout = parsed;
-            }
-        }
-
         // --- TIMEOUT & NAVIGATION SETTINGS ---
-        let { url, waitUntil = 'domcontentloaded', timeout = 30000, takeScreenshot } = opts ?? {};
-
-        // Safety: Prevent too short timeouts for heavy sites
-        const MIN_TIMEOUT = 15000;
-        if (timeout < MIN_TIMEOUT) {
-            console.log(
-                `[INFO] Boosting timeout from ${timeout}ms to ${MIN_TIMEOUT}ms for reliability.`,
-            );
-            timeout = MIN_TIMEOUT;
-        }
+        const { url, waitUntil = 'domcontentloaded', takeScreenshot } = opts ?? {};
+        const timeout = normalizeTimeout(opts.timeout);
 
         if (!url) {
             return res
@@ -110,7 +95,7 @@ const openUrlAction = async (req, res) => {
         await page.bringToFront().catch(() => {});
 
         try {
-            await page.goto(url, { waitUntil, timeout });
+            await page.goto(url, { waitUntil, ...playTimeout(timeout) });
         } catch (error) {
             const continueOnFailure =
                 req.body.configuration?.continueOnFailure || req.body.continueOnFailure || false;

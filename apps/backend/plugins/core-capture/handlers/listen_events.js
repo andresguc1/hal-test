@@ -1,19 +1,12 @@
 import * as fsp from 'fs/promises';
 import { executePlaywrightAction, smartEmitLog } from '../../../core/ActionExecutor.js';
+import { normalizeTimeout } from '../../../core/timeout-utils.js';
 /* eslint-disable no-undef */
 
 const listenEventsAction = (req, res) =>
     executePlaywrightAction(req, res, 'listen_events', async (page, opts) => {
-        const {
-            eventType,
-            selector,
-            urlPattern,
-            method,
-            logToFile,
-            filePath,
-            timeout = 0,
-            nodeId,
-        } = opts;
+        const { eventType, selector, urlPattern, method, logToFile, filePath, nodeId } = opts;
+        const timeout = normalizeTimeout(opts.timeout);
 
         const isNetworkEvent = ['request', 'response'].includes(eventType);
         const isDomEvent = ['click', 'input', 'change', 'submit'].includes(eventType);

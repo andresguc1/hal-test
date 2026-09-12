@@ -1,14 +1,16 @@
 import { executePlaywrightAction } from '../../../core/ActionExecutor.js';
+import { normalizeTimeout, playTimeout } from '../../../core/timeout-utils.js';
 import { variableManager } from '../../../services/VariableManager.js';
 
 const waitConditional = async (req, res) => {
-    const { waitType = 'browser', expression, timeout = 30000, polling = 100 } = req.body;
+    const { waitType = 'browser', expression, polling = 100 } = req.body;
+    const timeout = normalizeTimeout(req.body.timeout);
 
     if (waitType === 'browser') {
         return executePlaywrightAction(req, res, 'wait_conditional', async (page) => {
             await page.waitForFunction(expression, null, {
                 polling,
-                timeout,
+                ...playTimeout(timeout),
             });
             return { message: req.t('actions.wait_conditional.success') };
         })(req, res);
@@ -26,13 +28,14 @@ const waitConditional = async (req, res) => {
             }
         };
 
-        while (Date.now() - startTime < timeout) {
+        while (true) {
             if (checkCondition()) {
                 return res.status(200).json({
                     success: true,
                     message: 'Variable condition met',
                 });
             }
+            if (Date.now() - startTime >= timeout) break;
             await new Promise((resolve) => setTimeout(resolve, polling));
         }
 

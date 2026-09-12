@@ -98,6 +98,11 @@
     "dataset_processing": "Preparando a execução do dataset...",
     "dataset_started": "Lote de dataset iniciado com sucesso",
     "fallback": "Senão",
+    "add": "Adicionar",
+    "add_first": "Adicionar primeiro",
+    "remove": "Remover",
+    "move_up": "Mover para cima",
+    "move_down": "Mover para baixo",
     "flow_exec_error_msg": "Falha na execução do fluxo: {{message}}",
     "inspector_started": "Selecione um elemento na página...",
     "new_project_name": "Nome do novo projeto",
@@ -226,6 +231,7 @@
       "find_element": "Encontrar Elemento",
       "get_set_content": "Modificar texto/atributo",
       "assert_page_text": "A página de declaração contém texto",
+      "assert": "Asserção",
       "click": "Clique",
       "type_text": "Digite texto",
       "select_option": "Selecione Opções",
@@ -448,7 +454,18 @@
       "inputMapping": "Mapeamento de entrada",
       "outputMapping": "Mapeamento de saída",
       "parent_variable": "Variável pai",
-      "child_variable": "Variável filha"
+      "child_variable": "Variável filha",
+      "assertions": "Asserções",
+      "assertionType": "Tipo de asserção",
+      "operator": "Operador",
+      "expected": "Valor esperado",
+      "attributeName": "Nome do atributo",
+      "cssProperty": "Propriedade CSS",
+      "caseSensitive": "Sensível a maiúsculas/minúsculas",
+      "regex": "Usar Regex",
+      "regexFlags": "Flags Regex",
+      "min": "Mín",
+      "max": "Máx"
     },
     "config": {
       "save_error": "Não foi possível salvar a configuração.  Verifique os dados e tente novamente.",
@@ -549,7 +566,8 @@
       "comparison_ends": "Termina com",
       "comparison_equals": "Correspondência exata",
       "comparison_regex": "Padrão regex",
-      "comparison_starts": "Começa com"
+      "comparison_starts": "Começa com",
+      "page_title": "Usa page.title() — nenhum seletor de elemento necessário"
     },
     "validation": {
       "width_number": "A largura deve ser um número",
@@ -644,7 +662,14 @@
       "args": "Ex: ['valor1', 123, verdadeiro] (deve ser serializável em JSON)",
       "slowMo": "Ex: 50. Atrasa cada ação para depuração.",
       "executablePath": "Ex: /caminho/para/chrome.exe.  Use um executável de navegador personalizado.",
-      "no_source": "Sem fonte"
+      "no_source": "Sem fonte",
+      "assertions": "Adicione pelo menos uma asserção",
+      "assertionType": "Selecione o tipo de asserção...",
+      "operator": "Selecione o operador...",
+      "expected": "Digite o valor esperado...",
+      "attributeName": "Ex: class, id, data-test-id, href, etc.",
+      "cssProperty": "Ex: display, color, font-size, background-color, etc.",
+      "regexFlags": "Ex: i, g, m"
     },
     "options": {
       "mode": {

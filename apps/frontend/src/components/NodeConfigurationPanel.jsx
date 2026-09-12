@@ -32,17 +32,33 @@ import {
 import { api } from "../utils/api";
 import VariableInput from "./VariableInput";
 import { useAvailableVariables } from "../hooks/useAvailableVariables";
-import { NODE_INPUTS } from "@/config/validationRules";
+import { NODE_INPUTS, cleanNodeConfiguration } from "@/config/validationRules";
 
 import ConditionalBranchesEditor from "./editors/ConditionalBranchesEditor";
 import SwitchCasesEditor from "./editors/SwitchCasesEditor";
 import FormFillEditor from "./editors/FormFillEditor";
 import OptionPickerEditor from "./editors/OptionPickerEditor";
 import CheckboxListEditor from "./editors/CheckboxListEditor";
+import AssertionBuilder from "./editors/AssertionBuilder";
 import { SelectorResultPanel } from "./SelectorResultPanel";
 import { useTranslation } from "react-i18next";
 import { useForm, Controller } from "react-hook-form";
 import { createPortal } from "react-dom";
+
+const safeStringify = (value) => {
+  const seen = new WeakSet();
+  try {
+    return JSON.stringify(value, (key, val) => {
+      if (typeof val === "object" && val !== null) {
+        if (seen.has(val)) return "[Circular]";
+        seen.add(val);
+      }
+      return val;
+    });
+  } catch {
+    return "";
+  }
+};
 
 const NodeConfigurationPanel = ({
   isVisible,
@@ -230,53 +246,7 @@ const NodeConfigurationPanel = ({
   });
 
   const cleanConfiguration = useCallback(
-    (config, nodeType) => {
-      if (!config) return {};
-      const allowedKeys = new Set([
-        "customLabel",
-        "label",
-        "description",
-        "technicalName",
-        "headless",
-        "browserType",
-        "continueOnFailure",
-        "continueOnError",
-        "takeScreenshot",
-        "url",
-        "flowId",
-        // Legacy select_option keys preserved so existing flows are not stripped
-        "selector",
-        "selectionValue",
-        "selectionCriteria",
-        // New select_option keys
-        "containerSelector",
-        "selectedOptions",
-        "expandMenu",
-        "detectedOptions",
-        "staticHtml",
-      ]);
-
-      // Add inputs defined in NODE_INPUTS schema for this node type
-      const inputs = NODE_INPUTS[nodeType] || NODE_INPUTS.default || [];
-      inputs.forEach((input) => allowedKeys.add(input.key));
-
-      // Also add definedInputs which contains dynamic keys (like loop / component parameters)
-      definedInputs.forEach((input) => allowedKeys.add(input.key));
-
-      const cleaned = {};
-      for (const [key, val] of Object.entries(config)) {
-        if (allowedKeys.has(key)) {
-          cleaned[key] = val;
-        }
-      }
-      if (
-        cleaned.continueOnFailure !== undefined &&
-        cleaned.continueOnError === undefined
-      ) {
-        cleaned.continueOnError = cleaned.continueOnFailure;
-      }
-      return cleaned;
-    },
+    (config, nodeType) => cleanNodeConfiguration(config, nodeType, definedInputs),
     [definedInputs],
   );
 
@@ -285,8 +255,8 @@ const NodeConfigurationPanel = ({
     const globalConfig = activeNode.data?.configuration || {};
     const hasIdChanged = activeNode.id !== lastSyncedConfigRef.current.nodeId;
     const hasConfigChanged =
-      JSON.stringify(globalConfig) !==
-      JSON.stringify(lastSyncedConfigRef.current.config);
+      safeStringify(globalConfig) !==
+      safeStringify(lastSyncedConfigRef.current.config);
 
     if (hasIdChanged || hasConfigChanged) {
       isResettingRef.current = true;
@@ -335,8 +305,8 @@ const NodeConfigurationPanel = ({
     }
 
     if (!activeNode) return;
-    const currentConfigStr = JSON.stringify(watchedValues);
-    const lastSyncedStr = JSON.stringify(lastSyncedConfigRef.current.config);
+    const currentConfigStr = safeStringify(watchedValues);
+    const lastSyncedStr = safeStringify(lastSyncedConfigRef.current.config);
 
     if (isResettingRef.current) {
       // If we are in the middle of a reset, check if the watchedValues have successfully caught up
@@ -941,6 +911,23 @@ const NodeConfigurationPanel = ({
             )}
           />
         );
+      case "assertionList":
+        return (
+          <Controller
+            key={reactKey}
+            name={dataKey}
+            control={control}
+            render={({ field: { value, onChange } }) => (
+              <AssertionBuilder
+                value={value}
+                onChange={onChange}
+                variablesMap={variablesMap}
+                availableVariablePaths={availableVariablePaths}
+                t={t}
+              />
+            )}
+          />
+        );
       case "checkbox_list":
         return (
           <Controller
@@ -1237,8 +1224,11 @@ const NodeConfigurationPanel = ({
 
   const renderVariableDebugTrace = () => {
     const referenced = [];
-    const traverse = (obj) => {
-      if (!obj) return;
+    const seen = new Set();
+    const stack = [watchedValues];
+    while (stack.length > 0) {
+      const obj = stack.pop();
+      if (!obj) continue;
       if (typeof obj === "string") {
         const regex = /\{\{([^}]+)\}\}/g;
         let match;
@@ -1249,11 +1239,13 @@ const NodeConfigurationPanel = ({
           }
         }
       } else if (typeof obj === "object") {
-        Object.values(obj).forEach(traverse);
+        if (seen.has(obj)) continue;
+        seen.add(obj);
+        for (const value of Object.values(obj)) {
+          stack.push(value);
+        }
       }
-    };
-
-    traverse(watchedValues);
+    }
 
     if (referenced.length === 0) return null;
 

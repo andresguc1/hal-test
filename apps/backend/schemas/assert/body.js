@@ -31,7 +31,7 @@ const assertBodySchema = Joi.object({
     assertion: assertionSchema.optional(),
     assertions: Joi.array().items(assertionSchema).min(1).optional(),
 
-    timeout: Joi.number().integer().min(0).default(5000).optional(),
+    timeout: Joi.number().integer().min(0).default(0).optional(),
     softFail: Joi.boolean().default(false).optional(),
     continueOnError: Joi.alternatives().try(Joi.boolean(), Joi.string()).optional(),
     takeScreenshotOnFailure: Joi.boolean().optional(),

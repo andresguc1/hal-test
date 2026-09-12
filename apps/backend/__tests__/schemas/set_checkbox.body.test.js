@@ -6,7 +6,7 @@ describe('set_checkbox body schema', () => {
         const { error, value } = setCheckboxBodySchema.validate({ selector: '#accept' });
         expect(error).toBeUndefined();
         expect(value.action).toBe('check');
-        expect(value.timeout).toBe(30000);
+        expect(value.timeout).toBe(0);
     });
 
     it('should accept action toggle', () => {

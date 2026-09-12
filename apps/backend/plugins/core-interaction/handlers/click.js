@@ -1,6 +1,7 @@
 import { executePlaywrightAction } from '../../../core/ActionExecutor.js';
 import { clickContextMenuItem, dismissContextMenu } from '../../../core/menu-utils.js';
 import { buildPlaywrightLocator, normalizeSelectorForDotId } from '../../../core/selector-utils.js';
+import { normalizeTimeout, playTimeout } from '../../../core/timeout-utils.js';
 
 const RIGHT_BUTTON = 'right';
 
@@ -8,12 +9,12 @@ const click = (req, res) =>
     executePlaywrightAction(req, res, 'click', async (page, opts) => {
         const { selector, button, clickCount, modifiers, force, contextMenuItem, clickOutside } =
             opts;
-        const timeout = opts.timeout ? Number(opts.timeout) : undefined;
+        const timeout = normalizeTimeout(opts.timeout);
 
         if (!selector) throw new Error(req.t('errors.selector_required'));
 
         const targetSelector = await normalizeSelectorForDotId(page, selector);
-        const clickOptions = { button, clickCount, modifiers, timeout, force };
+        const clickOptions = { ...playTimeout(timeout), button, clickCount, modifiers, force };
         const locator = buildPlaywrightLocator(page, targetSelector);
 
         await locator.click(clickOptions);
@@ -22,7 +23,11 @@ const click = (req, res) =>
 
         if (button === RIGHT_BUTTON && (contextMenuItem || clickOutside)) {
             if (contextMenuItem) {
-                const menu = await clickContextMenuItem(page, contextMenuItem, { timeout });
+                const menu = await clickContextMenuItem(
+                    page,
+                    contextMenuItem,
+                    playTimeout(timeout),
+                );
                 traceDetails.contextMenuItem = contextMenuItem;
                 traceDetails.contextMenuStrategy = menu.strategy;
             }

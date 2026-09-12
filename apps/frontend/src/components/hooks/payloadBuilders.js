@@ -169,7 +169,7 @@ export const open_url = (payload) => {
   return {
     url: url,
     waitUntil: asString(payload?.waitUntil, "domcontentloaded"),
-    timeout: asNumber(payload?.timeout, 30000),
+    timeout: asNumber(payload?.timeout, 0, 0),
     browserId: asString(payload?.browserId),
     takeScreenshot: asBoolean(payload?.takeScreenshot, true),
   };
@@ -275,7 +275,7 @@ export const find_element = (payload) => {
   return {
     selector: asString(payload?.selector),
     selectorType: asString(payload?.selectorType, "css"),
-    timeout: asNumber(payload?.timeout, 10000, 0),
+    timeout: asNumber(payload?.timeout, 0, 0),
     visible: asBoolean(payload?.visible, true),
     browserId: asString(payload?.browserId),
   };
@@ -302,7 +302,7 @@ export const get_set_content = (payload) => {
   }
 
   body.takeScreenshot = asBoolean(payload?.takeScreenshot, false);
-  body.timeout = asNumber(payload?.timeout, 30000, 1);
+  body.timeout = asNumber(payload?.timeout, 0, 0);
 
   return body;
 };
@@ -323,7 +323,7 @@ export const execute_js = (payload) => {
     script: script,
     returnValue: returnValue,
     args: asString(payload?.args),
-    timeout: asNumber(payload?.timeout, 30000, 1),
+    timeout: asNumber(payload?.timeout, 0, 0),
     browserId: asString(payload?.browserId),
   };
 };
@@ -354,7 +354,7 @@ export const click = (payload = {}) => {
     button: finalButton,
     clickCount,
     browserId: asString(payload?.browserId),
-    timeout: asNumber(payload?.timeout, 30000, 1),
+    timeout: asNumber(payload?.timeout, 0, 0),
     // Right-click context menu: text name / locator of the option to click and
     // optional click-outside (blur) close verification.
     contextMenuItem: asString(payload?.contextMenuItem),
@@ -377,7 +377,7 @@ export const browser_dialog = (payload = {}) => {
     action: act,
     matchType: asString(payload.matchType, "contains"),
     caseSensitive: asBoolean(payload.caseSensitive, false),
-    timeout: asNumber(payload.timeout, 5000, 1),
+    timeout: asNumber(payload?.timeout, 0, 0),
     browserId: asString(payload?.browserId),
   };
 
@@ -412,7 +412,7 @@ export const type_text = (payload = {}) => {
     text: asString(text, ""),
     clearBeforeType: asBoolean(payload?.clearBeforeType, true),
     delay: asNumber(payload?.delay, 0, 0),
-    timeout: asNumber(payload?.timeout, 30000, 1),
+    timeout: asNumber(payload?.timeout, 0, 0),
     browserId: asString(payload?.browserId),
     takeScreenshot: asBoolean(payload?.takeScreenshot, true),
     continueOnError: asBoolean(
@@ -464,7 +464,7 @@ export const select_option = (payload) => {
     const result = {
       containerSelector,
       selectedOptions,
-      timeout: asNumber(payload?.timeout, 30000, 1),
+      timeout: asNumber(payload?.timeout, 0, 0),
       browserId,
     };
     if (expandMenu) result.expandMenu = true;
@@ -491,7 +491,7 @@ export const select_option = (payload) => {
     selector: asString(payload?.selector),
     selectionCriteria,
     selectionValue,
-    timeout: asNumber(payload?.timeout, 30000, 1),
+    timeout: asNumber(payload?.timeout, 0, 0),
     browserId,
   };
 };
@@ -500,7 +500,7 @@ export const set_checkbox = (payload = {}) => {
   const action = ["check", "uncheck", "toggle"].includes(payload?.action)
     ? payload.action
     : "check";
-  const timeout = asNumber(payload?.timeout, 30000, 1);
+  const timeout = asNumber(payload?.timeout, 0, 0);
 
   if (payload?.multiple) {
     const rawFields = Array.isArray(payload?.fields) ? payload.fields : [];
@@ -556,7 +556,7 @@ export const set_radio = (payload = {}) => {
   }
   return {
     selector,
-    timeout: asNumber(payload?.timeout, 30000, 1),
+    timeout: asNumber(payload?.timeout, 0, 0),
     browserId: asString(payload?.browserId),
   };
 };
@@ -584,7 +584,7 @@ export const pick_list_option = (payload = {}) => {
 
   const result = {
     selector,
-    timeout: asNumber(payload?.timeout, 30000, 1),
+    timeout: asNumber(payload?.timeout, 0, 0),
     browserId: asString(payload?.browserId),
     expandMenu: asBoolean(payload?.expandMenu, true),
   };
@@ -641,7 +641,7 @@ export const fill_form = (payload = {}) => {
     submitAfterFill: asBoolean(payload?.submitAfterFill, false),
     submitSelector: asString(payload?.submitSelector, ""),
     waitForNavigation: asBoolean(payload?.waitForNavigation, true),
-    timeout: asNumber(payload?.timeout, 30000, 1),
+    timeout: asNumber(payload?.timeout, 0, 0),
     browserId: asString(payload?.browserId),
     takeScreenshot: asBoolean(payload?.takeScreenshot, true),
     continueOnError: asBoolean(
@@ -655,7 +655,7 @@ export const submit_form = (payload) => {
   return {
     selector: asString(payload?.selector),
     waitForNavigation: asBoolean(payload?.waitForNavigation, true),
-    timeout: asNumber(payload?.timeout, 30000, 1),
+    timeout: asNumber(payload?.timeout, 0, 0),
     browserId: asString(payload?.browserId),
   };
 };
@@ -669,7 +669,7 @@ export const scroll = (payload) => {
     maxScrolls: asNumber(payload?.maxScrolls, 50, 1),
     waitTime: asNumber(payload?.waitTime, 2000, 500),
     behavior: asString(payload?.behavior, "auto"),
-    timeout: asNumber(payload?.timeout, 30000, 1),
+    timeout: asNumber(payload?.timeout, 0, 0),
     browserId: asString(payload?.browserId),
     takeScreenshot: asBoolean(payload?.takeScreenshot, true),
     continueOnError: asBoolean(
@@ -713,7 +713,7 @@ export const upload_file = (payload) => {
   return {
     selector: asString(payload?.selector),
     files: pathsArray.join(","),
-    timeout: asNumber(payload?.timeout, 30000, 1),
+    timeout: asNumber(payload?.timeout, 0, 0),
     browserId: asString(payload?.browserId),
   };
 };
@@ -735,7 +735,7 @@ export const drag_drop = (payload) => {
     targetSelector,
     steps: asNumber(payload?.steps, 10, 1),
     force: asBoolean(payload?.force, false),
-    timeout: asNumber(payload?.timeout, 30000, 1),
+    timeout: asNumber(payload?.timeout, 0, 0),
     browserId: asString(payload?.browserId),
     // Only emit the flag when explicitly set so legacy flows keep their native
     // fast (dragTo) behavior. Runtime: true → smooth on-screen animation.
@@ -759,7 +759,7 @@ export const hover = (payload) => {
 
   return {
     selector,
-    timeout: asNumber(payload?.timeout, 30000, 1),
+    timeout: asNumber(payload?.timeout, 0, 0),
     browserId: asString(payload?.browserId),
     takeScreenshot: asBoolean(payload?.takeScreenshot, true),
     continueOnError: asBoolean(
@@ -774,7 +774,7 @@ export const assert_page_text = (payload) => {
     textToFind: asString(payload?.textToFind),
     matchType: asString(payload?.matchType, "contains"),
     caseSensitive: asBoolean(payload?.caseSensitive, false),
-    timeout: asNumber(payload?.timeout, 5000, 0),
+    timeout: asNumber(payload?.timeout, 0, 0),
     browserId: asString(payload?.browserId),
     continueOnError: asBoolean(
       payload?.continueOnError ?? payload?.continueOnFailure,
@@ -787,7 +787,7 @@ export const wait_for_element = (payload) => {
   return {
     selector: asString(payload?.selector),
     condition: asString(payload?.condition, "visible"),
-    timeout: asNumber(payload?.timeout, 30000, 0),
+    timeout: asNumber(payload?.timeout, 0, 0),
     browserId: asString(payload?.browserId),
     takeScreenshot: asBoolean(payload?.takeScreenshot, true),
     continueOnError: asBoolean(
@@ -810,7 +810,7 @@ export const wait_conditional = (payload) => {
   return {
     conditionScript: conditionScript,
     polling: asNumber(payload?.polling, 500, 1),
-    timeout: asNumber(payload?.timeout, 20000, 1),
+    timeout: asNumber(payload?.timeout, 0, 0),
     args: asString(payload?.args),
     browserId: asString(payload?.browserId),
   };
@@ -826,7 +826,7 @@ export const wait_network = (payload) => {
 export const wait_navigation = (payload) => {
   return {
     waitUntil: asString(payload?.waitUntil, "networkidle"),
-    timeout: asNumber(payload?.timeout, 10000, 1),
+    timeout: asNumber(payload?.timeout, 0, 0),
     browserId: asString(payload?.browserId),
   };
 };
@@ -834,7 +834,7 @@ export const wait_navigation = (payload) => {
 export const wait_visible = (payload) => {
   return {
     selector: asString(payload?.selector),
-    timeout: asNumber(payload?.timeout, 15000, 0),
+    timeout: asNumber(payload?.timeout, 0, 0),
     scrollIntoView: asBoolean(payload?.scrollIntoView, true),
   };
 };
@@ -849,7 +849,7 @@ export const listen_events = (payload) => {
     selector: asString(payload?.selector),
     logToFile: asBoolean(payload?.logToFile, false),
     filePath: asString(payload?.filePath),
-    timeout: asNumber(payload?.timeout, 60000, 1),
+    timeout: asNumber(payload?.timeout, 0, 0),
     browserId: asString(payload?.browserId),
   };
 };
@@ -869,7 +869,7 @@ export const save_dom = (payload) => {
     selector: asString(payload?.selector, null),
     path: asString(payload?.path, null),
     variableName: asString(payload?.variableName, null),
-    timeout: asNumber(payload?.timeout, 30000, 1),
+    timeout: asNumber(payload?.timeout, 0, 0),
     takeScreenshot: asBoolean(payload?.takeScreenshot, true),
     browserId: asString(payload?.browserId),
   };
@@ -882,7 +882,7 @@ export const take_screenshot = (payload) => {
     fullPage: asBoolean(payload?.fullPage, false),
     format: asString(payload?.format, "png"),
     quality: asNumber(payload?.quality, 100, 1, 100),
-    timeout: asNumber(payload?.timeout, 30000, 1),
+    timeout: asNumber(payload?.timeout, 0, 0),
     browserId: asString(payload?.browserId),
     enabled: asBoolean(payload?.enabled, true),
   };
@@ -934,7 +934,7 @@ export const mock_response = (payload) => {
     status: asNumber(payload?.status, 200, 100, 599),
     responseBody: asString(payload?.responseBody),
     headers: asJsonString(payload?.headers, false, '"headers"'),
-    timeout: asNumber(payload?.timeout, 120000, 0),
+    timeout: asNumber(payload?.timeout, 0, 0),
     browserId: asString(payload?.browserId),
   };
 };
@@ -945,7 +945,7 @@ export const intercept_request = (payload) => {
     method: asString(payload?.method, "POST").toUpperCase(),
     action: asString(payload?.action, "mock"),
     responseMock: asString(payload?.responseMock),
-    timeout: asNumber(payload?.timeout, 60000, 0),
+    timeout: asNumber(payload?.timeout, 0, 0),
     browserId: asString(payload?.browserId),
   };
 };
@@ -1190,7 +1190,7 @@ export const handle_downloads = (payload) => {
 
   const body = {
     action: action,
-    timeout: asNumber(payload?.timeout, 30000, 1),
+    timeout: asNumber(payload?.timeout, 0, 0),
     browserId: browserId,
   };
 
@@ -1349,7 +1349,7 @@ export const run_tests = (payload) => {
     parallel: asBoolean(payload?.parallel, false),
     retries: asNumber(payload?.retries, 0, 0),
     reportFormat: asString(payload?.reportFormat, "junit"),
-    timeout: asNumber(payload?.timeout, 900000, 1),
+    timeout: asNumber(payload?.timeout, 0, 0),
   };
 };
 
@@ -1506,7 +1506,7 @@ export const branch = (payload) => {
   return {
     browserId: asString(payload?.browserId),
     mode: asString(payload?.mode, "parallel"),
-    timeout: asNumber(payload?.timeout, 30000, 0),
+    timeout: asNumber(payload?.timeout, 0, 0),
   };
 };
 
@@ -1536,6 +1536,6 @@ export const backend_js = (payload) => {
     expression: asString(
       payload?.expression ?? payload?.script ?? payload?.code,
     ),
-    timeout: asNumber(payload?.timeout, 10000, 0),
+    timeout: asNumber(payload?.timeout, 0, 0),
   };
 };

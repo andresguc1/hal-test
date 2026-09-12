@@ -8,7 +8,7 @@ const mockResponseBodySchema = Joi.object({
     status: Joi.number().integer().min(100).max(599).default(200),
     responseBody: Joi.alternatives().try(Joi.string(), Joi.object(), Joi.array()).required(),
     headers: Joi.string().optional().allow(null, ''), // JSON string
-    timeout: Joi.number().integer().min(0).default(120000), // 0 = persistente
+    timeout: Joi.number().integer().min(0).default(0), // 0 = persistente
 
     browserId: Joi.any().strip(),
     endpoint: Joi.string().optional().allow(''),

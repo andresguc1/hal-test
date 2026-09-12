@@ -343,8 +343,13 @@ export function useFlowExecution({
           type: nodeOrAction.type,
           payload: {
             ...(nodeOrAction.data?.configuration || {}),
-            customLabel: nodeOrAction.data?.customLabel,
-            label: nodeOrAction.data?.label || nodeOrAction.label,
+            ...(_payload || {}),
+            customLabel:
+              _payload?.customLabel || nodeOrAction.data?.customLabel,
+            label:
+              _payload?.label ||
+              nodeOrAction.data?.label ||
+              nodeOrAction.label,
           },
           ...nodeOrAction,
         };

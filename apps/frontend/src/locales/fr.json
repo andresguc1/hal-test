@@ -98,6 +98,11 @@
     "dataset_processing": "Préparation de l'exécution du dataset...",
     "dataset_started": "Lot de dataset démarré avec succès",
     "fallback": "Sinon",
+    "add": "Ajouter",
+    "add_first": "Ajouter le premier",
+    "remove": "Supprimer",
+    "move_up": "Monter",
+    "move_down": "Descendre",
     "flow_exec_error_msg": "Échec de l'exécution du flux : {{message}}",
     "inspector_started": "Sélectionnez un élément sur la page...",
     "new_project_name": "Nom du nouveau projet",
@@ -203,6 +208,7 @@
       "find_element": "Trouver l'Élément",
       "get_set_content": "Modifier Texte/Attr",
       "assert_page_text": "Valider le texte de la page",
+      "assert": "Assertion",
       "click": "Cliquer",
       "type_text": "Saisir du Texte",
       "select_option": "Sélectionner des Options",
@@ -448,7 +454,18 @@
       "inputMapping": "Mappage d'Entrée",
       "outputMapping": "Mappage de Sortie",
       "parent_variable": "Variable Parent",
-      "child_variable": "Variable Enfant"
+      "child_variable": "Variable Enfant",
+      "assertions": "Assertions",
+      "assertionType": "Type d'assertion",
+      "operator": "Opérateur",
+      "expected": "Valeur attendue",
+      "attributeName": "Nom de l'attribut",
+      "cssProperty": "Propriété CSS",
+      "caseSensitive": "Sensible à la casse",
+      "regex": "Utiliser Regex",
+      "regexFlags": "Flags Regex",
+      "min": "Min",
+      "max": "Max"
     },
     "config": {
       "save_error": "Impossible de sauvegarder la configuration. Veuillez vérifier les données et réessayer.",
@@ -549,7 +566,8 @@
       "comparison_ends": "Se termine par",
       "comparison_equals": "Correspondance exacte",
       "comparison_regex": "Motif regex",
-      "comparison_starts": "Commence par"
+      "comparison_starts": "Commence par",
+      "page_title": "Utilise page.title() — aucun sélecteur d'élément nécessaire"
     },
     "validation": {
       "width_number": "La largeur doit être un nombre",
@@ -644,7 +662,14 @@
       "args": "Ex : ['valeur1', 123, true] (doit être sérialisable en JSON)",
       "slowMo": "Ex : 50. Ralentit chaque action pour le débogage.",
       "executablePath": "Ex : /chemin/vers/chrome.exe. Utilisez un navigateur personnalisé.",
-      "no_source": "Sans source"
+      "no_source": "Sans source",
+      "assertions": "Ajoutez au moins une assertion",
+      "assertionType": "Sélectionnez le type d'assertion...",
+      "operator": "Sélectionnez l'opérateur...",
+      "expected": "Entrez la valeur attendue...",
+      "attributeName": "Ex : class, id, data-test-id, href, etc.",
+      "cssProperty": "Ex : display, color, font-size, background-color, etc.",
+      "regexFlags": "Ex : i, g, m"
     },
     "options": {
       "mode": {

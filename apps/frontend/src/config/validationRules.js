@@ -663,8 +663,7 @@ export const NODE_INPUTS = {
       key: "timeout",
       label: "Timeout (ms)",
       type: "number",
-      placeholder: "5000",
-      defaultValue: 5000,
+      placeholder: "Leave empty for platform default",
     },
     {
       key: "continueOnError",
@@ -676,11 +675,11 @@ export const NODE_INPUTS = {
   assert: [
     {
       key: "target.selector",
-      label: "Target Selector",
+      label: "Element to check",
       type: "selector",
-      placeholder: ".element, #id, [data-test-id]",
+      placeholder: "Click Pick or enter a CSS selector",
       required: true,
-      description: "CSS/XPath selector or Playwright locator for the target element(s)",
+      description: "The element you want to verify. Use Pick to select it visually, or type a CSS selector.",
     },
     {
       key: "target.scope",
@@ -692,28 +691,28 @@ export const NODE_INPUTS = {
         { label: "Page (URL/Title)", value: "page" },
       ],
       defaultValue: "element",
-      description: "Whether to assert on a single element, multiple elements, or page-level properties",
+      description: "Whether to check a single element, multiple elements, or the page itself.",
     },
     {
       key: "assertions",
-      label: "Assertions",
+      label: "What to verify",
       type: "assertionList",
       required: true,
-      description: "List of assertions to evaluate",
+      description: "Add one or more checks to run against the selected element.",
     },
     {
       key: "timeout",
-      label: "Timeout (ms)",
+      label: "Timeout",
       type: "number",
-      placeholder: "5000",
-      defaultValue: 5000,
+      placeholder: "Leave empty for platform default",
+      description: "Maximum time to wait for the check to pass (in milliseconds). Leave empty to use the platform default.",
     },
     {
       key: "softFail",
-      label: "🛡️ Continue on failure (Soft Fail)",
+      label: "Continue test on failure",
       type: "checkbox",
       defaultValue: false,
-      description: "If enabled, failed assertions won't stop the flow",
+      description: "If enabled, a failed check is recorded but the flow keeps running (soft fail).",
     },
   ],
   get_set_content: [
@@ -1526,6 +1525,85 @@ export const NODE_INPUTS = {
 };
 
 /**
+ * Keys that are always preserved across every node type when a configuration
+ * is cleaned before persisting. Node-specific fields are added from
+ * NODE_INPUTS and the dynamic `definedInputs` list.
+ */
+export const BASE_ALLOWED_CONFIG_KEYS = [
+  "customLabel",
+  "label",
+  "description",
+  "technicalName",
+  "headless",
+  "browserType",
+  "continueOnFailure",
+  "continueOnError",
+  "takeScreenshot",
+  "url",
+  "flowId",
+  // Legacy select_option keys preserved so existing flows are not stripped
+  "selector",
+  "selectionValue",
+  "selectionCriteria",
+  // New select_option keys
+  "containerSelector",
+  "selectedOptions",
+  "expandMenu",
+  "detectedOptions",
+  "staticHtml",
+];
+
+/**
+ * Filters a node configuration down to the fields that belong to the node
+ * type, so stale/dynamic keys do not leak into persisted flows.
+ *
+ * Nested schema keys use dot-notation (e.g. "target.selector") while the form
+ * stores them as a top-level object (config.target), so the parent root of
+ * every nested key is whitelisted as well — otherwise the whole object would
+ * be stripped on save.
+ *
+ * @param {object} config - Raw form values.
+ * @param {string} nodeType - Node type key (e.g. "assert").
+ * @param {Array<{key: string}>} [definedInputs] - Dynamic inputs (loop/component params).
+ * @returns {object} Cleaned configuration.
+ */
+export const cleanNodeConfiguration = (config, nodeType, definedInputs = []) => {
+  if (!config) return {};
+
+  const allowedKeys = new Set(BASE_ALLOWED_CONFIG_KEYS);
+
+  const inputs = NODE_INPUTS[nodeType] || NODE_INPUTS.default || [];
+  inputs.forEach((input) => {
+    if (input && input.key) allowedKeys.add(input.key);
+  });
+
+  (definedInputs || []).forEach((input) => {
+    if (input && input.key) allowedKeys.add(input.key);
+  });
+
+  // Whitelist the parent object of every nested (dotted) key.
+  [...allowedKeys]
+    .filter((key) => key.includes("."))
+    .forEach((key) => allowedKeys.add(key.split(".")[0]));
+
+  const cleaned = {};
+  for (const [key, val] of Object.entries(config)) {
+    if (allowedKeys.has(key)) {
+      cleaned[key] = val;
+    }
+  }
+
+  if (
+    cleaned.continueOnFailure !== undefined &&
+    cleaned.continueOnError === undefined
+  ) {
+    cleaned.continueOnError = cleaned.continueOnFailure;
+  }
+
+  return cleaned;
+};
+
+/**
  * Validates a node configuration based on the rules defined above.
  */
 export const validateNodeConfig = (nodeType, config = {}) => {
@@ -1533,19 +1611,29 @@ export const validateNodeConfig = (nodeType, config = {}) => {
 
   // Special validation for assert node
   if (nodeType === "assert") {
-    if (!config.target?.selector) {
-      return { isValid: false, missingField: "Target Selector", fieldKey: "target.selector" };
+    const scope = config.target?.scope ?? config["target.scope"] ?? "element";
+    const selector =
+      config.target?.selector ?? config["target.selector"];
+    if (scope !== "page" && !selector) {
+      return { isValid: false, missingField: "Element to check", fieldKey: "target.selector" };
     }
     if (!config.assertions || !Array.isArray(config.assertions) || config.assertions.length === 0) {
-      return { isValid: false, missingField: "Assertions", fieldKey: "assertions" };
+      return { isValid: false, missingField: "At least one check", fieldKey: "assertions" };
     }
+    // Operators that don't require an expected value
+    const operatorsNoValue = [
+      "empty", "not_empty", "exists", "not_exists",
+      "visible", "hidden", "enabled", "disabled",
+      "checked", "unchecked", "selected", "not_selected",
+      "focused", "not_focused", "readonly", "not_readonly",
+      "required", "not_required",
+    ];
     // Validate each assertion has required fields
     for (const assertion of config.assertions) {
       if (!assertion.type) {
         return { isValid: false, missingField: "Assertion Type", fieldKey: "assertions[].type" };
       }
-      // Some operators require expected value
-      if (assertion.operator && !["empty", "not_empty"].includes(assertion.operator)) {
+      if (assertion.operator && !operatorsNoValue.includes(assertion.operator)) {
         if (assertion.expected === undefined || assertion.expected === null || assertion.expected === "") {
           return { isValid: false, missingField: "Expected Value", fieldKey: "assertions[].expected" };
         }
@@ -1588,6 +1676,32 @@ export const truncate = (str, n) => {
 /**
  * Generates a human-readable label for a node based on its configuration.
  */
+const ASSERTION_LABELS = {
+    text: { equals: "Text equals", contains: "Text contains", not_equals: "Text not equal to", not_contains: "Text not contains", empty: "Text is empty", not_empty: "Text is not empty", regex: "Text matches", not_regex: "Text not matches" },
+    visibility: { visible: "Is visible", hidden: "Is hidden" },
+    existence: { exists: "Exists", not_exists: "Does not exist" },
+    count: { equals: "Count equals", not_equals: "Count not equal", greater_than: "Count greater than", less_than: "Count less than", greater_or_equal: "Count >= ", less_or_equal: "Count <= ", between: "Count between" },
+    attribute: { equals: "Attr equals", contains: "Attr contains", not_equals: "Attr not equal", not_contains: "Attr not contains", empty: "Attr is empty", not_empty: "Attr is not empty", regex: "Attr matches", not_regex: "Attr not matches" },
+    value: { equals: "Value equals", contains: "Value contains", not_equals: "Value not equal", not_contains: "Value not contains", empty: "Value is empty", not_empty: "Value is not empty", regex: "Value matches", not_regex: "Value not matches" },
+    state: { enabled: "Is enabled", disabled: "Is disabled", checked: "Is checked", unchecked: "Is unchecked", focused: "Is focused", not_focused: "Is not focused", readonly: "Is readonly", not_readonly: "Is not readonly", required: "Is required", not_required: "Is not required", selected: "Is selected", not_selected: "Is not selected" },
+    css_property: { equals: "CSS equals", contains: "CSS contains", not_equals: "CSS not equal", not_contains: "CSS not contains", regex: "CSS matches", not_regex: "CSS not matches" },
+    page: { url_equals: "URL equals", url_contains: "URL contains", url_not_equals: "URL not equal", url_not_contains: "URL not contains", title_equals: "Title equals", title_contains: "Title contains", title_not_equals: "Title not equal", title_not_contains: "Title not contains" },
+};
+
+function formatAssertionLabel(assertion) {
+    if (!assertion) return "Unknown";
+    const type = assertion.type || "unknown";
+    const operator = assertion.operator || "";
+    const expected = assertion.expected;
+    const base = ASSERTION_LABELS[type]?.[operator] || `${type}:${operator}`;
+    if (["empty", "not_empty", "exists", "not_exists", "visible", "hidden", "enabled", "disabled", "checked", "unchecked", "focused", "not_focused", "readonly", "not_readonly", "required", "not_required", "selected", "not_selected"].includes(operator)) {
+      return base;
+    }
+    if (expected === undefined || expected === null || expected === "") return base;
+    const val = truncate(String(expected), 12);
+    return `${base} «${val}»`;
+}
+
 export const getSmartLabel = (nodeType, config = {}) => {
   if (!config) return null;
 
@@ -1662,12 +1776,16 @@ export const getSmartLabel = (nodeType, config = {}) => {
       return config.textToFind
         ? `Assert Text: ${truncate(config.textToFind, 15)}`
         : "Assert Page Text";
-    case "assert":
+    case "assert": {
       if (config.assertions && config.assertions.length > 0) {
         const first = config.assertions[0];
-        return `Assert ${first.type}:${first.operator} ${config.assertions.length > 1 ? `+${config.assertions.length - 1} more` : ""}`;
+        const label = formatAssertionLabel(first);
+        return config.assertions.length > 1
+          ? `${label} +${config.assertions.length - 1}`
+          : label;
       }
       return "Assert";
+    }
     default:
       return null;
   }

@@ -22,7 +22,7 @@ const schema = Joi.object({
         .required(),
     assertion: assertionSchema.optional(),
     assertions: Joi.array().items(assertionSchema).optional(),
-    timeout: Joi.number().integer().min(0).default(5000).optional(),
+    timeout: Joi.number().integer().min(0).optional(),
     softFail: Joi.boolean().default(false).optional(),
 }).unknown(true);
 

@@ -1,15 +1,16 @@
 import { executePlaywrightAction } from '../../../core/ActionExecutor.js';
 import { buildPlaywrightLocator, normalizeSelectorForDotId } from '../../../core/selector-utils.js';
+import { normalizeTimeout, playTimeout } from '../../../core/timeout-utils.js';
 
 const typeText = (req, res) =>
     executePlaywrightAction(req, res, 'type_text', async (page, opts) => {
         const { selector, text, clearBeforeType, delay } = opts;
-        const timeout = opts.timeout ? Number(opts.timeout) : undefined;
+        const timeout = normalizeTimeout(opts.timeout);
 
         if (!selector) throw new Error(req.t('errors.selector_required'));
         if (text === undefined || text === null) throw new Error(req.t('errors.text_required'));
 
-        const actionOptions = { timeout };
+        const actionOptions = playTimeout(timeout);
         const targetSelector = await normalizeSelectorForDotId(page, selector);
         const locator = buildPlaywrightLocator(page, targetSelector);
 

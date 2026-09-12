@@ -1,5 +1,6 @@
 /* global document */
 import { BaseAssertionStrategy, registerAssertionStrategy } from '../AssertionBaseStrategy.js';
+import { playTimeout } from '../../../../core/timeout-utils.js';
 
 /**
  * StateStrategy
@@ -45,17 +46,17 @@ export class StateStrategy extends BaseAssertionStrategy {
         ];
     }
 
-    async execute(_page, locator, assertion, { timeout = 5000 } = {}) {
+    async execute(_page, locator, assertion, { timeout = 0 } = {}) {
         const operator = assertion.operator || 'enabled';
 
         try {
-            await locator.waitFor({ state: 'attached', timeout });
+            await locator.waitFor({ state: 'attached', ...playTimeout(timeout) });
         } catch (err) {
             return {
                 passed: false,
                 actual: 'absent',
                 expected: operator,
-                message: `Element was not found within ${timeout}ms, so its state could not be evaluated.`,
+                message: 'Element was not found, so its state could not be evaluated.',
             };
         }
 

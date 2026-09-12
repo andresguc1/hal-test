@@ -22,7 +22,7 @@ const waitForElementBodySchema = Joi.object({
         }),
 
     // 3. timeout (Opcional)
-    timeout: Joi.number().integer().min(1).default(30000).optional().messages({
+    timeout: Joi.number().integer().min(0).default(0).optional().messages({
         'number.min': 'El tiempo de espera (timeout) debe ser al menos 1 ms.',
         'number.base': 'El timeout debe ser un número entero.',
     }),

@@ -24,7 +24,7 @@ const assertPageTextBodySchema = Joi.object({
         'boolean.base': 'La propiedad "caseSensitive" debe ser un booleano.',
     }),
 
-    timeout: Joi.number().integer().min(0).default(5000).optional().messages({
+    timeout: Joi.number().integer().min(0).default(0).optional().messages({
         'number.base': 'El tiempo de espera debe ser un número entero.',
         'number.min': 'El tiempo de espera no puede ser negativo.',
     }),

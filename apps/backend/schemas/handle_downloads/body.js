@@ -21,7 +21,7 @@ const handleDownloadsBodySchema = Joi.object({
     }),
 
     // 3. timeout (Tiempo de Espera Máximo, Opcional)
-    timeout: Joi.number().integer().min(1).default(30000).optional().messages({
+    timeout: Joi.number().integer().min(0).default(0).optional().messages({
         'number.min': 'El timeout debe ser al menos 1ms.',
     }),
 

@@ -1,4 +1,5 @@
 import { BaseAssertionStrategy, registerAssertionStrategy } from '../AssertionBaseStrategy.js';
+import { playTimeout } from '../../../../core/timeout-utils.js';
 
 /**
  * TextStrategy
@@ -37,7 +38,7 @@ export class TextStrategy extends BaseAssertionStrategy {
         ];
     }
 
-    async execute(_page, locator, assertion, { timeout = 5000 } = {}) {
+    async execute(_page, locator, assertion, { timeout = 0 } = {}) {
         const operator = assertion.operator || 'contains';
         const expected = this.resolveExpected(assertion);
         const caseSensitive = assertion.caseSensitive === true;
@@ -46,7 +47,7 @@ export class TextStrategy extends BaseAssertionStrategy {
         const flags = assertion.regexFlags || '';
 
         try {
-            await locator.waitFor({ state: 'attached', timeout });
+            await locator.waitFor({ state: 'attached', ...playTimeout(timeout) });
         } catch (err) {
             return {
                 passed: false,
@@ -55,7 +56,7 @@ export class TextStrategy extends BaseAssertionStrategy {
                     operator === 'empty' || operator === 'not_empty'
                         ? this.labelFor(operator)
                         : expected,
-                message: `Element was not found within ${timeout}ms, so its text could not be read.`,
+                message: 'Element was not found, so its text could not be read.',
             };
         }
 

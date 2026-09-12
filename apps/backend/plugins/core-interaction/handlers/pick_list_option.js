@@ -1,5 +1,6 @@
 import { executePlaywrightAction } from '../../../core/ActionExecutor.js';
 import { buildPlaywrightLocator, normalizeSelectorForDotId } from '../../../core/selector-utils.js';
+import { normalizeTimeout, playTimeout } from '../../../core/timeout-utils.js';
 
 const OPTION_CSS = 'role=option, [role="option"], li, div[data-option]';
 
@@ -36,7 +37,7 @@ const clickOption = async (opt, runOptions) => {
 const pickListOption = (req, res) =>
     executePlaywrightAction(req, res, 'pick_list_option', async (page, opts) => {
         const { selector, optionText, optionIndex, expandMenu } = opts;
-        const timeout = opts.timeout ? Number(opts.timeout) : 30000;
+        const timeout = normalizeTimeout(opts.timeout);
 
         if (!selector) throw new Error(req.t('errors.selector_required'));
 
@@ -54,10 +55,10 @@ const pickListOption = (req, res) =>
         }
 
         const targetSelector = await normalizeSelectorForDotId(page, selector);
-        const runOptions = { timeout };
+        const runOptions = playTimeout(timeout);
         const containerLocator = buildPlaywrightLocator(page, targetSelector).first();
 
-        await containerLocator.waitFor({ state: 'attached', timeout });
+        await containerLocator.waitFor({ state: 'attached', ...playTimeout(timeout) });
 
         // Options scope: the visible panel when a menuSelector is provided,
         // otherwise the trigger/container itself.
@@ -94,7 +95,7 @@ const pickListOption = (req, res) =>
             .catch(() => false);
 
         if (scopeIsNativeSelect) {
-            await scope.waitFor({ state: 'attached', timeout });
+            await scope.waitFor({ state: 'attached', ...playTimeout(timeout) });
             const text = String(optionText).trim();
             try {
                 if (hasIndex) {
@@ -146,7 +147,7 @@ const pickListOption = (req, res) =>
         if (menuOpened) {
             await optionList
                 .first()
-                .waitFor({ state: 'visible', timeout })
+                .waitFor({ state: 'visible', ...playTimeout(timeout) })
                 .catch(() => {
                     const err = new Error(
                         `Menu did not open after clicking "${targetSelector}". Check the trigger or provide a "menuSelector" pointing at the visible options panel.`,
@@ -155,7 +156,7 @@ const pickListOption = (req, res) =>
                     throw err;
                 });
         }
-        await opt.waitFor({ state: 'visible', timeout });
+        await opt.waitFor({ state: 'visible', ...playTimeout(timeout) });
 
         await clickOption(opt, runOptions);
 

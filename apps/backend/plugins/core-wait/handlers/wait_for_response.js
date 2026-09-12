@@ -1,4 +1,5 @@
 import { executePlaywrightAction } from '../../../core/ActionExecutor.js';
+import { normalizeTimeout, playTimeout } from '../../../core/timeout-utils.js';
 import { variableManager } from '../../../services/VariableManager.js';
 
 const createRegex = (str) => {
@@ -8,25 +9,23 @@ const createRegex = (str) => {
 
 const waitForResponse = (req, res) =>
     executePlaywrightAction(req, res, 'wait_for_response', async (page, opts) => {
-        const { urlPattern, statusCode, timeout = 30000, saveToVariable } = opts;
+        const { urlPattern, statusCode, saveToVariable } = opts;
+        const timeout = normalizeTimeout(opts.timeout);
 
         if (!urlPattern) throw new Error(req.t('errors.url_pattern_required'));
 
         let response;
         if (statusCode) {
-            response = await page.waitForResponse(
-                (resp) => {
-                    const url = resp.url();
-                    const regex = createRegex(urlPattern);
-                    const matchUrl = regex.test(url);
-                    const matchStatus = resp.status() === statusCode;
+            response = await page.waitForResponse((resp) => {
+                const url = resp.url();
+                const regex = createRegex(urlPattern);
+                const matchUrl = regex.test(url);
+                const matchStatus = resp.status() === statusCode;
 
-                    return matchUrl && matchStatus;
-                },
-                { timeout },
-            );
+                return matchUrl && matchStatus;
+            }, playTimeout(timeout));
         } else {
-            response = await page.waitForResponse(urlPattern, { timeout });
+            response = await page.waitForResponse(urlPattern, playTimeout(timeout));
         }
 
         let bodyData = null;

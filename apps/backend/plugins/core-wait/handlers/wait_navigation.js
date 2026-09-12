@@ -1,8 +1,10 @@
 import { executePlaywrightAction } from '../../../core/ActionExecutor.js';
+import { normalizeTimeout, playTimeout } from '../../../core/timeout-utils.js';
 
 const waitNavigation = (req, res) =>
     executePlaywrightAction(req, res, 'wait_navigation', async (page, opts) => {
-        const { url, waitUntil = 'load', timeout = 30000 } = opts;
+        const { url, waitUntil = 'load' } = opts;
+        const timeout = normalizeTimeout(opts.timeout);
 
         const validStates = ['load', 'domcontentloaded', 'networkidle'];
         if (!validStates.includes(waitUntil)) {
@@ -13,9 +15,9 @@ const waitNavigation = (req, res) =>
 
         try {
             if (url) {
-                await page.waitForURL(url, { waitUntil, timeout: Number(timeout) });
+                await page.waitForURL(url, { waitUntil, ...playTimeout(timeout) });
             } else {
-                await page.waitForLoadState(waitUntil, { timeout: Number(timeout) });
+                await page.waitForLoadState(waitUntil, playTimeout(timeout));
             }
         } catch (error) {
             throw new Error(

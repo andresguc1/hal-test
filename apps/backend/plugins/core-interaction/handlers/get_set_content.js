@@ -1,4 +1,5 @@
 import { executePlaywrightAction } from '../../../core/ActionExecutor.js';
+import { normalizeTimeout, playTimeout } from '../../../core/timeout-utils.js';
 
 const getSetContent = (req, res) =>
     executePlaywrightAction(req, res, 'get_set_content', async (page, opts) => {
@@ -9,12 +10,12 @@ const getSetContent = (req, res) =>
             attribute,
             value,
             clearBeforeSet = true,
-            timeout = 30000,
         } = opts;
+        const timeout = normalizeTimeout(opts.timeout);
 
         if (!selector) throw new Error(req.t('errors.selector_required'));
 
-        await page.waitForSelector(selector, { state: 'attached', timeout });
+        await page.waitForSelector(selector, { state: 'attached', ...playTimeout(timeout) });
         const element = await page.$(selector);
         if (!element) {
             throw new Error(req.t('errors.element_not_found', { selector }));

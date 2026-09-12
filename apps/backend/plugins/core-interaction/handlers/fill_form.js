@@ -1,5 +1,6 @@
 import { executePlaywrightAction } from '../../../core/ActionExecutor.js';
 import { buildPlaywrightLocator } from '../../../core/selector-utils.js';
+import { normalizeTimeout, playTimeout } from '../../../core/timeout-utils.js';
 import { variableManager } from '../../../services/VariableManager.js';
 
 const fillForm = (req, res) =>
@@ -11,8 +12,8 @@ const fillForm = (req, res) =>
             submitAfterFill = false,
             submitSelector,
             waitForNavigation = true,
-            timeout = 30000,
         } = opts;
+        const timeoutMs = normalizeTimeout(opts.timeout);
 
         if (!formSelector) {
             console.error('[fillFormAction] Error: formSelector is missing');
@@ -30,9 +31,9 @@ const fillForm = (req, res) =>
             JSON.stringify(fields),
         );
 
-        const timeoutMs = typeof timeout === 'number' ? timeout : 30000;
+        const runOptions = playTimeout(timeoutMs);
         const formLocator = buildPlaywrightLocator(page, formSelector);
-        await formLocator.waitFor({ state: 'attached', timeout: timeoutMs });
+        await formLocator.waitFor({ state: 'attached', ...runOptions });
 
         const fillResults = [];
 
@@ -65,7 +66,7 @@ const fillForm = (req, res) =>
             const fieldClear = field.clearBeforeType ?? clearBeforeType;
 
             const targetLocator = buildPlaywrightLocator(page, selector);
-            await targetLocator.waitFor({ state: 'attached', timeout: timeoutMs });
+            await targetLocator.waitFor({ state: 'attached', ...runOptions });
 
             if (fieldDelay > 0) {
                 await page.waitForTimeout(fieldDelay);
@@ -74,27 +75,27 @@ const fillForm = (req, res) =>
             switch (fieldType) {
                 case 'text':
                     if (fieldClear) {
-                        await targetLocator.fill('', { timeout: timeoutMs });
+                        await targetLocator.fill('', { ...runOptions });
                         if (String(resolvedValue)) {
                             await targetLocator.type(String(resolvedValue), {
                                 delay: fieldDelay,
-                                timeout: timeoutMs,
+                                ...runOptions,
                             });
                         }
                     } else {
                         await targetLocator.type(String(resolvedValue), {
                             delay: fieldDelay,
-                            timeout: timeoutMs,
+                            ...runOptions,
                         });
                     }
                     break;
                 case 'select':
                     await targetLocator
-                        .selectOption({ label: String(resolvedValue) }, { timeout: timeoutMs })
+                        .selectOption({ label: String(resolvedValue) }, { ...runOptions })
                         .catch(async () => {
                             await targetLocator.selectOption(
                                 { value: String(resolvedValue) },
-                                { timeout: timeoutMs },
+                                { ...runOptions },
                             );
                         });
                     break;
@@ -102,15 +103,15 @@ const fillForm = (req, res) =>
                 case 'radio': {
                     const isChecked = resolvedValue === 'true' || resolvedValue === true;
                     if (isChecked) {
-                        await targetLocator.check({ timeout: timeoutMs });
+                        await targetLocator.check({ ...runOptions });
                     } else {
-                        await targetLocator.uncheck({ timeout: timeoutMs });
+                        await targetLocator.uncheck({ ...runOptions });
                     }
                     break;
                 }
                 case 'file':
                     await targetLocator.setInputFiles(String(resolvedValue), {
-                        timeout: timeoutMs,
+                        ...runOptions,
                     });
                     break;
                 default:
@@ -140,7 +141,7 @@ const fillForm = (req, res) =>
                     try {
                         await submitLocator.waitFor({
                             state: 'attached',
-                            timeout: Math.min(timeoutMs, 500),
+                            ...runOptions,
                         });
                         await submitLocator.click();
                     } catch (clickErr) {
@@ -160,14 +161,12 @@ const fillForm = (req, res) =>
 
             if (waitForNavigation) {
                 await Promise.all([
-                    page
-                        .waitForNavigation({ timeout: timeoutMs, waitUntil: 'load' })
-                        .catch((err) => {
-                            console.warn(
-                                `[fillFormAction] waitForNavigation timed out: ${err.message}`,
-                            );
-                            throw err;
-                        }),
+                    page.waitForNavigation({ ...runOptions, waitUntil: 'load' }).catch((err) => {
+                        console.warn(
+                            `[fillFormAction] waitForNavigation timed out: ${err.message}`,
+                        );
+                        throw err;
+                    }),
                     submitAction(),
                 ]);
             } else {
@@ -193,7 +192,7 @@ const fillForm = (req, res) =>
                 submitAfterFill,
                 submitSelector,
                 waitForNavigation,
-                timeout: timeoutMs,
+                ...runOptions,
             },
         };
     });

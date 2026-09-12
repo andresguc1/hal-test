@@ -1,9 +1,11 @@
 import { executePlaywrightAction } from '../../../core/ActionExecutor.js';
 import { buildPlaywrightLocator, normalizeSelectorForDotId } from '../../../core/selector-utils.js';
+import { normalizeTimeout, playTimeout } from '../../../core/timeout-utils.js';
 
 const waitVisible = (req, res) =>
     executePlaywrightAction(req, res, 'wait_visible', async (page, opts) => {
-        const { selector, timeout = 15000, scrollIntoView = true } = opts;
+        const { selector, scrollIntoView = true } = opts;
+        const timeout = normalizeTimeout(opts.timeout);
 
         if (!selector) {
             throw new Error(req.t('errors.selector_required'));
@@ -14,7 +16,7 @@ const waitVisible = (req, res) =>
 
         if (scrollIntoView) {
             try {
-                await locator.waitFor({ state: 'attached', timeout });
+                await locator.waitFor({ state: 'attached', ...playTimeout(timeout) });
                 await locator.scrollIntoViewIfNeeded();
             } catch (err) {
                 console.warn(
@@ -23,7 +25,7 @@ const waitVisible = (req, res) =>
             }
         }
 
-        await locator.waitFor({ state: 'visible', timeout });
+        await locator.waitFor({ state: 'visible', ...playTimeout(timeout) });
 
         let screenshotData = null;
         try {

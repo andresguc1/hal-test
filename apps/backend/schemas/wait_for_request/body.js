@@ -5,7 +5,7 @@ import Joi from 'joi';
 const waitForRequestBodySchema = Joi.object({
     urlPattern: Joi.string().required(),
     method: Joi.string().optional().uppercase().allow(''),
-    timeout: Joi.number().integer().min(0).default(30000),
+    timeout: Joi.number().integer().min(0).default(0),
 
     browserId: Joi.any().strip(),
     endpoint: Joi.string().optional().allow(''),

@@ -1,4 +1,5 @@
 import { BaseAssertionStrategy, registerAssertionStrategy } from '../AssertionBaseStrategy.js';
+import { playTimeout } from '../../../../core/timeout-utils.js';
 
 /**
  * AttributeStrategy
@@ -35,7 +36,7 @@ export class AttributeStrategy extends BaseAssertionStrategy {
         ];
     }
 
-    async execute(_page, locator, assertion, { timeout = 5000 } = {}) {
+    async execute(_page, locator, assertion, { timeout = 0 } = {}) {
         const operator = assertion.operator || 'equals';
         const attributeName = assertion.attribute;
         const expected = this.resolveExpected(assertion);
@@ -55,13 +56,13 @@ export class AttributeStrategy extends BaseAssertionStrategy {
         }
 
         try {
-            await locator.waitFor({ state: 'attached', timeout });
+            await locator.waitFor({ state: 'attached', ...playTimeout(timeout) });
         } catch (err) {
             return {
                 passed: false,
                 actual: 'absent',
                 expected,
-                message: `Element was not found within ${timeout}ms, so its attribute could not be read.`,
+                message: 'Element was not found, so its attribute could not be read.',
             };
         }
 

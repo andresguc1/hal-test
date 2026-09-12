@@ -9,7 +9,7 @@ const waitNetworkBodySchema = Joi.object({
     }),
 
     // 2. timeout (Tiempo de espera Máximo)
-    timeout: Joi.number().integer().min(1).default(30000).messages({
+    timeout: Joi.number().integer().min(0).default(0).messages({
         'number.min': 'El tiempo de espera (timeout) debe ser al menos 1ms.',
     }),
 

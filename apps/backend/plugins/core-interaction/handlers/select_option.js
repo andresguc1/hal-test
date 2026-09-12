@@ -1,5 +1,6 @@
 import { executePlaywrightAction } from '../../../core/ActionExecutor.js';
 import { buildPlaywrightLocator, normalizeSelectorForDotId } from '../../../core/selector-utils.js';
+import { normalizeTimeout, playTimeout } from '../../../core/timeout-utils.js';
 
 /**
  * Native <select> dropdown (single or multiple).
@@ -11,7 +12,7 @@ import { buildPlaywrightLocator, normalizeSelectorForDotId } from '../../../core
 const selectOption = (req, res) =>
     executePlaywrightAction(req, res, 'select_option', async (page, opts) => {
         const { selector, selectionCriteria, selectionValue } = opts;
-        const timeout = opts.timeout ? Number(opts.timeout) : 30000;
+        const timeout = normalizeTimeout(opts.timeout);
 
         if (!selector) throw new Error(req.t('errors.selector_required'));
 
@@ -32,8 +33,7 @@ const selectOption = (req, res) =>
         const targetSelector = await normalizeSelectorForDotId(page, selector);
 
         let valuesToSelect = {};
-        const runOptions = {};
-        if (timeout) runOptions.timeout = timeout;
+        const runOptions = playTimeout(timeout);
 
         if (valueToSelect !== '' && valueToSelect !== null && valueToSelect !== undefined) {
             if (criteria === 'value') {
@@ -55,7 +55,7 @@ const selectOption = (req, res) =>
 
         try {
             const locator = buildPlaywrightLocator(page, targetSelector);
-            await locator.waitFor({ state: 'attached', timeout: timeout || 30000 });
+            await locator.waitFor({ state: 'attached', ...playTimeout(timeout) });
             const tagName = await locator.evaluate((el) => el.tagName);
 
             if (tagName === 'OPTION') {

@@ -96,6 +96,11 @@
     "dataset_error": "Dataset run failed",
     "dataset_error_msg": "Dataset run failed: {{message}}",
     "dataset_processing": "Preparing dataset run...",
+    "add": "Add",
+    "add_first": "Add first",
+    "remove": "Remove",
+    "move_up": "Move up",
+    "move_down": "Move down",
     "dataset_started": "Dataset batch started successfully",
     "fallback": "Else",
     "flow_exec_error_msg": "Flow execution failed: {{message}}",
@@ -204,6 +209,7 @@
       "find_element": "Find Element",
       "get_set_content": "Modify Text/Attr",
       "assert_page_text": "Assert Page Contains Text",
+      "assert": "Assert",
       "click": "Click",
       "type_text": "Type Text",
       "fill_form": "Fill Form",
@@ -449,7 +455,18 @@
       "inputMapping": "Input Mapping",
       "outputMapping": "Output Mapping",
       "parent_variable": "Parent Variable",
-      "child_variable": "Child Variable"
+      "child_variable": "Child Variable",
+      "assertions": "Assertions",
+      "assertionType": "Assertion Type",
+      "operator": "Operator",
+      "expected": "Expected Value",
+      "attributeName": "Attribute Name",
+      "cssProperty": "CSS Property",
+      "caseSensitive": "Case Sensitive",
+      "regex": "Use Regex",
+      "regexFlags": "Regex Flags",
+      "min": "Min",
+      "max": "Max"
     },
     "config": {
       "save_error": "Could not save configuration. Please check the data and try again.",
@@ -550,7 +567,8 @@
       "comparison_ends": "Ends with",
       "comparison_equals": "Exact match",
       "comparison_regex": "Regex pattern",
-      "comparison_starts": "Starts with"
+      "comparison_starts": "Starts with",
+      "page_title": "Uses page.title() — no element selector needed"
     },
     "validation": {
       "width_number": "Width must be a number",
@@ -645,7 +663,14 @@
       "args": "Ex: ['value1', 123, true] (must be JSON serializable)",
       "slowMo": "Ex: 50. Delays each action for debugging.",
       "executablePath": "Ex: /path/to/chrome.exe. Use custom browser executable.",
-      "no_source": "No source"
+      "no_source": "No source",
+      "assertions": "Add at least one assertion",
+      "assertionType": "Select assertion type...",
+      "operator": "Select operator...",
+      "expected": "Enter expected value...",
+      "attributeName": "Ex: class, id, data-test-id, href, etc.",
+      "cssProperty": "Ex: display, color, font-size, background-color, etc.",
+      "regexFlags": "Ex: i, g, m"
     },
     "options": {
       "mode": {

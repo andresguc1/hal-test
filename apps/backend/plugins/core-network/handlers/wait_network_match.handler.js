@@ -1,5 +1,6 @@
 import { executePlaywrightAction } from '../../../core/ActionExecutor.js';
 import { networkHistoryService } from '../../../services/NetworkHistoryService.js';
+import { normalizeTimeout, playTimeout } from '../../../core/timeout-utils.js';
 
 const createRegex = (str) => {
     const escaped = str.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
@@ -8,7 +9,8 @@ const createRegex = (str) => {
 
 const waitNetworkMatch = (req, res) =>
     executePlaywrightAction(req, res, 'wait_network_match', async (page, opts, targetBrowserId) => {
-        const { type = 'response', urlPattern, method, statusCode, timeout = 30000 } = opts;
+        const { type = 'response', urlPattern, method, statusCode } = opts;
+        const timeout = normalizeTimeout(opts.timeout);
         if (!urlPattern) throw new Error(req.t('errors.url_pattern_required'));
 
         const regex = createRegex(urlPattern);
@@ -34,31 +36,24 @@ const waitNetworkMatch = (req, res) =>
         let data = {};
 
         if (type === 'request') {
-            const request = await page.waitForRequest(
-                (req) => {
-                    const matchUrl = regex.test(req.url());
-                    const methodFilter =
-                        method && method.toUpperCase() !== 'ALL' ? method.toUpperCase() : null;
-                    const matchMethod =
-                        !methodFilter || req.method().toUpperCase() === methodFilter;
-                    return matchUrl && matchMethod;
-                },
-                { timeout: Number(timeout) },
-            );
+            const request = await page.waitForRequest((req) => {
+                const matchUrl = regex.test(req.url());
+                const methodFilter =
+                    method && method.toUpperCase() !== 'ALL' ? method.toUpperCase() : null;
+                const matchMethod = !methodFilter || req.method().toUpperCase() === methodFilter;
+                return matchUrl && matchMethod;
+            }, playTimeout(timeout));
             data = { url: request.url(), method: request.method() };
         } else {
-            const response = await page.waitForResponse(
-                (resp) => {
-                    const matchUrl = regex.test(resp.url());
-                    const reqMethod = resp.request().method().toUpperCase();
-                    const methodFilter =
-                        method && method.toUpperCase() !== 'ALL' ? method.toUpperCase() : null;
-                    const matchMethod = !methodFilter || reqMethod === methodFilter;
-                    const matchStatus = !statusCode || resp.status() === Number(statusCode);
-                    return matchUrl && matchMethod && matchStatus;
-                },
-                { timeout: Number(timeout) },
-            );
+            const response = await page.waitForResponse((resp) => {
+                const matchUrl = regex.test(resp.url());
+                const reqMethod = resp.request().method().toUpperCase();
+                const methodFilter =
+                    method && method.toUpperCase() !== 'ALL' ? method.toUpperCase() : null;
+                const matchMethod = !methodFilter || reqMethod === methodFilter;
+                const matchStatus = !statusCode || resp.status() === Number(statusCode);
+                return matchUrl && matchMethod && matchStatus;
+            }, playTimeout(timeout));
             data = { url: response.url(), status: response.status() };
         }
         return {

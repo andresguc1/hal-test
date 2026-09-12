@@ -43,7 +43,7 @@ const interceptRequestBodySchema = Joi.object({
         }),
 
     // 5. timeout (Duración de Interceptación)
-    timeout: Joi.number().integer().min(0).default(60000).messages({
+    timeout: Joi.number().integer().min(0).default(0).messages({
         'number.min': 'El timeout debe ser positivo o cero.',
     }),
 

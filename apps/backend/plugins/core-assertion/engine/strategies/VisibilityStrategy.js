@@ -1,4 +1,5 @@
 import { BaseAssertionStrategy, registerAssertionStrategy } from '../AssertionBaseStrategy.js';
+import { playTimeout } from '../../../../core/timeout-utils.js';
 
 /**
  * VisibilityStrategy
@@ -21,12 +22,12 @@ export class VisibilityStrategy extends BaseAssertionStrategy {
         return ['visible', 'hidden'];
     }
 
-    async execute(_page, locator, assertion, { timeout = 5000 } = {}) {
+    async execute(_page, locator, assertion, { timeout = 0 } = {}) {
         const operator = assertion.operator || 'visible';
 
         if (operator === 'visible') {
             try {
-                await locator.waitFor({ state: 'visible', timeout });
+                await locator.waitFor({ state: 'visible', ...playTimeout(timeout) });
                 return {
                     passed: true,
                     actual: 'visible',
@@ -39,10 +40,7 @@ export class VisibilityStrategy extends BaseAssertionStrategy {
                     passed: false,
                     actual: count === 0 ? 'absent' : visible ? 'visible' : 'hidden',
                     expected: 'visible',
-                    message:
-                        count === 0
-                            ? `Element was not found within ${timeout}ms.`
-                            : `Element is not visible within ${timeout}ms.`,
+                    message: count === 0 ? 'Element was not found.' : 'Element is not visible.',
                 };
             }
         }

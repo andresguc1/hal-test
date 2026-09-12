@@ -1,5 +1,6 @@
 import { executePlaywrightAction } from '../../../core/ActionExecutor.js';
 import { buildPlaywrightLocator, normalizeSelectorForDotId } from '../../../core/selector-utils.js';
+import { normalizeTimeout, playTimeout } from '../../../core/timeout-utils.js';
 
 /**
  * Selects a single radio button (native input or ARIA [role=radio]).
@@ -10,15 +11,15 @@ import { buildPlaywrightLocator, normalizeSelectorForDotId } from '../../../core
 const setRadio = (req, res) =>
     executePlaywrightAction(req, res, 'set_radio', async (page, opts) => {
         const { selector } = opts;
-        const timeout = opts.timeout ? Number(opts.timeout) : 30000;
+        const timeout = normalizeTimeout(opts.timeout);
 
         if (!selector) throw new Error(req.t('errors.selector_required'));
 
         const targetSelector = await normalizeSelectorForDotId(page, selector);
-        const runOptions = { timeout };
+        const runOptions = playTimeout(timeout);
         const locator = buildPlaywrightLocator(page, targetSelector);
 
-        await locator.waitFor({ state: 'attached', timeout });
+        await locator.waitFor({ state: 'attached', ...playTimeout(timeout) });
 
         // check() only works on native radio inputs; ARIA [role=radio] elements
         // are selected via click.

@@ -37,7 +37,7 @@ const pickListOptionBodySchema = Joi.object({
     }),
 
     // 5. timeout (Número, Mínimo 1)
-    timeout: Joi.number().integer().min(1).default(30000).messages({
+    timeout: Joi.number().integer().min(0).default(0).messages({
         'number.min': 'El tiempo de espera (timeout) debe ser al menos 1ms.',
     }),
 

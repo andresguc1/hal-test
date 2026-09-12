@@ -1,4 +1,5 @@
 import { BaseAssertionStrategy, registerAssertionStrategy } from '../AssertionBaseStrategy.js';
+import { playTimeout } from '../../../../core/timeout-utils.js';
 
 /**
  * ExistenceStrategy
@@ -21,7 +22,7 @@ export class ExistenceStrategy extends BaseAssertionStrategy {
         return ['exists', 'not_exists'];
     }
 
-    async execute(_page, locator, assertion, { timeout = 5000 } = {}) {
+    async execute(_page, locator, assertion, { timeout = 0 } = {}) {
         const operator = assertion.operator || 'exists';
 
         if (operator === 'not_exists') {
@@ -38,7 +39,7 @@ export class ExistenceStrategy extends BaseAssertionStrategy {
         }
 
         try {
-            await locator.waitFor({ state: 'attached', timeout });
+            await locator.waitFor({ state: 'attached', ...playTimeout(timeout) });
             return {
                 passed: true,
                 actual: 'present',
@@ -50,7 +51,7 @@ export class ExistenceStrategy extends BaseAssertionStrategy {
                 passed: false,
                 actual: count > 0 ? 'present' : 'absent',
                 expected: 'present',
-                message: `Element was not found within ${timeout}ms.`,
+                message: count > 0 ? 'Element was not attached.' : 'Element was not found.',
             };
         }
     }

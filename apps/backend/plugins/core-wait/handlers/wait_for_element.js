@@ -1,9 +1,11 @@
 import { executePlaywrightAction } from '../../../core/ActionExecutor.js';
 import { buildPlaywrightLocator, normalizeSelectorForDotId } from '../../../core/selector-utils.js';
+import { normalizeTimeout, playTimeout } from '../../../core/timeout-utils.js';
 
 const waitForElement = (req, res) =>
     executePlaywrightAction(req, res, 'wait_for_element', async (page, opts) => {
-        const { selector, condition = 'visible', timeout = 30000, scrollIntoView = false } = opts;
+        const { selector, condition = 'visible', scrollIntoView = false } = opts;
+        const timeout = normalizeTimeout(opts.timeout);
 
         try {
             const targetSelector = await normalizeSelectorForDotId(page, selector);
@@ -11,7 +13,7 @@ const waitForElement = (req, res) =>
 
             if (scrollIntoView) {
                 try {
-                    await locator.waitFor({ state: 'attached', timeout });
+                    await locator.waitFor({ state: 'attached', ...playTimeout(timeout) });
                     await locator.scrollIntoViewIfNeeded({ timeout: 5000 }).catch(() => {});
                 } catch (err) {
                     console.warn(
@@ -23,7 +25,7 @@ const waitForElement = (req, res) =>
 
             const playwrightState = condition;
 
-            await locator.waitFor({ state: playwrightState, timeout });
+            await locator.waitFor({ state: playwrightState, ...playTimeout(timeout) });
 
             const messages = {
                 visible: req.t('actions.wait_for_element.visible', { selector: targetSelector }),

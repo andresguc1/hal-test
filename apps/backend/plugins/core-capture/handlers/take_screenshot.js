@@ -1,5 +1,6 @@
 import * as path from 'path';
 import { executePlaywrightAction } from '../../../core/ActionExecutor.js';
+import { normalizeTimeout, playTimeout } from '../../../core/timeout-utils.js';
 
 const takeScreenshotAction = (req, res) =>
     executePlaywrightAction(req, res, 'take_screenshot', async (page, opts) => {
@@ -9,9 +10,9 @@ const takeScreenshotAction = (req, res) =>
             path: savePath,
             format = 'png',
             quality = 100,
-            timeout = 30000,
             enabled = true,
         } = opts;
+        const timeout = normalizeTimeout(opts.timeout);
 
         if (!enabled) {
             console.log(`[Screenshot] Node skipped because it is disabled.`);
@@ -31,7 +32,7 @@ const takeScreenshotAction = (req, res) =>
         // Playwright options configuration
         const screenshotOptions = {
             type: format,
-            timeout: fullPage ? Math.max(timeout, 60000) : timeout, // 60s for fullPage
+            timeout: timeout > 0 ? timeout : undefined, // empty → Playwright default
             animations: 'disabled', // Prevent crashes on high-motion sites
         };
 
@@ -63,7 +64,7 @@ const takeScreenshotAction = (req, res) =>
         if (selector) {
             // Case 1: Element Capture
             console.log(`[Screenshot] Element mode: ${selector} (Timeout: ${timeout}ms)`);
-            await page.waitForSelector(selector, { state: 'visible', timeout });
+            await page.waitForSelector(selector, { state: 'visible', ...playTimeout(timeout) });
             const element = await page.$(selector);
             if (!element) {
                 throw new Error(req.t('errors.element_not_found', { selector }));

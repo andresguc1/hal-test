@@ -1,6 +1,9 @@
+import { normalizeTimeout } from '../../../core/timeout-utils.js';
+
 const branchAction = async (req, res) => {
     try {
-        const { mode, timeout = 30000 } = req.body;
+        const { mode } = req.body;
+        const timeout = normalizeTimeout(req.body.timeout);
 
         return res.status(200).json({
             success: true,
