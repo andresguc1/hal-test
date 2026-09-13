@@ -214,7 +214,7 @@
       "type_text": "Escribir Texto",
       "fill_form": "Rellenar Formulario",
       "select_option": "Seleccionar opciones",
-      "set_checkbox": "Marcar Checkbox",
+      "set_checkbox": "Marcar Opción",
       "set_radio": "Seleccionar Radio",
       "pick_list_option": "Elegir Opción de Lista",
       "scroll": "Desplazar",
@@ -507,6 +507,7 @@
       "current_unchecked": "Desmarcada",
       "current_unknown": "Desconocida",
       "retry_detect": "Reintentar detección",
+      "advanced": "Opciones avanzadas",
       "conditional": {
         "control_logic": "Lógica de Control",
         "if": "Si",

@@ -187,8 +187,17 @@ describe("set_checkbox payload builder", () => {
       selector: "#accept",
       action: "uncheck",
       timeout: 0,
+      verifyState: true,
       browserId: "",
     });
+  });
+
+  it("forwards verifyState false", () => {
+    const payload = set_checkbox({ selector: "#accept", verifyState: false });
+    expect(payload.verifyState).toBe(false);
+
+    const multi = set_checkbox({ multiple: true, fields: [{ target: "#a" }], verifyState: false });
+    expect(multi.verifyState).toBe(false);
   });
 
   it("normalizes invalid actions to check", () => {
@@ -224,6 +233,7 @@ describe("set_checkbox payload builder", () => {
       selector: "",
       action: "check",
       timeout: 5000,
+      verifyState: true,
       browserId: "",
     });
   });

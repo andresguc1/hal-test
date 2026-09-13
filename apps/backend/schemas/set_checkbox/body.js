@@ -48,6 +48,12 @@ const setCheckboxBodySchema = Joi.object({
         'number.min': 'El tiempo de espera (timeout) debe ser al menos 1ms.',
     }),
 
+    // verifyState — verifica el estado final del checkbox tras la acción
+    // (equivalente a expect(locator).toBeChecked()). Deshabilitable.
+    verifyState: Joi.boolean().default(true).messages({
+        'boolean.base': 'verifyState debe ser un valor booleano.',
+    }),
+
     // browserId (ID del navegador objetivo)
     browserId: Joi.string().allow(null, '').optional().messages({
         'string.base': 'browserId debe ser una cadena de texto (el ID único del navegador).',

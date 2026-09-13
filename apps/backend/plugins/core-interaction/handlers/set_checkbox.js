@@ -1,7 +1,12 @@
 import { executePlaywrightAction } from '../../../core/ActionExecutor.js';
 import { buildPlaywrightLocator, normalizeSelectorForDotId } from '../../../core/selector-utils.js';
 import { normalizeTimeout, playTimeout } from '../../../core/timeout-utils.js';
-import { actionLabel, applyCheckbox, findLabelCheckboxLocator } from '../utils/checkboxUtils.js';
+import {
+    applyCheckbox,
+    assertCheckedState,
+    findLabelCheckboxLocator,
+    readState,
+} from '../utils/checkboxUtils.js';
 
 /**
  * Sets the state of checkbox(es) — native inputs OR ARIA [role=checkbox] —
@@ -11,17 +16,12 @@ import { actionLabel, applyCheckbox, findLabelCheckboxLocator } from '../utils/c
  *  - Single:   { selector, action } where action ∈ check | uncheck | toggle
  *  - Multiple: { fields: [{ strategy: 'css'|'label', target, action }] }
  *
- * The live state is always re-read from the DOM after each action. If the
- * desired state is not reached, the action is retried once before failing.
+ * The live state is always re-read from the DOM after each action. When
+ * `verifyState` is enabled (default), the reached state is additionally
+ * asserted with Playwright-style polling (expect(locator).toBeChecked()).
  */
 
-const assertMatches = (target, action, state, source) => {
-    if (state !== actionLabel(action)) {
-        throw new Error(
-            `Failed to ${action} ${source}: state is ${state} after the action (retried once).`,
-        );
-    }
-};
+const shouldVerifyState = (opts, action) => opts.verifyState !== false && action !== 'toggle';
 
 /** Resolves the target locator for a css|label strategy. */
 const resolveCheckboxLocator = async (page, { strategy, target }, timeout) => {
@@ -57,15 +57,20 @@ const setCheckbox = (req, res) =>
                 );
 
                 const state = await applyCheckbox(page, locator, fAction, { timeout });
-                if (fAction !== 'toggle') {
-                    assertMatches(field.target, fAction, state, source);
-                }
+
+                const verifiedState = shouldVerifyState(opts, fAction)
+                    ? await assertCheckedState(locator, fAction === 'check', { timeout })
+                    : state;
 
                 results.push({
                     strategy,
                     target: String(target).trim(),
                     action: fAction,
-                    checked: state === 'checked',
+                    source,
+                    checked: verifiedState === 'checked',
+                    ...(shouldVerifyState(opts, fAction)
+                        ? { verification: 'toBeChecked' }
+                        : { verification: 'readState' }),
                 });
 
                 if (opts.delayAfterEach) {
@@ -98,8 +103,12 @@ const setCheckbox = (req, res) =>
 
         await locator.waitFor({ state: 'attached', ...playTimeout(timeout) });
 
+        const beforeState = await readState(locator).catch(() => 'unknown');
         const state = await applyCheckbox(page, locator, action, { timeout });
-        assertMatches(selector, action, state, targetSelector);
+
+        const verifiedState = shouldVerifyState(opts, action)
+            ? await assertCheckedState(locator, action === 'check', { timeout })
+            : state;
 
         return {
             message: req.t('actions.set_checkbox.success', {
@@ -109,10 +118,20 @@ const setCheckbox = (req, res) =>
             data: {
                 selector: targetSelector,
                 action,
-                checked: state === 'checked',
+                checked: verifiedState === 'checked',
                 selected: action === 'check',
+                verification: shouldVerifyState(opts, action) ? 'toBeChecked' : 'readState',
+                beforeState,
+                afterState: verifiedState,
             },
-            traceDetails: { selector: targetSelector, action, checked: state === 'checked' },
+            traceDetails: {
+                selector: targetSelector,
+                action,
+                checked: verifiedState === 'checked',
+                verification: shouldVerifyState(opts, action) ? 'toBeChecked' : 'readState',
+                beforeState,
+                afterState: verifiedState,
+            },
         };
     });
 

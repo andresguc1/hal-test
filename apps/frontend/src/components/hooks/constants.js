@@ -493,23 +493,16 @@ export const NODE_FIELD_CONFIGS = {
 
   set_checkbox: [
     {
-      name: "multiple",
-      label: "🟦 Select multiple checkboxes",
-      type: "boolean",
-      defaultValue: false,
-      hint: "Check several checkboxes in a single step.",
-    },
-    {
       name: "selector",
-      label: "Checkbox Selector",
+      label: "Checkbox Locator",
       type: "text",
-      placeholder: "Ex: #accept-terms or input[name='agree']",
+      placeholder: "Ex: #accept-terms, input[name='agree']",
       required: true,
       validation: (value, allParams, t) => {
         if (!allParams.multiple && !value) return t("nodes.validation.selector_required");
         return null;
       },
-      hint: "Selector of the checkbox element (native input, [role=checkbox] or its label).",
+      hint: "Playwright locator of the checkbox element (getByRole, #id, [data-testid], etc.).",
       showIf: (params) => !params.multiple,
     },
     {
@@ -521,15 +514,35 @@ export const NODE_FIELD_CONFIGS = {
         { value: "uncheck", label: "✖ Uncheck (set unchecked)" },
         { value: "toggle", label: "🔄 Toggle (invert)" },
       ],
+      groups: [
+        { label: "Basic", values: ["check", "uncheck"] },
+        { label: "Advanced", values: ["toggle"] },
+      ],
       defaultValue: "check",
       required: true,
       showIf: (params) => !params.multiple,
+    },
+    {
+      name: "multiple",
+      label: "🟦 Select multiple checkboxes",
+      type: "boolean",
+      defaultValue: false,
+      hint: "Check several checkboxes in a single step.",
+      advanced: true,
     },
     {
       name: "fields",
       label: "Checkboxes",
       type: "checkbox_list",
       showIf: (params) => !!params.multiple,
+      advanced: true,
+    },
+    {
+      name: "verifyState",
+      label: "🔎 Verify checkbox state after the action (toBeChecked)",
+      type: "boolean",
+      defaultValue: true,
+      advanced: true,
     },
     {
       name: "timeout",
@@ -538,6 +551,7 @@ export const NODE_FIELD_CONFIGS = {
       placeholder: "Ex: 15000",
       defaultValue: 30000,
       min: 1,
+      advanced: true,
       validation: (value, allParams, t) => {
         if (value !== undefined && value !== null && value < 1)
           return t("nodes.validation.timeout_min_1");

@@ -501,6 +501,7 @@ export const set_checkbox = (payload = {}) => {
     ? payload.action
     : "check";
   const timeout = asNumber(payload?.timeout, 0, 0);
+  const verifyState = payload?.verifyState !== false;
 
   if (payload?.multiple) {
     const rawFields = Array.isArray(payload?.fields) ? payload.fields : [];
@@ -533,6 +534,7 @@ export const set_checkbox = (payload = {}) => {
       selector: asString(payload?.selector),
       action,
       timeout,
+      verifyState,
       browserId: asString(payload?.browserId),
     };
   }
@@ -545,6 +547,7 @@ export const set_checkbox = (payload = {}) => {
     selector,
     action,
     timeout,
+    verifyState,
     browserId: asString(payload?.browserId),
   };
 };

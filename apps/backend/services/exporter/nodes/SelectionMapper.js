@@ -134,48 +134,77 @@ export const SelectionMapper = {
             case 'typescript': {
                 const s = q(selector);
                 const unchecked = params.action === 'uncheck';
+                const locExpr = `page.locator(\`${s}\`)`;
+                const verify =
+                    params.action !== 'toggle' && params.verifyState !== false
+                        ? `\n    await expect(${locExpr}).toBeChecked({ checked: ${!unchecked} });`
+                        : '';
                 return {
                     set_checkbox:
                         params.action === 'toggle'
-                            ? `await page.locator(\`${s}\`).click();`
-                            : `await page.locator(\`${s}\`).setChecked(${!unchecked});`,
-                    set_radio: `await page.locator(\`${s}\`).check();`,
+                            ? `await ${locExpr}.click();`
+                            : `await ${locExpr}.setChecked(${!unchecked});` + verify,
+                    set_radio: `await ${locExpr}.check();`,
                     pick_list_option: generatePickListCode('javascript', selector, params),
                 }[action];
             }
 
             case 'python': {
                 const s = q(selector);
+                const locExpr = `page.locator("${s}")`;
+                const verify =
+                    params.action !== 'toggle' && params.verifyState !== false
+                        ? params.action === 'uncheck'
+                            ? `\nawait expect(${locExpr}).not_to_be_checked()`
+                            : `\nawait expect(${locExpr}).to_be_checked()`
+                        : '';
                 return {
                     set_checkbox:
                         params.action === 'toggle'
-                            ? `await page.locator("${s}").click()`
-                            : `await page.locator("${s}").set_checked(${params.action === 'uncheck' ? 'False' : 'True'})`,
-                    set_radio: `await page.locator("${s}").check()`,
+                            ? `await ${locExpr}.click()`
+                            : `await ${locExpr}.set_checked(${params.action === 'uncheck' ? 'False' : 'True'})` +
+                              verify,
+                    set_radio: `await ${locExpr}.check()`,
                     pick_list_option: generatePickListCode('python', selector, params),
                 }[action];
             }
 
             case 'java': {
                 const s = q(selector);
+                const locExpr = `page.locator("${s}")`;
+                const verify =
+                    params.action !== 'toggle' && params.verifyState !== false
+                        ? params.action === 'uncheck'
+                            ? `\n    assertThat(${locExpr}).not().toBeChecked();`
+                            : `\n    assertThat(${locExpr}).toBeChecked();`
+                        : '';
                 return {
                     set_checkbox:
                         params.action === 'toggle'
-                            ? `page.locator("${s}").click();`
-                            : `page.locator("${s}").setChecked(${params.action === 'uncheck' ? 'false' : 'true'});`,
-                    set_radio: `page.locator("${s}").check();`,
+                            ? `${locExpr}.click();`
+                            : `${locExpr}.setChecked(${params.action === 'uncheck' ? 'false' : 'true'});` +
+                              verify,
+                    set_radio: `${locExpr}.check();`,
                     pick_list_option: generatePickListCode('java', selector, params),
                 }[action];
             }
 
             case 'csharp': {
                 const s = q(selector);
+                const locExpr = `page.Locator("${s}")`;
+                const verify =
+                    params.action !== 'toggle' && params.verifyState !== false
+                        ? params.action === 'uncheck'
+                            ? `\n    await Expect(${locExpr}).Not.ToBeCheckedAsync();`
+                            : `\n    await Expect(${locExpr}).ToBeCheckedAsync();`
+                        : '';
                 return {
                     set_checkbox:
                         params.action === 'toggle'
-                            ? `await page.Locator("${s}").ClickAsync();`
-                            : `await page.Locator("${s}").SetCheckedAsync(${params.action === 'uncheck' ? 'false' : 'true'});`,
-                    set_radio: `await page.Locator("${s}").CheckAsync();`,
+                            ? `await ${locExpr}.ClickAsync();`
+                            : `await ${locExpr}.SetCheckedAsync(${params.action === 'uncheck' ? 'false' : 'true'});` +
+                              verify,
+                    set_radio: `await ${locExpr}.CheckAsync();`,
                     pick_list_option: generatePickListCode('csharp', selector, params),
                 }[action];
             }

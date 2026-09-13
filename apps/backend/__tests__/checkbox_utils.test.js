@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import {
     actionLabel,
     applyCheckbox,
+    assertCheckedState,
     findLabelCheckboxLocator,
     resolveLabelCheckbox,
 } from '../plugins/core-interaction/utils/checkboxUtils.js';
@@ -149,5 +150,49 @@ describe('applyCheckbox', () => {
         const state = await applyCheckbox(tickingPage, loc, 'toggle', { timeout: 1000 });
         expect(loc.click).toHaveBeenCalled();
         expect(state).toBe('checked');
+    });
+});
+
+describe('assertCheckedState', () => {
+    const makeStateLocator = (isCheckedImpl, evaluateImpl) => ({
+        isChecked: vi.fn(isCheckedImpl),
+        evaluate: vi.fn(async () => (evaluateImpl ? evaluateImpl() : false)),
+    });
+
+    it('resolves immediately when the state already matches', async () => {
+        const loc = makeStateLocator(async () => true);
+        const state = await assertCheckedState(loc, true, { timeout: 200 });
+        expect(state).toBe('checked');
+        expect(loc.isChecked).toHaveBeenCalledTimes(1);
+    });
+
+    it('polls until the expected state is reached', async () => {
+        let reads = 0;
+        const loc = makeStateLocator(async () => {
+            reads += 1;
+            return reads >= 2;
+        });
+        const state = await assertCheckedState(loc, true, { timeout: 500 });
+        expect(state).toBe('checked');
+        expect(reads).toBeGreaterThanOrEqual(2);
+    });
+
+    it('throws when the state never matches within the timeout', async () => {
+        const loc = makeStateLocator(async () => false);
+        await expect(assertCheckedState(loc, true, { timeout: 100 })).rejects.toThrow(
+            /expected checked but got unchecked/,
+        );
+    });
+
+    it('falls back to the evaluate-based read when isChecked rejects', async () => {
+        const loc = {
+            isChecked: vi.fn(async () => {
+                throw new Error('detached');
+            }),
+            evaluate: vi.fn(async () => true),
+        };
+        const state = await assertCheckedState(loc, true, { timeout: 200 });
+        expect(state).toBe('checked');
+        expect(loc.evaluate).toHaveBeenCalled();
     });
 });

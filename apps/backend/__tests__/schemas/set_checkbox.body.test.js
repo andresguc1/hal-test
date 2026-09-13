@@ -18,6 +18,29 @@ describe('set_checkbox body schema', () => {
         expect(value.action).toBe('toggle');
     });
 
+    it('should default verifyState to true', () => {
+        const { error, value } = setCheckboxBodySchema.validate({ selector: '#accept' });
+        expect(error).toBeUndefined();
+        expect(value.verifyState).toBe(true);
+    });
+
+    it('should accept verifyState false', () => {
+        const { error, value } = setCheckboxBodySchema.validate({
+            selector: '#accept',
+            verifyState: false,
+        });
+        expect(error).toBeUndefined();
+        expect(value.verifyState).toBe(false);
+    });
+
+    it('should reject a non-boolean verifyState', () => {
+        const { error } = setCheckboxBodySchema.validate({
+            selector: '#accept',
+            verifyState: 'yes',
+        });
+        expect(error).toBeDefined();
+    });
+
     it('should reject invalid actions', () => {
         const { error } = setCheckboxBodySchema.validate({
             selector: '#accept',

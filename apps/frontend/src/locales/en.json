@@ -214,7 +214,7 @@
       "type_text": "Type Text",
       "fill_form": "Fill Form",
       "select_option": "Select Options",
-      "set_checkbox": "Set Checkbox",
+      "set_checkbox": "Check Option",
       "set_radio": "Select Radio",
       "pick_list_option": "Pick List Option",
       "scroll": "Scroll",
@@ -507,6 +507,7 @@
       "current_unchecked": "Unchecked",
       "current_unknown": "Unknown",
       "retry_detect": "Retry Detection",
+      "advanced": "Advanced Options",
       "conditional": {
         "control_logic": "Flow Control",
         "if": "When",

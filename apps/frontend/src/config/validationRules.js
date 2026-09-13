@@ -318,17 +318,11 @@ export const NODE_INPUTS = {
   ],
   set_checkbox: [
     {
-      key: "multiple",
-      label: "🟦 Select multiple checkboxes",
-      type: "boolean",
-      defaultValue: false,
-      hint: "Check several checkboxes in a single step.",
-    },
-    {
       key: "selector",
-      label: "Checkbox Selector",
+      label: "Checkbox Locator",
       type: "selector",
-      placeholder: "#accept-terms, form input[type=checkbox]",
+      placeholder:
+        "getByRole('checkbox', { name: 'Accept' }), #accept-terms, input[type=checkbox]",
       required: true,
       isVisible: (c) => !c.multiple,
     },
@@ -341,14 +335,34 @@ export const NODE_INPUTS = {
         { value: "uncheck", label: "✖ Uncheck (set unchecked)" },
         { value: "toggle", label: "🔄 Toggle (invert)" },
       ],
+      optgroups: [
+        { label: "Basic", values: ["check", "uncheck"] },
+        { label: "Advanced", values: ["toggle"] },
+      ],
       defaultValue: "check",
       isVisible: (c) => !c.multiple,
+    },
+    {
+      key: "multiple",
+      label: "🟦 Select multiple checkboxes",
+      type: "boolean",
+      defaultValue: false,
+      hint: "Check several checkboxes in a single step.",
+      advanced: true,
     },
     {
       key: "fields",
       label: "Checkboxes",
       type: "checkbox_list",
       isVisible: (c) => !!c.multiple,
+      advanced: true,
+    },
+    {
+      key: "verifyState",
+      label: "🔎 Verify checkbox state after the action (toBeChecked)",
+      type: "checkbox",
+      defaultValue: true,
+      advanced: true,
     },
     {
       key: "takeScreenshot",
@@ -367,6 +381,7 @@ export const NODE_INPUTS = {
       label: "Timeout (ms)",
       type: "number",
       placeholder: "30000",
+      advanced: true,
     },
   ],
   set_radio: [

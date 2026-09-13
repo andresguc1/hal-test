@@ -235,7 +235,7 @@
       "click": "Clique",
       "type_text": "Digite texto",
       "select_option": "Selecione Opções",
-      "set_checkbox": "Marcar Checkbox",
+      "set_checkbox": "Marcar Opção",
       "set_radio": "Selecionar Radio",
       "pick_list_option": "Escolher Opção da Lista",
       "fill_form": "Preencher Formulário",
@@ -506,6 +506,7 @@
       "current_unchecked": "Desmarcada",
       "current_unknown": "Desconhecida",
       "retry_detect": "Tentar novamente",
+      "advanced": "Opções avançadas",
       "conditional": {
         "control_logic": "Controle de Fluxo",
         "if": "Quando",

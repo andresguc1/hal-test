@@ -36,19 +36,28 @@ describe('SelectionMapper pick_list_option', () => {
 
 describe('SelectionMapper set_checkbox', () => {
     describe('single mode', () => {
-        it('exports setChecked(true) for check in JS', () => {
+        it('exports setChecked(true) + toBeChecked for check in JS', () => {
             expect(single({ selector: '#accept', action: 'check' }, 'javascript')).toBe(
-                'await page.locator(`#accept`).setChecked(true);',
+                'await page.locator(`#accept`).setChecked(true);\n    await expect(page.locator(`#accept`)).toBeChecked({ checked: true });',
             );
         });
 
-        it('exports setChecked(false) for uncheck in JS', () => {
+        it('exports setChecked(false) + toBeChecked for uncheck in JS', () => {
             expect(single({ selector: '#accept', action: 'uncheck' }, 'javascript')).toBe(
-                'await page.locator(`#accept`).setChecked(false);',
+                'await page.locator(`#accept`).setChecked(false);\n    await expect(page.locator(`#accept`)).toBeChecked({ checked: false });',
             );
         });
 
-        it('exports click() for toggle in JS', () => {
+        it('omits the verification line when verifyState is disabled', () => {
+            expect(
+                single(
+                    { selector: '#accept', action: 'uncheck', verifyState: false },
+                    'javascript',
+                ),
+            ).toBe('await page.locator(`#accept`).setChecked(false);');
+        });
+
+        it('exports click() for toggle without verification in JS', () => {
             expect(single({ selector: '#accept', action: 'toggle' }, 'javascript')).toBe(
                 'await page.locator(`#accept`).click();',
             );

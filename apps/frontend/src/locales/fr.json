@@ -212,7 +212,7 @@
       "click": "Cliquer",
       "type_text": "Saisir du Texte",
       "select_option": "Sélectionner des Options",
-      "set_checkbox": "Cocher une case",
+      "set_checkbox": "Cocher une option",
       "set_radio": "Sélectionner le Radio",
       "pick_list_option": "Choisir une Option de Liste",
       "fill_form": "Remplir le formulaire",
@@ -506,6 +506,7 @@
       "current_unchecked": "Décochée",
       "current_unknown": "Inconnu",
       "retry_detect": "Réessayer la détection",
+      "advanced": "Options avancées",
       "conditional": {
         "control_logic": "Contrôle de Flux",
         "if": "Quand",

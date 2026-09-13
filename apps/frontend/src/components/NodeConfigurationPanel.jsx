@@ -219,12 +219,12 @@ const NodeConfigurationPanel = ({
     defaultValues,
   });
 
-  const [localLabel, setLocalLabel] = useState(
+const [localLabel, setLocalLabel] = useState(
     activeNode?.data?.customLabel || activeNode?.data?.label || "",
   );
-
   const [lightboxUrl, setLightboxUrl] = useState(null);
   const [expandedWarnings, setExpandedWarnings] = useState({});
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   React.useEffect(() => {
     if (!lightboxUrl) return;
@@ -266,6 +266,7 @@ const NodeConfigurationPanel = ({
           activeNode.data?.customLabel || activeNode.data?.label || "",
         );
         setExpandedWarnings({});
+        setShowAdvanced(false);
       }
       lastSyncedConfigRef.current = {
         config: globalConfig,
@@ -1060,21 +1061,56 @@ const NodeConfigurationPanel = ({
                     <option value="" disabled>
                       {t("common.select", "Select")} {fieldLabel}...
                     </option>
-                    {(typeof field.options === "function"
-                      ? field.options(localConfig)
-                      : field.options
-                    )?.map((opt) => (
-                      <option
-                        key={opt.value}
-                        value={opt.value}
-                        className="bg-slate-800 text-slate-200"
-                      >
-                        {t(
-                          "nodes.options." + field.key + "." + opt.value,
-                          opt.label,
-                        )}
-                      </option>
-                    ))}
+                    {(() => {
+                      const opts =
+                        typeof field.options === "function"
+                          ? field.options(localConfig)
+                          : field.options;
+                      if (!opts) return null;
+                      if (Array.isArray(field.optgroups)) {
+                        const byGroup = field.optgroups.map((g) => ({
+                          group: g,
+                          options: opts.filter((o) =>
+                            g.values.includes(o.value),
+                          ),
+                        }));
+                        const grouped = byGroup.filter(
+                          (g) => g.options.length > 0,
+                        );
+                        return grouped.map(({ group, options: groupOpts }) => (
+                          <optgroup
+                            key={group.label}
+                            label={group.label}
+                            className="bg-slate-800 text-slate-300"
+                          >
+                            {groupOpts.map((opt) => (
+                              <option
+                                key={opt.value}
+                                value={opt.value}
+                                className="bg-slate-800 text-slate-200"
+                              >
+                                {t(
+                                  "nodes.options." + field.key + "." + opt.value,
+                                  opt.label,
+                                )}
+                              </option>
+                            ))}
+                          </optgroup>
+                        ));
+                      }
+                      return opts.map((opt) => (
+                        <option
+                          key={opt.value}
+                          value={opt.value}
+                          className="bg-slate-800 text-slate-200"
+                        >
+                          {t(
+                            "nodes.options." + field.key + "." + opt.value,
+                            opt.label,
+                          )}
+                        </option>
+                      ));
+                    })()}
                   </select>
                   <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
                     <svg
@@ -1370,11 +1406,40 @@ const NodeConfigurationPanel = ({
     }
 
     const inputs = definedInputs || [];
+    const visibleInputs = inputs.filter(
+      (f) => !f.isVisible || f.isVisible(localConfig),
+    );
+    const primaryInputs = visibleInputs.filter((f) => !f.advanced);
+    const advancedInputs = visibleInputs.filter((f) => f.advanced);
     return (
       <div className="space-y-5">
-        {inputs
-          .filter((f) => !f.isVisible || f.isVisible(localConfig))
-          .map(renderInput)}
+        {primaryInputs.map(renderInput)}
+        {advancedInputs.length > 0 && (
+          <div className="rounded-xl border border-white/5 bg-white/[0.02] overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setShowAdvanced((v) => !v)}
+              className="w-full flex items-center justify-between px-3 py-2.5 text-[10px] uppercase tracking-wider font-bold text-slate-400 hover:text-slate-200 transition-colors"
+            >
+              <span className="flex items-center gap-2">
+                <Zap size={12} />
+                {t("nodes.config.advanced", "Advanced Options")}
+              </span>
+              <ChevronDown
+                size={14}
+                className={cn(
+                  "transition-transform duration-200",
+                  showAdvanced && "rotate-180",
+                )}
+              />
+            </button>
+            {showAdvanced && (
+              <div className="px-3 pb-4 space-y-5 border-t border-white/5 pt-4">
+                {advancedInputs.map(renderInput)}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
   };

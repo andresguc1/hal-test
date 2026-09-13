@@ -5,7 +5,7 @@
  * logic can be unit-tested without a real browser.
  */
 
-import { playTimeout } from '../../../core/timeout-utils.js';
+import { normalizeTimeout, playTimeout } from '../../../core/timeout-utils.js';
 
 export const actionLabel = (action) => (action === 'uncheck' ? 'unchecked' : 'checked');
 
@@ -37,6 +37,45 @@ export const waitSettle = (page) => {
         return page.waitForTimeout(50).catch(() => {});
     }
     return Promise.resolve();
+};
+
+/**
+ * Verifies that a locator reaches the expected checked state, polling until
+ * the assertion holds or the timeout elapses (Playwright-style auto-retry,
+ * equivalent to expect(locator).toBeChecked({ checked })). A timeout of `0`
+ * falls back to a 5000ms window (Playwright's default expect timeout).
+ *
+ * @returns {Promise<'checked'|'unchecked'>} the confirmed live state.
+ * @throws {Error} when the state never matches within the window.
+ */
+export const assertCheckedState = async (locator, expectedChecked, { timeout = 0 } = {}) => {
+    const windowMs = normalizeTimeout(timeout) || 5000;
+    const deadline = Date.now() + windowMs;
+    let checked = null;
+    let lastError = null;
+
+    do {
+        try {
+            checked = await readChecked(locator);
+            lastError = null;
+        } catch (err) {
+            lastError = err;
+            checked = null;
+        }
+        if (checked === expectedChecked) {
+            return checked ? 'checked' : 'unchecked';
+        }
+        await new Promise((resolve) => setTimeout(resolve, 50));
+    } while (Date.now() < deadline);
+
+    const actual = checked === null ? 'not readable' : checked ? 'checked' : 'unchecked';
+    throw new Error(
+        lastError
+            ? `Checkbox state could not be verified: ${lastError.message}`
+            : `Checkbox state verification failed: expected ${
+                  expectedChecked ? 'checked' : 'unchecked'
+              } but got ${actual} after the action.`,
+    );
 };
 
 /**

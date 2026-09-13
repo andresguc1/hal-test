@@ -49,6 +49,47 @@ describe("validateNodeConfig", () => {
     );
     expect(validateNodeConfig("discussion", {}).isValid).toBe(true);
   });
+
+  it("should require the set_checkbox selector outside multiple mode", () => {
+    expect(validateNodeConfig("set_checkbox", { multiple: false, selector: "" }))
+      .toMatchObject({ isValid: false });
+    expect(
+      validateNodeConfig("set_checkbox", { multiple: false, selector: "#accept" })
+        .isValid,
+    ).toBe(true);
+  });
+
+  it("should not require a selector in set_checkbox multiple mode", () => {
+    expect(
+      validateNodeConfig("set_checkbox", {
+        multiple: true,
+        fields: [{ strategy: "css", target: "#a", action: "check" }],
+      }).isValid,
+    ).toBe(true);
+  });
+});
+
+describe("set_checkbox NODE_INPUTS wiring", () => {
+  const inputs = NODE_INPUTS.set_checkbox;
+
+  it("declares the advanced fields and optgroups for the action select", () => {
+    const advancedKeys = inputs.filter((f) => f.advanced).map((f) => f.key);
+    expect(advancedKeys).toEqual(
+      expect.arrayContaining(["multiple", "fields", "verifyState", "timeout"]),
+    );
+
+    const action = inputs.find((f) => f.key === "action");
+    expect(action.optgroups).toEqual([
+      { label: "Basic", values: ["check", "uncheck"] },
+      { label: "Advanced", values: ["toggle"] },
+    ]);
+  });
+
+  it("keeps takeScreenshot and continueOnError outside the advanced block", () => {
+    const visibleAdvanced = inputs.filter((f) => f.advanced).map((f) => f.key);
+    expect(visibleAdvanced).not.toContain("takeScreenshot");
+    expect(visibleAdvanced).not.toContain("continueOnError");
+  });
 });
 
 describe("cleanNodeConfiguration", () => {

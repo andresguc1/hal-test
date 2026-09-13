@@ -87,12 +87,14 @@ export const NODE_SIMULATORS = {
   }),
 
   set_checkbox: (config) => {
+    const verified = config.verifyState !== false;
     if (config.multiple && Array.isArray(config.fields) && config.fields.length > 0) {
       const fields = config.fields.map((f) => ({
         strategy: f.strategy || "css",
         target: f.target,
         action: f.action || "check",
         checked: f.action !== "uncheck",
+        verification: verified ? "toBeChecked" : "readState",
       }));
       return {
         success: true,
@@ -100,6 +102,7 @@ export const NODE_SIMULATORS = {
         total: fields.length,
         ok: fields.length,
         fields,
+        verification: verified ? "toBeChecked" : "readState",
         evidence: { result: "PASS" },
       };
     }
@@ -109,9 +112,11 @@ export const NODE_SIMULATORS = {
       action: config.action || "check",
       checked: config.action !== "uncheck",
       selected: config.action !== "uncheck",
+      verification: verified ? "toBeChecked" : "readState",
       evidence: {
         before: "Unknown",
         after: config.action === "uncheck" ? "unchecked" : "checked",
+        verification: verified ? "toBeChecked" : "readState",
         result: "PASS",
       },
     };
