@@ -86,7 +86,8 @@ export class AttributeStrategy extends BaseAssertionStrategy {
         if (useRegex) {
             let regex;
             try {
-                regex = new RegExp(expected, caseSensitive ? flags : `${flags}i`);
+                const sanitizedFlags = (flags || '').replace(/[^gimusdy]/g, '');
+                regex = new RegExp(expected, caseSensitive ? sanitizedFlags : `${sanitizedFlags}i`);
             } catch (err) {
                 return {
                     passed: false,
