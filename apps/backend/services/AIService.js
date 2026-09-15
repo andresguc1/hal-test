@@ -13,6 +13,7 @@ import { aiGenerationGuard } from '../core/AIGenerationGuard.js';
 import aiTaskOptimizer from './AITaskOptimizer.js';
 import aiUsageLogger from './AIUsageLogger.js';
 import modelDiscoveryService from './discovery/index.js';
+import { HALBIN_DEFAULT_PROMPT, HALBIN_FLOW_GENERATION_PROMPT } from '../config/halbinIdentity.js';
 
 /**
  * Checks whether a selected model identifier refers to the same model family
@@ -270,7 +271,7 @@ class AIService {
                 `[AIService] Tools Generation. Task: ${taskType} -> Using: ${activeProvider}/${activeModel}`,
             );
 
-            let activeSystem = system || 'You are HAL-9001.';
+            let activeSystem = system || HALBIN_DEFAULT_PROMPT;
             if (activeProvider === 'ollama') {
                 activeSystem += `\n\n[OLLAMA_TOOL_INSTRUCTIONS]
 You have access to tools that can manipulate the Visual Canvas and inspect the active browser page. If you need to use a tool to fulfill the user's request, include a <tool_call> tag in your response.
@@ -1030,10 +1031,7 @@ Response Format: Return ONLY raw JSON: {"correctedSelector": "text=...", "confid
                 `[AIService] Generating Flow. Using Matrix: ${activeProvider}/${activeModel}`,
             );
 
-            const systemPrompt = `
-            You are HAL-9001. Convert Natural Language instructions into a flow of automation nodes.
-            Supported Nodes: launch_browser, open_url, click, type_text, wait_visible, take_screenshot, close_browser.
-            `;
+            const systemPrompt = HALBIN_FLOW_GENERATION_PROMPT;
 
             const ValidNodeTypes = z.enum([
                 'launch_browser',

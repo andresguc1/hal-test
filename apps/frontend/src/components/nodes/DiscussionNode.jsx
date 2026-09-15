@@ -87,7 +87,7 @@ Please participate in the discussion. Answer questions, suggest improvements, or
       if (replyText.trim()) {
         const commentObj = {
           id: `comment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          userName: "HAL-9001",
+          userName: "HALBIN",
           userColor: "#a78bfa", // Violet
           text: replyText.trim(),
           timestamp: new Date().toISOString(),
@@ -156,7 +156,7 @@ Please participate in the discussion. Answer questions, suggest improvements, or
                 "flex flex-col gap-0.5 bg-slate-950/40 p-2 rounded-lg border border-slate-800/40",
                 c.isAi ||
                   c.userName?.includes("(AI)") ||
-                  c.userName === "HAL-9001"
+                  c.userName === "HALBIN"
                   ? "border-violet-500/40 bg-violet-950/20 shadow-[0_0_10px_rgba(139,92,246,0.05)]"
                   : "",
               )}
@@ -171,7 +171,7 @@ Please participate in the discussion. Answer questions, suggest improvements, or
                   </span>
                   {(c.isAi ||
                     c.userName?.includes("(AI)") ||
-                    c.userName === "HAL-9001") && (
+                    c.userName === "HALBIN") && (
                     <span className="text-[7px] font-black bg-gradient-to-r from-violet-500 to-indigo-500 text-white px-1 py-0.25 rounded uppercase tracking-wider scale-90 origin-left flex items-center gap-0.5 shrink-0 select-none">
                       <Sparkles size={6} className="text-white" />
                       SYSTEM AI

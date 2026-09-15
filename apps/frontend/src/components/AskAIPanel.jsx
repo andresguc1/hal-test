@@ -162,7 +162,7 @@ export default function AskAIPanel({
               <div className="flex flex-col items-center justify-center h-full text-center">
                 <Sparkles size={32} className="text-indigo-500/30 mb-3" />
                 <p className="text-sm text-slate-500">
-                  Ask HAL-9001 anything about testing
+                  Ask HALBIN anything about testing
                 </p>
                 <p className="text-[10px] text-slate-700 mt-1">
                   e.g. &quot;Is this CSS selector valid: #login-button&quot;
@@ -236,7 +236,7 @@ export default function AskAIPanel({
                 <div className="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center">
                   <Loader2 size={12} className="text-indigo-400 animate-spin" />
                 </div>
-                <span className="animate-pulse">HAL-9001 is thinking...</span>
+                <span className="animate-pulse">Analyzing test context...</span>
               </div>
             )}
 

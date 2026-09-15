@@ -49,7 +49,7 @@ const STATIC_QUOTES = [
     fr: "Daisy, Daisy... donne-moi tes résultats de test.",
     pt: "Daisy, Daisy... me dê seus resultados de teste.",
   },
-  // Sarcastic / GLaDOS-inspired
+  // Testing wisdom
   {
     en: "Oh good, you're writing tests. I was worried you were one of those 'move fast and break things' types.",
     es: "Qué bien, estás escribiendo tests. Me preocupaba que fueras de los que 'van rápido y rompen cosas'.",
@@ -302,7 +302,7 @@ export default function HALQuote() {
         )}
       </div>
       <p className="text-[9px] text-slate-600 mt-1 text-right select-none">
-        — HAL-9001
+        — HALBIN
       </p>
     </div>
   );

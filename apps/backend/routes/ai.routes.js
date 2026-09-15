@@ -10,6 +10,7 @@ import {
     clearAiUsage,
 } from '../controllers/aiUsage.controller.js';
 import { discoverAiModels } from '../controllers/aiDiscovery.controller.js';
+import { HALBIN_HEAL_QUOTE_SYSTEM, HALBIN_HEAL_QUOTE_PROMPT } from '../config/halbinIdentity.js';
 
 const router = express.Router();
 
@@ -345,7 +346,7 @@ router.post('/ask', async (req, res) => {
             apiKey,
             baseUrl: activeBaseUrl,
             temperature: temp,
-            system: 'You are HAL-9001, a QA automation expert assistant. Answer testing-related queries concisely and accurately.',
+            system: "You are HALBIN, HalTest's testing intelligence. Answer testing-related queries concisely and accurately.",
             taskType: 'reasoning',
         });
 
@@ -381,7 +382,7 @@ router.post('/ask', async (req, res) => {
 
 /**
  * POST /api/ai/hal-quote
- * Generate a HAL-9001 personality quote. Used by the Toolbox greeting.
+ * Generate a HALBIN testing wisdom quote. Used by the Toolbox greeting.
  */
 router.post('/hal-quote', async (req, res) => {
     const provider = req.headers['x-ai-provider'] || 'ollama';
@@ -389,28 +390,21 @@ router.post('/hal-quote', async (req, res) => {
     const activeBaseUrl = sanitizeBaseUrl(req.headers['x-ai-base-url']);
     const apiKey = req.headers['x-ai-api-key'] || 'ollama';
 
-    const system = `You are HAL-9001, the AI brain behind a visual test automation tool called HalTest.
-Generate a single short quote (1-2 sentences max) in the personality of HAL 9000 / GLaDOS / Marvin.
-Mix calm clinical precision with dry sarcasm and subtle existential dread.
-The quote should be about testing, automation, browsers, or the futility of human debugging.
-Do NOT use quotes marks. Do NOT prefix with "HAL:" or similar. Just the raw quote.
-Vary your tone: sometimes helpful, sometimes ominous, sometimes bored.`;
-
     try {
         const result = await aiService.generateText({
-            prompt: 'Generate one short HAL-9001 personality quote.',
+            prompt: HALBIN_HEAL_QUOTE_PROMPT,
             model: activeModel,
             provider,
             apiKey,
             baseUrl: activeBaseUrl,
             temperature: 0.9,
-            system,
+            system: HALBIN_HEAL_QUOTE_SYSTEM,
             taskType: 'general',
         });
 
         res.json({ success: true, quote: result.text.trim() });
     } catch (error) {
-        console.error('[AI] HAL quote generation failed:', error.message);
+        console.error('[AI] HALBIN quote generation failed:', error.message);
         res.status(500).json({ success: false, error: error.message });
     }
 });
