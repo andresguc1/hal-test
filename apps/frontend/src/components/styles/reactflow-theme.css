@@ -45,22 +45,37 @@
 /* ========================================
    MINIMAP
    ======================================== */
+/* Base styles - refined in StyledMiniMap.css for .custom-minimap */
 .react-flow__minimap {
-  background: hsl(var(--card));
-  border: 2px solid hsl(var(--border));
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-ui);
+  border-radius: 10px;
+  box-shadow: var(--panel-shadow);
+  backdrop-filter: blur(16px);
 }
 
 .react-flow__minimap-mask {
-  fill: hsl(var(--accent));
-  opacity: 0.3;
+  fill: var(--bg-canvas);
+  opacity: 0.4;
+  stroke: hsl(var(--primary));
+  stroke-width: 2;
 }
 
 .react-flow__minimap-node {
-  fill: hsl(var(--muted));
-  stroke: hsl(var(--border));
+  fill: currentColor;
+  stroke: currentColor;
   stroke-width: 1;
+  rx: 2;
+  ry: 2;
+  opacity: 0.9;
+}
+
+/* Selected node in minimap */
+.react-flow__minimap-node.selected {
+  opacity: 1;
+  stroke: hsl(var(--primary));
+  stroke-width: 1.5;
+  filter: drop-shadow(0 0 2px hsl(var(--primary)));
 }
 
 /* ========================================

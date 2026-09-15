@@ -1,15 +1,172 @@
-/* Positioning for mini-map to prevent jumping.
-   Uses fixed positioning so the minimap stays in viewport regardless of canvas pan/zoom. */
-.react-flow__minimap {
-  position: fixed !important;
-  bottom: 55px !important;
-  right: 20px !important;
-  z-index: 50 !important;
-  width: 180px !important;
-  height: 120px !important;
+/* ========================================
+   HALTEST MINIMAP - Professional Workflow Overview
+   ======================================== */
+
+/* Container - Uses React Flow's default absolute positioning within the pane */
+.custom-minimap {
+  width: 200px;
+  height: 140px;
+  border-radius: 10px;
+  overflow: hidden;
+  transition:
+    box-shadow var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
 }
 
-/* Glow effect on hover */
-.react-flow__minimap:hover {
-  box-shadow: 0 0 15px rgba(26, 115, 232, 0.6);
+/* Glass panel integration - inherits from .glass-panel utility */
+.custom-minimap.glass-panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-ui);
+  box-shadow: var(--panel-shadow);
+  backdrop-filter: blur(16px);
+}
+
+/* Hover state - subtle elevation increase */
+.custom-minimap:hover {
+  box-shadow:
+    var(--panel-shadow),
+    0 0 0 1px hsl(var(--primary) / 0.2);
+}
+
+/* Focus state for accessibility */
+.custom-minimap:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+}
+
+/* Responsive sizing */
+@media (max-width: 1024px) {
+  .custom-minimap {
+    width: 160px;
+    height: 110px;
+  }
+}
+
+@media (max-width: 768px) {
+  .custom-minimap {
+    width: 140px;
+    height: 100px;
+  }
+}
+
+/* ========================================
+   NODE REPRESENTATION
+   ======================================== */
+
+/* Base node style - smaller, cleaner rectangles */
+.custom-minimap .react-flow__minimap-node {
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-width: 1;
+  rx: 2;
+  ry: 2;
+  opacity: 0.9;
+  transition: opacity var(--duration-fast) var(--ease-standard);
+}
+
+/* Selected node in minimap */
+.custom-minimap .react-flow__minimap-node.selected {
+  opacity: 1;
+  stroke: hsl(var(--primary));
+  stroke-width: 1.5;
+  filter: drop-shadow(0 0 2px hsl(var(--primary)));
+}
+
+/* ========================================
+   VIEWPORT MASK (The highlighted area)
+   ======================================== */
+
+/* Mask background - subtle, doesn't obscure nodes */
+.custom-minimap .react-flow__minimap-mask {
+  fill: var(--bg-canvas);
+  opacity: 0.4;
+  transition: opacity var(--duration-fast) var(--ease-standard);
+}
+
+/* Mask stroke - clear boundary using primary color */
+.custom-minimap .react-flow__minimap-mask {
+  stroke: hsl(var(--primary));
+  stroke-width: 2;
+  stroke-dasharray: none;
+}
+
+/* Hover state for mask - slightly more visible */
+.custom-minimap:hover .react-flow__minimap-mask {
+  opacity: 0.5;
+  stroke-width: 2.5;
+}
+
+/* ========================================
+   MINIMAP CANVAS (Background)
+   ======================================== */
+
+.custom-minimap .react-flow__minimap svg {
+  background: transparent;
+}
+
+/* Subtle grid pattern in minimap background */
+.custom-minimap::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(hsl(var(--border-ui)) 0.5px, transparent 0.5px),
+    linear-gradient(90deg, hsl(var(--border-ui)) 0.5px, transparent 0.5px);
+  background-size: 16px 16px;
+  opacity: 0.3;
+  pointer-events: none;
+  border-radius: inherit;
+  z-index: 0;
+}
+
+/* Ensure nodes and mask render above the grid */
+.custom-minimap .react-flow__minimap svg {
+  position: relative;
+  z-index: 1;
+}
+
+/* ========================================
+   INTERACTION STATES
+   ======================================== */
+
+/* When panning via minimap */
+.custom-minimap.panning .react-flow__minimap-mask {
+  opacity: 0.6;
+  stroke: hsl(var(--primary));
+}
+
+/* When zooming via minimap */
+.custom-minimap.zooming {
+  transform: scale(1.02);
+}
+
+/* ========================================
+   REDUCED MOTION
+   ======================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .custom-minimap,
+  .custom-minimap .react-flow__minimap-node,
+  .custom-minimap .react-flow__minimap-mask {
+    transition: none;
+  }
+}
+
+/* ========================================
+   HIGH CONTRAST MODE SUPPORT
+   ======================================== */
+
+@media (prefers-contrast: high) {
+  .custom-minimap {
+    border-width: 2px;
+  }
+
+  .custom-minimap .react-flow__minimap-node {
+    stroke-width: 2;
+  }
+
+  .custom-minimap .react-flow__minimap-mask {
+    stroke-width: 3;
+    opacity: 0.6;
+  }
 }

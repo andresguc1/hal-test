@@ -2,26 +2,8 @@ import React from "react";
 import { MiniMap } from "@xyflow/react";
 import "./styles/StyledMiniMap.css";
 import { NODE_TYPE_MAP, getColorHex } from "@/config/nodeConstants";
-import { useTheme } from "next-themes";
 
 export default function StyledMiniMap() {
-  const { theme, resolvedTheme } = useTheme();
-  const currentTheme = resolvedTheme || theme;
-
-  const maskColors = {
-    dark: {
-      mask: "rgba(15, 23, 42, 0.7)",
-      maskStroke: "#1E293B",
-    },
-    light: {
-      mask: "rgba(248, 250, 252, 0.7)",
-      maskStroke: "#CBD5E1",
-    },
-  };
-
-  const themeConfig =
-    currentTheme === "dark" ? maskColors.dark : maskColors.light;
-
   const getNodeColor = (node) => {
     const nodeKey =
       node.data?.subType || node.data?.type || node.type || "launch_browser";
@@ -37,11 +19,11 @@ export default function StyledMiniMap() {
       className="custom-minimap glass-panel"
       nodeStrokeColor={(n) => getNodeColor(n)}
       nodeColor={(n) => getNodeColor(n)}
-      nodeBorderRadius={4}
-      nodeStrokeWidth={2}
-      maskColor={themeConfig.mask}
-      maskStrokeColor={themeConfig.maskStroke}
-      maskStrokeWidth={1}
+      nodeBorderRadius={2}
+      nodeStrokeWidth={1}
+      maskColor="rgba(15, 23, 42, 0.5)"
+      maskStrokeColor="hsl(var(--primary) / 0.8)"
+      maskStrokeWidth={2}
       zoomable={true}
       pannable={true}
     />
