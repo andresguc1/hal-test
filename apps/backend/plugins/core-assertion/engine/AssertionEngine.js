@@ -27,6 +27,7 @@ import './strategies/ValueStrategy.js';
 import './strategies/StateStrategy.js';
 import './strategies/CSSPropertyStrategy.js';
 import './strategies/PageStrategy.js';
+import './strategies/MutabilityStrategy.js';
 
 export class AssertionEngine {
     /**
@@ -37,9 +38,10 @@ export class AssertionEngine {
      * @param {import('playwright').Locator} params.locator
      * @param {Array<Object>} params.assertions - [{ type, operator, expected, … }]
      * @param {{ timeout?: number }} [params.options]
+     * @param {Object} [params.variables] - Run variables context for snapshot access
      * @returns {Promise<Array<Object>>} Structured results per assertion
      */
-    async evaluate({ page, locator, assertions = [], options = {} }) {
+    async evaluate({ page, locator, assertions = [], options = {}, variables = {} }) {
         const results = [];
         for (const assertion of assertions) {
             const type = assertion.type || assertion.assertType;
@@ -75,6 +77,7 @@ export class AssertionEngine {
             try {
                 const result = await strategy.execute(page, locator, assertion, {
                     timeout: options.timeout,
+                    variables,
                 });
                 results.push({
                     type,

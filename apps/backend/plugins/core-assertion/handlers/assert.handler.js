@@ -1,11 +1,8 @@
 import { executePlaywrightAction } from '../../../core/ActionExecutor.js';
 import { normalizeTimeout, playTimeout } from '../../../core/timeout-utils.js';
-import {
-    buildPlaywrightLocator,
-    normalizeSelectorForDotId,
-    convertPlaywrightLocator,
-} from '../../../core/selector-utils.js';
+import { resolveTarget } from '../../../core/selector-utils.js';
 import { assertionEngine } from '../engine/AssertionEngine.js';
+import { variableManager } from '../../../services/VariableManager.js';
 
 /**
  * Unified `assert` node handler.
@@ -15,7 +12,7 @@ import { assertionEngine } from '../engine/AssertionEngine.js';
  *
  * Request shape:
  * {
- *   target: { selector, scope: 'element'|'collection'|'page', selectorType },
+ *   target: { selector, scope: 'element'|'collection'|'page', selectorType, candidates },
  *   assertion: { type, operator, expected, … },   // single assertion
  *   assertions: [ … ],                            // or a list of assertions
  *   timeout, softFail, takeScreenshotOnFailure
@@ -58,20 +55,32 @@ const assertNode = (req, res) =>
             );
         }
 
-        let locator;
-        if (scope === 'page') {
-            locator = page.locator('body');
-        } else {
-            const selector = convertPlaywrightLocator(target.selector);
-            const normalized = await normalizeSelectorForDotId(page, selector);
-            locator = buildPlaywrightLocator(page, normalized);
+        const resolution = await resolveTarget({ page, target, scope, timeout });
+
+        if (resolution.resolution === 'none') {
+            const details = resolution.candidatesTried
+                .map((c) => `${c.selector} (${c.status}${c.error ? `: ${c.error}` : ''})`)
+                .join(' | ');
+            throw new Error(
+                req.t(
+                    'actions.assert.target_not_found',
+                    `Target element not found. Tried: ${details || 'no candidates'}`,
+                ),
+            );
         }
+
+        const locator = resolution.locator;
+
+        // Get run variables for snapshot access (mutability assertions)
+        const runId = req.body.runId;
+        const variables = runId ? variableManager.getAll(runId) : {};
 
         const results = await assertionEngine.evaluate({
             page,
             locator,
             assertions: list,
             options: { ...playTimeout(timeout) },
+            variables,
         });
 
         const totalCount = results.length;
@@ -107,6 +116,12 @@ const assertNode = (req, res) =>
                 total: totalCount,
                 softFailed: !allPassed,
                 assertions: results,
+                targetResolution: {
+                    usedSelector: resolution.usedSelector,
+                    selectorType: resolution.selectorType,
+                    resolution: resolution.resolution,
+                    candidatesTried: resolution.candidatesTried,
+                },
             },
             traceDetails: {
                 target,
@@ -114,6 +129,12 @@ const assertNode = (req, res) =>
                 softFail,
                 total: totalCount,
                 passed: passedCount,
+                targetResolution: {
+                    usedSelector: resolution.usedSelector,
+                    selectorType: resolution.selectorType,
+                    resolution: resolution.resolution,
+                    candidatesTried: resolution.candidatesTried,
+                },
             },
         };
     });

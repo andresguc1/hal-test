@@ -1,7 +1,20 @@
 import Joi from 'joi';
 
 const assertionSchema = Joi.object({
-    type: Joi.string().required(),
+    type: Joi.string()
+        .valid(
+            'existence',
+            'visibility',
+            'text',
+            'value',
+            'attribute',
+            'count',
+            'state',
+            'css_property',
+            'page',
+            'mutability',
+        )
+        .required(),
     operator: Joi.string().optional(),
     expected: Joi.any().optional(),
     attribute: Joi.string().allow(null, '').optional(),
@@ -10,6 +23,11 @@ const assertionSchema = Joi.object({
     regexFlags: Joi.string().allow(null, '').optional(),
     min: Joi.number().optional(),
     max: Joi.number().optional(),
+    // Mutability-specific fields
+    snapshotKey: Joi.string().optional(),
+    property: Joi.string().valid('text', 'value', 'html').optional(),
+    trimWhitespace: Joi.boolean().optional(),
+    cssProperty: Joi.string().allow(null, '').optional(),
 }).unknown(true);
 
 const schema = Joi.object({
@@ -17,6 +35,7 @@ const schema = Joi.object({
         selector: Joi.alternatives().try(Joi.string(), Joi.object()).required(),
         scope: Joi.string().valid('element', 'collection', 'page').default('element').optional(),
         selectorType: Joi.string().optional(),
+        candidates: Joi.object().optional(),
     })
         .unknown(true)
         .required(),

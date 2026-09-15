@@ -24,6 +24,7 @@ const assertBodySchema = Joi.object({
         }),
         scope: Joi.string().valid('element', 'collection', 'page').default('element').optional(),
         selectorType: Joi.string().allow(null, '').optional(),
+        candidates: Joi.object().optional(),
     })
         .unknown(true)
         .required(),
