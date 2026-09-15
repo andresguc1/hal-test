@@ -13,6 +13,7 @@ import { ValueStrategy } from '../plugins/core-assertion/engine/strategies/Value
 import { StateStrategy } from '../plugins/core-assertion/engine/strategies/StateStrategy.js';
 import { CSSPropertyStrategy } from '../plugins/core-assertion/engine/strategies/CSSPropertyStrategy.js';
 import { PageStrategy } from '../plugins/core-assertion/engine/strategies/PageStrategy.js';
+import { MutabilityStrategy } from '../plugins/core-assertion/engine/strategies/MutabilityStrategy.js';
 
 function createMockLocator(options = {}, overrides = {}) {
     const {
@@ -410,5 +411,269 @@ describe('PageStrategy', () => {
             { operator: 'title_regex', expected: 'Example.*Title' },
         );
         expect(result.passed).toBe(true);
+    });
+});
+
+describe('MutabilityStrategy', () => {
+    let strategy;
+
+    beforeEach(() => {
+        strategy = new MutabilityStrategy();
+    });
+
+    function createMockLocator(options = {}) {
+        const {
+            count = 1,
+            text = 'Sample text',
+            value = 'input value',
+            html = '<div>HTML content</div>',
+            waitForAttachedFail = false,
+        } = options;
+
+        const waitFor = vi.fn(async (opts = {}) => {
+            if (opts.state === 'attached' && waitForAttachedFail) {
+                throw new Error('timeout exceeded while waiting for locator');
+            }
+        });
+
+        const base = {
+            first: vi.fn(() => base),
+            nth: vi.fn(() => base),
+            locator: vi.fn(() => base),
+            waitFor,
+            count: vi.fn(async () => count),
+            innerText: vi.fn(async () => text),
+            inputValue: vi.fn(async () => value),
+            innerHTML: vi.fn(async () => html),
+            getAttribute: vi.fn(async (name) => (name === 'test-attr' ? 'attr-value' : null)),
+        };
+        return base;
+    }
+
+    it('should pass when content has changed (has_changed)', async () => {
+        const locator = createMockLocator({ text: 'New content' });
+        const result = await strategy.execute(
+            {},
+            locator,
+            {
+                operator: 'has_changed',
+                snapshotKey: 'my_snapshot',
+                property: 'text',
+            },
+            {
+                variables: { my_snapshot: 'Old content' },
+            },
+        );
+
+        expect(result.passed).toBe(true);
+        expect(result.actual).toBe('new content');
+        expect(result.expected).toContain('!=');
+    });
+
+    it('should fail when content has not changed (has_changed)', async () => {
+        const locator = createMockLocator({ text: 'Same content' });
+        const result = await strategy.execute(
+            {},
+            locator,
+            {
+                operator: 'has_changed',
+                snapshotKey: 'my_snapshot',
+                property: 'text',
+            },
+            {
+                variables: { my_snapshot: 'Same content' },
+            },
+        );
+
+        expect(result.passed).toBe(false);
+        expect(result.message).toContain('Expected content to have changed');
+    });
+
+    it('should pass when content remains unchanged (remains_unchanged)', async () => {
+        const locator = createMockLocator({ text: 'Stable content' });
+        const result = await strategy.execute(
+            {},
+            locator,
+            {
+                operator: 'remains_unchanged',
+                snapshotKey: 'my_snapshot',
+                property: 'text',
+            },
+            {
+                variables: { my_snapshot: 'Stable content' },
+            },
+        );
+
+        expect(result.passed).toBe(true);
+        expect(result.actual).toBe('stable content');
+    });
+
+    it('should fail when content changed but remains_unchanged expected', async () => {
+        const locator = createMockLocator({ text: 'Changed content' });
+        const result = await strategy.execute(
+            {},
+            locator,
+            {
+                operator: 'remains_unchanged',
+                snapshotKey: 'my_snapshot',
+                property: 'text',
+            },
+            {
+                variables: { my_snapshot: 'Original content' },
+            },
+        );
+
+        expect(result.passed).toBe(false);
+        expect(result.message).toContain('Expected content to remain unchanged');
+    });
+
+    it('should fail when snapshotKey is missing', async () => {
+        const locator = createMockLocator({ text: 'Any content' });
+        const result = await strategy.execute(
+            {},
+            locator,
+            {
+                operator: 'has_changed',
+                property: 'text',
+            },
+            {
+                variables: {},
+            },
+        );
+
+        expect(result.passed).toBe(false);
+        expect(result.message).toContain('snapshotKey is required');
+    });
+
+    it('should fail when snapshot not found in variables', async () => {
+        const locator = createMockLocator({ text: 'Any content' });
+        const result = await strategy.execute(
+            {},
+            locator,
+            {
+                operator: 'has_changed',
+                snapshotKey: 'missing_key',
+                property: 'text',
+            },
+            {
+                variables: { other_key: 'value' },
+            },
+        );
+
+        expect(result.passed).toBe(false);
+        expect(result.actual).toBe('missing_snapshot');
+        expect(result.message).toContain('No snapshot found for key');
+    });
+
+    it('should support caseSensitive option', async () => {
+        const locator = createMockLocator({ text: 'Hello World' });
+        const result = await strategy.execute(
+            {},
+            locator,
+            {
+                operator: 'has_changed',
+                snapshotKey: 'my_snapshot',
+                property: 'text',
+                caseSensitive: true,
+            },
+            {
+                variables: { my_snapshot: 'hello world' },
+            },
+        );
+
+        expect(result.passed).toBe(true); // Different when case sensitive
+    });
+
+    it('should be case insensitive by default', async () => {
+        const locator = createMockLocator({ text: 'Hello World' });
+        const result = await strategy.execute(
+            {},
+            locator,
+            {
+                operator: 'remains_unchanged',
+                snapshotKey: 'my_snapshot',
+                property: 'text',
+                caseSensitive: false,
+            },
+            {
+                variables: { my_snapshot: 'hello world' },
+            },
+        );
+
+        expect(result.passed).toBe(true); // Same when case insensitive
+    });
+
+    it('should support trimWhitespace option', async () => {
+        const locator = createMockLocator({ text: '  Hello  ' });
+        const result = await strategy.execute(
+            {},
+            locator,
+            {
+                operator: 'remains_unchanged',
+                snapshotKey: 'my_snapshot',
+                property: 'text',
+                trimWhitespace: true,
+            },
+            {
+                variables: { my_snapshot: 'Hello' },
+            },
+        );
+
+        expect(result.passed).toBe(true);
+    });
+
+    it('should support property: value for input elements', async () => {
+        const locator = createMockLocator({ value: 'new-value' });
+        const result = await strategy.execute(
+            {},
+            locator,
+            {
+                operator: 'has_changed',
+                snapshotKey: 'my_snapshot',
+                property: 'value',
+            },
+            {
+                variables: { my_snapshot: 'old-value' },
+            },
+        );
+
+        expect(result.passed).toBe(true);
+    });
+
+    it('should support property: html', async () => {
+        const locator = createMockLocator({ html: '<div>New HTML</div>' });
+        const result = await strategy.execute(
+            {},
+            locator,
+            {
+                operator: 'has_changed',
+                snapshotKey: 'my_snapshot',
+                property: 'html',
+            },
+            {
+                variables: { my_snapshot: '<div>Old HTML</div>' },
+            },
+        );
+
+        expect(result.passed).toBe(true);
+    });
+
+    it('should fail gracefully when element not found', async () => {
+        const locator = createMockLocator({ count: 0, waitForAttachedFail: true });
+        const result = await strategy.execute(
+            {},
+            locator,
+            {
+                operator: 'has_changed',
+                snapshotKey: 'my_snapshot',
+            },
+            {
+                variables: { my_snapshot: 'old' },
+            },
+        );
+
+        expect(result.passed).toBe(false);
+        expect(result.actual).toBe('absent');
+        expect(result.message).toContain('not found');
     });
 });
