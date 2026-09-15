@@ -709,6 +709,22 @@ export const NODE_INPUTS = {
       description: "Whether to check a single element, multiple elements, or the page itself.",
     },
     {
+      key: "target.candidates",
+      label: "Candidates",
+      type: "json",
+      required: false,
+      isVisible: () => false,
+      description: "Internal: picker candidate alternatives for fallback resolution.",
+    },
+    {
+      key: "target.selectorType",
+      label: "Selector Type",
+      type: "string",
+      required: false,
+      isVisible: () => false,
+      description: "Internal: type of the primary selector (e.g., playwright_role, playwright_test_id).",
+    },
+    {
       key: "assertions",
       label: "What to verify",
       type: "assertionList",

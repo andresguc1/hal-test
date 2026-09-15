@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { logger } from "../../utils/logger";
 import { projectManager } from "../../utils/ProjectManager";
 import { subFlowCache } from "../../utils/subFlowCache";
-import { debounce, deepClone } from "../../utils/flowUtils";
+import { debounce, deepClone, sanitizeForSerialization } from "../../utils/flowUtils";
 import { getContainerFlowId } from "./utils";
 import { STARTER_TEMPLATE } from "../../config/starterTemplate";
 import { useCollaboration } from "../../collaboration";
@@ -105,9 +105,11 @@ export function useFlowSync({
 
       isSavingRef.current = true;
       try {
+        const rawNodes = deepClone(nodesRef.current || []);
+        const rawEdges = deepClone(edgesRef.current || []);
         const flowData = {
-          nodes: deepClone(nodesRef.current || []),
-          edges: deepClone(edgesRef.current || []),
+          nodes: sanitizeForSerialization(rawNodes),
+          edges: sanitizeForSerialization(rawEdges),
           viewport: getViewport(),
           updatedAt: new Date().toISOString(),
         };

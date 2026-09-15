@@ -79,6 +79,17 @@ export const VariableInput = ({
   const [isFocused, setIsFocused] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
+  // Normalize onChange to always pass a value (string), not a React synthetic event.
+  // This prevents leaking event objects or DOM references into form state.
+  const handleChange = React.useCallback(
+    (e) => {
+      if (!onChange) return;
+      const val = e && typeof e === "object" && "target" in e ? e.target?.value : e;
+      onChange(val);
+    },
+    [onChange]
+  );
+
   // Sync scrolling between foreground and background
   const handleScroll = (e) => {
     if (bgRef.current) {
@@ -267,7 +278,7 @@ export const VariableInput = ({
               ? ""
               : value
         }
-        onChange={onChange}
+        onChange={handleChange}
         onScroll={handleScroll}
         onFocus={() => {
           setIsFocused(true);

@@ -104,6 +104,14 @@ const OPERATORS_NO_VALUE = ["empty", "not_empty", "exists", "not_exists"];
 
 const OPERATORS_MIN_MAX = ["between"];
 
+// Assertion types that are pure state checks and never need an "Expected Value" input.
+// These resolve via Playwright's built-in boolean checks (exists, visible, enabled, etc.).
+const ASSERTION_TYPES_NO_EXPECTED_VALUE = [
+    "existence",
+    "visibility",
+    "state",
+];
+
 function AssertionRow({
     assertion,
     index,
@@ -122,8 +130,13 @@ function AssertionRow({
     const needsMinMax = OPERATORS_MIN_MAX.includes(operator);
     const needsAttribute = type === "attribute";
     const needsCssProperty = type === "css_property";
-    const needsCaseSensitive = ["text", "attribute", "value", "css_property", "page"].includes(type);
-    const needsRegex = ["text", "attribute", "value", "css_property", "page"].includes(type);
+    // Case sensitive and regex only apply to types that support string comparison
+    // AND when an expected value is actually being provided
+    const typeSupportsStringOptions = ["text", "attribute", "value", "css_property", "page"].includes(type);
+    const needsCaseSensitive = typeSupportsStringOptions && needsValue;
+    const needsRegex = typeSupportsStringOptions && needsValue;
+    // Whether this assertion type ever needs an "Expected Value" field
+    const typeNeedsExpectedValue = !ASSERTION_TYPES_NO_EXPECTED_VALUE.includes(type);
 
     return (
         <div className="px-3 py-3 bg-[#0f172a]/60 border border-indigo-500/15 hover:border-indigo-500/30 rounded-xl space-y-3 relative group/field transition-all">
@@ -189,7 +202,7 @@ function AssertionRow({
                         </div>
                     )}
 
-                    {needsValue && !needsMinMax && (
+                    {typeNeedsExpectedValue && needsValue && !needsMinMax && (
                         <div className="flex gap-2">
                             <VariableInput
                                 value={assertion.expected ?? ""}
@@ -202,7 +215,7 @@ function AssertionRow({
                             />
                             <span className="text-[10px] text-slate-500 self-center px-2">
                                 {t("nodes.fields.expected")}
-                            </span>
+205:                            </span>
                         </div>
                     )}
 

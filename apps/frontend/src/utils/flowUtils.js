@@ -174,6 +174,55 @@ export function safeStringify(value, defaultValue = "") {
 }
 
 /**
+ * Sanitizes an object by removing React Fiber references and other non-serializable properties
+ * before JSON serialization. This prevents "Converting circular structure to JSON" errors.
+ *
+ * @param {*} obj - Object to sanitize
+ * @returns {*} Sanitized object safe for JSON.stringify
+ */
+export function sanitizeForSerialization(obj) {
+  if (obj === null || typeof obj !== "object") return obj;
+
+  const seen = new WeakSet();
+
+  function sanitize(value) {
+    if (value === null || typeof value !== "object") return value;
+    if (seen.has(value)) return undefined;
+    seen.add(value);
+
+    if (Array.isArray(value)) {
+      return value.map((item) => sanitize(item)).filter((v) => v !== undefined);
+    }
+
+    const result = {};
+    for (const [key, val] of Object.entries(value)) {
+      // Skip React Fiber internal properties
+      if (
+        key.startsWith("__reactFiber") ||
+        key.startsWith("__reactInternal") ||
+        key === "stateNode" ||
+        key === "_reactRootContainer" ||
+        key === "_reactInternals"
+      ) {
+        continue;
+      }
+      const sanitized = sanitize(val);
+      if (sanitized !== undefined) {
+        result[key] = sanitized;
+      }
+    }
+    return result;
+  }
+
+  try {
+    return sanitize(obj);
+  } catch (error) {
+    console.warn("Sanitization failed, returning original:", error);
+    return obj;
+  }
+}
+
+/**
  * Safely stringifies object to JSON with error handling (legacy)
  *
  * @param {*} obj - Object to stringify

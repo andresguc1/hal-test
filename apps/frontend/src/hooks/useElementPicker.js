@@ -361,16 +361,47 @@ export const useElementPicker = ({
           return currNodes.map((node) => {
             if (node.id !== targetNodeId) return node;
 
+            const currentConfig = node.data?.configuration || {};
+            const targetParentPath = targetField.includes(".")
+              ? targetField.substring(0, targetField.lastIndexOf("."))
+              : "";
+
+            let updatedConfig = setNestedValue(
+              currentConfig,
+              targetField,
+              trimmedSelector,
+            );
+
+            if (targetParentPath && data.candidates && Object.keys(data.candidates).length > 0) {
+              const validCandidates = {};
+              for (const [key, value] of Object.entries(data.candidates)) {
+                if (typeof value === "string" && value.trim()) {
+                  validCandidates[key] = value.trim();
+                }
+              }
+              if (Object.keys(validCandidates).length > 0) {
+                updatedConfig = setNestedValue(
+                  updatedConfig,
+                  `${targetParentPath}.candidates`,
+                  validCandidates,
+                );
+              }
+            }
+
+            if (targetParentPath && (data.selectorType || data.strategy)) {
+              updatedConfig = setNestedValue(
+                updatedConfig,
+                `${targetParentPath}.selectorType`,
+                data.selectorType || data.strategy || "unknown",
+              );
+            }
+
             return {
               ...node,
               data: {
                 ...node.data,
                 state: NODE_STATES.DEFAULT,
-                configuration: setNestedValue(
-                  node.data.configuration,
-                  targetField,
-                  trimmedSelector,
-                ),
+                configuration: updatedConfig,
                 selectorMeta: {
                   candidates: data.candidates || {},
                   selectorType: data.selectorType || data.strategy || "unknown",
@@ -475,6 +506,35 @@ export const useElementPicker = ({
               sanitizedSelector,
             );
 
+            const targetParentPath = targetField.includes(".")
+              ? targetField.substring(0, targetField.lastIndexOf("."))
+              : "";
+
+            let finalConfig = updatedConfig;
+            if (targetParentPath && data.candidates && Object.keys(data.candidates).length > 0) {
+              const validCandidates = {};
+              for (const [key, value] of Object.entries(data.candidates)) {
+                if (typeof value === "string" && value.trim()) {
+                  validCandidates[key] = value.trim();
+                }
+              }
+              if (Object.keys(validCandidates).length > 0) {
+                finalConfig = setNestedValue(
+                  finalConfig,
+                  `${targetParentPath}.candidates`,
+                  validCandidates,
+                );
+              }
+            }
+
+            if (targetParentPath && (data.selectorType || data.strategy)) {
+              finalConfig = setNestedValue(
+                finalConfig,
+                `${targetParentPath}.selectorType`,
+                data.selectorType || data.strategy || "unknown",
+              );
+            }
+
             const updatedMeta = {
               ...meta,
               aiOptimized: true,
@@ -488,7 +548,7 @@ export const useElementPicker = ({
               ...node,
               data: {
                 ...node.data,
-                configuration: updatedConfig,
+                configuration: finalConfig,
                 selectorMeta: updatedMeta,
               },
             };

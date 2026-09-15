@@ -1,5 +1,6 @@
 import { api } from "./api";
 import { logger } from "./logger";
+import { sanitizeForSerialization } from "./flowUtils";
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 1000;
@@ -217,8 +218,9 @@ class ProjectManager {
 
   async updateFlow(projectId, flowId, flowData) {
     try {
+      const sanitizedData = sanitizeForSerialization(flowData);
       const updatedFlow = await withRetry(
-        () => api.put(`/projects/${projectId}/flows/${flowId}`, flowData),
+        () => api.put(`/projects/${projectId}/flows/${flowId}`, sanitizedData),
         "updateFlow",
       );
       return updatedFlow;
