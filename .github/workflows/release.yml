@@ -154,18 +154,11 @@ jobs:
             });
           "
 
-      - name: 📝 Generate changelog entry
+      - name: Generate changelog entry
         run: |
           VERSION="${{ steps.set_version.outputs.version }}"
           DATE=$(date +%Y-%m-%d)
-          cat >> CHANGELOG.md << EOF
-          
-## [$VERSION] - $DATE
-          
-### Changed
-- Release $VERSION
-          
-EOF
+          printf '\n## [%s] - %s\n\n### Changed\n  - Release %s\n' "$VERSION" "$DATE" "$VERSION" >> CHANGELOG.md
 
       - name: 💾 Commit version bump
         run: |
