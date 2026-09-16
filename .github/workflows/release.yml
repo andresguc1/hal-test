@@ -319,7 +319,7 @@ jobs:
           path: apps/cli/dist
 
       - name: 🏷️ Create GitHub Release
-        uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf3019a6ddd5b1a8
+        uses: softprops/action-gh-release@e598afbe1493e6b1bafb1f389cabb956eab91231 # v3.0.3
         with:
           tag_name: v${{ needs.version.outputs.version }}
           name: HalTest v${{ needs.version.outputs.version }}
@@ -719,7 +719,7 @@ jobs:
         working-directory: apps/cli/dist
 
       - name: 🏷️ Create GitHub Release
-        uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf3019a6ddd5b1a8
+        uses: softprops/action-gh-release@e598afbe1493e6b1bafb1f389cabb956eab91231 # v3.0.3
         with:
           tag_name: ${{ github.ref_name }}
           name: HalTest ${{ github.ref_name }}
