@@ -4,7 +4,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { logger } from "../../utils/logger";
 import { projectManager } from "../../utils/ProjectManager";
 import { subFlowCache } from "../../utils/subFlowCache";
-import { debounce, deepClone, sanitizeForSerialization } from "../../utils/flowUtils";
+import {
+  debounce,
+  deepClone,
+  sanitizeForSerialization,
+} from "../../utils/flowUtils";
 import { getContainerFlowId } from "./utils";
 import { STARTER_TEMPLATE } from "../../config/starterTemplate";
 import { useCollaboration } from "../../collaboration";
@@ -129,8 +133,8 @@ export function useFlowSync({
               targetFlowId,
             );
           } catch {
-          // ignore
-        }
+            // ignore
+          }
         }
 
         // Invalidate query to keep global project state (and derived flow names) in sync

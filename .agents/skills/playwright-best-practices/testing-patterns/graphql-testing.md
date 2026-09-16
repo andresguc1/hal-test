@@ -52,7 +52,7 @@ test("query with variables", async ({ request }) => {
         id: expect.any(String),
         rating: expect.any(Number),
       }),
-    ])
+    ]),
   );
 });
 ```
@@ -190,11 +190,13 @@ export const test = base.extend<GraphQLFixtures>({
       },
     });
     const { data } = await loginResp.json();
-    
+
     if (!data?.login?.token) {
-      throw new Error(`Admin login failed: status ${loginResp.status()}, response: ${JSON.stringify(data)}`);
+      throw new Error(
+        `Admin login failed: status ${loginResp.status()}, response: ${JSON.stringify(data)}`,
+      );
     }
-    
+
     await loginCtx.dispose();
 
     const ctx = await playwright.request.newContext({
@@ -221,7 +223,7 @@ import { APIRequestContext, expect } from "@playwright/test";
 export async function gqlQuery<T = any>(
   request: APIRequestContext,
   query: string,
-  variables?: Record<string, any>
+  variables?: Record<string, any>,
 ): Promise<{ data: T; errors?: any[] }> {
   const resp = await request.post("/graphql", {
     data: { query, variables },
@@ -233,7 +235,7 @@ export async function gqlQuery<T = any>(
 export async function gqlMutation<T = any>(
   request: APIRequestContext,
   mutation: string,
-  variables?: Record<string, any>
+  variables?: Record<string, any>,
 ): Promise<{ data: T; errors?: any[] }> {
   return gqlQuery<T>(request, mutation, variables);
 }
@@ -248,7 +250,7 @@ test("fetch and update item", async ({ request }) => {
   const { data: fetchData } = await gqlQuery(
     request,
     `query GetItem($id: ID!) { item(id: $id) { id title } }`,
-    { id: "101" }
+    { id: "101" },
   );
   expect(fetchData.item.title).toBeDefined();
 
@@ -257,7 +259,7 @@ test("fetch and update item", async ({ request }) => {
     `mutation UpdateItem($id: ID!, $title: String!) {
       updateItem(id: $id, title: $title) { id title }
     }`,
-    { id: "101", title: "Updated Title" }
+    { id: "101", title: "Updated Title" },
   );
   expect(errors).toBeUndefined();
   expect(updateData.updateItem.title).toBe("Updated Title");
@@ -266,12 +268,12 @@ test("fetch and update item", async ({ request }) => {
 
 ## Anti-Patterns
 
-| Don't Do This | Problem | Do This Instead |
-| --- | --- | --- |
-| Check only `response.ok()` | GraphQL returns 200 even on errors — `errors` array is the real signal | Always check both `data` and `errors` in the response body |
-| Ignore `errors` array | Validation and auth errors appear in `errors`, not HTTP status | Destructure and assert: `expect(errors).toBeUndefined()` |
-| Hardcode query strings inline everywhere | Duplicated queries are hard to maintain | Extract queries to constants or use a helper function |
-| Skip variable validation | Invalid variables cause cryptic server errors | Validate input shape before sending |
+| Don't Do This                            | Problem                                                                | Do This Instead                                            |
+| ---------------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------- |
+| Check only `response.ok()`               | GraphQL returns 200 even on errors — `errors` array is the real signal | Always check both `data` and `errors` in the response body |
+| Ignore `errors` array                    | Validation and auth errors appear in `errors`, not HTTP status         | Destructure and assert: `expect(errors).toBeUndefined()`   |
+| Hardcode query strings inline everywhere | Duplicated queries are hard to maintain                                | Extract queries to constants or use a helper function      |
+| Skip variable validation                 | Invalid variables cause cryptic server errors                          | Validate input shape before sending                        |
 
 ## Troubleshooting
 

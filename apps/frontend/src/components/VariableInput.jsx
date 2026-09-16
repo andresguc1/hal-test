@@ -84,10 +84,11 @@ export const VariableInput = ({
   const handleChange = React.useCallback(
     (e) => {
       if (!onChange) return;
-      const val = e && typeof e === "object" && "target" in e ? e.target?.value : e;
+      const val =
+        e && typeof e === "object" && "target" in e ? e.target?.value : e;
       onChange(val);
     },
-    [onChange]
+    [onChange],
   );
 
   // Sync scrolling between foreground and background
@@ -310,9 +311,7 @@ export const VariableInput = ({
         const lastClose = stringValue.lastIndexOf("}}");
         const insideVar = lastOpen > lastClose;
         const qualify =
-          showSuggestions &&
-          suggestions?.length > 0 &&
-          (autoOpen || insideVar);
+          showSuggestions && suggestions?.length > 0 && (autoOpen || insideVar);
         return qualify;
       })() && (
         <div className="absolute top-full left-0 right-0 mt-2 p-1.5 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl z-[100] max-h-64 overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-top-2 duration-200">

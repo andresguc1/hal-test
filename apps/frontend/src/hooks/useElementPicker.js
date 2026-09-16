@@ -372,7 +372,11 @@ export const useElementPicker = ({
               trimmedSelector,
             );
 
-            if (targetParentPath && data.candidates && Object.keys(data.candidates).length > 0) {
+            if (
+              targetParentPath &&
+              data.candidates &&
+              Object.keys(data.candidates).length > 0
+            ) {
               const validCandidates = {};
               for (const [key, value] of Object.entries(data.candidates)) {
                 if (typeof value === "string" && value.trim()) {
@@ -511,7 +515,11 @@ export const useElementPicker = ({
               : "";
 
             let finalConfig = updatedConfig;
-            if (targetParentPath && data.candidates && Object.keys(data.candidates).length > 0) {
+            if (
+              targetParentPath &&
+              data.candidates &&
+              Object.keys(data.candidates).length > 0
+            ) {
               const validCandidates = {};
               for (const [key, value] of Object.entries(data.candidates)) {
                 if (typeof value === "string" && value.trim()) {

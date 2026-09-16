@@ -5,20 +5,20 @@
  * Handles deployments, rollbacks, and service management via Render API
  */
 
-import { createRequire } from 'module';
+import { createRequire } from "module";
 const require = createRequire(import.meta.url);
 
-const RENDER_API_BASE = 'https://api.render.com/v1';
+const RENDER_API_BASE = "https://api.render.com/v1";
 
 class RenderClient {
   constructor(apiKey) {
     if (!apiKey) {
-      throw new Error('RENDER_API_KEY is required');
+      throw new Error("RENDER_API_KEY is required");
     }
     this.apiKey = apiKey;
     this.headers = {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
     };
   }
 
@@ -39,7 +39,7 @@ class RenderClient {
 
   // Service Management
   async getServices() {
-    return this.request('/services');
+    return this.request("/services");
   }
 
   async getService(serviceId) {
@@ -47,29 +47,29 @@ class RenderClient {
   }
 
   async createService(serviceConfig) {
-    return this.request('/services', {
-      method: 'POST',
+    return this.request("/services", {
+      method: "POST",
       body: JSON.stringify(serviceConfig),
     });
   }
 
   async updateService(serviceId, updates) {
     return this.request(`/services/${serviceId}`, {
-      method: 'PATCH',
+      method: "PATCH",
       body: JSON.stringify(updates),
     });
   }
 
   async deleteService(serviceId) {
     return this.request(`/services/${serviceId}`, {
-      method: 'DELETE',
+      method: "DELETE",
     });
   }
 
   // Deployments
   async triggerDeploy(serviceId, options = {}) {
     return this.request(`/services/${serviceId}/deploys`, {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify({
         clearCache: options.clearCache || false,
         ...options,
@@ -87,7 +87,7 @@ class RenderClient {
 
   async rollbackDeploy(serviceId, deployId) {
     return this.request(`/services/${serviceId}/deploys/${deployId}/rollback`, {
-      method: 'POST',
+      method: "POST",
     });
   }
 
@@ -98,37 +98,50 @@ class RenderClient {
 
   async updateEnvVars(serviceId, envVars) {
     return this.request(`/services/${serviceId}/env-vars`, {
-      method: 'PUT',
+      method: "PUT",
       body: JSON.stringify(envVars),
     });
   }
 
   // Health check helper
-  async waitForDeploy(serviceId, deployId, maxWaitMs = 600000, pollIntervalMs = 10000) {
+  async waitForDeploy(
+    serviceId,
+    deployId,
+    maxWaitMs = 600000,
+    pollIntervalMs = 10000,
+  ) {
     const startTime = Date.now();
-    
+
     while (Date.now() - startTime < maxWaitMs) {
       const deploy = await this.getDeploy(serviceId, deployId);
-      
-      if (deploy.status === 'live') {
+
+      if (deploy.status === "live") {
         return deploy;
       }
-      
-      if (deploy.status === 'build_failed' || deploy.status === 'update_failed' || deploy.status === 'canceled') {
+
+      if (
+        deploy.status === "build_failed" ||
+        deploy.status === "update_failed" ||
+        deploy.status === "canceled"
+      ) {
         throw new Error(`Deploy failed with status: ${deploy.status}`);
       }
-      
+
       console.log(`   Deploy status: ${deploy.status} (waiting...)`);
-      await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
+      await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
     }
-    
+
     throw new Error(`Deploy timed out after ${maxWaitMs}ms`);
   }
 
   // Get the previous successful deploy for rollback
   async getPreviousSuccessfulDeploy(serviceId) {
     const deploys = await this.getDeploys(serviceId, 50);
-    return deploys.find(d => d.status === 'live' && d.createdAt !== new Date().toISOString().split('T')[0]);
+    return deploys.find(
+      (d) =>
+        d.status === "live" &&
+        d.createdAt !== new Date().toISOString().split("T")[0],
+    );
   }
 }
 

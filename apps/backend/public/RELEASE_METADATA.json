@@ -1,23 +1,23 @@
 {
-  "version": "1.0.71",
-  "versions": {
-    "root": "1.0.26",
-    "cli": "1.0.71",
-    "frontend": "1.1.0",
-    "web": "1.0.27",
-    "backend": "1.0.0"
-  },
-  "git": {
-    "commit": "db2c06c19a51c430d91d0042a0c77cbf850183f8",
-    "shortCommit": "db2c06c",
-    "branch": "main",
-    "tag": null,
-    "isDirty": true,
-    "commitDate": "2026-09-10T17:00:19-05:00"
-  },
-  "buildId": "local-1789181429711",
-  "timestamp": "2026-09-12T02:50:29.711Z",
-  "nodeVersion": "v24.19.0",
-  "platform": "linux",
-  "arch": "x64"
+    "version": "1.0.71",
+    "versions": {
+        "root": "1.0.26",
+        "cli": "1.0.71",
+        "frontend": "1.1.0",
+        "web": "1.0.27",
+        "backend": "1.0.0"
+    },
+    "git": {
+        "commit": "db2c06c19a51c430d91d0042a0c77cbf850183f8",
+        "shortCommit": "db2c06c",
+        "branch": "main",
+        "tag": null,
+        "isDirty": true,
+        "commitDate": "2026-09-10T17:00:19-05:00"
+    },
+    "buildId": "local-1789181429711",
+    "timestamp": "2026-09-12T02:50:29.711Z",
+    "nodeVersion": "v24.19.0",
+    "platform": "linux",
+    "arch": "x64"
 }

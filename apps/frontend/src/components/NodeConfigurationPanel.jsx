@@ -219,7 +219,7 @@ const NodeConfigurationPanel = ({
     defaultValues,
   });
 
-const [localLabel, setLocalLabel] = useState(
+  const [localLabel, setLocalLabel] = useState(
     activeNode?.data?.customLabel || activeNode?.data?.label || "",
   );
   const [lightboxUrl, setLightboxUrl] = useState(null);
@@ -246,7 +246,8 @@ const [localLabel, setLocalLabel] = useState(
   });
 
   const cleanConfiguration = useCallback(
-    (config, nodeType) => cleanNodeConfiguration(config, nodeType, definedInputs),
+    (config, nodeType) =>
+      cleanNodeConfiguration(config, nodeType, definedInputs),
     [definedInputs],
   );
 
@@ -442,7 +443,11 @@ const [localLabel, setLocalLabel] = useState(
         typeof value[0] === "object" &&
         ("result" in value[0] || "action" in value[0])
       ) {
-        return <div className="flex flex-col gap-1.5">{value.map(renderEvidenceOption)}</div>;
+        return (
+          <div className="flex flex-col gap-1.5">
+            {value.map(renderEvidenceOption)}
+          </div>
+        );
       }
 
       if (
@@ -635,7 +640,9 @@ const [localLabel, setLocalLabel] = useState(
         <span
           className={cn(
             "mt-0.5 shrink-0 text-[8px] font-black tracking-widest px-1.5 py-0.5 rounded",
-            pass ? "bg-emerald-500/20 text-emerald-300" : "bg-rose-500/20 text-rose-300",
+            pass
+              ? "bg-emerald-500/20 text-emerald-300"
+              : "bg-rose-500/20 text-rose-300",
           )}
         >
           {ev.result}
@@ -646,11 +653,14 @@ const [localLabel, setLocalLabel] = useState(
               {ev.label || ev.value || `Option ${i + 1}`}
             </span>
             {ev.type && (
-              <span className="text-[8px] uppercase text-slate-500">{ev.type}</span>
+              <span className="text-[8px] uppercase text-slate-500">
+                {ev.type}
+              </span>
             )}
           </div>
           <div className="text-[9px] text-slate-400 font-mono">
-            {ev.before} → <span className="text-indigo-300">{ev.action}</span> → {ev.after}
+            {ev.before} → <span className="text-indigo-300">{ev.action}</span> →{" "}
+            {ev.after}
           </div>
           {ev.message && (
             <div className="text-[9px] text-amber-400/90">{ev.message}</div>
@@ -966,12 +976,18 @@ const [localLabel, setLocalLabel] = useState(
                 detectedOptions={watch("detectedOptions") || []}
                 onDetectedOptionsChange={(opts) => {
                   // Update the detectedOptions field in the form
-                  setValue("detectedOptions", opts, { shouldValidate: false, shouldDirty: true });
+                  setValue("detectedOptions", opts, {
+                    shouldValidate: false,
+                    shouldDirty: true,
+                  });
                 }}
                 staticHtml={watch("staticHtml") || ""}
                 onStaticHtmlChange={(html) => {
                   // Update the staticHtml field in the form
-                  setValue("staticHtml", html, { shouldValidate: false, shouldDirty: true });
+                  setValue("staticHtml", html, {
+                    shouldValidate: false,
+                    shouldDirty: true,
+                  });
                 }}
               />
             )}
@@ -1090,7 +1106,10 @@ const [localLabel, setLocalLabel] = useState(
                                 className="bg-slate-800 text-slate-200"
                               >
                                 {t(
-                                  "nodes.options." + field.key + "." + opt.value,
+                                  "nodes.options." +
+                                    field.key +
+                                    "." +
+                                    opt.value,
                                   opt.label,
                                 )}
                               </option>
@@ -1564,11 +1583,7 @@ const [localLabel, setLocalLabel] = useState(
                 : t("common.collapse_panel", "Collapse Panel")
             }
           >
-            {minimized ? (
-              <ChevronRight size={16} />
-            ) : (
-              <ChevronDown size={16} />
-            )}
+            {minimized ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
           </button>
           <button
             onClick={onClose}

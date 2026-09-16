@@ -22,7 +22,10 @@ export function buildNodeMetaRows(nodeKey, cfg = {}, data = {}) {
     rows.push({ icon: Globe, text: String(cfg.url) });
   }
   if (cfg?.selector || data?.selector) {
-    rows.push({ icon: MousePointer, text: String(cfg.selector || data.selector) });
+    rows.push({
+      icon: MousePointer,
+      text: String(cfg.selector || data.selector),
+    });
   }
   if (cfg?.text) {
     rows.push({ icon: Terminal, text: String(cfg.text) });

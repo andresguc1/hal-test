@@ -213,7 +213,9 @@ program
 // --- LINT COMMAND ---
 program
   .command("lint <filePath>")
-  .description("Audit exported automation script for pipeline readiness (selectors, waits, secrets)")
+  .description(
+    "Audit exported automation script for pipeline readiness (selectors, waits, secrets)",
+  )
   .option("--json", "Output results in JSON format", false)
   .action(async (filePath, options) => {
     const spinner = ora(`Auditing file: ${filePath}...`).start();
@@ -222,7 +224,8 @@ program
       const codeContent = await fs.readFile(absolutePath, "utf-8");
 
       // Dynamic import of PipelineCodeLinter backend service
-      const linterModule = await import("../../backend/services/PipelineCodeLinter.js");
+      const linterModule =
+        await import("../../backend/services/PipelineCodeLinter.js");
       const linter = linterModule.default;
 
       const report = linter.lintCode(codeContent, path.basename(filePath));
@@ -233,21 +236,35 @@ program
         process.exit(report.passed ? 0 : 1);
       }
 
-      console.log(chalk.bold.blue(`\n🔍 Pipeline Code Audit Report: ${report.filename}`));
+      console.log(
+        chalk.bold.blue(`\n🔍 Pipeline Code Audit Report: ${report.filename}`),
+      );
       console.log(chalk.gray("=".repeat(50)));
 
       if (report.passed) {
-        console.log(chalk.bold.green(`STATUS: PASSED (Quality Score: ${report.score}/100)`));
+        console.log(
+          chalk.bold.green(
+            `STATUS: PASSED (Quality Score: ${report.score}/100)`,
+          ),
+        );
       } else {
-        console.log(chalk.bold.red(`STATUS: FAILED (Quality Score: ${report.score}/100)`));
+        console.log(
+          chalk.bold.red(`STATUS: FAILED (Quality Score: ${report.score}/100)`),
+        );
       }
 
-      console.log(`Errors: ${chalk.red(report.summary.errors)} | Warnings: ${chalk.yellow(report.summary.warnings)}\n`);
+      console.log(
+        `Errors: ${chalk.red(report.summary.errors)} | Warnings: ${chalk.yellow(report.summary.warnings)}\n`,
+      );
 
       if (report.issues.length > 0) {
         report.issues.forEach((issue) => {
           const color = issue.severity === "error" ? chalk.red : chalk.yellow;
-          console.log(color(`[${issue.severity.toUpperCase()}] Line ${issue.line}: ${issue.rule}`));
+          console.log(
+            color(
+              `[${issue.severity.toUpperCase()}] Line ${issue.line}: ${issue.rule}`,
+            ),
+          );
           console.log(`  Message: ${issue.message}`);
           if (issue.codeSnippet) {
             console.log(chalk.gray(`  Snippet: ${issue.codeSnippet}`));
@@ -255,7 +272,11 @@ program
           console.log(chalk.cyan(`  Fix:     ${issue.fix}\n`));
         });
       } else {
-        console.log(chalk.green("✨ Clean code! No issues detected. Ready for CI/CD pipeline.\n"));
+        console.log(
+          chalk.green(
+            "✨ Clean code! No issues detected. Ready for CI/CD pipeline.\n",
+          ),
+        );
       }
 
       process.exit(report.passed ? 0 : 1);
@@ -271,4 +292,3 @@ if (!process.argv.slice(2).length) {
 } else {
   program.parse();
 }
-

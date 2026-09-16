@@ -18,7 +18,13 @@ import { buildNodeMetaRows } from "@/utils/nodeMetaRows";
  * Rendered inside a screen-space overlay (NOT inside the scaled canvas)
  * so it stays readable at any zoom level.
  */
-export function NodeTooltipContent({ data, nodeKey, safeConfig, displayLabel, compact }) {
+export function NodeTooltipContent({
+  data,
+  nodeKey,
+  safeConfig,
+  displayLabel,
+  compact,
+}) {
   const cfg = data?.configuration || {};
 
   const stateMeta = getStateMeta(data?.state);
@@ -99,7 +105,9 @@ export function NodeTooltipContent({ data, nodeKey, safeConfig, displayLabel, co
       {(data?.error || data?.result?.error) && (
         <div className="flex items-start gap-1.5 border-t border-red-500/20 pt-1.5 text-[10px] text-red-300">
           <AlertCircle size={11} className="mt-0.5 shrink-0" />
-          <span className="break-all">{renderTooltipError(data.error || data.result.error)}</span>
+          <span className="break-all">
+            {renderTooltipError(data.error || data.result.error)}
+          </span>
         </div>
       )}
 
@@ -112,9 +120,7 @@ export function NodeTooltipContent({ data, nodeKey, safeConfig, displayLabel, co
             >
               <AlertTriangle size={11} className="mt-0.5 shrink-0" />
               <span className="break-all">
-                {typeof w === "string"
-                  ? w
-                  : w?.message || JSON.stringify(w)}
+                {typeof w === "string" ? w : w?.message || JSON.stringify(w)}
               </span>
             </div>
           ))}
@@ -166,14 +172,22 @@ export default function CanvasNodeTooltip({ anchor, onClose, children }) {
 function getStateMeta(state) {
   switch (state) {
     case "success":
-      return { label: "ok", icon: <CheckCircle size={9} />, bg: "bg-emerald-500" };
+      return {
+        label: "ok",
+        icon: <CheckCircle size={9} />,
+        bg: "bg-emerald-500",
+      };
     case "error":
       return { label: "error", icon: <XCircle size={9} />, bg: "bg-red-500" };
     case "running":
     case "executing":
       return { label: "running", icon: <Clock size={9} />, bg: "bg-amber-500" };
     case "warning":
-      return { label: "warn", icon: <AlertTriangle size={9} />, bg: "bg-yellow-500" };
+      return {
+        label: "warn",
+        icon: <AlertTriangle size={9} />,
+        bg: "bg-yellow-500",
+      };
     default:
       return null;
   }
@@ -182,7 +196,7 @@ function getStateMeta(state) {
 function truncateResult(result) {
   const raw =
     typeof result === "object"
-      ? result?.resolvedValue ?? result?.value ?? JSON.stringify(result)
+      ? (result?.resolvedValue ?? result?.value ?? JSON.stringify(result))
       : result;
   const s = String(raw ?? "");
   return s.length > 40 ? s.slice(0, 39) + "…" : s || "—";
@@ -228,17 +242,16 @@ export function CanvasNodeInfoOverlay({
   };
   const smartLabel = getSmartLabel(nodeKey, data?.configuration);
   const displayLabel =
-    data?.customLabel ||
-    smartLabel ||
-    data?.label ||
-    nodeKey;
+    data?.customLabel || smartLabel || data?.label || nodeKey;
 
   const tooltipCursorPos = lowZoom && cursorPos ? cursorPos : null;
 
   return (
     <div ref={anchorRef} className="pointer-events-none">
       <CanvasNodeTooltip
-        anchor={tooltipCursorPos ? { ...tooltipCursorPos, compact: true } : anchor}
+        anchor={
+          tooltipCursorPos ? { ...tooltipCursorPos, compact: true } : anchor
+        }
         onClose={onClose}
         compact={lowZoom}
       >

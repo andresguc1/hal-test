@@ -1,82 +1,82 @@
 {
-  "id": "core-wait",
-  "name": "Wait & Timing",
-  "version": "1.0.0",
-  "description": "Wait, timing, and synchronization actions",
-  "category": "wait_timing",
-  "color": "amber",
-  "nodes": [
-    {
-      "type": "wait_for_element",
-      "label": "Wait for Element",
-      "category": "wait_timing",
-      "color": "amber",
-      "icon": "Clock",
-      "handler": "./handlers/wait_for_element.js",
-      "schema": "./schemas/wait_for_element.js"
-    },
-    {
-      "type": "wait_visible",
-      "label": "Wait Visible",
-      "category": "wait_timing",
-      "color": "amber",
-      "icon": "Eye",
-      "handler": "./handlers/wait_visible.js",
-      "schema": "./schemas/wait_visible.js"
-    },
-    {
-      "type": "wait_navigation",
-      "label": "Wait Navigation",
-      "category": "wait_timing",
-      "color": "amber",
-      "icon": "Loader",
-      "handler": "./handlers/wait_navigation.js",
-      "schema": "./schemas/wait_navigation.js"
-    },
-    {
-      "type": "wait_network",
-      "label": "Wait Network",
-      "category": "wait_timing",
-      "color": "amber",
-      "icon": "Wifi",
-      "handler": "./handlers/wait_network.js",
-      "schema": "./schemas/wait_network.js"
-    },
-    {
-      "type": "wait_conditional",
-      "label": "Wait Conditional",
-      "category": "wait_timing",
-      "color": "amber",
-      "icon": "Timer",
-      "handler": "./handlers/wait_conditional.js",
-      "schema": "./schemas/wait_conditional.js"
-    },
-    {
-      "type": "pause",
-      "label": "Pause",
-      "category": "wait_timing",
-      "color": "amber",
-      "icon": "Pause",
-      "handler": "./handlers/pause.js",
-      "schema": "./schemas/pause.js"
-    },
-    {
-      "type": "wait_for_response",
-      "label": "Wait for Response",
-      "category": "wait_timing",
-      "color": "amber",
-      "icon": "ArrowDownToLine",
-      "handler": "./handlers/wait_for_response.js",
-      "schema": "./schemas/wait_for_response.js"
-    },
-    {
-      "type": "wait_for_request",
-      "label": "Wait for Request",
-      "category": "wait_timing",
-      "color": "amber",
-      "icon": "ArrowUpFromLine",
-      "handler": "./handlers/wait_for_request.js",
-      "schema": "./schemas/wait_for_request.js"
-    }
-  ]
+    "id": "core-wait",
+    "name": "Wait & Timing",
+    "version": "1.0.0",
+    "description": "Wait, timing, and synchronization actions",
+    "category": "wait_timing",
+    "color": "amber",
+    "nodes": [
+        {
+            "type": "wait_for_element",
+            "label": "Wait for Element",
+            "category": "wait_timing",
+            "color": "amber",
+            "icon": "Clock",
+            "handler": "./handlers/wait_for_element.js",
+            "schema": "./schemas/wait_for_element.js"
+        },
+        {
+            "type": "wait_visible",
+            "label": "Wait Visible",
+            "category": "wait_timing",
+            "color": "amber",
+            "icon": "Eye",
+            "handler": "./handlers/wait_visible.js",
+            "schema": "./schemas/wait_visible.js"
+        },
+        {
+            "type": "wait_navigation",
+            "label": "Wait Navigation",
+            "category": "wait_timing",
+            "color": "amber",
+            "icon": "Loader",
+            "handler": "./handlers/wait_navigation.js",
+            "schema": "./schemas/wait_navigation.js"
+        },
+        {
+            "type": "wait_network",
+            "label": "Wait Network",
+            "category": "wait_timing",
+            "color": "amber",
+            "icon": "Wifi",
+            "handler": "./handlers/wait_network.js",
+            "schema": "./schemas/wait_network.js"
+        },
+        {
+            "type": "wait_conditional",
+            "label": "Wait Conditional",
+            "category": "wait_timing",
+            "color": "amber",
+            "icon": "Timer",
+            "handler": "./handlers/wait_conditional.js",
+            "schema": "./schemas/wait_conditional.js"
+        },
+        {
+            "type": "pause",
+            "label": "Pause",
+            "category": "wait_timing",
+            "color": "amber",
+            "icon": "Pause",
+            "handler": "./handlers/pause.js",
+            "schema": "./schemas/pause.js"
+        },
+        {
+            "type": "wait_for_response",
+            "label": "Wait for Response",
+            "category": "wait_timing",
+            "color": "amber",
+            "icon": "ArrowDownToLine",
+            "handler": "./handlers/wait_for_response.js",
+            "schema": "./schemas/wait_for_response.js"
+        },
+        {
+            "type": "wait_for_request",
+            "label": "Wait for Request",
+            "category": "wait_timing",
+            "color": "amber",
+            "icon": "ArrowUpFromLine",
+            "handler": "./handlers/wait_for_request.js",
+            "schema": "./schemas/wait_for_request.js"
+        }
+    ]
 }

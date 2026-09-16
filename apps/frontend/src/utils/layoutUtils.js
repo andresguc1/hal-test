@@ -28,8 +28,7 @@ function normalizeOptions(third) {
     return {
       direction,
       spacing: {
-        branchSpacing:
-          third.branchSpacing ?? DEFAULT_SPACING.branchSpacing,
+        branchSpacing: third.branchSpacing ?? DEFAULT_SPACING.branchSpacing,
         mergeSpacing: third.mergeSpacing ?? DEFAULT_SPACING.mergeSpacing,
         nodesep: third.nodesep ?? DEFAULT_SPACING.nodesep,
         ranksep: third.ranksep ?? DEFAULT_SPACING.ranksep,
@@ -423,7 +422,8 @@ export const getLayoutedElements = (nodes, edges, third) => {
         let desiredY = p.y;
         sources.forEach((srcId) => {
           const sp = positions.get(srcId);
-          if (sp) desiredY = Math.max(desiredY, sp.y + sp.h + spacing.mergeSpacing);
+          if (sp)
+            desiredY = Math.max(desiredY, sp.y + sp.h + spacing.mergeSpacing);
         });
 
         if (desiredY <= p.y) continue;

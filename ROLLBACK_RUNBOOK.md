@@ -6,23 +6,25 @@ This runbook provides step-by-step procedures for rolling back HalTest releases 
 
 ## Rollback Types
 
-| Type | Scope | Use Case |
-|------|-------|----------|
-| **Full Rollback** | App + Database + npm | Critical bugs affecting all channels |
-| **App-Only Rollback** | HalTest Online (Render) | Frontend/backend bugs, database compatible |
-| **Database-Only Rollback** | SQLite/PostgreSQL | Schema migration issues |
-| **npm Deprecation** | npm package only | Critical npm package bugs |
+| Type                       | Scope                   | Use Case                                   |
+| -------------------------- | ----------------------- | ------------------------------------------ |
+| **Full Rollback**          | App + Database + npm    | Critical bugs affecting all channels       |
+| **App-Only Rollback**      | HalTest Online (Render) | Frontend/backend bugs, database compatible |
+| **Database-Only Rollback** | SQLite/PostgreSQL       | Schema migration issues                    |
+| **npm Deprecation**        | npm package only        | Critical npm package bugs                  |
 
 ---
 
 ## Quick Reference
 
 ### Emergency Contacts
+
 - **On-call Engineer**: Check PagerDuty / Slack #oncall
 - **Render Dashboard**: https://dashboard.render.com
 - **npm Package**: https://www.npmjs.com/package/haltest
 
 ### Key URLs
+
 - **Production Health**: https://hal-test-backend.onrender.com/api/status
 - **Production App**: https://hal-test-backend.onrender.com/app/
 - **Staging Health**: https://hal-test-backend-staging.onrender.com/api/status
@@ -55,12 +57,14 @@ The system automatically triggers rollback when:
 **When to use**: Critical bugs affecting all channels, database incompatibility
 
 **Automated** (preferred):
+
 ```bash
 # Via GitHub Actions
 gh workflow run auto-rollback.yml -f rollback_type=full -f backup_name=database.sqlite.2026-09-12T18-46-28.bak
 ```
 
 **Manual**:
+
 ```bash
 # 1. Trigger app rollback via Render
 gh api -X POST /repos/andresguc1/hal-test/actions/workflows/auto-rollback.yml/dispatches \
@@ -77,6 +81,7 @@ node scripts/npm-deprecate.js deprecate haltest@1.0.72 "Rolled back due to criti
 ```
 
 **Verification**:
+
 ```bash
 # Check health
 node scripts/rollback.js health
@@ -92,17 +97,20 @@ node scripts/rollback.js health
 **When to use**: Frontend/backend bugs, database schema compatible with previous version
 
 **Automated**:
+
 ```bash
 gh workflow run auto-rollback.yml -f rollback_type=app-only
 ```
 
 **Manual via Render Dashboard**:
+
 1. Go to https://dashboard.render.com/web/hal-test-backend/deploys
 2. Find previous successful deploy (green checkmark)
 3. Click "..." menu → "Rollback to this deploy"
 4. Confirm rollback
 
 **Manual via API**:
+
 ```bash
 export RENDER_API_KEY=your_key
 export RENDER_PRODUCTION_SERVICE_ID=your_service_id
@@ -110,6 +118,7 @@ node scripts/rollback.js app-rollback
 ```
 
 **Verification**:
+
 ```bash
 # Wait 2-3 minutes for deploy
 node scripts/rollback.js health
@@ -125,10 +134,12 @@ curl -s https://hal-test-backend.onrender.com/api/status | jq '.version'
 **When to use**: Migration issues, schema incompatibility
 
 **Prerequisites**:
+
 - Valid backup exists in `/backups/`
 - Application compatible with previous schema
 
 **Procedure**:
+
 ```bash
 # List available backups
 cd apps/backend && pnpm db:backup:list
@@ -139,6 +150,7 @@ node scripts/rollback.js db-rollback database.sqlite.2026-09-12T18-46-28.bak
 ```
 
 **For PostgreSQL (Production)**:
+
 ```bash
 # Using pg_restore (requires DATABASE_URL)
 export DATABASE_URL=postgresql://...
@@ -146,6 +158,7 @@ pg_restore -d $DATABASE_URL /path/to/backup.sql
 ```
 
 **PostgreSQL Point-in-Time Recovery (PITR)**:
+
 1. Go to Supabase Dashboard → Database → Backups
 2. Select "Point in Time Recovery"
 3. Choose timestamp before migration
@@ -159,6 +172,7 @@ pg_restore -d $DATABASE_URL /path/to/backup.sql
 **When to use**: Critical bug in published npm package
 
 **Procedure**:
+
 ```bash
 # Get current version
 VERSION=$(node -p "require('./apps/cli/package.json').version")
@@ -172,11 +186,13 @@ npm view haltest@$VERSION deprecated
 ```
 
 **User Impact**:
+
 - `npx haltest@latest` will show deprecation warning
 - Users pinned to specific version unaffected
 - `npm install haltest@1.0.71` still works
 
 **Recovery** (if fixed):
+
 ```bash
 # Undeprecate if bug was minor
 node scripts/npm-deprecate.js undeprecate haltest@$VERSION
@@ -188,14 +204,14 @@ node scripts/npm-deprecate.js undeprecate haltest@$VERSION
 
 ## Rollback Decision Matrix
 
-| Symptom | Recommended Rollback | Reason |
-|---------|---------------------|--------|
-| App crashes on startup | Full | Database may have migrated |
-| API errors (500) | App-only | Database likely compatible |
-| Frontend loads but blank | App-only | Database not affected |
-| Migration failed | Database + App | Schema incompatible |
-| npm package broken | npm deprecate + App | Users getting bad package |
-| Performance regression | App-only | No data loss risk |
+| Symptom                  | Recommended Rollback | Reason                     |
+| ------------------------ | -------------------- | -------------------------- |
+| App crashes on startup   | Full                 | Database may have migrated |
+| API errors (500)         | App-only             | Database likely compatible |
+| Frontend loads but blank | App-only             | Database not affected      |
+| Migration failed         | Database + App       | Schema incompatible        |
+| npm package broken       | npm deprecate + App  | Users getting bad package  |
+| Performance regression   | App-only             | No data loss risk          |
 
 ---
 
@@ -232,6 +248,7 @@ cd apps/backend && pnpm db:migrate
 ```
 
 **Important**: Migration rollback is safe because:
+
 - Each migration has explicit `down()` function
 - No data loss for additive migrations
 - Destructive migrations require manual review
@@ -241,6 +258,7 @@ cd apps/backend && pnpm db:migrate
 ## Communication Templates
 
 ### Slack Notification (Auto-rollback)
+
 ```
 🚨 AUTO-ROLLBACK TRIGGERED
 Service: HalTest Production
@@ -252,6 +270,7 @@ Status: ✅ Rollback complete, health checks passing
 ```
 
 ### GitHub Issue (Post-Rollback)
+
 ```
 Title: Rollback v1.0.72 → v1.0.71 - [Root Cause]
 
@@ -297,23 +316,23 @@ DRY_RUN=true node scripts/rollback.js check
 
 ## Troubleshooting
 
-| Issue | Solution |
-|-------|----------|
-| Rollback hangs | Check Render deploy status manually, force cancel if needed |
-| Database restore fails | Verify backup integrity, try PITR for PostgreSQL |
-| npm deprecate fails | Verify NPM_TOKEN has publish permissions |
-| Health check false positive | Check Render service logs, verify endpoints manually |
-| Version mismatch after rollback | Clear browser cache, check Render deploy history |
+| Issue                           | Solution                                                    |
+| ------------------------------- | ----------------------------------------------------------- |
+| Rollback hangs                  | Check Render deploy status manually, force cancel if needed |
+| Database restore fails          | Verify backup integrity, try PITR for PostgreSQL            |
+| npm deprecate fails             | Verify NPM_TOKEN has publish permissions                    |
+| Health check false positive     | Check Render service logs, verify endpoints manually        |
+| Version mismatch after rollback | Clear browser cache, check Render deploy history            |
 
 ---
 
 ## Version Compatibility
 
-| App Version | Min DB Migration | Compatible DB |
-|-------------|------------------|---------------|
-| 1.0.70 | 20260912000000 | ✅ |
-| 1.0.71 | 20260912000000 | ✅ |
-| 1.0.72 | 20260912000000 | ❌ (migration 0002 required) |
+| App Version | Min DB Migration | Compatible DB                |
+| ----------- | ---------------- | ---------------------------- |
+| 1.0.70      | 20260912000000   | ✅                           |
+| 1.0.71      | 20260912000000   | ✅                           |
+| 1.0.72      | 20260912000000   | ❌ (migration 0002 required) |
 
 **Rule**: Never rollback app to version incompatible with current database migration.
 

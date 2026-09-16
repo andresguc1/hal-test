@@ -180,7 +180,8 @@ export const NODE_INPUTS = {
       key: "contextMenuItem",
       label: "Context Menu Option (Right-Click)",
       type: "text",
-      placeholder: "e.g. Delete or page.getByRole('menuitem', { name: 'Delete' })",
+      placeholder:
+        "e.g. Delete or page.getByRole('menuitem', { name: 'Delete' })",
     },
     {
       key: "clickOutside",
@@ -222,7 +223,8 @@ export const NODE_INPUTS = {
       key: "expectText",
       label: "Expected Message",
       type: "text",
-      placeholder: "e.g. You selected: internet (leave empty to skip assertion)",
+      placeholder:
+        "e.g. You selected: internet (leave empty to skip assertion)",
     },
     {
       key: "matchType",
@@ -447,7 +449,8 @@ export const NODE_INPUTS = {
       key: "menuSelector",
       label: "Options Panel / Menu Container (optional)",
       type: "selector",
-      placeholder: "Optional: open overlay panel, e.g. [role=listbox], .menu-open",
+      placeholder:
+        "Optional: open overlay panel, e.g. [role=listbox], .menu-open",
       hint: "Use when the options render outside the trigger (portal/overlay or virtualized list).",
     },
     {
@@ -694,7 +697,8 @@ export const NODE_INPUTS = {
       type: "selector",
       placeholder: "Click Pick or enter a CSS selector",
       required: true,
-      description: "The element you want to verify. Use Pick to select it visually, or type a CSS selector.",
+      description:
+        "The element you want to verify. Use Pick to select it visually, or type a CSS selector.",
     },
     {
       key: "target.scope",
@@ -706,7 +710,8 @@ export const NODE_INPUTS = {
         { label: "Page (URL/Title)", value: "page" },
       ],
       defaultValue: "element",
-      description: "Whether to check a single element, multiple elements, or the page itself.",
+      description:
+        "Whether to check a single element, multiple elements, or the page itself.",
     },
     {
       key: "target.candidates",
@@ -714,7 +719,8 @@ export const NODE_INPUTS = {
       type: "json",
       required: false,
       isVisible: () => false,
-      description: "Internal: picker candidate alternatives for fallback resolution.",
+      description:
+        "Internal: picker candidate alternatives for fallback resolution.",
     },
     {
       key: "target.selectorType",
@@ -722,28 +728,32 @@ export const NODE_INPUTS = {
       type: "string",
       required: false,
       isVisible: () => false,
-      description: "Internal: type of the primary selector (e.g., playwright_role, playwright_test_id).",
+      description:
+        "Internal: type of the primary selector (e.g., playwright_role, playwright_test_id).",
     },
     {
       key: "assertions",
       label: "What to verify",
       type: "assertionList",
       required: true,
-      description: "Add one or more checks to run against the selected element.",
+      description:
+        "Add one or more checks to run against the selected element.",
     },
     {
       key: "timeout",
       label: "Timeout",
       type: "number",
       placeholder: "Leave empty for platform default",
-      description: "Maximum time to wait for the check to pass (in milliseconds). Leave empty to use the platform default.",
+      description:
+        "Maximum time to wait for the check to pass (in milliseconds). Leave empty to use the platform default.",
     },
     {
       key: "softFail",
       label: "Continue test on failure",
       type: "checkbox",
       defaultValue: false,
-      description: "If enabled, a failed check is recorded but the flow keeps running (soft fail).",
+      description:
+        "If enabled, a failed check is recorded but the flow keeps running (soft fail).",
     },
   ],
   get_set_content: [
@@ -1598,7 +1608,11 @@ export const BASE_ALLOWED_CONFIG_KEYS = [
  * @param {Array<{key: string}>} [definedInputs] - Dynamic inputs (loop/component params).
  * @returns {object} Cleaned configuration.
  */
-export const cleanNodeConfiguration = (config, nodeType, definedInputs = []) => {
+export const cleanNodeConfiguration = (
+  config,
+  nodeType,
+  definedInputs = [],
+) => {
   if (!config) return {};
 
   const allowedKeys = new Set(BASE_ALLOWED_CONFIG_KEYS);
@@ -1643,37 +1657,84 @@ export const validateNodeConfig = (nodeType, config = {}) => {
   // Special validation for assert node
   if (nodeType === "assert") {
     const scope = config.target?.scope ?? config["target.scope"] ?? "element";
-    const selector =
-      config.target?.selector ?? config["target.selector"];
+    const selector = config.target?.selector ?? config["target.selector"];
     if (scope !== "page" && !selector) {
-      return { isValid: false, missingField: "Element to check", fieldKey: "target.selector" };
+      return {
+        isValid: false,
+        missingField: "Element to check",
+        fieldKey: "target.selector",
+      };
     }
-    if (!config.assertions || !Array.isArray(config.assertions) || config.assertions.length === 0) {
-      return { isValid: false, missingField: "At least one check", fieldKey: "assertions" };
+    if (
+      !config.assertions ||
+      !Array.isArray(config.assertions) ||
+      config.assertions.length === 0
+    ) {
+      return {
+        isValid: false,
+        missingField: "At least one check",
+        fieldKey: "assertions",
+      };
     }
     // Operators that don't require an expected value
     const operatorsNoValue = [
-      "empty", "not_empty", "exists", "not_exists",
-      "visible", "hidden", "enabled", "disabled",
-      "checked", "unchecked", "selected", "not_selected",
-      "focused", "not_focused", "readonly", "not_readonly",
-      "required", "not_required",
+      "empty",
+      "not_empty",
+      "exists",
+      "not_exists",
+      "visible",
+      "hidden",
+      "enabled",
+      "disabled",
+      "checked",
+      "unchecked",
+      "selected",
+      "not_selected",
+      "focused",
+      "not_focused",
+      "readonly",
+      "not_readonly",
+      "required",
+      "not_required",
     ];
     // Validate each assertion has required fields
     for (const assertion of config.assertions) {
       if (!assertion.type) {
-        return { isValid: false, missingField: "Assertion Type", fieldKey: "assertions[].type" };
+        return {
+          isValid: false,
+          missingField: "Assertion Type",
+          fieldKey: "assertions[].type",
+        };
       }
-      if (assertion.operator && !operatorsNoValue.includes(assertion.operator)) {
-        if (assertion.expected === undefined || assertion.expected === null || assertion.expected === "") {
-          return { isValid: false, missingField: "Expected Value", fieldKey: "assertions[].expected" };
+      if (
+        assertion.operator &&
+        !operatorsNoValue.includes(assertion.operator)
+      ) {
+        if (
+          assertion.expected === undefined ||
+          assertion.expected === null ||
+          assertion.expected === ""
+        ) {
+          return {
+            isValid: false,
+            missingField: "Expected Value",
+            fieldKey: "assertions[].expected",
+          };
         }
       }
       if (assertion.type === "attribute" && !assertion.attribute) {
-        return { isValid: false, missingField: "Attribute Name", fieldKey: "assertions[].attribute" };
+        return {
+          isValid: false,
+          missingField: "Attribute Name",
+          fieldKey: "assertions[].attribute",
+        };
       }
       if (assertion.type === "css_property" && !assertion.cssProperty) {
-        return { isValid: false, missingField: "CSS Property", fieldKey: "assertions[].cssProperty" };
+        return {
+          isValid: false,
+          missingField: "CSS Property",
+          fieldKey: "assertions[].cssProperty",
+        };
       }
     }
   }
@@ -1708,29 +1769,115 @@ export const truncate = (str, n) => {
  * Generates a human-readable label for a node based on its configuration.
  */
 const ASSERTION_LABELS = {
-    text: { equals: "Text equals", contains: "Text contains", not_equals: "Text not equal to", not_contains: "Text not contains", empty: "Text is empty", not_empty: "Text is not empty", regex: "Text matches", not_regex: "Text not matches" },
-    visibility: { visible: "Is visible", hidden: "Is hidden" },
-    existence: { exists: "Exists", not_exists: "Does not exist" },
-    count: { equals: "Count equals", not_equals: "Count not equal", greater_than: "Count greater than", less_than: "Count less than", greater_or_equal: "Count >= ", less_or_equal: "Count <= ", between: "Count between" },
-    attribute: { equals: "Attr equals", contains: "Attr contains", not_equals: "Attr not equal", not_contains: "Attr not contains", empty: "Attr is empty", not_empty: "Attr is not empty", regex: "Attr matches", not_regex: "Attr not matches" },
-    value: { equals: "Value equals", contains: "Value contains", not_equals: "Value not equal", not_contains: "Value not contains", empty: "Value is empty", not_empty: "Value is not empty", regex: "Value matches", not_regex: "Value not matches" },
-    state: { enabled: "Is enabled", disabled: "Is disabled", checked: "Is checked", unchecked: "Is unchecked", focused: "Is focused", not_focused: "Is not focused", readonly: "Is readonly", not_readonly: "Is not readonly", required: "Is required", not_required: "Is not required", selected: "Is selected", not_selected: "Is not selected" },
-    css_property: { equals: "CSS equals", contains: "CSS contains", not_equals: "CSS not equal", not_contains: "CSS not contains", regex: "CSS matches", not_regex: "CSS not matches" },
-    page: { url_equals: "URL equals", url_contains: "URL contains", url_not_equals: "URL not equal", url_not_contains: "URL not contains", title_equals: "Title equals", title_contains: "Title contains", title_not_equals: "Title not equal", title_not_contains: "Title not contains" },
+  text: {
+    equals: "Text equals",
+    contains: "Text contains",
+    not_equals: "Text not equal to",
+    not_contains: "Text not contains",
+    empty: "Text is empty",
+    not_empty: "Text is not empty",
+    regex: "Text matches",
+    not_regex: "Text not matches",
+  },
+  visibility: { visible: "Is visible", hidden: "Is hidden" },
+  existence: { exists: "Exists", not_exists: "Does not exist" },
+  count: {
+    equals: "Count equals",
+    not_equals: "Count not equal",
+    greater_than: "Count greater than",
+    less_than: "Count less than",
+    greater_or_equal: "Count >= ",
+    less_or_equal: "Count <= ",
+    between: "Count between",
+  },
+  attribute: {
+    equals: "Attr equals",
+    contains: "Attr contains",
+    not_equals: "Attr not equal",
+    not_contains: "Attr not contains",
+    empty: "Attr is empty",
+    not_empty: "Attr is not empty",
+    regex: "Attr matches",
+    not_regex: "Attr not matches",
+  },
+  value: {
+    equals: "Value equals",
+    contains: "Value contains",
+    not_equals: "Value not equal",
+    not_contains: "Value not contains",
+    empty: "Value is empty",
+    not_empty: "Value is not empty",
+    regex: "Value matches",
+    not_regex: "Value not matches",
+  },
+  state: {
+    enabled: "Is enabled",
+    disabled: "Is disabled",
+    checked: "Is checked",
+    unchecked: "Is unchecked",
+    focused: "Is focused",
+    not_focused: "Is not focused",
+    readonly: "Is readonly",
+    not_readonly: "Is not readonly",
+    required: "Is required",
+    not_required: "Is not required",
+    selected: "Is selected",
+    not_selected: "Is not selected",
+  },
+  css_property: {
+    equals: "CSS equals",
+    contains: "CSS contains",
+    not_equals: "CSS not equal",
+    not_contains: "CSS not contains",
+    regex: "CSS matches",
+    not_regex: "CSS not matches",
+  },
+  page: {
+    url_equals: "URL equals",
+    url_contains: "URL contains",
+    url_not_equals: "URL not equal",
+    url_not_contains: "URL not contains",
+    title_equals: "Title equals",
+    title_contains: "Title contains",
+    title_not_equals: "Title not equal",
+    title_not_contains: "Title not contains",
+  },
 };
 
 function formatAssertionLabel(assertion) {
-    if (!assertion) return "Unknown";
-    const type = assertion.type || "unknown";
-    const operator = assertion.operator || "";
-    const expected = assertion.expected;
-    const base = ASSERTION_LABELS[type]?.[operator] || `${type}:${operator}`;
-    if (["empty", "not_empty", "exists", "not_exists", "visible", "hidden", "enabled", "disabled", "checked", "unchecked", "focused", "not_focused", "readonly", "not_readonly", "required", "not_required", "selected", "not_selected"].includes(operator)) {
-      return base;
-    }
-    if (expected === undefined || expected === null || expected === "") return base;
-    const val = truncate(String(expected), 12);
-    return `${base} «${val}»`;
+  if (!assertion) return "Unknown";
+  const type = assertion.type || "unknown";
+  const operator = assertion.operator || "";
+  const expected = assertion.expected;
+  const base = ASSERTION_LABELS[type]?.[operator] || `${type}:${operator}`;
+  if (
+    [
+      "empty",
+      "not_empty",
+      "exists",
+      "not_exists",
+      "visible",
+      "hidden",
+      "enabled",
+      "disabled",
+      "checked",
+      "unchecked",
+      "focused",
+      "not_focused",
+      "readonly",
+      "not_readonly",
+      "required",
+      "not_required",
+      "selected",
+      "not_selected",
+    ].includes(operator)
+  ) {
+    return base;
+  }
+  if (expected === undefined || expected === null || expected === "")
+    return base;
+  const val = truncate(String(expected), 12);
+  return `${base} «${val}»`;
 }
 
 export const getSmartLabel = (nodeType, config = {}) => {
@@ -1756,19 +1903,27 @@ export const getSmartLabel = (nodeType, config = {}) => {
         const count = Array.isArray(config.fields) ? config.fields.length : 0;
         return count > 0 ? `Set ${count} checkboxes` : "Set checkboxes";
       }
-      const action = config.action === "uncheck" ? "Uncheck" : config.action === "toggle" ? "Toggle" : "Check";
-      return config.selector ? `${action}: ${truncate(config.selector, 15)}` : null;
+      const action =
+        config.action === "uncheck"
+          ? "Uncheck"
+          : config.action === "toggle"
+            ? "Toggle"
+            : "Check";
+      return config.selector
+        ? `${action}: ${truncate(config.selector, 15)}`
+        : null;
     }
     case "set_radio":
       return config.selector
         ? `Select radio: ${truncate(config.selector, 15)}`
         : null;
     case "pick_list_option": {
-      const which = config.mode === "index"
-        ? config.optionIndex != null
-          ? `#${config.optionIndex}`
-          : "option"
-        : config.optionText || "option";
+      const which =
+        config.mode === "index"
+          ? config.optionIndex != null
+            ? `#${config.optionIndex}`
+            : "option"
+          : config.optionText || "option";
       return config.selector
         ? `Pick ${truncate(which, 12)} from ${truncate(config.selector, 12)}`
         : null;

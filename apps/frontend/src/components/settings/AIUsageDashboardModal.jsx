@@ -43,8 +43,7 @@ const taskColors = {
   general: "bg-slate-500/20 text-slate-300 border-slate-500/30",
 };
 
-const taskDefault =
-  "bg-slate-500/20 text-slate-300 border-slate-500/30";
+const taskDefault = "bg-slate-500/20 text-slate-300 border-slate-500/30";
 
 const taskColor = (type) => taskColors[type] || taskDefault;
 
@@ -136,9 +135,7 @@ export function AIUsageDashboardModal({ isOpen, onClose }) {
   const maxTaskCount = Math.max(1, ...taskTypes.map((x) => x.count));
 
   const filteredLogs =
-    taskFilter === "all"
-      ? logs
-      : logs.filter((l) => l.taskType === taskFilter);
+    taskFilter === "all" ? logs : logs.filter((l) => l.taskType === taskFilter);
 
   return (
     <Dialog open={isOpen} onOpenChange={(val) => !val && onClose()}>
@@ -250,8 +247,8 @@ export function AIUsageDashboardModal({ isOpen, onClose }) {
                           {t.taskType}
                         </Badge>
                         <span className="text-slate-400 tabular-nums">
-                          {t.count} llamadas · {t.totalTokens.toLocaleString()} tok ·{" "}
-                          {t.avgLatencyMs ? `${t.avgLatencyMs} ms` : "—"}
+                          {t.count} llamadas · {t.totalTokens.toLocaleString()}{" "}
+                          tok · {t.avgLatencyMs ? `${t.avgLatencyMs} ms` : "—"}
                         </span>
                       </div>
                       <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden border border-slate-800/60">
@@ -321,7 +318,9 @@ export function AIUsageDashboardModal({ isOpen, onClose }) {
                             style={{
                               height: `${Math.max(
                                 4,
-                                Math.round((d.totalTokens / maxDayTokens) * 100),
+                                Math.round(
+                                  (d.totalTokens / maxDayTokens) * 100,
+                                ),
                               )}%`,
                             }}
                           ></div>
@@ -344,10 +343,7 @@ export function AIUsageDashboardModal({ isOpen, onClose }) {
                       {t("settings.ai.usage_dashboard.recent_calls")}
                     </h4>
                   </div>
-                  <Select
-                    value={taskFilter}
-                    onValueChange={setTaskFilter}
-                  >
+                  <Select value={taskFilter} onValueChange={setTaskFilter}>
                     <SelectTrigger className="w-44 h-8 bg-slate-950 border-slate-800 text-[11px]">
                       <SelectValue />
                     </SelectTrigger>
@@ -416,12 +412,16 @@ export function AIUsageDashboardModal({ isOpen, onClose }) {
                               {log.model || "—"}
                             </td>
                             <td className="py-2 pr-3 text-right text-slate-400 tabular-nums whitespace-nowrap">
-                              {(log.promptTokens || 0) + (log.completionTokens || 0) > 0
-                                ? `${(log.promptTokens || 0)}/${(log.completionTokens || 0)}`
+                              {(log.promptTokens || 0) +
+                                (log.completionTokens || 0) >
+                              0
+                                ? `${log.promptTokens || 0}/${log.completionTokens || 0}`
                                 : "—"}
                             </td>
                             <td className="py-2 pr-3 text-right text-slate-400 tabular-nums">
-                              {log.latencyMs != null ? `${log.latencyMs} ms` : "—"}
+                              {log.latencyMs != null
+                                ? `${log.latencyMs} ms`
+                                : "—"}
                             </td>
                             <td className="py-2 text-right">
                               {log.success ? (
@@ -430,7 +430,10 @@ export function AIUsageDashboardModal({ isOpen, onClose }) {
                                   className="inline text-emerald-400"
                                 />
                               ) : (
-                                <XCircle size={14} className="inline text-red-400" />
+                                <XCircle
+                                  size={14}
+                                  className="inline text-red-400"
+                                />
                               )}
                             </td>
                           </tr>

@@ -1,37 +1,37 @@
 {
-  "id": "core-assertion",
-  "name": "Assertions",
-  "version": "1.0.0",
-  "description": "Page content assertions and validation",
-  "category": "assertion",
-  "color": "emerald",
-  "nodes": [
-    {
-      "type": "assert_page_text",
-      "label": "Assert Page Text",
-      "category": "assertion",
-      "color": "emerald",
-      "icon": "CheckCircle",
-      "handler": "./handlers/assert_page_text.handler.js",
-      "schema": "./schemas/assert_page_text.schema.js"
-    },
-    {
-      "type": "assert",
-      "label": "Assert",
-      "category": "assertion",
-      "color": "emerald",
-      "icon": "CheckCircle2",
-      "handler": "./handlers/assert.handler.js",
-      "schema": "./schemas/assert.js"
-    },
-    {
-      "type": "capture_snapshot",
-      "label": "Capture Snapshot",
-      "category": "assertion",
-      "color": "emerald",
-      "icon": "Camera",
-      "handler": "./handlers/capture_snapshot.handler.js",
-      "schema": "./schemas/capture_snapshot.js"
-    }
-  ]
+    "id": "core-assertion",
+    "name": "Assertions",
+    "version": "1.0.0",
+    "description": "Page content assertions and validation",
+    "category": "assertion",
+    "color": "emerald",
+    "nodes": [
+        {
+            "type": "assert_page_text",
+            "label": "Assert Page Text",
+            "category": "assertion",
+            "color": "emerald",
+            "icon": "CheckCircle",
+            "handler": "./handlers/assert_page_text.handler.js",
+            "schema": "./schemas/assert_page_text.schema.js"
+        },
+        {
+            "type": "assert",
+            "label": "Assert",
+            "category": "assertion",
+            "color": "emerald",
+            "icon": "CheckCircle2",
+            "handler": "./handlers/assert.handler.js",
+            "schema": "./schemas/assert.js"
+        },
+        {
+            "type": "capture_snapshot",
+            "label": "Capture Snapshot",
+            "category": "assertion",
+            "color": "emerald",
+            "icon": "Camera",
+            "handler": "./handlers/capture_snapshot.handler.js",
+            "schema": "./schemas/capture_snapshot.js"
+        }
+    ]
 }

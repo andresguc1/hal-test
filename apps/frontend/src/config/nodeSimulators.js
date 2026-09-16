@@ -65,30 +65,37 @@ export const NODE_SIMULATORS = {
     success: true,
     selector: config.containerSelector || config.selector,
     value: Array.isArray(config.selectedOptions)
-      ? config.selectedOptions
-          .map((o) => o.label || o.value)
-          .join(", ")
+      ? config.selectedOptions.map((o) => o.label || o.value).join(", ")
       : config.selectionValue,
     selectedOptions: config.selectedOptions || [],
     actionCount: Array.isArray(config.selectedOptions)
-      ? config.selectedOptions.filter((o) => o.action && o.action !== "NO_CHANGE").length
+      ? config.selectedOptions.filter(
+          (o) => o.action && o.action !== "NO_CHANGE",
+        ).length
       : 0,
-    optionCount: Array.isArray(config.selectedOptions) ? config.selectedOptions.length : 0,
-    evidence: (Array.isArray(config.selectedOptions) ? config.selectedOptions : []).map(
-      (o) => ({
-        label: o.label,
-        value: o.value,
-        action: o.action || "CHECK",
-        before: "Unknown",
-        after: "Unknown",
-        result: "PASS",
-      }),
-    ),
+    optionCount: Array.isArray(config.selectedOptions)
+      ? config.selectedOptions.length
+      : 0,
+    evidence: (Array.isArray(config.selectedOptions)
+      ? config.selectedOptions
+      : []
+    ).map((o) => ({
+      label: o.label,
+      value: o.value,
+      action: o.action || "CHECK",
+      before: "Unknown",
+      after: "Unknown",
+      result: "PASS",
+    })),
   }),
 
   set_checkbox: (config) => {
     const verified = config.verifyState !== false;
-    if (config.multiple && Array.isArray(config.fields) && config.fields.length > 0) {
+    if (
+      config.multiple &&
+      Array.isArray(config.fields) &&
+      config.fields.length > 0
+    ) {
       const fields = config.fields.map((f) => ({
         strategy: f.strategy || "css",
         target: f.target,
@@ -176,7 +183,12 @@ export const NODE_SIMULATORS = {
       failed: 0,
       total: assertions.length,
       softFailed: false,
-      assertions: assertions.map((a) => ({ ...a, passed: true, actual: "simulated", expected: a.expected })),
+      assertions: assertions.map((a) => ({
+        ...a,
+        passed: true,
+        actual: "simulated",
+        expected: a.expected,
+      })),
     };
   },
 

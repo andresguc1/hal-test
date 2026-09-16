@@ -1,8 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  applyConfigurationUpdate,
-  getContainerFlowId,
-} from "./utils";
+import { applyConfigurationUpdate, getContainerFlowId } from "./utils";
 
 describe("applyConfigurationUpdate", () => {
   const baseNode = {

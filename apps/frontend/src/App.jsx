@@ -72,7 +72,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import GuestModeModal from "./components/modals/GuestModeModal";
 import DatasetRunModal from "./components/modals/DatasetRunModal";
 import { ProjectExportModal } from "./components/modals/ProjectExportModal";
-import { ProjectImportModal } from "./components/modals/ProjectImportModal";import PerformanceRunModal from "./components/performance/PerformanceRunModal";
+import { ProjectImportModal } from "./components/modals/ProjectImportModal";
+import PerformanceRunModal from "./components/performance/PerformanceRunModal";
 import SecurityRunModal from "./components/security/SecurityRunModal";
 import { useExecutionStore } from "./stores/useExecutionStore";
 
@@ -2841,8 +2842,8 @@ function Dashboard({
             projects.find((p) => p.id === projectExportIds[0])?.name || ""
           }
           flowCount={
-            projects.find((p) => p.id === projectExportIds[0])?.flows
-              ?.length || 0
+            projects.find((p) => p.id === projectExportIds[0])?.flows?.length ||
+            0
           }
           componentCount={0}
           onClose={() => setProjectExportOpen(false)}

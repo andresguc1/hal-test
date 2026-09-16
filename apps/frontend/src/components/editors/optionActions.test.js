@@ -38,7 +38,10 @@ describe("getActionFor", () => {
       ACTION_UNCHECK,
     );
     expect(
-      getActionFor([{ label: "Admin", action: ACTION_CHECK }], { ...optA, value: "" }),
+      getActionFor([{ label: "Admin", action: ACTION_CHECK }], {
+        ...optA,
+        value: "",
+      }),
     ).toBe(ACTION_CHECK);
   });
 });

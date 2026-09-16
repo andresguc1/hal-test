@@ -24,35 +24,33 @@
 
 ```typescript
 // playwright.config.ts
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
-  testDir: './tests',
+  testDir: "./tests",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? '50%' : undefined,
+  workers: process.env.CI ? "50%" : undefined,
 
   use: {
-    baseURL: 'http://localhost:3000',
-    trace: 'on-first-retry',
-    screenshot: 'only-on-failure',
+    baseURL: "http://localhost:3000",
+    trace: "on-first-retry",
+    screenshot: "only-on-failure",
   },
 
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'mobile', use: { ...devices['iPhone 14'] } },
+    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    { name: "mobile", use: { ...devices["iPhone 14"] } },
   ],
 
   webServer: {
-    command: process.env.CI
-      ? 'npm run build && npm run start'
-      : 'npm run dev',
-    url: 'http://localhost:3000',
+    command: process.env.CI ? "npm run build && npm run start" : "npm run dev",
+    url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
     env: {
-      NODE_ENV: process.env.CI ? 'production' : 'test',
+      NODE_ENV: process.env.CI ? "production" : "test",
     },
   },
 });
@@ -76,45 +74,47 @@ NEXTAUTH_SECRET=test-secret-local
 ### Server Component Content
 
 ```typescript
-test('renders server component content', async ({ page }) => {
-  await page.goto('/');
+test("renders server component content", async ({ page }) => {
+  await page.goto("/");
 
-  await expect(page.getByRole('heading', { name: 'Welcome', level: 1 })).toBeVisible();
-  await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Welcome", level: 1 }),
+  ).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Main" })).toBeVisible();
 });
 ```
 
 ### Loading States with Streaming
 
 ```typescript
-test('loading state during data streaming', async ({ page }) => {
-  await page.route('**/api/stats', async (route) => {
+test("loading state during data streaming", async ({ page }) => {
+  await page.route("**/api/stats", async (route) => {
     await new Promise((r) => setTimeout(r, 2000));
     await route.continue();
   });
 
-  await page.goto('/dashboard');
+  await page.goto("/dashboard");
 
-  await expect(page.getByRole('progressbar')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
-  await expect(page.getByRole('progressbar')).toBeHidden();
+  await expect(page.getByRole("progressbar")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
+  await expect(page.getByRole("progressbar")).toBeHidden();
 });
 ```
 
 ### Nested Layouts
 
 ```typescript
-test('layouts persist across navigation', async ({ page }) => {
-  await page.goto('/dashboard/analytics');
+test("layouts persist across navigation", async ({ page }) => {
+  await page.goto("/dashboard/analytics");
 
-  const sidebar = page.getByRole('navigation', { name: 'Dashboard' });
+  const sidebar = page.getByRole("navigation", { name: "Dashboard" });
   await expect(sidebar).toBeVisible();
 
-  await sidebar.getByRole('link', { name: 'Settings' }).click();
-  await page.waitForURL('/dashboard/settings');
+  await sidebar.getByRole("link", { name: "Settings" }).click();
+  await page.waitForURL("/dashboard/settings");
 
   await expect(sidebar).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
 });
 ```
 
@@ -123,23 +123,25 @@ test('layouts persist across navigation', async ({ page }) => {
 ### SSR with getServerSideProps
 
 ```typescript
-test('page with getServerSideProps renders data', async ({ page }) => {
-  await page.goto('/blog');
+test("page with getServerSideProps renders data", async ({ page }) => {
+  await page.goto("/blog");
 
-  await expect(page.getByRole('heading', { name: 'Blog', level: 1 })).toBeVisible();
-  await expect(page.getByRole('article')).toHaveCount(10);
-  await expect(page.getByRole('article').first()).toContainText(/\w+/);
+  await expect(
+    page.getByRole("heading", { name: "Blog", level: 1 }),
+  ).toBeVisible();
+  await expect(page.getByRole("article")).toHaveCount(10);
+  await expect(page.getByRole("article").first()).toContainText(/\w+/);
 });
 ```
 
 ### Static Generation with getStaticProps
 
 ```typescript
-test('static page shows pre-rendered content', async ({ page }) => {
-  await page.goto('/about');
+test("static page shows pre-rendered content", async ({ page }) => {
+  await page.goto("/about");
 
-  await expect(page.getByRole('heading', { name: 'About Us' })).toBeVisible();
-  await expect(page.getByText('Founded in 2020')).toBeVisible();
+  await expect(page.getByRole("heading", { name: "About Us" })).toBeVisible();
+  await expect(page.getByText("Founded in 2020")).toBeVisible();
 });
 ```
 
@@ -148,43 +150,51 @@ test('static page shows pre-rendered content', async ({ page }) => {
 ### Slug Parameters
 
 ```typescript
-test('dynamic [slug] renders correct content', async ({ page }) => {
-  await page.goto('/blog/testing-guide');
+test("dynamic [slug] renders correct content", async ({ page }) => {
+  await page.goto("/blog/testing-guide");
 
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Testing Guide');
-  await expect(page.getByText('Page not found')).toBeHidden();
+  await expect(page.getByRole("heading", { level: 1 })).toContainText(
+    "Testing Guide",
+  );
+  await expect(page.getByText("Page not found")).toBeHidden();
 });
 
-test('non-existent slug shows 404', async ({ page }) => {
-  const response = await page.goto('/blog/nonexistent-post');
+test("non-existent slug shows 404", async ({ page }) => {
+  const response = await page.goto("/blog/nonexistent-post");
 
   expect(response?.status()).toBe(404);
-  await expect(page.getByRole('heading', { name: '404' })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "404" })).toBeVisible();
 });
 ```
 
 ### Catch-All Routes
 
 ```typescript
-test('catch-all handles nested paths', async ({ page }) => {
-  await page.goto('/docs/getting-started/installation');
-  await expect(page.getByRole('heading', { name: 'Installation' })).toBeVisible();
+test("catch-all handles nested paths", async ({ page }) => {
+  await page.goto("/docs/getting-started/installation");
+  await expect(
+    page.getByRole("heading", { name: "Installation" }),
+  ).toBeVisible();
 
-  await page.goto('/docs/api/configuration');
-  await expect(page.getByRole('heading', { name: 'Configuration' })).toBeVisible();
+  await page.goto("/docs/api/configuration");
+  await expect(
+    page.getByRole("heading", { name: "Configuration" }),
+  ).toBeVisible();
 });
 ```
 
 ### Query Parameters
 
 ```typescript
-test('query parameters filter content', async ({ page }) => {
-  await page.goto('/products?category=electronics&sort=price-asc');
+test("query parameters filter content", async ({ page }) => {
+  await page.goto("/products?category=electronics&sort=price-asc");
 
-  await expect(page.getByRole('heading', { name: 'Electronics' })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Electronics" }),
+  ).toBeVisible();
 
-  const prices = await page.getByTestId('product-price').allTextContents();
-  const numericPrices = prices.map((p) => parseFloat(p.replace('$', '')));
+  const prices = await page.getByTestId("product-price").allTextContents();
+  const numericPrices = prices.map((p) => parseFloat(p.replace("$", "")));
   expect(numericPrices).toEqual([...numericPrices].sort((a, b) => a - b));
 });
 ```
@@ -194,49 +204,51 @@ test('query parameters filter content', async ({ page }) => {
 ### Direct API Testing
 
 ```typescript
-test('GET /api/products returns list', async ({ request }) => {
-  const response = await request.get('/api/products');
+test("GET /api/products returns list", async ({ request }) => {
+  const response = await request.get("/api/products");
 
   expect(response.ok()).toBeTruthy();
   const body = await response.json();
   expect(body.products).toBeInstanceOf(Array);
-  expect(body.products[0]).toHaveProperty('id');
-  expect(body.products[0]).toHaveProperty('name');
+  expect(body.products[0]).toHaveProperty("id");
+  expect(body.products[0]).toHaveProperty("name");
 });
 
-test('POST /api/products creates item', async ({ request }) => {
-  const response = await request.post('/api/products', {
-    data: { name: 'Test Product', price: 29.99 },
+test("POST /api/products creates item", async ({ request }) => {
+  const response = await request.post("/api/products", {
+    data: { name: "Test Product", price: 29.99 },
   });
 
   expect(response.status()).toBe(201);
   const body = await response.json();
-  expect(body.product.name).toBe('Test Product');
+  expect(body.product.name).toBe("Test Product");
 });
 
-test('POST /api/products validates fields', async ({ request }) => {
-  const response = await request.post('/api/products', {
-    data: { name: '' },
+test("POST /api/products validates fields", async ({ request }) => {
+  const response = await request.post("/api/products", {
+    data: { name: "" },
   });
 
   expect(response.status()).toBe(400);
   const body = await response.json();
-  expect(body.error).toContainEqual(expect.objectContaining({ field: 'price' }));
+  expect(body.error).toContainEqual(
+    expect.objectContaining({ field: "price" }),
+  );
 });
 ```
 
 ### API Through UI
 
 ```typescript
-test('form submission calls API', async ({ page }) => {
-  await page.goto('/products/new');
+test("form submission calls API", async ({ page }) => {
+  await page.goto("/products/new");
 
-  await page.getByLabel('Product name').fill('Widget');
-  await page.getByLabel('Price').fill('19.99');
-  await page.getByRole('button', { name: 'Create product' }).click();
+  await page.getByLabel("Product name").fill("Widget");
+  await page.getByLabel("Price").fill("19.99");
+  await page.getByRole("button", { name: "Create product" }).click();
 
-  await expect(page.getByText('Product created successfully')).toBeVisible();
-  await page.waitForURL('/products/**');
+  await expect(page.getByText("Product created successfully")).toBeVisible();
+  await page.waitForURL("/products/**");
 });
 ```
 
@@ -245,46 +257,47 @@ test('form submission calls API', async ({ page }) => {
 ### Auth Redirects
 
 ```typescript
-test('unauthenticated user redirected to login', async ({ page }) => {
-  await page.goto('/dashboard');
+test("unauthenticated user redirected to login", async ({ page }) => {
+  await page.goto("/dashboard");
 
-  expect(page.url()).toContain('/login');
-  await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+  expect(page.url()).toContain("/login");
+  await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
 });
 
-test('redirect preserves return URL', async ({ page }) => {
-  await page.goto('/dashboard/settings');
+test("redirect preserves return URL", async ({ page }) => {
+  await page.goto("/dashboard/settings");
 
   const url = new URL(page.url());
-  expect(url.pathname).toBe('/login');
-  expect(url.searchParams.get('callbackUrl') || url.searchParams.get('returnTo'))
-    .toContain('/dashboard/settings');
+  expect(url.pathname).toBe("/login");
+  expect(
+    url.searchParams.get("callbackUrl") || url.searchParams.get("returnTo"),
+  ).toContain("/dashboard/settings");
 });
 ```
 
 ### Security Headers
 
 ```typescript
-test('middleware sets security headers', async ({ page }) => {
-  const response = await page.goto('/');
+test("middleware sets security headers", async ({ page }) => {
+  const response = await page.goto("/");
 
   const headers = response!.headers();
-  expect(headers['x-frame-options']).toBe('DENY');
-  expect(headers['x-content-type-options']).toBe('nosniff');
+  expect(headers["x-frame-options"]).toBe("DENY");
+  expect(headers["x-content-type-options"]).toBe("nosniff");
 });
 ```
 
 ### Locale Rewrites
 
 ```typescript
-test('middleware rewrites based on locale', async ({ page, context }) => {
+test("middleware rewrites based on locale", async ({ page, context }) => {
   await context.setExtraHTTPHeaders({
-    'Accept-Language': 'fr-FR,fr;q=0.9',
+    "Accept-Language": "fr-FR,fr;q=0.9",
   });
 
-  await page.goto('/');
+  await page.goto("/");
 
-  await expect(page.getByText('Bienvenue')).toBeVisible();
+  await expect(page.getByText("Bienvenue")).toBeVisible();
 });
 ```
 
@@ -293,22 +306,22 @@ test('middleware rewrites based on locale', async ({ page, context }) => {
 ### Console Error Detection
 
 ```typescript
-test('no hydration errors in console', async ({ page }) => {
+test("no hydration errors in console", async ({ page }) => {
   const consoleErrors: string[] = [];
-  page.on('console', (msg) => {
-    if (msg.type() === 'error') {
+  page.on("console", (msg) => {
+    if (msg.type() === "error") {
       consoleErrors.push(msg.text());
     }
   });
 
-  await page.goto('/');
-  await page.getByRole('button', { name: 'Get started' }).click();
+  await page.goto("/");
+  await page.getByRole("button", { name: "Get started" }).click();
 
   const hydrationErrors = consoleErrors.filter(
     (e) =>
-      e.includes('Hydration') ||
-      e.includes('hydration') ||
-      e.includes('did not match')
+      e.includes("Hydration") ||
+      e.includes("hydration") ||
+      e.includes("did not match"),
   );
   expect(hydrationErrors).toEqual([]);
 });
@@ -317,44 +330,44 @@ test('no hydration errors in console', async ({ page }) => {
 ### Interactive Elements After Hydration
 
 ```typescript
-test('interactive elements work after hydration', async ({ page }) => {
-  await page.goto('/');
+test("interactive elements work after hydration", async ({ page }) => {
+  await page.goto("/");
 
-  const counter = page.getByTestId('counter-value');
-  await expect(counter).toHaveText('0');
+  const counter = page.getByTestId("counter-value");
+  await expect(counter).toHaveText("0");
 
-  await page.getByRole('button', { name: 'Increment' }).click();
-  await expect(counter).toHaveText('1');
+  await page.getByRole("button", { name: "Increment" }).click();
+  await expect(counter).toHaveText("1");
 });
 ```
 
 ## next/image Testing
 
 ```typescript
-test('hero image loads with srcset', async ({ page }) => {
-  await page.goto('/');
+test("hero image loads with srcset", async ({ page }) => {
+  await page.goto("/");
 
-  const heroImage = page.getByRole('img', { name: 'Hero banner' });
+  const heroImage = page.getByRole("img", { name: "Hero banner" });
   await expect(heroImage).toBeVisible();
 
-  const srcset = await heroImage.getAttribute('srcset');
+  const srcset = await heroImage.getAttribute("srcset");
   expect(srcset).toBeTruthy();
-  expect(srcset).toContain('w=');
+  expect(srcset).toContain("w=");
 
-  const loading = await heroImage.getAttribute('loading');
-  expect(loading).not.toBe('lazy');
+  const loading = await heroImage.getAttribute("loading");
+  expect(loading).not.toBe("lazy");
 });
 
-test('offscreen images lazy load', async ({ page }) => {
-  await page.goto('/gallery');
+test("offscreen images lazy load", async ({ page }) => {
+  await page.goto("/gallery");
 
-  const offscreenImage = page.getByRole('img', { name: 'Gallery item 20' });
+  const offscreenImage = page.getByRole("img", { name: "Gallery item 20" });
 
   await offscreenImage.scrollIntoViewIfNeeded();
   await expect(offscreenImage).toBeVisible();
 
   const naturalWidth = await offscreenImage.evaluate(
-    (img: HTMLImageElement) => img.naturalWidth
+    (img: HTMLImageElement) => img.naturalWidth,
   );
   expect(naturalWidth).toBeGreaterThan(0);
 });
@@ -368,13 +381,13 @@ test('offscreen images lazy load', async ({ page }) => {
 // playwright.config.ts
 export default defineConfig({
   projects: [
-    { name: 'setup', testMatch: /auth\.setup\.ts/ },
+    { name: "setup", testMatch: /auth\.setup\.ts/ },
     {
-      name: 'authenticated',
-      use: { storageState: 'playwright/.auth/user.json' },
-      dependencies: ['setup'],
+      name: "authenticated",
+      use: { storageState: "playwright/.auth/user.json" },
+      dependencies: ["setup"],
     },
-    { name: 'unauthenticated', testMatch: '**/*.unauth.spec.ts' },
+    { name: "unauthenticated", testMatch: "**/*.unauth.spec.ts" },
   ],
 });
 ```
@@ -383,18 +396,18 @@ export default defineConfig({
 
 ```typescript
 // tests/auth.setup.ts
-import { test as setup, expect } from '@playwright/test';
+import { test as setup, expect } from "@playwright/test";
 
-const authFile = 'playwright/.auth/user.json';
+const authFile = "playwright/.auth/user.json";
 
-setup('authenticate via credentials', async ({ page }) => {
-  await page.goto('/login');
-  await page.getByLabel('Email').fill('test@example.com');
-  await page.getByLabel('Password').fill(process.env.TEST_PASSWORD!);
-  await page.getByRole('button', { name: 'Sign in' }).click();
+setup("authenticate via credentials", async ({ page }) => {
+  await page.goto("/login");
+  await page.getByLabel("Email").fill("test@example.com");
+  await page.getByLabel("Password").fill(process.env.TEST_PASSWORD!);
+  await page.getByRole("button", { name: "Sign in" }).click();
 
-  await page.waitForURL('/dashboard');
-  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+  await page.waitForURL("/dashboard");
+  await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
 
   await page.context().storageState({ path: authFile });
 });
@@ -403,11 +416,11 @@ setup('authenticate via credentials', async ({ page }) => {
 ### Authenticated Tests
 
 ```typescript
-test('authenticated user sees dashboard', async ({ page }) => {
-  await page.goto('/dashboard');
+test("authenticated user sees dashboard", async ({ page }) => {
+  await page.goto("/dashboard");
 
-  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
-  await expect(page.getByText('test@example.com')).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
+  await expect(page.getByText("test@example.com")).toBeVisible();
 });
 ```
 
@@ -415,10 +428,10 @@ test('authenticated user sees dashboard', async ({ page }) => {
 
 ### Dev Server vs Production Build
 
-| Scenario | Command | Trade-off |
-|---|---|---|
-| Local development | `npm run dev` | Fast iteration, no production behavior |
-| CI pipeline | `npm run build && npm run start` | Tests real production bundle |
+| Scenario          | Command                          | Trade-off                              |
+| ----------------- | -------------------------------- | -------------------------------------- |
+| Local development | `npm run dev`                    | Fast iteration, no production behavior |
+| CI pipeline       | `npm run build && npm run start` | Tests real production bundle           |
 
 ### Turbopack
 
@@ -451,15 +464,15 @@ webServer: [
 
 ## Anti-Patterns
 
-| Don't Do This | Problem | Do This Instead |
-|---|---|---|
-| `await page.waitForTimeout(3000)` | Arbitrary waits are fragile | `await page.waitForURL('/path')` or `await expect(locator).toBeVisible()` |
-| Test `getServerSideProps` directly | Depends on req/res context | Navigate to page and verify rendered output |
-| Mock your own API routes | Hides real API bugs | Let real API handle requests; mock only external services |
-| `page.goto('http://localhost:3000/path')` | Breaks when port changes | Use `page.goto('/path')` with `baseURL` |
-| Run `npm run build` locally for every test | Extremely slow | Use `npm run dev` locally with `reuseExistingServer: true` |
-| Test `next/image` by checking exact URLs | Paths change between dev/prod | Assert on `alt`, visibility, `naturalWidth > 0`, `srcset` |
-| Test server actions by calling as functions | Server actions need Next.js runtime | Trigger through UI (forms, buttons) |
+| Don't Do This                               | Problem                             | Do This Instead                                                           |
+| ------------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------- |
+| `await page.waitForTimeout(3000)`           | Arbitrary waits are fragile         | `await page.waitForURL('/path')` or `await expect(locator).toBeVisible()` |
+| Test `getServerSideProps` directly          | Depends on req/res context          | Navigate to page and verify rendered output                               |
+| Mock your own API routes                    | Hides real API bugs                 | Let real API handle requests; mock only external services                 |
+| `page.goto('http://localhost:3000/path')`   | Breaks when port changes            | Use `page.goto('/path')` with `baseURL`                                   |
+| Run `npm run build` locally for every test  | Extremely slow                      | Use `npm run dev` locally with `reuseExistingServer: true`                |
+| Test `next/image` by checking exact URLs    | Paths change between dev/prod       | Assert on `alt`, visibility, `naturalWidth > 0`, `srcset`                 |
+| Test server actions by calling as functions | Server actions need Next.js runtime | Trigger through UI (forms, buttons)                                       |
 
 ## Related
 

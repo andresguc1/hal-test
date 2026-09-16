@@ -119,7 +119,12 @@ export const NODE_CATEGORIES = {
   browser: {
     label: "Browser",
     icon: "🌐",
-    nodes: ["launch_browser", "resize_viewport", "manage_tabs", "browser_dialog"],
+    nodes: [
+      "launch_browser",
+      "resize_viewport",
+      "manage_tabs",
+      "browser_dialog",
+    ],
   },
   interaction: {
     label: "Interaction",
@@ -499,7 +504,8 @@ export const NODE_FIELD_CONFIGS = {
       placeholder: "Ex: #accept-terms, input[name='agree']",
       required: true,
       validation: (value, allParams, t) => {
-        if (!allParams.multiple && !value) return t("nodes.validation.selector_required");
+        if (!allParams.multiple && !value)
+          return t("nodes.validation.selector_required");
         return null;
       },
       hint: "Playwright locator of the checkbox element (getByRole, #id, [data-testid], etc.).",

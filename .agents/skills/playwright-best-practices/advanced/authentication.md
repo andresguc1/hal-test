@@ -24,7 +24,7 @@ await page.context().storageState({ path: ".auth/session.json" });
 // Reuse in config — every test starts authenticated
 {
   use: {
-    storageState: ".auth/session.json"
+    storageState: ".auth/session.json";
   }
 }
 
@@ -272,7 +272,7 @@ import { test, expect } from "@playwright/test";
 test("admin can access user management", async ({ page }) => {
   await page.goto("/admin/users");
   await expect(
-    page.getByRole("heading", { name: "User Management" })
+    page.getByRole("heading", { name: "User Management" }),
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "Remove user" })).toBeEnabled();
 });
@@ -307,7 +307,7 @@ export const test = base.extend<RoleFixtures>({
       const statePath = `.auth/${role}.json`;
       if (!fs.existsSync(statePath)) {
         throw new Error(
-          `Auth state for role "${role}" not found at ${statePath}`
+          `Auth state for role "${role}" not found at ${statePath}`,
         );
       }
       const context = await browser.newContext({ storageState: statePath });
@@ -333,7 +333,7 @@ test("admin sees remove button, guest does not", async ({ loginAs }) => {
   const adminPage = await loginAs("admin");
   await adminPage.goto("/admin/users");
   await expect(
-    adminPage.getByRole("button", { name: "Remove user" })
+    adminPage.getByRole("button", { name: "Remove user" }),
   ).toBeVisible();
 
   const guestPage = await loginAs("guest");
@@ -384,9 +384,7 @@ test("login via mocked OAuth flow", async ({ page }) => {
 // tests/oauth-login.spec.ts — API-based session injection
 import { test, expect } from "@playwright/test";
 
-test("bypass OAuth entirely via API session injection", async ({
-  page,
-}) => {
+test("bypass OAuth entirely via API session injection", async ({ page }) => {
   // Call a test-only endpoint that creates a session without OAuth
   const response = await page.request.post("/api/test/create-session", {
     data: {
@@ -581,7 +579,7 @@ test.describe("login page", () => {
   test("successful login redirects to home", async ({ page }) => {
     await loginPage.loginAndWaitForHome(
       "testuser@example.com",
-      "secretPass123"
+      "secretPass123",
     );
     await expect(page.getByRole("heading", { name: "Home" })).toBeVisible();
   });
@@ -600,7 +598,7 @@ test.describe("login page", () => {
     await loginPage.forgotPasswordLink.click();
     await page.waitForURL("/forgot-password");
     await expect(
-      page.getByRole("heading", { name: "Reset password" })
+      page.getByRole("heading", { name: "Reset password" }),
     ).toBeVisible();
   });
 });
@@ -631,7 +629,7 @@ async function globalSetup(config: FullConfig) {
 
   if (!response.ok()) {
     throw new Error(
-      `API login failed: ${response.status()} ${await response.text()}`
+      `API login failed: ${response.status()} ${await response.text()}`,
     );
   }
 
@@ -780,7 +778,7 @@ Need to test the login page itself?
 const response = await page.waitForResponse("**/api/auth/**");
 if (!response.ok()) {
   throw new Error(
-    `Login failed in global setup: ${response.status()} ${await response.text()}`
+    `Login failed in global setup: ${response.status()} ${await response.text()}`,
   );
 }
 ```

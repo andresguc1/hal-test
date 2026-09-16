@@ -45,7 +45,8 @@ const asNumber = (value, defaultValue, min = -Infinity, max = Infinity) => {
   // A blank/empty field (or explicit null/undefined) means "use the default":
   // Number("") coerces to 0, which the min-clamp can then turn into e.g. a
   // 1ms timeout on real runs.
-  if (value === "" || value === null || value === undefined) return defaultValue;
+  if (value === "" || value === null || value === undefined)
+    return defaultValue;
   const num = Number(value);
   if (!Number.isFinite(num)) return defaultValue;
   return Math.min(Math.max(Math.round(num), min), max);
@@ -340,12 +341,18 @@ export const click = (payload = {}) => {
   // still honored as a fallback for backward compatibility.
   const clickType = asString(payload?.clickType, "left").toLowerCase();
   const mappedByClickType =
-    clickType === "double" ? { button: "left", clickCount: 2 } : { button: clickType };
+    clickType === "double"
+      ? { button: "left", clickCount: 2 }
+      : { button: clickType };
 
-  const rawButton = asString(payload?.button ?? mappedByClickType.button, "left").toLowerCase();
+  const rawButton = asString(
+    payload?.button ?? mappedByClickType.button,
+    "left",
+  ).toLowerCase();
   const allowedButtons = ["left", "right", "middle"];
   const finalButton = allowedButtons.includes(rawButton) ? rawButton : "left";
-  const clickCount = clickType === "double"
+  const clickCount =
+    clickType === "double"
       ? 2
       : asNumber(payload?.clickCount, undefined, 1) || undefined;
 
@@ -442,7 +449,10 @@ export const select_option = (payload) => {
       .filter(Boolean)
       .map(mapOption)
       .filter((o) => o.label || o.value);
-  } else if (typeof selectedOptionsRaw === "string" && selectedOptionsRaw.trim()) {
+  } else if (
+    typeof selectedOptionsRaw === "string" &&
+    selectedOptionsRaw.trim()
+  ) {
     try {
       const parsed = JSON.parse(selectedOptionsRaw);
       if (Array.isArray(parsed)) {
@@ -512,7 +522,9 @@ export const set_checkbox = (payload = {}) => {
 
     const fields = rawFields
       .map((f) => {
-        const strategy = ["css", "label"].includes(f?.strategy) ? f.strategy : "css";
+        const strategy = ["css", "label"].includes(f?.strategy)
+          ? f.strategy
+          : "css";
         const target = asString(f?.target);
         if (target === "") return null;
         return {
@@ -578,10 +590,17 @@ export const pick_list_option = (payload = {}) => {
 
   const useIndex = payload?.mode === "index";
   if (useIndex) {
-    if (numIndex === undefined || Number.isNaN(numIndex) || !Number.isInteger(numIndex)) {
+    if (
+      numIndex === undefined ||
+      Number.isNaN(numIndex) ||
+      !Number.isInteger(numIndex)
+    ) {
       throw new Error("Provide a valid optionIndex when using index mode.");
     }
-  } else if (optionText === "" && (numIndex === undefined || Number.isNaN(numIndex))) {
+  } else if (
+    optionText === "" &&
+    (numIndex === undefined || Number.isNaN(numIndex))
+  ) {
     throw new Error("Provide optionText or optionIndex.");
   }
 

@@ -10,7 +10,11 @@ import {
   getNodeStyle,
 } from "../../components/hooks/flowStyles";
 import { CATEGORY_STYLES, NODE_TYPE_MAP } from "../../config/nodeConstants";
-import { wouldCreateCycle, deepClone, safeStringify } from "../../utils/flowUtils";
+import {
+  wouldCreateCycle,
+  deepClone,
+  safeStringify,
+} from "../../utils/flowUtils";
 import { calculateDesignTimeContext } from "../../utils/graphPropagation";
 import { getLayoutedElements } from "../../utils/layoutUtils";
 import { projectManager } from "../../utils/ProjectManager";
@@ -1637,18 +1641,14 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
             }
           }
 
-          return updateNodeRecursively(
-            nds,
-            nodeId,
-            (n) => applyConfigurationUpdate(deepClone(n), newConfig),
+          return updateNodeRecursively(nds, nodeId, (n) =>
+            applyConfigurationUpdate(deepClone(n), newConfig),
           );
         });
       } else {
         setNodes((nds) =>
-          updateNodeRecursively(
-            nds,
-            nodeId,
-            (n) => applyConfigurationUpdate(deepClone(n), newConfig),
+          updateNodeRecursively(nds, nodeId, (n) =>
+            applyConfigurationUpdate(deepClone(n), newConfig),
           ),
         );
       }

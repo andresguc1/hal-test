@@ -273,7 +273,7 @@ export function AISettingsPanel({ aiConfig, setAiConfig }) {
         </div>
       </div>
 
-{/* Model Name */}
+      {/* Model Name */}
       <div className="space-y-2">
         <Label className="text-xs text-slate-400">
           {t("settings.ai.custom_model_identifier")}

@@ -36,7 +36,10 @@ function buildOrthogonalBypassPath({
   const pivotX = sourceX + laneOffset;
 
   // Never let the pivot overshoot the midpoint of the edge (short edges).
-  const clampedPivotX = Math.max(sourceX, Math.min(pivotX, (sourceX + targetX) / 2 - 10));
+  const clampedPivotX = Math.max(
+    sourceX,
+    Math.min(pivotX, (sourceX + targetX) / 2 - 10),
+  );
 
   // Determine if we go down or up
   const goingDown = targetY > sourceY;

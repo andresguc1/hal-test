@@ -62,9 +62,12 @@ export default function BrowserSessionsChip({ className }) {
 
   useEffect(() => {
     refresh();
-    const timer = setInterval(() => {
-      if (!hiddenRef.current) refresh();
-    }, open ? POLL_MS_OPEN : POLL_MS_CLOSED);
+    const timer = setInterval(
+      () => {
+        if (!hiddenRef.current) refresh();
+      },
+      open ? POLL_MS_OPEN : POLL_MS_CLOSED,
+    );
     return () => clearInterval(timer);
   }, [refresh, open]);
 
@@ -99,7 +102,10 @@ export default function BrowserSessionsChip({ className }) {
   if (sessions.length === 0 && !error) return null;
 
   return (
-    <div ref={popoverRef} className={`relative ml-2 shrink-0 ${className ?? ""}`}>
+    <div
+      ref={popoverRef}
+      className={`relative ml-2 shrink-0 ${className ?? ""}`}
+    >
       <motion.button
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
@@ -109,7 +115,9 @@ export default function BrowserSessionsChip({ className }) {
         className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/25 text-indigo-300 cursor-pointer"
       >
         <Globe size={12} className="text-indigo-400" />
-        <span className="text-[10px] font-bold tabular-nums">{sessions.length}</span>
+        <span className="text-[10px] font-bold tabular-nums">
+          {sessions.length}
+        </span>
       </motion.button>
 
       {open && (

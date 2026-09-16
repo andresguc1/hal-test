@@ -97,10 +97,7 @@ export const applyConfigurationUpdate = (node, newConfig) => {
 
   const nextType = node?.data?.type || node?.type || "";
   const label =
-    newConfig.label ||
-    node?.data?.label ||
-    NODE_LABELS[nextType] ||
-    nextType;
+    newConfig.label || node?.data?.label || NODE_LABELS[nextType] || nextType;
 
   return {
     ...node,

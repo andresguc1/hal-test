@@ -316,7 +316,7 @@ test("user sees workspace on dashboard", async ({
 
   await page.waitForURL("/dashboard");
   await expect(
-    page.getByRole("heading", { name: seedWorkspace.name })
+    page.getByRole("heading", { name: seedWorkspace.name }),
   ).toBeVisible();
 });
 ```
@@ -350,7 +350,7 @@ test.describe("Error responses", () => {
           field: "price",
           message: expect.any(String),
         }),
-      ])
+      ]),
     );
   });
 
@@ -399,8 +399,8 @@ test.describe("Error responses", () => {
   test("429 — rate limiting", async ({ request }) => {
     const responses = await Promise.all(
       Array.from({ length: 50 }, () =>
-        request.get("/api/search", { params: { q: "test" } })
-      )
+        request.get("/api/search", { params: { q: "test" } }),
+      ),
     );
     const rateLimited = responses.filter((r) => r.status() === 429);
     expect(rateLimited.length).toBeGreaterThan(0);
@@ -537,7 +537,7 @@ test("state machine transitions — publish workflow", async ({ request }) => {
     `/api/articles/${article.id}/status`,
     {
       data: { status: "published" },
-    }
+    },
   );
   expect(approveResp.ok()).toBeTruthy();
   expect((await approveResp.json()).status).toBe("published");
@@ -613,7 +613,7 @@ test("GET /api/items matches schema", async ({ request }) => {
     throw new Error(
       `Schema validation failed:\n${result.error.issues
         .map((i) => `  ${i.path.join(".")}: ${i.message}`)
-        .join("\n")}`
+        .join("\n")}`,
     );
   }
 });

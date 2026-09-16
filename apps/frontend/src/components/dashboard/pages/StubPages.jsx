@@ -165,93 +165,93 @@ export function AIPage({ onOpenSettings }) {
         {cards
           .filter((card) => card.onClick)
           .map(({ icon, title, desc, badge, onClick }) => (
-          <div
-            key={title}
-            onClick={onClick}
-            style={{
-              background: "var(--dash-surface)",
-              border: "1px solid var(--dash-border)",
-              borderRadius: 12,
-              padding: 20,
-              boxShadow: "var(--dash-shadow-card)",
-              cursor: onClick ? "pointer" : "default",
-              transition: "all 0.2s ease",
-            }}
-            className={
-              onClick
-                ? "hover:border-blue-500/50 hover:bg-slate-800/20 active:scale-[0.98]"
-                : ""
-            }
-          >
             <div
+              key={title}
+              onClick={onClick}
               style={{
-                display: "flex",
-                alignItems: "flex-start",
-                justifyContent: "space-between",
-                gap: 8,
-                marginBottom: 10,
+                background: "var(--dash-surface)",
+                border: "1px solid var(--dash-border)",
+                borderRadius: 12,
+                padding: 20,
+                boxShadow: "var(--dash-shadow-card)",
+                cursor: onClick ? "pointer" : "default",
+                transition: "all 0.2s ease",
               }}
+              className={
+                onClick
+                  ? "hover:border-blue-500/50 hover:bg-slate-800/20 active:scale-[0.98]"
+                  : ""
+              }
             >
               <div
                 style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 9,
-                  background: "var(--dash-accent-subtle)",
                   display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "var(--dash-accent)",
-                  flexShrink: 0,
+                  alignItems: "flex-start",
+                  justifyContent: "space-between",
+                  gap: 8,
+                  marginBottom: 10,
                 }}
               >
-                {icon}
-              </div>
-              {badge && (
-                <span
+                <div
                   style={{
-                    fontSize: 10,
-                    fontWeight: 700,
-                    padding: "2px 7px",
-                    borderRadius: 9999,
-                    background:
-                      badge === "Active"
-                        ? "var(--dash-success-subtle)"
-                        : "var(--dash-surface-hover)",
-                    color:
-                      badge === "Active"
-                        ? "var(--dash-success-text)"
-                        : "var(--dash-text-tertiary)",
-                    letterSpacing: "0.04em",
-                    textTransform: "uppercase",
-                    border: `1px solid ${badge === "Active" ? "var(--dash-success)" : "var(--dash-border)"}`,
+                    width: 36,
+                    height: 36,
+                    borderRadius: 9,
+                    background: "var(--dash-accent-subtle)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "var(--dash-accent)",
+                    flexShrink: 0,
                   }}
                 >
-                  {badge}
-                </span>
-              )}
+                  {icon}
+                </div>
+                {badge && (
+                  <span
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      padding: "2px 7px",
+                      borderRadius: 9999,
+                      background:
+                        badge === "Active"
+                          ? "var(--dash-success-subtle)"
+                          : "var(--dash-surface-hover)",
+                      color:
+                        badge === "Active"
+                          ? "var(--dash-success-text)"
+                          : "var(--dash-text-tertiary)",
+                      letterSpacing: "0.04em",
+                      textTransform: "uppercase",
+                      border: `1px solid ${badge === "Active" ? "var(--dash-success)" : "var(--dash-border)"}`,
+                    }}
+                  >
+                    {badge}
+                  </span>
+                )}
+              </div>
+              <div
+                style={{
+                  fontWeight: 700,
+                  fontSize: 14,
+                  color: "var(--dash-text-primary)",
+                  marginBottom: 4,
+                }}
+              >
+                {title}
+              </div>
+              <div
+                style={{
+                  fontSize: 12,
+                  color: "var(--dash-text-secondary)",
+                  lineHeight: 1.5,
+                }}
+              >
+                {desc}
+              </div>
             </div>
-            <div
-              style={{
-                fontWeight: 700,
-                fontSize: 14,
-                color: "var(--dash-text-primary)",
-                marginBottom: 4,
-              }}
-            >
-              {title}
-            </div>
-            <div
-              style={{
-                fontSize: 12,
-                color: "var(--dash-text-secondary)",
-                lineHeight: 1.5,
-              }}
-            >
-              {desc}
-            </div>
-          </div>
-        ))}
+          ))}
       </div>
     </div>
   );

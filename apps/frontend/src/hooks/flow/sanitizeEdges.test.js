@@ -28,7 +28,13 @@ describe("sanitizeEdges — grouping composite edges", () => {
       },
     ];
 
-    const result = sanitizeEdges(edges, [componentNode, a, b, c, { id: "src" }]);
+    const result = sanitizeEdges(edges, [
+      componentNode,
+      a,
+      b,
+      c,
+      { id: "src" },
+    ]);
     expect(result.map((e) => e.id)).toEqual(["e_src-comp_a", "e_src-comp_b"]);
   });
 
@@ -52,14 +58,32 @@ describe("sanitizeEdges — grouping composite edges", () => {
       },
     ];
 
-    const result = sanitizeEdges(edges, [componentNode, a, b, c, { id: "dst" }]);
+    const result = sanitizeEdges(edges, [
+      componentNode,
+      a,
+      b,
+      c,
+      { id: "dst" },
+    ]);
     expect(result.map((e) => e.id)).toEqual(["e_comp-a-dst", "e_comp-b-dst"]);
   });
 
   it("still dedupes a TRUE duplicate connection", () => {
     const edges = [
-      { id: "e1", source: "src", target: "dst", sourceHandle: "out", targetHandle: "in" },
-      { id: "e2", source: "src", target: "dst", sourceHandle: "out", targetHandle: "in" },
+      {
+        id: "e1",
+        source: "src",
+        target: "dst",
+        sourceHandle: "out",
+        targetHandle: "in",
+      },
+      {
+        id: "e2",
+        source: "src",
+        target: "dst",
+        sourceHandle: "out",
+        targetHandle: "in",
+      },
     ];
 
     const result = sanitizeEdges(edges, [{ id: "src" }, { id: "dst" }]);

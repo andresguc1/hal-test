@@ -23,7 +23,9 @@ describe("click payload builder", () => {
 
   it("maps clickType right/middle to the mouse button", () => {
     expect(click({ selector: "#s", clickType: "right" }).button).toBe("right");
-    expect(click({ selector: "#s", clickType: "middle" }).button).toBe("middle");
+    expect(click({ selector: "#s", clickType: "middle" }).button).toBe(
+      "middle",
+    );
   });
 
   it("maps clickType double to a left double click", () => {
@@ -74,7 +76,10 @@ describe("browser_dialog payload builder", () => {
   });
 
   it("maps dismiss action and includes expectText", () => {
-    const payload = browser_dialog({ action: "dismiss", expectText: "internet" });
+    const payload = browser_dialog({
+      action: "dismiss",
+      expectText: "internet",
+    });
     expect(payload.action).toBe("dismiss");
     expect(payload.expectText).toBe("internet");
   });
@@ -196,7 +201,11 @@ describe("set_checkbox payload builder", () => {
     const payload = set_checkbox({ selector: "#accept", verifyState: false });
     expect(payload.verifyState).toBe(false);
 
-    const multi = set_checkbox({ multiple: true, fields: [{ target: "#a" }], verifyState: false });
+    const multi = set_checkbox({
+      multiple: true,
+      fields: [{ target: "#a" }],
+      verifyState: false,
+    });
     expect(multi.verifyState).toBe(false);
   });
 
@@ -241,14 +250,19 @@ describe("set_checkbox payload builder", () => {
   it("drops empty targets in multiple mode", () => {
     const payload = set_checkbox({
       multiple: true,
-      fields: [{ strategy: "css", target: "", action: "check" }, { strategy: "label", target: "News" }],
+      fields: [
+        { strategy: "css", target: "", action: "check" },
+        { strategy: "label", target: "News" },
+      ],
     });
     expect(payload.fields).toHaveLength(1);
     expect(payload.fields[0].action).toBe("check");
   });
 
   it("requires at least one valid field in multiple mode", () => {
-    expect(() => set_checkbox({ multiple: true, fields: [] })).toThrow(/checkbox/);
+    expect(() => set_checkbox({ multiple: true, fields: [] })).toThrow(
+      /checkbox/,
+    );
   });
 });
 
@@ -269,7 +283,10 @@ describe("set_radio payload builder", () => {
 
 describe("pick_list_option payload builder", () => {
   it("sends optionText and expandMenu by default", () => {
-    const payload = pick_list_option({ selector: "#lang", optionText: "Español" });
+    const payload = pick_list_option({
+      selector: "#lang",
+      optionText: "Español",
+    });
     expect(payload).toMatchObject({
       selector: "#lang",
       optionText: "Español",
@@ -289,18 +306,28 @@ describe("pick_list_option payload builder", () => {
   });
 
   it("uses optionIndex when optionText is empty", () => {
-    const payload = pick_list_option({ selector: "#lang", optionText: "", optionIndex: 3 });
+    const payload = pick_list_option({
+      selector: "#lang",
+      optionText: "",
+      optionIndex: 3,
+    });
     expect(payload.optionIndex).toBe(3);
     expect(payload.optionText).toBeUndefined();
   });
 
   it("honours expandMenu=false", () => {
-    const payload = pick_list_option({ selector: "#lang", optionText: "EN", expandMenu: false });
+    const payload = pick_list_option({
+      selector: "#lang",
+      optionText: "EN",
+      expandMenu: false,
+    });
     expect(payload.expandMenu).toBe(false);
   });
 
   it("requires optionText or optionIndex", () => {
-    expect(() => pick_list_option({ selector: "#lang" })).toThrow(/optionText|optionIndex/);
+    expect(() => pick_list_option({ selector: "#lang" })).toThrow(
+      /optionText|optionIndex/,
+    );
   });
 
   it("passes menuSelector through", () => {

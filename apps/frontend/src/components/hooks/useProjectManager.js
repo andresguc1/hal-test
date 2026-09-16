@@ -181,8 +181,8 @@ export function useProjectManager() {
             try {
               localStorage.setItem(`hal_last_flow_${projectId}`, nextFlowId);
             } catch {
-          // ignore
-        }
+              // ignore
+            }
           }
           return nextFlowId;
         }
@@ -273,8 +273,8 @@ export function useProjectManager() {
           try {
             localStorage.setItem(`hal_last_flow_${currentProjectId}`, flowId);
           } catch {
-          // ignore
-        }
+            // ignore
+          }
         }
         await updateProjectMutation.mutateAsync({
           projectId: currentProjectId,
@@ -316,8 +316,8 @@ export function useProjectManager() {
           try {
             savedFlowId = localStorage.getItem(`hal_last_flow_${projectId}`);
           } catch {
-          // ignore
-        }
+            // ignore
+          }
         }
         setCurrentFlowId(savedFlowId || null);
       } else {

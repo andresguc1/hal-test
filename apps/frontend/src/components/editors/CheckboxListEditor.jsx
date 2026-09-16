@@ -1,6 +1,13 @@
 import React, { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Info, Plus, Trash2, ArrowUp, ArrowDown, MousePointerClick } from "lucide-react";
+import {
+  Info,
+  Plus,
+  Trash2,
+  ArrowUp,
+  ArrowDown,
+  MousePointerClick,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const STRATEGIES = [
@@ -14,8 +21,19 @@ const ACTIONS = [
   { value: "toggle", label: "🔄 Toggle" },
 ];
 
-const CheckboxRow = ({ item, index, update, remove, move, pickingField, onStartPick, onCancelPick, t }) => {
-  const picking = pickingField === `fields.${index}.target` && item.strategy === "css";
+const CheckboxRow = ({
+  item,
+  index,
+  update,
+  remove,
+  move,
+  pickingField,
+  onStartPick,
+  onCancelPick,
+  t,
+}) => {
+  const picking =
+    pickingField === `fields.${index}.target` && item.strategy === "css";
 
   return (
     <div className="px-3 py-2.5 bg-[#0f172a]/60 border border-pink-500/15 hover:border-pink-500/30 rounded-xl space-y-2 relative group/field transition-all">
@@ -26,7 +44,9 @@ const CheckboxRow = ({ item, index, update, remove, move, pickingField, onStartP
             className="text-slate-600 hover:text-pink-400 cursor-pointer transition-colors"
             onClick={() => move(index, -1)}
           />
-          <span className="text-[8px] font-mono text-slate-500">{index + 1}</span>
+          <span className="text-[8px] font-mono text-slate-500">
+            {index + 1}
+          </span>
           <ArrowDown
             size={12}
             className="text-slate-600 hover:text-pink-400 cursor-pointer transition-colors"
@@ -120,7 +140,11 @@ const CheckboxListEditor = React.memo(
 
     const fields = useMemo(() => {
       try {
-        return Array.isArray(value) ? value : typeof value === "string" ? JSON.parse(value) : [];
+        return Array.isArray(value)
+          ? value
+          : typeof value === "string"
+            ? JSON.parse(value)
+            : [];
       } catch {
         return [];
       }

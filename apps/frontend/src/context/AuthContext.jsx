@@ -29,7 +29,9 @@ export const AuthProvider = ({ children }) => {
           !import.meta.env.VITE_SUPABASE_ANON_KEY;
 
         if (isLocal || backendAuthDisabled || clientSupabaseMissing) {
-          console.log("[Auth] Guest session enabled (backend auth disabled or not configured).");
+          console.log(
+            "[Auth] Guest session enabled (backend auth disabled or not configured).",
+          );
           setAuthMode("local");
           setUser({
             id: "guest-user",

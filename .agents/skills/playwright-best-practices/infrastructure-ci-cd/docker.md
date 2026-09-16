@@ -199,24 +199,24 @@ VS Code Dev Container or GitHub Codespaces configuration:
 
 ## Decision Guide
 
-| Scenario | Approach |
-|---|---|
-| Simple CI pipeline | Official image as CI container |
-| Tests need database + cache | Docker Compose with app, db, e2e services |
-| Team needs identical environments | Dev Container or custom Dockerfile |
-| Only testing Chromium | Slim image with `install --with-deps chromium` |
-| Cross-browser testing | Official image (all browsers pre-installed) |
-| Local development | Run directly on host for faster iteration |
+| Scenario                          | Approach                                       |
+| --------------------------------- | ---------------------------------------------- |
+| Simple CI pipeline                | Official image as CI container                 |
+| Tests need database + cache       | Docker Compose with app, db, e2e services      |
+| Team needs identical environments | Dev Container or custom Dockerfile             |
+| Only testing Chromium             | Slim image with `install --with-deps chromium` |
+| Cross-browser testing             | Official image (all browsers pre-installed)    |
+| Local development                 | Run directly on host for faster iteration      |
 
 ## Anti-Patterns
 
-| Anti-Pattern | Problem | Solution |
-|---|---|---|
-| Installing browsers at runtime | Wastes 60-90 seconds per run | Use official image or bake browsers into custom image |
-| Running as non-root without sandbox config | Chromium sandbox permission errors | Run as root or disable sandbox |
-| Bind-mounting `node_modules` from host | Platform-specific binary crashes | Use anonymous volume: `-v /app/node_modules` |
-| No health checks on dependent services | Tests start before database ready | Add `healthcheck` with `depends_on: condition: service_healthy` |
-| Building application inside Playwright container | Large image, slow builds | Separate app and e2e containers |
+| Anti-Pattern                                     | Problem                            | Solution                                                        |
+| ------------------------------------------------ | ---------------------------------- | --------------------------------------------------------------- |
+| Installing browsers at runtime                   | Wastes 60-90 seconds per run       | Use official image or bake browsers into custom image           |
+| Running as non-root without sandbox config       | Chromium sandbox permission errors | Run as root or disable sandbox                                  |
+| Bind-mounting `node_modules` from host           | Platform-specific binary crashes   | Use anonymous volume: `-v /app/node_modules`                    |
+| No health checks on dependent services           | Tests start before database ready  | Add `healthcheck` with `depends_on: condition: service_healthy` |
+| Building application inside Playwright container | Large image, slow builds           | Separate app and e2e containers                                 |
 
 ## Troubleshooting
 
@@ -234,11 +234,11 @@ docker pull mcr.microsoft.com/playwright:v<matching-version>-noble
 Tests trying to reach `localhost` instead of service name. Configure `baseURL`:
 
 ```typescript
-import { defineConfig } from '@playwright/test';
+import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
   use: {
-    baseURL: process.env.BASE_URL || 'http://localhost:3000',
+    baseURL: process.env.BASE_URL || "http://localhost:3000",
   },
 });
 ```

@@ -59,16 +59,16 @@ npm test
 
 ### Linting & Formatting
 
--   Lint code: `npm run lint`
--   Fix linting issues: `npm run lint:fix`
--   Format code: `npm run format`
+- Lint code: `npm run lint`
+- Fix linting issues: `npm run lint:fix`
+- Format code: `npm run format`
 
 ## 🔌 API Endpoints
 
 ### System Endpoints
 
--   `GET /status`: Check API health and status.
--   `GET /routes`: List all available action routes and their categories.
+- `GET /status`: Check API health and status.
+- `GET /routes`: List all available action routes and their categories.
 
 ### Action Endpoints
 
@@ -89,12 +89,12 @@ To see the full list of available actions and their required schemas, consult th
 
 ## 📂 Project Structure
 
--   `app.js`: Entry point of the application.
--   `routes/`: API route definitions.
--   `controllers/`: Logic for handling requests.
--   `schemas/`: Joi validation schemas for request bodies.
--   `middlewares/`: Express middlewares (validation, etc.).
--   `tests/`: Test files.
+- `app.js`: Entry point of the application.
+- `routes/`: API route definitions.
+- `controllers/`: Logic for handling requests.
+- `schemas/`: Joi validation schemas for request bodies.
+- `middlewares/`: Express middlewares (validation, etc.).
+- `tests/`: Test files.
 
 ## 👤 Author
 

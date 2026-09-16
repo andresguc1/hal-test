@@ -27,6 +27,7 @@ Add new semantic colors beyond the default palette:
 ```
 
 **Usage:**
+
 ```tsx
 <div className="bg-brand text-brand-foreground">Branded Component</div>
 ```
@@ -40,6 +41,7 @@ Add new semantic colors beyond the default palette:
 For complete v3 → v4 migration steps, see `references/migration-guide.md`.
 
 **Quick Summary**:
+
 - Remove `tailwind.config.js` (v4 uses CSS configuration)
 - Convert hardcoded colors to CSS variables
 - Update plugin syntax: `require('tailwindcss/plugin')(plugin)` in v3 config → `@plugin "plugin-name"` in CSS
@@ -52,11 +54,13 @@ For complete v3 → v4 migration steps, see `references/migration-guide.md`.
 ### 1. Always Use Semantic Tokens
 
 **✅ CORRECT:**
+
 ```tsx
 <Button variant="destructive">Delete</Button>
 ```
 
 **❌ WRONG:**
+
 ```tsx
 <Button className="bg-red-600">Delete</Button>
 ```
@@ -68,17 +72,21 @@ For complete v3 → v4 migration steps, see `references/migration-guide.md`.
 ### 2. Use `cn()` for Conditional Styling
 
 **Import:**
+
 ```tsx
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 ```
 
 **Usage:**
+
 ```tsx
-<div className={cn(
-  "base-class",
-  isActive && "active-class",
-  hasError && "error-class"
-)} />
+<div
+  className={cn(
+    "base-class",
+    isActive && "active-class",
+    hasError && "error-class",
+  )}
+/>
 ```
 
 **What `cn()` does**: Merges Tailwind classes intelligently (later classes override earlier ones).
@@ -88,6 +96,7 @@ import { cn } from "@/lib/utils"
 ### 3. Compose shadcn/ui Components
 
 **Pattern:**
+
 ```tsx
 <Dialog>
   <DialogTrigger asChild>
@@ -112,11 +121,13 @@ import { cn } from "@/lib/utils"
 Apply different variables based on state:
 
 ```tsx
-<div className={cn(
-  "rounded-lg p-4",
-  variant === "success" && "bg-success text-success-foreground",
-  variant === "error" && "bg-destructive text-destructive-foreground"
-)} />
+<div
+  className={cn(
+    "rounded-lg p-4",
+    variant === "success" && "bg-success text-success-foreground",
+    variant === "error" && "bg-destructive text-destructive-foreground",
+  )}
+/>
 ```
 
 ### Custom Radius Tokens
@@ -138,7 +149,7 @@ Usage: `className="rounded-[var(--radius-lg)]"`
 Use `cva()` from `class-variance-authority` for complex variants:
 
 ```tsx
-import { cva } from "class-variance-authority"
+import { cva } from "class-variance-authority";
 
 const buttonVariants = cva(
   "inline-flex items-center justify-center rounded-md",
@@ -158,8 +169,8 @@ const buttonVariants = cva(
       variant: "default",
       size: "default",
     },
-  }
-)
+  },
+);
 ```
 
 ---

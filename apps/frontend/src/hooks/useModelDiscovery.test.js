@@ -44,7 +44,10 @@ describe("useModelDiscovery helpers", () => {
   });
 
   it("fetchDiscoveredModels posts to /ai/discover-models", async () => {
-    api.post.mockResolvedValue({ state: "SUCCESS", models: [{ id: "gpt-4o-mini" }] });
+    api.post.mockResolvedValue({
+      state: "SUCCESS",
+      models: [{ id: "gpt-4o-mini" }],
+    });
     const res = await fetchDiscoveredModels({
       provider: "openai",
       apiKey: "sk-test",

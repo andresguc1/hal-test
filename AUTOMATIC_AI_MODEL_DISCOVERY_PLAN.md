@@ -12,6 +12,7 @@ Convertir el campo manual "Custom Model Identifier" (`AISettingsPanel.jsx:271-28
 ## 2. Alcance / No alcance
 
 **Alcance**
+
 - Nuevo servicio backend `ModelDiscoveryService` con registry de discoverers por proveedor.
 - Nuevo endpoint `POST /api/ai/discover-models`.
 - Guard SSRF scoped (`sanitizeDiscoveryBaseUrl`) con allowlist + estado `REJECTED`.
@@ -19,6 +20,7 @@ Convertir el campo manual "Custom Model Identifier" (`AISettingsPanel.jsx:271-28
 - Tests unit + integración (backend) y componente/hook (frontend).
 
 **No alcance (futuros, NO en este plan)**
+
 - Homogeneizar SSRF en `/api/actions/*` (bebida runtime no sanitizada: `extract_dom_context.js:88`).
 - Fix del "Test Connection" cloud (hoy desviado a loopback por `sanitizeBaseUrl`, `ai.routes.js:20-33`).
 - AI Model Router (diseñado para reutilizar este registry, sección 12).
@@ -50,6 +52,7 @@ Nada nuevo en `LLMFactory.js`; `AIService` solo gana un delegado delgado.
 ## 5. Tareas detalladas
 
 ### Tarea 1 — ModelDiscoveryService + registry
+
 - **Objective:** servicio singleton con API `discoverModels()` y registro de discoverers.
 - **Files (nuevos):** `apps/backend/services/ModelDiscoveryService.js`
 - **Changes:**
@@ -66,6 +69,7 @@ Nada nuevo en `LLMFactory.js`; `AIService` solo gana un delegado delgado.
 - **Validation:** unit tests de `toDiscoveryBase` y de estados FAILED/TIMEOUT con `vi.stubGlobal('fetch')`.
 
 ### Tarea 2 — Discoverers por proveedor (6)
+
 - **Objective:** listar modelos con fetch raw.
 - **Files (nuevos):** `apps/backend/services/discovery/_index.js` (registro), `ollama.discoverer.js`, `openai.discoverer.js`, `openrouter.discoverer.js`, `anthropic.discoverer.js`, `google.discoverer.js`, `genericOpenAI.discoverer.js`.
 - **Changes:**
@@ -80,9 +84,11 @@ Nada nuevo en `LLMFactory.js`; `AIService` solo gana un delegado delgado.
 - **Validation:** unit por proveedor (happy + 401 + timeout + malformed).
 
 ### Tarea 3 — Normalización + enum estados
+
 - **Objective:** tipo `ModelMetadata` + `DiscoveryState` + cap de salida.
 - **Files:** `apps/backend/services/discovery/types.js` (nuevos).
 - **Changes:**
+
   ```js
   // ModelMetadata
   { id: string, label?: string, ownedBy?: string, contextWindow?: number, source: string }
@@ -91,12 +97,15 @@ Nada nuevo en `LLMFactory.js`; `AIService` solo gana un delegado delgado.
   'IDLE'|'LOADING'|'SUCCESS'|'FAILED'|'TIMEOUT'|'UNAUTHORIZED'|'CONNECTION_REFUSED'|
   'NOT_SUPPORTED'|'NO_MODELS_FOUND'|'PARTIAL'|'OFFLINE'|'CUSTOM'|'REJECTED'
   ```
+
   - `id` siempre 1:1 con lo que hoy acepta `x-ai-model` (identificadores guardados previos siguen válidos).
+
 - **Dependencies:** T2.
 - **Risks:** IDs con `/` (OpenRouter) u otros chars no soportados por el SDK → solo informativo.
 - **Validation:** test de mapeos por proveedor.
 
 ### Tarea 4 — Ruta + controller
+
 - **Objective:** exponer `POST /api/ai/discover-models`.
 - **Files:** `routes/ai.routes.js` (editar), `controllers/aiDiscovery.controller.js` (nuevo).
 - **Changes:**
@@ -113,17 +122,24 @@ Nada nuevo en `LLMFactory.js`; `AIService` solo gana un delegado delgado.
 - **Validation:** supertest.
 
 ### Tarea 5 — Guard SSRF scoped
+
 - **Objective:** `sanitizeDiscoveryBaseUrl` sin alterar rutas existentes.
 - **Files:** `routes/ai.routes.js` (nuevo helper junto a `sanitizeBaseUrl`, `:20-33`).
 - **Changes:**
   ```js
   const DISCOVERY_ALLOWED_HOSTS = new Set([
-    '127.0.0.1', '::1', 'localhost', '[::1]',  // local
-    'api.openai.com', 'api.anthropic.com',
-    'generativelanguage.googleapis.com', 'openrouter.ai',
+    "127.0.0.1",
+    "::1",
+    "localhost",
+    "[::1]", // local
+    "api.openai.com",
+    "api.anthropic.com",
+    "generativelanguage.googleapis.com",
+    "openrouter.ai",
   ]);
   // + process.env.HALTEST_ALLOWED_AI_BASE_URLS (csv hosts) para gateways propietarios
   ```
+
   - Host no permitido → **NO swap silencioso**: devuelve señal para responder `state:'REJECTED'` (error explícito).
   - Solo `http:`/`https:`, `redirect:'error'`.
 - **Dependencies:** T4.
@@ -131,6 +147,7 @@ Nada nuevo en `LLMFactory.js`; `AIService` solo gana un delegado delgado.
 - **Validation:** tests REJECTED / permitido / loopback.
 
 ### Tarea 6 — Tests backend
+
 - **Objective:** cobertura unit + integración del discovery.
 - **Files (nuevos):** `apps/backend/__tests__/model-discovery.test.js`, `__tests__/model-discovery-routes.test.js`.
 - **Changes:** casos por proveedor, estados de error, SSRF (REJECTED), 400 sin key, body inválido; patrón `ai-usage.test.js` (supertest + app) y `vi.stubGlobal('fetch')`.
@@ -139,6 +156,7 @@ Nada nuevo en `LLMFactory.js`; `AIService` solo gana un delegado delgado.
 - **Validation:** `npx vitest run __tests__/model-discovery.test.js __tests__/model-discovery-routes.test.js`
 
 ### Tarea 7 — Frontend combobox + hook
+
 - **Objective:** selector real en caliente, reemplaza el Input `:271-288`.
 - **Files:** `apps/frontend/src/components/settings/AISettingsPanel.jsx` (editar), nuevos: `apps/frontend/src/hooks/useModelDiscovery.js`, `apps/frontend/src/components/settings/ModelDiscoveryCombobox.jsx`.
 - **Changes:**
@@ -152,6 +170,7 @@ Nada nuevo en `LLMFactory.js`; `AIService` solo gana un delegado delgado.
 - **Validation:** render + interacción con jsdom; lint.
 
 ### Tarea 8 — Locales + cache
+
 - **Objective:** i18n y cache funcional.
 - **Files:** `apps/frontend/src/locales/en.json`, `es.json`, `fr.json`, `pt.json`; `useModelDiscovery.js`.
 - **Changes:** claves `settings.ai.model_discovery.*` (`md_title`, `md_discover`, `md_loading`, `md_success`, `md_failed`, `md_rejected`, `md_not_supported`, `md_none_found`, `md_custom_hint`); fr/pt → fallback `en`. Cache: `localStorage`, invalida al cambiar provider/baseUrl, sin TTL forzado (clave = identidad).
@@ -160,6 +179,7 @@ Nada nuevo en `LLMFactory.js`; `AIService` solo gana un delegado delgado.
 - **Validation:** revisión de los 4 JSON (grep de claves).
 
 ### Tarea 9 — Tests frontend + regresión
+
 - **Objective:** verde en todo el repo.
 - **Files (nuevos):** `apps/frontend/src/hooks/useModelDiscovery.test.js` (o según runner del proyecto), test de componente con los 13 estados.
 - **Changes:** mock de `api.post`.
@@ -168,6 +188,7 @@ Nada nuevo en `LLMFactory.js`; `AIService` solo gana un delegado delgado.
 - **Validation:** `npm run lint` (backend+frontend), `npx turbo run build` / `vite build`, suite vitest completa.
 
 ### Tarea 10 — Docs endpoint (swagger)
+
 - **Objective:** documentación `POST /api/ai/discover-models` in-code.
 - **Files:** `routes/ai.routes.js` (bloque `@swagger`, patrón `:37-42`).
 - **Dependencies:** T4.
@@ -177,6 +198,7 @@ Nada nuevo en `LLMFactory.js`; `AIService` solo gana un delegado delgado.
 ## 6. Contrato del endpoint
 
 **`POST /api/ai/discover-models`**
+
 ```jsonc
 // Request
 { "provider": "ollama|openai|openrouter|anthropic|google|(custom compatible)",
@@ -195,18 +217,19 @@ Nada nuevo en `LLMFactory.js`; `AIService` solo gana un delegado delgado.
 // 400
 { "success": false, "message": "apiKey is required for provider openai" }
 ```
+
 Estados devueltos: `SUCCESS | FAILED | TIMEOUT | UNAUTHORIZED | CONNECTION_REFUSED | NOT_SUPPORTED | NO_MODELS_FOUND | PARTIAL | REJECTED`.
 
 ## 7. Normalización de modelos
 
-| Proveedor | `id` | `label` | `source` |
-|---|---|---|---|
-| ollama | `m.name` | `m.name` | `native` |
-| openai | `data[].id` | `data[].id` | `openai-compatible` |
-| openrouter | `data[].id` | `data[].id` | `openai-compatible` |
-| anthropic | `data[].id` | `display_name` | `anthropic-native` |
-| google | `models[].name` sin prefijo `models/` | `displayName` | `google-native` |
-| custom | `data[].id` | `data[].id` | `openai-compatible` |
+| Proveedor  | `id`                                  | `label`        | `source`            |
+| ---------- | ------------------------------------- | -------------- | ------------------- |
+| ollama     | `m.name`                              | `m.name`       | `native`            |
+| openai     | `data[].id`                           | `data[].id`    | `openai-compatible` |
+| openrouter | `data[].id`                           | `data[].id`    | `openai-compatible` |
+| anthropic  | `data[].id`                           | `display_name` | `anthropic-native`  |
+| google     | `models[].name` sin prefijo `models/` | `displayName`  | `google-native`     |
+| custom     | `data[].id`                           | `data[].id`    | `openai-compatible` |
 
 ## 8. Seguridad
 
@@ -233,14 +256,14 @@ Estados devueltos: `SUCCESS | FAILED | TIMEOUT | UNAUTHORIZED | CONNECTION_REFUS
 
 ## 11. Riesgos y mitigaciones
 
-| Riesgo | Mitigación |
-|---|---|
-| Volúmenes (OpenRouter cientos de modelos) | Cap 500 + combobox buscable |
-| SSRF relajado | Allowlist + REJECTED + timeouts + redirect:'error' |
-| Base Ollama con `/v1` rompe `/api/tags` | `toDiscoveryBase()` antes de healthCheck |
-| Import circular AIService↔discovery | Inyección lazy del `healthCheck` al discoverer Ollama |
-| Regresión UI/guardado | `selectedModel` string, placeholder `getDefaultModel`, fallback libre |
-| "Test Connection" cloud desviada a loopback (bug latente) | Documentado como Existing Issue; fuera de scope |
+| Riesgo                                                    | Mitigación                                                            |
+| --------------------------------------------------------- | --------------------------------------------------------------------- |
+| Volúmenes (OpenRouter cientos de modelos)                 | Cap 500 + combobox buscable                                           |
+| SSRF relajado                                             | Allowlist + REJECTED + timeouts + redirect:'error'                    |
+| Base Ollama con `/v1` rompe `/api/tags`                   | `toDiscoveryBase()` antes de healthCheck                              |
+| Import circular AIService↔discovery                       | Inyección lazy del `healthCheck` al discoverer Ollama                 |
+| Regresión UI/guardado                                     | `selectedModel` string, placeholder `getDefaultModel`, fallback libre |
+| "Test Connection" cloud desviada a loopback (bug latente) | Documentado como Existing Issue; fuera de scope                       |
 
 ## 12. Futuro: AI Model Router
 
@@ -251,8 +274,8 @@ Estados devueltos: `SUCCESS | FAILED | TIMEOUT | UNAUTHORIZED | CONNECTION_REFUS
 
 ## 13. Commits sugeridos (estilo conventional, English)
 
-1. `feat(ai): model discovery service and per-provider listing`  → T1–T3 + T6 (unit)
-2. `feat(ai): discover-models endpoint with scoped SSRF policy`  → T4–T5 + T6 (routes) + T10
-3. `feat(ai): model selector combobox in AI settings`            → T7–T9
+1. `feat(ai): model discovery service and per-provider listing` → T1–T3 + T6 (unit)
+2. `feat(ai): discover-models endpoint with scoped SSRF policy` → T4–T5 + T6 (routes) + T10
+3. `feat(ai): model selector combobox in AI settings` → T7–T9
 
 Husky ejecuta format + lint en cada commit (no modificarlo).

@@ -5,12 +5,12 @@
  * Handles deprecation of failed npm packages
  */
 
-import { createRequire } from 'module';
+import { createRequire } from "module";
 const require = createRequire(import.meta.url);
-const { execSync } = require('child_process');
+const { execSync } = require("child_process");
 
 class NPMPackageManager {
-  constructor(registryUrl = 'https://registry.npmjs.org') {
+  constructor(registryUrl = "https://registry.npmjs.org") {
     this.registryUrl = registryUrl;
   }
 
@@ -32,13 +32,13 @@ class NPMPackageManager {
   async deprecateVersion(packageName, version, message, accessToken) {
     const pkg = `${packageName}@${version}`;
     const cmd = `npm deprecate "${pkg}" "${message}" --registry=${this.registryUrl}`;
-    
+
     if (accessToken) {
       process.env.NODE_AUTH_TOKEN = accessToken;
     }
 
     try {
-      execSync(cmd, { stdio: 'inherit', env: process.env });
+      execSync(cmd, { stdio: "inherit", env: process.env });
       console.log(`✅ Deprecated ${pkg}`);
       return true;
     } catch (error) {
@@ -49,13 +49,13 @@ class NPMPackageManager {
   async undeprecateVersion(packageName, version, accessToken) {
     const pkg = `${packageName}@${version}`;
     const cmd = `npm deprecate "${pkg}" "" --registry=${this.registryUrl}`;
-    
+
     if (accessToken) {
       process.env.NODE_AUTH_TOKEN = accessToken;
     }
 
     try {
-      execSync(cmd, { stdio: 'inherit', env: process.env });
+      execSync(cmd, { stdio: "inherit", env: process.env });
       console.log(`✅ Undeprecated ${pkg}`);
       return true;
     } catch (error) {
@@ -66,7 +66,7 @@ class NPMPackageManager {
   async listDeprecatedVersions(packageName) {
     const info = await this.getPackageInfo(packageName);
     const deprecated = [];
-    
+
     for (const [version, data] of Object.entries(info.versions || {})) {
       if (data.deprecated) {
         deprecated.push({
@@ -76,7 +76,7 @@ class NPMPackageManager {
         });
       }
     }
-    
+
     return deprecated;
   }
 }
@@ -92,59 +92,82 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   (async () => {
     try {
       switch (command) {
-        case 'deprecate':
+        case "deprecate":
           if (!arg1 || !arg2) {
-            console.error('Usage: node npm-deprecate.js deprecate <package>@<version> "message"');
+            console.error(
+              'Usage: node npm-deprecate.js deprecate <package>@<version> "message"',
+            );
             process.exit(1);
           }
-          const [pkg, version] = arg1.split('@');
-          await manager.deprecateVersion(pkg, version, arg2, process.env.NPM_TOKEN);
+          const [pkg, version] = arg1.split("@");
+          await manager.deprecateVersion(
+            pkg,
+            version,
+            arg2,
+            process.env.NPM_TOKEN,
+          );
           break;
 
-        case 'undeprecate':
+        case "undeprecate":
           if (!arg1) {
-            console.error('Usage: node npm-deprecate.js undeprecate <package>@<version>');
+            console.error(
+              "Usage: node npm-deprecate.js undeprecate <package>@<version>",
+            );
             process.exit(1);
           }
-          const [pkg2, version2] = arg1.split('@');
-          await manager.undeprecateVersion(pkg2, version2, process.env.NPM_TOKEN);
+          const [pkg2, version2] = arg1.split("@");
+          await manager.undeprecateVersion(
+            pkg2,
+            version2,
+            process.env.NPM_TOKEN,
+          );
           break;
 
-        case 'list':
+        case "list":
           if (!arg1) {
-            console.error('Usage: node npm-deprecate.js list <package>');
+            console.error("Usage: node npm-deprecate.js list <package>");
             process.exit(1);
           }
           const deprecated = await manager.listDeprecatedVersions(arg1);
           console.log(`Deprecated versions for ${arg1}:`);
-          deprecated.forEach(d => {
+          deprecated.forEach((d) => {
             console.log(`  ${d.version}: ${d.deprecated} (${d.time})`);
           });
           break;
 
-        case 'versions':
+        case "versions":
           if (!arg1) {
-            console.error('Usage: node npm-deprecate.js versions <package>');
+            console.error("Usage: node npm-deprecate.js versions <package>");
             process.exit(1);
           }
           const versions = await manager.getVersions(arg1);
           console.log(`All versions for ${arg1}:`);
-          versions.forEach(v => console.log(`  ${v}`));
+          versions.forEach((v) => console.log(`  ${v}`));
           break;
 
         default:
-          console.log('Usage:');
-          console.log('  node npm-deprecate.js deprecate <package>@<version> "message" - Deprecate a version');
-          console.log('  node npm-deprecate.js undeprecate <package>@<version> - Remove deprecation');
-          console.log('  node npm-deprecate.js list <package> - List deprecated versions');
-          console.log('  node npm-deprecate.js versions <package> - List all versions');
-          console.log('\nEnvironment:');
-          console.log('  NPM_TOKEN - npm access token (required for deprecate/undeprecate)');
+          console.log("Usage:");
+          console.log(
+            '  node npm-deprecate.js deprecate <package>@<version> "message" - Deprecate a version',
+          );
+          console.log(
+            "  node npm-deprecate.js undeprecate <package>@<version> - Remove deprecation",
+          );
+          console.log(
+            "  node npm-deprecate.js list <package> - List deprecated versions",
+          );
+          console.log(
+            "  node npm-deprecate.js versions <package> - List all versions",
+          );
+          console.log("\nEnvironment:");
+          console.log(
+            "  NPM_TOKEN - npm access token (required for deprecate/undeprecate)",
+          );
           process.exit(1);
       }
       process.exit(0);
     } catch (error) {
-      console.error('❌', error.message);
+      console.error("❌", error.message);
       process.exit(1);
     }
   })();

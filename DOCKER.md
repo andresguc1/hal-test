@@ -7,6 +7,7 @@ Running HAL-TEST in Docker is the **recommended way** for production deployments
 ## Prerequisites
 
 Before starting, ensure you have:
+
 - **Docker Engine** ([Install Guide](https://docs.docker.com/engine/install/))
 - **Docker Compose** (usually included with Docker Desktop)
 
@@ -60,6 +61,7 @@ docker compose up -d --build
 ```
 
 This will:
+
 - Build the multi-stage Docker image (~2-3 minutes first time)
 - Install all Playwright browser dependencies
 - Compile frontend and backend assets
@@ -79,6 +81,7 @@ docker logs -f hal-test-app
 ```
 
 You should see:
+
 ```
 ✅ Inspector routes registered
 ✅ 67 action routes registered successfully
@@ -90,6 +93,7 @@ Database synchronized
 ## Access the Application
 
 Once the container is healthy:
+
 - **App Interface**: http://localhost:2001/app/
 - **Landing Page**: http://localhost:2001/
 - **API Documentation**: http://localhost:2001/api/docs
@@ -116,6 +120,7 @@ docker exec -it hal-test-app sh
 ## Data Persistence
 
 HAL-TEST uses Docker volumes to persist data:
+
 - **Volume Name**: `hal_test_data`
 - **Location inside container**: `/app/apps/backend/storage`
 - **Contains**: SQLite database, screenshots, session data
@@ -146,6 +151,7 @@ DATABASE_URL=postgresql://postgres.yourproject:password@aws-0-us-west-2.pooler.s
 ```
 
 **Benefits:**
+
 - Scalable and production-ready
 - Built-in authentication with Supabase
 - Automatic backups
@@ -166,6 +172,7 @@ DATABASE_URL=postgresql://postgres.yourproject:password@aws-0-us-west-2.pooler.s
 8. Update your `.env` file with the connection string
 
 > **Why Transaction Pooler?**
+>
 > - Direct connection (port 5432) uses IPv6 only
 > - Transaction pooler (port 6543) supports IPv4
 > - Docker containers may not have IPv6 enabled by default
@@ -181,11 +188,13 @@ DATABASE_URL=postgresql://postgres.yourproject:password@aws-0-us-west-2.pooler.s
 The app will automatically fallback to SQLite stored in the Docker volume.
 
 **Benefits:**
+
 - No external dependencies
 - Zero configuration
 - Portable (everything in one volume)
 
 **Limitations:**
+
 - Not recommended for production
 - No authentication features
 - Single-user only
@@ -202,12 +211,14 @@ docker logs hal-test-app --tail 100
 #### Issue: "Password authentication failed" (Code 28P01)
 
 **Symptoms:**
+
 ```
 severity: 'FATAL',
 code: '28P01',
 ```
 
 **Solution:**
+
 1. Go to Supabase Dashboard → Project Settings → Database
 2. Scroll to "Database Settings"
 3. Click "Reset database password"
@@ -221,6 +232,7 @@ code: '28P01',
 #### Issue: "ENOTFOUND" or "ENETUNREACH"
 
 **Symptoms:**
+
 ```
 Error: getaddrinfo ENOTFOUND db.projectref.supabase.co
 connect ENETUNREACH 2600:xxxx:xxxx
@@ -245,6 +257,7 @@ connect ENETUNREACH 2600:xxxx:xxxx
 ### Cannot Connect to Localhost
 
 If using **network_mode: host** (default on Linux):
+
 ```bash
 # The container uses your host network directly
 # Access via: http://localhost:2001
@@ -262,6 +275,7 @@ ports:
 ```
 
 Then restart:
+
 ```bash
 docker compose down
 docker compose up -d
@@ -303,8 +317,8 @@ The container is configured with Google and Cloudflare DNS for reliable name res
 
 ```yaml
 dns:
-  - 8.8.8.8   # Google DNS
-  - 1.1.1.1   # Cloudflare DNS
+  - 8.8.8.8 # Google DNS
+  - 1.1.1.1 # Cloudflare DNS
 ```
 
 This helps resolve issues with corporate networks or custom DNS setups.
@@ -316,14 +330,15 @@ All `.env` variables are automatically passed to the container. To override spec
 ```yaml
 # In docker-compose.yml
 environment:
-  - PORT=3000              # Change default port
+  - PORT=3000 # Change default port
   - NODE_ENV=production
-  - DATABASE_URL=postgresql://...  # Override .env value
+  - DATABASE_URL=postgresql://... # Override .env value
 ```
 
 ### Multi-Architecture Support
 
 The Docker image supports:
+
 - **linux/amd64** (Intel/AMD x86_64)
 - **linux/arm64** (Apple Silicon, ARM servers)
 
@@ -334,6 +349,7 @@ Docker automatically pulls the correct architecture.
 ### 1. Use External Database
 
 Always use Supabase (PostgreSQL) in production:
+
 ```bash
 DATABASE_URL=postgresql://postgres.yourproject:password@aws-0-us-west-2.pooler.supabase.com:6543/postgres
 ```
@@ -341,6 +357,7 @@ DATABASE_URL=postgresql://postgres.yourproject:password@aws-0-us-west-2.pooler.s
 ### 2. Set Strong Encryption Key
 
 Generate a secure 64-character hex key:
+
 ```bash
 # Generate random key
 openssl rand -hex 32
@@ -352,6 +369,7 @@ HALTEST_MASTER_ENCRYPTION_KEY=<generated_key>
 ### 3. Enable Container Health Checks
 
 Add to `docker-compose.yml`:
+
 ```yaml
 healthcheck:
   test: ["CMD", "curl", "-f", "http://localhost:2001/"]
@@ -364,6 +382,7 @@ healthcheck:
 ### 4. Configure Restart Policy
 
 Already included in `docker-compose.yml`:
+
 ```yaml
 restart: unless-stopped
 ```
@@ -373,14 +392,15 @@ This ensures the container restarts automatically after crashes or reboots.
 ### 5. Resource Limits
 
 Add to `docker-compose.yml`:
+
 ```yaml
 deploy:
   resources:
     limits:
-      cpus: '2'
+      cpus: "2"
       memory: 4G
     reservations:
-      cpus: '1'
+      cpus: "1"
       memory: 2G
 ```
 
@@ -389,6 +409,7 @@ deploy:
 ### 1. Protect Environment Variables
 
 Never commit `.env` to version control:
+
 ```bash
 # .gitignore
 .env
@@ -399,6 +420,7 @@ Never commit `.env` to version control:
 ### 2. Use Docker Secrets (Production)
 
 For sensitive data in production:
+
 ```yaml
 secrets:
   database_url:
@@ -413,6 +435,7 @@ services:
 ### 3. Network Isolation
 
 For better security, use bridge networking instead of host mode:
+
 ```yaml
 network_mode: bridge
 ports:
@@ -515,6 +538,7 @@ docker compose up -d
 ## Support
 
 If you encounter issues not covered here:
+
 1. Check logs: `docker logs hal-test-app`
 2. Search [GitHub Issues](https://github.com/andresguc1/hal-test/issues)
 3. Join [Slack Community](https://join.slack.com/t/haltest-talk/shared_invite/zt-3tzii9nxh-vgdIcI5A8bg~GCG8QF6MuA)

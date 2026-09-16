@@ -347,9 +347,7 @@ export function useFlowExecution({
             customLabel:
               _payload?.customLabel || nodeOrAction.data?.customLabel,
             label:
-              _payload?.label ||
-              nodeOrAction.data?.label ||
-              nodeOrAction.label,
+              _payload?.label || nodeOrAction.data?.label || nodeOrAction.label,
           },
           ...nodeOrAction,
         };
@@ -424,9 +422,16 @@ export function useFlowExecution({
               // Extract detectedOptions from select_option response and persist to node configuration
               const nodeType = node.data?.type || node.type;
               const detectedOptionsFromResult = result?.data?.detectedOptions;
-              const updatedConfiguration = { ...(node.data?.configuration || {}) };
-              if (nodeType === 'select_option' && detectedOptionsFromResult && detectedOptionsFromResult.length > 0) {
-                updatedConfiguration.detectedOptions = detectedOptionsFromResult;
+              const updatedConfiguration = {
+                ...(node.data?.configuration || {}),
+              };
+              if (
+                nodeType === "select_option" &&
+                detectedOptionsFromResult &&
+                detectedOptionsFromResult.length > 0
+              ) {
+                updatedConfiguration.detectedOptions =
+                  detectedOptionsFromResult;
               }
 
               return {
@@ -494,7 +499,9 @@ export function useFlowExecution({
           // tracked session (activeBrowserId) is stale. Invalidate it so later
           // nodes stop targeting the dead session and the engine re-resolves.
           if (
-            /closed|disconnected|cerrado|desconectado/i.test(error.message || "")
+            /closed|disconnected|cerrado|desconectado/i.test(
+              error.message || "",
+            )
           ) {
             setActiveBrowserId(null);
           }
@@ -974,7 +981,10 @@ export function useFlowExecution({
                       updateNodeState(node.id, NODE_STATES.ERROR, {
                         message: `Loop sub-flow not found or empty: ${flowId}`,
                       });
-                      loopResult = { success: false, error: "Missing loop sub-flow" };
+                      loopResult = {
+                        success: false,
+                        error: "Missing loop sub-flow",
+                      };
                       finished = true;
                       break;
                     }

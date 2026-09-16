@@ -133,13 +133,13 @@ test("manual trace", async ({ page, context }) => {
 
 If a test fails intermittently, it's likely flaky. Quick checks:
 
-| Behavior                               | Likely Cause                  | Next Step                              |
-| -------------------------------------- | ----------------------------- | -------------------------------------- |
-| Fails sometimes, passes other times    | Flaky - timing/race condition | [flaky-tests.md](flaky-tests.md)       |
-| Fails only with multiple workers       | Flaky - parallelism/isolation | [flaky-tests.md](flaky-tests.md)       |
-| Fails only in CI                       | Environment difference        | [CI Debugging](#debugging-in-ci) below |
-| Always fails                           | Bug in test or app            | Debug with tools above                 |
-| Always passes locally, always fails CI | CI-specific issue             | [ci-cd.md](../infrastructure-ci-cd/ci-cd.md)                   |
+| Behavior                               | Likely Cause                  | Next Step                                    |
+| -------------------------------------- | ----------------------------- | -------------------------------------------- |
+| Fails sometimes, passes other times    | Flaky - timing/race condition | [flaky-tests.md](flaky-tests.md)             |
+| Fails only with multiple workers       | Flaky - parallelism/isolation | [flaky-tests.md](flaky-tests.md)             |
+| Fails only in CI                       | Environment difference        | [CI Debugging](#debugging-in-ci) below       |
+| Always fails                           | Bug in test or app            | Debug with tools above                       |
+| Always passes locally, always fails CI | CI-specific issue             | [ci-cd.md](../infrastructure-ci-cd/ci-cd.md) |
 
 > **For flaky test detection commands, root cause analysis, and fixing strategies**, see [flaky-tests.md](flaky-tests.md).
 
@@ -435,15 +435,15 @@ test("with attachments", async ({ page }, testInfo) => {
 
 ### By Symptom
 
-| Symptom                                       | Common Causes                                                | Quick Fixes                                                         | Reference                                                                  |
-| --------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Symptom                                       | Common Causes                                                | Quick Fixes                                                         | Reference                                                                                  |
+| --------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | **Element not found**                         | Wrong selector, element not visible, in iframe, timing issue | Check locator with Inspector, wait for visibility, use frameLocator | [locators.md](../core/locators.md), [assertions-waiting.md](../core/assertions-waiting.md) |
-| **Timeout errors**                            | Slow network, heavy page load, waiting for wrong condition   | Increase timeout, wait for specific response, check network tab     | [assertions-waiting.md](../core/assertions-waiting.md)                             |
-| **Flaky tests**                               | Race conditions, shared state, timing dependencies           | See comprehensive flaky test guide                                  | [flaky-tests.md](flaky-tests.md)                                           |
-| **Tests pass locally, fail in CI**            | Environment differences, missing dependencies, timing        | Simulate CI locally, check CI logs, verify environment vars         | [ci-cd.md](../infrastructure-ci-cd/ci-cd.md), [flaky-tests.md](flaky-tests.md)                     |
-| **Slow test execution**                       | Not parallelized, heavy network calls, unnecessary waits     | Enable parallelization, mock APIs, optimize waits                   | [performance.md](../infrastructure-ci-cd/performance.md)                                           |
-| **Selector works in browser but not in test** | Element not attached, wrong context, dynamic content         | Use auto-waiting, check iframe, verify element state                | [locators.md](../core/locators.md)                                                 |
-| **Test fails on retry**                       | Non-deterministic data, external dependencies                | Use test data fixtures, mock external services                      | [fixtures-hooks.md](../core/fixtures-hooks.md)                                     |
+| **Timeout errors**                            | Slow network, heavy page load, waiting for wrong condition   | Increase timeout, wait for specific response, check network tab     | [assertions-waiting.md](../core/assertions-waiting.md)                                     |
+| **Flaky tests**                               | Race conditions, shared state, timing dependencies           | See comprehensive flaky test guide                                  | [flaky-tests.md](flaky-tests.md)                                                           |
+| **Tests pass locally, fail in CI**            | Environment differences, missing dependencies, timing        | Simulate CI locally, check CI logs, verify environment vars         | [ci-cd.md](../infrastructure-ci-cd/ci-cd.md), [flaky-tests.md](flaky-tests.md)             |
+| **Slow test execution**                       | Not parallelized, heavy network calls, unnecessary waits     | Enable parallelization, mock APIs, optimize waits                   | [performance.md](../infrastructure-ci-cd/performance.md)                                   |
+| **Selector works in browser but not in test** | Element not attached, wrong context, dynamic content         | Use auto-waiting, check iframe, verify element state                | [locators.md](../core/locators.md)                                                         |
+| **Test fails on retry**                       | Non-deterministic data, external dependencies                | Use test data fixtures, mock external services                      | [fixtures-hooks.md](../core/fixtures-hooks.md)                                             |
 
 ### Step-by-Step Debugging Process
 

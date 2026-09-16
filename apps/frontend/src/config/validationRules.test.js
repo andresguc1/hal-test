@@ -51,11 +51,14 @@ describe("validateNodeConfig", () => {
   });
 
   it("should require the set_checkbox selector outside multiple mode", () => {
-    expect(validateNodeConfig("set_checkbox", { multiple: false, selector: "" }))
-      .toMatchObject({ isValid: false });
     expect(
-      validateNodeConfig("set_checkbox", { multiple: false, selector: "#accept" })
-        .isValid,
+      validateNodeConfig("set_checkbox", { multiple: false, selector: "" }),
+    ).toMatchObject({ isValid: false });
+    expect(
+      validateNodeConfig("set_checkbox", {
+        multiple: false,
+        selector: "#accept",
+      }).isValid,
     ).toBe(true);
   });
 
@@ -139,7 +142,9 @@ describe("timeout defaults", () => {
       .filter(([, fields]) => Array.isArray(fields))
       .flatMap(([nodeType, fields]) =>
         fields
-          .filter((f) => f && f.key === "timeout" && f.defaultValue !== undefined)
+          .filter(
+            (f) => f && f.key === "timeout" && f.defaultValue !== undefined,
+          )
           .map((f) => `${nodeType}.timeout=${f.defaultValue}`),
       );
     expect(nodesWithHardcodedTimeout).toEqual([]);

@@ -35,7 +35,10 @@ describe("buildVariableTypeLookup", () => {
 
   it("skips items without a template path", () => {
     const lookup = buildVariableTypeLookup([
-      { nodeLabel: "X", items: [{ label: "a", path: "no-template", type: "string" }] },
+      {
+        nodeLabel: "X",
+        items: [{ label: "a", path: "no-template", type: "string" }],
+      },
     ]);
     expect(Object.keys(lookup)).toHaveLength(0);
   });

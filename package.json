@@ -1,69 +1,69 @@
 {
-    "name": "halt-test-monorepo",
-    "version": "1.0.26",
-    "description": "Unified platform for automation and mock services",
-    "license": "Apache-2.0",
-    "type": "module",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/andresguc1/hal-test.git"
+  "name": "halt-test-monorepo",
+  "version": "1.0.26",
+  "description": "Unified platform for automation and mock services",
+  "license": "Apache-2.0",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/andresguc1/hal-test.git"
+  },
+  "bugs": {
+    "url": "https://github.com/andresguc1/hal-test/issues"
+  },
+  "homepage": "haltest.com/app",
+  "private": true,
+  "scripts": {
+    "dev": "turbo dev",
+    "dev:backend": "turbo dev --filter @halt-test/backend",
+    "dev:frontend": "turbo dev --filter @halt-test/frontend",
+    "build": "turbo build",
+    "build:monolith": "pnpm --filter @halt-test/web build --outDir ../backend/public/web --emptyOutDir && pnpm --filter @halt-test/frontend build --outDir ../backend/public/app --emptyOutDir",
+    "start": "NODE_ENV=production node apps/backend/app.js",
+    "cli": "node apps/cli/bin/haltest.js",
+    "test": "turbo test",
+    "lint": "turbo lint",
+    "lint:fix": "turbo lint:fix",
+    "format": "turbo format",
+    "clean": "turbo clean && rm -rf node_modules",
+    "stop": "fuser -k 2001/tcp 3000/tcp || true",
+    "prepare": "husky",
+    "release": "gh workflow run release.yml -f version=v$(node -p \"require('./apps/cli/package.json').version\")",
+    "release:patch": "gh workflow run release.yml -f version=v$(node -p \"require('./apps/cli/package.json').version\".replace(/\\d+$/, m => +m + 1))",
+    "update:app": "git pull && pnpm install && pnpm build:monolith",
+    "setup": "pnpm install && node scripts/setup.js",
+    "sbom:all": "node scripts/generate-sbom.js all",
+    "sbom:single": "node scripts/generate-sbom.js single",
+    "verify:signatures": "node scripts/verify-signatures.js",
+    "audit:security": "node scripts/security-audit.js"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.6",
+    "turbo": "^2.3.3"
+  },
+  "lint-staged": {
+    "apps/**/*.{js,jsx,ts,tsx,json,css,md}": [
+      "prettier --write"
+    ]
+  },
+  "packageManager": "pnpm@9.15.4",
+  "pnpm": {
+    "overrides": {
+      "socket.io-parser": "4.2.6",
+      "hono": "4.12.14",
+      "body-parser": "2.2.2",
+      "qs": "6.15.1",
+      "vitest": "4.1.0"
     },
-    "bugs": {
-        "url": "https://github.com/andresguc1/hal-test/issues"
-    },
-    "homepage": "haltest.com/app",
-    "private": true,
-    "scripts": {
-        "dev": "turbo dev",
-        "dev:backend": "turbo dev --filter @halt-test/backend",
-        "dev:frontend": "turbo dev --filter @halt-test/frontend",
-        "build": "turbo build",
-        "build:monolith": "pnpm --filter @halt-test/web build --outDir ../backend/public/web --emptyOutDir && pnpm --filter @halt-test/frontend build --outDir ../backend/public/app --emptyOutDir",
-        "start": "NODE_ENV=production node apps/backend/app.js",
-        "cli": "node apps/cli/bin/haltest.js",
-        "test": "turbo test",
-        "lint": "turbo lint",
-        "lint:fix": "turbo lint:fix",
-        "format": "turbo format",
-        "clean": "turbo clean && rm -rf node_modules",
-        "stop": "fuser -k 2001/tcp 3000/tcp || true",
-        "prepare": "husky",
-        "release": "gh workflow run release.yml -f version=v$(node -p \"require('./apps/cli/package.json').version\")",
-        "release:patch": "gh workflow run release.yml -f version=v$(node -p \"require('./apps/cli/package.json').version\".replace(/\\d+$/, m => +m + 1))",
-        "update:app": "git pull && pnpm install && pnpm build:monolith",
-        "setup": "pnpm install && node scripts/setup.js",
-        "sbom:all": "node scripts/generate-sbom.js all",
-        "sbom:single": "node scripts/generate-sbom.js single",
-        "verify:signatures": "node scripts/verify-signatures.js",
-        "audit:security": "node scripts/security-audit.js"
-    },
-    "devDependencies": {
-        "husky": "^9.1.7",
-        "lint-staged": "^16.2.6",
-        "turbo": "^2.3.3"
-    },
-    "lint-staged": {
-        "apps/**/*.{js,jsx,ts,tsx,json,css,md}": [
-            "prettier --write"
-        ]
-    },
-    "packageManager": "pnpm@9.15.4",
-"pnpm": {
-            "overrides": {
-                "socket.io-parser": "4.2.6",
-                "hono": "4.12.14",
-                "body-parser": "2.2.2",
-                "qs": "6.15.1",
-                "vitest": "4.1.0"
-            },
-        "onlyBuiltDependencies": [
-            "better-sqlite3",
-            "sqlite3",
-            "playwright",
-            "esbuild"
-        ]
-    },
-    "engines": {
-        "node": ">=20.0.0"
-    }
+    "onlyBuiltDependencies": [
+      "better-sqlite3",
+      "sqlite3",
+      "playwright",
+      "esbuild"
+    ]
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
 }

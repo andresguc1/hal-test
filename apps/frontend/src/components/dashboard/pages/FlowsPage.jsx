@@ -48,11 +48,7 @@ export default function FlowsPage({ onOpenFlow, onRunFlow, onNavigate }) {
 
   const handleDelete = async (flow) => {
     if (!flow?.id || !flow?.projectId) return;
-    if (
-      !window.confirm(
-        `Delete flow "${flow.name}"? This cannot be undone.`,
-      )
-    )
+    if (!window.confirm(`Delete flow "${flow.name}"? This cannot be undone.`))
       return;
     setDeletingId(flow.id);
     try {

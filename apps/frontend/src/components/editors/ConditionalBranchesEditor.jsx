@@ -356,7 +356,9 @@ const ConditionalBranchesEditor = React.memo(
                         type="button"
                         aria-label={t(
                           "nodes.config.conditional.toggle_mode",
-                          isAdvanced ? "Cambiar a modo regla" : "Cambiar a modo JS",
+                          isAdvanced
+                            ? "Cambiar a modo regla"
+                            : "Cambiar a modo JS",
                         )}
                         title={isAdvanced ? "Modo JS" : "Modo regla"}
                         className={cn(
@@ -377,7 +379,10 @@ const ConditionalBranchesEditor = React.memo(
                           "nodes.config.conditional.remove_rule",
                           "Eliminar regla",
                         )}
-                        title={t("nodes.config.conditional.remove_rule", "Eliminar regla")}
+                        title={t(
+                          "nodes.config.conditional.remove_rule",
+                          "Eliminar regla",
+                        )}
                         className="p-1.5 min-w-[28px] min-h-[28px] inline-flex items-center justify-center text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
                       >
                         <Trash2 size={12} />
@@ -482,8 +487,7 @@ const ConditionalBranchesEditor = React.memo(
                               const currentRight = String(
                                 branch.expression?.right || "",
                               );
-                              const boolValue =
-                                currentRight.trim() === "true";
+                              const boolValue = currentRight.trim() === "true";
                               return (
                                 <select
                                   value={boolValue ? "true" : "false"}
@@ -544,7 +548,10 @@ const ConditionalBranchesEditor = React.memo(
           <button
             onClick={addBranch}
             type="button"
-            aria-label={t("nodes.config.conditional.add_rule", "Agregar Nueva Regla")}
+            aria-label={t(
+              "nodes.config.conditional.add_rule",
+              "Agregar Nueva Regla",
+            )}
             className="w-full py-3 bg-sky-500/5 hover:bg-sky-500/10 border border-dashed border-sky-500/20 rounded-2xl text-[10px] font-black uppercase tracking-widest text-sky-400 flex items-center justify-center gap-2 transition-all active:scale-[0.98] group"
           >
             <Plus

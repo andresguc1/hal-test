@@ -531,60 +531,58 @@ const AbyssNode = ({ id, data, selected, type }) => {
                 </button>
                 {showDecisionTrace && (
                   <div className="px-2 pb-1.5 space-y-0.5">
-                    {Object.entries(decisionTrace).map(
-                      ([branchKey, entry]) => {
-                        const st = entry?.status || "not_matched";
-                        const label =
-                          branches.find(
-                            (b) => (b.id || b.label) === branchKey,
-                          )?.label || branchKey;
-                        const badge =
-                          st === "matched"
-                            ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
-                            : st === "error"
-                              ? "bg-rose-500/20 text-rose-300 border-rose-500/40"
-                              : st === "skipped"
-                                ? "bg-slate-600/30 text-slate-400 border-slate-600/50"
-                                : "bg-slate-700/30 text-slate-300 border-slate-600/40";
-                        const badgeLabel =
-                          st === "matched"
-                            ? "MATCH"
-                            : st === "error"
-                              ? "ERROR"
-                              : st === "skipped"
-                                ? "SKIP"
-                                : "NO";
-                        return (
-                          <div
-                            key={branchKey}
-                            className="flex items-center gap-1.5 text-[9px] font-mono"
-                          >
-                            <span
-                              className={cn(
-                                "shrink-0 w-11 text-center px-1 py-0.5 rounded border font-black tracking-wide",
-                                badge,
-                              )}
-                            >
-                              {badgeLabel}
-                            </span>
-                            <span
-                              className="text-white/80 truncate"
-                              title={label}
-                            >
-                              {truncate(label || branchKey, 16)}
-                            </span>
-                            {entry?.resolvedLeft !== undefined && (
-                              <span
-                                className="text-slate-500 truncate max-w-[70px]"
-                                title={String(entry.resolvedLeft)}
-                              >
-                                = {truncate(JSON.stringify(entry.resolvedLeft), 14)}
-                              </span>
+                    {Object.entries(decisionTrace).map(([branchKey, entry]) => {
+                      const st = entry?.status || "not_matched";
+                      const label =
+                        branches.find((b) => (b.id || b.label) === branchKey)
+                          ?.label || branchKey;
+                      const badge =
+                        st === "matched"
+                          ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+                          : st === "error"
+                            ? "bg-rose-500/20 text-rose-300 border-rose-500/40"
+                            : st === "skipped"
+                              ? "bg-slate-600/30 text-slate-400 border-slate-600/50"
+                              : "bg-slate-700/30 text-slate-300 border-slate-600/40";
+                      const badgeLabel =
+                        st === "matched"
+                          ? "MATCH"
+                          : st === "error"
+                            ? "ERROR"
+                            : st === "skipped"
+                              ? "SKIP"
+                              : "NO";
+                      return (
+                        <div
+                          key={branchKey}
+                          className="flex items-center gap-1.5 text-[9px] font-mono"
+                        >
+                          <span
+                            className={cn(
+                              "shrink-0 w-11 text-center px-1 py-0.5 rounded border font-black tracking-wide",
+                              badge,
                             )}
-                          </div>
-                        );
-                      },
-                    )}
+                          >
+                            {badgeLabel}
+                          </span>
+                          <span
+                            className="text-white/80 truncate"
+                            title={label}
+                          >
+                            {truncate(label || branchKey, 16)}
+                          </span>
+                          {entry?.resolvedLeft !== undefined && (
+                            <span
+                              className="text-slate-500 truncate max-w-[70px]"
+                              title={String(entry.resolvedLeft)}
+                            >
+                              ={" "}
+                              {truncate(JSON.stringify(entry.resolvedLeft), 14)}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
