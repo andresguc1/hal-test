@@ -75,7 +75,7 @@ jobs:
         run: pnpm exec prettier --check "**/*.{js,jsx,json,md}"
 
       - name: 🛡️ Audit Dependencies
-        run: pnpm audit --prod
+        run: pnpm audit --prod --audit-level=high
 
       - name: 🧪 Run backend tests
         run: cd apps/backend && pnpm test
