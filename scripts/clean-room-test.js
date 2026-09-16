@@ -81,7 +81,12 @@ async function main() {
 
     // 3. Install package
     console.log("📥 Installing package...");
-    await runCommand(`npm install "${distDir}/${pkgFile}"`, tempDir, {}, 600000);
+    await runCommand(
+      `npm install "${distDir}/${pkgFile}"`,
+      tempDir,
+      {},
+      600000,
+    );
     console.log("   ✅ Package installed\n");
 
     // 4. Rebuild native modules (sqlite3, better-sqlite3)
@@ -101,12 +106,22 @@ async function main() {
 
     // 5. Test CLI version
     console.log("🔍 Testing CLI --version...");
-    const versionOutput = await runCommand("npx haltest --version", tempDir, {}, 120000);
+    const versionOutput = await runCommand(
+      "npx haltest --version",
+      tempDir,
+      {},
+      120000,
+    );
     console.log(`   ${versionOutput.trim()}\n`);
 
     // 6. Test CLI info
     console.log("🔍 Testing CLI --info...");
-    const infoOutput = await runCommand("npx haltest --info", tempDir, {}, 120000);
+    const infoOutput = await runCommand(
+      "npx haltest --info",
+      tempDir,
+      {},
+      120000,
+    );
     console.log(`   ${infoOutput.trim()}\n`);
 
     // 7. Start backend in background and test health endpoint
@@ -192,7 +207,12 @@ const { chromium } = require('playwright');
   console.log('Playwright test passed:', title);
 })();
 `;
-    await runCommand(`node -e "${pwTest.replace(/\n/g, " ")}"`, tempDir, {}, 120000);
+    await runCommand(
+      `node -e "${pwTest.replace(/\n/g, " ")}"`,
+      tempDir,
+      {},
+      120000,
+    );
     console.log("   ✅ Playwright works\n");
 
     // 11. Kill backend and any descendant processes
