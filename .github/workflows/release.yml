@@ -204,7 +204,7 @@ jobs:
           BUILD_ID: ${{ github.run_id }}
 
       - name: 📦 Upload CLI dist as artifact
-        uses: actions/upload-artifact@5d5d22a31266ced268874388604861cf4f7985a4
+        uses: actions/upload-artifact@v4
         with:
           name: cli-dist
           path: apps/cli/dist/
@@ -222,7 +222,7 @@ jobs:
       id-token: write
     steps:
       - name: 📥 Download CLI dist
-        uses: actions/download-artifact@5d5d22a31266ced268874388604861cf4f7985a4
+        uses: actions/download-artifact@v4
         with:
           name: cli-dist
           path: apps/cli/dist
@@ -257,7 +257,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: 📤 Upload SBOM Artifact
-        uses: actions/upload-artifact@5d5d22a31266ced268874388604861cf4f7985a4
+        uses: actions/upload-artifact@v4
         with:
           name: sbom
           path: apps/cli/dist/bom.json
@@ -274,13 +274,13 @@ jobs:
       contents: write
     steps:
       - name: 📥 Download CLI dist
-        uses: actions/download-artifact@5d5d22a31266ced268874388604861cf4f7985a4
+        uses: actions/download-artifact@v4
         with:
           name: cli-dist
           path: apps/cli/dist
 
       - name: 📥 Download SBOM
-        uses: actions/download-artifact@5d5d22a31266ced268874388604861cf4f7985a4
+        uses: actions/download-artifact@v4
         with:
           name: sbom
           path: apps/cli/dist

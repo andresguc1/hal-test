@@ -24,7 +24,7 @@ jobs:
       contents: read
     steps:
       - name: 📥 Checkout code
-        uses: actions/checkout@1769ed05b9f39e9906194499b5c2b0bf8535a69b
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -45,7 +45,7 @@ jobs:
       contents: read
     steps:
       - name: 📥 Checkout code
-        uses: actions/checkout@1769ed05b9f39e9906194499b5c2b0bf8535a69b
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -91,15 +91,15 @@ jobs:
       id-token: write
     steps:
       - name: 📥 Checkout code
-        uses: actions/checkout@1769ed05b9f39e9906194499b5c2b0bf8535a69b
+        uses: actions/checkout@v4
 
       - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@dc9f519e47a8b796aa19d9a9e5a5f11b696d5e8c
+        uses: pnpm/action-setup@v4
         with:
           version: 9.15.4
 
       - name: 🟢 Setup Node.js
-        uses: actions/setup-node@60edb5dd545a775178f192cb99c9b2d8661c5e89
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'pnpm'
@@ -111,7 +111,7 @@ jobs:
         run: node scripts/generate-sbom.js all
 
       - name: 📤 Upload SBOM artifacts
-        uses: actions/upload-artifact@5d5d22a31266ced268874388604861cf4f7985a4
+        uses: actions/upload-artifact@v4
         with:
           name: sbom-all-artifacts
           path: sbom-output/
@@ -130,15 +130,15 @@ jobs:
       attestations: write
     steps:
       - name: 📥 Checkout code
-        uses: actions/checkout@1769ed05b9f39e9906194499b5c2b0bf8535a69b
+        uses: actions/checkout@v4
 
       - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@dc9f519e47a8b796aa19d9a9e5a5f11b696d5e8c
+        uses: pnpm/action-setup@v4
         with:
           version: 9.15.4
 
       - name: 🟢 Setup Node.js
-        uses: actions/setup-node@60edb5dd545a775178f192cb99c9b2d8661c5e89
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'pnpm'
@@ -152,7 +152,7 @@ jobs:
       - name: 📋 Generate SLSA Provenance
         uses: slsa-framework/slsa-github-generator@main
         with:
-          base64-subjects: ${{ toJson(format('{0}: {1}', github.repository, github.sha)) }}
+          base64-subjects: "${{ toJson(format('{0}: {1}', github.repository, github.sha)) }}" 
           provenance-name: slsa-provenance.intoto.jsonl
           upload-assets: true
 
@@ -170,10 +170,10 @@ jobs:
     needs: generate-sbom
     steps:
       - name: 📥 Checkout code
-        uses: actions/checkout@1769ed05b9f39e9906194499b5c2b0bf8535a69b
+        uses: actions/checkout@v4
 
       - name: 📥 Download SBOMs
-        uses: actions/download-artifact@5d5d22a31266ced268874388604861cf4f7985a4
+        uses: actions/download-artifact@v4
         with:
           name: sbom-all-artifacts
           path: sbom-output
@@ -181,12 +181,12 @@ jobs:
       - name: 📦 Generate Release Provenance
         uses: slsa-framework/slsa-github-generator@main
         with:
-          base64-subjects: ${{ toJson(format('{0}: {1}', github.repository, github.sha)) }}
+          base64-subjects: "${{ toJson(format('{0}: {1}', github.repository, github.sha)) }}" 
           provenance-name: slsa-provenance-release.intoto.jsonl
           upload-assets: true
 
       - name: 📤 Upload Release Provenance
-        uses: actions/upload-artifact@5d5d22a31266ced268874388604861cf4f7985a4
+        uses: actions/upload-artifact@v4
         with:
           name: slsa-release-provenance
           path: slsa-provenance-release.intoto.jsonl
@@ -204,15 +204,15 @@ jobs:
       security-events: write
     steps:
       - name: 📥 Checkout code
-        uses: actions/checkout@1769ed05b9f39e9906194499b5c2b0bf8535a69b
+        uses: actions/checkout@v4
 
       - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@dc9f519e47a8b796aa19d9a9e5a5f11b696d5e8c
+        uses: pnpm/action-setup@v4
         with:
           version: 9.15.4
 
       - name: 🟢 Setup Node.js
-        uses: actions/setup-node@60edb5dd545a775178f192cb99c9b2d8661c5e89
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'pnpm'
@@ -231,7 +231,7 @@ jobs:
           category: pnpm-audit
 
       - name: 🔍 Run OSSF Scorecard
-        uses: ossf/scorecard-action@0864cf195801925294d2a76a54d5f097c5e5f0d4
+        uses: ossf/scorecard-action@v2
         with:
           results_file: scorecard-results.sarif
           results_format: sarif

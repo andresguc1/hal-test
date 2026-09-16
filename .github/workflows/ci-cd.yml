@@ -24,15 +24,15 @@ jobs:
     
     steps:
       - name: 📥 Checkout code
-        uses: actions/checkout@1769ed05b9f39e9906194499b5c2b0bf8535a69b
+        uses: actions/checkout@v4
 
       - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@dc9f519e47a8b796aa19d9a9e5a5f11b696d5e8c
+        uses: pnpm/action-setup@v4
         with:
           version: 9.15.4
 
       - name: 🟢 Setup Node.js
-        uses: actions/setup-node@60edb5dd545a775178f192cb99c9b2d8661c5e89
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
@@ -74,15 +74,15 @@ jobs:
     
     steps:
       - name: 📥 Checkout code
-        uses: actions/checkout@1769ed05b9f39e9906194499b5c2b0bf8535a69b
+        uses: actions/checkout@v4
 
       - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@dc9f519e47a8b796aa19d9a9e5a5f11b696d5e8c
+        uses: pnpm/action-setup@v4
         with:
           version: 9.15.4
 
       - name: 🟢 Setup Node.js
-        uses: actions/setup-node@60edb5dd545a775178f192cb99c9b2d8661c5e89
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
@@ -108,15 +108,15 @@ jobs:
     
     steps:
       - name: 📥 Checkout code
-        uses: actions/checkout@1769ed05b9f39e9906194499b5c2b0bf8535a69b
+        uses: actions/checkout@v4
 
       - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@dc9f519e47a8b796aa19d9a9e5a5f11b696d5e8c
+        uses: pnpm/action-setup@v4
         with:
           version: 9.15.4
 
       - name: 🟢 Setup Node.js
-        uses: actions/setup-node@60edb5dd545a775178f192cb99c9b2d8661c5e89
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
@@ -155,7 +155,7 @@ jobs:
     
     steps:
       - name: 📥 Checkout code
-        uses: actions/checkout@1769ed05b9f39e9906194499b5c2b0bf8535a69b
+        uses: actions/checkout@v4
 
       - name: 🚀 Trigger Render Deploy
         run: |

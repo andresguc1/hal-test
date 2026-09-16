@@ -27,12 +27,12 @@ jobs:
 
     steps:
       - name: "Checkout code"
-        uses: actions/checkout@1769ed05b9f39e9906194499b5c2b0bf8535a69b
+        uses: actions/checkout@v4
         with:
           persist-credentials: false
 
       - name: "Run analysis"
-        uses: ossf/scorecard-action@0864cf195801925294d2a76a54d5f097c5e5f0d4
+        uses: ossf/scorecard-action@v2
         with:
           results_file: results.sarif
           results_format: sarif
@@ -51,7 +51,7 @@ jobs:
       # Upload the results as artifacts (optional). Commenting out will disable uploads of run results in SARIF
       # format to the repository Actions tab.
       - name: "Upload artifact"
-        uses: actions/upload-artifact@5d5d22a31266ced268874388604861cf4f7985a4
+        uses: actions/upload-artifact@v4
         with:
           name: SARIF file
           path: results.sarif
