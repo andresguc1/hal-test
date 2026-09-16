@@ -126,6 +126,7 @@ Nada nuevo en `LLMFactory.js`; `AIService` solo gana un delegado delgado.
 - **Objective:** `sanitizeDiscoveryBaseUrl` sin alterar rutas existentes.
 - **Files:** `routes/ai.routes.js` (nuevo helper junto a `sanitizeBaseUrl`, `:20-33`).
 - **Changes:**
+
   ```js
   const DISCOVERY_ALLOWED_HOSTS = new Set([
     "127.0.0.1",
@@ -142,6 +143,7 @@ Nada nuevo en `LLMFactory.js`; `AIService` solo gana un delegado delgado.
 
   - Host no permitido → **NO swap silencioso**: devuelve señal para responder `state:'REJECTED'` (error explícito).
   - Solo `http:`/`https:`, `redirect:'error'`.
+
 - **Dependencies:** T4.
 - **Risks:** gateways propietarios → documentar el env override en el swagger.
 - **Validation:** tests REJECTED / permitido / loopback.
