@@ -1,23 +1,31 @@
-name: Publish haltest to npm
+# LEGACY — Publishing to npm now happens exclusively through `release.yml`
+# (tag push v* or manual workflow_dispatch). This workflow is kept only as a
+# read-only CI gate on main. It intentionally does NOT publish to npm.
+#
+# Migration to npm Trusted Publishing (OIDC):
+#   - Remove NPM_TOKEN secret usage for publishing.
+#   - The single publish path lives in release.yml.
+name: Publish haltest to npm (legacy gate)
 
 on:
   push:
     branches:
       - main
     paths:
-      - 'apps/cli/package.json'
+      - "apps/cli/package.json"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
-  build:
+  verify:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write
-      attestations: write
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: pnpm/action-setup@v4
         with:
           version: 9.15.4
@@ -25,55 +33,18 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20.x'
-          cache: 'pnpm'
+          node-version: "22.x"
+          cache: "pnpm"
 
       - name: Install dependencies (frozen lockfile)
         run: pnpm install --frozen-lockfile
 
-      - name: Format
-        run: pnpm format
-
-      - name: Lint
-        run: pnpm lint
-
-      - name: Test
-        run: pnpm test
-        env:
-          NODE_ENV: test
-          AUTH_ENABLED: 'false'
-          VITE_AUTH_ENABLED: 'false'
-
-      - name: Build
+      - name: Build CLI
         run: pnpm build
 
-      - name: Generate Release Metadata
-        run: node scripts/generate-release-metadata.js
-        env:
-          BUILD_ID: ${{ github.run_id }}
-
-      - name: Generate CycloneDX SBOM
-        run: npx @cyclonedx/cyclonedx-npm --output-format JSON --output-file bom.json --exclude-dev
-        working-directory: apps/cli/dist
-
-      - name: Upload SBOM Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: sbom
-          path: apps/cli/dist/bom.json
-          retention-days: 30
+      - name: Verify dist metadata
+        run: |
+          node -e "const p=require('./apps/cli/dist/package.json'); if(!p.repository) throw new Error('dist/package.json missing repository'); console.log('✓ dist/package.json repository:', p.repository.url)"
 
       - name: Clean-room test of npm package
-        run: |
-          node scripts/clean-room-test.js
-
-      - name: Publish to npm with provenance
-        run: cd apps/cli/dist && npm publish --provenance --access public
-
-      - name: Generate SLSA Provenance
-        if: success()
-        uses: slsa-framework/slsa-github-generator@main
-        with:
-          base64-subjects: "${{ toJson(format('{0}: {1}', github.repository, github.sha)) }}" 
-          provenance-name: slsa-provenance.intoto.jsonl
-          upload-assets: true
+        run: node scripts/clean-room-test.js

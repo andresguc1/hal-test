@@ -34,7 +34,7 @@ on:
         default: false
 
 permissions:
-  contents: write
+  contents: read
   id-token: write
 
 concurrency:
@@ -105,6 +105,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: validate
     if: github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: write
     outputs:
       version: ${{ steps.set_version.outputs.version }}
     steps:
@@ -187,6 +189,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: [validate, version]
     if: github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -229,6 +233,7 @@ jobs:
     needs: [build-cli]
     if: github.event_name == 'workflow_dispatch'
     permissions:
+      contents: read
       id-token: write
     outputs:
       sbom_generated: ${{ steps.upload-sbom.outputs.artifact-id != '' }}
@@ -254,6 +259,9 @@ jobs:
           cache: "pnpm"
           registry-url: "https://registry.npmjs.org"
 
+      - name: 📥 Upgrade npm (Trusted Publishing requires >= 11.5.1)
+        run: npm install -g npm@11
+
       - name: 📥 Install dist dependencies
         run: npm install --package-lock-only 2>/dev/null || true
         working-directory: apps/cli/dist
@@ -261,11 +269,22 @@ jobs:
       - name: 🧪 Clean-room test
         run: node scripts/clean-room-test.js
 
-      - name: 📤 Publish to npm
+      - name: 🔍 Check version not already published
+        id: check-version
+        run: |
+          VERSION=$(node -p "require('./apps/cli/dist/package.json').version")
+          if npm view "haltest@$VERSION" version >/dev/null 2>&1; then
+            echo "✅ haltest@$VERSION already published. Skipping publish."
+            echo "skip_publish=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "haltest@$VERSION not yet on npm. Proceeding to publish."
+            echo "skip_publish=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 📤 Publish to npm (OIDC Trusted Publishing)
+        if: steps.check-version.outputs.skip_publish != 'true'
         run: npm publish --provenance --access public
         working-directory: apps/cli/dist
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: 📤 Upload SBOM Artifact
         id: upload-sbom
@@ -321,6 +340,8 @@ jobs:
     needs: [github-release]
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.skip_staging != 'true'
     environment: staging
+    permissions:
+      contents: write
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -642,6 +663,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: validate
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+      id-token: write
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -660,6 +684,9 @@ jobs:
           cache: "pnpm"
           registry-url: "https://registry.npmjs.org"
 
+      - name: 📥 Upgrade npm (Trusted Publishing requires >= 11.5.1)
+        run: npm install -g npm@11
+
       - name: 📥 Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -674,11 +701,22 @@ jobs:
       - name: 🧪 Clean-room test
         run: node scripts/clean-room-test.js
 
-      - name: 📤 Publish to npm
+      - name: 🔍 Check version not already published
+        id: check-version
+        run: |
+          VERSION=$(node -p "require('./apps/cli/dist/package.json').version")
+          if npm view "haltest@$VERSION" version >/dev/null 2>&1; then
+            echo "✅ haltest@$VERSION already published. Skipping publish."
+            echo "skip_publish=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "haltest@$VERSION not yet on npm. Proceeding to publish."
+            echo "skip_publish=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 📤 Publish to npm (OIDC Trusted Publishing)
+        if: steps.check-version.outputs.skip_publish != 'true'
         run: npm publish --provenance --access public
         working-directory: apps/cli/dist
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: 🏷️ Create GitHub Release
         uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf3019a6ddd5b1a8
