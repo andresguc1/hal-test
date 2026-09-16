@@ -47,6 +47,43 @@ const edgeColSql = edgeColumns.map(quote).join(', ');
 export default {
     async up(queryInterface, _Sequelize) {
         const qi = queryInterface.sequelize;
+        const dialect = qi.getDialect();
+
+        if (dialect !== 'sqlite') {
+            // PostgreSQL: the unique constraints are dropped with a plain ALTER.
+            // (SQLite is the only dialect that forces a full table rebuild.)
+            console.log('🚚 Dropping global UNIQUE constraints on Nodes.nodeId / Edges.edgeId...');
+            for (const [table, column] of [
+                ['Nodes', 'nodeId'],
+                ['Edges', 'edgeId'],
+            ]) {
+                const constraint = `${table}_${column}_key`;
+                await qi.query(`ALTER TABLE "${table}" DROP CONSTRAINT IF EXISTS "${constraint}"`);
+                await qi.query(`DROP INDEX IF EXISTS "${constraint}"`);
+            }
+
+            const addIndexIfNotExists = async (t, fields, name) => {
+                try {
+                    await queryInterface.addIndex(t, fields, { name });
+                } catch (error) {
+                    if (!String(error.message).includes('already exists')) {
+                        throw error;
+                    }
+                    console.log(`   Index ${name} already exists, skipping`);
+                }
+            };
+
+            await addIndexIfNotExists('Nodes', ['flowId'], 'idx_nodes_flow_id');
+            await addIndexIfNotExists('Nodes', ['parentId'], 'idx_nodes_parent_id');
+            await addIndexIfNotExists('Nodes', ['nodeId'], 'idx_nodes_node_id');
+            await addIndexIfNotExists('Edges', ['flowId'], 'idx_edges_flow_id');
+            await addIndexIfNotExists('Edges', ['source'], 'idx_edges_source');
+            await addIndexIfNotExists('Edges', ['target'], 'idx_edges_target');
+            await addIndexIfNotExists('Edges', ['edgeId'], 'idx_edges_edge_id');
+
+            console.log('✅ Removed global UNIQUE constraints from Nodes.nodeId / Edges.edgeId');
+            return;
+        }
 
         console.log('🚚 Rebuilding Nodes/Edges without global UNIQUE constraints...');
 
@@ -126,9 +163,27 @@ export default {
     },
 
     async down(queryInterface, _Sequelize) {
-        // Re-add the UNIQUE constraints by recreating the tables again.
         const qi = queryInterface.sequelize;
-        await qi.query('PRAGMA foreign_keys=OFF');
+        const dialect = qi.getDialect();
+
+        if (dialect !== 'sqlite') {
+            // PostgreSQL: re-add the UNIQUE constraints with a plain ALTER.
+            console.log('🔁 Re-adding global UNIQUE constraints on Nodes.nodeId / Edges.edgeId...');
+            for (const [table, column] of [
+                ['Nodes', 'nodeId'],
+                ['Edges', 'edgeId'],
+            ]) {
+                const constraint = `${table}_${column}_key`;
+                await qi.query(`ALTER TABLE "${table}" DROP CONSTRAINT IF EXISTS "${constraint}"`);
+                await qi.query(
+                    `ALTER TABLE "${table}" ADD CONSTRAINT "${constraint}" UNIQUE ("${column}")`,
+                );
+            }
+            console.log('✅ Re-added global UNIQUE constraints to Nodes.nodeId / Edges.edgeId');
+            return;
+        }
+
+        // Re-add the UNIQUE constraints by recreating the tables again.
 
         try {
             await qi.query(

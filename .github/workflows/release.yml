@@ -162,12 +162,16 @@ jobs:
 
       - name: 💾 Commit version bump
         run: |
+          VERSION="${{ steps.set_version.outputs.version }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add package.json apps/*/package.json CHANGELOG.md
-          git commit -m "chore: release v${{ steps.set_version.outputs.version }}"
-          git tag -a "v${{ steps.set_version.outputs.version }}" -m "Release v${{ steps.set_version.outputs.version }}"
-          git push origin HEAD:${GITHUB_REF#refs/heads/} --tags
+          git commit -m "chore: release v$VERSION" || echo "No changes to commit"
+          # The tag may already exist from a previous (failed) attempt of the
+          # same version; recreate it so it always points at this release commit.
+          git tag -f -a "v$VERSION" -m "Release v$VERSION"
+          git push origin HEAD:${GITHUB_REF#refs/heads/}
+          git push origin "refs/tags/v$VERSION" --force
 
   # ========================================
   # JOB 3: Build CLI Package
