@@ -160,6 +160,12 @@ jobs:
           DATE=$(date +%Y-%m-%d)
           printf '\n## [%s] - %s\n\n### Changed\n  - Release %s\n' "$VERSION" "$DATE" "$VERSION" >> CHANGELOG.md
 
+      - name: 🎨 Format bumped files
+        run: |
+          # Format the bumped files so the prettier check in the next Validate
+          # run (same version re-releases) does not fail on them.
+          pnpm exec prettier --write package.json apps/*/package.json CHANGELOG.md
+
       - name: 💾 Commit version bump
         run: |
           VERSION="${{ steps.set_version.outputs.version }}"
