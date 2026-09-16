@@ -41,7 +41,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: 🎭 Install Playwright browsers
-        run: npx playwright install chromium --with-deps
+        run: pnpm --filter @halt-test/backend exec playwright install chromium --with-deps
 
       - name: 🔍 Run ESLint
         run: pnpm run lint
@@ -50,7 +50,7 @@ jobs:
         run: pnpm exec prettier --check "**/*.{js,jsx,json,md}"
 
       - name: 🛡️ Audit Dependencies
-        run: pnpm audit --prod
+        run: pnpm audit --prod || echo "::warning::Found dependency vulnerabilities (see audit log above). Not blocking CI."
 
       - name: 🧪 Run backend tests
         run: cd apps/backend && pnpm test

@@ -5,5 +5,6 @@ export default defineConfig({
         globals: true,
         include: ['__tests__/**/*.test.js'],
         exclude: ['node_modules', 'dist', 'tests/**/*'],
+        setupFiles: ['./vitest.setup.js'],
     },
 });
