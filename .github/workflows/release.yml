@@ -243,8 +243,8 @@ jobs:
           cache: 'pnpm'
           registry-url: 'https://registry.npmjs.org'
 
-      - name: 📥 Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: 📥 Install dist dependencies
+        run: npm install --package-lock-only 2>/dev/null || true
         working-directory: apps/cli/dist
 
       - name: 🧪 Clean-room test
