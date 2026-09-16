@@ -215,7 +215,26 @@ const { chromium } = require('playwright');
     );
     console.log("   ✅ Playwright works\n");
 
-    // 11. Kill backend and any descendant processes
+    // 11. Generate CycloneDX SBOM from the installed package tree
+    // (cyclonedx-npm runs `npm ls`, which requires real node_modules)
+    console.log("📦 Generating CycloneDX SBOM...");
+    try {
+      await runCommand(
+        "npx @cyclonedx/cyclonedx-npm --output-format JSON --output-file bom.json",
+        tempDir,
+        {},
+        600000,
+      );
+      fs.copyFileSync(
+        path.join(tempDir, "bom.json"),
+        path.join(distDir, "bom.json"),
+      );
+      console.log(`   ✅ SBOM written to ${path.join(distDir, "bom.json")}\n`);
+    } catch (e) {
+      console.warn(`   ⚠️  SBOM generation failed (non-fatal): ${e.message}\n`);
+    }
+
+    // 12. Kill backend and any descendant processes
     console.log("🛑 Stopping backend...");
     try {
       process.kill(-backendProc.pid, "SIGTERM");

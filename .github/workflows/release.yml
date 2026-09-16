@@ -3,20 +3,20 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to release (e.g., v1.0.72)'
+        description: "Version to release (e.g., v1.0.72)"
         required: true
         type: string
       skip_staging:
-        description: 'Skip staging deployment (emergency only)'
+        description: "Skip staging deployment (emergency only)"
         required: false
         type: boolean
         default: false
       rollback_type:
-        description: 'Type of rollback (full, app-only, db-only)'
+        description: "Type of rollback (full, app-only, db-only)"
         required: false
         type: choice
         options:
@@ -24,11 +24,11 @@ on:
           - app-only
           - db-only
       backup_name:
-        description: 'Backup name for database rollback (optional)'
+        description: "Backup name for database rollback (optional)"
         required: false
         type: string
       dry_run:
-        description: 'Dry run (simulate without making changes)'
+        description: "Dry run (simulate without making changes)"
         required: false
         type: boolean
         default: false
@@ -62,8 +62,8 @@ jobs:
       - name: 🟢 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'pnpm'
+          node-version: "22"
+          cache: "pnpm"
 
       - name: 📥 Install dependencies (frozen lockfile)
         run: pnpm install --frozen-lockfile
@@ -81,8 +81,8 @@ jobs:
         run: cd apps/backend && pnpm test
         env:
           NODE_ENV: test
-          AUTH_ENABLED: 'false'
-          VITE_AUTH_ENABLED: 'false'
+          AUTH_ENABLED: "false"
+          VITE_AUTH_ENABLED: "false"
 
       - name: 🧪 Run frontend tests
         run: cd apps/frontend && pnpm test
@@ -122,8 +122,8 @@ jobs:
       - name: 🟢 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'pnpm'
+          node-version: "22"
+          cache: "pnpm"
 
       - name: 📥 Install dependencies
         run: pnpm install --frozen-lockfile
@@ -134,7 +134,7 @@ jobs:
           VERSION="${{ github.event.inputs.version }}"
           VERSION="${VERSION#v}"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          
+
           # Update all package.json files
           node -e "
             const fs = require('fs');
@@ -199,8 +199,8 @@ jobs:
       - name: 🟢 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22.x'
-          cache: 'pnpm'
+          node-version: "22.x"
+          cache: "pnpm"
 
       - name: 📥 Install dependencies (frozen lockfile)
         run: pnpm install --frozen-lockfile
@@ -230,6 +230,8 @@ jobs:
     if: github.event_name == 'workflow_dispatch'
     permissions:
       id-token: write
+    outputs:
+      sbom_generated: ${{ steps.upload-sbom.outputs.artifact-id != '' }}
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -248,9 +250,9 @@ jobs:
       - name: 🟢 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22.x'
-          cache: 'pnpm'
-          registry-url: 'https://registry.npmjs.org'
+          node-version: "22.x"
+          cache: "pnpm"
+          registry-url: "https://registry.npmjs.org"
 
       - name: 📥 Install dist dependencies
         run: npm install --package-lock-only 2>/dev/null || true
@@ -259,10 +261,6 @@ jobs:
       - name: 🧪 Clean-room test
         run: node scripts/clean-room-test.js
 
-      - name: 📦 Generate CycloneDX SBOM
-        run: npx @cyclonedx/cyclonedx-npm --output-format JSON --output-file bom.json
-        working-directory: apps/cli/dist
-
       - name: 📤 Publish to npm
         run: npm publish --provenance --access public
         working-directory: apps/cli/dist
@@ -270,7 +268,9 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: 📤 Upload SBOM Artifact
+        id: upload-sbom
         uses: actions/upload-artifact@v4
+        if: hashFiles('apps/cli/dist/bom.json') != ''
         with:
           name: sbom
           path: apps/cli/dist/bom.json
@@ -294,6 +294,7 @@ jobs:
 
       - name: 📥 Download SBOM
         uses: actions/download-artifact@v4
+        if: needs.publish-npm.outputs.sbom_generated == 'true'
         with:
           name: sbom
           path: apps/cli/dist
@@ -309,6 +310,7 @@ jobs:
             apps/cli/dist/bom.json
           draft: false
           prerelease: false
+          fail_on_unmatched_files: false
 
   # ========================================
   # JOB 6: Deploy to Staging
@@ -328,10 +330,10 @@ jobs:
           echo "Pushing to staging branch to trigger Render staging deploy..."
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          
+
           # Force push to staging branch (creates/updates it from current commit)
           git push origin HEAD:refs/heads/staging --force
-          
+
           echo "Staging deploy triggered. Render will build and deploy hal-test-backend-staging"
           echo "Staging URL: https://hal-test-backend-staging.onrender.com"
 
@@ -529,8 +531,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22.x'
-          cache: 'pnpm'
+          node-version: "22.x"
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -590,8 +592,8 @@ jobs:
       - name: 🟢 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22.x'
-          cache: 'pnpm'
+          node-version: "22.x"
+          cache: "pnpm"
 
       - name: 📥 Install dependencies
         run: pnpm install --frozen-lockfile
@@ -654,9 +656,9 @@ jobs:
       - name: 🟢 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22.x'
-          cache: 'pnpm'
-          registry-url: 'https://registry.npmjs.org'
+          node-version: "22.x"
+          cache: "pnpm"
+          registry-url: "https://registry.npmjs.org"
 
       - name: 📥 Install dependencies
         run: pnpm install --frozen-lockfile
@@ -671,10 +673,6 @@ jobs:
 
       - name: 🧪 Clean-room test
         run: node scripts/clean-room-test.js
-
-      - name: 📦 Generate CycloneDX SBOM
-        run: npx @cyclonedx/cyclonedx-npm --output-format JSON --output-file bom.json
-        working-directory: apps/cli/dist
 
       - name: 📤 Publish to npm
         run: npm publish --provenance --access public
@@ -693,6 +691,7 @@ jobs:
             apps/cli/dist/bom.json
           draft: false
           prerelease: false
+          fail_on_unmatched_files: false
 
       - name: 🚀 Trigger Production Deploy
         run: |
