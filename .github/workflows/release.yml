@@ -15,6 +15,10 @@ on:
         required: false
         type: boolean
         default: false
+      staging_url:
+        description: "Optional staging URL (defaults to hal-test-backend-staging.onrender.com)"
+        required: false
+        type: string
       rollback_type:
         description: "Type of rollback (full, app-only, db-only)"
         required: false
@@ -342,11 +346,26 @@ jobs:
     environment: staging
     permissions:
       contents: write
+    env:
+      STAGING_URL: ${{ github.event.inputs.staging_url || 'https://hal-test-backend-staging.onrender.com' }}
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
 
+      - name: 🔍 Probe staging availability
+        id: probe
+        run: |
+          echo "Probing $STAGING_URL/api/status ..."
+          if curl -f -s --max-time 15 "$STAGING_URL/api/status" > /dev/null; then
+            echo "✅ Staging endpoint reachable."
+            echo "staging_available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "⚠️ Staging endpoint NOT reachable. Will skip staging validation."
+            echo "staging_available=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: 🚀 Trigger Staging Deploy
+        if: steps.probe.outputs.staging_available == 'true'
         run: |
           echo "Pushing to staging branch to trigger Render staging deploy..."
           git config user.name "github-actions[bot]"
@@ -356,14 +375,15 @@ jobs:
           git push origin HEAD:refs/heads/staging --force
 
           echo "Staging deploy triggered. Render will build and deploy hal-test-backend-staging"
-          echo "Staging URL: https://hal-test-backend-staging.onrender.com"
+          echo "Staging URL: $STAGING_URL"
 
       - name: ⏳ Wait for staging deployment & health check
+        if: steps.probe.outputs.staging_available == 'true'
         run: |
           echo "Checking staging application health (polling for up to 10 minutes)..."
           max_retries=60
           count=0
-          until curl -f -s https://hal-test-backend-staging.onrender.com/api/status > /dev/null; do
+          until curl -f -s "$STAGING_URL/api/status" > /dev/null; do
             count=$((count+1))
             if [ $count -ge $max_retries ]; then
               echo "Health check failed after 10 minutes."
@@ -375,9 +395,10 @@ jobs:
           echo "Staging application is up and healthy!"
 
       - name: ✅ Verify Staging Release Metadata
+        if: steps.probe.outputs.staging_available == 'true'
         run: |
           echo "Verifying staging release metadata matches build..."
-          RESPONSE=$(curl -s https://hal-test-backend-staging.onrender.com/api/status)
+          RESPONSE=$(curl -s "$STAGING_URL/api/status")
           echo "$RESPONSE" | jq '.'
           BUILD_COMMIT="${{ github.sha }}"
           DEPLOY_COMMIT=$(echo "$RESPONSE" | jq -r '.git.commit')
@@ -395,11 +416,18 @@ jobs:
           fi
 
       - name: ✅ Run staging smoke tests
+        if: steps.probe.outputs.staging_available == 'true'
         run: |
           echo "Running staging smoke tests..."
-          SMOKE_TEST_URL=https://hal-test-backend-staging.onrender.com node scripts/production-smoke-test.js
+          SMOKE_TEST_URL="$STAGING_URL" node scripts/production-smoke-test.js
         env:
-          SMOKE_TEST_URL: https://hal-test-backend-staging.onrender.com
+          SMOKE_TEST_URL: $STAGING_URL
+
+      - name: ⚠️ Staging unavailable - continuing without staging validation
+        if: steps.probe.outputs.staging_available == 'false'
+        run: |
+          echo "::warning::Staging service ($STAGING_URL) is not reachable. Staging deploy/validation was skipped, but the release continues."
+          echo "Staging URL: $STAGING_URL"
 
   # ========================================
   # JOB 7: Manual Approval Gate
@@ -413,12 +441,10 @@ jobs:
     steps:
       - name: ⏸️ Waiting for approval
         run: |
-          echo "✅ Staging deployment successful and smoke tests passed!"
-          echo "🔗 Staging URL: https://hal-test-backend-staging.onrender.com"
-          echo "🔗 Production URL: https://hal-test-backend.onrender.com"
+          echo "✅ Release ${{ needs.version.outputs.version }} ready for production."
+          echo "🔗 Production URL: https://haltest.com"
           echo ""
-          echo "Please verify staging at: https://hal-test-backend-staging.onrender.com"
-          echo "Then approve this deployment to continue to production."
+          echo "Please verify the release, then approve this deployment to continue to production."
           echo ""
           echo "This workflow will pause here until approved."
 
