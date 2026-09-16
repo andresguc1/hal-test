@@ -213,7 +213,11 @@ export default {
 }
 
 // CLI handling
-if (import.meta.url === `file://${process.argv[1]}`) {
+// When bundled by esbuild, import.meta.url resolves to the bundle entry
+// (backend/app.js), which would also equal process.argv[1] on server start.
+// Match on the script filename so the menu only runs when migrate.js itself
+// is invoked as `node migrate.js <command>`.
+if (process.argv[1] && process.argv[1].endsWith(path.sep + 'migrate.js')) {
     const command = process.argv[2];
     const arg = process.argv[3];
 

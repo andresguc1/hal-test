@@ -87,6 +87,13 @@ for (const dir of staticDirs) {
   }
 }
 
+// Migrations are loaded at runtime by migrate.js via readdirSync relative to
+// its own __dirname, which resolves to dist/backend once bundled by esbuild.
+copyDirSync(
+  path.join(BACKEND_ROOT, "database", "migrations"),
+  path.join(DIST_BACKEND, "migrations"),
+);
+
 // Create an empty storage folder for the backend migration compatibility
 fs.mkdirSync(path.join(DIST_BACKEND, "storage", "runs"), { recursive: true });
 
