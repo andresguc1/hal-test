@@ -15,7 +15,7 @@ const require = createRequire(import.meta.url);
 const exec = promisify(require("child_process").exec);
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-function runCommand(cmd, cwd, env = {}) {
+function runCommand(cmd, cwd, env = {}, timeoutMs = 600000) {
   return new Promise((resolve, reject) => {
     const proc = spawn("sh", ["-c", cmd], {
       cwd,
@@ -25,16 +25,36 @@ function runCommand(cmd, cwd, env = {}) {
 
     let stdout = "";
     let stderr = "";
+    let timedOut = false;
+
+    const timer = setTimeout(() => {
+      timedOut = true;
+      proc.kill("SIGTERM");
+      setTimeout(() => proc.kill("SIGKILL"), 5000);
+    }, timeoutMs);
 
     proc.stdout.on("data", (data) => (stdout += data.toString()));
     proc.stderr.on("data", (data) => (stderr += data.toString()));
 
     proc.on("close", (code) => {
-      if (code === 0) resolve(stdout);
-      else reject(new Error(`Command failed (${code}): ${cmd}\n${stderr}`));
+      clearTimeout(timer);
+      if (timedOut) {
+        reject(
+          new Error(
+            `Command timed out after ${timeoutMs / 1000}s: ${cmd}\n${stdout}\n${stderr}`,
+          ),
+        );
+      } else if (code === 0) {
+        resolve(stdout);
+      } else {
+        reject(new Error(`Command failed (${code}): ${cmd}\n${stderr}`));
+      }
     });
 
-    proc.on("error", reject);
+    proc.on("error", (err) => {
+      clearTimeout(timer);
+      reject(err);
+    });
   });
 }
 
@@ -47,7 +67,7 @@ async function main() {
   try {
     // 1. Pack the package
     console.log("📦 Packing npm package...");
-    await runCommand("npm pack", distDir);
+    await runCommand("npm pack", distDir, {}, 600000);
     const pkgFiles = fs
       .readdirSync(distDir)
       .filter((f) => f.startsWith("haltest-") && f.endsWith(".tgz"));
@@ -61,12 +81,12 @@ async function main() {
 
     // 3. Install package
     console.log("📥 Installing package...");
-    await runCommand(`npm install "${distDir}/${pkgFile}"`, tempDir);
+    await runCommand(`npm install "${distDir}/${pkgFile}"`, tempDir, {}, 600000);
     console.log("   ✅ Package installed\n");
 
     // 4. Rebuild native modules (sqlite3, better-sqlite3)
     console.log("🔨 Rebuilding native modules...");
-    await runCommand("npm rebuild", tempDir);
+    await runCommand("npm rebuild", tempDir, {}, 600000);
     console.log("   ✅ Native modules rebuilt\n");
 
     // 4. Install Playwright Chromium (required for backend)
@@ -76,17 +96,17 @@ async function main() {
     const installCmd = isCI
       ? "npx playwright install chromium --with-deps"
       : "npx playwright install chromium";
-    await runCommand(installCmd, tempDir);
+    await runCommand(installCmd, tempDir, {}, 900000);
     console.log("   ✅ Playwright installed\n");
 
     // 5. Test CLI version
     console.log("🔍 Testing CLI --version...");
-    const versionOutput = await runCommand("npx haltest --version", tempDir);
+    const versionOutput = await runCommand("npx haltest --version", tempDir, {}, 120000);
     console.log(`   ${versionOutput.trim()}\n`);
 
     // 6. Test CLI info
     console.log("🔍 Testing CLI --info...");
-    const infoOutput = await runCommand("npx haltest --info", tempDir);
+    const infoOutput = await runCommand("npx haltest --info", tempDir, {}, 120000);
     console.log(`   ${infoOutput.trim()}\n`);
 
     // 7. Start backend in background and test health endpoint
@@ -101,7 +121,7 @@ async function main() {
         AUTH_ENABLED: "false",
       },
       stdio: ["ignore", "pipe", "pipe"],
-      detached: false,
+      detached: true,
     });
 
     let backendReady = false;
@@ -137,6 +157,8 @@ async function main() {
     const healthOutput = await runCommand(
       "curl -s http://localhost:2002/api/status",
       tempDir,
+      {},
+      60000,
     );
     const health = JSON.parse(healthOutput);
     console.log(`   Version: ${health.version}`);
@@ -149,6 +171,8 @@ async function main() {
     const frontendOutput = await runCommand(
       'curl -s -o /dev/null -w "%{http_code}" http://localhost:2002/app/',
       tempDir,
+      {},
+      60000,
     );
     if (frontendOutput.trim() !== "200") {
       throw new Error(`Frontend returned ${frontendOutput}`);
@@ -168,24 +192,34 @@ const { chromium } = require('playwright');
   console.log('Playwright test passed:', title);
 })();
 `;
-    await runCommand(`node -e "${pwTest.replace(/\n/g, " ")}"`, tempDir);
+    await runCommand(`node -e "${pwTest.replace(/\n/g, " ")}"`, tempDir, {}, 120000);
     console.log("   ✅ Playwright works\n");
 
-    // 11. Kill backend
+    // 11. Kill backend and any descendant processes
     console.log("🛑 Stopping backend...");
-    backendProc.kill("SIGTERM");
-    await sleep(1000);
+    try {
+      process.kill(-backendProc.pid, "SIGTERM");
+    } catch {
+      backendProc.kill("SIGTERM");
+    }
+    await sleep(1500);
+    try {
+      process.kill(-backendProc.pid, "SIGKILL");
+    } catch {
+      /* already gone */
+    }
 
     console.log("✅ All clean-room tests passed!");
   } catch (error) {
     console.error("❌ Test failed:", error.message);
-    process.exit(1);
+    process.exitCode = 1;
   } finally {
     // Cleanup
     try {
       fs.rmSync(tempDir, { recursive: true, force: true });
     } catch {}
   }
+  process.exit(process.exitCode ?? 0);
 }
 
 main();
