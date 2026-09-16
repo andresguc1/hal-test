@@ -257,7 +257,7 @@ jobs:
         working-directory: apps/cli/dist
 
       - name: 🧪 Clean-room test
-        run: node ../../../scripts/clean-room-test.js
+        run: node scripts/clean-room-test.js
 
       - name: 📦 Generate CycloneDX SBOM
         run: npx @cyclonedx/cyclonedx-npm --output-format JSON --output-file bom.json
