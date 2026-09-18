@@ -203,6 +203,9 @@ const componentAction = async (req, res) => {
             startTime: Date.now(),
             callerId: nodeId,
             callerLabel: nodeLabel,
+            compositeNodeId: nodeId,
+            parentNodeId: nodeId,
+            subflowId: flowId || null,
         };
 
         const subflowResult = await executionService.runSequence(

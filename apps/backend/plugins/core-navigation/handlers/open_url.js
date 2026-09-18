@@ -188,6 +188,10 @@ const openUrlAction = async (req, res) => {
                                     : [],
                         },
                         screenshot: screenshotPath,
+                        // Composite/Subflow traceability metadata
+                        compositeNodeId: opts?.compositeNodeId || null,
+                        subflowId: opts?.subflowId || null,
+                        parentNodeId: opts?.parentNodeId || null,
                     },
                 );
             } catch (logErr) {

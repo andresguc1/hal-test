@@ -8,7 +8,7 @@ import { smartEmitLog } from '../../../core/ActionExecutor.js';
 const closeBrowserAction = async (req, res) => {
     const start = Date.now();
     try {
-        let { browserId, nodeId, runId } = req.body ?? {}; // Extract runId
+        let { browserId, nodeId, runId, compositeNodeId, subflowId, parentNodeId } = req.body ?? {};
         if (nodeId) {
             emitExecutionStatus({ stepId: nodeId, status: 'running' });
             smartEmitLog('Closing browser session...', 'info', nodeId);
@@ -107,6 +107,10 @@ const closeBrowserAction = async (req, res) => {
                         duration,
                         input: req.body,
                         output: { browserId, closed: true },
+                        // Composite/Subflow traceability metadata (from request)
+                        compositeNodeId: compositeNodeId || null,
+                        subflowId: subflowId || null,
+                        parentNodeId: parentNodeId || null,
                     },
                 );
             } catch (logErr) {
@@ -123,7 +127,7 @@ const closeBrowserAction = async (req, res) => {
     } catch (error) {
         const duration = Date.now() - start;
         console.error('[ERROR] closeBrowserAction:', error.message);
-        const { nodeId, runId } = req.body ?? {};
+        const { nodeId, runId, compositeNodeId, subflowId, parentNodeId } = req.body ?? {};
 
         if (nodeId)
             emitExecutionStatus({
@@ -143,6 +147,10 @@ const closeBrowserAction = async (req, res) => {
                         duration,
                         input: req.body,
                         error: error.message,
+                        // Composite/Subflow traceability metadata (from request)
+                        compositeNodeId: compositeNodeId || null,
+                        subflowId: subflowId || null,
+                        parentNodeId: parentNodeId || null,
                     },
                 );
             } catch (logErr) {

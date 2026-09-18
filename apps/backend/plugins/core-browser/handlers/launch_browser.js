@@ -9,6 +9,9 @@ import { getOrCreateContext } from '../../../core/browser-utils.js';
 const launchBrowserAction = async (req, res) => {
     const nodeId = req.body.nodeId;
     const runId = req.body.runId;
+    const compositeNodeId = req.body.compositeNodeId || null;
+    const subflowId = req.body.subflowId || null;
+    const parentNodeId = req.body.parentNodeId || null;
     const start = Date.now();
     if (nodeId) {
         emitExecutionStatus({ stepId: nodeId, status: 'running' });
@@ -162,6 +165,10 @@ const launchBrowserAction = async (req, res) => {
                         duration,
                         input: resolvedBody,
                         output: { browserId },
+                        // Composite/Subflow traceability metadata (from request)
+                        compositeNodeId,
+                        subflowId,
+                        parentNodeId,
                     },
                 );
                 console.log(`[FlightRecorder] Step result saved successfully`);
