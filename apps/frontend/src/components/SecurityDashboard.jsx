@@ -1558,7 +1558,7 @@ export default function SecurityDashboard() {
                           onClick={() => setSelectedAlert(alert)}
                           className={`p-4 transition-all cursor-pointer flex items-center justify-between gap-4 ${
                             isSelected
-                              ? "bg-red-950/20 border-l-4 border-l-red-500"
+                              ? "bg-red-950/20 border-l border-l-slate-500/50"
                               : "hover:bg-slate-800/30"
                           }`}
                         >

@@ -25,7 +25,7 @@ const StarterOverlay = ({ isVisible, onLoadTemplate, onDismiss }) => {
             <div className="absolute bottom-0 left-0 w-64 h-64 bg-violet-500/10 blur-[100px] -ml-32 -mb-32 pointer-events-none" />
 
             <div className="relative z-10 flex flex-col items-center text-center">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 mb-6">
+              <div className="w-16 h-16 rounded-2xl bg-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 mb-6">
                 <Sparkles className="text-white w-8 h-8" />
               </div>
 
@@ -67,7 +67,7 @@ const StarterOverlay = ({ isVisible, onLoadTemplate, onDismiss }) => {
               <div className="flex flex-col sm:flex-row gap-4 w-full">
                 <button
                   onClick={onLoadTemplate}
-                  className="flex-1 px-6 py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold text-lg shadow-xl shadow-indigo-500/20 transition-all active:scale-[0.98] flex items-center justify-center gap-3 group"
+                  className="flex-1 px-6 py-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-lg shadow-xl shadow-indigo-500/20 transition-all active:scale-[0.98] flex items-center justify-center gap-3 group"
                 >
                   Load Starter Template
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />

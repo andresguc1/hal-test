@@ -703,7 +703,7 @@ const NodeConfigurationPanel = ({
 
     return (
       <div className="relative group/panel">
-        <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 rounded-2xl blur-md opacity-0 group-hover/panel:opacity-100 transition duration-700" />
+        <div className="absolute -inset-1 bg-indigo-500/10 rounded-2xl blur-md opacity-0 group-hover/panel:opacity-100 transition duration-700" />
         <div className="relative bg-[#0b1222]/80 backdrop-blur-xl rounded-2xl border border-white/10 p-6 shadow-2xl max-h-[450px] overflow-y-auto custom-scrollbar border-t-white/20">
           <div className="absolute top-4 right-4 flex gap-2">
             <button

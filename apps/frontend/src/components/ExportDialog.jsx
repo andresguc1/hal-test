@@ -547,7 +547,7 @@ const ExportDialog = ({
                       <span className="text-xs uppercase tracking-wider text-slate-500">
                         {t("dialogs.export.nodes_label")}
                       </span>
-                      <span className="text-2xl font-bold text-indigo-400">
+                      <span className="text-2xl font-bold text-slate-100">
                         {nodes.length}
                       </span>
                     </div>
@@ -555,7 +555,7 @@ const ExportDialog = ({
                       <span className="text-xs uppercase tracking-wider text-slate-500">
                         {t("dialogs.export.nodes_label")}
                       </span>
-                      <span className="text-2xl font-bold text-indigo-400">
+                      <span className="text-2xl font-bold text-slate-100">
                         {edges.length}
                       </span>
                     </div>
@@ -881,7 +881,7 @@ const ExportDialog = ({
                     (exportMode !== "project" && nodes.length === 0) ||
                     (exportMode === "project" && !projectId)
                   }
-                  className="px-6 py-2 rounded-lg text-sm font-medium bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-lg shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+                  className="px-6 py-2 rounded-lg text-sm font-medium bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
                 >
                   {isProcessing ? (
                     <>

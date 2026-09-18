@@ -108,7 +108,7 @@ export default function MetricsDashboardModal({ isOpen, onClose }) {
                   <span className="text-xs font-medium text-slate-400">
                     Cobertura de Accesibilidad
                   </span>
-                  <span className="text-2xl font-black text-indigo-400 mt-1">
+                  <span className="text-2xl font-black text-slate-100 mt-1">
                     {metrics.coverage?.accessibilityCoveragePercent}%
                   </span>
                   <span className="text-[10px] text-slate-500 mt-2">

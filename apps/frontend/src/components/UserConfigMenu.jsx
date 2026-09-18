@@ -50,7 +50,7 @@ const UserConfigMenu = ({
       <div className="flex flex-col items-center p-4 border-b border-white/5 mb-2">
         <Avatar className="h-16 w-16 mb-3 ring-2 ring-white/10 shadow-lg">
           <AvatarImage src={user.profilePic} alt={user.name} />
-          <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-bold text-lg">
+          <AvatarFallback className="bg-indigo-500 text-white font-bold text-lg">
             {user.name.charAt(0)}
           </AvatarFallback>
         </Avatar>

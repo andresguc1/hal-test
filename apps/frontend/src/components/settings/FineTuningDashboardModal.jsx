@@ -189,7 +189,7 @@ export function FineTuningDashboardModal({
               </div>
               <div className="w-full bg-slate-900 rounded-full h-3 overflow-hidden border border-slate-800">
                 <div
-                  className="bg-gradient-to-r from-indigo-500 to-purple-600 h-full transition-all duration-500 ease-out"
+                  className="bg-indigo-500 h-full transition-all duration-500 ease-out"
                   style={{ width: `${trainingProgress}%` }}
                 ></div>
               </div>

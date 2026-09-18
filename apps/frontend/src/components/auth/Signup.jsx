@@ -53,14 +53,14 @@ export default function Signup() {
       <div className="w-full max-w-md space-y-8 p-10 rounded-2xl border border-white/5 bg-[#0f172a]/60 backdrop-blur-2xl shadow-[0_0_50px_-12px_rgba(79,70,229,0.2)] relative z-10">
         <div className="text-center">
           <div className="inline-flex items-center justify-center mb-6 relative group">
-            <div className="absolute -inset-1 bg-gradient-to-r from-indigo-600 to-blue-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
+            <div className="absolute -inset-1 bg-indigo-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
             <img
               src="/app/images/logo.jpg"
               alt="Haltest Logo"
               className="relative w-20 h-20 rounded-2xl border border-white/10 shadow-2xl object-cover transform transition-transform duration-500 group-hover:scale-105"
             />
           </div>
-          <h1 className="text-4xl font-black tracking-tighter text-white mb-2 bg-clip-text text-transparent bg-gradient-to-b from-white to-white/60">
+          <h1 className="text-4xl font-black tracking-tighter text-white mb-2">
             JOIN HAL-TEST
           </h1>
           <p className="text-slate-400 font-medium">
@@ -125,7 +125,7 @@ export default function Signup() {
           <Button
             type="submit"
             disabled={isLoading}
-            className="w-full h-12 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-bold rounded-xl transition-all transform active:scale-[0.98] shadow-lg shadow-indigo-500/20 border-t border-white/10"
+            className="w-full h-12 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all transform active:scale-[0.98] shadow-lg shadow-indigo-500/20 border-t border-white/10"
           >
             {isLoading ? (
               <Loader2 className="w-5 h-5 animate-spin" />

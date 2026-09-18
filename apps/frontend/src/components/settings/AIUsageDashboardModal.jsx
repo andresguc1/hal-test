@@ -253,7 +253,7 @@ export function AIUsageDashboardModal({ isOpen, onClose }) {
                       </div>
                       <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden border border-slate-800/60">
                         <div
-                          className="bg-gradient-to-r from-indigo-500 to-emerald-500 h-full transition-all duration-500"
+                          className="bg-indigo-500 h-full transition-all duration-500"
                           style={{
                             width: `${Math.round((t.count / maxTaskCount) * 100)}%`,
                           }}
@@ -314,7 +314,7 @@ export function AIUsageDashboardModal({ isOpen, onClose }) {
                             {d.totalTokens.toLocaleString()}
                           </span>
                           <div
-                            className="w-full max-w-[24px] bg-gradient-to-t from-indigo-600 to-amber-500 rounded-sm transition-all duration-500"
+                            className="w-full max-w-[24px] bg-indigo-600 rounded-sm transition-all duration-500"
                             style={{
                               height: `${Math.max(
                                 4,

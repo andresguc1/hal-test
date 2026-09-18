@@ -46,7 +46,7 @@ const FooterButton = ({
   const variants = {
     ghost: "text-slate-400 hover:text-white hover:bg-white/5 active:scale-95",
     primary:
-      "bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-lg shadow-indigo-500/20 active:scale-95 dark:shadow-[0_0_20px_rgba(59,130,246,0.5)] shadow-[0_0_20px_rgba(245,158,11,0.5)]",
+      "bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/20 active:scale-95 dark:shadow-[0_0_20px_rgba(59,130,246,0.5)] shadow-[0_0_20px_rgba(245,158,11,0.5)]",
     primary_performance:
       "bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white shadow-lg shadow-blue-500/20 active:scale-95 dark:shadow-[0_0_20px_rgba(37,99,235,0.5)]",
     primary_security:

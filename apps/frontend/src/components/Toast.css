@@ -23,7 +23,7 @@
   max-width: 400px;
   pointer-events: all;
   animation: slideIn 0.3s ease-out;
-  border-left: 4px solid;
+  border-left: 1px solid currentColor;
 }
 
 @keyframes slideIn {
