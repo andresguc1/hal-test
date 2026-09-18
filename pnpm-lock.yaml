@@ -387,6 +387,9 @@ importers:
       lint-staged:
         specifier: ^16.2.6
         version: 16.2.7
+      playwright:
+        specifier: ^1.62.1
+        version: 1.62.1
       pm2:
         specifier: ^6.0.13
         version: 6.0.14
@@ -2789,6 +2792,7 @@ packages:
 
   charm@0.1.2:
     resolution: {integrity: sha512-syedaZ9cPe7r3hoQA9twWYKu5AIyCswN5+szkmPBe9ccdLrj4bYaCnLVPTLd2kgVRc7+zoX4tyPgRnFKCj5YjQ==}
+    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
 
   cheerio-select@2.1.0:
     resolution: {integrity: sha512-9v9kG0LvzrlcungtnJtpGNxY+fzECQKhK4EGJX2vByejiMX84MFNQw4UxPJl3bFbTMw+Dfs37XaIkCwTZfLh4g==}

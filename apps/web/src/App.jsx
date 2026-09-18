@@ -18,7 +18,7 @@ export default function App() {
           __html: `
         body { margin: 0; cursor: default; }
         html { scroll-behavior: smooth; }
-        .font-mono { font-family: 'Geist Mono', monospace; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
       `,
         }}
       />

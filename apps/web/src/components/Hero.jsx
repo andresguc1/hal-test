@@ -52,7 +52,7 @@ export default function Hero() {
         transition={{ duration: 0.6, delay: 0.1 }}
         className="text-5xl md:text-7xl font-bold uppercase tracking-tight mb-6 max-w-4xl text-balance"
       >
-        <span className="bg-clip-text text-transparent bg-gradient-to-r from-white via-white to-white/50">
+        <span className="bg-clip-text text-white">
           The Missing Link
         </span>
         <br />
