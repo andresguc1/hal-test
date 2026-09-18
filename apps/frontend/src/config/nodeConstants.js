@@ -614,7 +614,7 @@ export const CATEGORY_STYLES = {
       headerBorder: "border-indigo-500/50",
       headerGradient: "from-indigo-600/60 via-indigo-600/20 to-transparent",
       categoryText: "text-indigo-500 dark:text-indigo-400",
-      buttonGradient: "from-indigo-600 to-indigo-500",
+      buttonGradient: "bg-indigo-600 hover:bg-indigo-500",
     },
   },
   violet: {
@@ -634,7 +634,7 @@ export const CATEGORY_STYLES = {
       headerBorder: "border-violet-500/50",
       headerGradient: "from-violet-600/60 via-violet-600/20 to-transparent",
       categoryText: "text-violet-500 dark:text-violet-400",
-      buttonGradient: "from-violet-600 to-violet-500",
+      buttonGradient: "bg-violet-600 hover:bg-violet-500",
     },
   },
   purple: {
@@ -654,7 +654,7 @@ export const CATEGORY_STYLES = {
       headerBorder: "border-purple-500/50",
       headerGradient: "from-purple-600/60 via-purple-600/20 to-transparent",
       categoryText: "text-purple-500 dark:text-purple-400",
-      buttonGradient: "from-purple-600 to-purple-500",
+      buttonGradient: "bg-purple-600 hover:bg-purple-500",
     },
   },
   fuchsia: {

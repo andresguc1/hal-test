@@ -287,7 +287,7 @@ const AbyssNode = ({ id, data, selected, type }) => {
 
       {/* Picking Indicator Badge */}
       {data.state === "picking" && (
-        <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-sky-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg border border-white animate-bounce z-50 whitespace-nowrap flex items-center gap-1">
+        <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-sky-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg border border-white z-50 whitespace-nowrap flex items-center gap-1">
           <MousePointer size={10} />
           PICKING TARGET
         </div>
@@ -414,7 +414,7 @@ const AbyssNode = ({ id, data, selected, type }) => {
               </span>
               {data.warnings && data.warnings.length > 0 && isNodeValid && (
                 <div
-                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500 text-slate-950 font-black text-[9px] tracking-wider cursor-help shrink-0 shadow-[0_0_10px_rgba(245,158,11,0.6)] hover:bg-amber-400 transition-colors animate-[pulse_1.5s_infinite]"
+                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500 text-amber-950 font-black text-[9px] tracking-wider cursor-help shrink-0 shadow-[0_0_10px_rgba(245,158,11,0.6)] hover:bg-amber-400 transition-colors animate-[pulse_1.5s_infinite]"
                   title={
                     `${data.warnings.length} Warning${data.warnings.length > 1 ? "s" : ""}:` +
                     data.warnings

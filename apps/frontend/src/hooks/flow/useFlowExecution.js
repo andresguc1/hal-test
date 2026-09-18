@@ -389,6 +389,10 @@ export function useFlowExecution({
 
           const effectiveRunId = payload?.runId || activeRunId || "atomic_run";
           if (effectiveRunId?.length >= 5) bodyToSend.runId = effectiveRunId;
+          if (payload?.compositeNodeId)
+            bodyToSend.compositeNodeId = payload.compositeNodeId;
+          if (payload?.subflowId) bodyToSend.subflowId = payload.subflowId;
+          if (payload?.parentNodeId) bodyToSend.parentNodeId = payload.parentNodeId;
           if (_options?.variables || payload?.variables) {
             bodyToSend.variables = {
               ...(_options?.variables || {}),
@@ -768,11 +772,35 @@ export function useFlowExecution({
           );
         };
 
+        // Records a step that is not produced by a plugin handler (containers,
+        // skipped nodes) so the Execution History mirrors the real flow graph.
+        const resolveLabel = (node) => {
+          const d = node.data || {};
+          return d.customLabel || d.label || node.type || node.id;
+        };
+
+        const logGraphStep = (node, status, extra = {}) => {
+          if (!runId || runId === "atomic_run" || !node) return;
+          api.post(`/runs/${runId}/steps`, {
+            nodeId: node.id,
+            type: node.type || node.data?.type || "component",
+            label: resolveLabel(node),
+            status,
+            duration: extra.duration || null,
+            subflowId: extra.subflowId || null,
+            compositeNodeId: extra.compositeNodeId || null,
+            parentNodeId: extra.parentNodeId || null,
+          }).catch((err) => {
+            console.warn('[useFlowExecution] Failed to log graph step:', err.message);
+          });
+        };
+
         const executeGraph = async (
           graphNodes,
           graphEdges,
           depth = 0,
           visitedFlows = new Set(),
+          compositeContext = {},
         ) => {
           if (depth > 15) throw new Error("Max recursion depth exceeded");
 
@@ -851,12 +879,21 @@ export function useFlowExecution({
                     updateNodeState(node.id, NODE_STATES.EXECUTING);
                     updateEdgeStatusBySource(node.id, NODE_STATES.EXECUTING);
 
+                    const subFlowStart = Date.now();
                     const subResult = await executeGraph(
                       subFlow.nodes,
                       subFlow.edges,
                       depth + 1,
                       newVisited,
+                      {
+                        compositeNodeId: node.id,
+                        subflowId: flowId,
+                        parentNodeId:
+                          compositeContext.compositeNodeId || null,
+                        depth: depth + 1,
+                      },
                     );
+                    const subFlowDuration = Date.now() - subFlowStart;
                     result = subResult || { success: true };
 
                     const isSoftFail =
@@ -871,6 +908,22 @@ export function useFlowExecution({
                       : NODE_STATES.ERROR;
 
                     updateNodeState(node.id, finalNodeState);
+
+                    logGraphStep(
+                      node,
+                      result.success
+                        ? isSoftFail
+                          ? "softfailed"
+                          : "success"
+                        : "failed",
+                      {
+                        duration: subFlowDuration,
+                        subflowId: flowId,
+                        compositeNodeId:
+                          compositeContext.compositeNodeId || null,
+                        parentNodeId: compositeContext.compositeNodeId || null,
+                      },
+                    );
 
                     if (!result.success && stopOnError) {
                       const divePath = result.divePath || [];
@@ -968,6 +1021,14 @@ export function useFlowExecution({
                         subFlow.nodes,
                         subFlow.edges,
                         depth + 1,
+                        visitedFlows,
+                        {
+                          compositeNodeId: node.id,
+                          subflowId: flowId,
+                          parentNodeId:
+                            compositeContext.compositeNodeId || null,
+                          depth: depth + 1,
+                        },
                       );
                       if (!subResult.success && stopOnError) {
                         loopResult = subResult;
@@ -1076,6 +1137,10 @@ export function useFlowExecution({
                     customLabel: node.data?.customLabel,
                     label: node.data?.label,
                     executionMode,
+                    compositeNodeId:
+                      compositeContext.compositeNodeId || null,
+                    subflowId: compositeContext.subflowId || null,
+                    parentNodeId: compositeContext.compositeNodeId || null,
                   },
                 };
 

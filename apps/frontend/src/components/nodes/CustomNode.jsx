@@ -218,7 +218,7 @@ function CustomNode({ data, selected }) {
         {/* AI Badge */}
         {isHealed && (
           <div
-            className="absolute top-2 right-2 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-violet-500 text-[10px] font-bold text-white shadow-lg border border-violet-400 animate-bounce-subtle z-10"
+            className="absolute top-2 right-2 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-violet-500 text-[10px] font-bold text-white shadow-lg border border-violet-400 z-10"
             title={`Auto-Healed: ${data.configuration?.originalValue} -> ${data.configuration?.healedValue}`}
           >
             <Sparkles size={10} fill="currentColor" />

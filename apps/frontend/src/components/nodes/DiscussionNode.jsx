@@ -172,7 +172,7 @@ Please participate in the discussion. Answer questions, suggest improvements, or
                   {(c.isAi ||
                     c.userName?.includes("(AI)") ||
                     c.userName === "HALBIN") && (
-                    <span className="text-[7px] font-black bg-gradient-to-r from-violet-500 to-indigo-500 text-white px-1 py-0.25 rounded uppercase tracking-wider scale-90 origin-left flex items-center gap-0.5 shrink-0 select-none">
+                    <span className="text-[7px] font-black bg-indigo-500 text-white px-1 py-0.25 rounded uppercase tracking-wider scale-90 origin-left flex items-center gap-0.5 shrink-0 select-none">
                       <Sparkles size={6} className="text-white" />
                       SYSTEM AI
                     </span>

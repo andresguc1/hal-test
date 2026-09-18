@@ -133,7 +133,7 @@ const ComponentNode = ({ id, data, selected }) => {
         {isError && (
           <XCircle
             size={14}
-            className="text-red-400 drop-shadow-sm animate-bounce"
+            className="text-red-400 drop-shadow-sm"
           />
         )}
       </div>

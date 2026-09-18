@@ -247,7 +247,7 @@ export default function ToolboxPanel({ addNode, favoriteNodes = [] }) {
             {/* HEADER */}
             <div className="h-14 flex items-center justify-between px-4 border-b border-white/5 shrink-0 bg-[#0f172a]/50">
               <div className="w-full flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center border border-white/10">
+                <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center border border-white/10">
                   <Box size={16} className="text-indigo-400" />
                 </div>
                 <span className="font-bold text-sm tracking-wide text-slate-100">

@@ -232,6 +232,21 @@ export default function RunHistoryPanel({
                       >
                         <Activity size={12} />
                       </button>
+                      {run.video_status === 'finalizing' && (
+                        <span className="text-[9px] text-slate-500 font-mono">
+                          Video processing...
+                        </span>
+                      )}
+                      {run.video_status === 'failed' && !run.video_path && (
+                        <span className="text-[9px] text-slate-500 font-mono">
+                          Video unavailable
+                        </span>
+                      )}
+                      {run.video_status === 'recording' && !run.video_path && (
+                        <span className="text-[9px] text-slate-500 font-mono">
+                          Recording...
+                        </span>
+                      )}
                       {run.video_path && (
                         <button
                           onClick={(e) => {
@@ -247,15 +262,14 @@ export default function RunHistoryPanel({
                           title="Watch Recording"
                         >
                           <Play size={12} fill="currentColor" />
+                          Watch execution
                         </button>
                       )}
-                      <button
-                        onClick={(e) => handleDeleteRun(e, run.id)}
-                        className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-rose-500/20 rounded-md text-slate-500 hover:text-rose-400 ui-transition"
-                        title="Delete Run"
-                      >
-                        <Trash2 size={12} />
-                      </button>
+                      {!run.video_path && (
+                        <span className="text-[9px] text-slate-500 font-mono">
+                          No video
+                        </span>
+                      )}
                     </div>
                   </div>
 
