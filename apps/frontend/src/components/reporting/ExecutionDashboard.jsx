@@ -212,7 +212,7 @@ export default function ExecutionDashboard({
                 <button
                   onClick={handleStartBatch}
                   disabled={selectedFlows.length === 0}
-                  className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold py-3 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(79,70,229,0.3)] transition-all"
+                  className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(79,70,229,0.3)] transition-all"
                 >
                   <Play size={16} />
                   Starts {selectedFlows.length} Workflows
@@ -253,7 +253,7 @@ export default function ExecutionDashboard({
                 </div>
               </div>
               <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-6 flex flex-col items-center justify-center">
-                <div className="text-4xl font-mono text-indigo-400 mb-2 flex items-center gap-2">
+                <div className="text-4xl font-mono text-slate-100 mb-2 flex items-center gap-2">
                   {isRunning && (
                     <RefreshCw
                       size={24}

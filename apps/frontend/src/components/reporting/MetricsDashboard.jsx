@@ -184,7 +184,7 @@ export default function MetricsDashboard() {
 function KPICard({ icon, label, value, subValue, trend, color }) {
   const variants = {
     indigo:
-      "from-indigo-500/20 to-indigo-900/20 text-indigo-400 border-indigo-500/20",
+      "bg-indigo-500/20 text-indigo-400 border-indigo-500/20",
     amber:
       "from-amber-500/20 to-amber-900/20 text-amber-400 border-amber-500/20",
     emerald:

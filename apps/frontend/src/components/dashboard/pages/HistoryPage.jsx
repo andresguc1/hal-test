@@ -4,14 +4,18 @@ import { useRuns, useProjects } from "../hooks/useDashboardData";
 import RunStatusBadge from "../components/RunStatusBadge";
 import EmptyState from "../components/EmptyState";
 
-function formatDate(d) {
-  if (!d) return "—";
-  return new Date(d).toLocaleString("en", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+function formatStepDetails(steps) {
+  if (!steps || steps.length === 0) return "—";
+  
+  const success = steps.filter((s) => s.status === 'success' || s.status === 'completed').length;
+  const failed = steps.filter((s) => s.status === 'failed').length;
+  const skipped = steps.filter((s) => s.status === 'skipped').length;
+  const healed = steps.filter((s) => s.status === 'healed').length;
+  
+  if (failed > 0) {
+    return `${steps.length} steps (${failed}❌, ${healed}🩹, ${skipped}⏭️)`;
+  }
+  return `${steps.length} steps ✓ (${success} passed)`;
 }
 
 function formatDuration(ms) {
@@ -19,6 +23,17 @@ function formatDuration(ms) {
   const s = Math.round(ms / 1000);
   if (s < 60) return `${s}s`;
   return `${Math.floor(s / 60)}m ${s % 60}s`;
+}
+
+function formatDate(d) {
+  if (!d) return "—";
+  return new Date(d).toLocaleDateString("en", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function groupByDay(runs) {
@@ -279,6 +294,14 @@ export default function HistoryPage({ onViewReport }) {
                   }}
                 >
                   {formatDate(run.started_at || run.created_at)}
+                </div>
+                <div
+                  style={{
+                    fontSize: 10,
+                    color: "var(--dash-text-tertiary)",
+                  }}
+                >
+                  {formatStepDetails(run.steps)}
                 </div>
                 {onViewReport && (
                   <button
