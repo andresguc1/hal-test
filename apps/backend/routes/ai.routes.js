@@ -4,6 +4,7 @@ import aiService from '../services/AIService.js';
 import { browserService } from '../services/browser.service.js';
 import selectorHealer from '../services/SelectorHealer.js';
 import { DEFAULT_LOCAL_MODEL } from '../services/LLMFactory.js';
+import { Run, StepResult } from '../database/init.js';
 import {
     getAiUsageSummary,
     getAiUsageLogs,
@@ -406,6 +407,110 @@ router.post('/hal-quote', async (req, res) => {
     } catch (error) {
         console.error('[AI] HALBIN quote generation failed:', error.message);
         res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * POST /api/ai/diagnose-step
+ * Generate a diagnosis for a single executed step from its OBSERVED facts.
+ * Operates on demand only: the diagnosis is explicitly requested by the user,
+ * persisted on the step, and never inferred when the data is unavailable.
+ */
+router.post('/diagnose-step', async (req, res) => {
+    const { runId, stepId } = req.body;
+
+    if (!runId || !stepId) {
+        return res.status(400).json({
+            success: false,
+            error: 'runId and stepId are required',
+            message: 'runId and stepId are required',
+        });
+    }
+
+    try {
+        const run = await Run.findByPk(runId);
+        if (!run) {
+            return res.status(404).json({
+                success: false,
+                error: 'Run execution not found',
+                message: 'Run execution not found',
+            });
+        }
+
+        const step = await StepResult.findByPk(stepId);
+        if (!step || step.run_id !== runId) {
+            return res.status(404).json({
+                success: false,
+                error: 'Step not found for this run',
+                message: 'Step not found for this run',
+            });
+        }
+
+        const observed = {
+            flow: run.flow_name,
+            node_type: step.node_type,
+            label: step.label,
+            status: step.status,
+            error: step.error,
+            input_data: step.input_data,
+            output_data: step.output_data,
+            duration_ms: step.duration_ms,
+        };
+
+        const provider = req.headers['x-ai-provider'] || 'ollama';
+        const activeModel = req.headers['x-ai-model'] || DEFAULT_LOCAL_MODEL;
+        const activeBaseUrl = sanitizeBaseUrl(req.headers['x-ai-base-url']);
+        const apiKey = req.headers['x-ai-api-key'] || 'ollama';
+
+        const result = await aiService.generateText({
+            prompt: [
+                'A test step did not succeed. Using ONLY the observed data below,',
+                'explain the most likely root cause and give one concrete suggested fix.',
+                'If the observed data is insufficient to be certain, say so explicitly.',
+                'Never invent selectors, values, endpoints or errors that are not present.',
+                '',
+                'OBSERVED DATA:',
+                JSON.stringify(observed, null, 2),
+            ].join('\n'),
+            model: activeModel,
+            provider,
+            apiKey,
+            baseUrl: activeBaseUrl,
+            temperature: 0.2,
+            system: "You are HALBIN, HalTest's testing intelligence. You explain test failures strictly from the observed facts provided. You separate evidence from inference and never fabricate data.",
+            taskType: 'reasoning',
+        });
+
+        const diagnosis = result.text?.trim() || null;
+        await step.update({ ai_diagnosis: diagnosis });
+
+        return res.json({
+            success: true,
+            ai_diagnosis: diagnosis,
+            model: activeModel,
+            provider,
+        });
+    } catch (error) {
+        console.error('[AI] diagnose-step Error:', error);
+
+        const msg = error.message?.toLowerCase() || '';
+        let statusCode = 500;
+        let userMessage = error.message;
+
+        if (msg.includes('econnrefused') || msg.includes('fetch failed')) {
+            statusCode = 503;
+            userMessage = 'Cannot connect to the AI provider. Is it running and configured?';
+        } else if (msg.includes('model') && msg.includes('not found')) {
+            statusCode = 404;
+            userMessage = `Model '${req.headers['x-ai-model'] || DEFAULT_LOCAL_MODEL}' not found.`;
+        } else if (msg.includes('timeout')) {
+            statusCode = 504;
+            userMessage = 'The AI request timed out. The model may be loading or busy.';
+        }
+
+        return res
+            .status(statusCode)
+            .json({ success: false, error: userMessage, message: userMessage });
     }
 });
 

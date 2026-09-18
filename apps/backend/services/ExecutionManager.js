@@ -309,7 +309,7 @@ class PerformanceRunner extends Runner {
                             projectId,
                             options: {
                                 performanceConfig: config, // Enables telemetry in ExecutionService
-                                overrides: { headless: true, recordVideo: false },
+                                overrides: { headless: true, recordVideo: true },
                                 variables: {
                                     __vu: vuId,
                                     __iteration: currentIteration,

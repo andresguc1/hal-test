@@ -186,6 +186,64 @@ export const startRunAction = async (req, res) => {
     }
 };
 
+/**
+ * Manual step logging used by orchestrators that do not run through a plugin
+ * handler (e.g. the web app records container/component and skipped nodes here
+ * so the Execution History can reconstruct the full timeline, including
+ * composites). The run id is normalized to its root and must exist.
+ */
+export const logRunStepAction = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const run = await Run.findByPk(id);
+        if (!run) {
+            return res.status(404).json({ success: false, message: 'Run not found' });
+        }
+
+        const {
+            nodeId,
+            type,
+            label,
+            status,
+            error,
+            screenshot,
+            input,
+            output,
+            duration,
+            videoTimestamp,
+            compositeNodeId,
+            subflowId,
+            parentNodeId,
+        } = req.body;
+
+        if (!nodeId || !type || !status) {
+            return res.status(400).json({
+                success: false,
+                message: 'nodeId, type and status are required',
+            });
+        }
+
+        await executionLogger.logStep(
+            id,
+            { id: nodeId, type, label },
+            {
+                status,
+                error: error || null,
+                screenshot: screenshot || null,
+                input: input || null,
+                output: output || null,
+                duration: typeof duration === 'number' ? duration : null,
+                videoTimestamp: videoTimestamp || null,
+            },
+            { compositeNodeId, subflowId, parentNodeId, label },
+        );
+
+        return res.status(201).json({ success: true });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
 export const endRunAction = async (req, res) => {
     try {
         const { id } = req.params;
@@ -257,7 +315,16 @@ export const getRunDetailsAction = async (req, res) => {
     try {
         const { id } = req.params;
         const run = await Run.findByPk(id, {
-            include: [{ model: StepResult, as: 'steps' }],
+            include: [
+                {
+                    model: StepResult,
+                    as: 'steps',
+                    order: [
+                        ['sequence', 'ASC'],
+                        ['id', 'ASC'],
+                    ],
+                },
+            ],
         });
 
         if (!run) {
@@ -841,5 +908,31 @@ export const exportPerformanceReportAction = async (req, res) => {
     } catch (error) {
         console.error('[RunController] exportPerformanceReportAction Error:', error);
         return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+export const exportRunReportAction = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const run = await Run.findByPk(id);
+        if (!run) {
+            return res.status(404).json({ success: false, message: 'Run execution not found' });
+        }
+
+        const filePath = await reportExporter.generateSingleFileReport(id);
+        const fileName = `haltest_run_${id.slice(0, 8)}.html`;
+
+        return res.download(filePath, fileName, (err) => {
+            if (err && !res.headersSent) {
+                console.error('[RunController] exportRunReportAction download error:', err);
+                res.status(500).json({ success: false, error: err.message });
+            }
+        });
+    } catch (error) {
+        console.error('[RunController] exportRunReportAction Error:', error);
+        if (!res.headersSent) {
+            return res.status(500).json({ success: false, error: error.message });
+        }
     }
 };

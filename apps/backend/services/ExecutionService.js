@@ -1143,6 +1143,10 @@ export class ExecutionService {
                 runId: state.runId,
                 browserId: state.browserId,
                 securityObservability: state.options?.securityObservability || false,
+                // Composite/subflow hierarchy so child steps persist their context.
+                compositeNodeId: state.compositeNodeId || state.callerId || null,
+                parentNodeId: state.parentNodeId || state.callerId || null,
+                subflowId: state.subflowId || null,
             };
 
             console.log(
@@ -1604,6 +1608,9 @@ export class ExecutionService {
                 executedNodeIds: new Set(),
                 activatedNodeIds: new Set(loopStartNodes.map((sn) => sn.nodeId)),
                 edgeStates: {},
+                compositeNodeId: node.nodeId,
+                parentNodeId: node.nodeId,
+                subflowId: flowId || null,
             };
 
             const sequenceParentId = flowId ? null : node.nodeId;
@@ -2077,6 +2084,9 @@ export class ExecutionService {
                 executedNodeIds: new Set(),
                 activatedNodeIds: new Set(startNodes.map((sn) => sn.nodeId)),
                 edgeStates: {},
+                compositeNodeId: node.nodeId,
+                parentNodeId: node.nodeId,
+                subflowId: flowId || null,
             };
 
             const sequenceParentId = flowId ? null : node.nodeId;

@@ -53,6 +53,10 @@ const Run = sequelize.define(
             type: DataTypes.STRING,
             allowNull: true,
         },
+        video_status: {
+            type: DataTypes.ENUM('recording', 'finalizing', 'available', 'failed'),
+            defaultValue: 'recording',
+        },
         browser_version: {
             type: DataTypes.STRING,
             allowNull: true,

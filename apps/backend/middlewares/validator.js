@@ -142,6 +142,9 @@ const validate = (schemas) => (req, res, next) => {
     const originalLabel = req.body?.label;
     const originalCustomLabel = req.body?.customLabel;
     const originalVariables = req.body?.variables;
+    const originalCompositeNodeId = req.body?.compositeNodeId;
+    const originalSubflowId = req.body?.subflowId;
+    const originalParentNodeId = req.body?.parentNodeId;
 
     if (schemas.body) {
         req.body = cleanedValues.body;
@@ -155,6 +158,10 @@ const validate = (schemas) => (req, res, next) => {
         if (originalLabel !== undefined) req.body.label = originalLabel;
         if (originalCustomLabel !== undefined) req.body.customLabel = originalCustomLabel;
         if (originalVariables !== undefined) req.body.variables = originalVariables;
+        if (originalCompositeNodeId !== undefined)
+            req.body.compositeNodeId = originalCompositeNodeId;
+        if (originalSubflowId !== undefined) req.body.subflowId = originalSubflowId;
+        if (originalParentNodeId !== undefined) req.body.parentNodeId = originalParentNodeId;
     }
     if (schemas.params) req.params = cleanedValues.params;
     if (schemas.query) req.query = cleanedValues.query;

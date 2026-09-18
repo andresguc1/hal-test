@@ -132,7 +132,7 @@ class ReportExporter {
                             <div class="flex-1 space-y-4">
                                 <div class="flex items-center gap-3">
                                     <span class="w-6 h-6 rounded-full bg-white/5 flex items-center justify-center text-[10px] font-bold">${idx + 1}</span>
-                                    <span class="text-xs font-bold uppercase tracking-wider">${step.node_type}</span>
+                                    <span class="text-xs font-bold uppercase tracking-wider">${step.label || step.node_type}</span>
                                     <span class="text-[10px] font-mono opacity-40">#${step.node_id.slice(0, 8)}</span>
                                 </div>
                                 

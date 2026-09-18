@@ -300,6 +300,10 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
                         videoTimestamp: req.body.runStartTime
                             ? (Date.now() - req.body.runStartTime) / 1000
                             : null,
+                        // Composite/Subflow traceability metadata
+                        compositeNodeId: opts?.compositeNodeId || null,
+                        subflowId: opts?.subflowId || null,
+                        parentNodeId: opts?.parentNodeId || null,
                     },
                 );
             } catch (logErr) {
@@ -795,6 +799,10 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
                                         },
                                         memoryHit: diagnosis.source === 'memory',
                                         aiDiagnosis: diagnosis.reasoning,
+                                        // Composite/Subflow traceability metadata
+                                        compositeNodeId: opts?.compositeNodeId || null,
+                                        subflowId: opts?.subflowId || null,
+                                        parentNodeId: opts?.parentNodeId || null,
                                     },
                                 );
                             } catch (logErr) {
@@ -911,6 +919,10 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
                         videoTimestamp: req.body.runStartTime
                             ? (Date.now() - req.body.runStartTime) / 1000
                             : null,
+                        // Composite/Subflow traceability metadata
+                        compositeNodeId: opts?.compositeNodeId || null,
+                        subflowId: opts?.subflowId || null,
+                        parentNodeId: opts?.parentNodeId || null,
                     },
                 );
             } catch (logErr) {

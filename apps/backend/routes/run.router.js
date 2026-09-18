@@ -11,11 +11,13 @@ import {
     getBatchSummaryAction,
     getFlowHistoryAction,
     cancelRunAction,
+    logRunStepAction,
     startDatasetBatchRunAction,
     startPerformanceRunAction,
     estimatePerformanceAction,
     startSecurityRunAction,
     exportPerformanceReportAction,
+    exportRunReportAction,
 } from '../controllers/run.controller.js';
 
 const router = Router();
@@ -30,10 +32,12 @@ router.post('/security', startSecurityRunAction);
 router.post('/performance/estimate', estimatePerformanceAction);
 router.get('/batch/:batchId/summary', getBatchSummaryAction);
 router.post('/:id/end', endRunAction);
+router.post('/:id/steps', logRunStepAction);
 router.post('/:id/cancel', cancelRunAction);
 router.get('/analytics', getReportAnalyticsAction);
 router.get('/flow/:flowId/history', getFlowHistoryAction);
 router.get('/:runId/export', exportPerformanceReportAction);
+router.get('/:id/report', exportRunReportAction);
 router.get('/', getRunsAction);
 router.get('/:id', getRunDetailsAction);
 
