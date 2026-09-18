@@ -18,7 +18,7 @@ export default {
         });
     },
 
-    async down(queryInterface, Sequelize) {
+    async down(queryInterface, _Sequelize) {
         await queryInterface.removeColumn('step_results', 'parentNodeId');
         await queryInterface.removeColumn('step_results', 'subflowId');
         await queryInterface.removeColumn('step_results', 'compositeNodeId');
