@@ -697,6 +697,11 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
                                 confidence: diagnosis.confidence,
                                 reasoning: diagnosis.reasoning,
                                 verified: !!diagnosis.verified,
+                                provider: diagnosis.source || diagnosis.provider,
+                                policy_action: diagnosis.policyAction,
+                                ambiguity: diagnosis.ambiguity,
+                                signals_matched: diagnosis.signals,
+                                calibrated_confidence: diagnosis.confidence,
                             });
                         } catch (pErr) {
                             console.error('[Self-Healing] Persistence failed:', pErr.message);

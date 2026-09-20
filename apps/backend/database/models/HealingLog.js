@@ -45,6 +45,27 @@ const HealingLog = sequelize.define(
             type: DataTypes.BOOLEAN,
             defaultValue: false,
         },
+        provider: {
+            type: DataTypes.STRING,
+            allowNull: true,
+        },
+        policy_action: {
+            type: DataTypes.STRING,
+            allowNull: true,
+        },
+        ambiguity: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true,
+            defaultValue: false,
+        },
+        signals_matched: {
+            type: DataTypes.JSON,
+            allowNull: true,
+        },
+        calibrated_confidence: {
+            type: DataTypes.FLOAT,
+            allowNull: true,
+        },
     },
     {
         timestamps: true,
