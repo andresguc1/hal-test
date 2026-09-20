@@ -32,6 +32,10 @@ export default defineConfig({
     setupFiles: ["./vitest.setup.js"],
     include: ["src/**/*.test.{js,jsx}"],
     exclude: ["node_modules", "dist"],
+    // Elevated to tolerate parallel (turbo) runs, where heavy flow-aware
+    // setup hooks (IndexedDB shims, ScreenshotManager) legitimately exceed
+    // Vitest's 10s default under load. The suite itself is ~2.6s isolated.
+    hookTimeout: 30000,
   },
 
   // === PROXY PARA BACKEND ===
