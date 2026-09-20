@@ -1,4 +1,6 @@
 import aiService from './AIService.js';
+import { bestSelector } from '../core/decisions/SelectorRanker.js';
+import { applyPolicy, ACTIONS, MODES } from '../core/decisions/DecisionPolicy.js';
 
 /* global document, window */
 
@@ -277,6 +279,62 @@ class SelectorHealer {
                         setTimeout(() => reject(new Error('DOM extraction timed out')), 10000),
                     ),
                 ]);
+            }
+
+            // 1b. Deterministic gate (F0-F2): ranked candidates + policy, BEFORE any LLM call.
+            // Si hay un candidato AUTO y verifica en el DOM, se usa sin IA.
+            const deterministicAttempt = bestSelector({
+                domSnippet: compressedDOM,
+                originalSelector,
+            });
+            if (
+                deterministicAttempt.selector &&
+                process.env.HALTEST_SELF_HEALING_MODE !== MODES.DISABLED
+            ) {
+                const policy = applyPolicy({
+                    selector: deterministicAttempt.selector,
+                    confidence: deterministicAttempt.confidence,
+                });
+                if (policy.action === ACTIONS.AUTO) {
+                    const candidate = deterministicAttempt.selector;
+                    const sanitization = this._sanitizeCandidate(
+                        candidate,
+                        deterministicAttempt.confidence,
+                        originalSelector,
+                    );
+                    if (sanitization.valid) {
+                        if (onProgress) {
+                            onProgress({ step: 'verifying_candidate', candidate, tier: 0 });
+                        }
+                        const verification = await this.verifySelector(page, candidate);
+                        if (verification.valid && verification.visible) {
+                            console.log(
+                                `[SelectorHealer] ✅ Deterministic heal: ${candidate} (conf=${deterministicAttempt.confidence})`,
+                            );
+                            return {
+                                correctedSelector: candidate,
+                                reasoning: `Deterministic signal match [${(deterministicAttempt.ranked[0]?.signals || []).join(', ') || deterministicAttempt.reason}]`,
+                                confidence: deterministicAttempt.confidence,
+                                verified: true,
+                                tier: 0,
+                                source: 'deterministic',
+                                policyAction: policy.action,
+                                metadata: {
+                                    provider: 'deterministic',
+                                    ambiguity: deterministicAttempt.ambiguity,
+                                    signals: deterministicAttempt.ranked[0]?.signals || [],
+                                    ranked: deterministicAttempt.ranked.map((r) => ({
+                                        selector: r.selector,
+                                        confidence: r.confidence,
+                                    })),
+                                },
+                            };
+                        }
+                        console.warn(
+                            `[SelectorHealer] ⚠️ Deterministic candidate failed verification: ${candidate}`,
+                        );
+                    }
+                }
             }
 
             const previousSelectors = [];
