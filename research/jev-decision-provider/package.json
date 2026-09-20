@@ -1,0 +1,16 @@
+{
+  "name": "haltest-jeev-decision-provider-poc",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "PoC aislado para validar Jev (TypeSafe System One) como Decision Provider opcional en HalTest",
+  "scripts": {
+    "benchmark": "node src/benchmark.js",
+    "test": "node tests/run.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+  }
+}
