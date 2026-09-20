@@ -916,52 +916,79 @@ Response Format: Return ONLY raw JSON: {"correctedSelector": "text=...", "confid
                         : parentSignal
                     : timeoutSignal;
 
-                const { text } = await generateText({
-                    model: modelRef,
-                    system: systemPrompt, // System prompt contains the static DOM tree
-                    prompt, // Prompt contains the dynamic tier/error instructions
-                    temperature,
-                    maxTokens,
-                    abortSignal: combinedSignal,
-                });
+                let object;
+                try {
+                    // F3: structured output (mismo esquema que el path cloud), con
+                    // fallback seguro al parsing de texto si el modelo/interfaz no lo soporta.
+                    const { object: structured } = await generateObject({
+                        model: modelRef,
+                        system: systemPrompt,
+                        prompt,
+                        temperature,
+                        schema: z.object({
+                            correctedSelector: z.string(),
+                            confidence: z.number(),
+                            reasoning: z.string().optional(),
+                            isBreakingChange: z.boolean().optional(),
+                        }),
+                        abortSignal: combinedSignal,
+                    });
+                    object = structured;
+                } catch (structuredErr) {
+                    console.warn(
+                        `[AIService] Structured output unavailable for Ollama, falling back to text parsing: ${structuredErr.message}`,
+                    );
+                    const { text } = await generateText({
+                        model: modelRef,
+                        system: systemPrompt,
+                        prompt,
+                        temperature,
+                        maxTokens,
+                        abortSignal: combinedSignal,
+                    });
 
-                console.log(
-                    `[AIService] Ollama Tier ${retryCount + 1} response: ${text.substring(0, 200)}...`,
-                );
-
-                const jsonMatch = text.match(/\{[\s\S]*\}/);
-                if (jsonMatch) {
-                    try {
-                        const parsed = JSON.parse(jsonMatch[0]);
-                        const corrected = parsed.correctedSelector || parsed.new_selector || null;
-                        const isBreakingChange =
-                            !!corrected &&
-                            (corrected.startsWith('text=') ||
-                                corrected.startsWith('xpath=') ||
-                                corrected !== originalSelector);
-
-                        return {
-                            correctedSelector: corrected,
-                            alternative_selectors: [corrected].filter(Boolean),
-                            confidence: parsed.confidence || (corrected ? 0.7 : 0),
-                            reasoning: parsed.reasoning || `Tier ${retryCount + 1} repair`,
-                            tier: retryCount + 1,
-                            isBreakingChange,
-                        };
-                    } catch (pErr) {
-                        console.warn(`[AIService] Tier ${retryCount + 1} JSON parse failed.`);
+                    const jsonMatch = text.match(/\{[\s\S]*\}/);
+                    if (jsonMatch) {
+                        try {
+                            const parsed = JSON.parse(repairJson(jsonMatch[0]));
+                            object = {
+                                correctedSelector:
+                                    parsed.correctedSelector || parsed.new_selector || null,
+                                confidence: parsed.confidence,
+                                reasoning: parsed.reasoning,
+                                isBreakingChange: parsed.isBreakingChange,
+                            };
+                        } catch (pErr) {
+                            console.warn(`[AIService] Tier ${retryCount + 1} JSON parse failed.`);
+                        }
                     }
                 }
 
+                const corrected = object?.correctedSelector || null;
+                if (!corrected) {
+                    return {
+                        correctedSelector: null,
+                        confidence: 0,
+                        reasoning: 'Failed to parse Tier response',
+                    };
+                }
+                const isBreakingChange =
+                    corrected.startsWith('text=') ||
+                    corrected.startsWith('xpath=') ||
+                    corrected !== originalSelector;
+
                 return {
-                    correctedSelector: null,
-                    confidence: 0,
-                    reasoning: 'Failed to parse Tier response',
+                    correctedSelector: corrected,
+                    alternative_selectors: [corrected].filter(Boolean),
+                    confidence: object.confidence == null ? 0.7 : object.confidence,
+                    reasoning: object.reasoning || `Tier ${retryCount + 1} repair`,
+                    tier: retryCount + 1,
+                    isBreakingChange,
                 };
             }
 
             // Cloud fallback (unchanged but using tiered prompt)
-            const { object } = await generateObject({
+            const { object: cloudObject } = await generateObject({
                 model: modelRef,
                 system: systemPrompt,
                 schema: z.object({
@@ -974,13 +1001,14 @@ Response Format: Return ONLY raw JSON: {"correctedSelector": "text=...", "confid
                 abortSignal: parentSignal || AbortSignal.timeout(customTimeout || 60000),
             });
 
-            const cloudCorrected = object.correctedSelector || object.new_selector || null;
+            const cloudCorrected =
+                cloudObject.correctedSelector || cloudObject.new_selector || null;
             return {
-                ...object,
+                ...cloudObject,
                 correctedSelector: cloudCorrected,
                 alternative_selectors: [cloudCorrected].filter(Boolean),
                 isBreakingChange:
-                    object.isBreakingChange ??
+                    cloudObject.isBreakingChange ??
                     (!!cloudCorrected &&
                         (cloudCorrected.startsWith('text=') ||
                             cloudCorrected.startsWith('xpath=') ||
