@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import { test as baseTest } from '@playwright-labs/fixture-abort';
 
 /**
  * Read environment variables from file.
@@ -13,6 +14,7 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './tests/generated',
+  test: baseTest,
   /* Run tests in files in parallel */
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */

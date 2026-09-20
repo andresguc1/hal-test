@@ -15,6 +15,9 @@ importers:
 
   .:
     devDependencies:
+      '@playwright-labs/fixture-abort':
+        specifier: ^1.0.3
+        version: 1.0.3(@playwright/test@1.62.1)
       husky:
         specifier: ^9.1.7
         version: 9.1.7
@@ -1459,6 +1462,11 @@ packages:
   '@pkgr/core@0.2.9':
     resolution: {integrity: sha512-QNqXyfVS2wm9hweSYD2O7F0G06uurj9kZ96TRQE5Y9hU7+tgdZwIkbAKc5Ocy1HxEY2kuDQa6cQ1WRs/O5LFKA==}
     engines: {node: ^12.20.0 || ^14.18.0 || >=16.0.0}
+
+  '@playwright-labs/fixture-abort@1.0.3':
+    resolution: {integrity: sha512-RHF5OcLKSBvcfS8BoFavd6u2XGBxaKiJ2ShCgbjS0H54D14wiP88dDIpaee5BDsAVmNlbKC6GdsO4LQNBLLpnQ==}
+    peerDependencies:
+      '@playwright/test': 1.57.0
 
   '@playwright/test@1.62.1':
     resolution: {integrity: sha512-DTcUc8qii+cpHvtOwggMtBRMjKZHXYWdw8syRYu2vtzuq4Wxphqq4NfCs5Zt44L6mA8rfDfj+PHnxFc/FeK6mQ==}
@@ -7422,6 +7430,10 @@ snapshots:
       '@noble/hashes': 1.8.0
 
   '@pkgr/core@0.2.9': {}
+
+  '@playwright-labs/fixture-abort@1.0.3(@playwright/test@1.62.1)':
+    dependencies:
+      '@playwright/test': 1.62.1
 
   '@playwright/test@1.62.1':
     dependencies:
