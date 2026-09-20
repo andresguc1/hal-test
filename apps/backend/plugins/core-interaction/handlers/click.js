@@ -1,6 +1,6 @@
 import { executePlaywrightAction } from '../../../core/ActionExecutor.js';
 import { clickContextMenuItem, dismissContextMenu } from '../../../core/menu-utils.js';
-import { buildPlaywrightLocator, normalizeSelectorForDotId } from '../../../core/selector-utils.js';
+import { resolveTarget } from '../../../core/selector-utils.js';
 import { normalizeTimeout, playTimeout } from '../../../core/timeout-utils.js';
 
 const RIGHT_BUTTON = 'right';
@@ -13,13 +13,24 @@ const click = (req, res) =>
 
         if (!selector) throw new Error(req.t('errors.selector_required'));
 
-        const targetSelector = await normalizeSelectorForDotId(page, selector);
+        // Use resolveTarget to properly prioritize Playwright locators from candidates
+        const { locator, resolution } = await resolveTarget({
+            page,
+            target: { selector, candidates: opts.candidates },
+            scope: 'element',
+            timeout,
+        });
+
         const clickOptions = { ...playTimeout(timeout), button, clickCount, modifiers, force };
-        const locator = buildPlaywrightLocator(page, targetSelector);
 
         await locator.click(clickOptions);
 
-        const traceDetails = { selector: targetSelector, details: clickOptions };
+        const traceDetails = {
+            selector,
+            resolution,
+            candidates: opts.candidates,
+            details: clickOptions,
+        };
 
         if (button === RIGHT_BUTTON && (contextMenuItem || clickOutside)) {
             if (contextMenuItem) {
@@ -42,7 +53,7 @@ const click = (req, res) =>
         }
 
         return {
-            message: req.t('actions.click.success', { selector: targetSelector }),
+            message: req.t('actions.click.success', { selector }),
             traceDetails,
         };
     });
