@@ -1,1 +1,5 @@
 node_modules
+dist
+legacy_backup
+*.timestamp-*.mjs
+vite.config.js.timestamp-*.mjs
