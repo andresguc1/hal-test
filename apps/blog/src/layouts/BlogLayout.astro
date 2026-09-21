@@ -1,0 +1,77 @@
+---
+import '../styles/global.css';
+import { BASE } from '../utils/base';
+
+interface Props {
+  title: string;
+  description: string;
+  image?: string;
+  pubDate?: Date;
+}
+
+const {
+  title = 'HAL-TEST Blog',
+  description = 'HAL-TEST: the missing link in browser automation.',
+  image,
+  pubDate,
+} = Astro.props;
+
+const fullTitle = title === 'HAL-TEST Blog' ? title : `${title} · HAL-TEST Blog`;
+const ogImage = image ?? `${BASE}images/haltest_og.png`;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+
+    <!-- Social -->
+    <meta property="og:type" content={pubDate ? 'article' : 'website'} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={new URL(ogImage, Astro.site)} />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    {pubDate && <meta property="article:published_time" content={pubDate.toISOString()} />}
+
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" type="image/x-icon" href={`${BASE}favicon.ico`} />
+    <link rel="alternate" type="application/rss+xml" title="HAL-TEST Blog RSS" href={`${BASE}rss.xml`} />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="site-header__inner">
+        <a class="brand" href={`${BASE}`} aria-label="HAL-TEST Blog home">
+          <img src={`${BASE}images/haltest_logo.jpeg`} alt="" width="30" height="30" />
+          <span
+            ><span class="brand--hal">HAL</span>-TEST Blog</span
+          >
+        </a>
+        <nav class="nav" aria-label="Primary">
+          <a href={`${BASE}`}>Posts</a>
+          <a href={`${BASE}rss.xml`} class="nav--pill">RSS</a>
+          <a href="https://haltest.com" class="nav--cta">Haltest.com</a>
+        </nav>
+      </div>
+    </header>
+
+    <main><slot /></main>
+
+    <footer class="site-footer">
+      <div class="site-footer__inner">
+        <span>© {new Date().getFullYear()} HAL-TEST · Apache-2.0</span>
+        <div class="site-footer__links">
+          <a href="https://github.com/andresguc1/hal-test">GitHub</a>
+          <a href="https://haltest.com">Product</a>
+          <a href="https://join.slack.com/t/haltest-talk/shared_invite/zt-3tzii9nxh-vgdIcI5A8bg~GCG8QF6MuA">Slack</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
