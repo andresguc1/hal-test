@@ -204,6 +204,19 @@
         "handle_downloads": {
             "success": "Descarga completada."
         },
+        "extract": {
+            "success": "Datos extraídos correctamente.",
+            "error": "Error al extraer datos.",
+            "empty": "No se encontró ningún elemento que coincida con el selector.",
+            "error_no_selector": "El selector es obligatorio para extraer datos."
+        },
+        "save_dataset": {
+            "success": "Dataset guardado correctamente.",
+            "error": "Error al guardar el dataset.",
+            "error_missing_source": "Se requiere el nombre de la variable de dataset (source).",
+            "error_empty_dataset": "La variable de dataset está vacía.",
+            "error_unsafe_path": "La ruta de destino no está permitida."
+        },
         "call_llm": {
             "success": "Pregunta enviada a la IA exitosamente."
         },

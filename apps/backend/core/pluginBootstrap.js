@@ -972,6 +972,30 @@ const BUILTIN_PLUGINS = [
             ]),
     },
     {
+        type: 'extract',
+        category: 'data',
+        label: 'Extract Data',
+        color: 'yellow',
+        icon: 'Table2',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-data/handlers/extract.js'),
+                import('../plugins/core-data/schemas/extract.js'),
+            ]),
+    },
+    {
+        type: 'save_dataset',
+        category: 'data',
+        label: 'Save Dataset',
+        color: 'yellow',
+        icon: 'FileOutput',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-data/handlers/save_dataset.js'),
+                import('../plugins/core-data/schemas/save_dataset.js'),
+            ]),
+    },
+    {
         type: 'run_tests',
         category: 'testing',
         label: 'Run Tests',

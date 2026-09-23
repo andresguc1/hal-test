@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import { api } from "../utils/api";
 import { cn } from "../lib/utils";
 import {
@@ -10,6 +10,9 @@ import {
   Activity,
   ChevronLeft,
   ChevronRight,
+  Database,
+  Download,
+  Loader2,
 } from "lucide-react";
 import { AnimatePresence, motion as Motion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
@@ -29,6 +32,8 @@ export default function RunHistoryPanel({
   const [playingVideo, setPlayingVideo] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [datasetsByRun, setDatasetsByRun] = useState({});
+  const [loadingDatasets, setLoadingDatasets] = useState({});
 
   const {
     data: runs = [],
@@ -43,27 +48,27 @@ export default function RunHistoryPanel({
   const handleRunClick = (run) => {
     setSelectedRunId(run.id);
     onSelectRun(run);
+    loadDatasets(run.id);
   };
 
-  const handleDeleteRun = async (e, runId) => {
-    e.stopPropagation();
-    if (!window.confirm("Delete this run record?")) return;
-    try {
-      setIsDeleting(true);
-      const res = await api.delete(`/runs/${runId}`);
-      if (res.success) {
-        if (selectedRunId === runId) {
-          setSelectedRunId(null);
-          onSelectRun(null);
-        }
-        queryClient.invalidateQueries({ queryKey: dashboardKeys.all });
+  const loadDatasets = useCallback(
+    async (runId) => {
+      if (!runId || datasetsByRun[runId] || loadingDatasets[runId]) return;
+      setLoadingDatasets((prev) => ({ ...prev, [runId]: true }));
+      try {
+        const res = await api.get(`/runs/${runId}/datasets`);
+        setDatasetsByRun((prev) => ({
+          ...prev,
+          [runId]: res.data || [],
+        }));
+      } catch (error) {
+        console.error("Failed to load datasets for run:", error);
+      } finally {
+        setLoadingDatasets((prev) => ({ ...prev, [runId]: false }));
       }
-    } catch (error) {
-      console.error("Failed to delete run:", error);
-    } finally {
-      setIsDeleting(false);
-    }
-  };
+    },
+    [datasetsByRun, loadingDatasets],
+  );
 
   const handleClearHistory = async () => {
     if (!window.confirm("Clear ALL history history for all flows?")) return;
@@ -277,6 +282,48 @@ export default function RunHistoryPanel({
                     <span>{run.trigger?.toUpperCase() || "MANUAL"}</span>
                     <span>ID: {run.id.slice(0, 6)}</span>
                   </div>
+
+                  {selectedRunId === run.id &&
+                    (loadingDatasets[run.id] ? (
+                      <div className="mt-2 flex items-center gap-1.5 text-[10px] text-slate-500">
+                        <Loader2 size={12} className="animate-spin" />
+                        Loading datasets...
+                      </div>
+                    ) : (datasetsByRun[run.id]?.length ?? 0) > 0 ? (
+                      <div className="mt-2 border-t border-white/5 pt-1.5 space-y-1">
+                        <div className="flex items-center gap-1.5 text-[9px] uppercase tracking-wider text-yellow-400/80 font-bold">
+                          <Database size={10} />
+                          Datasets
+                        </div>
+                        {datasetsByRun[run.id].map((file) => (
+                          <a
+                            key={file.fileName}
+                            href={api.getFileUrl(file.url)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="flex items-center justify-between gap-2 px-2 py-1 rounded-md bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/20 text-[10px] text-yellow-300/90 ui-transition"
+                            title={`Download ${file.fileName}`}
+                          >
+                            <span className="font-mono truncate">
+                              {file.fileName}
+                            </span>
+                            <span className="flex items-center gap-1 shrink-0">
+                              <span className="text-slate-500">
+                                {file.bytes > 1024
+                                  ? `${(file.bytes / 1024).toFixed(1)} KB`
+                                  : `${file.bytes} B`}
+                              </span>
+                              <Download size={10} />
+                            </span>
+                          </a>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="mt-2 text-[9px] text-slate-600 font-mono flex items-center gap-1">
+                        <Database size={9} /> No datasets saved
+                      </div>
+                    ))}
                 </div>
               ))
             )}

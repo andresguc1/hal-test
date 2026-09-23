@@ -1277,6 +1277,75 @@ export const read_data = (payload) => {
 };
 
 // ---------------------------------------------
+// Builders (Data Extraction)
+// ---------------------------------------------
+
+export const extract = (payload) => {
+  const selector = asString(payload?.selector);
+  if (selector === "") {
+    throw new Error("Selector (item selector) is required for extract.");
+  }
+
+  const validSources = ["text", "attribute", "html"];
+  const fields = Array.isArray(payload?.fields) ? payload.fields : [];
+  const normalizedFields = fields
+    .map((f) => {
+      const name = asString(f?.name);
+      if (name === "") return null;
+      return {
+        name,
+        source: validSources.includes(f?.source) ? f.source : "text",
+        selector: asString(f?.selector, ""),
+        attribute: asString(f?.attribute, ""),
+        optional: f?.optional === true,
+      };
+    })
+    .filter(Boolean);
+
+  return {
+    browserId: asString(payload?.browserId),
+    selector,
+    repeated: asBoolean(payload?.repeated, true),
+    fields: normalizedFields,
+    outputVariable: asString(payload?.outputVariable, "extractedData"),
+    accumulateInto: asString(payload?.accumulateInto, ""),
+    dedupeKey: asString(payload?.dedupeKey, ""),
+    ifEmpty: asString(payload?.ifEmpty, "ok"),
+    timeoutMs: asNumber(payload?.timeoutMs, undefined, 0),
+    nodeId: payload?.nodeId,
+  };
+};
+
+export const save_dataset = (payload) => {
+  const source = asString(payload?.source);
+  if (source === "") {
+    throw new Error(
+      "Dataset variable (source) is required for save_dataset.",
+    );
+  }
+
+  const validFormats = ["json", "csv", "ndjson"];
+  const validDelimiters = [",", ";", "\t", "|"];
+  const format = validFormats.includes(payload?.format)
+    ? payload.format
+    : "json";
+  const csvDelimiter = validDelimiters.includes(payload?.csvDelimiter)
+    ? payload.csvDelimiter
+    : ",";
+
+  return {
+    browserId: asString(payload?.browserId),
+    source,
+    format,
+    filename: asString(payload?.filename, ""),
+    outputVariable: asString(payload?.outputVariable, ""),
+    pretty: asBoolean(payload?.pretty, false),
+    csvDelimiter,
+    nodeId: payload?.nodeId,
+  };
+};
+
+// ---------------------------------------------
 // Builders (AI and LLM)
 // ---------------------------------------------
 

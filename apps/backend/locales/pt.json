@@ -201,6 +201,19 @@
         "handle_downloads": {
             "success": "Download concluído."
         },
+        "extract": {
+            "success": "Dados extraídos com sucesso.",
+            "error": "Erro ao extrair dados.",
+            "empty": "Nenhum elemento correspondeu ao seletor.",
+            "error_no_selector": "O seletor é obrigatório para extrair dados."
+        },
+        "save_dataset": {
+            "success": "Dataset salvo com sucesso.",
+            "error": "Erro ao salvar o dataset.",
+            "error_missing_source": "O nome da variável de dataset (source) é obrigatório.",
+            "error_empty_dataset": "A variável de dataset está vazia.",
+            "error_unsafe_path": "O caminho de destino não é permitido."
+        },
         "call_llm": {
             "success": "LLM chamado (Simulado)."
         },

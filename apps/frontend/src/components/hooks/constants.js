@@ -88,6 +88,8 @@ export const NODE_LABELS = {
   generate_data: "Generate Data (AI)",
   validate_semantic: "Semantic Validation",
   extract_dom_context: "Extract DOM Context",
+  extract: "Extract Data",
+  save_dataset: "Save Dataset",
   chain_of_thought: "Chain of Thought (Reasoning)",
   smart_selector: "Smart Selector (Auto-Repair)",
 

@@ -75,6 +75,8 @@ export { default as handleHooksBodySchema } from './handle_hooks/body.js';
 export { default as controlExceptionsBodySchema } from './control_exceptions/body.js';
 export { default as readDataBodySchema } from './read_data/body.js';
 export { default as handleDownloadsBodySchema } from './handle_downloads/body.js';
+export { default as extractBodySchema } from './extract/body.js';
+export { default as saveDatasetBodySchema } from './save_dataset/body.js';
 export { default as cliParamsBodySchema } from './cli_params/body.js';
 export { default as returnCodeBodySchema } from './return_code/body.js';
 export { default as integrateCIBodySchema } from './integrate_ci/body.js';

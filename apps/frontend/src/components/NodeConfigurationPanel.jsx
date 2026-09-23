@@ -37,6 +37,7 @@ import { NODE_INPUTS, cleanNodeConfiguration } from "@/config/validationRules";
 import ConditionalBranchesEditor from "./editors/ConditionalBranchesEditor";
 import SwitchCasesEditor from "./editors/SwitchCasesEditor";
 import FormFillEditor from "./editors/FormFillEditor";
+import ExtractFieldsEditor from "./editors/ExtractFieldsEditor";
 import OptionPickerEditor from "./editors/OptionPickerEditor";
 import CheckboxListEditor from "./editors/CheckboxListEditor";
 import AssertionBuilder from "./editors/AssertionBuilder";
@@ -910,6 +911,29 @@ const NodeConfigurationPanel = ({
                   variables={contextualVariablesMap}
                   allVariables={variablesMap}
                   suggestions={availableVariablePaths}
+                  onStartPick={onStartPick}
+                  onCancelPick={onCancelPick}
+                  pickingField={
+                    activeNode.data?.state === "picking"
+                      ? activeNode.data?.pickingField
+                      : null
+                  }
+                />
+              </div>
+            )}
+          />
+        );
+      case "extract_fields":
+        return (
+          <Controller
+            key={reactKey}
+            name={dataKey}
+            control={control}
+            render={({ field: { value, onChange } }) => (
+              <div className="space-y-1.5">
+                <ExtractFieldsEditor
+                  value={value}
+                  onChange={onChange}
                   onStartPick={onStartPick}
                   onCancelPick={onCancelPick}
                   pickingField={

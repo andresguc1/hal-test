@@ -1,5 +1,8 @@
 import { executionService } from '../services/ExecutionService.js';
 import { executionLogger } from '../services/ExecutionLogger.js';
+import path from 'path';
+import fs from 'fs';
+import { STORAGE_RUNS_DIR } from '../config/paths.js';
 import {
     Run,
     StepResult,
@@ -355,6 +358,38 @@ export const getRunDetailsAction = async (req, res) => {
         };
 
         return res.status(200).json({ success: true, data: normalizedRun });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+export const getRunDatasetsAction = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const datasetsDir = path.join(STORAGE_RUNS_DIR, id, 'datasets');
+
+        let files = [];
+        try {
+            const entries = await fs.promises.readdir(datasetsDir, { withFileTypes: true });
+            const statPromises = entries
+                .filter((e) => e.isFile())
+                .map(async (e) => {
+                    const full = path.join(datasetsDir, e.name);
+                    const stat = await fs.promises.stat(full);
+                    const ext = path.extname(e.name).replace('.', '');
+                    return {
+                        fileName: e.name,
+                        format: ext || 'file',
+                        bytes: stat.size,
+                        url: `storage/runs/${id}/datasets/${e.name}`,
+                    };
+                });
+            files = await Promise.all(statPromises);
+        } catch (err) {
+            if (err.code !== 'ENOENT') throw err;
+        }
+
+        return res.status(200).json({ success: true, data: files });
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
     }

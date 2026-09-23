@@ -201,6 +201,19 @@
         "handle_downloads": {
             "success": "Téléchargement terminé."
         },
+        "extract": {
+            "success": "Données extraites avec succès.",
+            "error": "Erreur lors de l'extraction des données.",
+            "empty": "Aucun élément ne correspond au sélecteur.",
+            "error_no_selector": "Le sélecteur est requis pour extraire des données."
+        },
+        "save_dataset": {
+            "success": "Jeu de données enregistré avec succès.",
+            "error": "Erreur lors de l'enregistrement du jeu de données.",
+            "error_missing_source": "Le nom de la variable de données (source) est requis.",
+            "error_empty_dataset": "La variable de données est vide.",
+            "error_unsafe_path": "Le chemin de destination n'est pas autorisé."
+        },
         "call_llm": {
             "success": "LLM appelé (simulé)."
         },

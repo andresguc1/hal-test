@@ -201,6 +201,19 @@
         "handle_downloads": {
             "success": "Download completed."
         },
+        "extract": {
+            "success": "Data extracted successfully.",
+            "error": "Error extracting data.",
+            "empty": "No elements matched the selector.",
+            "error_no_selector": "Selector is required for extract."
+        },
+        "save_dataset": {
+            "success": "Dataset saved successfully.",
+            "error": "Error saving dataset.",
+            "error_missing_source": "A dataset variable name (source) is required.",
+            "error_empty_dataset": "The dataset variable is empty.",
+            "error_unsafe_path": "The target path is not allowed."
+        },
         "call_llm": {
             "success": "LLM called (Simulated)."
         },
