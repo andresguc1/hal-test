@@ -1,6 +1,6 @@
 import { executePlaywrightAction } from '../../../core/ActionExecutor.js';
 import { normalizeTimeout, playTimeout } from '../../../core/timeout-utils.js';
-import { resolveTarget } from '../../../core/selector-utils.js';
+import { resolveTarget, buildPlaywrightLocator } from '../../../core/selector-utils.js';
 import { assertionEngine } from '../engine/AssertionEngine.js';
 import { variableManager } from '../../../services/VariableManager.js';
 
@@ -55,21 +55,41 @@ const assertNode = (req, res) =>
             );
         }
 
+        // Check if any assertion is a "hidden" visibility check
+        const hasHiddenAssertion = list.some(
+            (a) => a.type === 'visibility' && a.operator === 'hidden',
+        );
+
         const resolution = await resolveTarget({ page, target, scope, timeout });
 
-        if (resolution.resolution === 'none') {
-            const details = resolution.candidatesTried
-                .map((c) => `${c.selector} (${c.status}${c.error ? `: ${c.error}` : ''})`)
-                .join(' | ');
-            throw new Error(
-                req.t(
-                    'actions.assert.target_not_found',
-                    `Target element not found. Tried: ${details || 'no candidates'}`,
-                ),
-            );
-        }
+        let locator;
+        let resolutionInfo = resolution;
 
-        const locator = resolution.locator;
+        if (resolution.resolution === 'none') {
+            if (hasHiddenAssertion) {
+                // For hidden assertions, Playwright considers "not attached" as "hidden"
+                // Create a locator from the primary selector and let the assertion engine handle it
+                const primary = target?.selector;
+                locator = buildPlaywrightLocator(page, primary);
+                resolutionInfo = {
+                    ...resolution,
+                    resolution: 'hidden-assertion-fallback',
+                    usedSelector: primary,
+                };
+            } else {
+                const details = resolution.candidatesTried
+                    .map((c) => `${c.selector} (${c.status}${c.error ? `: ${c.error}` : ''})`)
+                    .join(' | ');
+                throw new Error(
+                    req.t(
+                        'actions.assert.target_not_found',
+                        `Target element not found. Tried: ${details || 'no candidates'}`,
+                    ),
+                );
+            }
+        } else {
+            locator = resolution.locator;
+        }
 
         // Get run variables for snapshot access (mutability assertions)
         const runId = req.body.runId;
@@ -117,10 +137,10 @@ const assertNode = (req, res) =>
                 softFailed: !allPassed,
                 assertions: results,
                 targetResolution: {
-                    usedSelector: resolution.usedSelector,
-                    selectorType: resolution.selectorType,
-                    resolution: resolution.resolution,
-                    candidatesTried: resolution.candidatesTried,
+                    usedSelector: resolutionInfo.usedSelector,
+                    selectorType: resolutionInfo.selectorType,
+                    resolution: resolutionInfo.resolution,
+                    candidatesTried: resolutionInfo.candidatesTried,
                 },
             },
             traceDetails: {
@@ -130,10 +150,10 @@ const assertNode = (req, res) =>
                 total: totalCount,
                 passed: passedCount,
                 targetResolution: {
-                    usedSelector: resolution.usedSelector,
-                    selectorType: resolution.selectorType,
-                    resolution: resolution.resolution,
-                    candidatesTried: resolution.candidatesTried,
+                    usedSelector: resolutionInfo.usedSelector,
+                    selectorType: resolutionInfo.selectorType,
+                    resolution: resolutionInfo.resolution,
+                    candidatesTried: resolutionInfo.candidatesTried,
                 },
             },
         };

@@ -92,25 +92,66 @@ const injectInspectorUI = () => {
         }
 
         const ariaLabel = el.getAttribute('aria-label');
-        if (ariaLabel) {
+        const accessibleName = getAccessibleName(el);
+
+        // Implicit role mapping - expanded to cover more elements
+        const implicitRoleMap = {
+            BUTTON: 'button',
+            A: 'link',
+            INPUT: 'textbox',
+            SELECT: 'combobox',
+            TEXTAREA: 'textbox',
+            H1: 'heading',
+            H2: 'heading',
+            H3: 'heading',
+            H4: 'heading',
+            H5: 'heading',
+            H6: 'heading',
+            NAV: 'navigation',
+            MAIN: 'main',
+            HEADER: 'banner',
+            FOOTER: 'contentinfo',
+            FORM: 'form',
+            IMG: 'img',
+            LI: 'listitem',
+            UL: 'list',
+            OL: 'list',
+            TABLE: 'table',
+            TH: 'columnheader',
+            TD: 'cell',
+            TR: 'row',
+            DL: 'list',
+            DT: 'term',
+            DD: 'definition',
+            ARTICLE: 'article',
+            SECTION: 'region',
+            ASIDE: 'complementary',
+            DIALOG: 'dialog',
+            FIELDSET: 'group',
+            LEGEND: 'legend',
+            LABEL: 'label',
+            OPTION: 'option',
+            OPTGROUP: 'group',
+            HR: 'separator',
+            METER: 'meter',
+            PROGRESS: 'progressbar',
+            OUTPUT: 'status',
+            MENU: 'menu',
+            MENUITEM: 'menuitem',
+        };
+
+        // Generate getByRole if we have an accessible name (aria-label, innerText, etc.)
+        const explicitRole = el.getAttribute('role');
+        const role = explicitRole || implicitRoleMap[el.tagName] || el.tagName.toLowerCase();
+
+        // Use aria-label if available, otherwise use accessible name from innerText/label
+        const roleName = ariaLabel || accessibleName;
+        if (roleName) {
             candidates.aria = `[aria-label="${ariaLabel}"]`;
-            const explicitRole = el.getAttribute('role');
-            const implicitRoleMap = {
-                BUTTON: 'button',
-                A: 'link',
-                INPUT: 'textbox',
-                SELECT: 'combobox',
-                TEXTAREA: 'textbox',
-                H1: 'heading',
-                H2: 'heading',
-                H3: 'heading',
-                NAV: 'navigation',
-                MAIN: 'main',
-                HEADER: 'banner',
-                FOOTER: 'contentinfo',
-            };
-            const role = explicitRole || implicitRoleMap[el.tagName] || el.tagName.toLowerCase();
-            candidates.playwrightRole = `getByRole('${role}', { name: '${escapeSelectorValue(ariaLabel)}' })`;
+            candidates.playwrightRole = `getByRole('${role}', { name: '${escapeSelectorValue(roleName)}' })`;
+        } else if (explicitRole) {
+            // Has explicit role but no accessible name
+            candidates.playwrightRole = `getByRole('${explicitRole}')`;
         }
 
         if (el.tagName === 'INPUT' && el.getAttribute('name')) {
@@ -118,31 +159,30 @@ const injectInspectorUI = () => {
         }
 
         const placeholder = el.getAttribute('placeholder');
-        if (placeholder && ['INPUT', 'TEXTAREA'].includes(el.tagName)) {
+        if (placeholder && ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName)) {
             candidates.playwrightPlaceholder = `getByPlaceholder('${escapeSelectorValue(placeholder)}')`;
         }
 
+        // Generate getByLabel for any element with an associated label
         let labelText = null;
-        if (['INPUT', 'SELECT', 'TEXTAREA'].includes(el.tagName)) {
-            const elId = el.getAttribute('id');
-            if (elId) {
-                try {
-                    const label = document.querySelector(`label[for="${window.CSS.escape(elId)}"]`);
-                    if (label) {
-                        labelText = label.innerText.trim();
-                    }
-                } catch (e) {
-                    // ignore selector errors
+        const elId = el.getAttribute('id');
+        if (elId) {
+            try {
+                const label = document.querySelector(`label[for="${window.CSS.escape(elId)}"]`);
+                if (label) {
+                    labelText = label.innerText.trim();
                 }
+            } catch (e) {
+                // ignore selector errors
             }
-            if (!labelText) {
-                const parentLabel = el.closest?.('label');
-                if (parentLabel) {
-                    labelText = parentLabel.innerText
-                        .trim()
-                        .replace(el.value || el.innerText || '', '')
-                        .trim();
-                }
+        }
+        if (!labelText) {
+            const parentLabel = el.closest?.('label');
+            if (parentLabel) {
+                labelText = parentLabel.innerText
+                    .trim()
+                    .replace(el.value || el.innerText || '', '')
+                    .trim();
             }
         }
         if (labelText) {
@@ -161,32 +201,29 @@ const injectInspectorUI = () => {
             candidates.playwrightTitle = `getByTitle('${escapeSelectorValue(title)}')`;
         }
 
-        if (['BUTTON', 'A', 'SPAN', 'LI'].includes(el.tagName)) {
-            const text = el.innerText.trim();
-            if (text && text.length < 40 && !text.includes('\n')) {
-                candidates.text = `//${el.tagName.toLowerCase()}[contains(text(), ${escapeXPathValue(text)})]`;
+        // Generate getByText for elements with unique text content
+        const text = el.innerText.trim();
+        if (text && text.length < 60 && !text.includes('\n')) {
+            // For any element with text content, generate XPath text and getByText
+            candidates.text = `//${el.tagName.toLowerCase()}[contains(text(), ${escapeXPathValue(text)})]`;
 
-                if (!candidates.playwrightRole) {
-                    const roleByTag = { BUTTON: 'button', A: 'link', LI: 'listitem' };
-                    const tagRole = roleByTag[el.tagName];
-                    if (tagRole) {
-                        candidates.playwrightRole = `getByRole('${tagRole}', { name: '${escapeSelectorValue(text)}' })`;
-                    }
-                }
-                candidates.playwrightText = `getByText('${escapeSelectorValue(text)}')`;
+            // Generate getByText for all elements with text content
+            candidates.playwrightText = `getByText('${escapeSelectorValue(text)}')`;
+
+            // Also generate getByRole for elements that have implicit roles but no aria-label
+            if (!candidates.playwrightRole && implicitRoleMap[el.tagName]) {
+                candidates.playwrightRole = `getByRole('${implicitRoleMap[el.tagName]}', { name: '${escapeSelectorValue(text)}' })`;
             }
         }
 
         candidates.cssPath = getCssPath(el);
 
-        if (!candidates.xpath) {
-            candidates.xpath = getCssPath(el);
-        }
+        candidates.xpath = getXPath(el);
 
         if (candidates.playwrightTestId) {
             return {
                 best: candidates.playwrightTestId,
-                type: 'playwright_test_id',
+                type: 'playwrightTestId',
                 all: candidates,
             };
         }
@@ -240,7 +277,7 @@ const injectInspectorUI = () => {
                     }
                 }
             }
-            return { best: candidates.playwrightRole, type: 'playwright_role', all: candidates };
+            return { best: candidates.playwrightRole, type: 'playwrightRole', all: candidates };
         }
         if (candidates.playwrightLabel) {
             const labelValue = candidates.playwrightLabel.match(
@@ -272,9 +309,9 @@ const injectInspectorUI = () => {
                     }
                 }
             }
-            return { best: candidates.playwrightLabel, type: 'playwright_label', all: candidates };
+            return { best: candidates.playwrightLabel, type: 'playwrightLabel', all: candidates };
         }
-        if (candidates.testId) return { best: candidates.testId, type: 'test_id', all: candidates };
+        if (candidates.testId) return { best: candidates.testId, type: 'testId', all: candidates };
         if (candidates.id) return { best: candidates.id, type: 'id', all: candidates };
         if (candidates.name) return { best: candidates.name, type: 'name', all: candidates };
         if (candidates.playwrightPlaceholder) {
@@ -291,12 +328,11 @@ const injectInspectorUI = () => {
             }
             return {
                 best: candidates.playwrightPlaceholder,
-                type: 'playwright_placeholder',
+                type: 'playwrightPlaceholder',
                 all: candidates,
             };
         }
-        if (candidates.aria)
-            return { best: candidates.aria, type: 'accessibility', all: candidates };
+        if (candidates.aria) return { best: candidates.aria, type: 'aria', all: candidates };
         if (candidates.playwrightAltText) {
             const altValue = candidates.playwrightAltText.match(
                 /getByAltText\(['"]([^'"]+)['"]\)/,
@@ -308,7 +344,7 @@ const injectInspectorUI = () => {
             }
             return {
                 best: candidates.playwrightAltText,
-                type: 'playwright_alt_text',
+                type: 'playwrightAltText',
                 all: candidates,
             };
         }
@@ -323,7 +359,7 @@ const injectInspectorUI = () => {
             }
             return {
                 best: candidates.playwrightTitle,
-                type: 'playwright_title',
+                type: 'playwrightTitle',
                 all: candidates,
             };
         }
@@ -334,11 +370,11 @@ const injectInspectorUI = () => {
                 candidates.playwrightText = candidates.playwrightText.replace('page.', '');
                 candidates.ambiguous = true;
             }
-            return { best: candidates.playwrightText, type: 'playwright_text', all: candidates };
+            return { best: candidates.playwrightText, type: 'playwrightText', all: candidates };
         }
-        if (candidates.text) return { best: candidates.text, type: 'content', all: candidates };
+        if (candidates.text) return { best: candidates.text, type: 'text', all: candidates };
 
-        return { best: candidates.cssPath, type: 'path', all: candidates };
+        return { best: candidates.cssPath, type: 'cssPath', all: candidates };
     }
 
     function getCssPath(el) {
@@ -362,6 +398,29 @@ const injectInspectorUI = () => {
             el = el.parentNode;
         }
         return path.join(' > ');
+    }
+
+    function getXPath(el) {
+        if (!(el instanceof Element)) return '';
+        const paths = [];
+        while (el && el.nodeType === Node.ELEMENT_NODE) {
+            let selector = el.nodeName.toLowerCase();
+            if (el.id && !isDynamicId(el.id)) {
+                selector += `[@id="${el.id}"]`;
+                paths.unshift(selector);
+                break;
+            } else {
+                let sib = el;
+                let nth = 1;
+                while ((sib = sib.previousElementSibling)) {
+                    if (sib.nodeName.toLowerCase() == el.nodeName.toLowerCase()) nth++;
+                }
+                if (nth != 1) selector += `[${nth}]`;
+            }
+            paths.unshift(selector);
+            el = el.parentNode;
+        }
+        return '//' + paths.join('/');
     }
 
     function getAccessibleName(el) {
@@ -770,26 +829,50 @@ export async function startInspector(page) {
 
             (async () => {
                 try {
-                    const sanitized = await ollamaService.sanitizeSelector(
-                        data.selector,
-                        data.htmlContext,
-                        data.selectorType,
-                    );
-                    if (sanitized && sanitized.confidence > 0.6) {
-                        console.log(
-                            `[Inspector] ✨ AI Optimized Selector — emitting element_sanitized: ${sanitized.sanitizedSelector} (confidence: ${sanitized.confidence})`,
+                    // Check if the original selector is already a Playwright native locator
+                    const isPlaywrightLocator =
+                        /^(getByTestId|getByLabel|getByRole|getByText|getByPlaceholder|getByAltText|getByTitle)\s*\(/i.test(
+                            data.selector,
                         );
-                        emitElementSanitized({
-                            pickId,
-                            selector: sanitized.sanitizedSelector,
-                            originalSelector: data.selector,
-                            aiOptimized: true,
-                            confidence: sanitized.confidence,
-                            reasoning: sanitized.reasoning,
-                        });
+
+                    // If we already have a Playwright locator, only use AI if it can significantly improve it
+                    // (e.g., the current locator is ambiguous or has low confidence)
+                    const shouldSanitize =
+                        !isPlaywrightLocator || (data.ambiguous && isPlaywrightLocator);
+
+                    let sanitized = null;
+                    if (shouldSanitize) {
+                        sanitized = await ollamaService.sanitizeSelector(
+                            data.selector,
+                            data.htmlContext,
+                            data.selectorType,
+                        );
+                    }
+
+                    // Only emit sanitized if it's significantly better
+                    if (sanitized && sanitized.confidence > 0.75) {
+                        // Additional check: if original is already a good Playwright locator,
+                        // only use AI result if it's also Playwright and has higher confidence
+                        if (isPlaywrightLocator && sanitized.locatorType === 'fallback') {
+                            console.log(
+                                '[Inspector] AI returned fallback for Playwright locator, skipping.',
+                            );
+                        } else {
+                            console.log(
+                                `[Inspector] ✨ AI Optimized Selector — emitting element_sanitized: ${sanitized.sanitizedSelector} (confidence: ${sanitized.confidence})`,
+                            );
+                            emitElementSanitized({
+                                pickId,
+                                selector: sanitized.sanitizedSelector,
+                                originalSelector: data.selector,
+                                aiOptimized: true,
+                                confidence: sanitized.confidence,
+                                reasoning: sanitized.reasoning,
+                            });
+                        }
                     } else {
                         console.log(
-                            '[Inspector] AI Sanitization confidence too low, skipping re-emit.',
+                            '[Inspector] AI Sanitization confidence too low or not needed, skipping re-emit.',
                         );
                     }
                 } catch (aiError) {
