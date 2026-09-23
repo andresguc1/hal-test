@@ -48,6 +48,7 @@ yarn-error.log*
 apps/backend/test-results/
 apps/backend/playwright-report/
 apps/frontend/playwright-report/
+apps/frontend/test-results/
 coverage/
 .nyc_output/
 
