@@ -150,7 +150,8 @@ jobs:
               'apps/cli/package.json',
               'apps/frontend/package.json',
               'apps/web/package.json',
-              'apps/backend/package.json'
+              'apps/backend/package.json',
+              'apps/blog/package.json',
             ];
             files.forEach(f => {
               const pkg = JSON.parse(fs.readFileSync(f, 'utf8'));
