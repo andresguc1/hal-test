@@ -1,0 +1,55 @@
+---
+import { getCollection } from 'astro:content';
+import BlogLayout from '../layouts/BlogLayout.astro';
+import { BASE } from '../utils/base';
+
+const posts = (await getCollection('blog'))
+  .filter((post) => !post.data.draft)
+  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+
+const fmt = new Intl.DateTimeFormat('en-US', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+});
+---
+
+<BlogLayout title="HAL-TEST Blog" description="HAL-TEST: the missing link in browser automation.">
+  <div class="wrap">
+    <section class="page-head">
+      <p class="eyebrow">Blog</p>
+      <h1>The missing link in browser automation</h1>
+<p class="lede">
+      Engineering notes from building HAL-TEST — visual flows, Playwright,
+      self-healing selectors, and browser automation at scale.
+    </p>
+    <p class="disclaimer">
+      <a href="https://haltest.com">haltest.com</a> es la aplicación principal.
+      Este es el <strong>blog</strong> donde compartimos artículos sobre automatización
+      y desarrollo del framework.
+    </p>
+    </section>
+
+    <section class="post-list" aria-label="Post list">
+      {
+        posts.map((post) => (
+          <a class="post-card" href={`${BASE}blog/${post.id}/`}>
+            <h2 class="post-card__title">{post.data.title}</h2>
+            <p class="post-card__meta">
+              {fmt.format(post.data.pubDate)}
+              {post.data.author && <> · {post.data.author}</>}
+            </p>
+            <p class="post-card__desc">{post.data.description}</p>
+            {
+              post.data.tags.length > 0 && (
+                <div class="post-card__tags">
+                  {post.data.tags.map((tag) => <span class="tag">{tag}</span>)}
+                </div>
+              )
+            }
+          </a>
+        ))
+      }
+    </section>
+  </div>
+</BlogLayout>

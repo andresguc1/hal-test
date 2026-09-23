@@ -260,6 +260,8 @@ export { default as closeContextAction } from '../plugins/core-session/handlers/
 export { default as readDataAction } from '../plugins/core-data/handlers/read_data.js';
 export { default as saveResultsAction } from '../plugins/core-data/handlers/save_results.js';
 export { default as handleDownloadsAction } from '../plugins/core-data/handlers/handle_downloads.js';
+export { default as extractAction } from '../plugins/core-data/handlers/extract.js';
+export { default as saveDatasetAction } from '../plugins/core-data/handlers/save_dataset.js';
 
 // ──── Testing Plugin ────
 export { default as runTestsAction } from '../plugins/core-testing/handlers/run_tests.js';

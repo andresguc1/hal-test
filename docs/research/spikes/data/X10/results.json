@@ -1,0 +1,239 @@
+{
+  "cases": {
+    "linear-100": {
+      "trial": "linear-100",
+      "seed": 424242,
+      "fixtureHash": "9d4250c15eb95f71",
+      "nodeCount": 100,
+      "edgeCount": 99,
+      "loadMs": 17380.1,
+      "layoutMs": 723.4,
+      "loadPhase": {
+        "phase": 0,
+        "longtaskCount": 13,
+        "longtaskSumMs": 6091,
+        "longtasks": [
+          1142,
+          92,
+          1064,
+          87,
+          82,
+          218,
+          1414,
+          556,
+          164,
+          217,
+          160,
+          616,
+          279
+        ]
+      },
+      "layoutPhase": {
+        "phase": 1,
+        "longtaskCount": 1,
+        "longtaskSumMs": 259,
+        "longtasks": [
+          259
+        ]
+      },
+      "visibleNodes": 36,
+      "at": "2026-09-21T01:39:40.564Z"
+    },
+    "linear-250": {
+      "trial": "linear-250",
+      "seed": 424243,
+      "fixtureHash": "ac1b01af7fc7b141",
+      "nodeCount": 250,
+      "edgeCount": 249,
+      "loadMs": 40700.2,
+      "layoutMs": 1050.6,
+      "loadPhase": {
+        "phase": 0,
+        "longtaskCount": 19,
+        "longtaskSumMs": 18131,
+        "longtasks": [
+          228,
+          468,
+          62,
+          79,
+          56,
+          102,
+          65,
+          242,
+          148,
+          71,
+          52,
+          1434,
+          4697,
+          106,
+          7101,
+          1802,
+          882,
+          402,
+          134
+        ]
+      },
+      "layoutPhase": {
+        "phase": 1,
+        "longtaskCount": 1,
+        "longtaskSumMs": 570,
+        "longtasks": [
+          570
+        ]
+      },
+      "visibleNodes": 35,
+      "at": "2026-09-21T01:40:28.584Z"
+    },
+    "linear-500": {
+      "trial": "linear-500",
+      "seed": 424244,
+      "fixtureHash": "955b60d7b6363bfc",
+      "nodeCount": 500,
+      "edgeCount": 499,
+      "loadMs": 80892.4,
+      "layoutMs": 6543.6,
+      "loadPhase": {
+        "phase": 0,
+        "longtaskCount": 20,
+        "longtaskSumMs": 24870,
+        "longtasks": [
+          66,
+          1422,
+          172,
+          1965,
+          127,
+          50,
+          115,
+          403,
+          340,
+          731,
+          250,
+          132,
+          90,
+          5435,
+          8550,
+          1031,
+          151,
+          2486,
+          74,
+          1280
+        ]
+      },
+      "layoutPhase": {
+        "phase": 1,
+        "longtaskCount": 4,
+        "longtaskSumMs": 6082,
+        "longtasks": [
+          5713,
+          82,
+          114,
+          173
+        ]
+      },
+      "visibleNodes": 35,
+      "at": "2026-09-21T01:48:28.044Z"
+    },
+    "branching-100": {
+      "trial": "branching-100",
+      "seed": 777001,
+      "fixtureHash": "11090aec46df1275",
+      "nodeCount": 100,
+      "edgeCount": 99,
+      "loadMs": 35256.1,
+      "layoutMs": 7938.8,
+      "loadPhase": {
+        "phase": 0,
+        "longtaskCount": 14,
+        "longtaskSumMs": 29444,
+        "longtasks": [
+          1001,
+          81,
+          1491,
+          71,
+          89,
+          102,
+          205,
+          57,
+          1460,
+          4702,
+          11899,
+          2105,
+          3987,
+          2194
+        ]
+      },
+      "layoutPhase": {
+        "phase": 1,
+        "longtaskCount": 7,
+        "longtaskSumMs": 7670,
+        "longtasks": [
+          3051,
+          1251,
+          257,
+          413,
+          760,
+          1374,
+          564
+        ]
+      },
+      "visibleNodes": 67,
+      "at": "2026-09-21T01:50:10.964Z"
+    },
+    "branching-250": {
+      "trial": "branching-250",
+      "seed": 777002,
+      "fixtureHash": "222c8540660650e2",
+      "nodeCount": 250,
+      "edgeCount": 249,
+      "loadMs": 69892.3,
+      "layoutMs": 13646.5,
+      "loadPhase": {
+        "phase": 0,
+        "longtaskCount": 25,
+        "longtaskSumMs": 37183,
+        "longtasks": [
+          64,
+          88,
+          336,
+          1168,
+          220,
+          413,
+          62,
+          54,
+          130,
+          684,
+          381,
+          61,
+          967,
+          420,
+          122,
+          1958,
+          8504,
+          51,
+          8445,
+          1666,
+          2621,
+          6103,
+          2506,
+          61,
+          98
+        ]
+      },
+      "layoutPhase": {
+        "phase": 1,
+        "longtaskCount": 6,
+        "longtaskSumMs": 12534,
+        "longtasks": [
+          4703,
+          163,
+          114,
+          6020,
+          801,
+          733
+        ]
+      },
+      "visibleNodes": 65,
+      "at": "2026-09-21T01:45:34.138Z"
+    }
+  }
+}

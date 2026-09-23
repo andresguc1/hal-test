@@ -1553,6 +1553,121 @@ export const NODE_INPUTS = {
     },
   ],
 
+  // --- DATA EXTRACTION ---
+  extract: [
+    {
+      key: "selector",
+      label: "Item Selector",
+      type: "selector",
+      placeholder: "e.g. li.product, tr.row",
+      required: true,
+      description:
+        "Matches one or more elements. Each match becomes a record.",
+    },
+    {
+      key: "repeated",
+      label: "Extract from every match (repeated)",
+      type: "checkbox",
+      defaultValue: true,
+    },
+    {
+      key: "fields",
+      label: "Fields to Extract",
+      type: "extract_fields",
+    },
+    {
+      key: "outputVariable",
+      label: "Output Variable",
+      type: "text",
+      placeholder: "extractedData",
+      defaultValue: "extractedData",
+    },
+    {
+      key: "accumulateInto",
+      label: "Accumulate Into Variable",
+      type: "text",
+      placeholder: "e.g. paginatedData",
+      description:
+        "Append records to an existing dataset (e.g. across pagination loops).",
+    },
+    {
+      key: "dedupeKey",
+      label: "De-duplicate By Key",
+      type: "text",
+      placeholder: "e.g. productId (first occurrence wins)",
+    },
+    {
+      key: "ifEmpty",
+      label: "If No Match",
+      type: "select",
+      options: [
+        { label: "Continue (empty dataset)", value: "ok" },
+        { label: "Fail the step", value: "fail" },
+      ],
+      defaultValue: "ok",
+    },
+    {
+      key: "timeoutMs",
+      label: "Timeout (ms)",
+      type: "number",
+      placeholder: "30000",
+    },
+  ],
+  save_dataset: [
+    {
+      key: "source",
+      label: "Dataset Variable",
+      type: "text",
+      placeholder: "e.g. extractedData",
+      required: true,
+      description:
+        "Variable produced by an Extract node (or accumulated records).",
+    },
+    {
+      key: "format",
+      label: "Format",
+      type: "select",
+      options: [
+        { label: "JSON", value: "json" },
+        { label: "CSV", value: "csv" },
+        { label: "NDJSON", value: "ndjson" },
+      ],
+      defaultValue: "json",
+    },
+    {
+      key: "csvDelimiter",
+      label: "CSV Delimiter",
+      type: "select",
+      options: [
+        { label: "Comma (,)", value: "," },
+        { label: "Semicolon (;)", value: ";" },
+        { label: "Tab", value: "\t" },
+        { label: "Pipe (|)", value: "|" },
+      ],
+      defaultValue: ",",
+    },
+    {
+      key: "filename",
+      label: "File Name",
+      type: "text",
+      placeholder: "e.g. products.csv (optional)",
+    },
+    {
+      key: "pretty",
+      label: "Pretty print JSON",
+      type: "checkbox",
+      defaultValue: false,
+    },
+    {
+      key: "outputVariable",
+      label: "Output Variable",
+      type: "text",
+      placeholder: "e.g. saveInfo",
+      description:
+        "Optional variable that receives the artifact info (path, bytes, downloadUrl).",
+    },
+  ],
+
   // --- DEFAULT FALLBACK ---
   default: [
     {
@@ -1592,6 +1707,19 @@ export const BASE_ALLOWED_CONFIG_KEYS = [
   "expandMenu",
   "detectedOptions",
   "staticHtml",
+  // Data extraction nodes
+  "repeated",
+  "fields",
+  "outputVariable",
+  "accumulateInto",
+  "dedupeKey",
+  "ifEmpty",
+  "timeoutMs",
+  "source",
+  "format",
+  "filename",
+  "pretty",
+  "csvDelimiter",
 ];
 
 /**
@@ -1956,6 +2084,23 @@ export const getSmartLabel = (nodeType, config = {}) => {
       return "Semantic Validation";
     case "extract_dom_context":
       return "Extract Context";
+    case "extract": {
+      const fieldCount = Array.isArray(config.fields)
+        ? config.fields.length
+        : 0;
+      const base = config.selector
+        ? `Extract: ${truncate(config.selector, 16)}`
+        : "Extract";
+      return fieldCount > 0
+        ? `${base} (${fieldCount} field${fieldCount > 1 ? "s" : ""})`
+        : base;
+    }
+    case "save_dataset": {
+      const fmt = config.format || "json";
+      return config.source
+        ? `Save ${truncate(String(config.source), 14)} as ${fmt.toUpperCase()}`
+        : `Save Dataset (${fmt.toUpperCase()})`;
+    }
     case "chain_of_thought":
       return "Reasoning (CoT)";
     case "assert_page_text":

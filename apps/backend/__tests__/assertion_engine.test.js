@@ -116,6 +116,20 @@ describe('AssertionEngine', () => {
         expect(results[0].actual).toBe('hidden');
     });
 
+    it('should evaluate visibility assertion (hidden) when element is absent (not attached)', async () => {
+        const locator = createMockLocator({ count: 0 });
+        buildPlaywrightLocator.mockReturnValue(locator);
+
+        const results = await assertionEngine.evaluate({
+            page: {},
+            locator,
+            assertions: [{ type: 'visibility', operator: 'hidden' }],
+        });
+
+        expect(results[0].passed).toBe(true);
+        expect(results[0].actual).toBe('absent');
+    });
+
     it('should evaluate text assertion (contains)', async () => {
         const locator = createMockLocator({ count: 1, text: 'Hello World' });
         buildPlaywrightLocator.mockReturnValue(locator);

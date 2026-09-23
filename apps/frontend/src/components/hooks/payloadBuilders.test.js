@@ -7,6 +7,8 @@ import {
   click,
   browser_dialog,
   drag_drop,
+  extract,
+  save_dataset,
 } from "./payloadBuilders.js";
 
 describe("click payload builder", () => {
@@ -388,5 +390,68 @@ describe("drag_drop payload builder", () => {
       visualAnimation: false,
     });
     expect(native.visualAnimation).toBe(false);
+  });
+});
+
+describe("extract payload builder", () => {
+  it("requires an item selector", () => {
+    expect(() => extract({})).toThrow(/selector/i);
+  });
+
+  it("normalizes fields and defaults", () => {
+    const payload = extract({
+      selector: "li.product",
+      fields: [
+        { name: "title", source: "text", selector: ".title" },
+        { name: "href", source: "attribute", selector: "a", attribute: "href" },
+        { name: "bad", source: "javascript" },
+        { name: "", source: "text" },
+      ],
+    });
+    expect(payload).toMatchObject({
+      selector: "li.product",
+      repeated: true,
+      outputVariable: "extractedData",
+      ifEmpty: "ok",
+    });
+    expect(payload.fields).toEqual([
+      { name: "title", source: "text", selector: ".title", attribute: "", optional: false },
+      { name: "href", source: "attribute", selector: "a", attribute: "href", optional: false },
+      { name: "bad", source: "text", selector: "", attribute: "", optional: false },
+    ]);
+  });
+
+  it("keeps accumulation and dedupe settings", () => {
+    const payload = extract({
+      selector: "tr",
+      accumulateInto: "allRows",
+      dedupeKey: "id",
+      repeated: false,
+    });
+    expect(payload.accumulateInto).toBe("allRows");
+    expect(payload.dedupeKey).toBe("id");
+    expect(payload.repeated).toBe(false);
+  });
+});
+
+describe("save_dataset payload builder", () => {
+  it("requires a source variable", () => {
+    expect(() => save_dataset({})).toThrow(/source/i);
+  });
+
+  it("defaults to JSON and sanitizes format/delimiter", () => {
+    const payload = save_dataset({ source: "extractedData" });
+    expect(payload).toMatchObject({
+      source: "extractedData",
+      format: "json",
+      csvDelimiter: ",",
+      pretty: false,
+    });
+    expect(
+      save_dataset({ source: "d", format: "bogus", csvDelimiter: "%" }),
+    ).toMatchObject({ format: "json", csvDelimiter: "," });
+    expect(
+      save_dataset({ source: "d", format: "csv", csvDelimiter: ";" }),
+    ).toMatchObject({ format: "csv", csvDelimiter: ";" });
   });
 });

@@ -119,6 +119,8 @@ const ROUTE_REGISTRY = {
     read_data: { schema: 'readDataBodySchema', category: 'data' },
     save_results: { schema: 'saveResultsBodySchema', category: 'data' },
     handle_downloads: { schema: 'handleDownloadsBodySchema', category: 'data' },
+    extract: { schema: 'extractBodySchema', category: 'data' },
+    save_dataset: { schema: 'saveDatasetBodySchema', category: 'data' },
     // Testing
     run_tests: { schema: 'runTestsBodySchema', category: 'testing' },
     cli_params: { schema: 'cliParamsBodySchema', category: 'cli' },

@@ -1,0 +1,320 @@
+{
+  "generated": "2026-09-23T16:16:00.398Z",
+  "datasets": {
+    "A": {
+      "label": "linear",
+      "sizeParam": 50,
+      "hash": "29f90906517a48a7",
+      "meta": {
+        "nodeCount": 50,
+        "edgeCount": 49,
+        "maxDegree": 1,
+        "roots": [
+          "n0"
+        ],
+        "cycleCount": 0,
+        "depth": 50,
+        "compositeCount": 0,
+        "branchCount": 0
+      }
+    },
+    "B": {
+      "label": "branching",
+      "sizeParam": 50,
+      "hash": "ca1427c4e5cf19c7",
+      "meta": {
+        "nodeCount": 50,
+        "edgeCount": 49,
+        "maxDegree": 2,
+        "roots": [
+          "n0"
+        ],
+        "cycleCount": 0,
+        "depth": 26,
+        "compositeCount": 0,
+        "branchCount": 0
+      }
+    },
+    "C": {
+      "label": "merge-heavy",
+      "sizeParam": 50,
+      "hash": "1ef1d31aa58b903e",
+      "meta": {
+        "nodeCount": 50,
+        "edgeCount": 49,
+        "maxDegree": 1,
+        "roots": [
+          "c0_0",
+          "c1_0",
+          "c2_0",
+          "c3_0"
+        ],
+        "cycleCount": 0,
+        "depth": 14,
+        "compositeCount": 0,
+        "branchCount": 0
+      }
+    },
+    "D": {
+      "label": "deep-branching",
+      "sizeParam": 50,
+      "hash": "4ba157df9781a969",
+      "meta": {
+        "nodeCount": 100,
+        "edgeCount": 99,
+        "maxDegree": 2,
+        "roots": [
+          "n0"
+        ],
+        "cycleCount": 0,
+        "depth": 51,
+        "compositeCount": 0,
+        "branchCount": 0
+      }
+    },
+    "E": {
+      "label": "diamond",
+      "sizeParam": 10,
+      "hash": "900ae61dcb60ad99",
+      "meta": {
+        "nodeCount": 32,
+        "edgeCount": 32,
+        "maxDegree": 3,
+        "roots": [
+          "start"
+        ],
+        "cycleCount": 0,
+        "depth": 13,
+        "compositeCount": 0,
+        "branchCount": 0
+      }
+    },
+    "F": {
+      "label": "composite",
+      "sizeParam": 6,
+      "hash": "0b7ef37668535d35",
+      "meta": {
+        "nodeCount": 7,
+        "edgeCount": 6,
+        "maxDegree": 1,
+        "roots": [
+          "r_start"
+        ],
+        "cycleCount": 0,
+        "depth": 7,
+        "compositeCount": 6,
+        "branchCount": 0
+      }
+    },
+    "G": {
+      "label": "realistic",
+      "sizeParam": 50,
+      "hash": "45c7f20eab9927d7",
+      "meta": {
+        "nodeCount": 52,
+        "edgeCount": 98,
+        "maxDegree": 48,
+        "roots": [
+          "browser"
+        ],
+        "cycleCount": 0,
+        "depth": 5,
+        "compositeCount": 0,
+        "branchCount": 1
+      }
+    },
+    "H": {
+      "label": "pathological",
+      "sizeParam": 50,
+      "hash": "cb279011d3bc35e7",
+      "meta": {
+        "nodeCount": 50,
+        "edgeCount": 26,
+        "maxDegree": 2,
+        "roots": [
+          "j0",
+          "j1",
+          "j2",
+          "j3",
+          "j4",
+          "j5",
+          "j6",
+          "j7",
+          "j8",
+          "j9",
+          "j10",
+          "j11",
+          "j12",
+          "j13",
+          "j14",
+          "j15",
+          "j16",
+          "j17",
+          "j18",
+          "j19",
+          "j20",
+          "j21",
+          "j22",
+          "j23",
+          "j24"
+        ],
+        "cycleCount": 1,
+        "depth": 1,
+        "compositeCount": 0,
+        "branchCount": 1
+      }
+    }
+  },
+  "shapes": {
+    "multiple-roots": {
+      "hash": "a412c62a36fa7081",
+      "meta": {
+        "nodeCount": 3,
+        "edgeCount": 2,
+        "maxDegree": 1,
+        "roots": [
+          "top",
+          "bottom"
+        ],
+        "cycleCount": 0,
+        "depth": 2,
+        "compositeCount": 0,
+        "branchCount": 0
+      }
+    },
+    "cyclic": {
+      "hash": "72b3b95651567a80",
+      "meta": {
+        "nodeCount": 3,
+        "edgeCount": 3,
+        "maxDegree": 1,
+        "roots": [],
+        "cycleCount": 1,
+        "depth": 1,
+        "compositeCount": 0,
+        "branchCount": 0
+      }
+    },
+    "diamond": {
+      "hash": "51ddfcf2add6f33b",
+      "meta": {
+        "nodeCount": 4,
+        "edgeCount": 4,
+        "maxDegree": 2,
+        "roots": [
+          "root"
+        ],
+        "cycleCount": 0,
+        "depth": 3,
+        "compositeCount": 0,
+        "branchCount": 0
+      }
+    },
+    "parallel": {
+      "hash": "40d35e1dd0ff54e0",
+      "meta": {
+        "nodeCount": 5,
+        "edgeCount": 6,
+        "maxDegree": 3,
+        "roots": [
+          "root"
+        ],
+        "cycleCount": 0,
+        "depth": 3,
+        "compositeCount": 0,
+        "branchCount": 0
+      }
+    },
+    "nested-branch": {
+      "hash": "23c05e1d260c085f",
+      "meta": {
+        "nodeCount": 7,
+        "edgeCount": 7,
+        "maxDegree": 2,
+        "roots": [
+          "root"
+        ],
+        "cycleCount": 0,
+        "depth": 5,
+        "compositeCount": 0,
+        "branchCount": 1
+      }
+    },
+    "composite": {
+      "hash": "b6cc659fbed1a4bf",
+      "meta": {
+        "nodeCount": 3,
+        "edgeCount": 2,
+        "maxDegree": 1,
+        "roots": [
+          "a"
+        ],
+        "cycleCount": 0,
+        "depth": 3,
+        "compositeCount": 1,
+        "branchCount": 0
+      }
+    },
+    "nested-composite": {
+      "hash": "3dfded7275be9d4c",
+      "meta": {
+        "nodeCount": 2,
+        "edgeCount": 1,
+        "maxDegree": 1,
+        "roots": [
+          "a"
+        ],
+        "cycleCount": 0,
+        "depth": 2,
+        "compositeCount": 1,
+        "branchCount": 0
+      }
+    },
+    "loop": {
+      "hash": "70401dbbc5eab458",
+      "meta": {
+        "nodeCount": 3,
+        "edgeCount": 2,
+        "maxDegree": 1,
+        "roots": [
+          "root"
+        ],
+        "cycleCount": 0,
+        "depth": 3,
+        "compositeCount": 0,
+        "branchCount": 0
+      }
+    },
+    "for_each": {
+      "hash": "1bdc05b2def86d79",
+      "meta": {
+        "nodeCount": 3,
+        "edgeCount": 2,
+        "maxDegree": 1,
+        "roots": [
+          "root"
+        ],
+        "cycleCount": 0,
+        "depth": 3,
+        "compositeCount": 0,
+        "branchCount": 0
+      }
+    },
+    "mixed": {
+      "hash": "eef9b49d8f11e698",
+      "meta": {
+        "nodeCount": 8,
+        "edgeCount": 8,
+        "maxDegree": 2,
+        "roots": [
+          "start",
+          "loopb"
+        ],
+        "cycleCount": 0,
+        "depth": 6,
+        "compositeCount": 1,
+        "branchCount": 1
+      }
+    }
+  }
+}

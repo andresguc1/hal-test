@@ -1,0 +1,62 @@
+{
+  "generated": "2026-09-23T16:15:56.150Z",
+  "transactionSize": {
+    "layout100_deltaBytes": 2663,
+    "layout500_deltaBytes": 13464,
+    "drag1_deltaBytes": 42,
+    "layout500_is_drag_amplified": 320.57142857142856
+  },
+  "lww": {
+    "layout_then_drag": {
+      "dragged_n0": [
+        4444,
+        5555
+      ],
+      "other_n1": [
+        111,
+        222
+      ]
+    },
+    "drag_then_layout": {
+      "dragged_n0": [
+        333,
+        444
+      ],
+      "other_n1": [
+        333,
+        444
+      ]
+    }
+  },
+  "atomicity": {
+    "updateCount_for_500": 1,
+    "all_500_applied_in_one_apply": true
+  },
+  "retraction": {
+    "baseline_without_resolver": {
+      "n0_result": [
+        1234,
+        4321
+      ],
+      "version_now": 1,
+      "note": "Yjs LWW outcome; non-intuitive, varies by clientID ordering"
+    },
+    "with_resolver": {
+      "n0_stays_drag": [
+        9001,
+        9002
+      ],
+      "stale_dropped": true
+    },
+    "resolver_rule": "incoming layout version > local layoutVersion → apply; equal-or-older → drop; drags never bump layoutVersion so they are never retracted"
+  },
+  "strategy": {
+    "layout_writes": "all-position cell writes in one atomic Y transaction (observed, updateCount=1)",
+    "cost": "see transactionSize; ~N×amplification vs single drag",
+    "outcome": "last-writer-wins per nested position cell; drag vs layout verdict = ORDER-dependent",
+    "stale_drag_clobber": "layout arriving after a drag overwrites the dragged cell (observed)",
+    "atomic_property": "a layout update lands atomically at peers (partial layouts impossible)",
+    "retraction": "layoutVersion written in the SAME Y transaction lets peers drop stale layouts",
+    "phase3_recommendation": "Treat layout as a user-visible op: PREVIEW → CONFIRM → atomic Y transaction bumping layoutVersion. No silent auto-layout inside live collab rooms; if auto-layout must exist, gate it to a single 'layout curator' client and rely on layoutVersion retraction."
+  }
+}

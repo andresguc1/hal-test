@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getLayoutedElements } from "./layoutUtils";
+import { getLayoutedElements, getLayoutedElementsLocal } from "./layoutUtils";
 
 function branchNode(id, type, config = {}) {
   return {
@@ -218,7 +218,7 @@ describe("getLayoutedElements - branch semantics (LR)", () => {
     // on purpose so it does not flake under CI CPU contention, while still
     // catching an algorithmic-complexity regression (a polynomial blow-up on
     // the merge/branch post-passes would massively exceed it).
-    expect(elapsed).toBeLessThan(2000);
+expect(elapsed).toBeLessThan(2000);
 
     // Re-run to confirm determinism at scale.
     const [layouted2] = getLayoutedElements(nodes, edges, "LR");
@@ -228,6 +228,167 @@ describe("getLayoutedElements - branch semantics (LR)", () => {
       expect(m.position.y).toBeCloseTo(n.position.y, 5);
     });
   });
+});
+
+describe("getLayoutedElementsLocal - arrange selection (X4)", () => {
+  const makeNodes = () => [
+    { id: "a", data: { type: "click" } },
+    { id: "b", data: { type: "click" } },
+    { id: "c", data: { type: "click" } },
+    { id: "d", data: { type: "click" } },
+    { id: "e", data: { type: "click" } },
+  ];
+  const makeEdges = () => [
+    { source: "a", target: "b" },
+    { source: "b", target: "c" },
+    { source: "c", target: "d" },
+    { source: "d", target: "e" },
+  ];
+
+  it("without selection behaves like getLayoutedElements but preserves original order", () => {
+    const nodes = makeNodes();
+    const edges = makeEdges();
+    const [full] = getLayoutedElements(nodes, edges, "LR");
+    const [local] = getLayoutedElementsLocal(nodes, edges, "LR");
+
+    // Same positions for all nodes
+    full.forEach((fn) => {
+      const ln = local.find((n) => n.id === fn.id);
+      expect(ln.position.x).toBeCloseTo(fn.position.x, 5);
+      expect(ln.position.y).toBeCloseTo(fn.position.y, 5);
+    });
+    // Original order preserved (local returns in input order, not sorted by id)
+    expect(local.map((n) => n.id)).toEqual(nodes.map((n) => n.id));
+  });
+
+  it("only repositions selected nodes + their neighbors; others stay byte-identical", () => {
+    const nodes = makeNodes();
+    const edges = makeEdges();
+
+    // Select "b" and "d" -> their neighbors "a", "c", "e" also get laid out
+    const [layouted] = getLayoutedElementsLocal(nodes, edges, "LR", ["b", "d"]);
+
+    // All nodes in linear chain are connected, so all get positions
+    layouted.forEach((n) => {
+      expect(n.position).toBeDefined();
+      expect(typeof n.position.x).toBe("number");
+      expect(typeof n.position.y).toBe("number");
+    });
+
+    // Array order unchanged (key X4 requirement)
+    expect(layouted.map((n) => n.id)).toEqual(nodes.map((n) => n.id));
+
+    // Now test with isolated node: select "c" only in a graph where "a" is disconnected
+    const nodes2 = [
+      { id: "a", data: { type: "click" } }, // disconnected
+      { id: "b", data: { type: "click" } },
+      { id: "c", data: { type: "click" } },
+      { id: "d", data: { type: "click" } },
+    ];
+    const edges2 = [
+      { source: "b", target: "c" },
+      { source: "c", target: "d" },
+    ];
+
+    const [layouted2] = getLayoutedElementsLocal(nodes2, edges2, "LR", ["c"]);
+
+    // "a" is disconnected from selection -> stays byte-identical
+    expect(layouted2[0]).toEqual(nodes2[0]);
+    // "b", "c", "d" are in subgraph -> have positions
+    expect(layouted2[1].position).toBeDefined();
+    expect(layouted2[2].position).toBeDefined();
+    expect(layouted2[3].position).toBeDefined();
+
+    // Array order unchanged
+    expect(layouted2.map((n) => n.id)).toEqual(nodes2.map((n) => n.id));
+  });
+
+  it("includes neighbors of selected nodes in layout subgraph", () => {
+    const nodes = makeNodes();
+    const edges = makeEdges();
+    // Select "c" only -> its neighbors "b" and "d" should also be laid out
+    const [layouted] = getLayoutedElementsLocal(nodes, edges, "LR", ["c"]);
+
+    const b = layouted.find((n) => n.id === "b");
+    const c = layouted.find((n) => n.id === "c");
+    const d = layouted.find((n) => n.id === "d");
+    expect(b.position).not.toEqual({ x: 0, y: 0 }); // laid out
+    expect(c.position).not.toEqual({ x: 0, y: 0 });
+    expect(d.position).not.toEqual({ x: 0, y: 0 });
+
+    // "a" and "e" untouched (not direct neighbors of "c"? actually "b" is neighbor of "c", "a" is neighbor of "b" -> not included)
+    expect(layouted[0]).toEqual(nodes[0]); // "a" unchanged
+    expect(layouted[4]).toEqual(nodes[4]); // "e" unchanged
+  });
+
+  it("edges connected to selected nodes are updated; others unchanged", () => {
+    const nodes = makeNodes();
+    const edges = makeEdges();
+    const [, layoutedEdges] = getLayoutedElementsLocal(
+      nodes,
+      edges,
+      "LR",
+      ["b", "d"],
+    );
+
+    // Edge b->c has both ends in subgraph (b selected, c neighbor) -> updated
+    const edgeBC = layoutedEdges.find((e) => e.source === "b" && e.target === "c");
+    expect(edgeBC).toBeDefined();
+    // Edge a->b has "a" not in subgraph -> unchanged (but "b" is selected, so it IS in subgraph)
+    // Actually "a" is neighbor of "b", so a->b is in subgraph
+    // Edge d->e: "e" is neighbor of "d" -> in subgraph
+    // All edges in linear chain get pulled in
+    expect(layoutedEdges.length).toBe(edges.length);
+  });
+
+  it("is deterministic across runs", () => {
+    const nodes = makeNodes();
+    const edges = makeEdges();
+    const [run1] = getLayoutedElementsLocal(nodes, edges, "LR", ["b", "d"]);
+    const [run2] = getLayoutedElementsLocal(nodes, edges, "LR", ["b", "d"]);
+    run1.forEach((n) => {
+      const m = run2.find((x) => x.id === n.id);
+      expect(m.position.x).toBeCloseTo(n.position.x, 5);
+      expect(m.position.y).toBeCloseTo(n.position.y, 5);
+    });
+  });
+
+it("with conditional branch: selected branch + its neighbors move", () => {
+    const nodes = [
+      { id: "cond", data: { type: "conditional", configuration: { branches: [{ id: "true" }, { id: "false" }] } } },
+      { id: "A", data: { type: "click" } },
+      { id: "B", data: { type: "click" } },
+      { id: "next", data: { type: "goBack" } },
+    ];
+    const edges = [
+      { source: "cond", target: "A", sourceHandle: "true" },
+      { source: "cond", target: "B", sourceHandle: "false" },
+      { source: "A", target: "next" },
+      { source: "B", target: "next" },
+    ];
+    const originalA = { ...nodes[1] };
+    const originalNext = { ...nodes[3] };
+    const originalCond = { ...nodes[0] };
+    const originalB = { ...nodes[2] };
+
+    // Select only TRUE branch "A"
+    const [layouted] = getLayoutedElementsLocal(nodes, edges, "LR", ["A"]);
+
+    // "A" moves, "cond" (source) and "next" (target) are neighbors -> also move
+    const a = layouted.find((n) => n.id === "A");
+    const next = layouted.find((n) => n.id === "next");
+    const cond = layouted.find((n) => n.id === "cond");
+    expect(a.position).not.toEqual(originalA.position);
+    expect(next.position).not.toEqual(originalNext.position);
+    expect(cond.position).not.toEqual(originalCond.position);
+
+    // "B" is NOT connected to "A" (different branch) -> stays byte-identical
+    expect(layouted[2]).toEqual(originalB); // "B" at index 2
+    expect(layouted.map((n) => n.id)).toEqual(nodes.map((n) => n.id));
+  });
+});
+
+describe("getLayoutedElementsLocal - arrange selection (X4)", () => {
 
   it("accepts per-call spacing overrides while remaining collision-free", () => {
     const nodes = [

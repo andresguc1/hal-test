@@ -23,6 +23,8 @@ import {
   Shield,
   ShieldCheck,
   Database,
+  Table2,
+  FileOutput,
 } from "lucide-react";
 import { resolveIcon } from "./iconMap";
 
@@ -140,6 +142,12 @@ export const NODE_CATEGORIES = {
     label: "Files & Data",
     nodes: ["read_file", "write_file", "upload_file", "download_file"],
   },
+  data_extraction: {
+    icon: Table2,
+    color: "amber",
+    label: "Data Extraction",
+    nodes: ["extract", "save_dataset"],
+  },
   database_ops: {
     icon: Database,
     color: "teal",
@@ -202,6 +210,7 @@ export const NODE_TYPE_MAP = Object.entries(NODE_CATEGORIES).reduce(
       if (nodeType === "output") overrides.icon = CheckSquare;
       if (nodeType === "sticky_note") overrides.icon = StickyNote;
       if (nodeType === "discussion") overrides.icon = MessageSquare;
+      if (nodeType === "save_dataset") overrides.icon = FileOutput;
 
       acc[nodeType] = {
         category: catKey,
@@ -524,6 +533,28 @@ export const NODE_OUTPUTS = {
     success: "boolean",
     fileName: "string",
     fileSize: "number",
+  },
+  extract: {
+    success: "boolean",
+    records: "array",
+    count: "number",
+    batchCount: "number",
+    added: "number",
+    duplicatesSkipped: "number",
+    total: "number",
+    selector: "string",
+    variableName: "string",
+    accumulateInto: "string",
+    dedupeKey: "string",
+  },
+  save_dataset: {
+    success: "boolean",
+    path: "string",
+    fileName: "string",
+    format: "string",
+    records: "number",
+    bytes: "number",
+    downloadUrl: "string",
   },
 
   // --- Composition ---

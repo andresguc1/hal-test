@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   validateNodeConfig,
   cleanNodeConfiguration,
+  getSmartLabel,
   NODE_INPUTS,
 } from "./validationRules";
 
@@ -131,6 +132,58 @@ describe("cleanNodeConfiguration", () => {
   it("handles null/undefined config gracefully", () => {
     expect(cleanNodeConfiguration(null, "assert")).toEqual({});
     expect(cleanNodeConfiguration(undefined, "assert")).toEqual({});
+  });
+});
+
+describe("Data extraction node configs", () => {
+  it("extract requires an item selector", () => {
+    expect(validateNodeConfig("extract", { selector: "" }).isValid).toBe(false);
+    expect(
+      validateNodeConfig("extract", { selector: "li.product" }).isValid,
+    ).toBe(true);
+  });
+
+  it("cleanNodeConfiguration preserves extraction fields", () => {
+    const cleaned = cleanNodeConfiguration(
+      {
+        selector: "li.product",
+        repeated: true,
+        fields: [{ name: "title", source: "text", selector: ".title" }],
+        outputVariable: "products",
+        accumulateInto: "all",
+        dedupeKey: "id",
+        ifEmpty: "fail",
+        timeoutMs: 5000,
+        totallyUnknownKey: "drop me",
+      },
+      "extract",
+    );
+    expect(cleaned).not.toHaveProperty("totallyUnknownKey");
+    expect(cleaned.fields).toEqual([
+      { name: "title", source: "text", selector: ".title" },
+    ]);
+    expect(cleaned.outputVariable).toBe("products");
+    expect(cleaned.accumulateInto).toBe("all");
+    expect(cleaned.dedupeKey).toBe("id");
+    expect(cleaned.ifEmpty).toBe("fail");
+  });
+
+  it("save_dataset requires the source variable", () => {
+    expect(validateNodeConfig("save_dataset", { source: "" }).isValid).toBe(
+      false,
+    );
+    expect(validateNodeConfig("save_dataset", { source: "products" }).isValid).toBe(
+      true,
+    );
+  });
+
+  it("smart labels summarize the extraction", () => {
+    expect(
+      getSmartLabel("extract", { selector: "li.product", fields: [{ name: "a" }] }),
+    ).toContain("li.product");
+    expect(
+      getSmartLabel("save_dataset", { source: "products", format: "csv" }),
+    ).toContain("CSV");
   });
 });
 

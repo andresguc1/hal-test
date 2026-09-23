@@ -1,0 +1,480 @@
+{
+  "generated": "2026-09-23T16:17:00.832Z",
+  "engineSoftware": {
+    "dagre": "0.8.5 (prod pre-pass config)",
+    "elk": "elkjs bundled (layered, ORTHOGONAL)",
+    "custom": "hand-rolled layered (longest-path + barycenter)"
+  },
+  "fixtures": {
+    "A@250": {
+      "fixtureHash": "a6fca8c6c297e8e6",
+      "engines": {
+        "dagre": {
+          "crossings": 0,
+          "passthrough": 0,
+          "edgeLenTotal": 77190,
+          "edgeLenMax": 310,
+          "edgeLenMean": 310,
+          "bboxWidth": 77410,
+          "bboxHeight": 72,
+          "area": 5573520,
+          "aspect": 1075.14,
+          "deterministic": true,
+          "ms": 1841,
+          "positionHash": "f9865851"
+        },
+        "elk": {
+          "crossings": 0,
+          "passthrough": 0,
+          "edgeLenTotal": 77190,
+          "edgeLenMax": 310,
+          "edgeLenMean": 310,
+          "bboxWidth": 77410,
+          "bboxHeight": 72,
+          "area": 5573520,
+          "aspect": 1075.14,
+          "deterministic": true,
+          "ms": 729,
+          "positionHash": "56054058"
+        },
+        "custom": {
+          "crossings": 0,
+          "passthrough": 0,
+          "edgeLenTotal": 32868,
+          "edgeLenMax": 132,
+          "edgeLenMean": 132,
+          "bboxWidth": 220,
+          "bboxHeight": 32940,
+          "area": 7246800,
+          "aspect": 0.01,
+          "deterministic": true,
+          "ms": 3,
+          "positionHash": "b0d07c5b"
+        }
+      }
+    },
+    "A@500": {
+      "fixtureHash": "5b242866923ff29e",
+      "engines": {
+        "dagre": {
+          "crossings": 0,
+          "passthrough": 0,
+          "edgeLenTotal": 154690,
+          "edgeLenMax": 310,
+          "edgeLenMean": 310,
+          "bboxWidth": 154910,
+          "bboxHeight": 72,
+          "area": 11153520,
+          "aspect": 2151.53,
+          "deterministic": true,
+          "ms": 2198,
+          "positionHash": "f4a08714"
+        },
+        "elk": {
+          "crossings": 0,
+          "passthrough": 0,
+          "edgeLenTotal": 154690,
+          "edgeLenMax": 310,
+          "edgeLenMean": 310,
+          "bboxWidth": 154910,
+          "bboxHeight": 72,
+          "area": 11153520,
+          "aspect": 2151.53,
+          "deterministic": true,
+          "ms": 809,
+          "positionHash": "68c2ca7d"
+        },
+        "custom": {
+          "crossings": 0,
+          "passthrough": 0,
+          "edgeLenTotal": 65868,
+          "edgeLenMax": 132,
+          "edgeLenMean": 132,
+          "bboxWidth": 220,
+          "bboxHeight": 65940,
+          "area": 14506800,
+          "aspect": 0,
+          "deterministic": true,
+          "ms": 3,
+          "positionHash": "77df4a9d"
+        }
+      }
+    },
+    "B@100": {
+      "fixtureHash": "c5cd6eccf5ea9226",
+      "engines": {
+        "dagre": {
+          "crossings": 0,
+          "passthrough": 0,
+          "edgeLenTotal": 32010,
+          "edgeLenMax": 337,
+          "edgeLenMean": 323,
+          "bboxWidth": 15720,
+          "bboxHeight": 6408,
+          "area": 100733760,
+          "aspect": 2.45,
+          "deterministic": true,
+          "ms": 343,
+          "positionHash": "a173ce08"
+        },
+        "elk": {
+          "crossings": 0,
+          "passthrough": 0,
+          "edgeLenTotal": 31800,
+          "edgeLenMax": 332,
+          "edgeLenMean": 321,
+          "bboxWidth": 15720,
+          "bboxHeight": 960,
+          "area": 15091200,
+          "aspect": 16.38,
+          "deterministic": true,
+          "ms": 198,
+          "positionHash": "07323273"
+        },
+        "custom": {
+          "crossings": 0,
+          "passthrough": 49,
+          "edgeLenTotal": 19536,
+          "edgeLenMax": 264,
+          "edgeLenMean": 197,
+          "bboxWidth": 220,
+          "bboxHeight": 13140,
+          "area": 2890800,
+          "aspect": 0.02,
+          "deterministic": true,
+          "ms": 1,
+          "positionHash": "e7280cca"
+        }
+      }
+    },
+    "B@250": {
+      "fixtureHash": "5b6ac7e83238ad45",
+      "engines": {
+        "dagre": {
+          "crossings": 0,
+          "passthrough": 0,
+          "edgeLenTotal": 80530,
+          "edgeLenMax": 337,
+          "edgeLenMean": 323,
+          "bboxWidth": 38970,
+          "bboxHeight": 16176,
+          "area": 630378720,
+          "aspect": 2.41,
+          "deterministic": true,
+          "ms": 1322,
+          "positionHash": "208f8a2c"
+        },
+        "elk": {
+          "crossings": 0,
+          "passthrough": 0,
+          "edgeLenTotal": 79998,
+          "edgeLenMax": 332,
+          "edgeLenMean": 321,
+          "bboxWidth": 38970,
+          "bboxHeight": 3228,
+          "area": 125795160,
+          "aspect": 12.07,
+          "deterministic": true,
+          "ms": 134,
+          "positionHash": "9c5542a6"
+        },
+        "custom": {
+          "crossings": 0,
+          "passthrough": 124,
+          "edgeLenTotal": 49236,
+          "edgeLenMax": 264,
+          "edgeLenMean": 198,
+          "bboxWidth": 220,
+          "bboxHeight": 32940,
+          "area": 7246800,
+          "aspect": 0.01,
+          "deterministic": true,
+          "ms": 1,
+          "positionHash": "b0d07c5b"
+        }
+      }
+    },
+    "C@50": {
+      "fixtureHash": "1ef1d31aa58b903e",
+      "engines": {
+        "dagre": {
+          "crossings": 0,
+          "passthrough": 0,
+          "edgeLenTotal": 15341,
+          "edgeLenMax": 407,
+          "edgeLenMean": 313,
+          "bboxWidth": 4250,
+          "bboxHeight": 468,
+          "area": 1989000,
+          "aspect": 9.08,
+          "deterministic": true,
+          "ms": 38,
+          "positionHash": "dbd5fe83"
+        },
+        "elk": {
+          "crossings": 0,
+          "passthrough": 0,
+          "edgeLenTotal": 15337,
+          "edgeLenMax": 403,
+          "edgeLenMean": 313,
+          "bboxWidth": 4250,
+          "bboxHeight": 468,
+          "area": 1989000,
+          "aspect": 9.08,
+          "deterministic": true,
+          "ms": 108,
+          "positionHash": "3808218d"
+        },
+        "custom": {
+          "crossings": 0,
+          "passthrough": 72,
+          "edgeLenTotal": 15972,
+          "edgeLenMax": 4884,
+          "edgeLenMean": 326,
+          "bboxWidth": 220,
+          "bboxHeight": 6540,
+          "area": 1438800,
+          "aspect": 0.03,
+          "deterministic": true,
+          "ms": 0,
+          "positionHash": "8b302544"
+        }
+      }
+    },
+    "D@100": {
+      "fixtureHash": "1e7c24fd2f1e542d",
+      "engines": {
+        "dagre": {
+          "crossings": 0,
+          "passthrough": 0,
+          "edgeLenTotal": 64356,
+          "edgeLenMax": 337,
+          "edgeLenMean": 323,
+          "bboxWidth": 31220,
+          "bboxHeight": 13140,
+          "area": 410230800,
+          "aspect": 2.38,
+          "deterministic": true,
+          "ms": 1025,
+          "positionHash": "32acb661"
+        },
+        "elk": {
+          "crossings": 0,
+          "passthrough": 0,
+          "edgeLenTotal": 63932,
+          "edgeLenMax": 332,
+          "edgeLenMean": 321,
+          "bboxWidth": 31220,
+          "bboxHeight": 2472,
+          "area": 77175840,
+          "aspect": 12.63,
+          "deterministic": true,
+          "ms": 333,
+          "positionHash": "0fc31571"
+        },
+        "custom": {
+          "crossings": 0,
+          "passthrough": 9900,
+          "edgeLenTotal": 1333068,
+          "edgeLenMax": 13200,
+          "edgeLenMean": 6699,
+          "bboxWidth": 220,
+          "bboxHeight": 26340,
+          "area": 5794800,
+          "aspect": 0.01,
+          "deterministic": true,
+          "ms": 1,
+          "positionHash": "8696e84a"
+        }
+      }
+    },
+    "E@10": {
+      "fixtureHash": "900ae61dcb60ad99",
+      "engines": {
+        "dagre": {
+          "crossings": 0,
+          "passthrough": 0,
+          "edgeLenTotal": 11091,
+          "edgeLenMax": 407,
+          "edgeLenMean": 347,
+          "bboxWidth": 3940,
+          "bboxHeight": 2580,
+          "area": 10165200,
+          "aspect": 1.53,
+          "deterministic": true,
+          "ms": 61,
+          "positionHash": "05806b3e"
+        },
+        "elk": {
+          "crossings": 0,
+          "passthrough": 0,
+          "edgeLenTotal": 10924,
+          "edgeLenMax": 396,
+          "edgeLenMean": 341,
+          "bboxWidth": 3940,
+          "bboxHeight": 582,
+          "area": 2293080,
+          "aspect": 6.77,
+          "deterministic": true,
+          "ms": 114,
+          "positionHash": "f33423e6"
+        },
+        "custom": {
+          "crossings": 0,
+          "passthrough": 29,
+          "edgeLenTotal": 8052,
+          "edgeLenMax": 396,
+          "edgeLenMean": 252,
+          "bboxWidth": 220,
+          "bboxHeight": 4164,
+          "area": 916080,
+          "aspect": 0.05,
+          "deterministic": true,
+          "ms": 0,
+          "positionHash": "72967ab4"
+        }
+      }
+    },
+    "F@6": {
+      "fixtureHash": "0b7ef37668535d35",
+      "engines": {
+        "dagre": {
+          "crossings": 0,
+          "passthrough": 0,
+          "edgeLenTotal": 1860,
+          "edgeLenMax": 310,
+          "edgeLenMean": 310,
+          "bboxWidth": 2080,
+          "bboxHeight": 72,
+          "area": 149760,
+          "aspect": 28.89,
+          "deterministic": true,
+          "ms": 20,
+          "positionHash": "99408a43"
+        },
+        "elk": {
+          "crossings": 0,
+          "passthrough": 0,
+          "edgeLenTotal": 1860,
+          "edgeLenMax": 310,
+          "edgeLenMean": 310,
+          "bboxWidth": 2080,
+          "bboxHeight": 72,
+          "area": 149760,
+          "aspect": 28.89,
+          "deterministic": true,
+          "ms": 25,
+          "positionHash": "a9dc3a77"
+        },
+        "custom": {
+          "crossings": 0,
+          "passthrough": 0,
+          "edgeLenTotal": 792,
+          "edgeLenMax": 132,
+          "edgeLenMean": 132,
+          "bboxWidth": 220,
+          "bboxHeight": 864,
+          "area": 190080,
+          "aspect": 0.25,
+          "deterministic": true,
+          "ms": 0,
+          "positionHash": "62abe854"
+        }
+      }
+    },
+    "G@52": {
+      "fixtureHash": "e9a9ee02f46cb42c",
+      "engines": {
+        "dagre": {
+          "crossings": 0,
+          "passthrough": 617,
+          "edgeLenTotal": 249143,
+          "edgeLenMax": 6475,
+          "edgeLenMean": 2443,
+          "bboxWidth": 1460,
+          "bboxHeight": 6540,
+          "area": 9548400,
+          "aspect": 0.22,
+          "deterministic": true,
+          "ms": 197,
+          "positionHash": "33d98819"
+        },
+        "elk": {
+          "crossings": 0,
+          "passthrough": 284,
+          "edgeLenTotal": 255813,
+          "edgeLenMax": 6474,
+          "edgeLenMean": 2508,
+          "bboxWidth": 2040,
+          "bboxHeight": 6540,
+          "area": 13341600,
+          "aspect": 0.31,
+          "deterministic": true,
+          "ms": 146,
+          "positionHash": "6e005d98"
+        },
+        "custom": {
+          "crossings": 0,
+          "passthrough": 2450,
+          "edgeLenTotal": 336864,
+          "edgeLenMax": 6600,
+          "edgeLenMean": 3303,
+          "bboxWidth": 220,
+          "bboxHeight": 7068,
+          "area": 1554960,
+          "aspect": 0.03,
+          "deterministic": true,
+          "ms": 0,
+          "positionHash": "55fb4ec7"
+        }
+      }
+    },
+    "H@50": {
+      "fixtureHash": "cb279011d3bc35e7",
+      "engines": {
+        "dagre": {
+          "crossings": 0,
+          "passthrough": 0,
+          "edgeLenTotal": 8060,
+          "edgeLenMax": 310,
+          "edgeLenMean": 310,
+          "bboxWidth": 7660,
+          "bboxHeight": 3372,
+          "area": 25829520,
+          "aspect": 2.27,
+          "deterministic": true,
+          "ms": 86,
+          "positionHash": "d8a4e008"
+        },
+        "elk": {
+          "crossings": 0,
+          "passthrough": 0,
+          "edgeLenTotal": 8060,
+          "edgeLenMax": 310,
+          "edgeLenMean": 310,
+          "bboxWidth": 7660,
+          "bboxHeight": 3372,
+          "area": 25829520,
+          "aspect": 2.27,
+          "deterministic": true,
+          "ms": 71,
+          "positionHash": "9c84990b"
+        },
+        "custom": {
+          "crossings": 0,
+          "passthrough": 0,
+          "edgeLenTotal": 3432,
+          "edgeLenMax": 132,
+          "edgeLenMean": 132,
+          "bboxWidth": 220,
+          "bboxHeight": 6540,
+          "area": 1438800,
+          "aspect": 0.03,
+          "deterministic": true,
+          "ms": 0,
+          "positionHash": "a7d1efae"
+        }
+      }
+    }
+  }
+}
