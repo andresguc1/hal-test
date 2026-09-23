@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../utils/api";
 import { NODE_STATES } from "../components/hooks/flowStyles";
 import { usePickerReplay } from "./usePickerReplay";
+import { pickBestSelector } from "../utils/selectorPriority";
 
 export const useElementPicker = ({
   selectedAction,
@@ -252,45 +253,6 @@ export const useElementPicker = ({
     ],
   );
 
-  const pickBestSelector = useCallback((data) => {
-    const sources = data.candidates || data.selectors || {};
-
-    const preferredOrder = [
-      "playwrightTestId",
-      "playwrightRole",
-      "playwrightLabel",
-      "playwrightPlaceholder",
-      "playwrightAltText",
-      "playwrightTitle",
-      "playwrightText",
-      "testId",
-      "id",
-      "name",
-      "aria",
-      "text",
-      "cssPath",
-      "xpath",
-    ];
-
-    for (const type of preferredOrder) {
-      const candidate = sources[type];
-      if (candidate) return candidate;
-    }
-
-    const fallbackMap = {
-      dataAttribute: sources.dataAttribute,
-      testId: sources.testId,
-      css: sources.css || sources.cssPath,
-      xpath: sources.xpath || sources.text,
-    };
-
-    for (const candidate of Object.values(fallbackMap)) {
-      if (candidate) return candidate;
-    }
-
-    return data.selector || data.sanitizedSelector || "";
-  }, []);
-
   const handleElementPicked = useCallback(
     async (data) => {
       console.log("[useElementPicker] Element Picked Event Received:", data);
@@ -317,7 +279,8 @@ export const useElementPicker = ({
       lastPickIdRef.current = pickId;
 
       try {
-        const finalSelector = pickBestSelector(data);
+        const result = pickBestSelector(data);
+        const finalSelector = result.selector;
 
         if (
           !finalSelector ||
@@ -449,7 +412,6 @@ export const useElementPicker = ({
       handleCancelPicking,
       setNodes,
       setNestedValue,
-      pickBestSelector,
       t,
       toast,
     ],

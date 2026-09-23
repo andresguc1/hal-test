@@ -474,3 +474,296 @@ export const getLayoutedElements = (nodes, edges, third) => {
 
   return [newNodes, newEdges];
 };
+
+/**
+ * Local layout variant: repositions ONLY selected nodes (and their
+ * directly connected edges) while leaving all other nodes at their
+ * EXACT original array indices and positions (byte-identical for
+ * non-participating nodes). This prevents triggering E5/P1/P8 couplings
+ * that depend on array order stability.
+ *
+ * @param {Array} nodes - ReactFlow nodes (original order preserved)
+ * @param {Array} edges - ReactFlow edges
+ * @param {string|Object} third - Direction string or options object
+ * @param {Set|Array} [selectedNodeIds] - Optional set of node ids to layout.
+ *   If omitted/empty, behaves like getLayoutedElements but preserves order.
+ * @returns {Array} - [layoutedNodes, layoutedEdges] in ORIGINAL node order.
+ */
+export const getLayoutedElementsLocal = (nodes, edges, third, selectedNodeIds) => {
+  if (!nodes || nodes.length === 0) return [[], []];
+
+  const selected = selectedNodeIds ? new Set(selectedNodeIds) : new Set();
+  const isLocal = selected.size > 0;
+
+  const { direction, spacing } = normalizeOptions(third);
+
+  const allEdges = edges || [];
+  const nodeById = new Map();
+  const nodeIndexById = new Map();
+  nodes.forEach((n, i) => {
+    nodeById.set(n.id, n);
+    nodeIndexById.set(n.id, i);
+  });
+
+  let layoutNodes;
+  let layoutEdges;
+
+  if (isLocal) {
+    // Build the induced subgraph: selected nodes + their immediate neighbors
+    const subgraphNodeIds = new Set(selected);
+    allEdges.forEach((e) => {
+      if (selected.has(e.source)) subgraphNodeIds.add(e.target);
+      if (selected.has(e.target)) subgraphNodeIds.add(e.source);
+    });
+
+    layoutNodes = nodes.filter((n) => subgraphNodeIds.has(n.id));
+    layoutEdges = allEdges.filter(
+      (e) => subgraphNodeIds.has(e.source) && subgraphNodeIds.has(e.target),
+    );
+  } else {
+    layoutNodes = nodes;
+    layoutEdges = allEdges;
+  }
+
+  // Determinism: sort nodes/edges for dagre (same as getLayoutedElements)
+  const sortedNodes = [...layoutNodes].sort((a, b) =>
+    (a.id || "").localeCompare(b.id || ""),
+  );
+  const sortedEdges = [...layoutEdges].sort((a, b) => {
+    const laneA = getLaneIndex(a, nodeById);
+    const laneB = getLaneIndex(b, nodeById);
+    if (laneA !== laneB) return laneA - laneB;
+    const srcCmp = (a.source || "").localeCompare(b.source || "");
+    if (srcCmp !== 0) return srcCmp;
+    return (a.target || "").localeCompare(b.target || "");
+  });
+
+  const sizeById = new Map();
+  sortedNodes.forEach((node) => {
+    sizeById.set(node.id, getLayoutSize(node));
+  });
+
+  const isVertical = direction === "TB" || direction === "BT";
+
+  const dagreGraph = new dagre.graphlib.Graph();
+  dagreGraph.setDefaultEdgeLabel(() => ({}));
+  dagreGraph.setGraph({
+    compound: true,
+    rankdir: direction,
+    align: "UL",
+    ranker: "tight-tree",
+    nodesep: spacing.nodesep,
+    ranksep: spacing.ranksep,
+    marginx: 50,
+    marginy: 50,
+  });
+
+  sortedNodes.forEach((node) => {
+    const { width, height } = sizeById.get(node.id);
+    dagreGraph.setNode(node.id, { width, height });
+    if (node.parentNode) {
+      dagreGraph.setParent(node.id, node.parentNode);
+    }
+  });
+
+  if (sortedEdges.length > 0) {
+    const laneWeight = (lane) => (lane < 0 ? 1 : 100 - lane * 10);
+    sortedEdges.forEach((edge) => {
+      const lane = getLaneIndex(edge, nodeById);
+      dagreGraph.setEdge(edge.source, edge.target, {
+        weight: laneWeight(lane),
+      });
+      if (!dagre.graphlib.alg.isAcyclic(dagreGraph)) {
+        dagreGraph.removeEdge(edge.source, edge.target);
+      }
+    });
+  }
+
+  dagre.layout(dagreGraph);
+
+  // Post-pass: branch separation & merge awareness (same as getLayoutedElements)
+  const positions = new Map();
+  const nodeIds = new Set();
+  sortedNodes.forEach((node) => {
+    const gNode = dagreGraph.node(node.id);
+    const { width, height } = sizeById.get(node.id);
+    nodeIds.add(node.id);
+    positions.set(node.id, {
+      x: gNode.x - width / 2,
+      y: gNode.y - height / 2,
+      w: width,
+      h: height,
+    });
+  });
+
+  // ... (post-pass logic copied from getLayoutedElements for vertical/LR)
+  // For brevity, we reuse the existing post-pass by extracting it to a helper
+  // but for the spike we'll apply the same logic inline:
+
+  if (!isVertical) {
+    const outgoingMap = new Map();
+    const incomingSources = new Map();
+    sortedEdges.forEach((edge) => {
+      if (!outgoingMap.has(edge.source)) outgoingMap.set(edge.source, []);
+      outgoingMap.get(edge.source).push(edge.target);
+      if (!incomingSources.has(edge.target)) {
+        incomingSources.set(edge.target, new Set());
+      }
+      incomingSources.get(edge.target).add(edge.source);
+    });
+
+    sortedNodes.forEach((node) => {
+      const branches = getSemanticBranches(node);
+      if (branches.length < 2) return;
+      const lanes = [];
+      sortedEdges.forEach((edge) => {
+        if (edge.source !== node.id) return;
+        const lane = getLaneIndex(edge, nodeById);
+        if (lane < 0) return;
+        lanes.push({ lane, target: edge.target });
+      });
+      lanes.sort((a, b) => a.lane - b.lane);
+      const uniqueTargets = [];
+      const seenTargets = new Set();
+      for (const { lane, target } of lanes) {
+        if (seenTargets.has(target)) continue;
+        seenTargets.add(target);
+        uniqueTargets.push({ lane, target });
+      }
+      if (uniqueTargets.length < 2) return;
+
+      const descSets = new Map();
+      uniqueTargets.forEach(({ target }) => {
+        descSets.set(target, getDescendantSet(target, nodeIds, outgoingMap));
+      });
+      const sharedSet = new Set();
+      const occurrence = new Map();
+      descSets.forEach((set) => {
+        set.forEach((id) => occurrence.set(id, (occurrence.get(id) || 0) + 1));
+      });
+      occurrence.forEach((count, id) => {
+        if (count > 1) sharedSet.add(id);
+      });
+
+      let laneCursor = -Infinity;
+      for (const { target } of uniqueTargets) {
+        const span = exclusiveSpan(
+          target,
+          nodeIds,
+          outgoingMap,
+          positions,
+          sharedSet,
+        );
+        if (!span) continue;
+        if (laneCursor === -Infinity) {
+          laneCursor = span.yMax;
+          continue;
+        }
+        const needed = laneCursor + spacing.branchSpacing - span.yMin;
+        if (needed > 0) {
+          shiftSubtree(target, needed, nodeIds, outgoingMap, positions);
+        }
+        const newSpan = exclusiveSpan(
+          target,
+          nodeIds,
+          outgoingMap,
+          positions,
+          sharedSet,
+        );
+        laneCursor = Math.max(laneCursor, newSpan ? newSpan.yMax : 0);
+      }
+    });
+
+    const mergeNodeIds = sortedNodes
+      .filter((node) => {
+        const sources = incomingSources.get(node.id);
+        return sources && sources.size >= 2;
+      })
+      .map((node) => node.id);
+
+    const MAX_ITER = Math.max(16, mergeNodeIds.length * 2);
+    let moved = true;
+    let iter = 0;
+    while (moved && iter < MAX_ITER) {
+      moved = false;
+      iter += 1;
+      for (const id of mergeNodeIds) {
+        const p = positions.get(id);
+        if (!p) continue;
+        const sources = incomingSources.get(id);
+        let desiredY = p.y;
+        sources.forEach((srcId) => {
+          const sp = positions.get(srcId);
+          if (sp) desiredY = Math.max(desiredY, sp.y + sp.h + spacing.mergeSpacing);
+        });
+        if (desiredY <= p.y) continue;
+
+        // Column collision check (same as getLayoutedElements)
+        const columnIds = new Map();
+        sortedNodes.forEach((node) => {
+          const pos = positions.get(node.id);
+          if (!pos) return;
+          const cx = Math.round(pos.x + pos.w / 2);
+          if (!columnIds.has(cx)) columnIds.set(cx, []);
+          columnIds.get(cx).push(node.id);
+        });
+
+        const cx = Math.round(p.x + p.w / 2);
+        const siblings = columnIds.get(cx) || [];
+        let candidateY = desiredY;
+        let progressed = true;
+        while (progressed) {
+          progressed = false;
+          for (const otherId of siblings) {
+            if (otherId === id) continue;
+            const o = positions.get(otherId);
+            if (!o) continue;
+            if (
+              p.x + p.w > o.x &&
+              o.x + o.w > p.x &&
+              candidateY + p.h > o.y &&
+              o.y + o.h > candidateY
+            ) {
+              const newY = o.y + o.h + 4;
+              if (newY > candidateY) {
+                candidateY = newY;
+                progressed = true;
+              }
+            }
+          }
+        }
+        if (candidateY > p.y) {
+          p.y = candidateY;
+          moved = true;
+        }
+      }
+    }
+  }
+
+  // Build new nodes preserving ORIGINAL order
+  const newNodes = nodes.map((node) => {
+    const p = positions.get(node.id);
+    if (p) {
+      return {
+        ...node,
+        position: { x: p.x, y: p.y },
+        ...(isVertical
+          ? { targetPosition: "top", sourcePosition: "bottom" }
+          : { targetPosition: "left", sourcePosition: "right" }),
+      };
+    }
+    return node; // unchanged (non-selected)
+  });
+
+  // Edges: only those in layout subgraph get new layouted positions
+  const newEdges = allEdges.map((edge) => {
+    const srcPos = positions.get(edge.source);
+    const tgtPos = positions.get(edge.target);
+    if (srcPos && tgtPos) {
+      return { ...edge };
+    }
+    return edge; // unchanged
+  });
+
+  return [newNodes, newEdges];
+};
