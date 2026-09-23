@@ -1,0 +1,109 @@
+{
+  "generated": "2026-09-23T16:17:39.396Z",
+  "runs": [
+    {
+      "dataset": "linear",
+      "size": 100,
+      "inThreadMedianMs": 401.8,
+      "inThreadP95Ms": 743.2,
+      "serTimeMedianMs": 1.5,
+      "serTimeP95Ms": 1.8,
+      "serSizeKB": 17.4,
+      "workerModelMedianMs": 404.8,
+      "workerModelP95Ms": 746.8,
+      "crossoverMedian": false,
+      "crossoverP95": false
+    },
+    {
+      "dataset": "linear",
+      "size": 250,
+      "inThreadMedianMs": 715.7,
+      "inThreadP95Ms": 1393.4,
+      "serTimeMedianMs": 16.1,
+      "serTimeP95Ms": 17.8,
+      "serSizeKB": 44.9,
+      "workerModelMedianMs": 747.8,
+      "workerModelP95Ms": 1429,
+      "crossoverMedian": false,
+      "crossoverP95": false
+    },
+    {
+      "dataset": "linear",
+      "size": 500,
+      "inThreadMedianMs": 5755.2,
+      "inThreadP95Ms": 6024.8,
+      "serTimeMedianMs": 10,
+      "serTimeP95Ms": 10.2,
+      "serSizeKB": 90.4,
+      "workerModelMedianMs": 5775.3,
+      "workerModelP95Ms": 6045.2,
+      "crossoverMedian": false,
+      "crossoverP95": false
+    },
+    {
+      "dataset": "linear",
+      "size": 1000,
+      "inThreadMedianMs": 13370.6,
+      "inThreadP95Ms": 14425.5,
+      "serTimeMedianMs": 13.5,
+      "serTimeP95Ms": 14.5,
+      "serSizeKB": 181.6,
+      "workerModelMedianMs": 13397.5,
+      "workerModelP95Ms": 14454.4,
+      "crossoverMedian": false,
+      "crossoverP95": false
+    },
+    {
+      "dataset": "branching",
+      "size": 100,
+      "inThreadMedianMs": 128.1,
+      "inThreadP95Ms": 158.6,
+      "serTimeMedianMs": 6.9,
+      "serTimeP95Ms": 7,
+      "serSizeKB": 19.8,
+      "workerModelMedianMs": 141.9,
+      "workerModelP95Ms": 172.5,
+      "crossoverMedian": false,
+      "crossoverP95": false
+    },
+    {
+      "dataset": "branching",
+      "size": 250,
+      "inThreadMedianMs": 1394.8,
+      "inThreadP95Ms": 1418.6,
+      "serTimeMedianMs": 4.6,
+      "serTimeP95Ms": 6.3,
+      "serSizeKB": 50.6,
+      "workerModelMedianMs": 1404.1,
+      "workerModelP95Ms": 1431.1,
+      "crossoverMedian": false,
+      "crossoverP95": false
+    },
+    {
+      "dataset": "branching",
+      "size": 500,
+      "inThreadMedianMs": 4626.1,
+      "inThreadP95Ms": 4716.9,
+      "serTimeMedianMs": 3,
+      "serTimeP95Ms": 3.1,
+      "serSizeKB": 102.5,
+      "workerModelMedianMs": 4632.1,
+      "workerModelP95Ms": 4723,
+      "crossoverMedian": false,
+      "crossoverP95": false
+    },
+    {
+      "dataset": "branching",
+      "size": 1000,
+      "inThreadMedianMs": 11643.7,
+      "inThreadP95Ms": 16365.6,
+      "serTimeMedianMs": 12.6,
+      "serTimeP95Ms": 14.3,
+      "serSizeKB": 206,
+      "workerModelMedianMs": 11668.9,
+      "workerModelP95Ms": 16394.2,
+      "crossoverMedian": false,
+      "crossoverP95": false
+    }
+  ]
+}
