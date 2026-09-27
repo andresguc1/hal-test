@@ -108,6 +108,20 @@ function captureProcessRef(browser) {
 }
 
 /**
+ * A headed (visible) browser needs a display server. macOS and Windows always
+ * have one; Linux only when DISPLAY (X11) or WAYLAND_DISPLAY is set. Cloud
+ * hosts (Render, Docker) run Linux without any display, so a headed launch
+ * there always fails with Playwright's "launched a headed browser without
+ * having a XServer running" error.
+ *
+ * @returns {boolean}
+ */
+export function canRunHeaded() {
+    if (process.platform !== 'linux') return true;
+    return Boolean(process.env.DISPLAY || process.env.WAYLAND_DISPLAY);
+}
+
+/**
  * Single source of truth for the effective `headless` value of a launch.
  * Unifies the two auto-launch paths (ActionExecutor implicit launch and
  * browser-utils.getActivePage) so explicit node configuration always wins,
@@ -117,6 +131,7 @@ function captureProcessRef(browser) {
  * @returns {boolean}
  */
 export function resolveEffectiveHeadless({ explicitHeadless, debugMode } = {}) {
+    if (!canRunHeaded()) return true;
     if (explicitHeadless !== undefined && explicitHeadless !== null) {
         return explicitHeadless === true || explicitHeadless === 'true';
     }
@@ -281,6 +296,15 @@ class BrowserManager {
                 '[BrowserService] Production environment detected - defaulting to headless',
             );
             headless = true;
+        }
+
+        let headlessForced = false;
+        if (!headless && !canRunHeaded()) {
+            console.warn(
+                '[BrowserService] No display server available (DISPLAY/WAYLAND_DISPLAY unset) - forcing headless',
+            );
+            headless = true;
+            headlessForced = true;
         }
 
         // 1. Select the browser engine
@@ -453,7 +477,14 @@ class BrowserManager {
         this.set(browserId, {
             browser,
             launchMethod,
-            options: { ...options, headless, launchArgs, maximizeWindow, recordVideo },
+            options: {
+                ...options,
+                headless,
+                ...(headlessForced && { headlessForced }),
+                launchArgs,
+                maximizeWindow,
+                recordVideo,
+            },
             // --- SESSION OWNERSHIP (Fase 0) ---
             profileHash,
             runId: options.runId || null,
@@ -476,7 +507,7 @@ class BrowserManager {
             this.registerRunSession(options.runId, browserId);
         }
 
-        return { browserId, browser, version };
+        return { browserId, browser, version, headless, headlessForced };
     }
 
     set(id, entry) {

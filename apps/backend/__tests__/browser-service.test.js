@@ -307,3 +307,90 @@ describe('BrowserService - Session Ownership (Fase 0)', () => {
         expect(after).toBeGreaterThanOrEqual(before);
     });
 });
+
+// =============================================================================
+// HEADLESS ENFORCEMENT WITHOUT A DISPLAY SERVER (cloud / Docker hosts)
+// =============================================================================
+describe('BrowserService - Headless enforcement without display server', () => {
+    let browserService;
+    let resolveEffectiveHeadless;
+    let canRunHeaded;
+    let chromium;
+    const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
+
+    const setPlatform = (value) =>
+        Object.defineProperty(process, 'platform', { value, configurable: true });
+
+    beforeEach(async () => {
+        const mod = await import('../services/browser.service.js');
+        browserService = mod.browserService;
+        resolveEffectiveHeadless = mod.resolveEffectiveHeadless;
+        canRunHeaded = mod.canRunHeaded;
+        ({ chromium } = await import('playwright'));
+        chromium.launch.mockClear();
+        vi.stubEnv('DISPLAY', undefined);
+        vi.stubEnv('WAYLAND_DISPLAY', undefined);
+        vi.stubEnv('HAL_CLI_MODE', undefined);
+    });
+
+    afterEach(async () => {
+        for (const id of Array.from(browserService.keys())) {
+            await browserService.delete(id).catch(() => {});
+        }
+        vi.unstubAllEnvs();
+        Object.defineProperty(process, 'platform', originalPlatform);
+    });
+
+    it('reports that headed mode is unavailable on linux without DISPLAY', () => {
+        setPlatform('linux');
+        expect(canRunHeaded()).toBe(false);
+    });
+
+    it('reports that headed mode is available on linux with DISPLAY', () => {
+        setPlatform('linux');
+        vi.stubEnv('DISPLAY', ':0');
+        expect(canRunHeaded()).toBe(true);
+    });
+
+    it('reports that headed mode is available on non-linux hosts', () => {
+        setPlatform('darwin');
+        expect(canRunHeaded()).toBe(true);
+    });
+
+    it('forces headless when headless:false is requested on a host without display', async () => {
+        setPlatform('linux');
+
+        const { browserId, headless } = await browserService.launchBrowser({
+            browserType: 'chromium',
+            headless: false,
+            devicePreset: 'Desktop',
+        });
+
+        expect(headless).toBe(true);
+        expect(chromium.launch).toHaveBeenCalledWith(expect.objectContaining({ headless: true }));
+        const entry = browserService.get(browserId);
+        expect(entry.options.headless).toBe(true);
+        expect(entry.options.headlessForced).toBe(true);
+    });
+
+    it('keeps headless:false when the host has a display server', async () => {
+        setPlatform('linux');
+        vi.stubEnv('DISPLAY', ':0');
+
+        const { browserId, headless } = await browserService.launchBrowser({
+            browserType: 'chromium',
+            headless: false,
+            devicePreset: 'Desktop',
+        });
+
+        expect(headless).toBe(false);
+        expect(chromium.launch).toHaveBeenCalledWith(expect.objectContaining({ headless: false }));
+        expect(browserService.get(browserId).options.headlessForced).toBeUndefined();
+    });
+
+    it('resolveEffectiveHeadless ignores an explicit false when no display is available', () => {
+        setPlatform('linux');
+        expect(resolveEffectiveHeadless({ explicitHeadless: false })).toBe(true);
+        expect(resolveEffectiveHeadless({ debugMode: true })).toBe(true);
+    });
+});

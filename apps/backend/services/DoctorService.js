@@ -2,6 +2,7 @@ import * as os from 'os';
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
+import { canRunHeaded } from './browser.service.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -128,7 +129,18 @@ class DoctorService {
 
         const ok = versionSupported && allBrowsersInstalled;
 
+        const display = {
+            headedSupported: canRunHeaded(),
+            DISPLAY: process.env.DISPLAY || null,
+            WAYLAND_DISPLAY: process.env.WAYLAND_DISPLAY || null,
+        };
+
         const guidance = [];
+        if (!display.headedSupported) {
+            guidance.push(
+                'Este host no tiene servidor gráfico (DISPLAY/WAYLAND_DISPLAY vacíos): los navegadores se lanzan en headless aunque el nodo pida modo visible. Para modo visible en Linux instalá xvfb y arrancá con: xvfb-run pnpm start',
+            );
+        }
         if (!allBrowsersInstalled) {
             guidance.push(
                 `Faltan binarios de navegador (${missing.join(', ')}). Instáalos con: npx playwright install ${REQUIRED_BROWSERS.join(' ')}`,
@@ -161,6 +173,7 @@ class DoctorService {
             cacheDir,
             missing,
             allBrowsersInstalled,
+            display,
             guidance,
         };
         return this._cached;
@@ -168,6 +181,9 @@ class DoctorService {
 
     async runStartupCheck() {
         const report = this.check();
+        if (!report.display.headedSupported) {
+            console.log('[Doctor] ℹ️ Sin servidor gráfico: los navegadores correrán en headless.');
+        }
         if (report.ok) {
             console.log(
                 `[Doctor] ✅ Playwright ${report.playwright} con ${REQUIRED_BROWSERS.filter((b) => report.browsers[b]).join(', ')} listo en ${report.os.key}.`,
