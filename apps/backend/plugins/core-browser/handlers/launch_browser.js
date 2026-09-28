@@ -113,11 +113,20 @@ const launchBrowserAction = async (req, res) => {
             '[ACTION] Starting browser launch with options:',
             JSON.stringify(resolvedBody, null, 2),
         );
-        const { browserId, version } = await browserService.launchBrowser(resolvedBody);
+        const { browserId, version, headless, headlessForced } =
+            await browserService.launchBrowser(resolvedBody);
         launchedBrowserId = browserId;
 
+        if (headlessForced) {
+            smartEmitLog(
+                'This host has no display server: browser launched in headless mode instead of visible mode',
+                'warning',
+                nodeId,
+            );
+        }
+
         // Ensure a visual page/window exists if launching in visible mode
-        if (!resolvedBody.headless) {
+        if (!headless) {
             try {
                 const entry = browserService.get(browserId);
                 if (entry && entry.browser) {

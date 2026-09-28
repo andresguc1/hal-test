@@ -2,11 +2,7 @@
 // Extracted from action.controller.js for reuse across plugins
 // ==========================================================
 
-import {
-    browserService,
-    computeProfileHash,
-    resolveEffectiveHeadless,
-} from '../services/browser.service.js';
+import { browserService, computeProfileHash } from '../services/browser.service.js';
 import { networkHistoryService } from '../services/NetworkHistoryService.js';
 import { SecurityAuditor } from '../services/SecurityAuditor.js';
 import { DataLeakEngine } from '../services/security/DataLeakEngine.js';
@@ -729,14 +725,8 @@ async function getActivePage(req, browserId) {
     if (validation.error) {
         try {
             console.log('[getActivePage] No active browser session. Auto-launching browser...');
-            const launchOpts = {
-                ...req.body,
-                headless: resolveEffectiveHeadless({
-                    explicitHeadless: req.body?.headless,
-                    debugMode: req.body?.debugMode,
-                }),
-            };
-            const { browserId: newId } = await browserService.launchBrowser(launchOpts);
+            // launchBrowser() owns the headless policy, so the body is forwarded untouched.
+            const { browserId: newId } = await browserService.launchBrowser({ ...req.body });
             validation = validateBrowser(req, newId);
         } catch (e) {
             console.error('[getActivePage] Auto-launch failed:', e.message);

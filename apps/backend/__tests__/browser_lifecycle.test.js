@@ -48,8 +48,10 @@ vi.mock('fs', async (importOriginal) => {
 // Avoid the 30s interval interfering with assertions.
 vi.useFakeTimers();
 
-import { browserService, resolveEffectiveHeadless } from '../services/browser.service.js';
+import { browserService, resolveHeadlessPolicy } from '../services/browser.service.js';
 import { validateBrowser, createIsolatedContext } from '../core/browser-utils.js';
+import { chromium } from 'playwright';
+import { givenDesktopHost, givenHeadlessHost } from './helpers/display.js';
 
 const launchProfile = (overrides = {}) =>
     browserService.launchBrowser({ browserType: 'chromium', headless: false, ...overrides });
@@ -100,7 +102,9 @@ describe('Fase 2 - Session Registry', () => {
     });
 
     it('releaseRun keeps a visible workspace session open (Debug persistence)', async () => {
+        givenDesktopHost();
         const { browserId } = await launchProfile({ runId: 'run-1' }); // headless: false
+        expect(browserService.get(browserId).options.headless).toBe(false);
         const closedId = await browserService.releaseRun('run-1');
         expect(closedId).toBe(browserId);
         expect(browserService.has(browserId)).toBe(true);
@@ -266,7 +270,9 @@ describe('Idle sweep - visible workspace persistence', () => {
     });
 
     it('never idle-closes a visible (headful) session while the user edits', async () => {
+        givenDesktopHost();
         const { browserId } = await launchProfile(); // headless: false
+        expect(browserService.get(browserId).options.headless).toBe(false);
         browserService.lastAccessed.set(browserId, Date.now() - 10 * 60 * 1000);
         await browserService._idleSweep(Date.now());
         expect(browserService.has(browserId)).toBe(true);
@@ -311,28 +317,68 @@ describe('Fase 5 - unified headless policy', () => {
         process.env.HAL_CLI_MODE = ENV.HAL_CLI_MODE;
     });
 
-    it('explicit node configuration always wins', () => {
+    // Every case below states the host it runs against: a host with no display
+    // server cannot honour a request for a visible window.
+
+    it('explicit node configuration wins on a host with a display', () => {
+        givenDesktopHost();
         process.env.NODE_ENV = 'development';
-        expect(resolveEffectiveHeadless({ explicitHeadless: true, debugMode: true })).toBe(true);
-        expect(resolveEffectiveHeadless({ explicitHeadless: false, debugMode: false })).toBe(false);
-        expect(resolveEffectiveHeadless({ explicitHeadless: 'true' })).toBe(true);
+        expect(resolveHeadlessPolicy({ explicitHeadless: true, debugMode: true })).toEqual({
+            headless: true,
+            forced: false,
+        });
+        expect(resolveHeadlessPolicy({ explicitHeadless: false, debugMode: false })).toEqual({
+            headless: false,
+            forced: false,
+        });
+        expect(resolveHeadlessPolicy({ explicitHeadless: 'true' })).toEqual({
+            headless: true,
+            forced: false,
+        });
     });
 
-    it('debug sessions default to a visible window', () => {
+    it('debug sessions default to a visible window on a host with a display', () => {
+        givenDesktopHost();
         process.env.NODE_ENV = 'production';
-        expect(resolveEffectiveHeadless({ debugMode: true })).toBe(false);
+        expect(resolveHeadlessPolicy({ debugMode: true })).toEqual({
+            headless: false,
+            forced: false,
+        });
     });
 
     it('production (non-CLI) defaults to headless', () => {
+        givenDesktopHost();
         process.env.NODE_ENV = 'production';
         delete process.env.HAL_CLI_MODE;
-        expect(resolveEffectiveHeadless({})).toBe(true);
+        expect(resolveHeadlessPolicy({})).toEqual({ headless: true, forced: false });
     });
 
     it('CLI mode is interactive by default even in production', () => {
+        givenDesktopHost();
         process.env.NODE_ENV = 'production';
         process.env.HAL_CLI_MODE = 'true';
-        expect(resolveEffectiveHeadless({})).toBe(false);
+        expect(resolveHeadlessPolicy({})).toEqual({ headless: false, forced: false });
+    });
+
+    it('downgrades a visible request to headless on a host with no display', () => {
+        givenHeadlessHost();
+        process.env.NODE_ENV = 'development';
+        expect(resolveHeadlessPolicy({ explicitHeadless: false, debugMode: false })).toEqual({
+            headless: true,
+            forced: true,
+        });
+        expect(resolveHeadlessPolicy({ debugMode: true })).toEqual({
+            headless: true,
+            forced: true,
+        });
+    });
+
+    it('leaves an explicit headless request untouched on a host with no display', () => {
+        givenHeadlessHost();
+        expect(resolveHeadlessPolicy({ explicitHeadless: true })).toEqual({
+            headless: true,
+            forced: false,
+        });
     });
 });
 
@@ -406,5 +452,59 @@ describe('Fase 6 - Session Seal & Orphan Kill', () => {
         expect(await browserService.killOrphans()).toBe(0);
         expect(scanSpy).not.toHaveBeenCalled();
         scanSpy.mockRestore();
+    });
+});
+
+// =============================================================================
+// HEADLESS CLAMP ON LAUNCH (cloud / Docker hosts have no display server)
+// =============================================================================
+describe('Headless clamp at launch time', () => {
+    afterEach(async () => {
+        for (const id of Array.from(browserService.keys())) {
+            await browserService.delete(id).catch(() => {});
+        }
+        chromium.launch.mockClear();
+    });
+
+    it('launches headless even when a visible window was requested, with no display', async () => {
+        givenHeadlessHost();
+
+        const { browserId, headless, headlessForced } = await browserService.launchBrowser({
+            browserType: 'chromium',
+            headless: false,
+        });
+
+        expect(headless).toBe(true);
+        expect(headlessForced).toBe(true);
+        expect(chromium.launch).toHaveBeenCalledWith(expect.objectContaining({ headless: true }));
+        expect(browserService.get(browserId).options).toMatchObject({
+            headless: true,
+            headlessForced: true,
+        });
+    });
+
+    it('honours a visible window when the host has a display', async () => {
+        givenDesktopHost();
+
+        const { headless, headlessForced } = await browserService.launchBrowser({
+            browserType: 'chromium',
+            headless: false,
+        });
+
+        expect(headless).toBe(false);
+        expect(headlessForced).toBe(false);
+        expect(chromium.launch).toHaveBeenCalledWith(expect.objectContaining({ headless: false }));
+    });
+
+    it('never marks a headless request as forced', async () => {
+        givenHeadlessHost();
+
+        const { headless, headlessForced } = await browserService.launchBrowser({
+            browserType: 'chromium',
+            headless: true,
+        });
+
+        expect(headless).toBe(true);
+        expect(headlessForced).toBe(false);
     });
 });

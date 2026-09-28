@@ -2,7 +2,7 @@
 // Extracted from action.controller.js for reuse across plugins
 // ==========================================================
 
-import { browserService, resolveEffectiveHeadless } from '../services/browser.service.js';
+import { browserService } from '../services/browser.service.js';
 import { activeRunManager } from '../services/ActiveRunManager.js';
 import { traceService } from '../services/trace.service.js';
 import { variableManager } from '../services/VariableManager.js';
@@ -125,15 +125,10 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
             '[Implicit Launch] Debug mode detected with no active browser. Launching default...',
         );
         try {
-            const { browserId } = await browserService.launchBrowser({
-                ...opts,
-                // Fase 5: unified headless policy — explicit node config wins,
-                // otherwise interactive (debug) sessions stay visible.
-                headless: resolveEffectiveHeadless({
-                    explicitHeadless: opts.headless,
-                    debugMode: true,
-                }),
-            });
+            // launchBrowser() owns the headless policy (explicit config, then
+            // debug/production defaults, then the host's display capability),
+            // so the options are forwarded untouched.
+            const { browserId } = await browserService.launchBrowser({ ...opts, debugMode: true });
             opts.browserId = browserId;
             req.body.browserId = browserId;
             targetBrowserId = browserId;

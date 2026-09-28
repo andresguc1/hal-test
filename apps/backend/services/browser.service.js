@@ -4,6 +4,7 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { DEVICE_PRESETS } from '../utils/constants.js';
 import { STORAGE_DIR, STORAGE_RUNS_DIR } from '../config/paths.js';
+import { canRunHeaded } from '../core/display-utils.js';
 import fs from 'fs';
 
 // Redirect Playwright/Chromium temp files to /var/tmp to avoid /tmp ENOSPC issues
@@ -108,22 +109,40 @@ function captureProcessRef(browser) {
 }
 
 /**
- * Single source of truth for the effective `headless` value of a launch.
- * Unifies the two auto-launch paths (ActionExecutor implicit launch and
- * browser-utils.getActivePage) so explicit node configuration always wins,
- * interactive/debug sessions default to a visible window and production
- * (non-CLI) sessions default to headless.
+ * Decides the `headless` value for a launch, given what the caller asked for.
  *
- * @returns {boolean}
+ * Preference order (what the launch *would* use):
+ *   1. Explicit caller configuration (node checkbox / auto-launch paths).
+ *   2. Debug sessions default to a visible window.
+ *   3. Production non-CLI sessions default to headless.
+ *
+ * The host's capability then overrides that preference: a host with no display
+ * server cannot open a visible window, so the launch is downgraded to headless.
+ *
+ * `launchBrowser()` is the only caller that reaches `browserEngine.launch()`,
+ * so applying the downgrade here covers every launch path in the backend
+ * (Launch Browser node, ActionExecutor implicit launch, browser-utils
+ * auto-launch, the inspector and open_url).
+ *
+ * @returns {{headless: boolean, forced: boolean}} `forced` is true when the
+ *   host's lack of a display server overrode the requested visible mode.
  */
-export function resolveEffectiveHeadless({ explicitHeadless, debugMode } = {}) {
+export function resolveHeadlessPolicy({ explicitHeadless, debugMode } = {}) {
+    let requested;
     if (explicitHeadless !== undefined && explicitHeadless !== null) {
-        return explicitHeadless === true || explicitHeadless === 'true';
+        requested = explicitHeadless === true || explicitHeadless === 'true';
+    } else if (debugMode) {
+        requested = false; // interactive debugging → visible window
+    } else {
+        const isProduction = process.env.NODE_ENV === 'production';
+        const isCliMode = process.env.HAL_CLI_MODE === 'true';
+        requested = isProduction && !isCliMode;
     }
-    if (debugMode) return false; // interactive debugging → visible window
-    const isProduction = process.env.NODE_ENV === 'production';
-    const isCliMode = process.env.HAL_CLI_MODE === 'true';
-    return isProduction && !isCliMode;
+
+    if (!requested && !canRunHeaded()) {
+        return { headless: true, forced: true };
+    }
+    return { headless: requested, forced: false };
 }
 
 function isProcessAlive(pid) {
@@ -243,12 +262,12 @@ class BrowserManager {
     /**
      * Launches a new browser with the specified options.
      * @param {Object} options - Launch options (browserType, headless, slowMo, args, maximizeWindow, timeout).
-     * @returns {Promise<{browserId: string, browser: import('playwright').Browser}>}
+     * @returns {Promise<{browserId: string, browser: import('playwright').Browser, version: string,
+     *   headless: boolean, headlessForced: boolean}>}
      */
     async launchBrowser(options = {}) {
         let {
             browserType = 'chromium',
-            headless = false,
             slowMo,
             args = '',
             maximizeWindow = false,
@@ -269,18 +288,17 @@ class BrowserManager {
         }
 
         // --- HEADLESS LOGIC ---
-        // Respect the user's manual preference if provided exactly.
-        // Otherwise, force headless in production servers (except CLI mode).
-        const isProduction = process.env.NODE_ENV === 'production';
-        const isCliMode = process.env.HAL_CLI_MODE === 'true';
-
-        if (options.headless !== undefined) {
-            headless = options.headless === true || options.headless === 'true';
-        } else if (isProduction && !isCliMode) {
-            console.log(
-                '[BrowserService] Production environment detected - defaulting to headless',
+        // Single decision point: respects the explicit option, falls back to
+        // debug/production defaults, and downgrades to headless when the host
+        // has no display server to open a window on.
+        const { headless, forced: headlessForced } = resolveHeadlessPolicy({
+            explicitHeadless: options.headless,
+            debugMode: options.debugMode,
+        });
+        if (headlessForced) {
+            console.warn(
+                '[BrowserService] No display server (DISPLAY/WAYLAND_DISPLAY unset) - forcing headless',
             );
-            headless = true;
         }
 
         // 1. Select the browser engine
@@ -453,7 +471,14 @@ class BrowserManager {
         this.set(browserId, {
             browser,
             launchMethod,
-            options: { ...options, headless, launchArgs, maximizeWindow, recordVideo },
+            options: {
+                ...options,
+                headless,
+                headlessForced,
+                launchArgs,
+                maximizeWindow,
+                recordVideo,
+            },
             // --- SESSION OWNERSHIP (Fase 0) ---
             profileHash,
             runId: options.runId || null,
@@ -476,7 +501,7 @@ class BrowserManager {
             this.registerRunSession(options.runId, browserId);
         }
 
-        return { browserId, browser, version };
+        return { browserId, browser, version, headless, headlessForced };
     }
 
     set(id, entry) {
