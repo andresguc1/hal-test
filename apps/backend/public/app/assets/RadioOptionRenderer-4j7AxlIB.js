@@ -1,21 +1,22 @@
 import {
-    R as r,
+    R as d,
     g as _,
     s as A,
-    a as E,
-    c as K,
+    c as w,
     j as s,
-    l as S,
-    b as d,
-} from './index-B2OTYBQ0.js';
-const h = {
-        custom_component: {
-            label: 'Custom',
-            cls: 'bg-orange-500/15 text-orange-400 border-orange-500/30',
+    C as E,
+    b as l,
+    A as K,
+    e as g,
+} from './index-BJ3-zPHc.js';
+const N = {
+        radio: { label: 'Radio', cls: 'bg-fuchsia-500/15 text-fuchsia-400 border-fuchsia-500/30' },
+        aria_radio: {
+            label: 'Radio',
+            cls: 'bg-fuchsia-500/15 text-fuchsia-400 border-fuchsia-500/30',
         },
-        custom: { label: 'Custom', cls: 'bg-orange-500/15 text-orange-400 border-orange-500/30' },
     },
-    w = {
+    R = {
         NO_CHANGE: {
             labelKey: 'nodes.config.action_no_change',
             cls: 'bg-slate-600/20 text-slate-400 border-slate-600/40',
@@ -24,16 +25,8 @@ const h = {
             labelKey: 'nodes.config.action_check',
             cls: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
         },
-        UNCHECK: {
-            labelKey: 'nodes.config.action_uncheck',
-            cls: 'bg-rose-500/15 text-rose-400 border-rose-500/30',
-        },
-        SELECT: {
-            labelKey: 'nodes.config.action_select',
-            cls: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
-        },
     },
-    R = {
+    O = {
         checked: {
             labelKey: 'nodes.config.current_checked',
             cls: 'bg-emerald-500/10 text-emerald-400',
@@ -47,23 +40,20 @@ const h = {
             cls: 'bg-amber-500/10 text-amber-400',
         },
     },
-    B = r.memo(({ detectedOptions: n, config: a, onChange: c, t, multiSelect: f }) => {
-        const y = r.useCallback((e) => _(a, e), [a]),
-            N = r.useCallback(
+    S = d.memo(({ detectedOptions: i, config: n, onChange: o, t: a }) => {
+        const b = d.useCallback((e) => _(n, e), [n]),
+            y = d.useCallback(
                 (e) => (e.actualState ? e.actualState.checked : !!(e.checked || e.selected)),
                 [],
             ),
-            k = r.useCallback(
-                (e, o) => {
-                    c(A(a, e, o));
+            j = d.useCallback(
+                (e, c) => {
+                    o(A(n, e, c));
                 },
-                [a, c],
+                [n, o],
             ),
-            j = r.useCallback(() => {
-                c(E(n));
-            }, [n, c]),
-            x = K(a),
-            b = n.filter((e) => e.enabled !== !1).length;
+            u = w(n),
+            m = i.find((e) => b(e) === 'CHECK');
         return s.jsxs('div', {
             className: 'space-y-2',
             children: [
@@ -73,57 +63,64 @@ const h = {
                     children: [
                         s.jsxs('span', {
                             className:
-                                'text-xs uppercase tracking-wider font-semibold text-slate-400 flex items-center gap-1.5',
+                                'text-xs uppercase tracking-wider font-semibold text-slate-400',
                             children: [
-                                s.jsx(S, { size: 12 }),
-                                t('nodes.config.detected_options', 'Detected Options'),
+                                a('nodes.config.detected_options', 'Detected Options'),
                                 ' (',
-                                n.length,
+                                i.length,
                                 ')',
                             ],
                         }),
-                        s.jsxs('div', {
+                        s.jsx('div', {
                             className: 'flex items-center gap-1',
-                            children: [
-                                f &&
-                                    b > 0 &&
-                                    s.jsx('button', {
-                                        type: 'button',
-                                        onClick: j,
-                                        disabled: b === 0,
-                                        className:
-                                            'px-2 py-0.5 rounded text-[9px] font-semibold text-indigo-400 hover:bg-indigo-500/15 transition-colors disabled:opacity-40',
-                                        children: t('nodes.config.all', 'All'),
-                                    }),
-                                x > 0 &&
-                                    s.jsx('button', {
-                                        type: 'button',
-                                        onClick: () => c([]),
-                                        disabled: x === 0,
-                                        className:
-                                            'px-2 py-0.5 rounded text-[9px] font-semibold text-slate-400 hover:bg-slate-500/15 transition-colors disabled:opacity-40',
-                                        children: t('nodes.config.clear', 'Clear'),
-                                    }),
-                            ],
+                            children:
+                                u > 0 &&
+                                s.jsxs('button', {
+                                    type: 'button',
+                                    onClick: () => o([]),
+                                    disabled: u === 0,
+                                    className:
+                                        'px-2 py-0.5 rounded text-[9px] font-semibold text-slate-400 hover:bg-slate-500/15 transition-colors disabled:opacity-40',
+                                    children: [
+                                        s.jsx(E, { size: 10, className: 'inline mr-0.5' }),
+                                        a('nodes.config.clear', 'Clear'),
+                                    ],
+                                }),
                         }),
                     ],
                 }),
                 s.jsx('div', {
                     className:
                         'border border-slate-700/60 rounded-xl overflow-hidden max-h-48 overflow-y-auto custom-scrollbar divide-y divide-slate-800/60',
-                    children: n.map((e, o) => {
-                        const m = N(e),
-                            u = h[e.type] || h.custom_component,
-                            g = R[m ? 'checked' : 'unchecked'],
-                            C = y(e);
+                    children: i.map((e, c) => {
+                        const r = y(e),
+                            h = N[e.type] || N.radio,
+                            f = O[r ? 'checked' : 'unchecked'],
+                            k = b(e);
                         return s.jsxs(
                             'div',
                             {
-                                className: d(
+                                className: l(
                                     'flex items-center gap-3 px-3 py-2 hover:bg-slate-800/40 transition-colors',
                                     e.enabled === !1 && 'opacity-45',
                                 ),
                                 children: [
+                                    s.jsx('div', {
+                                        className: 'flex items-center gap-2 shrink-0',
+                                        children: s.jsx('span', {
+                                            className: l(
+                                                'w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors',
+                                                r
+                                                    ? 'bg-fuchsia-500 border-fuchsia-500'
+                                                    : 'border-slate-600',
+                                            ),
+                                            children:
+                                                r &&
+                                                s.jsx('span', {
+                                                    className: 'w-2 h-2 rounded-full bg-white',
+                                                }),
+                                        }),
+                                    }),
                                     s.jsxs('div', {
                                         className: 'flex-1 min-w-0',
                                         children: [
@@ -135,14 +132,14 @@ const h = {
                                                             'text-xs text-slate-200 truncate',
                                                         children:
                                                             e.label ||
-                                                            `${t('nodes.config.option', 'Option')} ${o + 1}`,
+                                                            `${a('nodes.config.option', 'Option')} ${c + 1}`,
                                                     }),
                                                     s.jsx('span', {
-                                                        className: d(
+                                                        className: l(
                                                             'text-[8px] px-1 py-px rounded border leading-none shrink-0',
-                                                            u.cls,
+                                                            h.cls,
                                                         ),
-                                                        children: u.label,
+                                                        children: h.label,
                                                     }),
                                                 ],
                                             }),
@@ -150,20 +147,20 @@ const h = {
                                                 className: 'flex items-center gap-1.5 mt-1',
                                                 children: [
                                                     s.jsxs('span', {
-                                                        className: d(
+                                                        className: l(
                                                             'text-[8px] px-1.5 py-px rounded-full leading-none',
-                                                            g.cls,
+                                                            f.cls,
                                                         ),
                                                         children: [
-                                                            t(
+                                                            a(
                                                                 'nodes.config.current_label',
                                                                 'Current',
                                                             ),
                                                             ':',
                                                             ' ',
-                                                            t(
-                                                                g.labelKey,
-                                                                m ? 'Checked' : 'Unchecked',
+                                                            a(
+                                                                f.labelKey,
+                                                                r ? 'Checked' : 'Unchecked',
                                                             ),
                                                         ],
                                                     }),
@@ -171,7 +168,7 @@ const h = {
                                                         ? s.jsx('span', {
                                                               className:
                                                                   'text-[8px] text-rose-400 px-1 py-px rounded-full bg-rose-500/10',
-                                                              children: t(
+                                                              children: a(
                                                                   'nodes.config.disabled',
                                                                   'disabled',
                                                               ),
@@ -192,39 +189,40 @@ const h = {
                                         className: 'shrink-0 flex items-center',
                                         children: s.jsx('div', {
                                             className: 'flex items-center gap-0.5',
-                                            children: ['NO_CHANGE', 'SELECT'].map((l) => {
-                                                const v = C === l,
-                                                    i = w[l],
-                                                    p = e.enabled === !1;
+                                            children: [K, g].map((t) => {
+                                                const C = k === t,
+                                                    x = R[t],
+                                                    v = t === g && m && m.id !== e.id,
+                                                    p = e.enabled === !1 || v;
                                                 return s.jsx(
                                                     'button',
                                                     {
                                                         type: 'button',
                                                         disabled: p,
-                                                        onClick: () => k(e, l),
-                                                        title: t(i.labelKey, l),
-                                                        className: d(
+                                                        onClick: () => j(e, t),
+                                                        title: a(x.labelKey, t),
+                                                        className: l(
                                                             'px-1.5 py-px rounded text-[9px] font-bold border leading-none transition-colors',
-                                                            v
-                                                                ? i.cls
+                                                            C
+                                                                ? x.cls
                                                                 : 'bg-transparent text-slate-600 border-transparent',
                                                             p && 'opacity-35 cursor-not-allowed',
                                                         ),
-                                                        children: t(i.labelKey, l),
+                                                        children: a(x.labelKey, t),
                                                     },
-                                                    l,
+                                                    t,
                                                 );
                                             }),
                                         }),
                                     }),
                                 ],
                             },
-                            e.id || o,
+                            e.id || c,
                         );
                     }),
                 }),
             ],
         });
     });
-B.displayName = 'CustomOptionRenderer';
-export { B as CustomOptionRenderer, B as default };
+S.displayName = 'RadioOptionRenderer';
+export { S as RadioOptionRenderer, S as default };

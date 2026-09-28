@@ -1,34 +1,21 @@
 import {
-    h as E,
     R as r,
-    g as K,
-    s as w,
-    a as L,
-    c as R,
+    g as _,
+    s as A,
+    a as E,
+    c as K,
     j as s,
-    b as o,
-    A as S,
-} from './index-B2OTYBQ0.js';
-const T = [
-        ['path', { d: 'M13 5h8', key: 'a7qcls' }],
-        ['path', { d: 'M13 12h8', key: 'h98zly' }],
-        ['path', { d: 'M13 19h8', key: 'c3s6r1' }],
-        ['path', { d: 'm3 17 2 2 4-4', key: '1jhpwq' }],
-        ['path', { d: 'm3 7 2 2 4-4', key: '1obspn' }],
-    ],
-    y = E('list-checks', T),
-    f = {
-        listbox: {
-            label: 'Listbox',
-            cls: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+    l as S,
+    b as d,
+} from './index-BJ3-zPHc.js';
+const h = {
+        custom_component: {
+            label: 'Custom',
+            cls: 'bg-orange-500/15 text-orange-400 border-orange-500/30',
         },
-        list: { label: 'List', cls: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' },
-        aria_option: {
-            label: 'Option',
-            cls: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
-        },
+        custom: { label: 'Custom', cls: 'bg-orange-500/15 text-orange-400 border-orange-500/30' },
     },
-    B = {
+    w = {
         NO_CHANGE: {
             labelKey: 'nodes.config.action_no_change',
             cls: 'bg-slate-600/20 text-slate-400 border-slate-600/40',
@@ -37,12 +24,16 @@ const T = [
             labelKey: 'nodes.config.action_check',
             cls: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
         },
+        UNCHECK: {
+            labelKey: 'nodes.config.action_uncheck',
+            cls: 'bg-rose-500/15 text-rose-400 border-rose-500/30',
+        },
         SELECT: {
             labelKey: 'nodes.config.action_select',
             cls: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
         },
     },
-    D = {
+    R = {
         checked: {
             labelKey: 'nodes.config.current_checked',
             cls: 'bg-emerald-500/10 text-emerald-400',
@@ -56,24 +47,23 @@ const T = [
             cls: 'bg-amber-500/10 text-amber-400',
         },
     },
-    G = r.memo(({ detectedOptions: a, config: n, onChange: c, t: l, multiSelect: x }) => {
-        const k = r.useCallback((e) => K(n, e), [n]),
+    B = r.memo(({ detectedOptions: n, config: a, onChange: c, t, multiSelect: f }) => {
+        const y = r.useCallback((e) => _(a, e), [a]),
             N = r.useCallback(
                 (e) => (e.actualState ? e.actualState.checked : !!(e.checked || e.selected)),
                 [],
             ),
-            j = r.useCallback(
-                (e, d) => {
-                    c(w(n, e, d));
+            k = r.useCallback(
+                (e, o) => {
+                    c(A(a, e, o));
                 },
-                [n, c],
+                [a, c],
             ),
-            C = r.useCallback(() => {
-                c(L(a));
-            }, [a, c]),
-            b = R(n),
-            m = a.filter((e) => e.enabled !== !1).length,
-            v = x ? 'SELECT' : 'CHECK';
+            j = r.useCallback(() => {
+                c(E(n));
+            }, [n, c]),
+            x = K(a),
+            b = n.filter((e) => e.enabled !== !1).length;
         return s.jsxs('div', {
             className: 'space-y-2',
             children: [
@@ -83,39 +73,36 @@ const T = [
                     children: [
                         s.jsxs('span', {
                             className:
-                                'text-xs uppercase tracking-wider font-semibold text-slate-400',
+                                'text-xs uppercase tracking-wider font-semibold text-slate-400 flex items-center gap-1.5',
                             children: [
-                                s.jsx(y, { size: 12, className: 'inline mr-1' }),
-                                l('nodes.config.detected_options', 'Detected Options'),
+                                s.jsx(S, { size: 12 }),
+                                t('nodes.config.detected_options', 'Detected Options'),
                                 ' (',
-                                a.length,
+                                n.length,
                                 ')',
                             ],
                         }),
                         s.jsxs('div', {
                             className: 'flex items-center gap-1',
                             children: [
-                                x &&
-                                    m > 0 &&
-                                    s.jsxs('button', {
+                                f &&
+                                    b > 0 &&
+                                    s.jsx('button', {
                                         type: 'button',
-                                        onClick: C,
-                                        disabled: m === 0,
+                                        onClick: j,
+                                        disabled: b === 0,
                                         className:
                                             'px-2 py-0.5 rounded text-[9px] font-semibold text-indigo-400 hover:bg-indigo-500/15 transition-colors disabled:opacity-40',
-                                        children: [
-                                            s.jsx(y, { size: 10, className: 'inline mr-0.5' }),
-                                            l('nodes.config.all', 'All'),
-                                        ],
+                                        children: t('nodes.config.all', 'All'),
                                     }),
-                                b > 0 &&
+                                x > 0 &&
                                     s.jsx('button', {
                                         type: 'button',
                                         onClick: () => c([]),
-                                        disabled: b === 0,
+                                        disabled: x === 0,
                                         className:
                                             'px-2 py-0.5 rounded text-[9px] font-semibold text-slate-400 hover:bg-slate-500/15 transition-colors disabled:opacity-40',
-                                        children: l('nodes.config.clear', 'Clear'),
+                                        children: t('nodes.config.clear', 'Clear'),
                                     }),
                             ],
                         }),
@@ -124,15 +111,15 @@ const T = [
                 s.jsx('div', {
                     className:
                         'border border-slate-700/60 rounded-xl overflow-hidden max-h-48 overflow-y-auto custom-scrollbar divide-y divide-slate-800/60',
-                    children: a.map((e, d) => {
-                        const u = N(e),
-                            p = f[e.type] || f.listbox,
-                            h = D[u ? 'checked' : 'unchecked'],
-                            _ = k(e);
+                    children: n.map((e, o) => {
+                        const m = N(e),
+                            u = h[e.type] || h.custom_component,
+                            g = R[m ? 'checked' : 'unchecked'],
+                            C = y(e);
                         return s.jsxs(
                             'div',
                             {
-                                className: o(
+                                className: d(
                                     'flex items-center gap-3 px-3 py-2 hover:bg-slate-800/40 transition-colors',
                                     e.enabled === !1 && 'opacity-45',
                                 ),
@@ -148,14 +135,14 @@ const T = [
                                                             'text-xs text-slate-200 truncate',
                                                         children:
                                                             e.label ||
-                                                            `${l('nodes.config.option', 'Option')} ${d + 1}`,
+                                                            `${t('nodes.config.option', 'Option')} ${o + 1}`,
                                                     }),
                                                     s.jsx('span', {
-                                                        className: o(
+                                                        className: d(
                                                             'text-[8px] px-1 py-px rounded border leading-none shrink-0',
-                                                            p.cls,
+                                                            u.cls,
                                                         ),
-                                                        children: p.label,
+                                                        children: u.label,
                                                     }),
                                                 ],
                                             }),
@@ -163,20 +150,20 @@ const T = [
                                                 className: 'flex items-center gap-1.5 mt-1',
                                                 children: [
                                                     s.jsxs('span', {
-                                                        className: o(
+                                                        className: d(
                                                             'text-[8px] px-1.5 py-px rounded-full leading-none',
-                                                            h.cls,
+                                                            g.cls,
                                                         ),
                                                         children: [
-                                                            l(
+                                                            t(
                                                                 'nodes.config.current_label',
                                                                 'Current',
                                                             ),
                                                             ':',
                                                             ' ',
-                                                            l(
-                                                                h.labelKey,
-                                                                u ? 'Checked' : 'Unchecked',
+                                                            t(
+                                                                g.labelKey,
+                                                                m ? 'Checked' : 'Unchecked',
                                                             ),
                                                         ],
                                                     }),
@@ -184,7 +171,7 @@ const T = [
                                                         ? s.jsx('span', {
                                                               className:
                                                                   'text-[8px] text-rose-400 px-1 py-px rounded-full bg-rose-500/10',
-                                                              children: l(
+                                                              children: t(
                                                                   'nodes.config.disabled',
                                                                   'disabled',
                                                               ),
@@ -205,39 +192,39 @@ const T = [
                                         className: 'shrink-0 flex items-center',
                                         children: s.jsx('div', {
                                             className: 'flex items-center gap-0.5',
-                                            children: [S, v].map((t) => {
-                                                const A = _ === t,
-                                                    i = B[t],
-                                                    g = e.enabled === !1;
+                                            children: ['NO_CHANGE', 'SELECT'].map((l) => {
+                                                const v = C === l,
+                                                    i = w[l],
+                                                    p = e.enabled === !1;
                                                 return s.jsx(
                                                     'button',
                                                     {
                                                         type: 'button',
-                                                        disabled: g,
-                                                        onClick: () => j(e, t),
-                                                        title: l(i.labelKey, t),
-                                                        className: o(
+                                                        disabled: p,
+                                                        onClick: () => k(e, l),
+                                                        title: t(i.labelKey, l),
+                                                        className: d(
                                                             'px-1.5 py-px rounded text-[9px] font-bold border leading-none transition-colors',
-                                                            A
+                                                            v
                                                                 ? i.cls
                                                                 : 'bg-transparent text-slate-600 border-transparent',
-                                                            g && 'opacity-35 cursor-not-allowed',
+                                                            p && 'opacity-35 cursor-not-allowed',
                                                         ),
-                                                        children: l(i.labelKey, t),
+                                                        children: t(i.labelKey, l),
                                                     },
-                                                    t,
+                                                    l,
                                                 );
                                             }),
                                         }),
                                     }),
                                 ],
                             },
-                            e.id || d,
+                            e.id || o,
                         );
                     }),
                 }),
             ],
         });
     });
-G.displayName = 'ListboxOptionRenderer';
-export { G as ListboxOptionRenderer, G as default };
+B.displayName = 'CustomOptionRenderer';
+export { B as CustomOptionRenderer, B as default };

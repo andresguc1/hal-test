@@ -1,22 +1,12 @@
-import {
-    R as r,
-    g as A,
-    s as _,
-    a as K,
-    c as E,
-    j as s,
-    S as p,
-    d as w,
-    b as o,
-    A as S,
-    e as R,
-    f as B,
-} from './index-B2OTYBQ0.js';
-const g = {
-        checkbox: { label: 'Checkbox', cls: 'bg-sky-500/15 text-sky-400 border-sky-500/30' },
-        aria_checkbox: { label: 'Checkbox', cls: 'bg-sky-500/15 text-sky-400 border-sky-500/30' },
+import { R as r, g as _, s as A, a as E, c as K, j as s, b as d } from './index-BJ3-zPHc.js';
+const h = {
+        select: { label: 'Select', cls: 'bg-amber-500/15 text-amber-400 border-amber-500/30' },
+        'select-multi': {
+            label: 'Select',
+            cls: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+        },
     },
-    H = {
+    S = {
         NO_CHANGE: {
             labelKey: 'nodes.config.action_no_change',
             cls: 'bg-slate-600/20 text-slate-400 border-slate-600/40',
@@ -29,8 +19,12 @@ const g = {
             labelKey: 'nodes.config.action_uncheck',
             cls: 'bg-rose-500/15 text-rose-400 border-rose-500/30',
         },
+        SELECT: {
+            labelKey: 'nodes.config.action_select',
+            cls: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+        },
     },
-    O = {
+    w = {
         checked: {
             labelKey: 'nodes.config.current_checked',
             cls: 'bg-emerald-500/10 text-emerald-400',
@@ -44,23 +38,23 @@ const g = {
             cls: 'bg-amber-500/10 text-amber-400',
         },
     },
-    T = r.memo(({ detectedOptions: a, config: n, onChange: c, t: l }) => {
-        const k = r.useCallback((e) => A(n, e), [n]),
-            f = r.useCallback(
+    R = r.memo(({ detectedOptions: a, config: n, onChange: c, t: l, multiSelect: f }) => {
+        const y = r.useCallback((e) => _(n, e), [n]),
+            N = r.useCallback(
                 (e) => (e.actualState ? e.actualState.checked : !!(e.checked || e.selected)),
                 [],
             ),
-            y = r.useCallback(
-                (e, d) => {
-                    c(_(n, e, d));
+            k = r.useCallback(
+                (e, o) => {
+                    c(A(n, e, o));
                 },
                 [n, c],
             ),
-            N = r.useCallback(() => {
-                c(K(a));
+            j = r.useCallback(() => {
+                c(E(a));
             }, [a, c]),
-            b = E(n),
-            C = a.filter((e) => e.enabled !== !1).length;
+            b = K(n),
+            x = a.filter((e) => e.enabled !== !1).length;
         return s.jsxs('div', {
             className: 'space-y-2',
             children: [
@@ -81,28 +75,24 @@ const g = {
                         s.jsxs('div', {
                             className: 'flex items-center gap-1',
                             children: [
-                                s.jsxs('button', {
-                                    type: 'button',
-                                    onClick: N,
-                                    disabled: C === 0,
-                                    className:
-                                        'px-2 py-0.5 rounded text-[9px] font-semibold text-indigo-400 hover:bg-indigo-500/15 transition-colors disabled:opacity-40',
-                                    children: [
-                                        s.jsx(p, { size: 10, className: 'inline mr-0.5' }),
-                                        l('nodes.config.all', 'All'),
-                                    ],
-                                }),
+                                f &&
+                                    x > 0 &&
+                                    s.jsx('button', {
+                                        type: 'button',
+                                        onClick: j,
+                                        disabled: x === 0,
+                                        className:
+                                            'px-2 py-0.5 rounded text-[9px] font-semibold text-indigo-400 hover:bg-indigo-500/15 transition-colors disabled:opacity-40',
+                                        children: l('nodes.config.all', 'All'),
+                                    }),
                                 b > 0 &&
-                                    s.jsxs('button', {
+                                    s.jsx('button', {
                                         type: 'button',
                                         onClick: () => c([]),
                                         disabled: b === 0,
                                         className:
                                             'px-2 py-0.5 rounded text-[9px] font-semibold text-slate-400 hover:bg-slate-500/15 transition-colors disabled:opacity-40',
-                                        children: [
-                                            s.jsx(w, { size: 10, className: 'inline mr-0.5' }),
-                                            l('nodes.config.clear', 'Clear'),
-                                        ],
+                                        children: l('nodes.config.clear', 'Clear'),
                                     }),
                             ],
                         }),
@@ -111,31 +101,19 @@ const g = {
                 s.jsx('div', {
                     className:
                         'border border-slate-700/60 rounded-xl overflow-hidden max-h-48 overflow-y-auto custom-scrollbar divide-y divide-slate-800/60',
-                    children: a.map((e, d) => {
-                        const i = f(e),
-                            m = g[e.type] || g.checkbox,
-                            u = O[i ? 'checked' : 'unchecked'],
-                            j = k(e);
+                    children: a.map((e, o) => {
+                        const m = N(e),
+                            u = h[e.type] || h.select,
+                            p = w[m ? 'checked' : 'unchecked'],
+                            v = y(e);
                         return s.jsxs(
                             'div',
                             {
-                                className: o(
+                                className: d(
                                     'flex items-center gap-3 px-3 py-2 hover:bg-slate-800/40 transition-colors',
                                     e.enabled === !1 && 'opacity-45',
                                 ),
                                 children: [
-                                    s.jsx('div', {
-                                        className: 'flex items-center gap-2 shrink-0',
-                                        children: s.jsx('span', {
-                                            className: o(
-                                                'w-4 h-4 rounded border-2 flex items-center justify-center transition-colors',
-                                                i
-                                                    ? 'bg-emerald-500 border-emerald-500 text-white'
-                                                    : 'border-slate-600 text-transparent',
-                                            ),
-                                            children: i && s.jsx(p, { size: 10 }),
-                                        }),
-                                    }),
                                     s.jsxs('div', {
                                         className: 'flex-1 min-w-0',
                                         children: [
@@ -147,14 +125,14 @@ const g = {
                                                             'text-xs text-slate-200 truncate',
                                                         children:
                                                             e.label ||
-                                                            `${l('nodes.config.option', 'Option')} ${d + 1}`,
+                                                            `${l('nodes.config.option', 'Option')} ${o + 1}`,
                                                     }),
                                                     s.jsx('span', {
-                                                        className: o(
+                                                        className: d(
                                                             'text-[8px] px-1 py-px rounded border leading-none shrink-0',
-                                                            m.cls,
+                                                            u.cls,
                                                         ),
-                                                        children: m.label,
+                                                        children: u.label,
                                                     }),
                                                 ],
                                             }),
@@ -162,9 +140,9 @@ const g = {
                                                 className: 'flex items-center gap-1.5 mt-1',
                                                 children: [
                                                     s.jsxs('span', {
-                                                        className: o(
+                                                        className: d(
                                                             'text-[8px] px-1.5 py-px rounded-full leading-none',
-                                                            u.cls,
+                                                            p.cls,
                                                         ),
                                                         children: [
                                                             l(
@@ -174,8 +152,8 @@ const g = {
                                                             ':',
                                                             ' ',
                                                             l(
-                                                                u.labelKey,
-                                                                i ? 'Checked' : 'Unchecked',
+                                                                p.labelKey,
+                                                                m ? 'Checked' : 'Unchecked',
                                                             ),
                                                         ],
                                                     }),
@@ -204,25 +182,25 @@ const g = {
                                         className: 'shrink-0 flex items-center',
                                         children: s.jsx('div', {
                                             className: 'flex items-center gap-0.5',
-                                            children: [S, R, B].map((t) => {
-                                                const v = j === t,
-                                                    x = H[t],
-                                                    h = e.enabled === !1;
+                                            children: ['NO_CHANGE', 'SELECT'].map((t) => {
+                                                const C = v === t,
+                                                    i = S[t],
+                                                    g = e.enabled === !1;
                                                 return s.jsx(
                                                     'button',
                                                     {
                                                         type: 'button',
-                                                        disabled: h,
-                                                        onClick: () => y(e, t),
-                                                        title: l(x.labelKey, t),
-                                                        className: o(
+                                                        disabled: g,
+                                                        onClick: () => k(e, t),
+                                                        title: l(i.labelKey, t),
+                                                        className: d(
                                                             'px-1.5 py-px rounded text-[9px] font-bold border leading-none transition-colors',
-                                                            v
-                                                                ? x.cls
+                                                            C
+                                                                ? i.cls
                                                                 : 'bg-transparent text-slate-600 border-transparent',
-                                                            h && 'opacity-35 cursor-not-allowed',
+                                                            g && 'opacity-35 cursor-not-allowed',
                                                         ),
-                                                        children: l(x.labelKey, t),
+                                                        children: l(i.labelKey, t),
                                                     },
                                                     t,
                                                 );
@@ -231,12 +209,12 @@ const g = {
                                     }),
                                 ],
                             },
-                            e.id || d,
+                            e.id || o,
                         );
                     }),
                 }),
             ],
         });
     });
-T.displayName = 'CheckboxOptionRenderer';
-export { T as CheckboxOptionRenderer, T as default };
+R.displayName = 'SelectOptionRenderer';
+export { R as SelectOptionRenderer, R as default };
