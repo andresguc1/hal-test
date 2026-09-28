@@ -1,0 +1,3 @@
+# The monolith bundles under public/ are build output. They must match
+# `pnpm run build:monolith` byte for byte, so never reformat them.
+public/
