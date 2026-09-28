@@ -32,6 +32,8 @@ import i18n from "../i18n";
 import { api } from "../utils/api";
 import { useProjectManager } from "./hooks/useProjectManager";
 import { useToast } from "../hooks/useToast";
+import { buildBreadcrumb, buildFoldedLineInfo } from "../utils/codePreview";
+import { buildGenerationKey, buildFlowStepsFromCanvas } from "../utils/generationKey";
 
 // ─── Log type → color mapping ─────────────────────────────────────────────────
 const LOG_COLORS = {
@@ -523,7 +525,7 @@ export default function TerminalPanel({
           flow: flowSteps,
           framework,
           language,
-          locale: i18n.language,
+          locale: i18n.language.split("-")[0].toLowerCase(),
           projectId: currentProject?.id,
           designPattern,
         });

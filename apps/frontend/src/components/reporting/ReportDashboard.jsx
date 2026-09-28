@@ -34,6 +34,7 @@ import {
   Loader2,
   Sparkles,
   RefreshCw,
+  Code2,
 } from "lucide-react";
 import { AnimatePresence, motion as Motion } from "framer-motion";
 import { cn } from "../../lib/utils";
@@ -155,7 +156,7 @@ function statusLabel(status) {
   return label === "SOFTFAILED" ? "SOFT FAILED" : label;
 }
 
-function ReportDashboardContent({ runId, onClose }) {
+function ReportDashboardContent({ runId, onClose, onViewCode }) {
   const { t } = useTranslation();
   const [run, setRun] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -819,6 +820,19 @@ function ReportDashboardContent({ runId, onClose }) {
                       >
                         {statusLabel(s.status)}
                       </span>
+                      {onViewCode && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onViewCode(runId, s);
+                          }}
+                          className="ml-1.5 p-1 rounded hover:bg-indigo-500/10 text-indigo-400 hover:text-indigo-300 transition-colors"
+                          title={t("report.view_code", "View code for this step")}
+                          aria-label={t("report.view_code", "View code for this step")}
+                        >
+                          <Code2 size={11} />
+                        </button>
+                      )}
                     </button>
                   );
                 })}

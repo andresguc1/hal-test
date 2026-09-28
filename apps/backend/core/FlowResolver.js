@@ -15,13 +15,19 @@ const CONTAINER_TYPES = ['component', 'loop', 'for_each'];
 class FlowResolver {
     /**
      * Recursively resolves all container nodes in a flow, populating subNodes.
+     *
+     * Reuse (F1): the same flowRef used by several sibling containers resolves
+     * EVERY instance (shared cache per call, branch-local pathStack).  Failures
+     * are annotated on the node as `{ status: 'unresolved', reason }` so the
+     * generators can emit a structured warning instead of an empty block.
      * @param {Array} nodes - Array of node objects
      * @param {string} projectId - Project ID for resolving refs
      * @param {number} depth - Current recursion depth (for cycle detection)
-     * @param {Set} visited - Set of visited component IDs (cycle detection)
+     * @param {Set} pathStack - Branch path (cycle detection, per branch)
+     * @param {Map} cache - Loaded sub-flows shared across the whole resolution
      * @returns {Promise<Array>} - Nodes with subNodes populated
      */
-    async resolve(nodes, projectId, depth = 0, visited = new Set()) {
+    async resolve(nodes, projectId, depth = 0, pathStack = new Set(), cache = new Map()) {
         if (!nodes || !Array.isArray(nodes)) return [];
         if (depth > MAX_DEPTH) {
             console.warn(
@@ -50,12 +56,25 @@ class FlowResolver {
                         `[FlowResolver] Container node ${nodeId} (type: ${type}) has no flowId/ref. ` +
                             `${inlineCount > 0 ? `Using ${inlineCount} inline subNode(s).` : 'No subNodes — component will generate as empty.'}`,
                     );
-                } else if (flowRef && !visited.has(flowRef)) {
-                    visited.add(flowRef);
-
-                    const subFlow = await this._loadSubFlow(flowRef, projectId);
+                } else if (pathStack.has(flowRef)) {
+                    console.warn(
+                        `[FlowResolver] Circular reference detected for sub-flow "${flowRef}" at container node ${nodeId}.`,
+                    );
+                    if (inlineCount === 0) {
+                        resolved.data = {
+                            ...resolved.data,
+                            flowResolution: { status: 'unresolved', reason: 'cycle_detected' },
+                        };
+                    }
+                } else {
+                    let subFlow = cache.get(flowRef);
+                    if (subFlow === undefined) {
+                        subFlow = await this._loadSubFlow(flowRef, projectId);
+                        cache.set(flowRef, subFlow);
+                    }
 
                     if (subFlow) {
+                        pathStack.add(flowRef);
                         resolved.data = {
                             ...resolved.data,
                             flowName: subFlow.name || subFlow.flowName || 'Component',
@@ -63,21 +82,26 @@ class FlowResolver {
                                 subFlow.nodes,
                                 projectId,
                                 depth + 1,
-                                new Set(visited),
+                                pathStack,
+                                cache,
                             ),
                             subEdges: subFlow.edges || [],
                         };
+                        pathStack.delete(flowRef);
                     } else {
-                        // Sub-flow could not be resolved. Preserve any inline
-                        // subNodes that the caller (e.g. frontend Code Preview)
-                        // may have already attached, so the generator still has
-                        // something to work with instead of producing an empty
-                        // block.  Log a detailed warning so the issue is visible
-                        // in server logs.
                         console.warn(
                             `[FlowResolver] Could not resolve sub-flow "${flowRef}" for container node ${nodeId} (project: ${projectId}). ` +
                                 `${inlineCount > 0 ? `Preserving ${inlineCount} inline subNode(s).` : 'No inline subNodes available — component will generate as empty.'}`,
                         );
+                        if (inlineCount === 0) {
+                            resolved.data = {
+                                ...resolved.data,
+                                flowResolution: {
+                                    status: 'unresolved',
+                                    reason: 'flow_not_found',
+                                },
+                            };
+                        }
                     }
                 }
             }
@@ -88,7 +112,8 @@ class FlowResolver {
                     resolved.data.subNodes,
                     projectId,
                     depth + 1,
-                    new Set(visited),
+                    pathStack,
+                    cache,
                 );
             }
 

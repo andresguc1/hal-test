@@ -63,6 +63,9 @@ export class CypressGenerator extends BaseGenerator {
             const subCode = this.generateSteps(subNodes, depth + 1);
 
             if (type === 'component') {
+                if (subNodes.length === 0) {
+                    return this.warnUnresolvedComponent(step, label, index, indent, '//');
+                }
                 // Component: group as a nested describe
                 const safeLabel = escapeForSingleQuotes(label);
                 return `${indent}${nodeIdComment ? nodeIdComment + '\n' + indent : ''}describe('${safeLabel}', () => {\n${subCode}\n${indent}});`;

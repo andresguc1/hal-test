@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { exportService } from '../services/exporter/index.js';
+import { DesignPatternRegistry } from '../services/exporter/patterns/DesignPatternRegistry.js';
 import { Flow, Node, Edge } from '../database/init.js';
 
 const router = Router();
@@ -58,7 +59,6 @@ router.post('/code', async (req, res) => {
         const VALID_FRAMEWORKS = ['playwright', 'cypress', 'selenium'];
         const VALID_LANGUAGES = ['javascript', 'typescript', 'python', 'java', 'csharp'];
         const VALID_LOCALES = ['en', 'es', 'fr', 'pt'];
-        const VALID_PATTERNS = ['flat', 'pom'];
 
         const fw = (framework || 'playwright').toLowerCase();
         const lang = (language || 'javascript').toLowerCase();
@@ -74,6 +74,9 @@ router.post('/code', async (req, res) => {
         if (!VALID_LOCALES.includes(loc)) {
             return res.status(400).json({ success: false, message: `Invalid locale: ${loc}` });
         }
+
+        // Dynamic patterns from registry (filtered by framework & language)
+        const VALID_PATTERNS = DesignPatternRegistry.getAvailable(fw, lang).map((p) => p.name);
         if (!VALID_PATTERNS.includes(pattern)) {
             return res
                 .status(400)

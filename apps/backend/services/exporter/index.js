@@ -1,9 +1,12 @@
-import { PlaywrightGenerator } from './generators/PlaywrightGenerator.js';
-import { CypressGenerator } from './generators/CypressGenerator.js';
-import { SeleniumGenerator } from './generators/SeleniumGenerator.js';
+import crypto from 'crypto';
 import { flowResolver } from '../../core/FlowResolver.js';
 import pipelineCodeLinter from '../PipelineCodeLinter.js';
 import codeValidator from '../CodeValidator.js';
+// Register all design patterns FIRST (before generators that use the registry)
+import './patterns/index.js';
+import { PlaywrightGenerator } from './generators/PlaywrightGenerator.js';
+import { CypressGenerator } from './generators/CypressGenerator.js';
+import { SeleniumGenerator } from './generators/SeleniumGenerator.js';
 
 export const exportService = {
     /**
@@ -21,7 +24,8 @@ export const exportService = {
      * Genera código ejecutable basado en el flujo y el framework seleccionado.
      * @param {Array} flowData - Datos del flujo (lista de pasos).
      * @param {string} framework - Framework destino ('playwright', 'puppeteer', etc.).
-     * @returns {object} - Resultado con el código generado y metadatos.
+     * @returns {object} - Resultado con el código generado, metadatos,
+     *   mappingByFile (mapping estructural Canvas↔Code) y generationKey.
      */
     generateCode: (
         flowData,
@@ -33,8 +37,20 @@ export const exportService = {
         designPattern = 'flat',
     ) => {
         try {
-            let code = '';
-            let warnings = [];
+            const inputSnapshot = JSON.stringify({
+                flow: flowData,
+                framework,
+                language,
+                locale,
+                usePOM,
+                includeCICD,
+                designPattern,
+            });
+            const generationKey = `sha256:${crypto
+                .createHash('sha256')
+                .update(inputSnapshot)
+                .digest('hex')}`;
+
             const extensionMap = {
                 javascript: 'js',
                 typescript: 'ts',
@@ -44,6 +60,7 @@ export const exportService = {
             };
             const extension = extensionMap[language.toLowerCase()] || 'js';
 
+            let result;
             switch (framework.toLowerCase()) {
                 case 'playwright': {
                     const generator = new PlaywrightGenerator(
@@ -53,43 +70,42 @@ export const exportService = {
                         includeCICD,
                         designPattern,
                     );
-                    const result = generator.generate(flowData);
-                    const isMultiFile =
-                        usePOM || includeCICD || (designPattern !== 'flat' && result.files);
-                    if (isMultiFile) {
-                        return {
-                            success: true,
-                            isZip: true,
-                            files: result.files,
-                            warnings: result.warnings || [],
-                            framework,
-                            language,
-                            extension,
-                            designPattern,
-                        };
-                    }
-                    code = result.code;
-                    warnings = result.warnings || [];
+                    result = generator.generate(flowData);
                     break;
                 }
                 case 'cypress': {
                     const generator = new CypressGenerator(language, locale);
-                    const result = generator.generate(flowData);
-                    code = result.code;
-                    warnings = result.warnings || [];
+                    result = generator.generate(flowData);
                     break;
                 }
                 case 'selenium': {
                     const generator = new SeleniumGenerator(language, locale);
-                    const result = generator.generate(flowData);
-                    code = result.code;
-                    warnings = result.warnings || [];
+                    result = generator.generate(flowData);
                     break;
                 }
                 default:
                     throw new Error(`Framework no soportado: ${framework}`);
             }
 
+            const warnings = result.warnings || [];
+            const mappingByFile = result.mappingByFile || null;
+
+            if (result.files) {
+                return {
+                    success: true,
+                    isZip: true,
+                    files: result.files,
+                    warnings,
+                    mappingByFile,
+                    generationKey,
+                    framework,
+                    language,
+                    extension,
+                    designPattern,
+                };
+            }
+
+            const code = result.code;
             const filename = `export_${Date.now()}.${extension}`;
             let lintReport = null;
             let validationReport = null;
@@ -116,6 +132,8 @@ export const exportService = {
                 success: true,
                 code,
                 warnings,
+                mappingByFile,
+                generationKey,
                 lintReport,
                 validationReport,
                 framework,

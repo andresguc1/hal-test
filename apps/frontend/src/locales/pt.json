@@ -173,15 +173,21 @@
     "cmd_test_headed": "Executar um teste do HalTest com navegador visível",
     "cmd_report": "Abrir relatório HTML",
     "cmd_install": "Instalar navegadores",
-    "confirm_sync_title": "Sincronização desabilitada",
-    "confirm_sync_description": "A sincronização inversa do código para o fluxo de trabalho é experimental e foi desabilitada temporariamente para evitar a corrupção do fluxo.",
+    "confirm_sync_title": "Sincronizar código com o canvas?",
+    "confirm_sync_description": "Sincronizar o código substituirá o fluxo atual. As posições manuais dos nós e os layouts personalizados serão redefinidos automaticamente para corresponder à sequência do código.",
     "confirm_sync_btn": "Entendido",
-    "sync_disabled_toast": "Sincronização desabilitada.",
     "enter_edit_mode": "Modo Edição Avançada",
     "exit_edit_mode": "Modo Exibição",
     "sync_failed": "Falha ao sincronizar o código com o canvas.",
     "sync_parse_error": "Não foi possível reinterpretar o código em ações de fluxo.",
-    "sync_success": "Código sincronizado com o canvas com sucesso"
+    "sync_success": "Código sincronizado com o canvas com sucesso",
+    "fold_toggle": "Recolher / expandir este bloco",
+    "fold_expand": "{{lines}} linha(s) oculta(s) · clique para expandir",
+    "breadcrumb_root": "Fluxo principal",
+    "breadcrumb_explore": "Duplo clique para abrir o subfluxo",
+    "view_code": "Ver código deste passo",
+    "stale_warning": "O código está fora de sincronia com o canvas",
+    "regenerate": "Regenerar"
   },
   "nodes": {
     "select_option": {
@@ -196,6 +202,8 @@
     },
     "labels": {
       "open_url": "Abrir URL",
+      "unresolved_code": "Não resolvido",
+      "unresolved_code_hint": "Nenhum fluxo vinculado a este componente — a última geração produziu um bloco vazio.",
       "close_browser": "Fechar navegador",
       "go_back": "Voltar",
       "go_forward": "Avançar",
@@ -1791,5 +1799,8 @@
     "confirm": "Excluir projetos",
     "description": "Você está prestes a excluir permanentemente {{count}} projeto(s) contendo {{flows}} fluxos. Isso excluirá todos os fluxos, nós e conexões. Esta ação não pode ser desfeita.",
     "typed_description": "Você está prestes a excluir permanentemente {{count}} projeto(s) contendo {{flows}} fluxos. Isso não pode ser desfeito. Digite DELETE para confirmar."
+  },
+  "codePreview": {
+    "flow_node_not_found": "O componente do subfluxo não está no canvas atual."
   }
 }

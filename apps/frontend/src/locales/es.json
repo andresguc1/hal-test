@@ -173,15 +173,21 @@
     "cmd_test_headed": "Ejecutar un test de HalTest con navegador visible",
     "cmd_report": "Abrir reporte HTML",
     "cmd_install": "Instalar navegadores",
-    "confirm_sync_title": "Sincronización deshabilitada",
-    "confirm_sync_description": "La sincronización inversa desde el código al flujo de trabajo es experimental y ha sido deshabilitada temporalmente para evitar la corrupción del flujo.",
+    "confirm_sync_title": "¿Sincronizar código al lienzo?",
+    "confirm_sync_description": "Al sincronizar, el código reemplazará el flujo actual. Las posiciones manuales de los nodos y los diseños personalizados se restablecerán para coincidir con la secuencia del código.",
     "confirm_sync_btn": "Entendido",
-    "sync_disabled_toast": "Sincronización deshabilitada.",
     "enter_edit_mode": "Modo Edición Avanzada",
     "exit_edit_mode": "Modo Vista",
     "sync_failed": "Error al sincronizar el código con el lienzo.",
     "sync_parse_error": "No se pudo interpretar el código de nuevo en acciones del flujo.",
-    "sync_success": "Código sincronizado con el lienzo correctamente"
+    "sync_success": "Código sincronizado con el lienzo correctamente",
+    "fold_toggle": "Plegar / expandir este bloque",
+    "fold_expand": "{{lines}} línea(s) ocultas · clic para expandir",
+    "breadcrumb_root": "Flujo principal",
+    "breadcrumb_explore": "Doble clic para abrir el subflujo",
+    "view_code": "Ver código de este paso",
+    "stale_warning": "El código está desincronizado con el lienzo",
+    "regenerate": "Regenerar"
   },
   "nodes": {
     "select_option": {
@@ -197,6 +203,8 @@
     },
     "labels": {
       "open_url": "Abrir URL",
+      "unresolved_code": "Sin resolver",
+      "unresolved_code_hint": "Sin flujo asociado a este componente — la última generación produjo un bloque vacío.",
       "close_browser": "Cerrar navegador",
       "go_back": "Retroceder",
       "go_forward": "Avanzar",
@@ -1836,5 +1844,8 @@
     "confirm": "Eliminar proyectos",
     "description": "Estás a punto de eliminar permanentemente {{count}} proyecto(s) con {{flows}} flujos. Se eliminarán todos los flujos, nodos y conexiones. Esta acción no se puede deshacer.",
     "typed_description": "Estás a punto de eliminar permanentemente {{count}} proyecto(s) con {{flows}} flujos. Esto no se puede deshacer. Escribe DELETE para confirmar."
+  },
+  "codePreview": {
+    "flow_node_not_found": "El componente del subflujo no está en el lienzo actual."
   }
 }

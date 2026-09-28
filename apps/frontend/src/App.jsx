@@ -57,6 +57,7 @@ import { HalToaster } from "./components/Toast";
 import { useHaltestSocket } from "./hooks/useHaltestSocket";
 import { useFigmaInteraction } from "./hooks/useFigmaInteraction";
 import { useTranslation } from "react-i18next";
+import i18n from "./i18n";
 import { useTheme } from "next-themes";
 import { useNodeDefinitions } from "./hooks/useNodeDefinitions";
 import RunHistoryPanel from "./components/RunHistoryPanel";
@@ -249,6 +250,112 @@ function Dashboard({
   } = useFlowManager(currentProject, currentFlowId, switchFlow);
   window.nodes = nodes;
   window.edges = edges;
+
+// Resolution status surfaced from the last code generation (TerminalPanel →
+// onCodePreview) — consumed by ComponentNode as a persistence-resolution badge.
+const [codePreviewByNode, setCodePreviewByNode] = React.useState({});
+
+// TerminalPanel ref for imperative methods (loadRunMapping for Phase 4)
+const terminalPanelRef = React.useRef(null);
+
+// Phase 4 inverse: track executed steps from the active run to highlight
+  // code blocks in TerminalPanel. Key format: "${instanceKey || 'null'}:${nodeId}".
+  const [executedMappingKeys, setExecutedMappingKeys] = React.useState(() => new Set());
+
+  // Active run ID for reporting/history (Phase 4 inverse highlighting)
+  const [reportingRunId, setReportingRunId] = React.useState(null);
+
+  // Phase 3: jump from a code container (double-click) to its subflow canvas.
+  // `flowId` comes from the mapping entry; the canvas node is looked up by
+  // flowId (or by itself when id === flowId), then we reuse `enterComponent`
+  // (same guard/view-stack as the double-click on the canvas node).
+  const handleExploreSubFlowFromCode = React.useCallback(
+    async (flowId) => {
+      if (!flowId) return;
+      const target = nodes.find(
+        (n) =>
+          (n.data?.flowId || n.data?.configuration?.flowId) === flowId ||
+          n.id === flowId,
+      );
+      if (!target) {
+        toast.warning(
+          t(
+            "codePreview.flow_node_not_found",
+            "The sub-flow component is not on the current canvas.",
+          ),
+        );
+        return;
+      }
+      try {
+        await enterComponent(target.id);
+      } catch (err) {
+        console.error("[App] explore sub-flow from code:", err);
+      }
+      setTimeout(() => fitView({ duration: 600 }), 250);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [nodes, enterComponent, fitView],
+  );
+
+  // Phase 4: load a historical run's code mapping and focus a step in TerminalPanel
+  const handleLoadRunMapping = React.useCallback(
+    async (runId, step) => {
+      if (!terminalPanelRef.current) return;
+      try {
+        // Default to current project's settings, but allow override
+        const options = {
+          framework: 'playwright',
+          language: 'javascript',
+          locale: i18n.language.split('-')[0].toLowerCase(),
+          usePOM: false,
+          includeCICD: false,
+          designPattern: 'flat',
+        };
+        const result = await api.getRunMapping(runId, options);
+        if (result.success && result.mappingByFile) {
+          terminalPanelRef.current.loadRunMapping({
+            mappingByFile: result.mappingByFile,
+            generationKey: result.generationKey,
+            targetNodeId: step.node_id || step.nodeId,
+            compositeNodeId: step.compositeNodeId || null,
+            subflowId: step.subflowId || null,
+          });
+        }
+      } catch (err) {
+        console.error('[App] loadRunMapping failed:', err);
+        toast.error('Failed to load code mapping for this run');
+      }
+    },
+    [api],
+  );
+
+  // Phase 4 inverse: compute executed mapping keys from the active run's steps
+  // and pass to TerminalPanel for highlighting executed blocks.
+  React.useEffect(() => {
+    if (!reportingRunId) {
+      setExecutedMappingKeys(new Set());
+      return;
+    }
+    // Fetch run details to get steps
+    api.get(`/runs/${reportingRunId}`)
+      .then((run) => {
+        if (!run?.data?.steps) {
+          setExecutedMappingKeys(new Set());
+          return;
+        }
+        const keys = new Set();
+        for (const step of run.data.steps) {
+          const nodeId = step.node_id || step.nodeId;
+          const compositeNodeId = step.compositeNodeId || null;
+          // Key format matches mapping entry: instanceKey:nodeId
+          const instanceKey = compositeNodeId || null;
+          const key = `${instanceKey === null ? 'null' : instanceKey}:${nodeId}`;
+          keys.add(key);
+        }
+        setExecutedMappingKeys(keys);
+      })
+      .catch(() => setExecutedMappingKeys(new Set()));
+  }, [reportingRunId]);
 
   // Zoom-aware contextual node tooltip (screen-space overlay)
   const [infoNode, setInfoNode] = React.useState(null); // { id, rect, nodeKey, data, safeConfig, displayLabel, compact }
@@ -773,8 +880,6 @@ function Dashboard({
     setIsGuestModeModalOpen(false);
     window.location.href = "/login"; // Or trigger Supabase login flow
   }, []);
-
-  const [reportingRunId, setReportingRunId] = useState(null);
 
   // 5. Effects
   React.useEffect(() => {
@@ -1903,6 +2008,9 @@ function Dashboard({
       const isContainer = ["component", "loop"].includes(
         node.type || node.data?.type,
       );
+      const previewEntry = codePreviewByNode[node.id] || null;
+      const previewJSON = JSON.stringify(node.data?.codePreview || null);
+      const newPreviewJSON = JSON.stringify(previewEntry);
 
       let updatedNode = node;
 
@@ -1948,7 +2056,8 @@ function Dashboard({
       if (
         currentWarningsJSON !== newWarningsJSON ||
         updatedNode !== node ||
-        node.data?.canvasViewMode !== canvasViewMode
+        node.data?.canvasViewMode !== canvasViewMode ||
+        previewJSON !== newPreviewJSON
       ) {
         return {
           ...updatedNode,
@@ -1956,6 +2065,7 @@ function Dashboard({
             ...updatedNode.data,
             warnings: nodeWarnings,
             canvasViewMode,
+            codePreview: previewEntry,
           },
         };
       }
@@ -1963,7 +2073,7 @@ function Dashboard({
       return node;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nodes, edges, currentProject, canvasViewMode]); // Removed enterComponent because it changes on every node update
+  }, [nodes, edges, currentProject, canvasViewMode, codePreviewByNode]); // Removed enterComponent because it changes on every node update
 
   // Props dinámicas que sí cambian
   const flowConfig = useMemo(
@@ -2552,14 +2662,18 @@ function Dashboard({
 
             {/* Real-time Execution Terminal - Now inside Main Layout */}
             <TerminalPanel
+              ref={terminalPanelRef}
               socket={socket}
               nodes={nodes}
               edges={edges}
-              setNodes={setNodes}
-              setEdges={setEdges}
+              _setNodes={setNodes}
+              _setEdges={setEdges}
               selectedNodeId={selectedNodeId}
               setSelectedNodeId={setActiveNodeId}
               executionMode={canvasViewMode}
+              onCodePreview={setCodePreviewByNode}
+              onExploreSubFlow={handleExploreSubFlowFromCode}
+              executedMappingKeys={executedMappingKeys}
             />
 
             {/* Ask AI Debug Console */}
@@ -2887,6 +3001,7 @@ function Dashboard({
           <ReportDashboard
             runId={reportingRunId}
             onClose={() => setReportingRunId(null)}
+            onViewCode={handleLoadRunMapping}
           />
         )}
       </AnimatePresence>

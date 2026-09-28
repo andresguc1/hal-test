@@ -231,6 +231,15 @@ export const api = {
   },
 
   /**
+   * Fetch the code mapping for a historical run.
+   */
+  async getRunMapping(runId, options = {}) {
+    const params = new URLSearchParams(options).toString();
+    const query = params ? `?${params}` : '';
+    return this.get(`/runs/${runId}/mapping${query}`);
+  },
+
+  /**
    * Download a resource as a Blob (e.g. project ZIP export).
    */
   async download(endpoint, customConfig = {}) {

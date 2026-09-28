@@ -25,7 +25,14 @@ router.get('/status', (req, res) => {
     res.json({
         success: true,
         message: 'Import router is working',
-        endpoints: ['/analyze', '/convert', '/import-directory', '/directory', '/directory-pom'],
+        endpoints: [
+            '/analyze',
+            '/convert',
+            '/import-directory',
+            '/directory',
+            '/directory-pom',
+            '/code',
+        ],
     });
 });
 
@@ -368,6 +375,33 @@ router.post('/directory-pom', upload.any(), async (req, res) => {
             message: error.message,
             stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
         });
+    }
+});
+
+// Parse edited code back into flow actions (Code → Canvas sync).
+router.post('/code', (req, res) => {
+    try {
+        const { code, framework } = req.body || {};
+        if (!code || typeof code !== 'string' || !code.trim()) {
+            return res
+                .status(400)
+                .json({ success: false, message: req.t('actions.import_router.content_required') });
+        }
+
+        const result = importService.convert(code, framework || null);
+        if (!result.success) {
+            return res.status(400).json({ success: false, message: result.error });
+        }
+
+        const first = result.flows?.[0] || null;
+        res.json({
+            success: true,
+            actions: first?.flow || [],
+            flowMeta: first?.meta || null,
+            flows: result.flows,
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
     }
 });
 

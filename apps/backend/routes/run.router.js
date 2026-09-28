@@ -4,6 +4,7 @@ import {
     endRunAction,
     getRunsAction,
     getRunDetailsAction,
+    getRunMappingAction,
     getRunDatasetsAction,
     deleteRunAction,
     clearHistoryAction,
@@ -39,6 +40,7 @@ router.get('/analytics', getReportAnalyticsAction);
 router.get('/flow/:flowId/history', getFlowHistoryAction);
 router.get('/:runId/export', exportPerformanceReportAction);
 router.get('/:id/report', exportRunReportAction);
+router.get('/:id/mapping', getRunMappingAction);
 router.get('/:id/datasets', getRunDatasetsAction);
 router.get('/', getRunsAction);
 router.get('/:id', getRunDetailsAction);

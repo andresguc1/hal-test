@@ -73,6 +73,9 @@ export class SeleniumGenerator extends BaseGenerator {
             const subCode = this.generateSteps(subNodes, depth + 1);
 
             if (type === 'component') {
+                if (subNodes.length === 0) {
+                    return this.warnUnresolvedComponent(step, label, index, indent, commentChar);
+                }
                 // Component: group with comment markers (Selenium has no native grouping)
                 return `${indent}${nodeIdComment ? nodeIdComment + '\n' + indent : ''}${commentChar} [GROUP]: ${label}\n${subCode}\n${indent}${commentChar} [END GROUP]`;
             }

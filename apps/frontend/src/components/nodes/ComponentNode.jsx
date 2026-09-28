@@ -69,6 +69,11 @@ const ComponentNode = ({ id, data, selected }) => {
   // 4. Sub-flow Stats
   const subNodeCount = data.nodeCount || 0;
 
+  // Resolution status surfaced from the last code generation (App →
+  // codePreviewByNode). Unresolved = the emitter produced a placeholder block.
+  const preview = data.codePreview || null;
+  const isPreviewUnresolved = preview?.status === "unresolved";
+
   const { color: statusColor, shadow: statusShadow } =
     isSuccess || isError
       ? {
@@ -131,10 +136,7 @@ const ComponentNode = ({ id, data, selected }) => {
           <CheckCircle size={14} className="text-green-400 drop-shadow-sm" />
         )}
         {isError && (
-          <XCircle
-            size={14}
-            className="text-red-400 drop-shadow-sm"
-          />
+          <XCircle size={14} className="text-red-400 drop-shadow-sm" />
         )}
       </div>
 
@@ -186,6 +188,20 @@ const ComponentNode = ({ id, data, selected }) => {
               })}
             </span>
           )}
+          {showDetails && isPreviewUnresolved && (
+            <span
+              title={
+                preview.reason ||
+                t(
+                  "nodes.labels.unresolved_code_hint",
+                  "No flow bound to this component — the last generation produced an empty block.",
+                )
+              }
+              className="mt-0.5 w-max inline-flex items-center gap-1 px-1.5 py-px rounded text-[9px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30"
+            >
+              {t("nodes.labels.unresolved_code", "Unresolved")}
+            </span>
+          )}
         </div>
       </div>
 
@@ -234,7 +250,10 @@ function arePropsEqual(prevProps, nextProps) {
     prevProps.data?.state === nextProps.data?.state &&
     prevProps.data?.label === nextProps.data?.label &&
     prevProps.data?.customLabel === nextProps.data?.customLabel &&
-    prevProps.data?.nodeCount === nextProps.data?.nodeCount
+    prevProps.data?.nodeCount === nextProps.data?.nodeCount &&
+    prevProps.data?.codePreview?.status ===
+      nextProps.data?.codePreview?.status &&
+    prevProps.data?.codePreview?.reason === nextProps.data?.codePreview?.reason
   );
 }
 

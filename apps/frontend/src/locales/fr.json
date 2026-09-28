@@ -173,15 +173,21 @@
     "cmd_test_headed": "Exécuter un fichier de test avec navigateur visible",
     "cmd_report": "Ouvrir le rapport HTML",
     "cmd_install": "Installer les navigateurs",
-    "confirm_sync_title": "Synchronisation désactivée",
-    "confirm_sync_description": "La synchronisation inverse du code vers le flux de travail est actuellement expérimentale et a été temporairement désactivée pour éviter la corruption du flux.",
+    "confirm_sync_title": "Synchroniser le code avec le canevas ?",
+    "confirm_sync_description": "Synchroniser le code remplacera le flux actuel. Les positions manuelles des nœuds et les mises en page personnalisées seront automatiquement réinitialisées pour correspondre à la séquence du code.",
     "confirm_sync_btn": "Compris",
-    "sync_disabled_toast": "Synchronisation désactivée.",
     "enter_edit_mode": "Mode Édition Avancée",
     "exit_edit_mode": "Mode Vue",
     "sync_failed": "Échec de la synchronisation du code avec le canevas.",
     "sync_parse_error": "Impossible de réinterpréter le code en actions de flux.",
-    "sync_success": "Code synchronisé avec le canevas avec succès"
+    "sync_success": "Code synchronisé avec le canevas avec succès",
+    "fold_toggle": "Replier / déplier ce bloc",
+    "fold_expand": "{{lines}} ligne(s) masquée(s) · cliquer pour développer",
+    "breadcrumb_root": "Flux principal",
+    "breadcrumb_explore": "Double-clic pour ouvrir le sous-flux",
+    "view_code": "Voir le code de cette étape",
+    "stale_warning": "Le code est hors synchronisation avec le canevas",
+    "regenerate": "Régénérer"
   },
   "nodes": {
     "select_option": {
@@ -196,6 +202,8 @@
     },
     "labels": {
       "open_url": "Ouvrir l'URL",
+      "unresolved_code": "Non résolu",
+      "unresolved_code_hint": "Aucun flux lié à ce composant — la dernière génération a produit un bloc vide.",
       "close_browser": "Fermer le Navigateur",
       "go_back": "Retour",
       "go_forward": "Suivant",
@@ -1791,5 +1799,8 @@
     "confirm": "Supprimer les projets",
     "description": "Vous êtes sur le point de supprimer définitivement {{count}} projet(s) contenant {{flows}} flux. Cela supprimera tous les flux, nœuds et connexions. Cette action est irréversible.",
     "typed_description": "Vous êtes sur le point de supprimer définitivement {{count}} projet(s) contenant {{flows}} flux. Cette action est irréversible. Tapez DELETE pour confirmer."
+  },
+  "codePreview": {
+    "flow_node_not_found": "Le composant du sous-flux n'est pas présent sur le canevas actuel."
   }
 }

@@ -173,15 +173,21 @@
     "cmd_test_headed": "Run a HalTest file with visible browser",
     "cmd_report": "Open HTML report",
     "cmd_install": "Install browsers",
-    "confirm_sync_title": "Synchronization Disabled",
-    "confirm_sync_description": "Reverse synchronization from code to workflow is currently experimental and has been temporarily disabled to prevent workflow corruption.",
+    "confirm_sync_title": "Sync Code to Canvas?",
+    "confirm_sync_description": "Syncing code will replace the current flow. Any manual node positions or custom layouts will be automatically reset to match the code sequence.",
     "confirm_sync_btn": "Got it",
-    "sync_disabled_toast": "Synchronization disabled.",
     "enter_edit_mode": "Advanced Edit Mode",
     "exit_edit_mode": "View Mode",
     "sync_failed": "Failed to sync code to canvas.",
     "sync_parse_error": "Could not parse code back into flow actions.",
-    "sync_success": "Code synced to canvas successfully"
+    "sync_success": "Code synced to canvas successfully",
+    "fold_toggle": "Collapse / expand this block",
+    "fold_expand": "{{lines}} line(s) hidden · click to expand",
+    "breadcrumb_root": "Main Flow",
+    "breadcrumb_explore": "Double-click to open the subflow",
+    "view_code": "View code for this step",
+    "stale_warning": "Code is out of sync with canvas",
+    "regenerate": "Regenerate"
   },
   "nodes": {
     "select_option": {
@@ -197,6 +203,8 @@
     },
     "labels": {
       "open_url": "Open URL",
+      "unresolved_code": "Unresolved",
+      "unresolved_code_hint": "No flow bound to this component — the last generation produced an empty block.",
       "close_browser": "Close Browser",
       "go_back": "Go Back",
       "go_forward": "Go Forward",
@@ -1836,5 +1844,8 @@
     "confirm": "Delete projects",
     "description": "You are about to permanently delete {{count}} project(s) containing {{flows}} flows. This will delete all flows, nodes, and connections. This action cannot be undone.",
     "typed_description": "You are about to permanently delete {{count}} project(s) containing {{flows}} flows. This cannot be undone. Type DELETE to confirm."
+  },
+  "codePreview": {
+    "flow_node_not_found": "The sub-flow component is not on the current canvas."
   }
 }

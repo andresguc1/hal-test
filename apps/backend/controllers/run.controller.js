@@ -1,5 +1,6 @@
 import { executionService } from '../services/ExecutionService.js';
 import { executionLogger } from '../services/ExecutionLogger.js';
+import { buildMappingFromSnapshot } from '../services/exporter/buildMappingFromSnapshot.js';
 import path from 'path';
 import fs from 'fs';
 import { STORAGE_RUNS_DIR } from '../config/paths.js';
@@ -359,6 +360,44 @@ export const getRunDetailsAction = async (req, res) => {
 
         return res.status(200).json({ success: true, data: normalizedRun });
     } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+export const getRunMappingAction = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const run = await Run.findByPk(id);
+
+        if (!run) {
+            return res.status(404).json({ success: false, message: 'Run not found' });
+        }
+
+        const flowSnapshot = run.flow_snapshot;
+        if (!flowSnapshot) {
+            return res.status(400).json({ success: false, message: 'Run has no flow snapshot' });
+        }
+
+        // Allow overriding generation options via query params
+        const options = {
+            framework: req.query.framework || 'playwright',
+            language: req.query.language || 'javascript',
+            locale: req.query.locale || 'es',
+            usePOM: req.query.usePOM === 'true',
+            includeCICD: req.query.includeCICD === 'true',
+            designPattern: req.query.designPattern || 'flat',
+        };
+
+        // Build mapping from the run's flow snapshot
+        const result = await buildMappingFromSnapshot({
+            flowSnapshot,
+            projectId: run.project_id || null,
+            options,
+        });
+
+        return res.status(200).json({ success: true, ...result });
+    } catch (error) {
+        console.error('[RunController] getRunMappingAction Error:', error);
         return res.status(500).json({ success: false, error: error.message });
     }
 };
