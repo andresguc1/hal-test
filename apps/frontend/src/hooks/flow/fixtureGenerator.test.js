@@ -136,7 +136,9 @@ describe("X2 — dataset generator (validity, coverage, reproducibility)", () =>
     expect(metas.G.branchCount + metas.H.branchCount).toBeGreaterThanOrEqual(1); // branch/sourceHandle nodes
     expect(metas.A.maxDegree).toBe(1); // linear: no fan-out
     // symmetric chain counts prove analyze() itself:
-    expect(metas.B.edgeCount).toBe(metas.B.maxDegree >= 1 ? metas.B.nodeCount - 1 : 0);
+    expect(metas.B.edgeCount).toBe(
+      metas.B.maxDegree >= 1 ? metas.B.nodeCount - 1 : 0,
+    );
   });
 
   it("X8 shapes: all 10 present, deterministic, hash-pinned", () => {
@@ -144,7 +146,9 @@ describe("X2 — dataset generator (validity, coverage, reproducibility)", () =>
     expect(shapes).toHaveLength(Object.keys(PINNED_SHAPES).length);
     for (const s of shapes) {
       assertStructural(s);
-      const name = Object.keys(PINNED_SHAPES).find((k) => PINNED_SHAPES[k] === s.hash);
+      const name = Object.keys(PINNED_SHAPES).find(
+        (k) => PINNED_SHAPES[k] === s.hash,
+      );
       expect(name, `no pin for ${s.hash}`).toBeDefined();
       manifest.shapes[s.label] = { hash: s.hash, meta: s.meta };
     }
@@ -162,6 +166,10 @@ afterAll(() => {
   mkdirSync(out, { recursive: true });
   writeFileSync(
     path.join(out, "manifest.json"),
-    JSON.stringify({ generated: new Date().toISOString(), ...manifest }, null, 2),
+    JSON.stringify(
+      { generated: new Date().toISOString(), ...manifest },
+      null,
+      2,
+    ),
   );
 });

@@ -489,7 +489,12 @@ export const getLayoutedElements = (nodes, edges, third) => {
  *   If omitted/empty, behaves like getLayoutedElements but preserves order.
  * @returns {Array} - [layoutedNodes, layoutedEdges] in ORIGINAL node order.
  */
-export const getLayoutedElementsLocal = (nodes, edges, third, selectedNodeIds) => {
+export const getLayoutedElementsLocal = (
+  nodes,
+  edges,
+  third,
+  selectedNodeIds,
+) => {
   if (!nodes || nodes.length === 0) return [[], []];
 
   const selected = selectedNodeIds ? new Set(selectedNodeIds) : new Set();
@@ -694,7 +699,8 @@ export const getLayoutedElementsLocal = (nodes, edges, third, selectedNodeIds) =
         let desiredY = p.y;
         sources.forEach((srcId) => {
           const sp = positions.get(srcId);
-          if (sp) desiredY = Math.max(desiredY, sp.y + sp.h + spacing.mergeSpacing);
+          if (sp)
+            desiredY = Math.max(desiredY, sp.y + sp.h + spacing.mergeSpacing);
         });
         if (desiredY <= p.y) continue;
 

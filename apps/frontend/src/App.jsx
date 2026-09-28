@@ -251,16 +251,18 @@ function Dashboard({
   window.nodes = nodes;
   window.edges = edges;
 
-// Resolution status surfaced from the last code generation (TerminalPanel →
-// onCodePreview) — consumed by ComponentNode as a persistence-resolution badge.
-const [codePreviewByNode, setCodePreviewByNode] = React.useState({});
+  // Resolution status surfaced from the last code generation (TerminalPanel →
+  // onCodePreview) — consumed by ComponentNode as a persistence-resolution badge.
+  const [codePreviewByNode, setCodePreviewByNode] = React.useState({});
 
-// TerminalPanel ref for imperative methods (loadRunMapping for Phase 4)
-const terminalPanelRef = React.useRef(null);
+  // TerminalPanel ref for imperative methods (loadRunMapping for Phase 4)
+  const terminalPanelRef = React.useRef(null);
 
-// Phase 4 inverse: track executed steps from the active run to highlight
+  // Phase 4 inverse: track executed steps from the active run to highlight
   // code blocks in TerminalPanel. Key format: "${instanceKey || 'null'}:${nodeId}".
-  const [executedMappingKeys, setExecutedMappingKeys] = React.useState(() => new Set());
+  const [executedMappingKeys, setExecutedMappingKeys] = React.useState(
+    () => new Set(),
+  );
 
   // Active run ID for reporting/history (Phase 4 inverse highlighting)
   const [reportingRunId, setReportingRunId] = React.useState(null);
@@ -304,12 +306,12 @@ const terminalPanelRef = React.useRef(null);
       try {
         // Default to current project's settings, but allow override
         const options = {
-          framework: 'playwright',
-          language: 'javascript',
-          locale: i18n.language.split('-')[0].toLowerCase(),
+          framework: "playwright",
+          language: "javascript",
+          locale: i18n.language.split("-")[0].toLowerCase(),
           usePOM: false,
           includeCICD: false,
-          designPattern: 'flat',
+          designPattern: "flat",
         };
         const result = await api.getRunMapping(runId, options);
         if (result.success && result.mappingByFile) {
@@ -322,8 +324,8 @@ const terminalPanelRef = React.useRef(null);
           });
         }
       } catch (err) {
-        console.error('[App] loadRunMapping failed:', err);
-        toast.error('Failed to load code mapping for this run');
+        console.error("[App] loadRunMapping failed:", err);
+        toast.error("Failed to load code mapping for this run");
       }
     },
     [api],
@@ -337,7 +339,8 @@ const terminalPanelRef = React.useRef(null);
       return;
     }
     // Fetch run details to get steps
-    api.get(`/runs/${reportingRunId}`)
+    api
+      .get(`/runs/${reportingRunId}`)
       .then((run) => {
         if (!run?.data?.steps) {
           setExecutedMappingKeys(new Set());
@@ -349,7 +352,7 @@ const terminalPanelRef = React.useRef(null);
           const compositeNodeId = step.compositeNodeId || null;
           // Key format matches mapping entry: instanceKey:nodeId
           const instanceKey = compositeNodeId || null;
-          const key = `${instanceKey === null ? 'null' : instanceKey}:${nodeId}`;
+          const key = `${instanceKey === null ? "null" : instanceKey}:${nodeId}`;
           keys.add(key);
         }
         setExecutedMappingKeys(keys);

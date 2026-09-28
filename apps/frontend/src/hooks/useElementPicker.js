@@ -407,14 +407,7 @@ export const useElementPicker = ({
         await handleCancelPicking();
       }
     },
-    [
-      updateNodeState,
-      handleCancelPicking,
-      setNodes,
-      setNestedValue,
-      t,
-      toast,
-    ],
+    [updateNodeState, handleCancelPicking, setNodes, setNestedValue, t, toast],
   );
 
   const handleElementSanitized = useCallback(

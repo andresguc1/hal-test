@@ -85,7 +85,8 @@ export const simulateExecution = (graph, opts = {}) => {
   if (activeNodes.length > 1 && !forcedStart) {
     const incomingCount = new Map(activeNodes.map((n) => [n.id, 0]));
     activeEdges.forEach((e) => {
-      if (incomingCount.has(e.target)) incomingCount.set(e.target, incomingCount.get(e.target) + 1);
+      if (incomingCount.has(e.target))
+        incomingCount.set(e.target, incomingCount.get(e.target) + 1);
     });
     const roots = activeNodes.filter((n) => incomingCount.get(n.id) === 0);
     startNodes = roots.length > 0 ? orderStartNodes(roots) : [];
@@ -107,16 +108,21 @@ export const simulateExecution = (graph, opts = {}) => {
     trace.push({ id: node.id, type: kind(node) });
 
     const nextEdges = activeEdges.filter((e) => e.source === node.id);
-    const path = String(pathByNodeId[node.id] || "").trim().toLowerCase();
+    const path = String(pathByNodeId[node.id] || "")
+      .trim()
+      .toLowerCase();
     const isBranchNode = isBranchy(node);
     const shouldEnforceStrict = ["switch", "conditional"].includes(kind(node));
 
     let winnerEdges = nextEdges;
     if (path && path !== "undefined") {
-      const matched = nextEdges.filter((e) => matchesBranchPath(e.sourceHandle, path));
+      const matched = nextEdges.filter((e) =>
+        matchesBranchPath(e.sourceHandle, path),
+      );
       if (shouldEnforceStrict || isBranchNode) {
         winnerEdges = matched;
-        if (matched.length === 0 && nextEdges.length > 0 && shouldEnforceStrict) winnerEdges = [];
+        if (matched.length === 0 && nextEdges.length > 0 && shouldEnforceStrict)
+          winnerEdges = [];
       } else if (matched.length > 0) {
         winnerEdges = matched;
       }
@@ -138,7 +144,10 @@ const flipRoots = (nodes) =>
   nodes.map((n) =>
     n.id !== "tail" ? { ...n, position: { x: 0, y: 200 - n.position.y } } : n,
   );
-const reverseEdges = (graph) => ({ ...graph, edges: [...graph.edges].reverse() });
+const reverseEdges = (graph) => ({
+  ...graph,
+  edges: [...graph.edges].reverse(),
+});
 const reorderNodes = (graph) => ({
   ...graph,
   nodes: [...graph.nodes].sort((a, b) => b.id.localeCompare(a.id)),
@@ -167,7 +176,9 @@ describe("X8 — execution semantics vs visual arrangement", () => {
   it("1 multiple-roots — E1: position.y drives root order (top→bottom)", () => {
     const g = x8Graphs()[0];
     const base = toIds(simulateExecution(g));
-    const flipped = toIds(simulateExecution({ ...g, nodes: flipRoots(g.nodes) }));
+    const flipped = toIds(
+      simulateExecution({ ...g, nodes: flipRoots(g.nodes) }),
+    );
     const flippedBack = toIds(
       simulateExecution({ ...g, nodes: flipRoots(flipRoots(g.nodes)) }),
     );
@@ -235,14 +246,19 @@ describe("X8 — execution semantics vs visual arrangement", () => {
     record("parallel", {
       base,
       reversedEdgesOnly: reversed,
-      conclusion: "ARRAY ORDER COUPLING CONFIRMED — starts p1 or p3 depending on edges array",
+      conclusion:
+        "ARRAY ORDER COUPLING CONFIRMED — starts p1 or p3 depending on edges array",
     });
   });
 
   it("5 nested-branch — E4: branch winner selected by sourceHandle (position neutral)", () => {
     const g = x8Graphs()[4];
-    const viaTrue = simulateExecution(g, { pathByNodeId: { root: "", cond: "true" } });
-    const viaFalse = simulateExecution(g, { pathByNodeId: { root: "", cond: "false" } });
+    const viaTrue = simulateExecution(g, {
+      pathByNodeId: { root: "", cond: "true" },
+    });
+    const viaFalse = simulateExecution(g, {
+      pathByNodeId: { root: "", cond: "false" },
+    });
 
     expect(toIds(viaTrue)).toContain("t1");
     expect(toIds(viaFalse)).toContain("f1");
@@ -250,14 +266,36 @@ describe("X8 — execution semantics vs visual arrangement", () => {
     expect(toIds(viaFalse)).not.toContain("t1");
 
     // Position-permuted graph must give the exact same traces.
-    const flipped = { ...g, nodes: g.nodes.map((n) => ({ ...n, position: { x: -n.position.y, y: n.position.x } })) };
-    expect(toIds(simulateExecution(flipped, { pathByNodeId: { root: "", cond: "true" } }))).toEqual(toIds(viaTrue));
-    expect(toIds(simulateExecution(flipped, { pathByNodeId: { root: "", cond: "false" } }))).toEqual(toIds(viaFalse));
+    const flipped = {
+      ...g,
+      nodes: g.nodes.map((n) => ({
+        ...n,
+        position: { x: -n.position.y, y: n.position.x },
+      })),
+    };
+    expect(
+      toIds(
+        simulateExecution(flipped, {
+          pathByNodeId: { root: "", cond: "true" },
+        }),
+      ),
+    ).toEqual(toIds(viaTrue));
+    expect(
+      toIds(
+        simulateExecution(flipped, {
+          pathByNodeId: { root: "", cond: "false" },
+        }),
+      ),
+    ).toEqual(toIds(viaFalse));
 
     record("nested-branch", {
       traceTrue: toIds(viaTrue),
       traceFalse: toIds(viaFalse),
-      positionPermutedTraceTrue: toIds(simulateExecution(flipped, { pathByNodeId: { root: "", cond: "true" } })),
+      positionPermutedTraceTrue: toIds(
+        simulateExecution(flipped, {
+          pathByNodeId: { root: "", cond: "true" },
+        }),
+      ),
       conclusion:
         "POSITION NEUTRAL + ARRAY NEUTRAL CONFIRMED — matchesBranchPath(sourceHandle) resolves branch; permutation of positions and edge order between branches does not change winner",
     });
@@ -278,7 +316,9 @@ describe("X8 — execution semantics vs visual arrangement", () => {
     const movedDown = g.nodes.map((n) =>
       n.id === "top" ? { ...n, position: { x: 0, y: 500 } } : n,
     );
-    expect(toIds(simulateExecution({ ...g, nodes: movedDown }))[0]).toBe("bottom");
+    expect(toIds(simulateExecution({ ...g, nodes: movedDown }))[0]).toBe(
+      "bottom",
+    );
 
     // ...but a launch_browser lower on canvas still beats a non-launch entry.
     const mixed = [
@@ -293,10 +333,23 @@ describe("X8 — execution semantics vs visual arrangement", () => {
 
   it("layout-cycles — repeated layout (id-sorted output) must be order-stable", () => {
     // Round-trips through the id-sorted ordering produced by getLayoutedElements
-    const sorted = (arr, key) => [...arr].sort((a, b) => (a[key] > b[key] ? 1 : -1));
+    const sorted = (arr, key) =>
+      [...arr].sort((a, b) => (a[key] > b[key] ? 1 : -1));
     for (const g of x8Graphs()) {
-      const once = toIds(simulateExecution({ ...g, nodes: sorted(g.nodes, "id"), edges: sorted(g.edges, "id") }));
-      const twice = toIds(simulateExecution({ ...g, nodes: sorted(g.nodes, "id"), edges: sorted(g.edges, "id") }));
+      const once = toIds(
+        simulateExecution({
+          ...g,
+          nodes: sorted(g.nodes, "id"),
+          edges: sorted(g.edges, "id"),
+        }),
+      );
+      const twice = toIds(
+        simulateExecution({
+          ...g,
+          nodes: sorted(g.nodes, "id"),
+          edges: sorted(g.edges, "id"),
+        }),
+      );
       expect(once).toEqual(twice);
     }
   });
@@ -315,7 +368,13 @@ describe("X8 — execution semantics vs visual arrangement", () => {
     for (const [name, g] of Object.entries(sets)) {
       const base = toIds(simulateExecution(g));
       const overPos = toIds(
-        simulateExecution({ ...g, nodes: g.nodes.map((n) => ({ ...n, position: { x: n.position.y, y: n.position.x } })) }),
+        simulateExecution({
+          ...g,
+          nodes: g.nodes.map((n) => ({
+            ...n,
+            position: { x: n.position.y, y: n.position.x },
+          })),
+        }),
       );
       const overArr = toIds(simulateExecution(reorderNodes(g)));
       const overEdge = toIds(simulateExecution(reverseEdges(g)));
@@ -335,6 +394,9 @@ describe("X8 — execution semantics vs visual arrangement", () => {
   afterAll(() => {
     const out = path.resolve("../../docs/research/spikes/data/X8");
     mkdirSync(out, { recursive: true });
-    writeFileSync(path.join(out, "traces.json"), JSON.stringify(traceFixture, null, 2));
+    writeFileSync(
+      path.join(out, "traces.json"),
+      JSON.stringify(traceFixture, null, 2),
+    );
   });
 });

@@ -21,15 +21,23 @@
 import { test, expect } from "@playwright/test";
 import { writeFileSync, mkdirSync, readFileSync, existsSync } from "node:fs";
 import path from "node:path";
-import { datasetLinear, datasetBranching } from "../test/fixtures/layout/export.js";
+import {
+  datasetLinear,
+  datasetBranching,
+} from "../test/fixtures/layout/export.js";
 
 const API = "http://localhost:2001";
-const storeDir = path.resolve(process.cwd(), "../../docs/research/spikes/data/X10");
+const storeDir = path.resolve(
+  process.cwd(),
+  "../../docs/research/spikes/data/X10",
+);
 
 function storeResults(caseName, measurements) {
   mkdirSync(storeDir, { recursive: true });
   const file = path.join(storeDir, "results.json");
-  const prev = existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : { cases: {} };
+  const prev = existsSync(file)
+    ? JSON.parse(readFileSync(file, "utf8"))
+    : { cases: {} };
   prev.cases[caseName] = { ...measurements, at: new Date().toISOString() };
   writeFileSync(file, JSON.stringify(prev, null, 2));
 }
@@ -55,7 +63,11 @@ async function createProjectWithFlow(seed, fixture) {
   const pj = await fetch(`${API}/api/projects`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name: `X10-${Date.now()}-${seed}`, nodes: [], edges: [] }),
+    body: JSON.stringify({
+      name: `X10-${Date.now()}-${seed}`,
+      nodes: [],
+      edges: [],
+    }),
   });
   if (!pj.ok) throw new Error(`create project failed: ${pj.status}`);
   const { project } = await pj.json();
@@ -113,7 +125,10 @@ function settleDetector() {
         requestAnimationFrame(sample);
         return;
       }
-      const sig = `${[...nodes].slice(0, 20).map((n) => n.style.transform).join("|")}:${nodes.length}`;
+      const sig = `${[...nodes]
+        .slice(0, 20)
+        .map((n) => n.style.transform)
+        .join("|")}:${nodes.length}`;
       const now = performance.now();
       if (window.__frameLog.length === 0) window.__frameStart = now;
       window.__frameLog.push(sig);
@@ -149,14 +164,25 @@ test.describe("X10 — layout engine baseline (current dagre LR)", () => {
     { id: "linear-100", builder: (s) => datasetLinear(100, s), seed: 424242 },
     { id: "linear-250", builder: (s) => datasetLinear(250, s), seed: 424243 },
     { id: "linear-500", builder: (s) => datasetLinear(500, s), seed: 424244 },
-    { id: "branching-100", builder: (s) => datasetBranching(100, s), seed: 777001 },
-    { id: "branching-250", builder: (s) => datasetBranching(250, s), seed: 777002 },
+    {
+      id: "branching-100",
+      builder: (s) => datasetBranching(100, s),
+      seed: 777001,
+    },
+    {
+      id: "branching-250",
+      builder: (s) => datasetBranching(250, s),
+      seed: 777002,
+    },
   ];
 
   for (const trial of TRIALS) {
     test(trial.id, async ({ page }) => {
       const fixture = trial.builder(trial.seed);
-      const { project, flow } = await createProjectWithFlow(trial.seed, fixture);
+      const { project, flow } = await createProjectWithFlow(
+        trial.seed,
+        fixture,
+      );
 
       await page.addInitScript(
         ({ pid, fid }) => {
@@ -183,9 +209,11 @@ test.describe("X10 — layout engine baseline (current dagre LR)", () => {
         window.__frameLog = [];
         window.__frameStart = -1;
       });
-      await page.waitForFunction(settleDetector, undefined, { timeout: 120_000 });
-      const loadMs = await page.evaluate(() =>
-        Math.round((window.__settleAt - window.__x10.tNav) * 10) / 10,
+      await page.waitForFunction(settleDetector, undefined, {
+        timeout: 120_000,
+      });
+      const loadMs = await page.evaluate(
+        () => Math.round((window.__settleAt - window.__x10.tNav) * 10) / 10,
       );
       const loadPhase = await computePhase(page, 0);
 
@@ -200,9 +228,12 @@ test.describe("X10 — layout engine baseline (current dagre LR)", () => {
           btn.click();
         }
       });
-      await page.waitForFunction(settleDetector, undefined, { timeout: 120_000 });
+      await page.waitForFunction(settleDetector, undefined, {
+        timeout: 120_000,
+      });
       const layoutMs = await page.evaluate(
-        () => Math.round((window.__settleAt - window.__x10.layoutStart) * 10) / 10,
+        () =>
+          Math.round((window.__settleAt - window.__x10.layoutStart) * 10) / 10,
       );
       const layoutPhase = await computePhase(page, 1);
       const visibleNodes = await page.locator(".react-flow__node").count();

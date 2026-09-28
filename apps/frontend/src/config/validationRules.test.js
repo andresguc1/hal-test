@@ -172,14 +172,17 @@ describe("Data extraction node configs", () => {
     expect(validateNodeConfig("save_dataset", { source: "" }).isValid).toBe(
       false,
     );
-    expect(validateNodeConfig("save_dataset", { source: "products" }).isValid).toBe(
-      true,
-    );
+    expect(
+      validateNodeConfig("save_dataset", { source: "products" }).isValid,
+    ).toBe(true);
   });
 
   it("smart labels summarize the extraction", () => {
     expect(
-      getSmartLabel("extract", { selector: "li.product", fields: [{ name: "a" }] }),
+      getSmartLabel("extract", {
+        selector: "li.product",
+        fields: [{ name: "a" }],
+      }),
     ).toContain("li.product");
     expect(
       getSmartLabel("save_dataset", { source: "products", format: "csv" }),

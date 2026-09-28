@@ -1,18 +1,18 @@
 export const PLAYWRIGHT_SELECTOR_PRIORITY = [
-  'playwrightTestId',
-  'playwrightRole',
-  'playwrightLabel',
-  'playwrightPlaceholder',
-  'playwrightAltText',
-  'playwrightTitle',
-  'playwrightText',
-  'testId',
-  'id',
-  'name',
-  'aria',
-  'text',
-  'cssPath',
-  'xpath',
+  "playwrightTestId",
+  "playwrightRole",
+  "playwrightLabel",
+  "playwrightPlaceholder",
+  "playwrightAltText",
+  "playwrightTitle",
+  "playwrightText",
+  "testId",
+  "id",
+  "name",
+  "aria",
+  "text",
+  "cssPath",
+  "xpath",
 ];
 
 export function pickBestSelector(sources) {
@@ -31,8 +31,11 @@ export function pickBestSelector(sources) {
   };
 
   for (const candidate of Object.values(fallbackMap)) {
-    if (candidate) return { selector: candidate, type: 'fallback' };
+    if (candidate) return { selector: candidate, type: "fallback" };
   }
 
-  return { selector: sources.selector || sources.sanitizedSelector || '', type: 'unknown' };
+  return {
+    selector: sources.selector || sources.sanitizedSelector || "",
+    type: "unknown",
+  };
 }

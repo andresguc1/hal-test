@@ -28,13 +28,20 @@ const x5Results = { runs: [] };
 // ============================================================
 
 function buildOrthogonalBypassPath({
-  sourceX, sourceY, targetX, targetY,
-  parallelIndex = 0, borderRadius = 10,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  parallelIndex = 0,
+  borderRadius = 10,
 }) {
   const laneOffset = 16 + (parallelIndex % 3) * 10;
   const r = borderRadius;
   const pivotX = sourceX + laneOffset;
-  const clampedPivotX = Math.max(sourceX, Math.min(pivotX, (sourceX + targetX) / 2 - 10));
+  const clampedPivotX = Math.max(
+    sourceX,
+    Math.min(pivotX, (sourceX + targetX) / 2 - 10),
+  );
   const goingDown = targetY > sourceY;
   const yDir = goingDown ? 1 : -1;
 
@@ -49,8 +56,12 @@ function buildOrthogonalBypassPath({
 }
 
 function smoothStepPath({
-  sourceX, sourceY, targetX, targetY,
-  sourcePosition = "right", targetPosition = "left",
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  sourcePosition = "right",
+  targetPosition = "left",
   _borderRadius = 10,
 }) {
   // Simplified from @xyflow/react getSmoothStepPath
@@ -64,25 +75,36 @@ function smoothStepPath({
 }
 
 function routeEdge(edge, _nodes, isBypass, _parallelIndex) {
-  const source = edge.sourceNode || { position: { x: edge.sourceX, y: edge.sourceY } };
-  const target = edge.targetNode || { position: { x: edge.targetX, y: edge.targetY } };
+  const source = edge.sourceNode || {
+    position: { x: edge.sourceX, y: edge.sourceY },
+  };
+  const target = edge.targetNode || {
+    position: { x: edge.targetX, y: edge.targetY },
+  };
   const sourceX = edge.sourceX ?? source.position.x;
   const sourceY = edge.sourceY ?? source.position.y;
   const targetX = edge.targetX ?? target.position.x;
   const targetY = edge.targetY ?? target.position.y;
 
   const distanceY = Math.abs(targetY - sourceY);
-  const bypass = isBypass ?? (distanceY > 30);
+  const bypass = isBypass ?? distanceY > 30;
 
   if (bypass) {
     return buildOrthogonalBypassPath({
-      sourceX, sourceY, targetX, targetY,
+      sourceX,
+      sourceY,
+      targetX,
+      targetY,
       parallelIndex: edge.parallelIndex ?? 0,
     });
   }
   return smoothStepPath({
-    sourceX, sourceY, targetX, targetY,
-    sourcePosition: "right", targetPosition: "left",
+    sourceX,
+    sourceY,
+    targetX,
+    targetY,
+    sourcePosition: "right",
+    targetPosition: "left",
   });
 }
 
@@ -129,10 +151,19 @@ class RoutingCache {
 
   stats() {
     const total = this.hits + this.misses;
-    return { hits: this.hits, misses: this.misses, hitRate: total ? this.hits / total : 0, size: this.cache.size };
+    return {
+      hits: this.hits,
+      misses: this.misses,
+      hitRate: total ? this.hits / total : 0,
+      size: this.cache.size,
+    };
   }
 
-  clear() { this.cache.clear(); this.hits = 0; this.misses = 0; }
+  clear() {
+    this.cache.clear();
+    this.hits = 0;
+    this.misses = 0;
+  }
 }
 
 // ============================================================
@@ -183,17 +214,24 @@ describe("X5 — Edge routing cache + candidates", { timeout: 120_000 }, () => {
     for (const size of sizes) {
       it(`${name} @ ${size}: uncached vs cached routing cost`, () => {
         const fixture = builder(size, 42);
-        const [layoutedNodes, layoutedEdges] = getLayoutedElements(fixture.nodes, fixture.edges, "LR");
+        const [layoutedNodes, layoutedEdges] = getLayoutedElements(
+          fixture.nodes,
+          fixture.edges,
+          "LR",
+        );
 
         // Build edge objects with positions
-        const nodeById = new Map(layoutedNodes.map(n => [n.id, n]));
-        const edgesWithPos = layoutedEdges.map(e => ({
+        const nodeById = new Map(layoutedNodes.map((n) => [n.id, n]));
+        const edgesWithPos = layoutedEdges.map((e) => ({
           ...e,
           sourceX: nodeById.get(e.source)?.position.x,
           sourceY: nodeById.get(e.source)?.position.y,
           targetX: nodeById.get(e.target)?.position.x,
           targetY: nodeById.get(e.target)?.position.y,
-          parallelIndex: String(e.id).split("").reduce((a, c) => a + c.charCodeAt(0), 0) % 3,
+          parallelIndex:
+            String(e.id)
+              .split("")
+              .reduce((a, c) => a + c.charCodeAt(0), 0) % 3,
         }));
 
         const uncached = measureRoute(edgesWithPos, layoutedNodes, 50);
@@ -215,7 +253,7 @@ describe("X5 — Edge routing cache + candidates", { timeout: 120_000 }, () => {
         });
 
         console.log(
-          `[X5] ${name}@${size}: edges=${edgesWithPos.length} uncached=${uncached.medianMs.toFixed(2)}ms cached=${cached.medianMs.toFixed(2)}ms speedup=${speedup.toFixed(2)}x hitRate=${cached.cache.hitRate.toFixed(2)}`
+          `[X5] ${name}@${size}: edges=${edgesWithPos.length} uncached=${uncached.medianMs.toFixed(2)}ms cached=${cached.medianMs.toFixed(2)}ms speedup=${speedup.toFixed(2)}x hitRate=${cached.cache.hitRate.toFixed(2)}`,
         );
       });
     }
@@ -223,9 +261,13 @@ describe("X5 — Edge routing cache + candidates", { timeout: 120_000 }, () => {
 
   it("cache invalidation on node move", () => {
     const fixture = datasetBranching(100, 42);
-    const [nodes, edges] = getLayoutedElements(fixture.nodes, fixture.edges, "LR");
-    const nodeById = new Map(nodes.map(n => [n.id, n]));
-    const edgesWithPos = edges.map(e => ({
+    const [nodes, edges] = getLayoutedElements(
+      fixture.nodes,
+      fixture.edges,
+      "LR",
+    );
+    const nodeById = new Map(nodes.map((n) => [n.id, n]));
+    const edgesWithPos = edges.map((e) => ({
       ...e,
       sourceX: nodeById.get(e.source)?.position.x,
       sourceY: nodeById.get(e.source)?.position.y,
@@ -235,13 +277,13 @@ describe("X5 — Edge routing cache + candidates", { timeout: 120_000 }, () => {
     }));
 
     const cache = new RoutingCache();
-    edgesWithPos.forEach(e => cache.get(e, null));
+    edgesWithPos.forEach((e) => cache.get(e, null));
     const before = cache.stats();
 
     // Move 10 nodes
-    const movedIds = edgesWithPos.slice(0, 10).map(e => e.source);
+    const movedIds = edgesWithPos.slice(0, 10).map((e) => e.source);
     cache.invalidate(movedIds);
-    edgesWithPos.forEach(e => cache.get(e, null));
+    edgesWithPos.forEach((e) => cache.get(e, null));
     const after = cache.stats();
 
     // Some misses expected (invalidate worked)
@@ -259,10 +301,17 @@ describe("X5 — Edge routing cache + candidates", { timeout: 120_000 }, () => {
 });
 
 afterAll(() => {
-  const out = path.resolve(__dirname, "../../../../../docs/research/spikes/data/X5");
+  const out = path.resolve(
+    __dirname,
+    "../../../../../docs/research/spikes/data/X5",
+  );
   mkdirSync(out, { recursive: true });
   writeFileSync(
     path.join(out, "results.json"),
-    JSON.stringify({ generated: new Date().toISOString(), ...x5Results }, null, 2),
+    JSON.stringify(
+      { generated: new Date().toISOString(), ...x5Results },
+      null,
+      2,
+    ),
   );
 });

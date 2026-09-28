@@ -50,7 +50,10 @@ const pickType = (rand, allowBranch) => {
   const pool = allowBranch
     ? nodeTypes
     : nodeTypes.filter(
-        (t) => !["switch", "conditional", "loop", "for_each", "component"].includes(t),
+        (t) =>
+          !["switch", "conditional", "loop", "for_each", "component"].includes(
+            t,
+          ),
       );
   return pool[Math.floor(rand() * pool.length)];
 };
@@ -73,7 +76,6 @@ const sha256 = (obj) => hashOf(obj);
 
 const analyze = (fixture) => {
   const { nodes, edges } = fixture;
-  const idSet = new Set(nodes.map((n) => n.id));
   const adj = new Map(nodes.map((n) => [n.id, []]));
   edges.forEach((e) => {
     if (adj.has(e.source)) adj.get(e.source).push(e.target);
@@ -93,7 +95,6 @@ const analyze = (fixture) => {
   ).length;
 
   const depth = (() => {
-    let visitor = {};
     const seen = {};
     const walk = (id, d) => {
       seen[id] = d;
@@ -158,9 +159,15 @@ export const datasetLinear = (size = 50, seed = 42) => {
   const edges = [];
   for (let i = 0; i < size; i++) {
     nodes.push(
-      makeNode(`n${i}`, pickType(rand, false), Math.floor(rand() * 400), i * 90),
+      makeNode(
+        `n${i}`,
+        pickType(rand, false),
+        Math.floor(rand() * 400),
+        i * 90,
+      ),
     );
-    if (i > 0) edges.push({ id: `e${i - 1}`, source: `n${i - 1}`, target: `n${i}` });
+    if (i > 0)
+      edges.push({ id: `e${i - 1}`, source: `n${i - 1}`, target: `n${i}` });
   }
   return fixture(nodes, edges, "A", "linear", { seed });
 };
@@ -175,14 +182,31 @@ export const datasetBranching = (size = 50, seed = 7) => {
   const edges = [];
   for (let i = 0; i < size; i++) {
     nodes.push(
-      makeNode(`n${i}`, pickType(rand, false), (i % 8) * 80, Math.floor(i / 8) * 160),
+      makeNode(
+        `n${i}`,
+        pickType(rand, false),
+        (i % 8) * 80,
+        Math.floor(i / 8) * 160,
+      ),
     );
   }
   for (let i = 0; i < size; i += 2) {
     const left = i + 1;
     const right = i + 2;
-    if (left < size) edges.push({ id: `e${i}-${left}`, source: `n${i}`, target: `n${left}`, sourceHandle: `l${i}` });
-    if (right < size) edges.push({ id: `e${i}-${right}`, source: `n${i}`, target: `n${right}`, sourceHandle: `r${i}` });
+    if (left < size)
+      edges.push({
+        id: `e${i}-${left}`,
+        source: `n${i}`,
+        target: `n${left}`,
+        sourceHandle: `l${i}`,
+      });
+    if (right < size)
+      edges.push({
+        id: `e${i}-${right}`,
+        source: `n${i}`,
+        target: `n${right}`,
+        sourceHandle: `r${i}`,
+      });
   }
   return fixture(nodes, edges, "B", "branching", { seed });
 };
@@ -200,11 +224,19 @@ export const datasetMergeHeavy = (size = 50, seed = 13) => {
   for (let c = 0; c < chains; c++) {
     for (let i = 0; i < perChain; i++) {
       const id = `c${c}_${i}`;
-      nodes.push(makeNode(id, pickType(rand, false), Math.floor(rand() * 200), (c * perChain + i) * 90));
-      if (i > 0) edges.push({ id: `e_${id}`, source: `c${c}_${i - 1}`, target: id });
+      nodes.push(
+        makeNode(
+          id,
+          pickType(rand, false),
+          Math.floor(rand() * 200),
+          (c * perChain + i) * 90,
+        ),
+      );
+      if (i > 0)
+        edges.push({ id: `e_${id}`, source: `c${c}_${i - 1}`, target: id });
     }
   }
-  nodes.push(makeNode("lag", "wait", 220, (chains * perChain) / 2 * 90));
+  nodes.push(makeNode("lag", "wait", 220, ((chains * perChain) / 2) * 90));
   for (let c = 0; c < chains; c++) {
     const last = `c${c}_${perChain - 1}`;
     if (nodes.some((n) => n.id === last)) {
@@ -226,13 +258,28 @@ export const datasetDeepBranching = (size = 50, seed = 23) => {
   const nodes = [];
   const edges = [];
   for (let i = 0; i < size; i++) {
-    nodes.push(makeNode(`n${i}`, pickType(rand, false), Math.floor(rand() * 300), i * 80));
-    if (i > 0) edges.push({ id: `e_spine_${i}`, source: `n${i - 1}`, target: `n${i}` });
+    nodes.push(
+      makeNode(
+        `n${i}`,
+        pickType(rand, false),
+        Math.floor(rand() * 300),
+        i * 80,
+      ),
+    );
+    if (i > 0)
+      edges.push({ id: `e_spine_${i}`, source: `n${i - 1}`, target: `n${i}` });
   }
   for (let i = 0; i < size; i++) {
     const leafId = `leaf_${i}`;
-    nodes.push(makeNode(leafId, "screenshot", Math.floor(rand() * 300) + 320, i * 80));
-    edges.push({ id: `e_leaf_${i}`, source: `n${i}`, target: leafId, sourceHandle: `f${i}` });
+    nodes.push(
+      makeNode(leafId, "screenshot", Math.floor(rand() * 300) + 320, i * 80),
+    );
+    edges.push({
+      id: `e_leaf_${i}`,
+      source: `n${i}`,
+      target: leafId,
+      sourceHandle: `f${i}`,
+    });
   }
   return fixture(nodes, edges, "D", "deep-branching", { seed });
 };
@@ -252,12 +299,23 @@ export const datasetDiamond = (count = 10, seed = 109) => {
     nodes.push(makeNode(mid, pickType(rand, false), (d + 1) * 180, 0));
     nodes.push(makeNode(lo, pickType(rand, false), (d + 1) * 180, 120));
     nodes.push(makeNode(hi, pickType(rand, false), (d + 1) * 180, -120));
-    if (d === 0) edges.push({ id: "e_start_mid", source: "start", target: mid });
+    if (d === 0)
+      edges.push({ id: "e_start_mid", source: "start", target: mid });
     else edges.push({ id: `e_chain_${d}`, source: `m${d - 1}`, target: mid });
-    edges.push({ id: `e_${mid}_lo`, source: mid, target: lo, sourceHandle: `s_${d}_lo` });
-    edges.push({ id: `e_${mid}_hi`, source: mid, target: hi, sourceHandle: `s_${d}_hi` });
+    edges.push({
+      id: `e_${mid}_lo`,
+      source: mid,
+      target: lo,
+      sourceHandle: `s_${d}_lo`,
+    });
+    edges.push({
+      id: `e_${mid}_hi`,
+      source: mid,
+      target: hi,
+      sourceHandle: `s_${d}_hi`,
+    });
   }
-  const sink = makeNode("end", "assert", (count) * 180, 0);
+  const sink = makeNode("end", "assert", count * 180, 0);
   nodes.push(sink);
   edges.push({ id: `e_last_lo`, source: `lo${count - 1}`, target: "end" });
   edges.push({ id: `e_last_hi`, source: `hi${count - 1}`, target: "end" });
@@ -278,7 +336,9 @@ export const datasetComposite = (count = 6, seed = 58) => {
     const cid = `comp_${s}`;
     const subId = `sub_${s}`;
     // attach container flow id via extra field (persisted separately in app)
-    rootNodes.push(makeNode(cid, "component", (s + 1) * 200, 0, `Subflow ${s}`));
+    rootNodes.push(
+      makeNode(cid, "component", (s + 1) * 200, 0, `Subflow ${s}`),
+    );
     rootNodes[rootNodes.length - 1].data.flowId = subId;
     rootEdges.push({ id: `e_root_${s}`, source: prev, target: cid });
     prev = cid;
@@ -287,11 +347,22 @@ export const datasetComposite = (count = 6, seed = 58) => {
     sn.push(makeNode(`${subId}_in`, "navigate", 0, 0));
     for (let i = 1; i <= 3; i++) {
       const nid = `${subId}_${i}`;
-      sn.push(makeNode(nid, pickType(rand, i % 2 === 0), i * 160, (i % 2) * 140));
-      if (i === 1) se.push({ id: `e_${subId}_head`, source: `${subId}_in`, target: nid });
-      else se.push({ id: `e_${subId}_${i}`, source: `${subId}_${i - 1}`, target: nid, sourceHandle: `b${i}` });
+      sn.push(
+        makeNode(nid, pickType(rand, i % 2 === 0), i * 160, (i % 2) * 140),
+      );
+      if (i === 1)
+        se.push({ id: `e_${subId}_head`, source: `${subId}_in`, target: nid });
+      else
+        se.push({
+          id: `e_${subId}_${i}`,
+          source: `${subId}_${i - 1}`,
+          target: nid,
+          sourceHandle: `b${i}`,
+        });
     }
-    subflows.push(fixture(sn, se, "F", `subflow-${s}`, { seed, subflowId: subId }));
+    subflows.push(
+      fixture(sn, se, "F", `subflow-${s}`, { seed, subflowId: subId }),
+    );
   }
   return fixture(rootNodes, rootEdges, "F", "composite", {
     seed,
@@ -305,7 +376,6 @@ export const datasetComposite = (count = 6, seed = 58) => {
  * conditional branch (tabs/cards) → loops + for_each → assertions → screenshot.
  */
 export const datasetRealistic = (size = 50, seed = 777) => {
-  const rand = mulberry32(seed);
   const nodes = [];
   const edges = [];
   const root = makeNode("browser", "launch_browser", 0, 0);
@@ -322,24 +392,49 @@ export const datasetRealistic = (size = 50, seed = 777) => {
   const noTargets = [];
   const remaining = size - 3;
   for (let i = 0; i < remaining; i += 2) {
-    const yes = makeNode(`tabs_${i}`, i % 3 === 0 ? "for_each" : "click", 220, 200 + (i / 2) * 90);
-    const no = makeNode(`cards_${i + 1}`, i % 4 === 0 ? "loop" : "extract_text", 220, 240 + (i / 2) * 90);
+    const yes = makeNode(
+      `tabs_${i}`,
+      i % 3 === 0 ? "for_each" : "click",
+      220,
+      200 + (i / 2) * 90,
+    );
+    const no = makeNode(
+      `cards_${i + 1}`,
+      i % 4 === 0 ? "loop" : "extract_text",
+      220,
+      240 + (i / 2) * 90,
+    );
     nodes.push(yes);
     nodes.push(no);
     yesTargets.push(yes);
     noTargets.push(no);
   }
   yesTargets.forEach((t, i) =>
-    edges.push({ id: `e_yes_${i}`, source: "branch_main", target: t.id, sourceHandle: "true" }),
+    edges.push({
+      id: `e_yes_${i}`,
+      source: "branch_main",
+      target: t.id,
+      sourceHandle: "true",
+    }),
   );
   noTargets.forEach((t, i) =>
-    edges.push({ id: `e_noh_${i}`, source: "branch_main", target: t.id, sourceHandle: "false" }),
+    edges.push({
+      id: `e_noh_${i}`,
+      source: "branch_main",
+      target: t.id,
+      sourceHandle: "false",
+    }),
   );
 
   const sink = makeNode("assert_final", "assert", 0, 700);
   nodes.push(sink);
   [...yesTargets, ...noTargets].forEach((t, i) => {
-    edges.push({ id: `e_merge_${i}`, source: t.id, target: "assert_final", sourceHandle: "flow" });
+    edges.push({
+      id: `e_merge_${i}`,
+      source: t.id,
+      target: "assert_final",
+      sourceHandle: "flow",
+    });
   });
   return fixture(nodes, edges, "G", "realistic", { seed });
 };
@@ -354,7 +449,14 @@ export const datasetPathological = (size = 50, seed = 7283) => {
   const edges = [];
   const half = Math.floor(size / 2);
   for (let i = 0; i < half; i++) {
-    nodes.push(makeNode(`i${i}`, pickType(rand, false), Math.floor(rand() * 400), i * 80));
+    nodes.push(
+      makeNode(
+        `i${i}`,
+        pickType(rand, false),
+        Math.floor(rand() * 400),
+        i * 80,
+      ),
+    );
     if (i > 0) {
       const src = `i${i - 1}`;
       const target = `i${i}`;
@@ -362,7 +464,14 @@ export const datasetPathological = (size = 50, seed = 7283) => {
     }
   }
   for (let i = 0; i < size - half; i++) {
-    nodes.push(makeNode(`j${i}`, pickType(rand, i % 2 === 0), 500 + Math.floor(rand() * 200), i * 60));
+    nodes.push(
+      makeNode(
+        `j${i}`,
+        pickType(rand, i % 2 === 0),
+        500 + Math.floor(rand() * 200),
+        i * 60,
+      ),
+    );
   }
   // isolate cycle between the first two island nodes (no roots on that island)
   edges.push({ id: "e_cycle_i0i1", source: "i0", target: "i1" });
@@ -493,7 +602,7 @@ export const x8Composite = (seed = 66) => {
     { id: "e_bc", source: "b", target: "c" },
   ];
   nodes[1].data.flowId = "x8composite_sub";
-  const subflow = fixture(
+  fixture(
     [
       makeNode("b1", "click", 0, 0),
       makeNode("b2", "extract_text", 200, 0),
@@ -507,7 +616,7 @@ export const x8Composite = (seed = 66) => {
     "composite-subflow",
     { seed, subflowId: "x8composite_sub" },
   );
-  return step(nodes, edges, seed, "composite"); 
+  return step(nodes, edges, seed, "composite");
 };
 
 /**
@@ -519,23 +628,16 @@ export const x8NestedComposite = (seed = 77) => {
     makeNode("b", "component", 200, 0),
   ];
   nodes[1].data.flowId = "x8nested_sub";
-  const edges = [
-    { id: "e_ab", source: "a", target: "b" },
-  ];
+  const edges = [{ id: "e_ab", source: "a", target: "b" }];
   const inner = fixture(
-    [
-      makeNode("d", "component", 0, 0),
-      makeNode("leaf", "click", 200, 0),
-    ],
-    [
-      { id: "e_d_leaf", source: "d", target: "leaf" },
-    ],
+    [makeNode("d", "component", 0, 0), makeNode("leaf", "click", 200, 0)],
+    [{ id: "e_d_leaf", source: "d", target: "leaf" }],
     "X8",
     "nested-inner",
     { seed, subflowId: "x8nested_innermost" },
   );
   inner.nodes[0].data.flowId = "x8nested_innermost";
-  const subflow = fixture(
+  fixture(
     [
       makeNode("b1", "navigate", 0, 0),
       inner.nodes[0],
@@ -564,7 +666,12 @@ export const x8Loop = (seed = 88) => {
   ];
   const edges = [
     { id: "e_root_body", source: "root", target: "body", sourceHandle: "body" },
-    { id: "e_body_end", source: "body", target: "end", sourceHandle: "complete" },
+    {
+      id: "e_body_end",
+      source: "body",
+      target: "end",
+      sourceHandle: "complete",
+    },
   ];
   return step(nodes, edges, seed, "loop");
 };
@@ -612,14 +719,9 @@ export const x8Mixed = (seed = 123) => {
   ];
   nodes[5].data.flowId = "x8mixed_loop";
   nodes[6].data.flowId = "x8mixed_comp";
-  const subComp = fixture(
-    [
-      makeNode("s1", "navigate", 0, 0),
-      makeNode("s2", "click", 200, 0),
-    ],
-    [
-      { id: "e_s1", source: "s1", target: "s2" },
-    ],
+  fixture(
+    [makeNode("s1", "navigate", 0, 0), makeNode("s2", "click", 200, 0)],
+    [{ id: "e_s1", source: "s1", target: "s2" }],
     "X8",
     "mixed-composite-sub",
     { seed, subflowId: "x8mixed_comp" },
@@ -650,4 +752,3 @@ export const DATASET_BUILDERS = {
   G: datasetRealistic,
   H: datasetPathological,
 };
-

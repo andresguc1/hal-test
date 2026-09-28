@@ -37,7 +37,8 @@ const seedNodes = (doc, n, startTop = 100) => {
   }
 };
 
-const posOf = (doc, id, k) => doc.getMap("nodes").get(id).get("position").get(k);
+const posOf = (doc, id, k) =>
+  doc.getMap("nodes").get(id).get("position").get(k);
 
 const runTx = (doc, fn) => {
   const updates = [];
@@ -45,7 +46,10 @@ const runTx = (doc, fn) => {
   doc.on("update", onUpdate);
   doc.transact(fn);
   doc.off("update", onUpdate);
-  return { deltaBytes: Y.mergeUpdates(updates).byteLength, updateCount: updates.length };
+  return {
+    deltaBytes: Y.mergeUpdates(updates).byteLength,
+    updateCount: updates.length,
+  };
 };
 
 const runLayout = (doc, ids, xv, yv) =>
@@ -68,7 +72,10 @@ const syncFull = (src, target) =>
   Y.applyUpdate(target, Y.encodeStateAsUpdate(src));
 
 const syncTo = (src, target) =>
-  Y.applyUpdate(target, Y.encodeStateAsUpdate(src, Y.encodeStateVector(target)));
+  Y.applyUpdate(
+    target,
+    Y.encodeStateAsUpdate(src, Y.encodeStateVector(target)),
+  );
 
 const makePair = (n) => {
   const a = new Y.Doc();
@@ -236,12 +243,17 @@ describe(
 
     it("(d) strategy is recorded from the evidence", () => {
       results.strategy = {
-        layout_writes: "all-position cell writes in one atomic Y transaction (observed, updateCount=1)",
+        layout_writes:
+          "all-position cell writes in one atomic Y transaction (observed, updateCount=1)",
         cost: "see transactionSize; ~N×amplification vs single drag",
-        outcome: "last-writer-wins per nested position cell; drag vs layout verdict = ORDER-dependent",
-        stale_drag_clobber: "layout arriving after a drag overwrites the dragged cell (observed)",
-        atomic_property: "a layout update lands atomically at peers (partial layouts impossible)",
-        retraction: "layoutVersion written in the SAME Y transaction lets peers drop stale layouts",
+        outcome:
+          "last-writer-wins per nested position cell; drag vs layout verdict = ORDER-dependent",
+        stale_drag_clobber:
+          "layout arriving after a drag overwrites the dragged cell (observed)",
+        atomic_property:
+          "a layout update lands atomically at peers (partial layouts impossible)",
+        retraction:
+          "layoutVersion written in the SAME Y transaction lets peers drop stale layouts",
         phase3_recommendation:
           "Treat layout as a user-visible op: PREVIEW → CONFIRM → atomic Y transaction bumping layoutVersion. No silent auto-layout inside live collab rooms; if auto-layout must exist, gate it to a single 'layout curator' client and rely on layoutVersion retraction.",
       };
@@ -255,6 +267,10 @@ afterAll(() => {
   mkdirSync(out, { recursive: true });
   writeFileSync(
     path.join(out, "results.json"),
-    JSON.stringify({ generated: new Date().toISOString(), ...results }, null, 2),
+    JSON.stringify(
+      { generated: new Date().toISOString(), ...results },
+      null,
+      2,
+    ),
   );
 });

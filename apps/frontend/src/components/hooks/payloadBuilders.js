@@ -1319,9 +1319,7 @@ export const extract = (payload) => {
 export const save_dataset = (payload) => {
   const source = asString(payload?.source);
   if (source === "") {
-    throw new Error(
-      "Dataset variable (source) is required for save_dataset.",
-    );
+    throw new Error("Dataset variable (source) is required for save_dataset.");
   }
 
   const validFormats = ["json", "csv", "ndjson"];

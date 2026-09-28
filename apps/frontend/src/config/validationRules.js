@@ -1561,8 +1561,7 @@ export const NODE_INPUTS = {
       type: "selector",
       placeholder: "e.g. li.product, tr.row",
       required: true,
-      description:
-        "Matches one or more elements. Each match becomes a record.",
+      description: "Matches one or more elements. Each match becomes a record.",
     },
     {
       key: "repeated",

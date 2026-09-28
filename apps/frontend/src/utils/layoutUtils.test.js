@@ -218,7 +218,7 @@ describe("getLayoutedElements - branch semantics (LR)", () => {
     // on purpose so it does not flake under CI CPU contention, while still
     // catching an algorithmic-complexity regression (a polynomial blow-up on
     // the merge/branch post-passes would massively exceed it).
-expect(elapsed).toBeLessThan(2000);
+    expect(elapsed).toBeLessThan(2000);
 
     // Re-run to confirm determinism at scale.
     const [layouted2] = getLayoutedElements(nodes, edges, "LR");
@@ -324,15 +324,15 @@ describe("getLayoutedElementsLocal - arrange selection (X4)", () => {
   it("edges connected to selected nodes are updated; others unchanged", () => {
     const nodes = makeNodes();
     const edges = makeEdges();
-    const [, layoutedEdges] = getLayoutedElementsLocal(
-      nodes,
-      edges,
-      "LR",
-      ["b", "d"],
-    );
+    const [, layoutedEdges] = getLayoutedElementsLocal(nodes, edges, "LR", [
+      "b",
+      "d",
+    ]);
 
     // Edge b->c has both ends in subgraph (b selected, c neighbor) -> updated
-    const edgeBC = layoutedEdges.find((e) => e.source === "b" && e.target === "c");
+    const edgeBC = layoutedEdges.find(
+      (e) => e.source === "b" && e.target === "c",
+    );
     expect(edgeBC).toBeDefined();
     // Edge a->b has "a" not in subgraph -> unchanged (but "b" is selected, so it IS in subgraph)
     // Actually "a" is neighbor of "b", so a->b is in subgraph
@@ -353,9 +353,15 @@ describe("getLayoutedElementsLocal - arrange selection (X4)", () => {
     });
   });
 
-it("with conditional branch: selected branch + its neighbors move", () => {
+  it("with conditional branch: selected branch + its neighbors move", () => {
     const nodes = [
-      { id: "cond", data: { type: "conditional", configuration: { branches: [{ id: "true" }, { id: "false" }] } } },
+      {
+        id: "cond",
+        data: {
+          type: "conditional",
+          configuration: { branches: [{ id: "true" }, { id: "false" }] },
+        },
+      },
       { id: "A", data: { type: "click" } },
       { id: "B", data: { type: "click" } },
       { id: "next", data: { type: "goBack" } },
@@ -389,7 +395,6 @@ it("with conditional branch: selected branch + its neighbors move", () => {
 });
 
 describe("getLayoutedElementsLocal - arrange selection (X4)", () => {
-
   it("accepts per-call spacing overrides while remaining collision-free", () => {
     const nodes = [
       branchNode("cond", "conditional", {

@@ -74,9 +74,11 @@ describe("X6 — Worker crossover cost model", { timeout: 60_000 }, () => {
 
         const serNodes = measureSerialization(nodes);
         const serEdges = measureSerialization(edges);
-        const serTotalTimeMedian = serNodes.timeMedianMs + serEdges.timeMedianMs;
+        const serTotalTimeMedian =
+          serNodes.timeMedianMs + serEdges.timeMedianMs;
         const serTotalTimeP95 = serNodes.timeP95Ms + serEdges.timeP95Ms;
-        const serTotalSizeKB = (serNodes.sizeMedianBytes + serEdges.sizeMedianBytes) / 1024;
+        const serTotalSizeKB =
+          (serNodes.sizeMedianBytes + serEdges.sizeMedianBytes) / 1024;
 
         const workerModelMedian = serTotalTimeMedian * 2 + inThread.medianMs;
         const workerModelP95 = serTotalTimeP95 * 2 + inThread.p95Ms;
@@ -111,6 +113,10 @@ afterAll(() => {
   mkdirSync(out, { recursive: true });
   writeFileSync(
     path.join(out, "results.json"),
-    JSON.stringify({ generated: new Date().toISOString(), ...results }, null, 2),
+    JSON.stringify(
+      { generated: new Date().toISOString(), ...results },
+      null,
+      2,
+    ),
   );
 });

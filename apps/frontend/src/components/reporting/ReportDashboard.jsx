@@ -132,7 +132,8 @@ function computeEdgeStates(steps, upToIndex, allEdges) {
   return map;
 }
 
-const SECRET_KEYS = /password|passwd|secret|token|api[_-]?key|authorization|credential/i;
+const SECRET_KEYS =
+  /password|passwd|secret|token|api[_-]?key|authorization|credential/i;
 
 function redactSensitive(value, key) {
   if (key && SECRET_KEYS.test(String(key))) return "••••••";
@@ -389,7 +390,11 @@ function ReportDashboardContent({ runId, onClose, onViewCode }) {
     );
 
     setEdges((prev) => {
-      const edgeStateMap = computeEdgeStates(normalizedSteps, currentStepIndex, prev);
+      const edgeStateMap = computeEdgeStates(
+        normalizedSteps,
+        currentStepIndex,
+        prev,
+      );
       return prev.map((edge) => ({
         ...edge,
         data: {
@@ -404,12 +409,7 @@ function ReportDashboardContent({ runId, onClose, onViewCode }) {
   // children) and uses the step's real duration when recorded. In video mode
   // the video element drives the timeline instead, so this stays idle.
   useEffect(() => {
-    if (
-      !isPlaying ||
-      evidenceTab === "video" ||
-      !steps ||
-      steps.length === 0
-    ) {
+    if (!isPlaying || evidenceTab === "video" || !steps || steps.length === 0) {
       return;
     }
 
@@ -651,17 +651,21 @@ function ReportDashboardContent({ runId, onClose, onViewCode }) {
 
         <div className="flex items-center gap-3">
           {/* Steps summary */}
-<div className="flex items-center gap-1.5 text-[10px] text-slate-400 bg-slate-900/60 border border-white/5 rounded-lg px-3 py-1.5 font-mono">
-              <ListTree size={12} className="text-indigo-400" />
-              <span className="font-bold text-slate-200">
-                {hasSteps ? `${t("report.steps", "STEPS", { count: steps.length })}` : t("report.empty", "0 STEPS")}
+          <div className="flex items-center gap-1.5 text-[10px] text-slate-400 bg-slate-900/60 border border-white/5 rounded-lg px-3 py-1.5 font-mono">
+            <ListTree size={12} className="text-indigo-400" />
+            <span className="font-bold text-slate-200">
+              {hasSteps
+                ? `${t("report.steps", "STEPS", { count: steps.length })}`
+                : t("report.empty", "0 STEPS")}
+            </span>
+            {hasSteps && topLevelCount < steps.length && (
+              <span className="text-slate-500">
+                {t("report.top_level", "{{count}} top-level", {
+                  count: topLevelCount,
+                })}
               </span>
-              {hasSteps && topLevelCount < steps.length && (
-                <span className="text-slate-500">
-                  {t("report.top_level", "{{count}} top-level", { count: topLevelCount })}
-                </span>
-              )}
-            </div>
+            )}
+          </div>
 
           <div
             className={cn(
@@ -725,13 +729,13 @@ function ReportDashboardContent({ runId, onClose, onViewCode }) {
         {/* STEP NAVIGATOR */}
         <aside className="w-[300px] border-r border-white/5 bg-slate-900/40 flex flex-col shrink-0 overflow-hidden">
           <div className="p-3 border-b border-white/5 flex items-center justify-between bg-slate-900/40">
-<div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
               <ListTree size={14} className="text-indigo-400" />
               <span className="text-[10px] font-bold uppercase tracking-widest text-slate-300">
                 {t("report.execution_timeline", "Execution Timeline")}
               </span>
             </div>
-<span className="text-[9px] font-mono text-slate-500">
+            <span className="text-[9px] font-mono text-slate-500">
               {hasSteps
                 ? (() => {
                     const n = Math.max(playbackPosition + 1, 0);
@@ -794,10 +798,14 @@ function ReportDashboardContent({ runId, onClose, onViewCode }) {
                               <>
                                 <span>·</span>
                                 <span className="text-fuchsia-400/80">
-                                  {t("report.child_step", "Child {{index}}/{{total}}", {
-                                    index: row.childIndex,
-                                    total: row.childTotal,
-                                  })}
+                                  {t(
+                                    "report.child_step",
+                                    "Child {{index}}/{{total}}",
+                                    {
+                                      index: row.childIndex,
+                                      total: row.childTotal,
+                                    },
+                                  )}
                                 </span>
                               </>
                             )}
@@ -827,8 +835,14 @@ function ReportDashboardContent({ runId, onClose, onViewCode }) {
                             onViewCode(runId, s);
                           }}
                           className="ml-1.5 p-1 rounded hover:bg-indigo-500/10 text-indigo-400 hover:text-indigo-300 transition-colors"
-                          title={t("report.view_code", "View code for this step")}
-                          aria-label={t("report.view_code", "View code for this step")}
+                          title={t(
+                            "report.view_code",
+                            "View code for this step",
+                          )}
+                          aria-label={t(
+                            "report.view_code",
+                            "View code for this step",
+                          )}
                         >
                           <Code2 size={11} />
                         </button>
@@ -865,7 +879,9 @@ function ReportDashboardContent({ runId, onClose, onViewCode }) {
             nodesConnectable={false}
             elementsSelectable={true}
             onNodeClick={(_, node) => {
-              const idx = steps.findIndex((s) => (s.node_id || s.nodeId) === node.id);
+              const idx = steps.findIndex(
+                (s) => (s.node_id || s.nodeId) === node.id,
+              );
               if (idx !== undefined && idx !== -1) setCurrentStepIndex(idx);
             }}
             className="reporting-canvas"
@@ -920,7 +936,8 @@ function ReportDashboardContent({ runId, onClose, onViewCode }) {
                   <span
                     className={cn(
                       "px-2 py-0.5 rounded border text-[8px] font-bold whitespace-nowrap",
-                      STATUS_STYLES[currentStep.status] || STATUS_STYLES.pending,
+                      STATUS_STYLES[currentStep.status] ||
+                        STATUS_STYLES.pending,
                     )}
                   >
                     {statusLabel(currentStep.status)}
@@ -929,13 +946,17 @@ function ReportDashboardContent({ runId, onClose, onViewCode }) {
                 <div className="flex items-center gap-2 text-[9px] font-mono text-slate-500">
                   <span className="uppercase">{currentStep.node_type}</span>
                   <span>·</span>
-                  <span>Step #{currentStep.sequence ?? currentStepIndex + 1}</span>
+                  <span>
+                    Step #{currentStep.sequence ?? currentStepIndex + 1}
+                  </span>
                   <span>·</span>
                   <span>{formatDuration(currentStep.duration_ms)}</span>
                   {typeof currentStep.video_timestamp === "number" && (
                     <>
                       <span>·</span>
-                      <span>Video @ {currentStep.video_timestamp.toFixed(2)}s</span>
+                      <span>
+                        Video @ {currentStep.video_timestamp.toFixed(2)}s
+                      </span>
                     </>
                   )}
                 </div>
@@ -1127,7 +1148,10 @@ function ReportDashboardContent({ runId, onClose, onViewCode }) {
                         {t("report.no_diagnosis", "No diagnosis available.")}
                       </p>
                       <p className="text-[10px] text-slate-600 leading-relaxed">
-                        {t("report.no_diagnosis_desc", "Diagnostics are generated independently of the execution replay. The observed facts above let you evaluate this step without an AI explanation.")}
+                        {t(
+                          "report.no_diagnosis_desc",
+                          "Diagnostics are generated independently of the execution replay. The observed facts above let you evaluate this step without an AI explanation.",
+                        )}
                       </p>
                       <button
                         onClick={handleGenerateDiagnosis}
@@ -1165,7 +1189,9 @@ function ReportDashboardContent({ runId, onClose, onViewCode }) {
         {/* SCRUBBER — one tick per visible step, click or drag to seek */}
         <div className="flex items-center gap-3">
           <span className="text-[10px] font-mono text-slate-500 w-16 shrink-0 tabular-nums">
-            {hasSteps ? `${Math.max(playbackPosition + 1, 0)} / ${playbackOrder.length}` : "0 / 0"}
+            {hasSteps
+              ? `${Math.max(playbackPosition + 1, 0)} / ${playbackOrder.length}`
+              : "0 / 0"}
           </span>
           <div className="relative flex-1">
             <div className="flex items-center gap-[2px] h-3 mb-0.5">
@@ -1258,7 +1284,9 @@ function ReportDashboardContent({ runId, onClose, onViewCode }) {
                   hasSteps &&
                   setCurrentStepIndex(playbackOrder[playbackOrder.length - 1])
                 }
-                disabled={!hasSteps || playbackPosition >= playbackOrder.length - 1}
+                disabled={
+                  !hasSteps || playbackPosition >= playbackOrder.length - 1
+                }
                 className="p-1.5 hover:bg-white/5 disabled:opacity-30 rounded-md transition-colors"
                 title="Last"
                 aria-label="Last step"
@@ -1328,7 +1356,10 @@ function ReportDashboardContent({ runId, onClose, onViewCode }) {
             className="fixed inset-0 z-[1100] bg-black/90 flex items-center justify-center p-10"
             onClick={() => setLightboxImage(null)}
           >
-            <button className="absolute top-5 right-5 p-2 hover:bg-white/10 rounded-lg text-slate-400" onClick={() => setLightboxImage(null)}>
+            <button
+              className="absolute top-5 right-5 p-2 hover:bg-white/10 rounded-lg text-slate-400"
+              onClick={() => setLightboxImage(null)}
+            >
               <X size={22} />
             </button>
             <img

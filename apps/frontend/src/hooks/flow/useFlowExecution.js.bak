@@ -392,8 +392,7 @@ export function useFlowExecution({
           if (payload?.compositeNodeId)
             bodyToSend.compositeNodeId = payload.compositeNodeId;
           if (payload?.subflowId) bodyToSend.subflowId = payload.subflowId;
-          if (payload?.parentNodeId)
-            bodyToSend.parentNodeId = payload.parentNodeId;
+          if (payload?.parentNodeId) bodyToSend.parentNodeId = payload.parentNodeId;
           if (_options?.variables || payload?.variables) {
             bodyToSend.variables = {
               ...(_options?.variables || {}),
@@ -782,23 +781,18 @@ export function useFlowExecution({
 
         const logGraphStep = (node, status, extra = {}) => {
           if (!runId || runId === "atomic_run" || !node) return;
-          api
-            .post(`/runs/${runId}/steps`, {
-              nodeId: node.id,
-              type: node.type || node.data?.type || "component",
-              label: resolveLabel(node),
-              status,
-              duration: extra.duration || null,
-              subflowId: extra.subflowId || null,
-              compositeNodeId: extra.compositeNodeId || null,
-              parentNodeId: extra.parentNodeId || null,
-            })
-            .catch((err) => {
-              console.warn(
-                "[useFlowExecution] Failed to log graph step:",
-                err.message,
-              );
-            });
+          api.post(`/runs/${runId}/steps`, {
+            nodeId: node.id,
+            type: node.type || node.data?.type || "component",
+            label: resolveLabel(node),
+            status,
+            duration: extra.duration || null,
+            subflowId: extra.subflowId || null,
+            compositeNodeId: extra.compositeNodeId || null,
+            parentNodeId: extra.parentNodeId || null,
+          }).catch((err) => {
+            console.warn('[useFlowExecution] Failed to log graph step:', err.message);
+          });
         };
 
         const executeGraph = async (
@@ -894,7 +888,8 @@ export function useFlowExecution({
                       {
                         compositeNodeId: node.id,
                         subflowId: flowId,
-                        parentNodeId: compositeContext.compositeNodeId || null,
+                        parentNodeId:
+                          compositeContext.compositeNodeId || null,
                         depth: depth + 1,
                       },
                     );
@@ -1142,7 +1137,8 @@ export function useFlowExecution({
                     customLabel: node.data?.customLabel,
                     label: node.data?.label,
                     executionMode,
-                    compositeNodeId: compositeContext.compositeNodeId || null,
+                    compositeNodeId:
+                      compositeContext.compositeNodeId || null,
                     subflowId: compositeContext.subflowId || null,
                     parentNodeId: compositeContext.compositeNodeId || null,
                   },

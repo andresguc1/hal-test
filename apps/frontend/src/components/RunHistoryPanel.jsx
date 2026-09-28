@@ -237,17 +237,17 @@ export default function RunHistoryPanel({
                       >
                         <Activity size={12} />
                       </button>
-                      {run.video_status === 'finalizing' && (
+                      {run.video_status === "finalizing" && (
                         <span className="text-[9px] text-slate-500 font-mono">
                           Video processing...
                         </span>
                       )}
-                      {run.video_status === 'failed' && !run.video_path && (
+                      {run.video_status === "failed" && !run.video_path && (
                         <span className="text-[9px] text-slate-500 font-mono">
                           Video unavailable
                         </span>
                       )}
-                      {run.video_status === 'recording' && !run.video_path && (
+                      {run.video_status === "recording" && !run.video_path && (
                         <span className="text-[9px] text-slate-500 font-mono">
                           Recording...
                         </span>

@@ -53,12 +53,25 @@ const sourceDataSet = (id) => {
   return builders[k](Number(size), 1);
 };
 
-const FIXTURES = ["A@250", "A@500", "B@100", "B@250", "C@50", "D@100", "E@10", "F@6", "G@52", "H@50"];
+const FIXTURES = [
+  "A@250",
+  "A@500",
+  "B@100",
+  "B@250",
+  "C@50",
+  "D@100",
+  "E@10",
+  "F@6",
+  "G@52",
+  "H@50",
+];
 
 /* --------------------------- dagre (prod pre-pass) --------------------------- */
 
 const dagreLayout = (fixture) => {
-  const sortedNodes = [...fixture.nodes].sort((a, b) => a.id.localeCompare(b.id));
+  const sortedNodes = [...fixture.nodes].sort((a, b) =>
+    a.id.localeCompare(b.id),
+  );
   const nodeById = new Map(fixture.nodes.map((n) => [n.id, n]));
   const lane = (e) => {
     const src = nodeById.get(e.source)?.data?.type;
@@ -110,7 +123,11 @@ const elkLayout = async (fixture) => {
     width: n.width || NODE_W,
     height: n.height || NODE_H,
   }));
-  const edges = fixture.edges.map((e) => ({ id: e.id, sources: [e.source], targets: [e.target] }));
+  const edges = fixture.edges.map((e) => ({
+    id: e.id,
+    sources: [e.source],
+    targets: [e.target],
+  }));
   const out = await elk.layout({
     id: "root",
     layoutOptions: {
@@ -125,7 +142,10 @@ const elkLayout = async (fixture) => {
     edges,
   });
   return Object.fromEntries(
-    (out.children || []).map((c) => [c.id, { x: c.x + c.width / 2, y: c.y + c.height / 2, w: c.width, h: c.height }]),
+    (out.children || []).map((c) => [
+      c.id,
+      { x: c.x + c.width / 2, y: c.y + c.height / 2, w: c.width, h: c.height },
+    ]),
   );
 };
 
@@ -174,7 +194,9 @@ const customLayout = (fixture) => {
         const mid = (id) => {
           const cs = forward.get(id).filter((c) => rank.get(c) === r + 1);
           if (!cs.length) return 0;
-          return cs.reduce((sum, c) => sum + layers[r + 1].indexOf(c), 0) / cs.length;
+          return (
+            cs.reduce((sum, c) => sum + layers[r + 1].indexOf(c), 0) / cs.length
+          );
         };
         return mid(a) - mid(b);
       });
@@ -199,11 +221,14 @@ const customLayout = (fixture) => {
 /* -------------------------------- metrics -------------------------------- */
 
 function edgeCrossings(fixture, nodes) {
-  const byId = new Map(Object.entries(nodes).map(([id, p]) => [id, [p.x, p.y]]));
+  const byId = new Map(
+    Object.entries(nodes).map(([id, p]) => [id, [p.x, p.y]]),
+  );
   const E = fixture.edges.map((e) => [byId.get(e.source), byId.get(e.target)]);
   let count = 0;
   const cross = (a1, a2, b1, b2) => {
-    const d = (p, q, r) => (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]);
+    const d = (p, q, r) =>
+      (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]);
     const s1 = Math.sign(d(a1, a2, b1)) * Math.sign(d(a1, a2, b2));
     const s2 = Math.sign(d(b1, b2, a1)) * Math.sign(d(b1, b2, a2));
     return s1 < 0 && s2 < 0;
@@ -233,7 +258,12 @@ function edgeNodePassthrough(fixture, nodes) {
   const rects = new Map(
     Object.entries(nodes).map(([id, p]) => [
       id,
-      { x0: p.x - p.w / 2, x1: p.x + p.w / 2, y0: p.y - p.h / 2, y1: p.y + p.h / 2 },
+      {
+        x0: p.x - p.w / 2,
+        x1: p.x + p.w / 2,
+        y0: p.y - p.h / 2,
+        y1: p.y + p.h / 2,
+      },
     ]),
   );
   let count = 0;
@@ -248,7 +278,10 @@ function edgeNodePassthrough(fixture, nodes) {
       const r = rects.get(node.id);
       if (len2 === 0) continue;
       // closest point on infinite line to rect center, reject if inside rect
-      const t = ((r.x0 + (r.x1 - r.x0) / 2 - a.x) * dx + ((r.y0 + (r.y1 - r.y0) / 2 - a.y)) * dy) / len2;
+      const t =
+        ((r.x0 + (r.x1 - r.x0) / 2 - a.x) * dx +
+          (r.y0 + (r.y1 - r.y0) / 2 - a.y) * dy) /
+        len2;
       const tClamped = Math.max(0, Math.min(1, t));
       const cx = a.x + tClamped * dx;
       const cy = a.y + tClamped * dy;
@@ -310,27 +343,35 @@ describe("X3 — layout engine comparison (dagre / elk / layered-custom)", () =>
   });
 
   for (const fid of FIXTURES) {
-    it(`metrics + determinism + perf: ${fid}`, { timeout: 180_000 }, async () => {
-      const fixture = sourceDataSet(fid);
-      const entry = { dagre: {}, elk: {}, custom: {} };
-      for (const [engine, fn] of [
-        ["dagre", dagreLayout],
-        ["elk", elkLayout],
-        ["custom", customLayout],
-      ]) {
-        const one = await fn(fixture);
-        const two = await fn(fixture);
-        const equal = JSON.stringify(one) === JSON.stringify(two);
-        entry[engine] = {
-          ...metrics(fixture, one),
-          deterministic: equal,
-          ms: engine === "elk" ? await runMedian(fn, fixture, 3) : await runMedian(fn, fixture, 5),
-        };
-        entry[engine].positionHash = hashOf(one);
-        if (engine === "dagre") entry[engine].deterministic = equal && hashOf(one) === hashOf(two);
-      }
-      results.fixtures[fid] = { fixtureHash: fixture.hash, engines: entry };
-    });
+    it(
+      `metrics + determinism + perf: ${fid}`,
+      { timeout: 180_000 },
+      async () => {
+        const fixture = sourceDataSet(fid);
+        const entry = { dagre: {}, elk: {}, custom: {} };
+        for (const [engine, fn] of [
+          ["dagre", dagreLayout],
+          ["elk", elkLayout],
+          ["custom", customLayout],
+        ]) {
+          const one = await fn(fixture);
+          const two = await fn(fixture);
+          const equal = JSON.stringify(one) === JSON.stringify(two);
+          entry[engine] = {
+            ...metrics(fixture, one),
+            deterministic: equal,
+            ms:
+              engine === "elk"
+                ? await runMedian(fn, fixture, 3)
+                : await runMedian(fn, fixture, 5),
+          };
+          entry[engine].positionHash = hashOf(one);
+          if (engine === "dagre")
+            entry[engine].deterministic = equal && hashOf(one) === hashOf(two);
+        }
+        results.fixtures[fid] = { fixtureHash: fixture.hash, engines: entry };
+      },
+    );
   }
 
   afterAll(() => {
@@ -338,7 +379,11 @@ describe("X3 — layout engine comparison (dagre / elk / layered-custom)", () =>
     mkdirSync(out, { recursive: true });
     writeFileSync(
       path.join(out, "results.json"),
-      JSON.stringify({ generated: new Date().toISOString(), ...results }, null, 2),
+      JSON.stringify(
+        { generated: new Date().toISOString(), ...results },
+        null,
+        2,
+      ),
     );
   });
 });

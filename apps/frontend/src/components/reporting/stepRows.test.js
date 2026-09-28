@@ -69,7 +69,11 @@ describe("buildStepRows — composites", () => {
 
 describe("buildStepRows — nested composites", () => {
   const outer = step({ node_id: "comp", node_type: "component" });
-  const inner = step({ node_id: "loop1", node_type: "loop", compositeNodeId: "comp" });
+  const inner = step({
+    node_id: "loop1",
+    node_type: "loop",
+    compositeNodeId: "comp",
+  });
   const innerChildA = step({ node_id: "a", compositeNodeId: "loop1" });
   const innerChildB = step({ node_id: "b", compositeNodeId: "loop1" });
 
@@ -97,7 +101,12 @@ describe("buildStepRows — nested composites", () => {
       comp: { nodeId: "comp", type: "component", data: { label: "Outer" } },
     };
     const rows = buildStepRows([inner, innerChildA, innerChildB], snapshot);
-    expect(rows.map((r) => r.type)).toEqual(["container", "container", "child", "child"]);
+    expect(rows.map((r) => r.type)).toEqual([
+      "container",
+      "container",
+      "child",
+      "child",
+    ]);
     expect(rows.map((r) => r.depth)).toEqual([0, 1, 2, 2]);
     expect(rows[0].step.label).toBe("Outer");
   });
@@ -105,10 +114,12 @@ describe("buildStepRows — nested composites", () => {
 
 describe("resolveStepLabel", () => {
   it("prefers the flow snapshot's human label over the persisted id", () => {
-    const snapshot = { n1: { nodeId: "n1", data: { label: "Launch Browser" } } };
-    expect(resolveStepLabel(step({ node_id: "n1", label: "n1" }), snapshot)).toBe(
-      "Launch Browser",
-    );
+    const snapshot = {
+      n1: { nodeId: "n1", data: { label: "Launch Browser" } },
+    };
+    expect(
+      resolveStepLabel(step({ node_id: "n1", label: "n1" }), snapshot),
+    ).toBe("Launch Browser");
   });
 
   it("falls back to a meaningful persisted label", () => {
@@ -118,10 +129,12 @@ describe("resolveStepLabel", () => {
   });
 
   it("falls back to node_type then node_id", () => {
-    expect(resolveStepLabel(step({ node_id: "n1", label: "n1" }))).toBe("click");
-    expect(resolveStepLabel(step({ node_id: "n1", label: "n1", node_type: null }))).toBe(
-      "n1",
+    expect(resolveStepLabel(step({ node_id: "n1", label: "n1" }))).toBe(
+      "click",
     );
+    expect(
+      resolveStepLabel(step({ node_id: "n1", label: "n1", node_type: null })),
+    ).toBe("n1");
   });
 });
 

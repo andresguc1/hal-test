@@ -6,12 +6,14 @@ import EmptyState from "../components/EmptyState";
 
 function formatStepDetails(steps) {
   if (!steps || steps.length === 0) return "—";
-  
-  const success = steps.filter((s) => s.status === 'success' || s.status === 'completed').length;
-  const failed = steps.filter((s) => s.status === 'failed').length;
-  const skipped = steps.filter((s) => s.status === 'skipped').length;
-  const healed = steps.filter((s) => s.status === 'healed').length;
-  
+
+  const success = steps.filter(
+    (s) => s.status === "success" || s.status === "completed",
+  ).length;
+  const failed = steps.filter((s) => s.status === "failed").length;
+  const skipped = steps.filter((s) => s.status === "skipped").length;
+  const healed = steps.filter((s) => s.status === "healed").length;
+
   if (failed > 0) {
     return `${steps.length} steps (${failed}❌, ${healed}🩹, ${skipped}⏭️)`;
   }

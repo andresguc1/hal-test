@@ -29,12 +29,17 @@ import { datasetLinear } from "../test/fixtures/layout/export.js";
 const API = "http://localhost:2001";
 const AUTOSAVE_DEBOUNCE_MS = 2000;
 const WAIT = AUTOSAVE_DEBOUNCE_MS + 1200;
-const storeDir = path.resolve(process.cwd(), "../../docs/research/spikes/data/X1");
+const storeDir = path.resolve(
+  process.cwd(),
+  "../../docs/research/spikes/data/X1",
+);
 
 function storeResults(caseName, measurements) {
   mkdirSync(storeDir, { recursive: true });
   const file = path.join(storeDir, "results.json");
-  const prev = existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : { cases: {} };
+  const prev = existsSync(file)
+    ? JSON.parse(readFileSync(file, "utf8"))
+    : { cases: {} };
   prev.cases[caseName] = { ...measurements, at: new Date().toISOString() };
   writeFileSync(file, JSON.stringify(prev, null, 2));
 }
@@ -121,7 +126,8 @@ async function settleFrames(page, frames = 2) {
     (n) =>
       new Promise((resolve) => {
         let left = n;
-        const tick = () => (left-- > 0 ? requestAnimationFrame(tick) : resolve());
+        const tick = () =>
+          left-- > 0 ? requestAnimationFrame(tick) : resolve();
         tick();
       }),
     frames,
@@ -132,21 +138,26 @@ async function snapshotPositions(page) {
   return page.evaluate(() => {
     const out = [];
     document.querySelectorAll(".react-flow__node").forEach((el) => {
-      const id = el.getAttribute("data-id") || el.getAttribute("data-nodeid") || "";
+      const id =
+        el.getAttribute("data-id") || el.getAttribute("data-nodeid") || "";
       if (!id) return;
       const m = (el.style.transform || "").match(
         /translate\((-?[\d.]+)px,\s*(-?[\d.]+)px\)/,
       );
       out.push(
-        m ? { id, position: { x: Number(m[1]), y: Number(m[2]) } } : { id, position: null },
+        m
+          ? { id, position: { x: Number(m[1]), y: Number(m[2]) } }
+          : { id, position: null },
       );
     });
     return out.sort((a, b) => a.id.localeCompare(b.id));
   });
 }
 
-const posById = (list) => Object.fromEntries(list.map((n) => [n.id, n.position]));
-const equalPositions = (a, b) => JSON.stringify(posById(a)) === JSON.stringify(posById(b));
+const posById = (list) =>
+  Object.fromEntries(list.map((n) => [n.id, n.position]));
+const equalPositions = (a, b) =>
+  JSON.stringify(posById(a)) === JSON.stringify(posById(b));
 
 const layoutTriggerSelectors = [
   'button[title="Magic Organize"]',
@@ -190,7 +201,11 @@ async function snapshotAll(page, minCount = 5) {
 }
 
 async function fitView(page) {
-  await page.locator('button[title="Fit View"]').first().click().catch(() => {});
+  await page
+    .locator('button[title="Fit View"]')
+    .first()
+    .click()
+    .catch(() => {});
   await page.waitForTimeout(400);
 }
 
@@ -204,7 +219,9 @@ async function waitForNodes(page, count = 5) {
 
 async function dragNode(page, id, dx, dy) {
   const el = page
-    .locator(`.react-flow__node[data-id="${id}"], .react-flow__node[data-nodeid="${id}"]`)
+    .locator(
+      `.react-flow__node[data-id="${id}"], .react-flow__node[data-nodeid="${id}"]`,
+    )
     .first();
   const box = await el.boundingBox();
   const cx = box.x + box.width / 2;
@@ -218,7 +235,9 @@ async function dragNode(page, id, dx, dy) {
 test.describe("X1 — position persistence (P2), case-by-case", () => {
   test.describe.configure({ mode: "serial" });
 
-  test("CONTROL — initial on-open layout overwrites persisted fixture positions", async ({ page }, testInfo) => {
+  test("CONTROL — initial on-open layout overwrites persisted fixture positions", async ({
+    page,
+  }, testInfo) => {
     const ctx = await createX1Project(testInfo.project.use.baseURL, 909);
     const { project, flow, fixture } = ctx;
 
@@ -240,7 +259,10 @@ test.describe("X1 — position persistence (P2), case-by-case", () => {
       (n) => n.position && Math.abs(n.position.y - fixtureMap[n.id].y) > 1,
     ).length;
     const layoutDiffsFromRender = positionsAfterLayout.filter(
-      (n) => !positionsOnRender.find((p) => p.id === n.id && p.position?.y === n.position.y),
+      (n) =>
+        !positionsOnRender.find(
+          (p) => p.id === n.id && p.position?.y === n.position.y,
+        ),
     ).length;
 
     await testInfo.attach("control-persisted-before-open", {
@@ -275,7 +297,9 @@ test.describe("X1 — position persistence (P2), case-by-case", () => {
     });
   });
 
-  test("CASE B — no-op reload: are persisted manual positions preserved?", async ({ page }, testInfo) => {
+  test("CASE B — no-op reload: are persisted manual positions preserved?", async ({
+    page,
+  }, testInfo) => {
     const ctx = await createX1Project(testInfo.project.use.baseURL, 101);
     const { project, flow, fixture } = ctx;
 
@@ -283,7 +307,8 @@ test.describe("X1 — position persistence (P2), case-by-case", () => {
     await page.waitForTimeout(600);
     const firstLoad = await snapshotAll(page);
     const firstLoadFixtureMatch = fixture.nodes.filter(
-      (nf) => firstLoad.find((n) => n.id === nf.id)?.position?.y === nf.position.y,
+      (nf) =>
+        firstLoad.find((n) => n.id === nf.id)?.position?.y === nf.position.y,
     ).length;
 
     await page.reload();
@@ -295,7 +320,8 @@ test.describe("X1 — position persistence (P2), case-by-case", () => {
 
     // measurement, not a blind pass/fail
     const fixturePreservedOnReload = fixture.nodes.filter(
-      (nf) => secondLoad.find((n) => n.id === nf.id)?.position?.y === nf.position.y,
+      (nf) =>
+        secondLoad.find((n) => n.id === nf.id)?.position?.y === nf.position.y,
     ).length;
 
     testInfo.annotations.push({
@@ -317,7 +343,9 @@ test.describe("X1 — position persistence (P2), case-by-case", () => {
     });
   });
 
-  test("CASE A — drag then autosave: what survives a reload?", async ({ page }, testInfo) => {
+  test("CASE A — drag then autosave: what survives a reload?", async ({
+    page,
+  }, testInfo) => {
     const ctx = await createX1Project(testInfo.project.use.baseURL, 202);
     const { project, flow } = ctx;
 
@@ -330,7 +358,9 @@ test.describe("X1 — position persistence (P2), case-by-case", () => {
     await page.waitForTimeout(WAIT); // autosave the drag
 
     const savedBeforeReload = (await fetchCanonical(project.id))?.nodes || [];
-    const savedN1 = savedBeforeReload.find((n) => n.id === "n1" || n.nodeId === "n1");
+    const savedN1 = savedBeforeReload.find(
+      (n) => n.id === "n1" || n.nodeId === "n1",
+    );
     const autosavePersistedDrag =
       savedN1 && Math.abs(savedN1.position.y - (preDragY + 60)) < 2;
 
@@ -351,7 +381,11 @@ test.describe("X1 — position persistence (P2), case-by-case", () => {
         `(dragSurvivedReload=false ⇒ initial on-open layout overwrote the manual drag)`,
     });
     await testInfo.attach("a-persisted-before-reload", {
-      body: JSON.stringify({ preDragY, savedN1, autosavePersistedDrag }, null, 2),
+      body: JSON.stringify(
+        { preDragY, savedN1, autosavePersistedDrag },
+        null,
+        2,
+      ),
       contentType: "application/json",
     });
     await testInfo.attach("a-after-reload", {
@@ -369,7 +403,9 @@ test.describe("X1 — position persistence (P2), case-by-case", () => {
     });
   });
 
-  test("CASE C — auto layout, unrelated edit, wait>debounce, reload (P2 full path)", async ({ page }, testInfo) => {
+  test("CASE C — auto layout, unrelated edit, wait>debounce, reload (P2 full path)", async ({
+    page,
+  }, testInfo) => {
     const ctx = await createX1Project(testInfo.project.use.baseURL, 303);
     const { project, flow, fixture } = ctx;
 
@@ -381,7 +417,6 @@ test.describe("X1 — position persistence (P2), case-by-case", () => {
     await page.waitForTimeout(600);
     const afterLayout = await snapshotAll(page);
 
-    const unrelatedEdit = clicked;
     await page.mouse.wheel(0, 80);
     await page.waitForTimeout(WAIT);
 
@@ -389,7 +424,9 @@ test.describe("X1 — position persistence (P2), case-by-case", () => {
     const persistedLayout =
       persistedAfterEdit.length &&
       fixture.nodes.some(
-        (nf) => persistedAfterEdit.find((n) => n.id === nf.id || n.nodeId === nf.id)?.position?.y !== nf.position.y,
+        (nf) =>
+          persistedAfterEdit.find((n) => n.id === nf.id || n.nodeId === nf.id)
+            ?.position?.y !== nf.position.y,
       );
 
     await page.reload();
@@ -459,9 +496,11 @@ test.describe("X1 — position persistence (P2), case-by-case", () => {
     });
   });
 
-  test("CASE E — open a second flow, return: no silent re-layout", async ({ page }, testInfo) => {
+  test("CASE E — open a second flow, return: no silent re-layout", async ({
+    page,
+  }, testInfo) => {
     const ctx = await createX1Project(testInfo.project.use.baseURL, 505);
-    const { project, flow, fixture } = ctx;
+    const { project, flow } = ctx;
 
     await fetch(`${API}/api/projects/${project.id}/flows`, {
       method: "POST",
@@ -469,7 +508,15 @@ test.describe("X1 — position persistence (P2), case-by-case", () => {
       body: JSON.stringify({
         name: "secondary",
         type: "main",
-        nodes: [{ id: "s1", nodeId: "s1", type: "click", position: { x: 12, y: 12 }, data: { type: "click" } }],
+        nodes: [
+          {
+            id: "s1",
+            nodeId: "s1",
+            type: "click",
+            position: { x: 12, y: 12 },
+            data: { type: "click" },
+          },
+        ],
         edges: [],
       }),
     });
@@ -493,7 +540,9 @@ test.describe("X1 — position persistence (P2), case-by-case", () => {
     });
   });
 
-  test("CASE G — collaborative: layout during drag (best-effort single editor)", async ({ page }, testInfo) => {
+  test("CASE G — collaborative: layout during drag (best-effort single editor)", async ({
+    page,
+  }, testInfo) => {
     const ctx = await createX1Project(testInfo.project.use.baseURL, 606);
     const { project, flow } = ctx;
 

@@ -415,9 +415,27 @@ describe("extract payload builder", () => {
       ifEmpty: "ok",
     });
     expect(payload.fields).toEqual([
-      { name: "title", source: "text", selector: ".title", attribute: "", optional: false },
-      { name: "href", source: "attribute", selector: "a", attribute: "href", optional: false },
-      { name: "bad", source: "text", selector: "", attribute: "", optional: false },
+      {
+        name: "title",
+        source: "text",
+        selector: ".title",
+        attribute: "",
+        optional: false,
+      },
+      {
+        name: "href",
+        source: "attribute",
+        selector: "a",
+        attribute: "href",
+        optional: false,
+      },
+      {
+        name: "bad",
+        source: "text",
+        selector: "",
+        attribute: "",
+        optional: false,
+      },
     ]);
   });
 

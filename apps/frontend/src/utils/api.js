@@ -235,7 +235,7 @@ export const api = {
    */
   async getRunMapping(runId, options = {}) {
     const params = new URLSearchParams(options).toString();
-    const query = params ? `?${params}` : '';
+    const query = params ? `?${params}` : "";
     return this.get(`/runs/${runId}/mapping${query}`);
   },
 
