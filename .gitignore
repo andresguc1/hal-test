@@ -59,6 +59,15 @@ Thumbs.db
 temp/
 tmp/
 
+# Research / investigation artifacts (kept local only, not versioned)
+docs/research/
+research/
+spike/
+ASSERTION_ENGINE_RESEARCH.md
+AUTOMATIC_AI_MODEL_DISCOVERY_PLAN.md
+HALTEST_AGENTIC_QE_ARCHITECTURE.md
+.opencode/plans/PROJECT_MANAGEMENT_INVESTIGATION.md
+
 # Misc local-only files
 Issues.md
 apps/prod_variables.env
