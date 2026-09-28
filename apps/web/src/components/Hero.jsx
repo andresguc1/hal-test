@@ -77,17 +77,20 @@ export default function Hero() {
         transition={{ duration: 0.6, delay: 0.28 }}
         className="flex flex-wrap items-center justify-center gap-3 mb-10"
       >
-        {PILLARS.map(({ icon: Icon, label, color }) => (
-          <div
-            key={label}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10 backdrop-blur-md"
-          >
-            <Icon size={16} className={color} />
-            <span className="text-xs font-bold uppercase tracking-widest text-slate-200">
-              {label}
-            </span>
-          </div>
-        ))}
+        {PILLARS.map((pillar) => {
+          const Icon = pillar.icon;
+          return (
+            <div
+              key={pillar.label}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10 backdrop-blur-md"
+            >
+              <Icon size={16} className={pillar.color} />
+              <span className="text-xs font-bold uppercase tracking-widest text-slate-200">
+                {pillar.label}
+              </span>
+            </div>
+          );
+        })}
       </Motion.div>
 
       {/* CTAs */}
