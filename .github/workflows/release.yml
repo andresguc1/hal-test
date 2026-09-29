@@ -199,6 +199,8 @@ jobs:
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.version.outputs.version }}
 
       - name: 📦 Setup pnpm
         uses: pnpm/action-setup@v4
@@ -235,7 +237,7 @@ jobs:
   publish-npm:
     name: 📤 Publish to npm
     runs-on: ubuntu-latest
-    needs: [build-cli]
+    needs: [build-cli, version]
     if: github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
@@ -245,6 +247,8 @@ jobs:
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.version.outputs.version }}
 
       - name: 📥 Download CLI dist
         uses: actions/download-artifact@v4
@@ -305,7 +309,7 @@ jobs:
   github-release:
     name: 🏷️ GitHub Release
     runs-on: ubuntu-latest
-    needs: [publish-npm]
+    needs: [publish-npm, version]
     if: github.event_name == 'workflow_dispatch'
     permissions:
       contents: write
@@ -342,7 +346,7 @@ jobs:
   deploy-staging:
     name: 🚀 Deploy to Staging
     runs-on: ubuntu-latest
-    needs: [github-release]
+    needs: [github-release, version]
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.skip_staging != 'true'
     environment: staging
     permissions:
@@ -352,6 +356,8 @@ jobs:
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.version.outputs.version }}
 
       - name: 🔍 Probe staging availability
         id: probe
@@ -436,7 +442,7 @@ jobs:
   approval:
     name: ⏸️ Manual Approval for Production
     runs-on: ubuntu-latest
-    needs: [deploy-staging]
+    needs: [deploy-staging, version]
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.skip_staging != 'true'
     environment: production
     steps:
@@ -455,12 +461,14 @@ jobs:
   deploy-production:
     name: 🚀 Deploy to Production
     runs-on: ubuntu-latest
-    needs: [approval]
+    needs: [approval, version]
     if: github.event_name == 'workflow_dispatch'
     environment: production
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.version.outputs.version }}
 
       - name: 🚀 Trigger Production Deploy
         run: |
@@ -517,12 +525,14 @@ jobs:
   deploy-production-emergency:
     name: 🚨 Emergency Production Deploy
     runs-on: ubuntu-latest
-    needs: [github-release]
+    needs: [github-release, version]
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.skip_staging == 'true'
     environment: production
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.version.outputs.version }}
 
       - name: 🚀 Trigger Emergency Production Deploy
         run: |
@@ -564,11 +574,13 @@ jobs:
   post-deploy-monitor:
     name: Post-Deploy Monitoring
     runs-on: ubuntu-latest
-    needs: [deploy-production, deploy-production-emergency]
+    needs: [deploy-production, deploy-production-emergency, version]
     if: always() && !cancelled() && (needs.deploy-production.result == 'success' || needs.deploy-production-emergency.result == 'success')
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.version.outputs.version }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
