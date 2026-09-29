@@ -26,6 +26,7 @@ async function generateSBOM(packageDir, outputFile, options = {}) {
       format.toUpperCase(),
       "--output-file",
       outputFile,
+      "--ignore-npm-errors",
     ];
 
     if (!includeDev) {
