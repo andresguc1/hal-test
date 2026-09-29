@@ -20,6 +20,18 @@ export default {
         const table = 'step_results';
         const tempTable = 'step_results_new';
 
+        if (queryInterface.sequelize.getDialect() !== 'sqlite') {
+            // This migration rebuilds step_results to repair a SQLite-only
+            // defect (VARCHAR(255) PRIMARY KEY without auto-increment). On
+            // PostgreSQL the id column is already serial/identity and the
+            // additional replay columns are handled by dialect-agnostic
+            // addColumn calls, so the rebuild is a no-op on non-SQLite.
+            console.log(
+                `   step_results rebuild is SQLite-only; skipping on ${queryInterface.sequelize.getDialect()}`,
+            );
+            return;
+        }
+
         // A previous attempt may have failed midway (e.g. on a fresh database
         // whose step_results used the legacy column names), leaving the staging
         // table behind. Drop it so the rebuild is always restartable.

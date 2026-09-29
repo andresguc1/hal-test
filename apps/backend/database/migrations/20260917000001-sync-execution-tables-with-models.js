@@ -16,16 +16,32 @@ import { QueryTypes } from 'sequelize';
  */
 
 async function columnsOf(queryInterface, table) {
-    const rows = await queryInterface.sequelize.query(`PRAGMA table_info(${table})`, {
-        type: QueryTypes.SELECT,
-    });
+    const qi = queryInterface.sequelize;
+    if (qi.getDialect() === 'sqlite') {
+        const rows = await qi.query(`PRAGMA table_info(${table})`, {
+            type: QueryTypes.SELECT,
+        });
+        return rows.map((r) => r.name);
+    }
+    const rows = await qi.query(
+        'SELECT column_name AS name FROM information_schema.columns WHERE table_name = $1',
+        { type: QueryTypes.SELECT, bind: [table] },
+    );
     return rows.map((r) => r.name);
 }
 
 async function hasTable(queryInterface, table) {
-    const rows = await queryInterface.sequelize.query(
-        `SELECT name FROM sqlite_master WHERE type = 'table' AND name = '${table}'`,
-        { type: QueryTypes.SELECT },
+    const qi = queryInterface.sequelize;
+    if (qi.getDialect() === 'sqlite') {
+        const rows = await qi.query(
+            `SELECT name FROM sqlite_master WHERE type = 'table' AND name = '${table}'`,
+            { type: QueryTypes.SELECT },
+        );
+        return rows.length > 0;
+    }
+    const rows = await qi.query(
+        'SELECT table_name AS name FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = $1',
+        { type: QueryTypes.SELECT, bind: [table] },
     );
     return rows.length > 0;
 }
@@ -60,54 +76,63 @@ export default {
             const alreadyAligned = lockColumns.includes('startedAt') && !lockColumns.includes('id');
 
             if (!alreadyAligned) {
-                const tempTable = 'execution_locks_new';
-                try {
-                    await queryInterface.dropTable(tempTable);
-                } catch (_) {
-                    /* not present */
-                }
+                if (queryInterface.sequelize.getDialect() !== 'sqlite') {
+                    // The legacy-layout rebuild below relies on SQLite-only intro‐
+                    // spection (PRAGMA) and expressions (strftime). On PostgreSQL
+                    // the lock table is always created in the model shape, so a
+                    // legacy-table rebuild is never needed here.
+                    console.log(
+                        `   Skipping SQLite-only execution_locks rebuild on ${queryInterface.sequelize.getDialect()}`,
+                    );
+                } else {
+                    const tempTable = 'execution_locks_new';
+                    try {
+                        await queryInterface.dropTable(tempTable);
+                    } catch (_) {
+                        /* not present */
+                    }
 
-                await queryInterface.createTable(tempTable, {
-                    flowId: {
-                        type: Sequelize.STRING(255),
-                        primaryKey: true,
-                        allowNull: false,
-                    },
-                    userId: {
-                        type: Sequelize.STRING(255),
-                        allowNull: false,
-                    },
-                    userName: {
-                        type: Sequelize.STRING(255),
-                        allowNull: true,
-                    },
-                    runId: {
-                        type: Sequelize.STRING(255),
-                        allowNull: false,
-                    },
-                    startedAt: {
-                        type: Sequelize.BIGINT,
-                        allowNull: false,
-                    },
-                    expiresAt: {
-                        type: Sequelize.BIGINT,
-                        allowNull: false,
-                    },
-                });
+                    await queryInterface.createTable(tempTable, {
+                        flowId: {
+                            type: Sequelize.STRING(255),
+                            primaryKey: true,
+                            allowNull: false,
+                        },
+                        userId: {
+                            type: Sequelize.STRING(255),
+                            allowNull: false,
+                        },
+                        userName: {
+                            type: Sequelize.STRING(255),
+                            allowNull: true,
+                        },
+                        runId: {
+                            type: Sequelize.STRING(255),
+                            allowNull: false,
+                        },
+                        startedAt: {
+                            type: Sequelize.BIGINT,
+                            allowNull: false,
+                        },
+                        expiresAt: {
+                            type: Sequelize.BIGINT,
+                            allowNull: false,
+                        },
+                    });
 
-                // Legacy rows may have NULLs the model forbids and store time as
-                // DATE; normalize while copying.
-                const startedExpr = lockColumns.includes('startedAt')
-                    ? 'startedAt'
-                    : lockColumns.includes('acquiredAt')
-                      ? "CAST(strftime('%s', acquiredAt) AS INTEGER) * 1000"
-                      : "CAST(strftime('%s', 'now') AS INTEGER) * 1000";
-                const expiresExpr = lockColumns.includes('expiresAt')
-                    ? "CAST(strftime('%s', expiresAt) AS INTEGER) * 1000"
-                    : "CAST(strftime('%s', 'now') AS INTEGER) * 1000 + 600000";
+                    // Legacy rows may have NULLs the model forbids and store time as
+                    // DATE; normalize while copying.
+                    const startedExpr = lockColumns.includes('startedAt')
+                        ? 'startedAt'
+                        : lockColumns.includes('acquiredAt')
+                          ? "CAST(strftime('%s', acquiredAt) AS INTEGER) * 1000"
+                          : "CAST(strftime('%s', 'now') AS INTEGER) * 1000";
+                    const expiresExpr = lockColumns.includes('expiresAt')
+                        ? "CAST(strftime('%s', expiresAt) AS INTEGER) * 1000"
+                        : "CAST(strftime('%s', 'now') AS INTEGER) * 1000 + 600000";
 
-                await queryInterface.sequelize.query(
-                    `INSERT INTO ${tempTable} (flowId, userId, userName, runId, startedAt, expiresAt)
+                    await queryInterface.sequelize.query(
+                        `INSERT INTO ${tempTable} (flowId, userId, userName, runId, startedAt, expiresAt)
                      SELECT flowId,
                             COALESCE(userId, ''),
                             userName,
@@ -115,11 +140,12 @@ export default {
                             COALESCE(${startedExpr}, CAST(strftime('%s', 'now') AS INTEGER) * 1000),
                             COALESCE(${expiresExpr}, CAST(strftime('%s', 'now') AS INTEGER) * 1000 + 600000)
                        FROM execution_locks`,
-                );
+                    );
 
-                await queryInterface.dropTable('execution_locks');
-                await queryInterface.renameTable(tempTable, 'execution_locks');
-                console.log('   Rebuilt execution_locks to match ExecutionLockModel');
+                    await queryInterface.dropTable('execution_locks');
+                    await queryInterface.renameTable(tempTable, 'execution_locks');
+                    console.log('   Rebuilt execution_locks to match ExecutionLockModel');
+                }
             }
         } else {
             await queryInterface.createTable('execution_locks', {

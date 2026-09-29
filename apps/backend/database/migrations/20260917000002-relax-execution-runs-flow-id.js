@@ -19,12 +19,23 @@ import { QueryTypes } from 'sequelize';
 
 export default {
     async up(queryInterface, Sequelize) {
-        const columns = await queryInterface.sequelize.query('PRAGMA table_info(execution_runs)', {
-            type: QueryTypes.SELECT,
-        });
+        const qi = queryInterface.sequelize;
+        const dialect = qi.getDialect();
+        const columns =
+            dialect === 'sqlite'
+                ? await qi.query('PRAGMA table_info(execution_runs)', {
+                      type: QueryTypes.SELECT,
+                  })
+                : await qi.query(
+                      "SELECT column_name AS name, is_nullable AS notnull FROM information_schema.columns WHERE table_name = 'execution_runs' AND column_name = 'flow_id'",
+                      { type: QueryTypes.SELECT },
+                  );
         const flow = columns.find((c) => c.name === 'flow_id');
 
-        if (flow && flow.notnull === 1) {
+        const isNotNull =
+            dialect === 'sqlite' ? flow && flow.notnull === 1 : flow && flow.notnull === 'NO';
+
+        if (isNotNull) {
             await queryInterface.changeColumn('execution_runs', 'flow_id', {
                 type: Sequelize.STRING(255),
                 allowNull: true,
