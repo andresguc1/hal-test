@@ -111,6 +111,7 @@ export class PlaywrightGenerator extends BaseGenerator {
 
     generate(steps) {
         this.warnings = [];
+        this._initMapping();
         this.extension = this.language.toLowerCase() === 'typescript' ? 'ts' : 'js';
 
         // Handle new pattern-based multi-file output
@@ -122,12 +123,26 @@ export class PlaywrightGenerator extends BaseGenerator {
             return super.generate(steps);
         }
 
-        this.pageObjectsMap = new Map();
+        return this._generateMultiFile(steps);
+    }
+
+    /**
+     * Multi-file output: POM page classes + spec (or single spec file inside a
+     * ZIP structure) plus playwright.config.js, package.json and CI/CD
+     * pipelines. Produces `mappingByFile` keyed per output file so the code
+     * preview can navigate spec ↔ page classes.
+     * @param {Array} steps
+     * @returns {{ files: object, warnings: Array, mappingByFile: object }}
+     */
+    _generateMultiFile(steps) {
         const files = {};
         const isTS = this.language.toLowerCase() === 'typescript';
         const indent = '    ';
+        const mappingByFile = {};
+        const specFile = `tests/flow.spec.${this.extension}`;
 
         if (this.usePOM) {
+            this.pageObjectsMap = new Map();
             this.collectPageObjects(steps, this.pageObjectsMap, null);
 
             // Generate POM page classes
@@ -169,6 +184,7 @@ export class PlaywrightGenerator extends BaseGenerator {
                     classCode = `${playwrightImport}${importsCode}\nexport class ${po.className} {\n${indent}/**\n${indent} * @param {import('@playwright/test').Page} page\n${indent} */\n${indent}constructor(page) {\n${indent}${indent}this.page = page;\n${instantiationsCode}${indent}}\n\n${indent}async run() {\n${indent}${indent}const { page } = this;\n${pageBodyCode}\n${indent}}\n}\n`;
                 }
 
+                po.classCode = classCode;
                 files[`pages/${po.fileName}`] = classCode;
             }
 
@@ -205,11 +221,21 @@ export class PlaywrightGenerator extends BaseGenerator {
             const testBody = this.generateSteps(steps, 0);
             const footer = `\n    console.log(\`${this.msg.completed}\`);\n});`;
 
-            files[`tests/flow.spec.${this.extension}`] = `${header}${testBody}${footer}`;
+            files[specFile] = `${header}${testBody}${footer}`;
+            mappingByFile[specFile] = this.buildFileMapping(files[specFile]);
+            for (const po of this.pageObjectsMap.values()) {
+                if (po.classCode) {
+                    mappingByFile[`pages/${po.fileName}`] = this.buildFileMapping(
+                        po.classCode,
+                        po.flowId,
+                    );
+                }
+            }
         } else {
             // Generate single spec file inside ZIP structure
             const singleFileResult = super.generate(steps);
-            files[`tests/flow.spec.${this.extension}`] = singleFileResult.code;
+            files[specFile] = singleFileResult.code;
+            mappingByFile[specFile] = singleFileResult.mappingByFile?.['main'] || [];
         }
 
         // Generate Playwright Config
@@ -298,7 +324,7 @@ playwright_tests:
 `;
         }
 
-        return { files, warnings: this.warnings };
+        return { files, warnings: this.warnings, mappingByFile };
     }
 
     /**
@@ -311,7 +337,7 @@ playwright_tests:
 
         if (this.designPattern === 'pom') {
             this.usePOM = true;
-            return this.generate(steps);
+            return this._generateMultiFile(steps);
         }
 
         if (this.designPattern === 'screenplay' && pattern) {
@@ -394,23 +420,15 @@ playwright_tests:
 
         // Handle recursive components/sub-flows
         const subNodes = step.data?.subNodes || step.subNodes || [];
-        const flowId = step.data?.configuration?.flowId || step.data?.flowId;
         if (type === 'component' || subNodes.length > 0) {
-            // Emit a visible warning when a composite/component node could not
-            // be resolved (empty subNodes and no flowId reference).  This
-            // prevents the silent "empty test.step block" that previously
-            // made components like "Disappearing Elements" vanish from the
-            // generated code without any indication.
-            if (type === 'component' && subNodes.length === 0 && !flowId) {
-                const emptyWarning = this.isEn
-                    ? `Component "${label}" could not be resolved (no flowId or subNodes). Skipped.`
-                    : `Componente "${label}" no pudo resolverse (sin flowId ni subNodes). Omitido.`;
-                this.addWarning(type, label, index);
-
-                if (lang === 'javascript' || lang === 'typescript') {
-                    return `${indent}${nodeIdComment ? nodeIdComment + '\n' : ''}${indent}// ⚠️ ${emptyWarning}`;
-                }
-                return `${indent}${nodeIdComment ? nodeIdComment + '\n' : ''}${indent}${commentChar} ⚠️ ${emptyWarning}`;
+            // A component with no executable children must never produce a
+            // silent empty test.step block. Emit a structured warning instead
+            // (see warnUnresolvedComponent):
+            //  - flowId present (or a flowResolution attempt) → status
+            //    'unresolved', reason from flowResolution or 'no_project_context'.
+            //  - otherwise (solo-metadata) → 'ignored' / 'no_executable_children'.
+            if (type === 'component' && subNodes.length === 0) {
+                return this.warnUnresolvedComponent(step, label, index, indent, commentChar);
             }
 
             if (this.usePOM) {
