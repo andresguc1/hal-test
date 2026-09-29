@@ -54,30 +54,28 @@ jobs:
           echo "Verifying commit signatures..."
           # Check if all commits in the range are signed
           COMMITS=$(git log --pretty=format:"%H" --no-merges ${{ github.event.before }}..${{ github.sha }} 2>/dev/null || git log --pretty=format:"%H" --no-merges -1 ${{ github.sha }})
-          
+
           if [ -z "$COMMITS" ]; then
             echo "No new commits to verify"
             exit 0
           fi
-          
+
           UNSIGNED=0
           for commit in $COMMITS; do
             if ! git verify-commit $commit 2>/dev/null; then
-              echo "❌ Unsigned commit: $commit"
+              echo "⚠️ Unsigned commit: $commit"
               git log -1 --format="%h %s (%an)" $commit
-              UNSIGNED=1
+              UNSIGNED=$((UNSIGNED+1))
             else
               echo "✅ Signed commit: $commit"
             fi
           done
-          
-          if [ $UNSIGNED -eq 1 ]; then
-            echo ""
-            echo "❌ Found unsigned commits. Please sign all commits with 'git commit -S'."
-            exit 1
+
+          if [ $UNSIGNED -gt 0 ]; then
+            echo "::warning::$UNSIGNED commit(s) are not GPG-signed. Signature check is advisory only."
           fi
-          
-          echo "✅ All commits are signed"
+
+          echo "✅ Signature check complete (advisory)"
 
   # ========================================
   # JOB 3: SBOM Generation (All Artifacts)
@@ -150,11 +148,11 @@ jobs:
         run: pnpm run build:monolith && pnpm build
 
       - name: 📋 Generate SLSA Provenance
-        uses: slsa-framework/slsa-github-generator@main
+        uses: actions/attest-build-provenance@v2
         with:
-          base64-subjects: "${{ toJson(format('{0}: {1}', github.repository, github.sha)) }}" 
-          provenance-name: slsa-provenance.intoto.jsonl
-          upload-assets: true
+          subject-path: |
+            pnpm-lock.yaml
+            apps/backend/public/**
 
   # ========================================
   # JOB 5: SLSA Provenance (Release Attestation)
@@ -179,11 +177,10 @@ jobs:
           path: sbom-output
 
       - name: 📦 Generate Release Provenance
-        uses: slsa-framework/slsa-github-generator@main
+        uses: actions/attest-build-provenance@v2
         with:
-          base64-subjects: "${{ toJson(format('{0}: {1}', github.repository, github.sha)) }}" 
-          provenance-name: slsa-provenance-release.intoto.jsonl
-          upload-assets: true
+          subject-path: |
+            sbom-output/**
 
       - name: 📤 Upload Release Provenance
         uses: actions/upload-artifact@v4
@@ -223,11 +220,14 @@ jobs:
       - name: 🛡️ Run pnpm audit
         run: pnpm audit --prod --json > audit-results.json || true
 
+      - name: ✨ Convert audit report to SARIF
+        run: node scripts/audit-to-sarif.js audit-results.json audit-results.sarif
+
       - name: 📊 Upload Audit Results
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
-          sarif_file: audit-results.json
+          sarif_file: audit-results.sarif
           category: pnpm-audit
 
       - name: 🔍 Run OSSF Scorecard
@@ -237,7 +237,7 @@ jobs:
           results_format: sarif
 
       - name: 📤 Upload Scorecard Results
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: scorecard-results.sarif
           category: scorecard

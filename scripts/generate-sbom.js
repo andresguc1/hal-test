@@ -29,16 +29,16 @@ async function generateSBOM(packageDir, outputFile, options = {}) {
     ];
 
     if (!includeDev) {
-      args.push("--exclude-dev");
+      args.push("--omit", "dev");
     }
 
-    console.log(`   Running: npx @cyclonedx/cyclonedx-npm ${args.join(" ")}`);
+    const cmd = `npx @cyclonedx/cyclonedx-npm ${args.join(" ")}`;
+    console.log(`   Running: ${cmd}`);
 
-    execSync("npx @cyclonedx/cyclonedx-npm", {
+    execSync(cmd, {
       cwd: packageDir,
       stdio: "inherit",
       env: { ...process.env, NODE_ENV: "production" },
-      args: args,
       timeout: 120000,
     });
 
