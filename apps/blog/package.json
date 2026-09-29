@@ -1,7 +1,7 @@
 {
   "name": "@halt-test/blog",
   "private": true,
-  "version": "1.0.71",
+  "version": "1.0.72",
   "type": "module",
   "description": "HAL-TEST engineering blog (Astro, static, deployed via GitHub Pages)",
   "scripts": {

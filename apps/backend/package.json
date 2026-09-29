@@ -1,6 +1,6 @@
 {
     "name": "@halt-test/backend",
-    "version": "1.0.71",
+    "version": "1.0.72",
     "description": "Backend for the HalTest project",
     "main": "index.js",
     "type": "module",
