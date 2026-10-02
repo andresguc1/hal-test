@@ -2762,6 +2762,7 @@ function Dashboard({
             isOpen={isSettingsOpen}
             onClose={closeSettings}
             initialTab={settingsTab}
+            currentProject={currentProject}
           />
         </div>
         {/* Modals/Dialogs */}

@@ -60,6 +60,7 @@
     "connected": "Connected",
     "disconnected": "Disconnected",
     "saving": "Saving...",
+    "saved": "Saved",
     "executed": "executed",
     "execute_flow_tooltip": "Execute complete flow sequentially",
     "save_flow_tooltip": "Save current flow",
@@ -752,6 +753,7 @@
       "general": "General",
       "canvas": "Canvas & Editor",
       "integrations": "AI & Integrations",
+      "project": "Project",
       "system": "System",
       "canvas_coming_soon": "Canvas settings (Grid, Snap, Minimap) coming next.",
       "system_coming_soon": "System configurations coming soon."
@@ -886,6 +888,13 @@
         "col_latency": "Lat.",
         "col_status": "Status"
       }
+    },
+    "project": {
+      "title": "Project Settings",
+      "subtitle": "Configure defaults that apply to all flows in this project.",
+      "defaultTimeout": "Default Action Timeout",
+      "defaultTimeoutHelp": "When a flow node does not declare its own timeout, this value is used. Leave empty for the platform default (30 s for actions, 5 s for assertions).",
+      "timeoutPlaceholder": "e.g. 60000"
     },
     "vault": {
       "title": "Secure Wallet",

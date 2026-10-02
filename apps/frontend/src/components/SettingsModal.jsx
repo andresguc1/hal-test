@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "next-themes";
+import { api } from "@/utils/api";
 import {
   Dialog,
   DialogContent,
@@ -34,6 +35,7 @@ export default function SettingsModal({
   isOpen,
   onClose,
   initialTab = "general",
+  currentProject,
 }) {
   const { t, i18n } = useTranslation();
 
@@ -107,6 +109,80 @@ export default function SettingsModal({
     );
   };
 
+  const handleProjectUpdate = useCallback(async (updates) => {
+    if (!currentProject) return;
+    try {
+      await api.put(`/projects/${currentProject.id}`, updates);
+    } catch (err) {
+      console.error("Failed to update project:", err);
+      throw err;
+    }
+  }, [currentProject]);
+
+  const ProjectSettingsPanel = ({ project, onUpdate }) => {
+    const [timeoutMs, setTimeoutMs] = useState(project.defaultActionTimeoutMs ?? "");
+    const [saving, setSaving] = useState(false);
+    const [saved, setSaved] = useState(false);
+
+    const handleSave = async () => {
+      setSaving(true);
+      try {
+        const value = timeoutMs === "" ? null : Number(timeoutMs);
+        await onUpdate({ defaultActionTimeoutMs: value });
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      } catch (err) {
+        console.error("Failed to save project timeout:", err);
+      } finally {
+        setSaving(false);
+      }
+    };
+
+    return (
+      <div className="space-y-4">
+        <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
+          <Label className="block text-base text-slate-300 mb-2">
+            {t("settings.project.defaultTimeout")}
+          </Label>
+          <p className="text-slate-500 text-sm mb-3">
+            {t("settings.project.defaultTimeoutHelp")}
+          </p>
+          <div className="flex items-center gap-4">
+            <div className="relative w-full max-w-md">
+              <input
+                type="number"
+                min="0"
+                step="1000"
+                value={timeoutMs}
+                onChange={(e) => setTimeoutMs(e.target.value)}
+                disabled={saving}
+                className="w-full bg-slate-900 border-slate-700 text-white placeholder-slate-500 rounded-lg px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                placeholder={t("settings.project.timeoutPlaceholder")}
+              />
+              {saving && (
+                <span className="text-slate-500 text-sm animate-pulse">
+                  {t("common.saving")}
+                </span>
+              )}
+              {saved && !saving && (
+                <span className="text-green-400 text-sm">
+                  {t("common.saved")}
+                </span>
+              )}
+            </div>
+            <Button
+              variant="primary"
+              onClick={handleSave}
+              disabled={saving || timeoutMs === ""}
+            >
+              {t("common.save")}
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl p-0 overflow-hidden bg-[#0F0F10] border-slate-800 text-slate-100 flex h-[600px] shadow-2xl">
@@ -124,6 +200,13 @@ export default function SettingsModal({
             icon={Settings}
             label={t("settings.sidebar.general")}
           />
+          {currentProject && (
+            <SidebarItem
+              id="project"
+              icon={AlertTriangle}
+              label={t("settings.sidebar.project")}
+            />
+          )}
           <SidebarItem
             id="integrations"
             icon={Cpu}
@@ -226,6 +309,25 @@ export default function SettingsModal({
                     })}
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* PROJECT TAB */}
+            {currentProject && activeTab === "project" && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                <div className="mb-6">
+                  <h3 className="text-xl font-semibold text-white">
+                    {t("settings.project.title")}
+                  </h3>
+                  <p className="text-slate-400 text-sm">
+                    {t("settings.project.subtitle")}
+                  </p>
+                </div>
+
+                <ProjectSettingsPanel
+                  project={currentProject}
+                  onUpdate={handleProjectUpdate}
+                />
               </div>
             )}
 

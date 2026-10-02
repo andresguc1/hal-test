@@ -59,6 +59,7 @@
     "connected": "Conectado",
     "disconnected": "Desconectado",
     "saving": "Guardando...",
+    "saved": "Guardado",
     "executed": "ejecutados",
     "execute_flow_tooltip": "Ejecutar el flujo completo secuencialmente",
     "save_flow_tooltip": "Guardar flujo actual",
@@ -752,6 +753,7 @@
       "general": "General",
       "canvas": "Canvas y Editor",
       "integrations": "IA e Integraciones",
+      "project": "Proyecto",
       "system": "Sistema",
       "canvas_coming_soon": "Configuración de Canvas (Cuadrícula, Ajuste, Minimapa) próximamente.",
       "system_coming_soon": "Configuraciones del sistema próximamente."
@@ -923,6 +925,13 @@
       "editor": "Lienzo & Editor",
       "ai": "IA e integraciones",
       "system": "Sistema"
+    },
+    "project": {
+      "title": "Ajustes del Proyecto",
+      "subtitle": "Configura los valores por defecto que se aplican a todos los flujos de este proyecto.",
+      "defaultTimeout": "Timeout de acción por defecto",
+      "defaultTimeoutHelp": "Cuando un nodo de flujo no declara su propio timeout, se usa este valor. Déjalo vacío para el valor por defecto de la plataforma (30 s para acciones, 5 s para aserciones).",
+      "timeoutPlaceholder": "ej. 60000"
     }
   },
   "context_menu": {

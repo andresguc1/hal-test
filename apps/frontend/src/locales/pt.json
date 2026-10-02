@@ -59,6 +59,7 @@
     "connected": "Conectado",
     "disconnected": "Desconectado",
     "saving": "Salvando...",
+    "saved": "Salvo",
     "executed": "executados",
     "execute_flow_tooltip": "Executar o fluxo completo sequencialmente",
     "save_flow_tooltip": "Salvar fluxo actual",
@@ -774,6 +775,7 @@
       "general": "Em geral",
       "canvas": "Tela e Editor",
       "integrations": "IA e integrações",
+      "project": "Projeto",
       "system": "Sistema",
       "canvas_coming_soon": "Configurações de tela (Grade, Snap, Minimapa) a seguir.",
       "system_coming_soon": "Configurações do sistema em breve."
@@ -878,6 +880,13 @@
       "error_saving_key": "Erro ao salvar chave",
       "failed_to_save_key": "Não foi possível salvar a chave",
       "validation_error": "Erro de validação. Verifique a chave."
+    },
+    "project": {
+      "title": "Configurações do Projeto",
+      "subtitle": "Configure os padrões que se aplicam a todos os fluxos neste projeto.",
+      "defaultTimeout": "Timeout de Ação Padrão",
+      "defaultTimeoutHelp": "Quando um nó de fluxo não declara seu próprio timeout, este valor é usado. Deixe vazio para o padrão da plataforma (30 s para ações, 5 s para asserções).",
+      "timeoutPlaceholder": "ex. 60000"
     }
   },
   "canvas": {

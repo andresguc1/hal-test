@@ -1085,7 +1085,8 @@ router.delete('/projects/:id/folders', async (req, res) => {
 // Update project
 router.put('/projects/:id', async (req, res) => {
     try {
-        const { name, description, activeFlowId, collaborationEnabled } = req.body;
+        const { name, description, activeFlowId, collaborationEnabled, defaultActionTimeoutMs } =
+            req.body;
         const project = await Project.findByPk(req.params.id);
         if (!project) {
             console.warn(`[ProjectRouter] Project NOT FOUND for update: ID=${req.params.id}`);
@@ -1098,6 +1099,8 @@ router.put('/projects/:id', async (req, res) => {
         if (description !== undefined) updates.description = description;
         if (activeFlowId !== undefined) updates.activeFlowId = activeFlowId;
         if (collaborationEnabled !== undefined) updates.collaborationEnabled = collaborationEnabled;
+        if (defaultActionTimeoutMs !== undefined)
+            updates.defaultActionTimeoutMs = defaultActionTimeoutMs;
 
         await project.update(updates);
 

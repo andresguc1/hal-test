@@ -60,6 +60,7 @@
     "connected": "Connecté",
     "disconnected": "Déconnecté",
     "saving": "Sauvegarde...",
+    "saved": "Enregistré",
     "executed": "exécuté",
     "execute_flow_tooltip": "Exécuter le flux complet séquentiellement",
     "save_flow_tooltip": "Sauvegarder le flux actuel",
@@ -751,6 +752,7 @@
       "general": "Général",
       "canvas": "Canevas & Éditeur",
       "integrations": "IA & Intégrations",
+      "project": "Projet",
       "system": "Système",
       "canvas_coming_soon": "Paramètres du canevas (Grille, Alignement, Minimap) à venir.",
       "system_coming_soon": "Configurations système à venir."
@@ -878,6 +880,13 @@
       "editor": "Toile et éditeur",
       "ai": "IA et intégrations",
       "system": "Système"
+    },
+    "project": {
+      "title": "Paramètres du Projet",
+      "subtitle": "Configurez les valeurs par défaut qui s'appliquent à tous les flux de ce projet.",
+      "defaultTimeout": "Timeout d'action par défaut",
+      "defaultTimeoutHelp": "Lorsqu'un nœud de flux ne déclare pas son propre timeout, cette valeur est utilisée. Laissez vide pour la valeur par défaut de la plateforme (30 s pour les actions, 5 s pour les assertions).",
+      "timeoutPlaceholder": "ex. 60000"
     }
   },
   "context_menu": {

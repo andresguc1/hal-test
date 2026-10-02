@@ -30,6 +30,11 @@ const Project = sequelize.define(
             defaultValue: false,
             allowNull: false,
         },
+        defaultActionTimeoutMs: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            defaultValue: null,
+        },
     },
     {
         timestamps: true,
