@@ -367,14 +367,18 @@ playwright_tests:
         return { files, warnings: this.warnings };
     }
 
-    generateHeader(_steps) {
+    generateHeader(steps) {
         const lang = this.language.toLowerCase();
         const extra = lang === 'typescript' ? ' (TS)' : '';
+        // Flat/single-file exports must import `expect` whenever the flow
+        // contains assertion nodes, otherwise generated specs throw
+        // `ReferenceError: expect is not defined`.
+        const needsExpect = this.hasAssertions(steps || []);
 
         switch (lang) {
             case 'javascript':
             case 'typescript':
-                return `import { test } from '@playwright/test';\n\ntest(\`Flujo Generado Hal-Test${extra}\`, async ({ page }) => {\n    console.log(\`${this.msg.start}\`);\n`;
+                return `import { test${needsExpect ? ', expect' : ''} } from '@playwright/test';\n\ntest(\`Flujo Generado Hal-Test${extra}\`, async ({ page }) => {\n    console.log(\`${this.msg.start}\`);\n`;
             case 'python':
                 return `import asyncio\nfrom playwright.async_api import async_playwright\n\n# ${this.msg.start}\n`;
             case 'java':

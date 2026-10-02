@@ -320,27 +320,58 @@ export const AssertionMapper = {
 
                             case 'text': {
                                 const text = escape(expected);
+                                // Merge timeout + ignoreCase + useInnerText into a
+                                // single options object so the emitted Playwright
+                                // code stays syntactically valid. useInnerText:true
+                                // mirrors the runtime (innerText) so generated and
+                                // executed semantics agree on visible text.
+                                const textOptionParts = [];
+                                if (timeout !== 5000) textOptionParts.push(`timeout: ${timeout}`);
+                                if (!caseSensitive) textOptionParts.push('ignoreCase: true');
+                                textOptionParts.push('useInnerText: true');
+                                const textOpt = textOptionParts.length
+                                    ? `, { ${textOptionParts.join(', ')} }`
+                                    : '';
+                                const regexTimeoutOpt =
+                                    timeout !== 5000 ? `, { timeout: ${timeout} }` : '';
+                                const sanitizeFlags = (f) => (f || '').replace(/[^gimusdy]/g, '');
+                                const safeFlags = sanitizeFlags(regexFlags);
+                                const ciFlag = caseSensitive ? '' : 'i';
+                                const escapeRegExpLiteral = (str) =>
+                                    escapeForTemplateLiteral(
+                                        String(str ?? '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+                                    );
+
                                 if (operator === 'empty')
-                                    return `await ${expectPrefix}(${locator}).toHaveText('')${timeoutOpt};`;
+                                    return `await ${expectPrefix}(${locator}).toHaveText('')${regexTimeoutOpt};`;
                                 if (operator === 'not_empty')
-                                    return `await ${expectPrefix}(${locator}).not.toHaveText('')${timeoutOpt};`;
+                                    return `await ${expectPrefix}(${locator}).not.toHaveText('')${regexTimeoutOpt};`;
                                 if (operator === 'equals')
-                                    return `await ${expectPrefix}(${locator}).toHaveText(\`${text}\`${caseSensitive ? '' : ', { ignoreCase: true }'})${timeoutOpt};`;
+                                    // Cypress `contains` semantics: a text match
+                                    // succeeds when the expected text exists as a
+                                    // part of (or the whole) visible text. An empty
+                                    // expected value resolves to the empty-text check,
+                                    // mirroring the runtime.
+                                    return text === ''
+                                        ? `await ${expectPrefix}(${locator}).toHaveText('')${regexTimeoutOpt};`
+                                        : `await ${expectPrefix}(${locator}).toContainText(\`${text}\`${textOpt});`;
                                 if (operator === 'not_equals')
-                                    return `await ${expectPrefix}(${locator}).not.toHaveText(\`${text}\`${caseSensitive ? '' : ', { ignoreCase: true }'})${timeoutOpt};`;
+                                    return text === ''
+                                        ? `await ${expectPrefix}(${locator}).not.toHaveText('')${regexTimeoutOpt};`
+                                        : `await ${expectPrefix}(${locator}).not.toContainText(\`${text}\`${textOpt});`;
                                 if (operator === 'contains')
-                                    return `await ${expectPrefix}(${locator}).toContainText(\`${text}\`${caseSensitive ? '' : ', { ignoreCase: true }'})${timeoutOpt};`;
+                                    return `await ${expectPrefix}(${locator}).toContainText(\`${text}\`${textOpt});`;
                                 if (operator === 'not_contains')
-                                    return `await ${expectPrefix}(${locator}).not.toContainText(\`${text}\`${caseSensitive ? '' : ', { ignoreCase: true }'})${timeoutOpt};`;
-                                if (isRegex || operator === 'regex') {
-                                    const flags = caseSensitive ? regexFlags : regexFlags + 'i';
-                                    return `await ${expectPrefix}(${locator}).toMatchText(new RegExp(\`${escapeRegex(expected)}\`, '${flags}')${timeoutOpt});`;
-                                }
-                                if (operator === 'not_regex') {
-                                    const flags = caseSensitive ? regexFlags : regexFlags + 'i';
-                                    return `await ${expectPrefix}(${locator}).not.toMatchText(new RegExp(\`${escapeRegex(expected)}\`, '${flags}')${timeoutOpt});`;
-                                }
-                                return `await ${expectPrefix}(${locator}).toContainText(\`${text}\`)${timeoutOpt};`;
+                                    return `await ${expectPrefix}(${locator}).not.toContainText(\`${text}\`${textOpt});`;
+                                if (operator === 'starts_with')
+                                    return `await ${expectPrefix}(${locator}).toHaveText(new RegExp(\`^${escapeRegExpLiteral(text)}\`, '${ciFlag}')${regexTimeoutOpt});`;
+                                if (operator === 'ends_with')
+                                    return `await ${expectPrefix}(${locator}).toHaveText(new RegExp(\`${escapeRegExpLiteral(text)}$\`, '${ciFlag}')${regexTimeoutOpt});`;
+                                if (isRegex || operator === 'regex')
+                                    return `await ${expectPrefix}(${locator}).toHaveText(new RegExp(\`${escapeRegex(expected)}\`, '${safeFlags}${ciFlag}')${regexTimeoutOpt});`;
+                                if (operator === 'not_regex')
+                                    return `await ${expectPrefix}(${locator}).not.toHaveText(new RegExp(\`${escapeRegex(expected)}\`, '${safeFlags}${ciFlag}')${regexTimeoutOpt});`;
+                                return `await ${expectPrefix}(${locator}).toContainText(\`${text}\`)${regexTimeoutOpt};`;
                             }
 
                             case 'count': {
