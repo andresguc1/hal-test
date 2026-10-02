@@ -190,6 +190,15 @@
     "regenerate": "Régénérer"
   },
   "nodes": {
+    "fieldHelp": {
+      "targetMode": "Utilise le pipeline d'entrée réel : les styles :hover, les gestionnaires mouseleave et elementFromPoint le détectent. Les coordonnées sont relatives à la fenêtre visible et ne changent pas au défilement.",
+      "x": "Mesuré depuis le bord gauche de la zone visible, pas depuis le début du document. Sur un navigateur large de 1280 px, 1279 est l'extrême droite.",
+      "y": "Mesuré depuis le haut de la zone visible. Si la page est défilée, cela reste inférieur à la position dans le document.",
+      "exitDirection": "Le pointeur entre d'abord dans l'élément, puis en sort par ce bord ; c'est ce second déplacement qui déclenche mouseleave. Automatique choisit le premier bord ayant de la place, en privilégiant le haut.",
+      "steps": "Nombre d'événements mousemove émis le long du trajet. 12 prend environ 0,2 s, 100 environ 1,7 s. Plafonné à 200 car le coût est par étape. Utilisez 1 si le pointeur doit simplement apparaître à la destination.",
+      "settleMs": "Pause après l'arrivée du pointeur, avant le rapport de l'étape. Utilisez quelques centaines de ms pour laisser une transition ou animation se terminer.",
+      "verifyTarget": "Ajoute à l'étape l'élément trouvé à ces coordonnées. Utile pour confirmer que le déplacement est arrivé où prévu."
+    },
     "select_option": {
       "container_required": "Un sélecteur de conteneur est requis.",
       "none_found": "Aucune option détectée.",
@@ -226,6 +235,7 @@
       "fill_form": "Remplir le formulaire",
       "scroll": "Défiler",
       "hover": "Survoler",
+      "mouse_move": "Déplacer la souris",
       "drag_drop": "Glisser & Déposer",
       "upload_file": "Téléverser des Fichiers",
       "pause": "Pause (Attente)",
@@ -368,6 +378,14 @@
       "targetSelector": "Sélecteur Cible",
       "steps": "Étapes de l'Animation",
       "force": "Forcer l'Action ?",
+      "targetMode": "Où doit aller le pointeur ?",
+      "x": "X (pixels depuis le bord gauche de la fenêtre)",
+      "y": "Y (pixels depuis le haut de la fenêtre)",
+      "offsetX": "Décalage X (depuis le bord gauche de l'élément)",
+      "offsetY": "Décalage Y (depuis le bord supérieur de l'élément)",
+      "exitDirection": "Sortir par quel bord ?",
+      "settleMs": "Attendre à l'arrivée (ms)",
+      "verifyTarget": "Indiquer l'élément présent à la destination",
       "files": "Chemins des Fichiers",
       "scrollIntoView": "Défiler jusqu'à l'élément",
       "idleTime": "Temps d'Inactivité (ms)",
@@ -625,6 +643,10 @@
     },
     "placeholders": {
       "url": "https://exemple.fr",
+      "x": "Ex : 1200",
+      "y": "Ex : 340",
+      "offsetX": "Ex : 0",
+      "offsetY": "Ex : 0",
       "timeout": "Ex : 30000. Temps de navigation max.",
       "endpoint": "http://localhost:2001/api/actions/resize_viewport",
       "text": "Ex : mon_utilisateur@domaine.com",

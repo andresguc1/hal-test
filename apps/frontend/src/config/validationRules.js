@@ -641,6 +641,139 @@ export const NODE_INPUTS = {
       required: true,
     },
   ],
+  mouse_move: [
+    {
+      key: "targetMode",
+      label: "Where should the pointer go?",
+      type: "select",
+      options: [
+        { label: "Viewport point (X / Y)", value: "viewport_absolute" },
+        { label: "Centre of an element", value: "element_center" },
+        { label: "A point on an element", value: "element_offset" },
+        {
+          label: "Away from an element (leave it)",
+          value: "away_from_element",
+        },
+      ],
+      defaultValue: "viewport_absolute",
+      required: true,
+      description:
+        "Drives the real input pipeline, so :hover styles, mouseleave handlers and elementFromPoint all see it. Coordinates are viewport-relative and do not change when the page scrolls.",
+    },
+    {
+      key: "x",
+      label: "X (pixels from left of viewport)",
+      type: "number",
+      placeholder: "1200",
+      isVisible: (config) => config.targetMode === "viewport_absolute",
+      description:
+        "Measured from the left edge of the visible area, not the top of the document. On a 1280px-wide browser, 1279 is the far right.",
+    },
+    {
+      key: "y",
+      label: "Y (pixels from top of viewport)",
+      type: "number",
+      placeholder: "340",
+      isVisible: (config) => config.targetMode === "viewport_absolute",
+      description:
+        "Measured from the top of the visible area. If the page is scrolled down, this is still smaller than the document position.",
+    },
+    {
+      key: "selector",
+      label: "Target Element",
+      type: "selector",
+      placeholder: "#panel or .menu-item",
+      required: true,
+      isVisible: (config) =>
+        config.targetMode === "element_center" ||
+        config.targetMode === "element_offset" ||
+        config.targetMode === "away_from_element",
+    },
+    {
+      key: "offsetX",
+      label: "Offset X (from element's left edge)",
+      type: "number",
+      placeholder: "0",
+      isVisible: (config) => config.targetMode === "element_offset",
+    },
+    {
+      key: "offsetY",
+      label: "Offset Y (from element's top edge)",
+      type: "number",
+      placeholder: "0",
+      isVisible: (config) => config.targetMode === "element_offset",
+    },
+    {
+      key: "exitDirection",
+      label: "Leave through which edge?",
+      type: "select",
+      options: [
+        { label: "Automatic (first side with room)", value: "any" },
+        { label: "Up", value: "up" },
+        { label: "Down", value: "down" },
+        { label: "Left", value: "left" },
+        { label: "Right", value: "right" },
+      ],
+      defaultValue: "any",
+      isVisible: (config) => config.targetMode === "away_from_element",
+      description:
+        "The pointer is moved into the element first, then out past this edge — that second move is what makes the page fire mouseleave. Automatic picks the first edge with room, preferring up.",
+    },
+    {
+      key: "timeout",
+      label: "Timeout (ms)",
+      type: "number",
+      placeholder: "30000",
+    },
+    {
+      key: "takeScreenshot",
+      label: "📸 Take Screenshot",
+      type: "checkbox",
+      defaultValue: true,
+    },
+    {
+      key: "continueOnError",
+      label: "🛡️ Continue on failure (Soft Fail)",
+      type: "checkbox",
+      defaultValue: false,
+    },
+    {
+      key: "steps",
+      // Each step is a real round-trip costing ~16ms, so this number is also a
+      // duration in seconds. Say so, or users pick 500 and wait 8 seconds.
+      label: "Travel steps (1 = instant jump)",
+      type: "number",
+      placeholder: "12",
+      advanced: true,
+      description:
+        "How many mousemove events to emit along the path. 12 takes about 0.2s, 100 about 1.7s. Capped at 200 because the cost is per step. Use 1 if the pointer should simply appear at the destination.",
+    },
+    {
+      key: "settleMs",
+      label: "Wait after arriving (ms)",
+      type: "number",
+      placeholder: "0",
+      advanced: true,
+      description:
+        "Pause after the pointer lands, before the step is reported. Use a few hundred ms to let a hover transition or animation finish.",
+    },
+    {
+      key: "verifyTarget",
+      label: "Report what element is at the destination",
+      type: "checkbox",
+      defaultValue: false,
+      advanced: true,
+      description:
+        "Adds the element found at those coordinates to the step result. Useful for confirming a move landed where you expected.",
+    },
+    {
+      key: "force",
+      label: "Force hover (skip actionability checks)",
+      type: "checkbox",
+      defaultValue: false,
+      advanced: true,
+    },
+  ],
 
   // --- DOM / CODE ---
   find_element: [

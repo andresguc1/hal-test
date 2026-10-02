@@ -190,6 +190,15 @@
     "regenerate": "Regenerate"
   },
   "nodes": {
+    "fieldHelp": {
+      "targetMode": "Drives the real input pipeline, so :hover styles, mouseleave handlers and elementFromPoint all see it. Coordinates are viewport-relative and do not change when the page scrolls.",
+      "x": "Measured from the left edge of the visible area, not the top of the document. On a 1280px-wide browser, 1279 is the far right.",
+      "y": "Measured from the top of the visible area. If the page is scrolled down, this is still smaller than the document position.",
+      "exitDirection": "The pointer is moved into the element first, then out past this edge — that second move is what makes the page fire mouseleave. Automatic picks the first edge with room, preferring up.",
+      "steps": "How many mousemove events to emit along the path. 12 takes about 0.2s, 100 about 1.7s. Capped at 200 because the cost is per step. Use 1 if the pointer should simply appear at the destination.",
+      "settleMs": "Pause after the pointer lands, before the step is reported. Use a few hundred ms to let a hover transition or animation finish.",
+      "verifyTarget": "Adds the element found at those coordinates to the step result. Useful for confirming a move landed where you expected."
+    },
     "select_option": {
       "container_required": "A container selector is required.",
       "browser_required": "Launch a browser and load the page first, then retry detection.",
@@ -227,6 +236,7 @@
       "pick_list_option": "Pick List Option",
       "scroll": "Scroll",
       "hover": "Hover",
+      "mouse_move": "Mouse Move",
       "drag_drop": "Drag & Drop",
       "upload_file": "Upload Files",
       "pause": "Pause (Sleep)",
@@ -369,6 +379,14 @@
       "targetSelector": "Target Selector",
       "steps": "Animation Steps",
       "force": "Force Action?",
+      "targetMode": "Where should the pointer go?",
+      "x": "X (pixels from left of viewport)",
+      "y": "Y (pixels from top of viewport)",
+      "offsetX": "Offset X (from element's left edge)",
+      "offsetY": "Offset Y (from element's top edge)",
+      "exitDirection": "Leave through which edge?",
+      "settleMs": "Wait after arriving (ms)",
+      "verifyTarget": "Report what element is at the destination",
       "files": "File Paths",
       "scrollIntoView": "Scroll into view",
       "idleTime": "Idle Time (ms)",
@@ -626,6 +644,10 @@
     },
     "placeholders": {
       "url": "https://example.com",
+      "x": "Ex: 1200",
+      "y": "Ex: 340",
+      "offsetX": "Ex: 0",
+      "offsetY": "Ex: 0",
       "timeout": "Ex: 30000. Max navigation time.",
       "endpoint": "http://localhost:2001/api/actions/resize_viewport",
       "text": "Ex: my_user@domain.com",

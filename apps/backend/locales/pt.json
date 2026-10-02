@@ -254,6 +254,9 @@
         "drag_drop": {
             "success": "Elemento {{source}} arrastado e solto corretamente em {{target}}."
         },
+        "mouse_move": {
+            "success": "Ponteiro movido para a coordenada da viewport ({{x}}, {{y}})."
+        },
         "import_router": {
             "content_required": "O conteúdo é obrigatório.",
             "directory_path_required": "O caminho do diretório é obrigatório.",
@@ -346,6 +349,9 @@
         "select_option_no_options": "Nenhuma opção selecionável encontrada dentro de \"{{selector}}\". {{message}}",
         "select_option_value_required": "O valor, rótulo ou índice a selecionar é obrigatório.",
         "select_option_not_native": "O seletor \"{{selector}}\" não aponta para um elemento <select> nativo ou uma de suas <option>.",
-        "pick_option_required": "Você deve fornecer optionText (texto da opção) ou optionIndex (posição numérica)."
+        "pick_option_required": "Você deve fornecer optionText (texto da opção) ou optionIndex (posição numérica).",
+        "mouse_move_unresolved_selector": "Não foi possível resolver o seletor '{{selector}}' para mover o ponteiro.",
+        "mouse_move_no_bounding_box": "O elemento '{{selector}}' não tem caixa delimitadora visível, não foi possível calcular uma coordenada do ponteiro.",
+        "mouse_move_unknown_mode": "targetMode '{{targetMode}}' desconhecido para mouse_move. Valores esperados: viewport_absolute, element_center, element_offset, away_from_element."
     }
 }

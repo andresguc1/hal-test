@@ -76,6 +76,7 @@ const ROUTE_REGISTRY = {
     pick_list_option: { schema: 'pickListOptionBodySchema', category: 'interaction' },
     scroll: { schema: 'scrollBodySchema', category: 'interaction' },
     hover: { schema: 'hoverBodySchema', category: 'interaction' },
+    mouse_move: { schema: 'mouseMoveBodySchema', category: 'interaction' },
     drag_drop: { schema: 'dragDropBodySchema', category: 'interaction' },
     upload_file: { schema: 'uploadFileBodySchema', category: 'interaction' },
     find_element: { schema: 'findElementBodySchema', category: 'element' },

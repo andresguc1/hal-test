@@ -190,6 +190,15 @@
     "regenerate": "Regenerar"
   },
   "nodes": {
+    "fieldHelp": {
+      "targetMode": "Usa el pipeline de entrada real, así que los estilos :hover, los manejadores mouseleave y elementFromPoint lo detectan. Las coordenadas son relativas a la ventana visible y no cambian al hacer scroll.",
+      "x": "Se mide desde el borde izquierdo del área visible, no desde el inicio del documento. En un navegador de 1280px de ancho, 1279 es el extremo derecho.",
+      "y": "Se mide desde el borde superior del área visible. Si la página está scrolleada, sigue siendo menor que la posición del documento.",
+      "exitDirection": "Primero el puntero entra al elemento y luego sale por este borde; ese segundo movimiento es lo que hace que la página dispare mouseleave. Automático elige el primer borde con espacio, prefiriendo arriba.",
+      "steps": "Cuántos eventos mousemove emitir en el camino. 12 tarda unos 0,2s y 100 unos 1,7s. El máximo es 200 porque el costo es por paso. Usa 1 si el puntero simplemente debe aparecer en el destino.",
+      "settleMs": "Pausa después de que el puntero llega, antes de reportar el paso. Usa unos cientos de ms para dejar terminar una transición o animación hover.",
+      "verifyTarget": "Agrega a los resultados el elemento encontrado en esas coordenadas. Útil para confirmar que el movimiento llegó donde esperabas."
+    },
     "select_option": {
       "container_required": "Se requiere un selector de contenedor.",
       "browser_required": "Primero lanza un navegador y carga la página, luego reintenta la detección.",
@@ -227,6 +236,7 @@
       "pick_list_option": "Elegir Opción de Lista",
       "scroll": "Desplazar",
       "hover": "Pasar mouse sobre elemento",
+      "mouse_move": "Mover mouse",
       "drag_drop": "Arrastrar",
       "upload_file": "Subir Archivos",
       "pause": "Pausa (Sueño)",
@@ -371,6 +381,14 @@
       "targetSelector": "Selector de Destino",
       "steps": "Pasos de Animación",
       "force": "¿Forzar Acción?",
+      "targetMode": "¿A dónde debe moverse el puntero?",
+      "x": "X (píxeles desde la izquierda de la ventana)",
+      "y": "Y (píxeles desde arriba de la ventana)",
+      "offsetX": "Desplazamiento X (desde el borde izquierdo del elemento)",
+      "offsetY": "Desplazamiento Y (desde el borde superior del elemento)",
+      "exitDirection": "¿Salir por qué borde?",
+      "settleMs": "Esperar al llegar (ms)",
+      "verifyTarget": "Informar qué elemento hay en el destino",
       "files": "Rutas de Archivos",
       "scrollIntoView": "Hacer scroll al elemento",
       "idleTime": "Tiempo de inactividad (ms)",
@@ -626,6 +644,10 @@
     },
     "placeholders": {
       "url": "https://example.com",
+      "x": "Ej: 1200",
+      "y": "Ej: 340",
+      "offsetX": "Ej: 0",
+      "offsetY": "Ej: 0",
       "timeout": "Ex: 30000. Max navigation time.",
       "endpoint": "http://localhost:2001/api/actions/resize_viewport",
       "text": "Ex: my_user@domain.com",

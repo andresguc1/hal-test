@@ -260,6 +260,9 @@
         "hover": {
             "success": "Puntero posicionado sobre el elemento '{{selector}}'."
         },
+        "mouse_move": {
+            "success": "Puntero movido a la coordenada de la ventana ({{x}}, {{y}})."
+        },
         "import_router": {
             "content_required": "El contenido es obligatorio.",
             "directory_path_required": "La ruta del directorio es obligatoria.",
@@ -320,6 +323,9 @@
         "browser_not_found": "No se encontró navegador con ID: {{id}}",
         "no_active_pages": "No hay páginas activas en el contexto. Llama a open_url primero.",
         "selector_required": "El parámetro 'selector' es obligatorio.",
+        "mouse_move_unresolved_selector": "No se pudo resolver el selector '{{selector}}' para mover el puntero.",
+        "mouse_move_no_bounding_box": "El elemento '{{selector}}' no tiene una caja delimitadora visible; no se puede calcular una coordenada de puntero.",
+        "mouse_move_unknown_mode": "targetMode '{{targetMode}}' desconocido para mouse_move. Valores esperados: viewport_absolute, element_center, element_offset, away_from_element.",
         "fields_required": "Se requiere al menos una definición de campo de formulario.",
         "invalid_action": "El parámetro 'action' debe ser 'get' o 'set'.",
         "invalid_content_type": "El parámetro 'contentType' debe ser 'text', 'html' o 'attribute'.",

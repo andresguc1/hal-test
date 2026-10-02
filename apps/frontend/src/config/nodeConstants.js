@@ -84,6 +84,7 @@ export const NODE_CATEGORIES = {
       "scroll",
       "drag_drop",
       "hover",
+      "mouse_move",
     ],
   },
   diagnostics: {

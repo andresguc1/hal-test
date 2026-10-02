@@ -31,6 +31,7 @@ export { default as dragDropBodySchema } from './drag_drop/body.js';
 export { default as uploadFileBodySchema } from './upload_file/body.js';
 export { default as interactionBodySchema } from './interaction/body.js';
 export { default as hoverBodySchema } from './hover/body.js';
+export { default as mouseMoveBodySchema } from './mouse_move/body.js';
 
 // ⏳ Waits (Espera)
 export { default as waitForElementBodySchema } from './wait_for_element/body.js';

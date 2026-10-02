@@ -64,6 +64,7 @@ const NODE_CATEGORIES = {
       { id: "submit_form" },
       { id: "scroll" },
       { id: "drag_drop" },
+      { id: "mouse_move" },
       { id: "upload_file" },
     ],
   },

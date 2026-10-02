@@ -228,6 +228,18 @@ const BUILTIN_PLUGINS = [
             ]),
     },
     {
+        type: 'mouse_move',
+        category: 'user_interaction',
+        label: 'Move Mouse',
+        color: 'pink',
+        icon: 'Move',
+        loadModules: () =>
+            Promise.all([
+                import('../plugins/core-interaction/handlers/mouse_move.js'),
+                import('../plugins/core-interaction/schemas/mouse_move.js'),
+            ]),
+    },
+    {
         type: 'drag_drop',
         category: 'user_interaction',
         label: 'Drag & Drop',

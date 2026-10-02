@@ -211,6 +211,7 @@ export { default as typeTextAction } from '../plugins/core-interaction/handlers/
 export { default as fillFormAction } from '../plugins/core-interaction/handlers/fill_form.js';
 export { default as findElementAction } from '../plugins/core-interaction/handlers/find_element.js';
 export { default as hoverAction } from '../plugins/core-interaction/handlers/hover.js';
+export { default as mouseMoveAction } from '../plugins/core-interaction/handlers/mouse_move.js';
 export { default as scrollAction } from '../plugins/core-interaction/handlers/scroll.js';
 export { default as selectOptionAction } from '../plugins/core-interaction/handlers/select_option.js';
 export { default as setCheckboxAction } from '../plugins/core-interaction/handlers/set_checkbox.js';
@@ -320,6 +321,7 @@ import _waitNetworkAction from '../plugins/core-wait/handlers/wait_network.js';
 import _listenEventsAction from '../plugins/core-capture/handlers/listen_events.js';
 import _scrollAction from '../plugins/core-interaction/handlers/scroll.js';
 import _hoverAction from '../plugins/core-interaction/handlers/hover.js';
+import _mouseMoveAction from '../plugins/core-interaction/handlers/mouse_move.js';
 import _uploadFileAction from '../plugins/core-interaction/handlers/upload_file.js';
 import _manageCookiesAction from '../plugins/core-network/handlers/manage_cookies.handler.js';
 import _manageStorageAction from '../plugins/core-session/handlers/manage_storage.js';
@@ -374,6 +376,7 @@ export async function interactionAction(req, res) {
         listen_events: _listenEventsAction,
         scroll: _scrollAction,
         hover: _hoverAction,
+        mouse_move: _mouseMoveAction,
         upload_file: _uploadFileAction,
         manage_cookies: _manageCookiesAction,
         manage_storage: _manageStorageAction,

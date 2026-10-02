@@ -723,7 +723,7 @@ const NodeConfigurationPanel = ({
     );
   };
 
-  const renderInput = (field) => {
+  const renderInputControl = (field) => {
     const dataKey = field.key;
     const reactKey = `input-${field.key}`;
     const fieldLabel = t("nodes.fields." + field.key, field.label);
@@ -1405,6 +1405,28 @@ const NodeConfigurationPanel = ({
             );
           })}
         </div>
+      </div>
+    );
+  };
+
+  // Optional per-field help text. Purely additive: a field without a
+  // `description` renders exactly as it did before, so existing nodes are
+  // unaffected. Coordinates in particular are the kind of thing people
+  // misread as page-relative, and the label alone is not enough to say so.
+  //
+  // Keyed under nodes.fieldHelp, NOT the pre-existing nodes.hints block: that
+  // block is keyed by semantic names, six of which (selector, force, timeout,
+  // path, fullPage, waitForNavigation) collide with real field keys and would
+  // have started rendering unrelated copy under other nodes' fields.
+  const renderInput = (field) => {
+    const control = renderInputControl(field);
+    if (!field.description) return control;
+    return (
+      <div key={`input-${field.key}-help`} className="space-y-1">
+        {control}
+        <p className="text-[10px] leading-relaxed text-slate-500">
+          {t("nodes.fieldHelp." + field.key, field.description)}
+        </p>
       </div>
     );
   };

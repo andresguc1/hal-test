@@ -107,6 +107,17 @@
             "handler": "./handlers/hover.js"
         },
         {
+            "type": "mouse_move",
+            "category": "user_interaction",
+            "label": "Move Mouse",
+            "description": "Move the pointer to a viewport coordinate, an element point, or off an element",
+            "color": "green",
+            "icon": "Move",
+            "version": "1.0.0",
+            "schema": "./schemas/mouse_move.js",
+            "handler": "./handlers/mouse_move.js"
+        },
+        {
             "type": "drag_drop",
             "category": "user_interaction",
             "label": "Drag and Drop",

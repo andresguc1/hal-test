@@ -254,6 +254,9 @@
         "drag_drop": {
             "success": "Element {{source}} dragged and dropped correctly in {{target}}."
         },
+        "mouse_move": {
+            "success": "Pointer moved to viewport coordinate ({{x}}, {{y}})."
+        },
         "import_router": {
             "content_required": "Content is required.",
             "directory_path_required": "Directory path is required.",
@@ -346,6 +349,9 @@
         "select_option_no_options": "No selectable options found inside \"{{selector}}\". {{message}}",
         "select_option_value_required": "The value, label or index to select is required.",
         "select_option_not_native": "The selector \"{{selector}}\" does not point to a native <select> element or one of its <option>.",
-        "pick_option_required": "You must provide optionText (option text) or optionIndex (numeric position)."
+        "pick_option_required": "You must provide optionText (option text) or optionIndex (numeric position).",
+        "mouse_move_unresolved_selector": "Could not resolve selector '{{selector}}' to move the pointer.",
+        "mouse_move_no_bounding_box": "Element '{{selector}}' has no visible bounding box, so no pointer coordinate could be computed.",
+        "mouse_move_unknown_mode": "Unknown mouse_move targetMode '{{targetMode}}'. Expected one of: viewport_absolute, element_center, element_offset, away_from_element."
     }
 }

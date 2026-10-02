@@ -202,13 +202,245 @@ function buildClickCode(params, lang, framework) {
     return parts.join(' ');
 }
 
+/**
+ * Mouse pointer movement to a viewport or element-relative destination.
+ * Mirrors the runtime handler (plugins/core-interaction/handlers/mouse_move.js).
+ *
+ * The `away_from_element` mode emits TWO statements on purpose: the runtime
+ * hovers into the element first so the browser's hit-test has something to
+ * leave. Collapsing that to a single move would generate code that does not
+ * reproduce the behaviour the node actually ran.
+ */
+function buildMouseMoveCode(params, lang, framework) {
+    const fw = String(framework || 'playwright').toLowerCase();
+    const l = String(lang).toLowerCase();
+    const isTplLang = l === 'javascript' || l === 'typescript';
+
+    const mode = String(params.targetMode || 'viewport_absolute');
+    const selector = params.selector || '';
+    // Default to 12 to match the runtime default in the handler, so an exported
+    // test moves the pointer the same way the flow did inside HalTest. Clamped
+    // to the same 200 ceiling the body schema enforces.
+    const steps = Math.min(200, Math.max(1, Number(params.steps) || 12));
+    const exitDirection = String(params.exitDirection || 'any');
+    const s = isTplLang ? escapeForTemplateLiteral(selector) : escapeForDoubleQuotes(selector);
+    const n = (v) => Math.round(Number(v) || 0);
+
+    // ----- Cypress ----------------------------------------------------------
+    // Cypress has no real page.mouse. A synthetic 'mousemove' does not drive
+    // CSS :hover or elementFromPoint, so the limitation is stated in-band
+    // (same convention as the Selenium click-outside comment above).
+    if (fw === 'cypress') {
+        const target =
+            mode === 'viewport_absolute'
+                ? `cy.get('body').trigger('mousemove', { clientX: ${n(params.x)}, clientY: ${n(params.y)}, bubbles: true });`
+                : `cy.get(\`${s}\`).trigger('mousemove', { bubbles: true });`;
+        return (
+            `// NOTE: Cypress has no page.mouse; this dispatches a synthetic DOM ` +
+            `mousemove and will NOT drive CSS :hover, elementFromPoint or native ` +
+            `mouseleave the way real pointer input does.\n        ${target}`
+        );
+    }
+
+    // ----- Selenium ---------------------------------------------------------
+    if (fw === 'selenium') {
+        if (l === 'python' || l === 'java') {
+            const el =
+                l === 'python'
+                    ? `driver.find_element(By.CSS_SELECTOR, "${s}")`
+                    : `driver.findElement(By.cssSelector("${s}"))`;
+            const act = l === 'python' ? 'ActionChains(driver)' : 'new Actions(driver)';
+
+            if (mode === 'viewport_absolute') {
+                return (
+                    `// NOTE: Selenium's ActionChains move relative to the current pointer ` +
+                    `position and expose no absolute viewport coordinate, so the HalTest ` +
+                    `coordinate (${n(params.x)}, ${n(params.y)}) cannot be reproduced directly. ` +
+                    `Move the pointer to the origin first, or target the element instead.\n        ` +
+                    `${act}.move_by_offset(${n(params.x)}, ${n(params.y)}).perform()`
+                );
+            }
+            if (mode === 'away_from_element') {
+                return (
+                    `${act}.move_to_element(${el}).perform();\n        ` +
+                    `${act}.move_by_offset(0, -10).perform()`
+                );
+            }
+            return `${act}.move_to_element(${el}).perform()`;
+        }
+        return `// mouse move not implemented for Selenium in ${lang}`;
+    }
+
+    // ----- Playwright (default) --------------------------------------------
+
+    // `steps` is a Playwright-native option for every binding, so it carries
+    // across all five languages unchanged.
+    if (mode === 'viewport_absolute') {
+        if (l === 'python')
+            return `await page.mouse.move(${n(params.x)}, ${n(params.y)}, steps=${steps})`;
+        if (l === 'java')
+            return `page.mouse().move(${n(params.x)}, ${n(params.y)}, new Mouse.MoveOptions().setSteps(${steps}));`;
+        if (l === 'csharp')
+            return `await page.Mouse.MoveAsync(${n(params.x)}, ${n(params.y)}, new MouseMoveOptions { Steps = ${steps} });`;
+        return `await page.mouse.move(${n(params.x)}, ${n(params.y)}, { steps: ${steps} });`;
+    }
+
+    if (mode === 'element_offset') {
+        // Element-relative offsets are expressed against the element's box at
+        // runtime; the generated code resolves the same box from the DOM.
+        const dx = n(params.offsetX);
+        const dy = n(params.offsetY);
+        if (isTplLang) {
+            return (
+                `const __mmBox = await page.locator(\`${s}\`).boundingBox();\n        ` +
+                `if (__mmBox) await page.mouse.move(Math.round(__mmBox.x + ${dx}), Math.round(__mmBox.y + ${dy}), { steps: ${steps} });`
+            );
+        }
+        if (l === 'python') {
+            return (
+                `__mm_box = await page.locator("${s}").bounding_box()\n        ` +
+                `if __mm_box: await page.mouse.move(round(__mm_box["x"] + ${dx}), round(__mm_box["y"] + ${dy}), steps=${steps})`
+            );
+        }
+        if (l === 'java') {
+            return (
+                `var __mmBox = page.locator("${s}").boundingBox();\n        ` +
+                `if (__mmBox != null) page.mouse().move((int) Math.round(__mmBox.x + ${dx}), (int) Math.round(__mmBox.y + ${dy}), new Mouse.MoveOptions().setSteps(${steps}));`
+            );
+        }
+        return (
+            `var box = await page.Locator("${s}").BoundingBoxAsync();\n        ` +
+            `if (box != null) await page.Mouse.MoveAsync((int)Math.Round(box.X + ${dx}), (int)Math.Round(box.Y + ${dy}), new MouseMoveOptions { Steps = ${steps} });`
+        );
+    }
+
+    // element_center and away_from_element both need the element located first.
+    if (mode === 'away_from_element') {
+        // Two statements on purpose: enter, then leave. The generated code must
+        // reproduce the two-phase contract or it will not fire mouseleave.
+        const hover = isTplLang
+            ? `await page.locator(\`${s}\`).hover();`
+            : l === 'python'
+              ? `await page.locator("${s}").hover()`
+              : l === 'java'
+                ? `page.locator("${s}").hover();`
+                : `await page.Locator("${s}").HoverAsync();`;
+        const sel = isTplLang ? `\`${s}\`` : l === 'python' ? `"${s}"` : `"${s}"`;
+        const away = buildEscapeCode(l, steps, exitDirection, sel);
+        // Newline, not a space: Python's hover() has no statement terminator,
+        // so a space-separated join would produce invalid syntax.
+        return `${hover}\n        ${away}`;
+    }
+
+    // element_center — the box centre is resolved from the DOM.
+    if (isTplLang) {
+        return (
+            `const __mmBox = await page.locator(\`${s}\`).boundingBox();\n        ` +
+            `if (__mmBox) await page.mouse.move(Math.round(__mmBox.x + __mmBox.width / 2), Math.round(__mmBox.y + __mmBox.height / 2), { steps: ${steps} });`
+        );
+    }
+    if (l === 'python') {
+        return (
+            `__mm_box = await page.locator("${s}").bounding_box()\n        ` +
+            `if __mm_box: await page.mouse.move(round(__mm_box["x"] + __mm_box["width"] / 2), round(__mm_box["y"] + __mm_box["height"] / 2), steps=${steps})`
+        );
+    }
+    if (l === 'java') {
+        return (
+            `var __mmBox = page.locator("${s}").boundingBox();\n        ` +
+            `if (__mmBox != null) page.mouse().move((int) Math.round(__mmBox.x + __mmBox.width / 2), (int) Math.round(__mmBox.y + __mmBox.height / 2), new Mouse.MoveOptions().setSteps(${steps}));`
+        );
+    }
+    return (
+        `var box = await page.Locator("${s}").BoundingBoxAsync();\n        ` +
+        `if (box != null) await page.Mouse.MoveAsync((int)Math.Round(box.X + box.Width / 2), (int)Math.Round(box.Y + box.Height / 2), new MouseMoveOptions { Steps = ${steps} });`
+    );
+}
+
+/**
+ * Generated "leave the element" step. There is no Playwright API to move to a
+ * point outside an element, so the box is measured and an offset beyond the
+ * chosen edge is used — the same escape strategy as the runtime helper.
+ *
+ * `sel` is the already-escaped selector literal, quoted per language.
+ */
+function buildEscapeCode(l, steps, exitDirection, sel) {
+    const margin = 8;
+    if (l === 'python') {
+        return (
+            `__mm_away = await page.locator(${sel}).bounding_box(); ` +
+            `if __mm_away: await page.mouse.move(round(__mm_away["x"] + __mm_away["width"] / 2), ${escapeOffsetPython(exitDirection, margin)}, steps=${steps})`
+        );
+    }
+    if (l === 'java') {
+        return (
+            `var __mmAway = page.locator(${sel}).boundingBox(); ` +
+            `if (__mmAway != null) page.mouse().move((int) Math.round(__mmAway.x + __mmAway.width / 2), (int) ${escapeOffsetJava(exitDirection, margin)}, new Mouse.MoveOptions().setSteps(${steps}));`
+        );
+    }
+    if (l === 'csharp') {
+        return (
+            `var away = await page.Locator(${sel}).BoundingBoxAsync(); ` +
+            `if (away != null) await page.Mouse.MoveAsync((int)Math.Round(away.X + away.Width / 2), ${escapeOffsetCSharp(exitDirection, margin)}, new MouseMoveOptions { Steps = ${steps} });`
+        );
+    }
+    return (
+        `const away = await page.locator(${sel}).boundingBox(); ` +
+        `if (away) await page.mouse.move(Math.round(away.x + away.width / 2), ${escapeOffsetJs(exitDirection, margin)}, { steps: ${steps} });`
+    );
+}
+
+const escapeOffsetJs = (dir, m) =>
+    dir === 'down'
+        ? `Math.round(away.y + away.height + ${m})`
+        : dir === 'left'
+          ? `Math.round(away.x - ${m})`
+          : dir === 'right'
+            ? `Math.round(away.x + away.width + ${m})`
+            : `Math.round(away.y - ${m})`;
+
+const escapeOffsetPython = (dir, m) =>
+    dir === 'down'
+        ? `round(__mm_away["y"] + __mm_away["height"] + ${m})`
+        : dir === 'left'
+          ? `round(__mm_away["x"] - ${m})`
+          : dir === 'right'
+            ? `round(__mm_away["x"] + __mm_away["width"] + ${m})`
+            : `round(__mm_away["y"] - ${m})`;
+
+const escapeOffsetJava = (dir, m) =>
+    dir === 'down'
+        ? `Math.round(__mmAway.y + __mmAway.height + ${m})`
+        : dir === 'left'
+          ? `Math.round(__mmAway.x - ${m})`
+          : dir === 'right'
+            ? `Math.round(__mmAway.x + __mmAway.width + ${m})`
+            : `Math.round(__mmAway.y - ${m})`;
+
+const escapeOffsetCSharp = (dir, m) =>
+    dir === 'down'
+        ? `(int)Math.Round(away.Y + away.Height + ${m})`
+        : dir === 'left'
+          ? `(int)Math.Round(away.X - ${m})`
+          : dir === 'right'
+            ? `(int)Math.Round(away.X + away.Width + ${m})`
+            : `(int)Math.Round(away.Y - ${m})`;
+
 export const InteractionMapper = {
-    type: ['click', 'type_text', 'type', 'hover', 'scroll', 'press_key'],
+    type: ['click', 'type_text', 'type', 'hover', 'scroll', 'press_key', 'mouse_move'],
 
     getCode: (params, lang, index, framework = 'playwright') => {
         const selector = params.selector || '';
         const text = params.text || '';
         const clickCode = buildClickCode(params, lang, framework);
+
+        // Mouse Move resolves every framework/language combination itself,
+        // including documented fallbacks for Cypress and Selenium, so it
+        // short-circuits before the per-framework maps below.
+        const nodeType = params.actionType || params.type;
+        if (nodeType === 'mouse_move') {
+            return buildMouseMoveCode(params, lang, framework);
+        }
 
         if (framework.toLowerCase() === 'cypress') {
             const s = escapeForTemplateLiteral(selector);
