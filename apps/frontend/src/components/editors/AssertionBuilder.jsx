@@ -80,6 +80,8 @@ const OPERATORS_BY_TYPE = {
     { value: "not_equals", label: "Does Not Equal" },
     { value: "contains", label: "Contains" },
     { value: "not_contains", label: "Does Not Contain" },
+    { value: "starts_with", label: "Starts With" },
+    { value: "ends_with", label: "Ends With" },
     { value: "empty", label: "Is Empty" },
     { value: "not_empty", label: "Is Not Empty" },
     { value: "regex", label: "Matches Regex" },
