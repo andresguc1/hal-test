@@ -120,6 +120,7 @@ class ProjectExportService {
             description: project.description || '',
             activeFlowId: project.activeFlowId || null,
             collaborationEnabled: project.collaborationEnabled || false,
+            defaultActionTimeoutMs: project.defaultActionTimeoutMs ?? null,
             createdAt: project.createdAt,
             updatedAt: project.updatedAt,
             flowsMeta: flowFiles.map((f) => ({

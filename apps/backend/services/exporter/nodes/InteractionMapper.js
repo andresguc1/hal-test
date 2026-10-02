@@ -496,25 +496,36 @@ export const InteractionMapper = {
             case 'typescript': {
                 const s = escapeForTemplateLiteral(selector);
                 const t = escapeForTemplateLiteral(text);
+                const timeoutOpt =
+                    params.timeout !== undefined && Number(params.timeout) > 0
+                        ? `, { timeout: ${Number(params.timeout)} }`
+                        : '';
                 return {
-                    click: clickCode,
-                    type_text: `await page.fill(\`${s}\`, \`${t}\`);`,
-                    type: `await page.fill(\`${s}\`, \`${t}\`);`,
-                    hover: `await page.hover(\`${s}\`);`,
-                    scroll: `await page.mouse.wheel(${params.deltaX || 0}, ${params.deltaY || 500});`,
-                    press_key: `await page.keyboard.press(\`${params.key || ''}\`);`,
+                    click: clickCode.slice(0, -1) + timeoutOpt + ';',
+                    type_text: `await page.fill(\`${s}\`, \`${t}\`${timeoutOpt});`,
+                    type: `await page.fill(\`${s}\`, \`${t}\`${timeoutOpt});`,
+                    hover: `await page.hover(\`${s}\`${timeoutOpt});`,
+                    scroll: `await page.mouse.wheel(${params.deltaX || 0}, ${params.deltaY || 500}${timeoutOpt});`,
+                    press_key: `await page.keyboard.press(\`${params.key || ''}\`${timeoutOpt});`,
                 }[params.actionType || params.type];
             }
             case 'python': {
                 const s = escapeForDoubleQuotes(selector);
                 const t = escapeForDoubleQuotes(text);
+                const timeoutOpt =
+                    params.timeout !== undefined && Number(params.timeout) > 0
+                        ? `, timeout=${Number(params.timeout)}`
+                        : '';
                 return {
-                    click: clickCode,
-                    type_text: `await page.fill("${s}", "${t}")`,
-                    type: `await page.fill("${s}", "${t}")`,
-                    hover: `await page.hover("${s}")`,
-                    scroll: `await page.mouse.wheel(${params.deltaX || 0}, ${params.deltaY || 500})`,
-                    press_key: `await page.keyboard.press("${params.key || ''}")`,
+                    click: clickCode.slice(0, -1) + timeoutOpt,
+                    type_text: `await page.fill("${s}", "${t}"` + timeoutOpt + ')',
+                    type: `await page.fill("${s}", "${t}"` + timeoutOpt + ')',
+                    hover: `await page.hover("${s}"` + timeoutOpt + ')',
+                    scroll:
+                        `await page.mouse.wheel(${params.deltaX || 0}, ${params.deltaY || 500}` +
+                        timeoutOpt +
+                        ')',
+                    press_key: `await page.keyboard.press("${params.key || ''}"` + timeoutOpt + ')',
                 }[params.actionType || params.type];
             }
             case 'java': {

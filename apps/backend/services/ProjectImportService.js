@@ -108,6 +108,7 @@ class ProjectImportService {
                         description: sourceProject.description || '',
                         userId: effectiveUserId || null,
                         collaborationEnabled: sourceProject.collaborationEnabled || false,
+                        defaultActionTimeoutMs: sourceProject.defaultActionTimeoutMs ?? null,
                     },
                     { transaction },
                 );
