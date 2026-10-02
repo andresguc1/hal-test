@@ -1,9 +1,18 @@
 // apps/frontend/src/config/validationRules.js
 
+import {
+  canConfigureTimeout,
+  timeoutFieldDefinition,
+  timeoutCapableNodeTypes,
+} from "./timeoutCapabilities.js";
+
 /**
  * Unified NODE_INPUTS schema.
  * Defines available input fields for each node type and their validation rules.
- * This is the SOURCE OF TRUTH for both the Configuration Panel and the Execution Validator.
+ * This is the SOURCE OF TRUTH for both the Configuration Panel and the Execution Validator, with one
+ * exception: the `timeout` field is declared in timeoutCapabilities.js and injected below, because
+ * whether a node type can be given a timeout at all is a question about runtime capability rather
+ * than about the shape of a form.
  */
 export const NODE_INPUTS = {
   // --- BROWSER MANAGEMENT ---
@@ -80,12 +89,6 @@ export const NODE_INPUTS = {
       type: "text",
       placeholder: "https://example.com",
       required: true,
-    },
-    {
-      key: "timeout",
-      label: "Timeout (ms)",
-      type: "number",
-      placeholder: "30000",
     },
     {
       key: "takeScreenshot",
@@ -190,12 +193,6 @@ export const NODE_INPUTS = {
       defaultValue: false,
     },
     {
-      key: "timeout",
-      label: "Timeout (ms)",
-      type: "number",
-      placeholder: "30000",
-    },
-    {
       key: "takeScreenshot",
       label: "📸 Take Screenshot",
       type: "checkbox",
@@ -236,12 +233,6 @@ export const NODE_INPUTS = {
         { label: "Regex", value: "regex" },
       ],
       defaultValue: "contains",
-    },
-    {
-      key: "timeout",
-      label: "Wait for Dialog (ms)",
-      type: "number",
-      placeholder: "5000",
     },
     {
       key: "continueOnError",
@@ -378,13 +369,6 @@ export const NODE_INPUTS = {
       type: "checkbox",
       defaultValue: false,
     },
-    {
-      key: "timeout",
-      label: "Timeout (ms)",
-      type: "number",
-      placeholder: "30000",
-      advanced: true,
-    },
   ],
   set_radio: [
     {
@@ -405,12 +389,6 @@ export const NODE_INPUTS = {
       label: "🛡️ Continue on failure (Soft Fail)",
       type: "checkbox",
       defaultValue: false,
-    },
-    {
-      key: "timeout",
-      label: "Timeout (ms)",
-      type: "number",
-      placeholder: "30000",
     },
   ],
   pick_list_option: [
@@ -472,12 +450,6 @@ export const NODE_INPUTS = {
       type: "checkbox",
       defaultValue: false,
     },
-    {
-      key: "timeout",
-      label: "Timeout (ms)",
-      type: "number",
-      placeholder: "30000",
-    },
   ],
   fill_form: [
     {
@@ -521,12 +493,6 @@ export const NODE_INPUTS = {
         config.submitAfterFill ||
         (typeof config.submitSelector === "string" &&
           config.submitSelector.trim().length > 0),
-    },
-    {
-      key: "timeout",
-      label: "Timeout (ms)",
-      type: "number",
-      placeholder: "30000",
     },
     {
       key: "takeScreenshot",
@@ -720,12 +686,6 @@ export const NODE_INPUTS = {
         "The pointer is moved into the element first, then out past this edge — that second move is what makes the page fire mouseleave. Automatic picks the first edge with room, preferring up.",
     },
     {
-      key: "timeout",
-      label: "Timeout (ms)",
-      type: "number",
-      placeholder: "30000",
-    },
-    {
       key: "takeScreenshot",
       label: "📸 Take Screenshot",
       type: "checkbox",
@@ -811,12 +771,6 @@ export const NODE_INPUTS = {
       defaultValue: false,
     },
     {
-      key: "timeout",
-      label: "Timeout (ms)",
-      type: "number",
-      placeholder: "Leave empty for platform default",
-    },
-    {
       key: "continueOnError",
       label: "🛡️ Continue on failure (Soft Fail)",
       type: "checkbox",
@@ -871,14 +825,6 @@ export const NODE_INPUTS = {
       required: true,
       description:
         "Add one or more checks to run against the selected element.",
-    },
-    {
-      key: "timeout",
-      label: "Timeout",
-      type: "number",
-      placeholder: "Leave empty for platform default",
-      description:
-        "Maximum time to wait for the check to pass (in milliseconds). Leave empty to use the platform default.",
     },
     {
       key: "softFail",
@@ -943,12 +889,6 @@ export const NODE_INPUTS = {
         { label: "Detached (Removed)", value: "detached" },
       ],
       required: true,
-    },
-    {
-      key: "timeout",
-      label: "Timeout (ms)",
-      type: "number",
-      placeholder: "30000",
     },
     {
       key: "takeScreenshot",
@@ -1019,12 +959,6 @@ export const NODE_INPUTS = {
       placeholder: "**/api/v1/login",
       required: true,
     },
-    {
-      key: "timeout",
-      label: "Timeout (ms)",
-      type: "number",
-      placeholder: "30000",
-    },
   ],
   wait_for_response: [
     {
@@ -1039,12 +973,6 @@ export const NODE_INPUTS = {
       label: "Status (Optional)",
       type: "number",
       placeholder: "200",
-    },
-    {
-      key: "timeout",
-      label: "Timeout (ms)",
-      type: "number",
-      placeholder: "30000",
     },
   ],
 
@@ -1392,12 +1320,6 @@ export const NODE_INPUTS = {
       placeholder: "// Runs on server\nreturn { success: true };",
       required: true,
     },
-    {
-      key: "timeout",
-      label: "Timeout (ms)",
-      type: "number",
-      placeholder: "10000",
-    },
   ],
   fail_flow: [
     {
@@ -1413,12 +1335,6 @@ export const NODE_INPUTS = {
       label: "Wait Condition",
       type: "conditional_branches",
       required: true,
-    },
-    {
-      key: "timeout",
-      label: "Max Wait (ms)",
-      type: "number",
-      placeholder: "10000",
     },
   ],
   input: [
@@ -1813,6 +1729,37 @@ export const NODE_INPUTS = {
 };
 
 /**
+ * Injects the `timeout` field into every node type the capability registry
+ * says can honour one.
+ *
+ * Generating the definition rather than declaring it per type is the point: the
+ * 15 types that used to spell it out inline each did it slightly differently —
+ * three different placeholder texts, one of them hidden behind "advanced" —
+ * while the ~40 types whose operations could just as well be bounded had no
+ * declaration at all and lost the value on save. One generator means a type
+ * cannot drift into advertising a timeout nothing applies, and cannot be left
+ * out of the one that does apply.
+ *
+ * A node type with no NODE_INPUTS entry at all is materialised here. It used to
+ * fall through to `default`, which whitelists `selector` and nothing else, so
+ * such a node lost every other value it held.
+ */
+for (const nodeType of timeoutCapableNodeTypes()) {
+  const definition = timeoutFieldDefinition(nodeType);
+  if (!definition) continue;
+
+  // A type that already had an entry keeps its own fields in their own order.
+  // A type with no entry used to resolve to `default` for both rendering and
+  // validation, so it is seeded from `default` here rather than starting empty
+  // — otherwise the required-selector check these types relied on would
+  // quietly disappear just by giving them a timeout.
+  if (!Array.isArray(NODE_INPUTS[nodeType])) {
+    NODE_INPUTS[nodeType] = NODE_INPUTS.default.map((input) => ({ ...input }));
+  }
+  NODE_INPUTS[nodeType].push(definition);
+}
+
+/**
  * Keys that are always preserved across every node type when a configuration
  * is cleaned before persisting. Node-specific fields are added from
  * NODE_INPUTS and the dynamic `definedInputs` list.
@@ -1876,6 +1823,15 @@ export const cleanNodeConfiguration = (
   if (!config) return {};
 
   const allowedKeys = new Set(BASE_ALLOWED_CONFIG_KEYS);
+
+  // `timeout` is additionally governed by the capability registry, so a value
+  // on a node type whose schema does not list the field is not stripped on
+  // save. Before this, it survived only for the 15 types that declared it
+  // inline, and was dropped from type_text, hover, select_option,
+  // take_screenshot and every other type with no declaration.
+  if (canConfigureTimeout(nodeType)) {
+    allowedKeys.add("timeout");
+  }
 
   const inputs = NODE_INPUTS[nodeType] || NODE_INPUTS.default || [];
   inputs.forEach((input) => {

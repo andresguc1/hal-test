@@ -4,6 +4,8 @@
  * Inspired by Scantrix & Playwright/SDET best practices.
  */
 
+import { canConfigureTimeout } from "../config/timeoutCapabilities.js";
+
 /**
  * Runs policy checks on the current list of nodes and edges.
  * @param {Array} nodes - React Flow nodes
@@ -203,6 +205,28 @@ export function runPolicyEnforcer(nodes, edges) {
         if (value !== undefined && value !== null && value !== "") {
           const isNumeric = !isNaN(Number(value)) && typeof value !== "boolean";
           const isTemplated = String(value).includes("{{");
+
+          // A numeric `timeout` on a node type the registry says cannot honour
+          // one is dead configuration: it survives in the flow but no
+          // consumer ever applies it. Flagged separately, because "this value
+          // is doing nothing" and "this value is too rigid" need different
+          // fixes and a user cannot tell them apart from the message alone.
+          if (isNumeric && field === "timeout" && !canConfigureTimeout(nodeType)) {
+            nodeWarnings.push({
+              rule: "ignored_timeout",
+              severity: "warning",
+              message: `'timeout' of ${value}ms is set on a ${nodeType} node, which does not use one.`,
+              educationalGuide: {
+                title: "Timeout Is Ignored On This Node",
+                why: `${nodeType} does not wait on a Playwright operation, so there is nothing for a timeout to bound. The value is stored but never applied, which makes a run look configured when it is not.`,
+                remediation:
+                  "Remove the field, or move the wait to a node type that has a timeout — such as a wait or assertion node — if the intent was to bound how long this step may take.",
+                badCode: `// Bad: a ${nodeType} node with a timeout nothing reads\n{ type: "${nodeType}", configuration: { timeout: ${value} } }`,
+                goodCode: `// Good: the wait that actually needs bounding\n{ type: "wait_for_element", configuration: { selector: ".loaded", timeout: ${value} } }`,
+              },
+            });
+            continue;
+          }
 
           if (isNumeric && !isTemplated) {
             nodeWarnings.push({
