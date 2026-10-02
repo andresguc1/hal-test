@@ -40,6 +40,8 @@ export const TIMEOUT_SEMANTIC = Object.freeze({
   WAIT: "wait",
   /** A sandboxed script's own execution budget. */
   REGISTRATION_TTL: "registrationTtl",
+  /** How long a mock, route, header or interception rule stays registered. */
+  RULE_LIFETIME: "ruleLifetime",
   /** Starting or attaching to a browser container. */
   CONTAINER_BUDGET: "containerBudget",
   /** Browser or context lifecycle. */
@@ -98,7 +100,13 @@ const SEMANTIC_DEFAULTS = Object.freeze({
   },
   [TIMEOUT_SEMANTIC.ASSERTION]: {
     consumer: TIMEOUT_CONSUMER.PLAYWRIGHT,
-    default: 5000,
+    // HalTest's short fast-fail assertion window, not Playwright's 5000 ms
+    // expect() default. The strategies poll themselves rather than going
+    // through expect(), and an assertion is usually either already true or
+    // never going to be — waiting five seconds per broken check turns one
+    // misconfigured step into a slow run. Kept here in step with
+    // DEFAULT_ASSERTION_WINDOW_MS in apps/backend/core/timeout-utils.js.
+    default: 500,
     min: 0,
     max: null,
     step: 500,
@@ -123,6 +131,22 @@ const SEMANTIC_DEFAULTS = Object.freeze({
     step: 500,
     unit: "ms",
     guardrail: null,
+  },
+  /**
+   * Same consumer, different zero: a mock, route, header or interception rule
+   * treats 0 as "stay registered until the run ends", where a script's 0 means
+   * "use the default". The two cannot share a placeholder, so the semantic
+   * carries the flag and the label follows it.
+   */
+  [TIMEOUT_SEMANTIC.RULE_LIFETIME]: {
+    consumer: TIMEOUT_CONSUMER.WRAPPER,
+    default: 0,
+    min: 0,
+    max: 600000,
+    step: 500,
+    unit: "ms",
+    guardrail: null,
+    persistentAtZero: true,
   },
   [TIMEOUT_SEMANTIC.CONTAINER_BUDGET]: {
     consumer: TIMEOUT_CONSUMER.CONTAINER,
@@ -204,6 +228,16 @@ const NODE_TYPE_SEMANTICS = Object.freeze({
   wait_for_request: TIMEOUT_SEMANTIC.WAIT,
   wait_for_response: TIMEOUT_SEMANTIC.WAIT,
   manage_cookies: TIMEOUT_SEMANTIC.ACTION,
+  // These five declare `timeout` in their Joi body schema as the lifetime of
+  // the rule they register, not a bound on an operation — intercept_request
+  // calls it "Duración de Interceptación" and mock_response documents 0 as
+  // "persistente". The field was being stripped from all five on save, so a
+  // configured interception duration never reached the run.
+  mock_response: TIMEOUT_SEMANTIC.RULE_LIFETIME,
+  block_resource: TIMEOUT_SEMANTIC.RULE_LIFETIME,
+  configure_route: TIMEOUT_SEMANTIC.RULE_LIFETIME,
+  modify_headers: TIMEOUT_SEMANTIC.RULE_LIFETIME,
+  intercept_request: TIMEOUT_SEMANTIC.RULE_LIFETIME,
 
   // Files and data
   upload_file: TIMEOUT_SEMANTIC.ACTION,

@@ -1,4 +1,5 @@
 import { BaseAssertionStrategy, registerAssertionStrategy } from '../AssertionBaseStrategy.js';
+import { assertionWindow } from '../../../../core/timeout-utils.js';
 
 /**
  * PageStrategy
@@ -45,106 +46,151 @@ export class PageStrategy extends BaseAssertionStrategy {
         ];
     }
 
-    async execute(page, _locator, assertion, { timeout: _timeout = 0 } = {}) {
-        const operator = assertion.operator || 'url_contains';
-        const expected = this.resolveExpected(assertion);
-        const caseSensitive = assertion.caseSensitive === true;
-        const useRegex = assertion.regex === true || operator.includes('_regex');
-        const flags = assertion.regexFlags || '';
+    async execute(page, _locator, assertion, { timeout = 0 } = {}) {
+        // One evaluation of the assertion against a single snapshot of the
+        // page. `permanent` marks the failures that retrying cannot fix, so
+        // the poll below returns immediately for those instead of burning the
+        // whole window on an operator that will never work.
+        const evaluateOnce = async () => {
+            const operator = assertion.operator || 'url_contains';
+            const expected = this.resolveExpected(assertion);
+            const caseSensitive = assertion.caseSensitive === true;
+            const useRegex = assertion.regex === true || operator.includes('_regex');
+            const flags = assertion.regexFlags || '';
 
-        let actualValue;
-        let propertyName;
+            let actualValue;
+            let propertyName;
 
-        if (operator.startsWith('url_')) {
-            propertyName = 'url';
-            actualValue = page.url();
-        } else if (operator.startsWith('title_')) {
-            propertyName = 'title';
-            try {
-                actualValue = await page.title();
-            } catch (err) {
+            if (operator.startsWith('url_')) {
+                propertyName = 'url';
+                actualValue = page.url();
+            } else if (operator.startsWith('title_')) {
+                propertyName = 'title';
+                try {
+                    actualValue = await page.title();
+                } catch (err) {
+                    return {
+                        passed: false,
+                        actual: 'error',
+                        expected,
+                        message: `Failed to get page title: ${err.message}`,
+                    };
+                }
+            } else {
                 return {
                     passed: false,
-                    actual: 'error',
-                    expected,
-                    message: `Failed to get page title: ${err.message}`,
+                    actual: null,
+                    expected: operator,
+                    message: `Unsupported operator "${operator}" for page assertions.`,
+                    permanent: true,
                 };
             }
-        } else {
-            return {
-                passed: false,
-                actual: null,
-                expected: operator,
-                message: `Unsupported operator "${operator}" for page assertions.`,
-            };
-        }
 
-        if (useRegex) {
-            let regex;
-            try {
-                const sanitizedFlags = (flags || '').replace(/[^gimusdy]/g, '');
-                regex = new RegExp(expected, caseSensitive ? sanitizedFlags : `${sanitizedFlags}i`);
-            } catch (err) {
+            if (useRegex) {
+                let regex;
+                try {
+                    const sanitizedFlags = (flags || '').replace(/[^gimusdy]/g, '');
+                    regex = new RegExp(
+                        expected,
+                        caseSensitive ? sanitizedFlags : `${sanitizedFlags}i`,
+                    );
+                } catch (err) {
+                    return {
+                        passed: false,
+                        actual: actualValue,
+                        expected,
+                        message: `Invalid regular expression "${expected}": ${err.message}`,
+                        permanent: true,
+                    };
+                }
+                const found = regex.test(actualValue);
+                const passed = operator.endsWith('_not_regex') ? !found : found;
+                return {
+                    passed,
+                    actual: actualValue,
+                    expected: passed
+                        ? expected
+                        : operator.endsWith('_not_regex')
+                          ? `(not matching) ${expected}`
+                          : `(matching) ${expected}`,
+                    message: passed
+                        ? undefined
+                        : operator.endsWith('_not_regex')
+                          ? `Expected page ${propertyName} NOT to match /${expected}/${flags} but it did.`
+                          : `Expected page ${propertyName} to match /${expected}/${flags} but it did not.`,
+                };
+            }
+
+            const haystack = caseSensitive ? actualValue : actualValue.toLowerCase();
+            const needle = caseSensitive
+                ? String(expected ?? '')
+                : String(expected ?? '').toLowerCase();
+
+            let passed;
+            if (operator.endsWith('_not_equals')) {
+                passed = haystack !== needle;
+            } else if (operator.endsWith('_not_contains')) {
+                passed = !haystack.includes(needle);
+            } else if (operator.endsWith('_not_regex')) {
+                // handled above
+            } else if (operator.endsWith('_equals')) {
+                passed = haystack === needle;
+            } else if (operator.endsWith('_contains')) {
+                passed = haystack.includes(needle);
+            } else if (operator.endsWith('_regex')) {
+                // handled above
+            } else {
                 return {
                     passed: false,
                     actual: actualValue,
                     expected,
-                    message: `Invalid regular expression "${expected}": ${err.message}`,
+                    message: `Unsupported operator "${operator}" for page assertions.`,
+                    permanent: true,
                 };
             }
-            const found = regex.test(actualValue);
-            const passed = operator.endsWith('not_regex') ? !found : found;
+
             return {
                 passed,
                 actual: actualValue,
-                expected: passed
-                    ? expected
-                    : operator.endsWith('not_regex')
-                      ? `(not matching) ${expected}`
-                      : `(matching) ${expected}`,
+                expected,
                 message: passed
                     ? undefined
-                    : operator.endsWith('not_regex')
-                      ? `Expected page ${propertyName} NOT to match /${expected}/${flags} but it did.`
-                      : `Expected page ${propertyName} to match /${expected}/${flags} but it did not.`,
+                    : `Expected page ${propertyName} ${this.describeOperator(operator)} "${expected}" but found "${this.truncate(actualValue)}".`,
             };
-        }
-
-        const haystack = caseSensitive ? actualValue : actualValue.toLowerCase();
-        const needle = caseSensitive
-            ? String(expected ?? '')
-            : String(expected ?? '').toLowerCase();
-
-        let passed;
-        if (operator.endsWith('_not_equals')) {
-            passed = haystack !== needle;
-        } else if (operator.endsWith('_not_contains')) {
-            passed = !haystack.includes(needle);
-        } else if (operator.endsWith('_not_regex')) {
-            // handled above
-        } else if (operator.endsWith('_equals')) {
-            passed = haystack === needle;
-        } else if (operator.endsWith('_contains')) {
-            passed = haystack.includes(needle);
-        } else if (operator.endsWith('_regex')) {
-            // handled above
-        } else {
-            return {
-                passed: false,
-                actual: actualValue,
-                expected,
-                message: `Unsupported operator "${operator}" for page assertions.`,
-            };
-        }
-
-        return {
-            passed,
-            actual: actualValue,
-            expected,
-            message: passed
-                ? undefined
-                : `Expected page ${propertyName} ${this.describeOperator(operator)} "${expected}" but found "${this.truncate(actualValue)}".`,
         };
+
+        let result = await evaluateOnce();
+        if (result.passed || result.permanent) {
+            return this.stripInternalFlags(result);
+        }
+
+        // A URL or title is routinely expected to arrive after this step runs:
+        // a redirect that has not landed yet, or a title written by a
+        // client-side script. Every other strategy in this engine re-reads its
+        // target until the window expires; page-level assertions read a single
+        // snapshot, so the configured timeout had nothing to bound and a check
+        // that became true two seconds later failed as though it never would.
+        //
+        // Polled here rather than through expect() because there is no locator
+        // to hand it — the condition is derived from page state — which is the
+        // same reason the sibling strategies poll by hand.
+        const deadline = Date.now() + assertionWindow(timeout);
+        while (!result.passed && Date.now() <= deadline) {
+            await new Promise((resolve) => setTimeout(resolve, 100));
+            result = await evaluateOnce();
+            if (result.permanent) break;
+        }
+
+        return this.stripInternalFlags(result);
+    }
+
+    /**
+     * Drops the bookkeeping keys the engine does not know about, so they
+     * cannot leak into a step result.
+     */
+    stripInternalFlags(result) {
+        const { permanent: _permanent, ...rest } = result;
+        return rest;
     }
 
     describeOperator(operator) {

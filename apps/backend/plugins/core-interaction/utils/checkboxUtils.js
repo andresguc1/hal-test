@@ -5,7 +5,7 @@
  * logic can be unit-tested without a real browser.
  */
 
-import { normalizeTimeout, playTimeout } from '../../../core/timeout-utils.js';
+import { assertionWindow, playTimeout } from '../../../core/timeout-utils.js';
 
 export const actionLabel = (action) => (action === 'uncheck' ? 'unchecked' : 'checked');
 
@@ -42,14 +42,18 @@ export const waitSettle = (page) => {
 /**
  * Verifies that a locator reaches the expected checked state, polling until
  * the assertion holds or the timeout elapses (Playwright-style auto-retry,
- * equivalent to expect(locator).toBeChecked({ checked })). A timeout of `0`
- * falls back to a 5000ms window (Playwright's default expect timeout).
+ * equivalent to expect(locator).toBeChecked({ checked })).
+ *
+ * When no timeout is configured this uses HalTest's short fast-fail assertion
+ * window rather than Playwright's 5000 ms expect default. A checkbox state is
+ * usually either already correct or never going to be, so the long window
+ * would charge five seconds to every step that is merely misconfigured.
  *
  * @returns {Promise<'checked'|'unchecked'>} the confirmed live state.
  * @throws {Error} when the state never matches within the window.
  */
 export const assertCheckedState = async (locator, expectedChecked, { timeout = 0 } = {}) => {
-    const windowMs = normalizeTimeout(timeout) || 5000;
+    const windowMs = assertionWindow(timeout);
     const deadline = Date.now() + windowMs;
     let checked = null;
     let lastError = null;

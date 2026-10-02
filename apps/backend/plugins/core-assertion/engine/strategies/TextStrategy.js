@@ -1,5 +1,5 @@
 import { BaseAssertionStrategy, registerAssertionStrategy } from '../AssertionBaseStrategy.js';
-import { playTimeout } from '../../../../core/timeout-utils.js';
+import { playTimeout, assertionWindow } from '../../../../core/timeout-utils.js';
 
 /**
  * TextStrategy
@@ -90,11 +90,11 @@ export class TextStrategy extends BaseAssertionStrategy {
         }
 
         // Web-first semantics: keep re-reading the element's visible text until
-        // the assertion passes or the retry window elapses. A bounded 500 ms
-        // window is used when no timeout is configured so dynamic content has a
-        // chance to settle without slowing down fast-fail assertions.
-        const retryWindow = timeout > 0 ? timeout : 500;
-        const deadline = Date.now() + retryWindow;
+        // the assertion passes or the retry window elapses. When no timeout is
+        // configured, assertionWindow() supplies HalTest's short fast-fail
+        // default so dynamic content has a chance to settle without every
+        // broken check costing five seconds.
+        const deadline = Date.now() + assertionWindow(timeout);
         const poll = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
         const readText = async () => (await locator.innerText().catch(() => '')) || '';
