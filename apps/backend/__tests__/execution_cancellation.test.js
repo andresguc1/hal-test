@@ -36,6 +36,12 @@ describe('Execution Cancellation & AI Interruption', () => {
 
             expect(result).toBe(true);
             expect(signal.aborted).toBe(true);
+            // After abort, the run is still tracked as active (aborted) until done() is called.
+            // This allows in-flight handlers to observe the abort signal.
+            expect(activeRunManager.isActive(runId)).toBe(true);
+            expect(activeRunManager.getSignal(runId)?.aborted).toBe(true);
+
+            activeRunManager.done(runId);
             expect(activeRunManager.isActive(runId)).toBe(false);
         });
 

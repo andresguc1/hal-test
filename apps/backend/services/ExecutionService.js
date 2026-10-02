@@ -1,4 +1,4 @@
-import { Flow, Node, Edge, Run, StepResult } from '../database/init.js';
+import { Flow, Node, Edge, Run, StepResult, Project } from '../database/init.js';
 import { executionLogger } from './ExecutionLogger.js';
 import * as actions from '../controllers/action.controller.js';
 import { emitLog, emitFlowFinished, emitEdgeStatus, emitExecutionStatus } from '../socket.js';
@@ -8,6 +8,7 @@ import { expressionEngine } from './ExpressionEngine.js';
 import { executionManager } from './ExecutionManager.js';
 import { activeRunManager } from './ActiveRunManager.js';
 import { yjsServer } from './collaboration/YjsServer.js';
+// import { resolveNodeTimeout, getActionSemantic, playTimeout } from '../core/timeout-resolver.js';
 import chalk from 'chalk';
 
 /**
@@ -336,7 +337,7 @@ export class ExecutionService {
             emitFlowFinished({ runId, status: 'failed', flowId, error: error.message });
             throw error;
         } finally {
-            activeRunManager.cleanup(runId);
+            activeRunManager.done(runId);
             // --- AUTOMATIC RESOURCE CLEANUP ---
             // Ensure the browser launched for this specific run is closed —
             // unless it is a visible workspace that must survive run boundaries.
@@ -1014,7 +1015,9 @@ export class ExecutionService {
 
     /**
      * Wraps an async operation with a per-node timeout.
-     * If the operation exceeds nodeTimeoutMs, throws a descriptive TimeoutError.
+     * If the operation exceeds timeoutMs, throws a descriptive TimeoutError.
+     * The timer is cleared on the success path so a completed node does not
+     * leave a dangling setTimeout for the full duration.
      * @param {Promise} promise - The operation to wrap
      * @param {string} nodeId - Node identifier for error messaging
      * @param {string} actionType - Node type for error messaging
@@ -1022,20 +1025,22 @@ export class ExecutionService {
      * @returns {Promise} Resolved value or throws on timeout
      */
     _withNodeTimeout(promise, nodeId, actionType, timeoutMs) {
-        return Promise.race([
-            promise,
-            new Promise((_, reject) =>
-                setTimeout(() => {
-                    reject(
-                        new Error(
-                            `Node timeout: "${actionType}" (node ${nodeId}) exceeded ${timeoutMs}ms limit. ` +
-                                `The node may be stuck on a network request, selector wait, or unresponsive element. ` +
-                                `Increase timeout via options.overrides.nodeTimeoutMs or check the target application.`,
-                        ),
-                    );
-                }, timeoutMs),
-            ),
-        ]);
+        let timer;
+        const timeoutPromise = new Promise((_, reject) => {
+            timer = setTimeout(() => {
+                reject(
+                    new Error(
+                        `Node timeout: "${actionType}" (node ${nodeId}) exceeded ${timeoutMs}ms limit. ` +
+                            `The node may be stuck on a network request, selector wait, or unresponsive element. ` +
+                            `Increase timeout via node configuration, project default, or check the target application.`,
+                    ),
+                );
+            }, timeoutMs);
+        });
+
+        return Promise.race([promise, timeoutPromise]).finally(() => {
+            clearTimeout(timer);
+        });
     }
 
     /**
