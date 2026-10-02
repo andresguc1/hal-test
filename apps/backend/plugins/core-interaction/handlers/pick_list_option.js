@@ -37,7 +37,7 @@ const clickOption = async (opt, runOptions) => {
 const pickListOption = (req, res) =>
     executePlaywrightAction(req, res, 'pick_list_option', async (page, opts) => {
         const { selector, optionText, optionIndex, expandMenu } = opts;
-        const timeout = normalizeTimeout(opts.timeout);
+        const timeout = normalizeTimeout(req.body._timeoutResolution?.effectiveMs ?? opts.timeout);
 
         if (!selector) throw new Error(req.t('errors.selector_required'));
 

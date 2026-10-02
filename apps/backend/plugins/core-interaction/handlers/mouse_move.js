@@ -97,7 +97,7 @@ const mouseMove = (req, res) =>
             force = false,
         } = opts;
 
-        const timeout = normalizeTimeout(opts.timeout);
+        const timeout = normalizeTimeout(req.body._timeoutResolution?.effectiveMs ?? opts.timeout);
         const viewport = page.viewportSize();
 
         let dest = null;

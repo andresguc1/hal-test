@@ -21,7 +21,7 @@ const browserDialogAction = (req, res) =>
             caseSensitive = false,
             promptText,
         } = opts;
-        const timeout = normalizeTimeout(opts.timeout);
+        const timeout = normalizeTimeout(req.body._timeoutResolution?.effectiveMs ?? opts.timeout);
 
         // Configure how the engine answers future native dialogs on this page.
         // Playwright requires dialogs to be answered from the event that triggers

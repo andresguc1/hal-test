@@ -12,7 +12,7 @@ import { normalizeTimeout, playTimeout } from '../../../core/timeout-utils.js';
 const selectOption = (req, res) =>
     executePlaywrightAction(req, res, 'select_option', async (page, opts) => {
         const { selector, selectionCriteria, selectionValue } = opts;
-        const timeout = normalizeTimeout(opts.timeout);
+        const timeout = normalizeTimeout(req.body._timeoutResolution?.effectiveMs ?? opts.timeout);
 
         if (!selector) throw new Error(req.t('errors.selector_required'));
 

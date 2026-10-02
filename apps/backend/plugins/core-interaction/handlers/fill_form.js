@@ -13,7 +13,9 @@ const fillForm = (req, res) =>
             submitSelector,
             waitForNavigation = true,
         } = opts;
-        const timeoutMs = normalizeTimeout(opts.timeout);
+        const timeoutMs = normalizeTimeout(
+            req.body._timeoutResolution?.effectiveMs ?? opts.timeout,
+        );
 
         if (!formSelector) {
             console.error('[fillFormAction] Error: formSelector is missing');

@@ -4,7 +4,7 @@ import { normalizeTimeout, playTimeout } from '../../../core/timeout-utils.js';
 const manageTabsAction = (req, res) =>
     executePlaywrightAction(req, res, 'manage_tabs', async (page, opts, browserId, context) => {
         const { action, url, tabIndex, closeAll } = opts;
-        const timeout = normalizeTimeout(opts.timeout);
+        const timeout = normalizeTimeout(req.body._timeoutResolution?.effectiveMs ?? opts.timeout);
         let message = '';
         let responseData = {};
 

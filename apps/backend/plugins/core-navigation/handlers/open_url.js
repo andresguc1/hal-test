@@ -34,7 +34,10 @@ const openUrlAction = async (req, res) => {
 
         // --- TIMEOUT & NAVIGATION SETTINGS ---
         const { url, waitUntil = 'domcontentloaded', takeScreenshot } = opts ?? {};
-        const timeout = normalizeTimeout(opts.timeout);
+        // Use the resolved timeout computed by ExecutionService (from node config → project default → platform default).
+        // The resolved value is in _timeoutResolution.effectiveMs; fall back to normalizing opts.timeout for backwards compat.
+        const resolvedTimeout = req.body._timeoutResolution?.effectiveMs ?? opts.timeout;
+        const timeout = normalizeTimeout(resolvedTimeout);
 
         if (!url) {
             return res

@@ -9,7 +9,7 @@ const click = (req, res) =>
     executePlaywrightAction(req, res, 'click', async (page, opts) => {
         const { selector, button, clickCount, modifiers, force, contextMenuItem, clickOutside } =
             opts;
-        const timeout = normalizeTimeout(opts.timeout);
+        const timeout = normalizeTimeout(req.body._timeoutResolution?.effectiveMs ?? opts.timeout);
 
         if (!selector) throw new Error(req.t('errors.selector_required'));
 

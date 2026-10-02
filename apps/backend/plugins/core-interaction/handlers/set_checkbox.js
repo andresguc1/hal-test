@@ -38,7 +38,7 @@ const resolveCheckboxLocator = async (page, { strategy, target }, timeout) => {
 const setCheckbox = (req, res) =>
     executePlaywrightAction(req, res, 'set_checkbox', async (page, opts) => {
         const { action = 'check', fields } = opts;
-        const timeout = normalizeTimeout(opts.timeout);
+        const timeout = normalizeTimeout(req.body._timeoutResolution?.effectiveMs ?? opts.timeout);
         const targetRequired =
             req.t('errors.select_option_value_required') || 'Target is required.';
 

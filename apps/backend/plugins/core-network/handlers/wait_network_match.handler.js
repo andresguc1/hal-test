@@ -10,7 +10,7 @@ const createRegex = (str) => {
 const waitNetworkMatch = (req, res) =>
     executePlaywrightAction(req, res, 'wait_network_match', async (page, opts, targetBrowserId) => {
         const { type = 'response', urlPattern, method, statusCode } = opts;
-        const timeout = normalizeTimeout(opts.timeout);
+        const timeout = normalizeTimeout(req.body._timeoutResolution?.effectiveMs ?? opts.timeout);
         if (!urlPattern) throw new Error(req.t('errors.url_pattern_required'));
 
         const regex = createRegex(urlPattern);

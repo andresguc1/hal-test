@@ -22,7 +22,7 @@ import { variableManager } from '../../../services/VariableManager.js';
 const captureSnapshotNode = (req, res) =>
     executePlaywrightAction(req, res, 'capture_snapshot', async (page, opts) => {
         const { target, snapshotKey, property = 'text' } = opts;
-        const timeout = normalizeTimeout(opts.timeout);
+        const timeout = normalizeTimeout(req.body._timeoutResolution?.effectiveMs ?? opts.timeout);
 
         if (!snapshotKey) {
             throw new Error(

@@ -5,7 +5,7 @@ import { normalizeTimeout, playTimeout } from '../../../core/timeout-utils.js';
 const hover = (req, res) =>
     executePlaywrightAction(req, res, 'hover', async (page, opts) => {
         const { selector } = opts;
-        const timeout = normalizeTimeout(opts.timeout);
+        const timeout = normalizeTimeout(req.body._timeoutResolution?.effectiveMs ?? opts.timeout);
 
         if (!selector) {
             throw new Error(req.t('errors.selector_required'));

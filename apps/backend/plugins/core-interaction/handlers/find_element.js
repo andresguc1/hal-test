@@ -5,7 +5,7 @@ import { normalizeTimeout, playTimeout } from '../../../core/timeout-utils.js';
 const findElement = (req, res) =>
     executePlaywrightAction(req, res, 'find_element', async (page, opts) => {
         const { selector, selectorType = 'css', visible = true } = opts;
-        const timeout = normalizeTimeout(opts.timeout);
+        const timeout = normalizeTimeout(req.body._timeoutResolution?.effectiveMs ?? opts.timeout);
 
         if (!selector) throw new Error(req.t('errors.selector_required'));
 

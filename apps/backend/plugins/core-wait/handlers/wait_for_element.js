@@ -5,7 +5,7 @@ import { normalizeTimeout, playTimeout } from '../../../core/timeout-utils.js';
 const waitForElement = (req, res) =>
     executePlaywrightAction(req, res, 'wait_for_element', async (page, opts) => {
         const { selector, condition = 'visible', scrollIntoView = false } = opts;
-        const timeout = normalizeTimeout(opts.timeout);
+        const timeout = normalizeTimeout(req.body._timeoutResolution?.effectiveMs ?? opts.timeout);
 
         try {
             const targetSelector = await normalizeSelectorForDotId(page, selector);

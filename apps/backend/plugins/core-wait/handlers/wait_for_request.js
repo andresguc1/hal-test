@@ -9,7 +9,7 @@ const createRegex = (str) => {
 const waitForRequest = (req, res) =>
     executePlaywrightAction(req, res, 'wait_for_request', async (page, opts) => {
         const { urlPattern, method } = opts;
-        const timeout = normalizeTimeout(opts.timeout);
+        const timeout = normalizeTimeout(req.body._timeoutResolution?.effectiveMs ?? opts.timeout);
 
         const request = await page.waitForRequest((req) => {
             const regex = createRegex(urlPattern);

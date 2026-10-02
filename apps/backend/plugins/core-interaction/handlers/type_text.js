@@ -5,7 +5,7 @@ import { normalizeTimeout, playTimeout } from '../../../core/timeout-utils.js';
 const typeText = (req, res) =>
     executePlaywrightAction(req, res, 'type_text', async (page, opts) => {
         const { selector, text, clearBeforeType, delay } = opts;
-        const timeout = normalizeTimeout(opts.timeout);
+        const timeout = normalizeTimeout(req.body._timeoutResolution?.effectiveMs ?? opts.timeout);
 
         if (!selector) throw new Error(req.t('errors.selector_required'));
         if (text === undefined || text === null) throw new Error(req.t('errors.text_required'));

@@ -4,7 +4,7 @@ import { normalizeTimeout, playTimeout } from '../../../core/timeout-utils.js';
 const waitNavigation = (req, res) =>
     executePlaywrightAction(req, res, 'wait_navigation', async (page, opts) => {
         const { url, waitUntil = 'load' } = opts;
-        const timeout = normalizeTimeout(opts.timeout);
+        const timeout = normalizeTimeout(req.body._timeoutResolution?.effectiveMs ?? opts.timeout);
 
         const validStates = ['load', 'domcontentloaded', 'networkidle'];
         if (!validStates.includes(waitUntil)) {
