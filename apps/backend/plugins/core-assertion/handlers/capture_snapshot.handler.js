@@ -42,7 +42,13 @@ const captureSnapshotNode = (req, res) =>
             );
         }
 
-        const resolution = await resolveTarget({ page, target, scope: 'element', timeout });
+        const resolution = await resolveTarget({
+            page,
+            target,
+            scope: 'element',
+            timeout,
+            signal: req.signal,
+        });
 
         if (resolution.resolution === 'none') {
             const details = resolution.candidatesTried

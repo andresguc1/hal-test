@@ -60,7 +60,13 @@ const assertNode = (req, res) =>
             (a) => a.type === 'visibility' && a.operator === 'hidden',
         );
 
-        const resolution = await resolveTarget({ page, target, scope, timeout });
+        const resolution = await resolveTarget({
+            page,
+            target,
+            scope,
+            timeout,
+            signal: req.signal,
+        });
 
         let locator;
         let resolutionInfo = resolution;

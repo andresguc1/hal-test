@@ -197,7 +197,12 @@ const componentAction = async (req, res) => {
             activatedNodeIds: new Set(entryNodes.flatMap((n) => [n.nodeId, n.id]).filter(Boolean)),
             edgeStates: {},
             variables: {},
-            overrides: req.body.overrides || {},
+            overrides: {
+                ...(req.body.overrides || {}),
+                projectDefaultActionTimeoutMs:
+                    req.body._timeoutResolution?.effectiveMs ??
+                    req.body.overrides?.projectDefaultActionTimeoutMs,
+            },
             options: { ...(req.body.options || {}) },
             headers: req.headers || {},
             startTime: Date.now(),

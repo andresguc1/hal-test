@@ -437,10 +437,10 @@ function isValidSelectorString(sel) {
     return typeof sel === 'string' && sel.trim().length > 0;
 }
 
-async function probeAttached(page, selector, probeTimeoutMs) {
+async function probeAttached(page, selector, probeTimeoutMs, signal) {
     try {
         const locator = buildPlaywrightLocator(page, selector);
-        await locator.waitFor({ state: 'attached', timeout: probeTimeoutMs });
+        await locator.waitFor({ state: 'attached', timeout: probeTimeoutMs, signal });
         return { locator, error: null };
     } catch (err) {
         // waitFor throws a strict-mode violation when the selector resolves to
@@ -487,7 +487,7 @@ async function disambiguateGetByText(page, selector) {
     }
 }
 
-async function resolveTarget({ page, target, scope, timeout = 30000 }) {
+async function resolveTarget({ page, target, scope, timeout = 30000, signal }) {
     if (scope === 'page') {
         return {
             locator: page.locator('body'),
@@ -548,7 +548,7 @@ async function resolveTarget({ page, target, scope, timeout = 30000 }) {
     const errors = [];
 
     for (const candidate of orderedCandidates) {
-        const probe = await probeAttached(page, candidate, probeMs);
+        const probe = await probeAttached(page, candidate, probeMs, signal);
         if (probe.locator) {
             const matches = probe.ambiguous === true ? 2 : await countMatches(probe.locator);
             if (matches > 1) {

@@ -121,6 +121,7 @@ const mouseMove = (req, res) =>
                 target: { selector, candidates: opts.candidates },
                 scope: 'element',
                 timeout: timeout || undefined,
+                signal: req.signal,
             });
             const locator = resolved.locator;
             resolution = resolved.resolution;

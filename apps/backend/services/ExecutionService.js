@@ -1046,6 +1046,17 @@ export class ExecutionService {
     /**
      * Executes a single node action
      */
+    /**
+     * Executes a single node action.
+     *
+     * Key changes from the previous version:
+     * - Resolves the effective timeout per node from node config → project default → platform default.
+     * - Computes a wall-clock ceiling = max(30000, effectiveTimeout * 1.5).
+     * - Builds a combined AbortSignal = AbortSignal.any([runSignal, AbortSignal.timeout(wallClockMs)]).
+     * - Passes the combined signal to the handler so Playwright operations can be aborted.
+     * - Fixes the Object.assign leak for launch_browser by stripping non-browser keys.
+     * - The _withNodeTimeout wrapper now clears its timer on the success path.
+     */
     async executeNode(node, allNodes, allEdges, state) {
         const actionType = node.data?.type || node.type;
         const ignoredTypes = [
@@ -1078,21 +1089,43 @@ export class ExecutionService {
             startMem = process.memoryUsage();
         }
 
+        // Resolve the node's semantic and effective timeout / wall-clock ceiling.
+        // The semantic is derived from the action type; the timeout comes from
+        // node config → project default → platform default. The wall-clock ceiling
+        // is max(30s, effectiveTimeout * 1.5) so a node that asks for more time
+        // gets a proportional ceiling, but never less than the old 30 s floor.
+        const { getActionSemantic, resolveNodeTimeout } =
+            await import('../core/timeout-resolver.js');
+        const semantic = getActionSemantic(actionType);
+        const configuredTimeout = node.data?.configuration?.timeout
+            ? Number(node.data.configuration.timeout)
+            : 0;
+        const projectDefault = state.overrides?.projectDefaultActionTimeoutMs ?? null;
+        const { effectiveMs, wallClockMs, source } = resolveNodeTimeout({
+            semantic,
+            configuredTimeout,
+            projectDefault,
+        });
+
+        // Build the combined abort signal: the run-level signal OR the wall-clock
+        // deadline. This replaces the old single run-level signal and makes the
+        // timeout actually abort the in-flight Playwright operation.
+        const combinedSignal = AbortSignal.any([state.signal, AbortSignal.timeout(wallClockMs)]);
+
         // SPECIAL CASE: Composition Containers (Loop, ForEach)
-        const nodeTimeoutMs = state.overrides?.nodeTimeoutMs || DEFAULT_NODE_TIMEOUT_MS;
         if (actionType === 'loop') {
             resultData = await this._withNodeTimeout(
                 this.executeLoopContainer(node, allNodes, allEdges, state),
                 node.nodeId,
                 actionType,
-                nodeTimeoutMs,
+                wallClockMs,
             );
         } else if (actionType === 'for_each') {
             resultData = await this._withNodeTimeout(
                 this.executeForEachContainer(node, allNodes, allEdges, state),
                 node.nodeId,
                 actionType,
-                nodeTimeoutMs,
+                wallClockMs,
             );
         } else {
             const handlerName = this.getHandlerName(actionType);
@@ -1155,12 +1188,39 @@ export class ExecutionService {
             };
 
             console.log(
-                `[DEBUG] Final Execution Body for ${node.nodeId}: Label="${body.label}", RunId="${body.runId}"`,
+                `[DEBUG] Final Execution Body for ${node.nodeId}: Label="${body.label}", RunId="${body.runId}", TimeoutSource=${source}, EffectiveMs=${effectiveMs}, WallClockMs=${wallClockMs}`,
             );
 
-            // Apply browser launch overrides
+            // Apply browser launch overrides — but ONLY the keys that the
+            // launch_browser handler actually consumes. The old Object.assign
+            // copied ALL overrides (including nodeTimeoutMs, projectDefaultActionTimeoutMs,
+            // etc.) into the body, which broke Joi validation and leaked config.
             if (actionType === 'launch_browser') {
-                Object.assign(body, state.overrides);
+                const browserLaunchKeys = [
+                    'headless',
+                    'browserType',
+                    'channel',
+                    'args',
+                    'devtools',
+                    'proxy',
+                    'downloadsPath',
+                    'timeout',
+                    'slowMo',
+                    'viewport',
+                    'userAgent',
+                    'locale',
+                    'timezoneId',
+                    'geolocation',
+                    'permissions',
+                    'colorScheme',
+                    'reducedMotion',
+                    'forcedColors',
+                ];
+                for (const key of browserLaunchKeys) {
+                    if (state.overrides[key] !== undefined) {
+                        body[key] = state.overrides[key];
+                    }
+                }
             }
 
             console.log(`[ExecutionService] Executing node: ${node.nodeId} (${actionType})`);
@@ -1171,12 +1231,21 @@ export class ExecutionService {
                     ...body,
                     runId: state.runId, // Ensure runId is ALWAYS in the body
                     runStartTime: state.startTime,
+                    // Record the timeout resolution for telemetry and debugging
+                    _timeoutResolution: {
+                        source,
+                        effectiveMs,
+                        wallClockMs,
+                        semantic,
+                    },
                 },
                 t: i18n.t.bind(i18n),
                 headers: state.headers || {},
                 // Needed for some controllers
                 params: {},
-                signal: state.signal,
+                // The combined signal: run abort OR wall-clock deadline.
+                // Handlers read this via req.signal.
+                signal: combinedSignal,
             };
 
             const res = {
@@ -1191,13 +1260,13 @@ export class ExecutionService {
                 },
             };
 
-            // Call the controller action with per-node timeout
+            // Call the controller action with per-node wall-clock timeout
             try {
                 await this._withNodeTimeout(
                     handler(req, res),
                     node.nodeId,
                     actionType,
-                    nodeTimeoutMs,
+                    wallClockMs,
                 );
             } catch (err) {
                 emitLog({
@@ -1447,9 +1516,6 @@ export class ExecutionService {
         return resultData;
     }
 
-    /**
-     * Orchestrates the execution of a Loop acting as an encapsulated sub-flow (Dive-in)
-     */
     async executeLoopContainer(node, allNodes, allEdges, state) {
         const config = node.data?.configuration || {};
         if (

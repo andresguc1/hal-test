@@ -19,6 +19,7 @@ const click = (req, res) =>
             target: { selector, candidates: opts.candidates },
             scope: 'element',
             timeout,
+            signal: req.signal,
         });
 
         const clickOptions = { ...playTimeout(timeout), button, clickCount, modifiers, force };
