@@ -443,7 +443,47 @@ async function probeAttached(page, selector, probeTimeoutMs) {
         await locator.waitFor({ state: 'attached', timeout: probeTimeoutMs });
         return { locator, error: null };
     } catch (err) {
+        // waitFor throws a strict-mode violation when the selector resolves to
+        // several elements. Distinguish that "attached but ambiguous" case from
+        // a genuinely missing element by counting matches.
+        try {
+            const locator = buildPlaywrightLocator(page, selector);
+            const matches = await locator.count();
+            if (matches > 1) return { locator, error: null, ambiguous: true };
+        } catch {
+            // fall through to not-attached
+        }
         return { locator: null, error: err.message };
+    }
+}
+
+// Returns how many elements a locator currently matches. Falls back to 1 on
+// transient errors so a resolved-but-unknowable count is treated as usable.
+async function countMatches(locator) {
+    try {
+        return await locator.count();
+    } catch {
+        return 1;
+    }
+}
+
+const AMBIGUOUS_GETBYTEXT = /^getByText\(\s*(['"])((?:[^\\]|\\.)*)\1\s*\)\s*;?$/;
+
+// If a persisted getByText selector matches several elements (substring match),
+// retry it with Playwright's { exact: true } option which the element picker
+// confirms as unique before storing it.
+async function disambiguateGetByText(page, selector) {
+    const match = (selector || '').trim().match(AMBIGUOUS_GETBYTEXT);
+    if (!match) return null;
+    const text = match[2].replace(/\\'/g, "'").replace(/\\"/g, '"');
+    try {
+        const locator = page.getByText(text, { exact: true });
+        const count = await locator.count();
+        if (count !== 1) return null;
+        const escaped = String(text).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        return { locator, selector: `getByText('${escaped}', { exact: true })` };
+    } catch {
+        return null;
     }
 }
 
@@ -479,6 +519,20 @@ async function resolveTarget({ page, target, scope, timeout = 30000 }) {
     if (orderedCandidates.length <= 1) {
         const normalized = await normalizeSelectorForDotId(page, primary);
         const locator = buildPlaywrightLocator(page, normalized);
+        const matches = await countMatches(locator);
+        if (matches > 1) {
+            const exact = await disambiguateGetByText(page, primary);
+            if (exact) {
+                return {
+                    locator: exact.locator,
+                    usedSelector: exact.selector,
+                    selectorType: 'text',
+                    resolution: 'primary',
+                    candidatesTried: [{ selector: exact.selector, status: 'attached' }],
+                    errors: [],
+                };
+            }
+        }
         return {
             locator,
             usedSelector: primary,
@@ -494,11 +548,23 @@ async function resolveTarget({ page, target, scope, timeout = 30000 }) {
     const errors = [];
 
     for (const candidate of orderedCandidates) {
-        const { locator, error } = await probeAttached(page, candidate, probeMs);
-        if (locator) {
+        const probe = await probeAttached(page, candidate, probeMs);
+        if (probe.locator) {
+            const matches = probe.ambiguous === true ? 2 : await countMatches(probe.locator);
+            if (matches > 1) {
+                // Playwright strict mode: a locator resolving to several
+                // elements cannot drive a single-element action. Skip it and
+                // keep looking for the next unambiguous candidate.
+                candidatesTried.push({
+                    selector: candidate,
+                    status: 'ambiguous',
+                    count: matches,
+                });
+                continue;
+            }
             candidatesTried.push({ selector: candidate, status: 'attached' });
             return {
-                locator,
+                locator: probe.locator,
                 usedSelector: candidate,
                 selectorType:
                     PICKER_CANDIDATE_ORDER.find((k) => candidates?.[k] === candidate) || 'fallback',
@@ -507,18 +573,32 @@ async function resolveTarget({ page, target, scope, timeout = 30000 }) {
                 errors,
             };
         }
-        candidatesTried.push({ selector: candidate, status: 'not-attached', error });
-        if (error) errors.push(`${candidate}: ${error}`);
+        candidatesTried.push({ selector: candidate, status: 'not-attached', error: probe.error });
+        if (probe.error) errors.push(`${candidate}: ${probe.error}`);
     }
 
     const normalized = await normalizeSelectorForDotId(page, primary);
-    const locator = buildPlaywrightLocator(page, normalized);
-    candidatesTried.push({ selector: primary, status: 'used-as-last-resort' });
+    let locator = buildPlaywrightLocator(page, normalized);
+    let usedSelector = primary;
+    let effectiveSelectorType = selectorType;
+    const matches = await countMatches(locator);
+
+    if (matches > 1) {
+        const exact = await disambiguateGetByText(page, primary);
+        if (exact) {
+            locator = exact.locator;
+            usedSelector = exact.selector;
+            effectiveSelectorType = 'text';
+            candidatesTried.push({ selector: usedSelector, status: 'attached' });
+        }
+    }
+
+    candidatesTried.push({ selector: usedSelector, status: 'used-as-last-resort' });
     return {
         locator,
-        usedSelector: primary,
-        selectorType,
-        resolution: 'none',
+        usedSelector,
+        selectorType: effectiveSelectorType,
+        resolution: matches > 1 && usedSelector === primary ? 'none-ambiguous' : 'none',
         candidatesTried,
         errors,
     };
@@ -532,6 +612,7 @@ const SELECTOR_FIELDS_BY_ACTION = {
     wait_visible: ['selector'],
     select_option: ['selector', 'containerSelector'],
     hover: ['selector'],
+    mouse_move: ['selector'],
     scroll: ['selector'],
     drag_drop: ['sourceSelector', 'targetSelector'],
     upload_file: ['selector'],

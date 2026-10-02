@@ -225,6 +225,8 @@ const injectInspectorUI = () => {
                 best: candidates.playwrightTestId,
                 type: 'playwrightTestId',
                 all: candidates,
+                matchCount: 1,
+                ambiguous: false,
             };
         }
         if (candidates.playwrightRole) {
@@ -243,6 +245,13 @@ const injectInspectorUI = () => {
                         candidates.ambiguous = true;
                         candidates.context = contextChain[0];
                         candidates.contextChain = contextChain;
+                        return {
+                            best: candidates.playwrightRole,
+                            type: 'playwrightRole',
+                            all: candidates,
+                            matchCount: resolved,
+                            ambiguous: false,
+                        };
                     } else {
                         const cardinality = getCardinalitySelector(
                             el,
@@ -258,8 +267,22 @@ const injectInspectorUI = () => {
                             candidates.context = contextChain[0];
                             candidates.contextChain = contextChain;
                             candidates.cardinality = true;
+                            return {
+                                best: candidates.playwrightRole,
+                                type: 'playwrightRole',
+                                all: candidates,
+                                matchCount: resolved,
+                                ambiguous: false,
+                            };
                         } else {
                             candidates.ambiguous = true;
+                            return {
+                                best: candidates.playwrightRole,
+                                type: 'playwrightRole',
+                                all: candidates,
+                                matchCount,
+                                ambiguous: true,
+                            };
                         }
                     }
                 } else {
@@ -272,12 +295,32 @@ const injectInspectorUI = () => {
                         candidates.playwrightRole = cardinality;
                         candidates.ambiguous = true;
                         candidates.cardinality = true;
+                        return {
+                            best: candidates.playwrightRole,
+                            type: 'playwrightRole',
+                            all: candidates,
+                            matchCount: 1,
+                            ambiguous: false,
+                        };
                     } else {
                         candidates.ambiguous = true;
+                        return {
+                            best: candidates.playwrightRole,
+                            type: 'playwrightRole',
+                            all: candidates,
+                            matchCount,
+                            ambiguous: true,
+                        };
                     }
                 }
             }
-            return { best: candidates.playwrightRole, type: 'playwrightRole', all: candidates };
+            return {
+                best: candidates.playwrightRole,
+                type: 'playwrightRole',
+                all: candidates,
+                matchCount,
+                ambiguous: false,
+            };
         }
         if (candidates.playwrightLabel) {
             const labelValue = candidates.playwrightLabel.match(
@@ -311,9 +354,30 @@ const injectInspectorUI = () => {
             }
             return { best: candidates.playwrightLabel, type: 'playwrightLabel', all: candidates };
         }
-        if (candidates.testId) return { best: candidates.testId, type: 'testId', all: candidates };
-        if (candidates.id) return { best: candidates.id, type: 'id', all: candidates };
-        if (candidates.name) return { best: candidates.name, type: 'name', all: candidates };
+        if (candidates.testId)
+            return {
+                best: candidates.testId,
+                type: 'testId',
+                all: candidates,
+                matchCount: 1,
+                ambiguous: false,
+            };
+        if (candidates.id)
+            return {
+                best: candidates.id,
+                type: 'id',
+                all: candidates,
+                matchCount: 1,
+                ambiguous: false,
+            };
+        if (candidates.name)
+            return {
+                best: candidates.name,
+                type: 'name',
+                all: candidates,
+                matchCount: 1,
+                ambiguous: false,
+            };
         if (candidates.playwrightPlaceholder) {
             const placeholderValue = candidates.playwrightPlaceholder.match(
                 /getByPlaceholder\(['"]([^'"]+)['"]\)/,
@@ -330,9 +394,18 @@ const injectInspectorUI = () => {
                 best: candidates.playwrightPlaceholder,
                 type: 'playwrightPlaceholder',
                 all: candidates,
+                matchCount,
+                ambiguous: matchCount > 1,
             };
         }
-        if (candidates.aria) return { best: candidates.aria, type: 'aria', all: candidates };
+        if (candidates.aria)
+            return {
+                best: candidates.aria,
+                type: 'aria',
+                all: candidates,
+                matchCount: 1,
+                ambiguous: false,
+            };
         if (candidates.playwrightAltText) {
             const altValue = candidates.playwrightAltText.match(
                 /getByAltText\(['"]([^'"]+)['"]\)/,
@@ -346,6 +419,8 @@ const injectInspectorUI = () => {
                 best: candidates.playwrightAltText,
                 type: 'playwrightAltText',
                 all: candidates,
+                matchCount,
+                ambiguous: matchCount > 1,
             };
         }
         if (candidates.playwrightTitle) {
@@ -361,20 +436,66 @@ const injectInspectorUI = () => {
                 best: candidates.playwrightTitle,
                 type: 'playwrightTitle',
                 all: candidates,
+                matchCount,
+                ambiguous: matchCount > 1,
             };
         }
         if (candidates.playwrightText) {
             const textValue = candidates.playwrightText.match(/getByText\(['"]([^'"]+)['"]\)/)?.[1];
-            const matchCount = countTextMatches(textValue);
-            if (matchCount > 1) {
-                candidates.playwrightText = candidates.playwrightText.replace('page.', '');
+            const substringCount = countSubstringTextMatches(textValue);
+            if (substringCount > 1) {
                 candidates.ambiguous = true;
+                // getByText matches substrings, so `Close` can also match an
+                // "If closed, it will not appear…" node. Prefer the exact text
+                // variant when it is unique; otherwise fall back to the precise
+                // CSS path instead of emitting a strict-mode-violating locator.
+                const exactCount = countTextMatches(textValue);
+                if (exactCount === 1) {
+                    candidates.playwrightText = `getByText('${escapeSelectorValue(
+                        textValue,
+                    )}', { exact: true })`;
+                    return {
+                        best: candidates.playwrightText,
+                        type: 'playwrightText',
+                        all: candidates,
+                        matchCount: 1,
+                        ambiguous: false,
+                    };
+                } else {
+                    candidates.playwrightText = candidates.playwrightText.replace('page.', '');
+                    return {
+                        best: candidates.cssPath,
+                        type: 'cssPath',
+                        all: candidates,
+                        matchCount: 1,
+                        ambiguous: false,
+                    };
+                }
             }
-            return { best: candidates.playwrightText, type: 'playwrightText', all: candidates };
+            return {
+                best: candidates.playwrightText,
+                type: 'playwrightText',
+                all: candidates,
+                matchCount: substringCount,
+                ambiguous: substringCount > 1,
+            };
         }
-        if (candidates.text) return { best: candidates.text, type: 'text', all: candidates };
+        if (candidates.text)
+            return {
+                best: candidates.text,
+                type: 'text',
+                all: candidates,
+                matchCount: 1,
+                ambiguous: false,
+            };
 
-        return { best: candidates.cssPath, type: 'cssPath', all: candidates };
+        return {
+            best: candidates.cssPath,
+            type: 'cssPath',
+            all: candidates,
+            matchCount: 1,
+            ambiguous: false,
+        };
     }
 
     function getCssPath(el) {
@@ -542,6 +663,28 @@ const injectInspectorUI = () => {
             if (el.children.length === 0) {
                 const nodeText = el.innerText.trim();
                 if (nodeText === text) {
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
+
+    // Emulates Playwright's getByText matching (case-insensitive, normalized
+    // whitespace, substring) so the picker can detect selectors that will trip
+    // strict mode at execution time. Only leaf text nodes are considered, which
+    // mirrors the deepest-element matching Playwright performs.
+    function countSubstringTextMatches(text) {
+        if (!text) return 0;
+        const needle = text.trim().replace(/\s+/g, ' ').toLowerCase();
+        if (!needle) return 0;
+        const elements = document.querySelectorAll('*');
+        let count = 0;
+        for (const el of elements) {
+            if (!isElementVisible(el)) continue;
+            if (el.children.length === 0) {
+                const nodeText = (el.innerText || '').trim().replace(/\s+/g, ' ').toLowerCase();
+                if (nodeText && nodeText.includes(needle)) {
                     count++;
                 }
             }

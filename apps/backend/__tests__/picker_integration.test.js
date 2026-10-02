@@ -12,6 +12,7 @@ import {
     buildPlaywrightLocator,
     convertPlaywrightLocator,
     normalizeSelectorForDotId,
+    resolveTarget,
 } from '../core/selector-utils.js';
 
 describe('Picker-to-Execution Integration Tests', () => {
@@ -205,6 +206,51 @@ describe('Picker-to-Execution Integration Tests', () => {
             await locator.fill('chained-user', { timeout: 3000, force: true });
             const value = await locator.inputValue();
             expect(value).toBe('chained-user');
+        });
+    });
+
+    describe('Ambiguous getByText resolution (strict mode)', () => {
+        it('resolves and clicks a single element when getByText matches multiple', async () => {
+            const p = await context.newPage();
+            await p.setContent(`
+                <html><body>
+                    <p>If closed, it will not appear on subsequent page loads.</p>
+                    <p id="modal-close" onclick="this.dataset.clicked='1'">Close</p>
+                </body></html>
+            `);
+
+            // The picker emits the substring getByText; Playwright resolves it
+            // to TWO paragraphs (strict mode violation for single-element actions).
+            const raw = buildPlaywrightLocator(p, "getByText('Close')");
+            expect(await raw.count()).toBe(2);
+
+            // Persisted target carries the substring primary plus an
+            // unambiguous cssPath candidate. Resolution must skip the
+            // ambiguous selector and use the candidate, so click() works.
+            const target = {
+                selector: "getByText('Close')",
+                scope: 'element',
+                selectorType: 'playwrightText',
+                candidates: {
+                    playwrightText: "getByText('Close')",
+                    cssPath: '#modal-close',
+                },
+            };
+            const resolution = await resolveTarget({
+                page: p,
+                target,
+                scope: 'element',
+                timeout: 5000,
+            });
+            expect(resolution.resolution).toBe('fallback');
+            expect(resolution.usedSelector).toBe('#modal-close');
+            expect(resolution.candidatesTried[0].status).toBe('ambiguous');
+
+            await resolution.locator.click();
+            await expect
+                .poll(() => p.locator('#modal-close').getAttribute('data-clicked'))
+                .toBe('1');
+            await p.close();
         });
     });
 });

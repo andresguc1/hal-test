@@ -35,6 +35,8 @@ describe('resolveTarget', () => {
                         <button>Cancel</button>
                     </div>
                     <div class="dynamic-content">Initial content</div>
+                    <p>If closed, it will not appear on subsequent page loads.</p>
+                    <p id="modal-close">Close</p>
                 </body>
             </html>
         `);
@@ -186,6 +188,64 @@ describe('resolveTarget', () => {
             // Should skip bad candidate and use the valid one
             expect(result.resolution).toBe('fallback');
             expect(result.usedSelector).toBe("getByTestId('submit-btn')");
+        });
+    });
+
+    describe('strict mode (Playwright single-element actions)', () => {
+        it('should skip a candidate that matches multiple elements', async () => {
+            // getByText('Close') is substring-matched, so it matches BOTH
+            // `<p>If closed, it will not appear…</p>` and `<p id="modal-close">Close</p>`.
+            // The next unambiguous candidate (the id) must win instead.
+            const target = createTarget(
+                "getByText('Close')",
+                {
+                    playwrightText: "getByText('Close')",
+                    id: '#modal-close',
+                },
+                'playwrightText',
+            );
+            const result = await resolveTarget({ page, target, scope: 'element', timeout: 30000 });
+
+            expect(result.usedSelector).toBe('#modal-close');
+            expect(result.selectorType).toBe('id');
+            expect(result.candidatesTried[0].status).toBe('ambiguous');
+            const count = await result.locator.count();
+            expect(count).toBe(1);
+        });
+
+        it('should disambiguate an ambiguous getByText primary with exact:true (no candidates)', async () => {
+            const target = createTarget("getByText('Close')", {}, 'playwrightText');
+            const result = await resolveTarget({ page, target, scope: 'element', timeout: 30000 });
+
+            expect(result.usedSelector).toContain('{ exact: true }');
+            const count = await result.locator.count();
+            expect(count).toBe(1);
+        });
+
+        it('should disambiguate an ambiguous getByText primary as last-resort when all candidates fail', async () => {
+            const target = createTarget(
+                "getByText('Close')",
+                { id: '#nonexistent' },
+                'playwrightText',
+            );
+            const result = await resolveTarget({ page, target, scope: 'element', timeout: 30000 });
+
+            expect(result.usedSelector).toContain('{ exact: true }');
+            const count = await result.locator.count();
+            expect(count).toBe(1);
+        });
+
+        it('should keep an exact getByText primary untouched', async () => {
+            const target = createTarget(
+                "getByText('Cancel', { exact: true })",
+                {},
+                'playwrightText',
+            );
+            const result = await resolveTarget({ page, target, scope: 'element', timeout: 30000 });
+
+            expect(result.usedSelector).toBe("getByText('Cancel', { exact: true })");
+            const count = await result.locator.count();
+            expect(count).toBe(1);
         });
     });
 
