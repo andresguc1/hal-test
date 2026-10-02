@@ -4,6 +4,7 @@ import {
   canConfigureTimeout,
   timeoutFieldDefinition,
   timeoutCapableNodeTypes,
+  getTimeoutCapability,
 } from "./timeoutCapabilities.js";
 
 /**
@@ -1966,6 +1967,30 @@ export const validateNodeConfig = (nodeType, config = {}) => {
           continue;
         }
         return { isValid: false, missingField: rule.label, fieldKey: rule.key };
+      }
+    }
+  }
+
+  // Validate timeout range if the node type declares a timeout capability.
+  // This uses the registry to enforce min/max/step, so the validation stays
+  // in sync with the declared capability rather than hardcoding limits.
+  const capability = getTimeoutCapability(nodeType);
+  if (capability && config.timeout !== undefined && config.timeout !== "") {
+    const value = Number(config.timeout);
+    if (!Number.isNaN(value)) {
+      if (capability.min !== null && value < capability.min) {
+        return {
+          isValid: false,
+          missingField: `${capability.labelKey || 'Timeout'} must be at least ${capability.min}`,
+          fieldKey: "timeout",
+        };
+      }
+      if (capability.max !== null && value > capability.max) {
+        return {
+          isValid: false,
+          missingField: `${capability.labelKey || 'Timeout'} must be at most ${capability.max}`,
+          fieldKey: "timeout",
+        };
       }
     }
   }

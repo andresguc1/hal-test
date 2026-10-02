@@ -894,7 +894,12 @@
       "subtitle": "Configure defaults that apply to all flows in this project.",
       "defaultTimeout": "Default Action Timeout",
       "defaultTimeoutHelp": "When a flow node does not declare its own timeout, this value is used. Leave empty for the platform default (30 s for actions, 5 s for assertions).",
-      "timeoutPlaceholder": "e.g. 60000"
+      "timeoutPlaceholder": "e.g. 60000",
+      "timeoutSource": {
+        "node": "Node",
+        "project": "Project",
+        "platform": "Platform"
+      }
     },
     "vault": {
       "title": "Secure Wallet",

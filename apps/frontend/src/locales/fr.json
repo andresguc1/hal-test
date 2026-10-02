@@ -886,7 +886,12 @@
       "subtitle": "Configurez les valeurs par défaut qui s'appliquent à tous les flux de ce projet.",
       "defaultTimeout": "Timeout d'action par défaut",
       "defaultTimeoutHelp": "Lorsqu'un nœud de flux ne déclare pas son propre timeout, cette valeur est utilisée. Laissez vide pour la valeur par défaut de la plateforme (30 s pour les actions, 5 s pour les assertions).",
-      "timeoutPlaceholder": "ex. 60000"
+      "timeoutPlaceholder": "ex. 60000",
+      "timeoutSource": {
+        "node": "Nœud",
+        "project": "Projet",
+        "platform": "Plateforme"
+      }
     }
   },
   "context_menu": {

@@ -886,7 +886,12 @@
       "subtitle": "Configure os padrões que se aplicam a todos os fluxos neste projeto.",
       "defaultTimeout": "Timeout de Ação Padrão",
       "defaultTimeoutHelp": "Quando um nó de fluxo não declara seu próprio timeout, este valor é usado. Deixe vazio para o padrão da plataforma (30 s para ações, 5 s para asserções).",
-      "timeoutPlaceholder": "ex. 60000"
+      "timeoutPlaceholder": "ex. 60000",
+      "timeoutSource": {
+        "node": "Nó",
+        "project": "Projeto",
+        "platform": "Plataforma"
+      }
     }
   },
   "canvas": {

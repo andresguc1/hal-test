@@ -931,7 +931,12 @@
       "subtitle": "Configura los valores por defecto que se aplican a todos los flujos de este proyecto.",
       "defaultTimeout": "Timeout de acción por defecto",
       "defaultTimeoutHelp": "Cuando un nodo de flujo no declara su propio timeout, se usa este valor. Déjalo vacío para el valor por defecto de la plataforma (30 s para acciones, 5 s para aserciones).",
-      "timeoutPlaceholder": "ej. 60000"
+      "timeoutPlaceholder": "ej. 60000",
+      "timeoutSource": {
+        "node": "Nodo",
+        "project": "Proyecto",
+        "platform": "Plataforma"
+      }
     }
   },
   "context_menu": {
