@@ -420,10 +420,12 @@ app.post('/tollai/verify', express.json(), (req, res) => {
     // Accept the proof and mint a session
     const token = createSession();
 
-    // Set session cookie
+    // Set session cookie - works for localhost cross-port dev
+    const isLocalhost = req.hostname === 'localhost' || req.hostname === '127.0.0.1';
     res.cookie('tollai_session', token, {
         httpOnly: true,
-        sameSite: 'lax',
+        sameSite: isLocalhost ? 'none' : 'lax',
+        secure: isLocalhost ? false : true, // false for localhost, true for production
         maxAge: TOLLAI_SESSION_TTL,
     });
 
