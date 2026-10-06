@@ -1,5 +1,0 @@
-driver = webdriver.Firefox()
-driver.get("http://www.python.org")
-elem = driver.find_element(By.NAME, "q")
-elem.send_keys("pycon")
-driver.close()

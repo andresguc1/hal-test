@@ -1,3 +1,6 @@
-packages:
-  - 'apps/*'
-  - 'packages/*'
+pmOnFail: ignore
+
+minimumReleaseAgeExclude:
+  - '@next/*'
+  - next
+  - tollai@1.0.0

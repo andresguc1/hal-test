@@ -1,4 +1,0 @@
-
-
-echo "[Husky] Running pre-commit hooks (lint-staged)..."
-npx lint-staged

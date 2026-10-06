@@ -1,4 +1,0 @@
-npx lint-staged
-
-# Opcionalmente, puedes añadir tu script de prueba
-# npm run api:test
