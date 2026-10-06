@@ -11,6 +11,9 @@
     sessionTTL: 15 * 60 * 1000,
   };
 
+  let isPoWRunning = false;
+  let isVerified = false;
+
   function getCookie(name) {
     const match = document.cookie.match(new RegExp("(^|;)\\s*" + name + "\\s*="));
     return match ? decodeURIComponent(match[0].split("=")[1]) : null;
@@ -34,13 +37,12 @@
   }
 
   async function computeProofOfWork(challengeId, difficulty) {
-    // Difficulty is in BITS (standard PoW). Convert to hex digits for target.
     const zeroHexDigits = Math.ceil(difficulty / 4);
     const target = BigInt("0x" + "0".repeat(zeroHexDigits) + "f".repeat(64 - zeroHexDigits));
     let nonce = 0;
     const startTime = Date.now();
-    // Scale max iterations with difficulty: 2^difficulty * small constant
-    const maxIterations = Math.min(1000000 * Math.max(1, difficulty / 20), 50000000);
+    // For 20 bits: expected ~1M iterations. Use 5M for 99% success rate.
+    const maxIterations = Math.min(Math.pow(2, difficulty) * 5, 50000000);
 
     while (nonce < maxIterations) {
       const data = challengeId + ":" + nonce;
@@ -49,7 +51,7 @@
 
       if (hashBigInt <= target) {
         const workTime = Date.now() - startTime;
-        console.log(`[TollAI] PoW solved: nonce=${nonce}, time=${workTime}ms, difficulty=${difficulty} bits (${zeroHexDigits} hex), hash=${hash.substring(0, 16)}...`);
+        console.log(`[TollAI] PoW solved: nonce=${nonce}, time=${workTime}ms, difficulty=${difficulty} bits (${zeroHexDigits} hex)`);
         return { nonce, hash, workTime };
       }
       nonce++;
@@ -62,6 +64,8 @@
   }
 
   async function initTollAI() {
+    if (isVerified) return;
+    
     const token = getCookie("tollai_session");
     if (token) {
       await verifySession(token);
@@ -76,20 +80,24 @@
       const data = await response.json();
       if (data.status === "ok" && data.activeSessions > 0) {
         document.body.classList.add("tollai-verified");
-        console.log("TollAI session verified");
+        isVerified = true;
+        console.log("[TollAI] Session verified");
         startDwellTracking();
       } else {
         setCookie("tollai_session", "", -1);
         await startTollAIFlow();
       }
     } catch (error) {
-      console.error("TollAI session verification failed:", error);
+      console.error("[TollAI] Session verification failed:", error);
       setCookie("tollai_session", "", -1);
       await startTollAIFlow();
     }
   }
 
   async function startTollAIFlow() {
+    if (isPoWRunning || isVerified) return;
+    isPoWRunning = true;
+
     try {
       const challengeResponse = await fetch("/tollai/challenge", {
         credentials: "include",
@@ -99,6 +107,7 @@
 
       if (!challengeData.challengeId) {
         console.error("[TollAI] Failed to get challenge");
+        isPoWRunning = false;
         return;
       }
 
@@ -121,14 +130,22 @@
 
       if (verifyData.verified) {
         document.body.classList.add("tollai-verified");
+        isVerified = true;
+        isPoWRunning = false;
         console.log("[TollAI] Session verified after PoW");
         // Reload page to pass middleware with new session cookie
         setTimeout(() => window.location.reload(), 500);
       } else {
         console.error("[TollAI] Verification failed:", verifyData);
+        isPoWRunning = false;
+        // Retry after a delay
+        setTimeout(startTollAIFlow, 2000);
       }
     } catch (error) {
       console.error("[TollAI] Flow error:", error);
+      isPoWRunning = false;
+      // Retry after a delay
+      setTimeout(startTollAIFlow, 5000);
     }
   }
 
@@ -148,7 +165,7 @@
           });
           console.log(`[TollAI] Dwell reported: ${dwellMs}ms`);
         } catch (e) {
-          console.error("Dwell report failed:", e);
+          console.error("[TollAI] Dwell report failed:", e);
         }
       }
     };
