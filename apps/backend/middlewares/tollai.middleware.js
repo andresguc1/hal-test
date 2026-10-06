@@ -3,15 +3,31 @@ import { validateSession } from '../services/tollaiSessionStore.js';
 const TOLLAI_COOKIE_NAME = 'tollai_session';
 
 function isAuthenticated(req) {
+    // Check if user is already authenticated by auth middleware
+    if (req.user && req.user.id && req.user.id !== 'guest-user') {
+        return true;
+    }
     // Check Authorization header
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
         return true;
     }
-    // Check Supabase auth cookies
+    // Check Supabase auth cookies (various naming patterns)
     if (req.cookies) {
-        for (const [name] of Object.entries(req.cookies)) {
+        for (const [name, value] of Object.entries(req.cookies)) {
+            // Supabase uses: sb-<project-ref>-auth-token, supabase.auth.token, etc.
             if (name.startsWith('sb-') && name.endsWith('-auth-token')) {
+                return true;
+            }
+            if (name.includes('supabase') && (name.includes('auth') || name.includes('token'))) {
+                return true;
+            }
+            // Generic session/auth cookies
+            if (
+                (name === 'session' || name === 'auth-token' || name === 'access_token') &&
+                value &&
+                value.length > 20
+            ) {
                 return true;
             }
         }

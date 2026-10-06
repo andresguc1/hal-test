@@ -5,7 +5,7 @@
   "use strict";
 
   const CONFIG = {
-    powDifficulty: 14,
+    powDifficulty: 20, // bits
     minResponseTime: 1500,
     minDwellMs: 1500,
     sessionTTL: 15 * 60 * 1000,
@@ -91,8 +91,6 @@
 
   async function startTollAIFlow() {
     try {
-      showTollNotice("Verifying human access...", "loading");
-
       const challengeResponse = await fetch("/tollai/challenge", {
         credentials: "include",
         headers: { Accept: "application/json" },
@@ -100,13 +98,12 @@
       const challengeData = await challengeResponse.json();
 
       if (!challengeData.challengeId) {
-        console.error("Failed to get challenge");
-        showTollNotice("Challenge failed", "error");
+        console.error("[TollAI] Failed to get challenge");
         return;
       }
 
       const difficulty = challengeData.difficulty || CONFIG.powDifficulty;
-      console.log(`[TollAI] Computing PoW for challenge ${challengeData.challengeId} at difficulty ${difficulty}`);
+      console.log(`[TollAI] Computing PoW for challenge ${challengeData.challengeId} at difficulty ${difficulty} bits`);
 
       const powResult = await computeProofOfWork(challengeData.challengeId, difficulty);
 
@@ -124,17 +121,14 @@
 
       if (verifyData.verified) {
         document.body.classList.add("tollai-verified");
-        console.log("TollAI session verified after PoW");
-        showTollNotice("Verification complete", "success");
+        console.log("[TollAI] Session verified after PoW");
         // Reload page to pass middleware with new session cookie
         setTimeout(() => window.location.reload(), 500);
       } else {
-        console.error("TollAI verification failed:", verifyData);
-        showTollNotice("Verification failed: " + (verifyData.message || "Unknown error"), "error");
+        console.error("[TollAI] Verification failed:", verifyData);
       }
     } catch (error) {
-      console.error("TollAI flow error:", error);
-      showTollNotice("Verification error: " + error.message, "error");
+      console.error("[TollAI] Flow error:", error);
     }
   }
 
@@ -164,43 +158,6 @@
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "hidden") reportDwell();
     });
-  }
-
-  function showTollNotice(message, type = "info") {
-    const existing = document.getElementById("tollai-notice");
-    if (existing) existing.remove();
-
-    const notice = document.createElement("div");
-    notice.id = "tollai-notice";
-    const colors = {
-      loading: { bg: "#0f172a", border: "#3b82f6", text: "#e2e8f0" },
-      success: { bg: "#064e3b", border: "#10b981", text: "#a7f3d0" },
-      error: { bg: "#7f1d1d", border: "#ef4444", text: "#fca5a5" },
-    };
-    const c = colors[type] || colors.loading;
-
-    notice.style.cssText = `
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: ${c.bg};
-      border: 1px solid ${c.border};
-      padding: 12px 20px;
-      border-radius: 6px;
-      color: ${c.text};
-      font-size: 14px;
-      z-index: 9999;
-      max-width: 400px;
-      text-align: center;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    `;
-    notice.textContent = message;
-    document.body.appendChild(notice);
-
-    if (type !== "loading") {
-      setTimeout(() => notice.remove(), 5000);
-    }
   }
 
   if (document.readyState === "loading") {
