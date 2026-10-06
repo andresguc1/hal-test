@@ -360,6 +360,9 @@ importers:
       tailwind-merge:
         specifier: ^3.4.0
         version: 3.4.0
+      tollai:
+        specifier: ^1.0.0
+        version: 1.0.0
       uuid:
         specifier: ^13.0.0
         version: 13.0.0
@@ -7334,6 +7337,10 @@ packages:
   token-types@6.1.2:
     resolution: {integrity: sha512-dRXchy+C0IgK8WPC6xvCHFRIWYUbqqdEIKPaKo/AcTUNzwLTK6AH7RjdLWsEZcAN/TBdtfUw3PYEgPr5VPr6ww==}
     engines: {node: '>=14.16'}
+
+  tollai@1.0.0:
+    resolution: {integrity: sha512-M7jpIUzrAG8q9zh06oA4RDTnV+qaBGXmyr6cPZGRmgb1+SLz1egVtaiA7lM/1oWbGTgbEBO6e09HoqE2Vz4BAA==}
+    engines: {node: '>=14.0.0'}
 
   toposort-class@1.0.1:
     resolution: {integrity: sha512-OsLcGGbYF3rMjPUf8oKktyvCiUxSbqMMS39m33MAjLTC1DVIH6x3WSt63/M77ihI09+Sdfk1AXvfhCEeUmC7mg==}
@@ -16149,6 +16156,8 @@ snapshots:
       '@borewit/text-codec': 0.2.2
       '@tokenizer/token': 0.3.0
       ieee754: 1.2.1
+
+  tollai@1.0.0: {}
 
   toposort-class@1.0.1: {}
 
