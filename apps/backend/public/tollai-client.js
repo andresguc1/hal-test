@@ -34,10 +34,13 @@
   }
 
   async function computeProofOfWork(challengeId, difficulty) {
-    const target = BigInt("0x" + "0".repeat(difficulty) + "f".repeat(64 - difficulty));
+    // Difficulty is in BITS (standard PoW). Convert to hex digits for target.
+    const zeroHexDigits = Math.ceil(difficulty / 4);
+    const target = BigInt("0x" + "0".repeat(zeroHexDigits) + "f".repeat(64 - zeroHexDigits));
     let nonce = 0;
     const startTime = Date.now();
-    const maxIterations = 1000000;
+    // Scale max iterations with difficulty: 2^difficulty * small constant
+    const maxIterations = Math.min(1000000 * Math.max(1, difficulty / 20), 50000000);
 
     while (nonce < maxIterations) {
       const data = challengeId + ":" + nonce;
@@ -46,7 +49,7 @@
 
       if (hashBigInt <= target) {
         const workTime = Date.now() - startTime;
-        console.log(`[TollAI] PoW solved: nonce=${nonce}, time=${workTime}ms, hash=${hash.substring(0, 16)}...`);
+        console.log(`[TollAI] PoW solved: nonce=${nonce}, time=${workTime}ms, difficulty=${difficulty} bits (${zeroHexDigits} hex), hash=${hash.substring(0, 16)}...`);
         return { nonce, hash, workTime };
       }
       nonce++;
@@ -55,7 +58,7 @@
         await new Promise(r => setTimeout(r, 0));
       }
     }
-    throw new Error("PoW computation exceeded max iterations");
+    throw new Error(`PoW computation exceeded max iterations (${maxIterations}) at difficulty ${difficulty} bits`);
   }
 
   async function initTollAI() {
@@ -123,7 +126,8 @@
         document.body.classList.add("tollai-verified");
         console.log("TollAI session verified after PoW");
         showTollNotice("Verification complete", "success");
-        setTimeout(() => startDwellTracking(), 1000);
+        // Reload page to pass middleware with new session cookie
+        setTimeout(() => window.location.reload(), 500);
       } else {
         console.error("TollAI verification failed:", verifyData);
         showTollNotice("Verification failed: " + (verifyData.message || "Unknown error"), "error");

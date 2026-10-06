@@ -406,8 +406,10 @@ app.post('/tollai/verify', express.json(), (req, res) => {
     }
 
     // Verify the proof-of-work
-    const difficulty = Number(process.env.TOLLAI_POW_DIFFICULTY) || 14;
-    const target = BigInt('0x' + '0'.repeat(difficulty) + 'f'.repeat(64 - difficulty));
+    const difficulty = Number(process.env.TOLLAI_POW_DIFFICULTY) || 20;
+    // Difficulty is in BITS. Convert to hex digits for target.
+    const zeroHexDigits = Math.ceil(difficulty / 4);
+    const target = BigInt('0x' + '0'.repeat(zeroHexDigits) + 'f'.repeat(64 - zeroHexDigits));
 
     const data = challengeId + ':' + nonce;
     const hash = crypto.createHash('sha256').update(data).digest('hex');
