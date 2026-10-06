@@ -1,5 +1,5 @@
 // TollAI Client Script for hal-test - Proof of Work Verification
-// This script handles proof-of-work challenge in the browser
+// Transparent for humans, nightmare for bots
 
 (function () {
   "use strict";
@@ -9,10 +9,12 @@
     minResponseTime: 1500,
     minDwellMs: 1500,
     sessionTTL: 15 * 60 * 1000,
+    renewalBuffer: 60 * 1000, // renew 1 minute before expiry
   };
 
   let isPoWRunning = false;
   let isVerified = false;
+  let renewalTimer = null;
 
   function getCookie(name) {
     const match = document.cookie.match(new RegExp("(^|;)\\s*" + name + "\\s*="));
@@ -29,6 +31,14 @@
     document.cookie = name + "=" + encodeURIComponent(value) + expires + ";path=/;samesite=lax";
   }
 
+  function isOnChallengePage() {
+    // Detect if we're on the 403 challenge page (has spinner + "Verifying access" text)
+    const title = document.title;
+    const hasSpinner = document.querySelector('.spinner') !== null;
+    const hasVerifyingText = document.body.textContent.includes('Verifying access');
+    return title === 'Verification Required' || hasSpinner || hasVerifyingText;
+  }
+
   async function sha256(message) {
     const msgBuffer = new TextEncoder().encode(message);
     const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
@@ -41,7 +51,6 @@
     const target = BigInt("0x" + "0".repeat(zeroHexDigits) + "f".repeat(64 - zeroHexDigits));
     let nonce = 0;
     const startTime = Date.now();
-    // For 20 bits: expected ~1M iterations. Use 5M for 99% success rate.
     const maxIterations = Math.min(Math.pow(2, difficulty) * 5, 50000000);
 
     while (nonce < maxIterations) {
@@ -63,15 +72,89 @@
     throw new Error(`PoW computation exceeded max iterations (${maxIterations}) at difficulty ${difficulty} bits`);
   }
 
+  function scheduleRenewal() {
+    if (renewalTimer) clearTimeout(renewalTimer);
+    // Renew at sessionTTL - renewalBuffer (e.g., 14 minutes for 15 min TTL)
+    const delay = CONFIG.sessionTTL - CONFIG.renewalBuffer;
+    renewalTimer = setTimeout(() => {
+      console.log("[TollAI] Scheduling background session renewal");
+      backgroundRenewal();
+    }, delay);
+  }
+
+  async function backgroundRenewal() {
+    if (isPoWRunning) return;
+    isPoWRunning = true;
+
+    try {
+      console.log("[TollAI] Background session renewal started");
+      const challengeResponse = await fetch("/tollai/challenge", {
+        credentials: "include",
+        headers: { Accept: "application/json" },
+      });
+      const challengeData = await challengeResponse.json();
+
+      if (!challengeData.challengeId) {
+        console.error("[TollAI] Renewal: failed to get challenge");
+        isPoWRunning = false;
+        setTimeout(backgroundRenewal, 30000); // retry in 30s
+        return;
+      }
+
+      const difficulty = challengeData.difficulty || CONFIG.powDifficulty;
+      console.log(`[TollAI] Background renewal: computing PoW at difficulty ${difficulty} bits`);
+
+      const powResult = await computeProofOfWork(challengeData.challengeId, difficulty);
+
+      const verifyResponse = await fetch("/tollai/verify", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          challengeId: challengeData.challengeId,
+          nonce: powResult.nonce,
+        }),
+      });
+
+      const verifyData = await verifyResponse.json();
+
+      if (verifyData.verified) {
+        console.log("[TollAI] Background renewal successful");
+        // Schedule next renewal
+        scheduleRenewal();
+      } else {
+        console.error("[TollAI] Background renewal failed:", verifyData);
+        // Retry sooner on failure
+        setTimeout(backgroundRenewal, 30000);
+      }
+    } catch (error) {
+      console.error("[TollAI] Background renewal error:", error);
+      setTimeout(backgroundRenewal, 60000);
+    } finally {
+      isPoWRunning = false;
+    }
+  }
+
   async function initTollAI() {
-    if (isVerified) return;
-    
+    if (isVerified) {
+      // Already verified - just schedule renewal
+      scheduleRenewal();
+      return;
+    }
+
     const token = getCookie("tollai_session");
     if (token) {
       await verifySession(token);
       return;
     }
-    await startTollAIFlow();
+
+    // No session - check if we're on challenge page
+    if (isOnChallengePage()) {
+      await startTollAIFlow(true); // true = on challenge page, will reload
+    } else {
+      // On app page but no session - silently get one
+      await startTollAIFlow(false);
+    }
   }
 
   async function verifySession(token) {
@@ -82,19 +165,20 @@
         document.body.classList.add("tollai-verified");
         isVerified = true;
         console.log("[TollAI] Session verified");
+        scheduleRenewal();
         startDwellTracking();
       } else {
         setCookie("tollai_session", "", -1);
-        await startTollAIFlow();
+        await startTollAIFlow(isOnChallengePage());
       }
     } catch (error) {
       console.error("[TollAI] Session verification failed:", error);
       setCookie("tollai_session", "", -1);
-      await startTollAIFlow();
+      await startTollAIFlow(isOnChallengePage());
     }
   }
 
-  async function startTollAIFlow() {
+  async function startTollAIFlow(onChallengePage) {
     if (isPoWRunning || isVerified) return;
     isPoWRunning = true;
 
@@ -133,19 +217,26 @@
         isVerified = true;
         isPoWRunning = false;
         console.log("[TollAI] Session verified after PoW");
-        // Reload page to pass middleware with new session cookie
-        setTimeout(() => window.location.reload(), 500);
+        scheduleRenewal();
+        startDwellTracking();
+
+        // ONLY reload if we're on the challenge page (403 page)
+        // On app page, we just continue silently
+        if (onChallengePage) {
+          console.log("[TollAI] On challenge page - reloading to enter app");
+          setTimeout(() => window.location.reload(), 500);
+        } else {
+          console.log("[TollAI] On app page - session established silently");
+        }
       } else {
         console.error("[TollAI] Verification failed:", verifyData);
         isPoWRunning = false;
-        // Retry after a delay
-        setTimeout(startTollAIFlow, 2000);
+        setTimeout(() => startTollAIFlow(onChallengePage), 2000);
       }
     } catch (error) {
       console.error("[TollAI] Flow error:", error);
       isPoWRunning = false;
-      // Retry after a delay
-      setTimeout(startTollAIFlow, 5000);
+      setTimeout(() => startTollAIFlow(onChallengePage), 5000);
     }
   }
 
