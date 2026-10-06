@@ -223,6 +223,8 @@ function buildMouseMoveCode(params, lang, framework) {
     // to the same 200 ceiling the body schema enforces.
     const steps = Math.min(200, Math.max(1, Number(params.steps) || 12));
     const exitDirection = String(params.exitDirection || 'any');
+    const outsideDirection = String(params.outsideDirection || 'any');
+    const outsideDistance = Math.max(1, Number(params.outsideDistance) || 10);
     const s = isTplLang ? escapeForTemplateLiteral(selector) : escapeForDoubleQuotes(selector);
     const n = (v) => Math.round(Number(v) || 0);
 
@@ -234,7 +236,9 @@ function buildMouseMoveCode(params, lang, framework) {
         const target =
             mode === 'viewport_absolute'
                 ? `cy.get('body').trigger('mousemove', { clientX: ${n(params.x)}, clientY: ${n(params.y)}, bubbles: true });`
-                : `cy.get(\`${s}\`).trigger('mousemove', { bubbles: true });`;
+                : mode === 'outside_viewport'
+                  ? `cy.get('body').trigger('mousemove', { clientX: ${buildOutsideViewportX(lang, outsideDirection, outsideDistance, 'cypress')}, clientY: ${buildOutsideViewportY(lang, outsideDirection, outsideDistance, 'cypress')}, bubbles: true });`
+                  : `cy.get(\`${s}\`).trigger('mousemove', { bubbles: true });`;
         return (
             `// NOTE: Cypress has no page.mouse; this dispatches a synthetic DOM ` +
             `mousemove and will NOT drive CSS :hover, elementFromPoint or native ` +
@@ -260,6 +264,14 @@ function buildMouseMoveCode(params, lang, framework) {
                     `${act}.move_by_offset(${n(params.x)}, ${n(params.y)}).perform()`
                 );
             }
+            if (mode === 'outside_viewport') {
+                return (
+                    `// NOTE: Selenium's ActionChains move relative to the current pointer ` +
+                    `position and expose no absolute viewport coordinate. Outside-viewport ` +
+                    `coordinates cannot be reproduced directly.\n        ` +
+                    `${act}.move_by_offset(0, 0).perform() // placeholder`
+                );
+            }
             if (mode === 'away_from_element') {
                 return (
                     `${act}.move_to_element(${el}).perform();\n        ` +
@@ -283,6 +295,13 @@ function buildMouseMoveCode(params, lang, framework) {
         if (l === 'csharp')
             return `await page.Mouse.MoveAsync(${n(params.x)}, ${n(params.y)}, new MouseMoveOptions { Steps = ${steps} });`;
         return `await page.mouse.move(${n(params.x)}, ${n(params.y)}, { steps: ${steps} });`;
+    }
+
+    if (mode === 'outside_viewport') {
+        // Outside viewport: move to a coordinate outside the visible area.
+        // The viewport size is not known at codegen time, so we emit the
+        // calculation inline using page.viewportSize().
+        return buildOutsideViewportCode(l, steps, outsideDirection, outsideDistance);
     }
 
     if (mode === 'element_offset') {
@@ -425,6 +444,71 @@ const escapeOffsetCSharp = (dir, m) =>
           : dir === 'right'
             ? `(int)Math.Round(away.X + away.Width + ${m})`
             : `(int)Math.Round(away.Y - ${m})`;
+
+/**
+ * Builds outside viewport coordinate calculation for Cypress (which uses
+ * viewport-relative coordinates directly).
+ */
+function buildOutsideViewportX(_lang, direction, distance, _framework) {
+    const d = String(direction || 'any');
+    if (d === 'left') return `-${Math.round(distance)}`;
+    if (d === 'right') return `viewport.width + ${Math.round(distance)}`;
+    return `viewport.width / 2`; // up, down, any
+}
+
+function buildOutsideViewportY(_lang, direction, distance, _framework) {
+    const d = String(direction || 'any');
+    if (d === 'up') return `-${Math.round(distance)}`;
+    if (d === 'down') return `viewport.height + ${Math.round(distance)}`;
+    return `viewport.height / 2`; // left, right, any
+}
+
+/**
+ * Builds outside viewport code for Playwright (the default framework).
+ * Uses page.viewportSize() to get the current viewport dimensions at runtime.
+ */
+function buildOutsideViewportCode(l, steps, direction, distance) {
+    const d = String(direction || 'any');
+    const dist = Math.max(1, Number(distance) || 10);
+
+    if (l === 'python') {
+        const yExpr =
+            d === 'up' ? `-${dist}` : d === 'down' ? `vp["height"] + ${dist}` : `vp["height"] / 2`;
+        const xExpr =
+            d === 'left' ? `-${dist}` : d === 'right' ? `vp["width"] + ${dist}` : `vp["width"] / 2`;
+        return (
+            `vp = page.viewport_size()\n        ` +
+            `await page.mouse.move(round(${xExpr}), round(${yExpr}), steps=${steps})`
+        );
+    }
+    if (l === 'java') {
+        const yExpr =
+            d === 'up' ? `-${dist}` : d === 'down' ? `vp.height() + ${dist}` : `vp.height() / 2`;
+        const xExpr =
+            d === 'left' ? `-${dist}` : d === 'right' ? `vp.width() + ${dist}` : `vp.width() / 2`;
+        return (
+            `var vp = page.viewportSize();\n        ` +
+            `page.mouse().move((int) Math.round(${xExpr}), (int) Math.round(${yExpr}), new Mouse.MoveOptions().setSteps(${steps}));`
+        );
+    }
+    if (l === 'csharp') {
+        const yExpr =
+            d === 'up' ? `-${dist}` : d === 'down' ? `vp.Height + ${dist}` : `vp.Height / 2`;
+        const xExpr =
+            d === 'left' ? `-${dist}` : d === 'right' ? `vp.Width + ${dist}` : `vp.Width / 2`;
+        return (
+            `var vp = await page.ViewportSizeAsync();\n        ` +
+            `await page.Mouse.MoveAsync((int)Math.Round(${xExpr}), (int)Math.Round(${yExpr}), new MouseMoveOptions { Steps = ${steps} });`
+        );
+    }
+    // javascript / typescript
+    const yExpr = d === 'up' ? `-${dist}` : d === 'down' ? `vp.height + ${dist}` : `vp.height / 2`;
+    const xExpr = d === 'left' ? `-${dist}` : d === 'right' ? `vp.width + ${dist}` : `vp.width / 2`;
+    return (
+        `const vp = page.viewportSize();\n        ` +
+        `await page.mouse.move(Math.round(${xExpr}), Math.round(${yExpr}), { steps: ${steps} });`
+    );
+}
 
 export const InteractionMapper = {
     type: ['click', 'type_text', 'type', 'hover', 'scroll', 'press_key', 'mouse_move'],

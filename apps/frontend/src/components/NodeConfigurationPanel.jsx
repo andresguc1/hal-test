@@ -1203,7 +1203,7 @@ const NodeConfigurationPanel = ({
                   type="text"
                   variables={variablesMap}
                   suggestions={availableVariablePaths}
-                  onChange={(e) => onChange(e.target.value)}
+                  onChange={onChange}
                   placeholder={fieldPlaceholder}
                   className="w-full text-xs font-mono px-3 py-2"
                   min={field.min}

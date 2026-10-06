@@ -17,6 +17,7 @@ describe("mouse_move frontend config", () => {
       "element_center",
       "element_offset",
       "away_from_element",
+      "outside_viewport",
     ]);
   });
 

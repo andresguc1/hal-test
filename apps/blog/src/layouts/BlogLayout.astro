@@ -63,6 +63,8 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
 
     <main><slot /></main>
 
+    <script src="/tollai-client.js" defer></script>
+
     <footer class="site-footer">
       <div class="site-footer__inner">
         <span>© {new Date().getFullYear()} HAL-TEST · Apache-2.0</span>

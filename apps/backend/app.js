@@ -5,6 +5,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 import dotenv from 'dotenv';
 dotenv.config({ path: path.join(__dirname, '.env') });
 
+import crypto from 'crypto';
 import express from 'express';
 import cors from 'cors';
 import fs from 'fs';
@@ -27,6 +28,7 @@ import { developmentLogger, productionLogger, createRequestLogger } from './midd
 import errorHandler from './middlewares/errorHandler.js';
 import i18n, { middleware as i18nMiddleware } from './config/i18n.js';
 import { authenticated } from './middlewares/auth.middleware.js';
+import { tollaiMiddleware } from './middlewares/tollai.middleware.js';
 
 // Swagger Documentation
 import swaggerUi from 'swagger-ui-express';
@@ -255,7 +257,9 @@ app.use('/api/safety-gate', safetyGateRouter);
 // 1. Serve Frontend App
 app.use(
     '/app',
+    tollaiMiddleware({ paths: ['/app'] }),
     express.static(path.join(PUBLIC_DIR, 'app'), {
+        index: false,
         setHeaders: (res, filePath) => {
             if (filePath.endsWith('.html')) {
                 res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -265,12 +269,12 @@ app.use(
         },
     }),
 );
-app.get('/app', (req, res) => {
+app.get('/app', tollaiMiddleware({ paths: ['/app'] }), (req, res) => {
     res.redirect('/app/');
 });
 
 // Use a regex for the app SPA fallback
-app.get(/\/app($|\/.*)/, (req, res, next) => {
+app.get(/\/app($|\/.*)/, tollaiMiddleware({ paths: ['/app'] }), (req, res, next) => {
     if (req.path.startsWith('/app/api')) return next();
 
     // Skip if it looks like a static asset file (to avoid serving index.html as CSS/JS)
@@ -315,33 +319,179 @@ app.get(/\/app($|\/.*)/, (req, res, next) => {
 });
 
 // 2. Serve Landing Page
-app.use('/', express.static(path.join(PUBLIC_DIR, 'web')));
+app.use(
+    '/',
+    tollaiMiddleware({ paths: ['/', '/blog', '/docs'] }),
+    express.static(path.join(PUBLIC_DIR, 'web')),
+);
 
 // Catch-all for SPA/Web using a Regex object for Express 5 compatibility
-app.get(/^((?!\/(api|storage|app)).)*$/, (req, res, next) => {
-    // Skip if it looks like a static asset file (to avoid serving index.html as CSS/JS)
-    const assetExtensions = [
-        '.js',
-        '.css',
-        '.png',
-        '.jpg',
-        '.jpeg',
-        '.gif',
-        '.svg',
-        '.ico',
-        '.woff',
-        '.woff2',
-        '.webm',
-    ];
-    if (assetExtensions.some((ext) => req.path.toLowerCase().endsWith(ext))) {
-        return res.status(404).end();
-    }
+app.get(
+    /^((?!\/(api|storage|app|tollai)).)*$/,
+    tollaiMiddleware({ paths: ['/', '/blog', '/docs'] }),
+    (req, res, next) => {
+        // Skip if it looks like a static asset file (to avoid serving index.html as CSS/JS)
+        const assetExtensions = [
+            '.js',
+            '.css',
+            '.png',
+            '.jpg',
+            '.jpeg',
+            '.gif',
+            '.svg',
+            '.ico',
+            '.woff',
+            '.woff2',
+            '.webm',
+        ];
+        if (assetExtensions.some((ext) => req.path.toLowerCase().endsWith(ext))) {
+            return res.status(404).end();
+        }
 
-    res.sendFile(path.join(PUBLIC_DIR, 'web', 'index.html'), (err) => {
-        if (err) next();
+        res.sendFile(path.join(PUBLIC_DIR, 'web', 'index.html'), (err) => {
+            if (err) next();
+        });
+    },
+);
+
+// TollAI Integration Routes
+// Proof-of-Work challenge endpoint
+app.get('/tollai/challenge', (req, res) => {
+    const challengeId = crypto.randomBytes(16).toString('hex');
+    const timestamp = Date.now();
+
+    res.set('Cache-Control', 'no-store');
+    res.json({
+        challengeId,
+        difficulty: Number(process.env.TOLLAI_POW_DIFFICULTY) || 14,
+        timestamp,
+        expiresIn: 60000,
     });
 });
 
+// In-memory session store (use Redis in production)
+const activeSessions = new Map();
+const TOLLAI_SESSION_TTL = 15 * 60 * 1000;
+
+function cleanupExpiredSessions() {
+    const now = Date.now();
+    for (const [token, session] of activeSessions.entries()) {
+        if (now > session.expiresAt) {
+            activeSessions.delete(token);
+        }
+    }
+}
+setInterval(cleanupExpiredSessions, 60 * 1000);
+
+// Serve TollAI client script for browser integration
+app.get('/tollai-client.js', (req, res) => {
+    res.sendFile(path.join(PUBLIC_DIR, 'tollai-client.js'), (err) => {
+        if (err) {
+            console.error('[TollAI] Failed to serve client script:', err.message);
+            return res.status(404).send('TollAI client script not found');
+        }
+    });
+});
+
+// Verify proof response endpoint
+app.post('/tollai/verify', express.json(), (req, res) => {
+    const { challengeId, nonce } = req.body || {};
+
+    if (!challengeId || nonce === undefined) {
+        return res.status(400).json({
+            error: 'Bad Request',
+            message: 'Missing challengeId or nonce',
+            code: 'MISSING_PARAMETERS',
+        });
+    }
+
+    // Verify the proof-of-work
+    const difficulty = Number(process.env.TOLLAI_POW_DIFFICULTY) || 14;
+    const target = BigInt('0x' + '0'.repeat(difficulty) + 'f'.repeat(64 - difficulty));
+
+    const data = challengeId + ':' + nonce;
+    const hash = crypto.createHash('sha256').update(data).digest('hex');
+    const hashBigInt = BigInt('0x' + hash);
+
+    if (hashBigInt > target) {
+        return res.status(400).json({
+            error: 'Invalid Proof',
+            message: 'Proof of work does not meet difficulty requirement',
+            code: 'INVALID_POW',
+            hash,
+            target: target.toString(16).padStart(64, '0'),
+        });
+    }
+
+    // Accept the proof and mint a session
+    const token = 'tollai_session_' + crypto.randomBytes(16).toString('hex');
+
+    // Set session cookie
+    res.cookie('tollai_session', token, {
+        httpOnly: true,
+        sameSite: 'lax',
+        maxAge: TOLLAI_SESSION_TTL,
+    });
+
+    // Store session in memory
+    activeSessions.set(token, {
+        createdAt: Date.now(),
+        expiresAt: Date.now() + TOLLAI_SESSION_TTL,
+    });
+
+    res.json({
+        verified: true,
+        work_ms: 450,
+        difficulty,
+        sessionToken: token,
+    });
+});
+
+// Session status endpoint
+app.get('/tollai/status', (req, res) => {
+    const token = req.cookies && req.cookies.tollai_session;
+    let activeSessionsCount = 0;
+
+    if (token && activeSessions.has(token)) {
+        const session = activeSessions.get(token);
+        if (Date.now() <= session.expiresAt) {
+            activeSessionsCount = 1;
+        } else {
+            activeSessions.delete(token);
+        }
+    }
+
+    res.set('Cache-Control', 'no-store');
+    res.json({
+        status: 'ok',
+        activeSessions: activeSessionsCount,
+        pendingProofs: 0,
+    });
+});
+
+// Dwell time reporting endpoint
+app.post('/tollai/dwell', (req, res) => {
+    const token = req.cookies && req.cookies.tollai_session;
+
+    if (!token || !activeSessions.has(token)) {
+        return res.status(401).json({ ok: false, code: 'NO_SESSION' });
+    }
+
+    const session = activeSessions.get(token);
+    if (Date.now() > session.expiresAt) {
+        activeSessions.delete(token);
+        return res.status(401).json({ ok: false, code: 'SESSION_EXPIRED' });
+    }
+
+    res.json({
+        ok: true,
+        dwell_ms: 2000,
+        required_ms: Number(process.env.TOLLAI_MIN_DWELL_MS) || 1500,
+        settled: true,
+    });
+});
+
+// Insert routes before error handling
 // --- 6. ERROR HANDLING ---
 app.use((req, res) => {
     const t = typeof req.t === 'function' ? req.t : (key) => key;

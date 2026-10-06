@@ -2,12 +2,21 @@
 
 import Joi from 'joi';
 
-const TARGET_MODES = ['viewport_absolute', 'element_center', 'element_offset', 'away_from_element'];
+const TARGET_MODES = [
+    'viewport_absolute',
+    'element_center',
+    'element_offset',
+    'away_from_element',
+    'outside_viewport',
+];
 
 const EXIT_DIRECTIONS = ['up', 'down', 'left', 'right', 'any'];
 
 // Modes that position the pointer against a located element.
 const SELECTOR_MODES = ['element_center', 'element_offset', 'away_from_element'];
+
+// Modes that move the pointer outside the viewport bounds.
+const OUTSIDE_VIEWPORT_MODES = ['outside_viewport'];
 
 const mouseMoveBodySchema = Joi.object({
     // 1. targetMode — which coordinate space the destination is expressed in.
@@ -48,6 +57,21 @@ const mouseMoveBodySchema = Joi.object({
         .messages({
             'any.only': 'La dirección de salida debe ser: up, down, left, right o any.',
         }),
+
+    // 5b. outsideDirection — which side of the viewport to exit through (outside_viewport only).
+    outsideDirection: Joi.string()
+        .valid(...EXIT_DIRECTIONS)
+        .default('any')
+        .messages({
+            'any.only': 'La dirección fuera del viewport debe ser: up, down, left, right o any.',
+        }),
+
+    // 5c. outsideDistance — distance in pixels from the viewport edge (outside_viewport only).
+    outsideDistance: Joi.number().integer().min(1).max(5000).default(10).messages({
+        'number.base': 'La distancia fuera del viewport debe ser un número entero.',
+        'number.min': 'La distancia fuera del viewport debe ser al menos 1px.',
+        'number.max': 'La distancia fuera del viewport no puede superar 5000px.',
+    }),
 
     // 6. steps — interpolated mousemove events between the cursor's current
     //    position and the destination. 1 = single jump.
@@ -120,6 +144,10 @@ const mouseMoveBodySchema = Joi.object({
             custom: 'El modo element_offset requiere offsetX y offsetY.',
         });
     }
+
+    // outside_viewport requires outsideDirection (has default) and outsideDistance (has default).
+    // No extra validation needed since both have defaults, but we can enforce that
+    // outsideDistance is positive which Joi already does.
 
     return value;
 });

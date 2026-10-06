@@ -14,6 +14,7 @@ const ROWS = [
   { label: "Deterministic auto-healing", values: [true, false, "partial"] },
   { label: "Real-time collaboration", values: [true, false, true] },
   { label: "Runs in your own CI/CD", values: [true, true, "partial"] },
+  { label: "AI agent defense (TollAI)", values: [true, false, false] },
 ];
 
 function Cell({ value }) {

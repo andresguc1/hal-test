@@ -1,6 +1,6 @@
 import React from "react";
 import { motion as Motion } from "framer-motion";
-import { Slack, ArrowRight } from "lucide-react";
+import { Slack, ArrowRight, Shield, Bot } from "lucide-react";
 
 export default function FinalCTA() {
   return (
@@ -27,6 +27,17 @@ export default function FinalCTA() {
               npx haltest@latest
             </code>
           </div>
+        </div>
+
+        {/* TollAI Protection Badge */}
+        <div className="mb-8 flex items-center justify-center gap-2 text-xs text-slate-400">
+          <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-violet-500/20 border border-violet-500/30">
+            <Shield size={12} className="text-emerald-400" />
+            <span className="font-bold uppercase tracking-widest text-violet-300">
+              TollAI Protected
+            </span>
+            <Bot size={12} className="text-hal-primary-400" />
+          </span>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 items-center justify-center">

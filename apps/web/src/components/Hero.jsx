@@ -1,17 +1,28 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { motion as Motion } from "framer-motion";
-import { Slack, Copy, Check, Workflow, Gauge, ShieldCheck } from "lucide-react";
+import {
+  Slack,
+  Copy,
+  Check,
+  Workflow,
+  Gauge,
+  ShieldCheck,
+  Cpu,
+  Bot,
+  Shield,
+} from "lucide-react";
 
 const PILLARS = [
   { icon: Workflow, label: "Automation", color: "text-hal-primary-400" },
   { icon: Gauge, label: "Performance", color: "text-hal-warning-500" },
   { icon: ShieldCheck, label: "Security", color: "text-emerald-400" },
+  { icon: Cpu, label: "TollAI Defense", color: "text-violet-400" },
 ];
 
 const STATS = [
   { value: "50+", label: "Node Types" },
-  { value: "3-in-1", label: "Automation · Perf · Security" },
+  { value: "4-in-1", label: "Automation · Perf · Security · AI Defense" },
   { value: "10+", label: "Frameworks In / Out" },
   { value: "Playwright", label: "Native Engine" },
 ];
@@ -226,6 +237,35 @@ export default function Hero() {
             </span>
           </div>
         ))}
+      </Motion.div>
+
+      {/* TollAI Badge */}
+      <Motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.65 }}
+        className="mb-12 flex items-center justify-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-violet-500/20 to-blue-500/20 border border-violet-500/30 max-w-xl"
+      >
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-xs font-bold uppercase tracking-widest text-violet-300">
+            Protected by TollAI
+          </span>
+        </div>
+        <div className="flex items-center gap-4 text-xs text-slate-400">
+          <span className="flex items-center gap-1">
+            <Shield size={12} className="text-emerald-400" />
+            Cognitive Toll
+          </span>
+          <span className="flex items-center gap-1">
+            <Bot size={12} className="text-hal-primary-400" />
+            PoW Challenge
+          </span>
+          <span className="flex items-center gap-1">
+            <Cpu size={12} className="text-violet-400" />
+            14-bit Difficulty
+          </span>
+        </div>
       </Motion.div>
     </section>
   );

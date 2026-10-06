@@ -621,6 +621,10 @@ export const NODE_INPUTS = {
           label: "Away from an element (leave it)",
           value: "away_from_element",
         },
+        {
+          label: "Outside viewport (exit intent)",
+          value: "outside_viewport",
+        },
       ],
       defaultValue: "viewport_absolute",
       required: true,
@@ -685,6 +689,31 @@ export const NODE_INPUTS = {
       isVisible: (config) => config.targetMode === "away_from_element",
       description:
         "The pointer is moved into the element first, then out past this edge — that second move is what makes the page fire mouseleave. Automatic picks the first edge with room, preferring up.",
+    },
+    {
+      key: "outsideDirection",
+      label: "Direction",
+      type: "select",
+      options: [
+        { label: "Automatic (Top)", value: "any" },
+        { label: "Top", value: "up" },
+        { label: "Bottom", value: "down" },
+        { label: "Left", value: "left" },
+        { label: "Right", value: "right" },
+      ],
+      defaultValue: "any",
+      isVisible: (config) => config.targetMode === "outside_viewport",
+      description:
+        "Which side of the viewport to exit through. Automatic picks Top (the most common exit-intent pattern).",
+    },
+    {
+      key: "outsideDistance",
+      label: "Distance from viewport (px)",
+      type: "number",
+      placeholder: "10",
+      isVisible: (config) => config.targetMode === "outside_viewport",
+      description:
+        "How many pixels outside the viewport edge the pointer should land. Larger values are more reliably detected as 'left the viewport' by the browser.",
     },
     {
       key: "takeScreenshot",

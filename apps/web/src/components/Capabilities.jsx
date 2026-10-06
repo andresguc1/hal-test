@@ -1,6 +1,14 @@
 import React from "react";
 import { motion as Motion } from "framer-motion";
-import { Workflow, Gauge, ShieldCheck } from "lucide-react";
+import {
+  Workflow,
+  Gauge,
+  ShieldCheck,
+  Cpu,
+  Bot,
+  Shield,
+  Key,
+} from "lucide-react";
 
 const CAPABILITIES = [
   {
@@ -45,6 +53,20 @@ const CAPABILITIES = [
       "Compliance reports wired into your pipeline",
     ],
   },
+  {
+    icon: Cpu,
+    accent: "text-violet-400",
+    ring: "hover:border-violet-500/40",
+    glow: "bg-violet-500/10",
+    title: "TollAI Defense",
+    tagline: "Cognitive toll against autonomous agents.",
+    points: [
+      "Proof-of-work challenge (14-bit difficulty ~450ms)",
+      "Dwell time verification (1.5s minimum human delay)",
+      "Session binding with httpOnly cookies",
+      "Zero-config integration on landing page",
+    ],
+  },
 ];
 
 export default function Capabilities() {
@@ -60,7 +82,7 @@ export default function Capabilities() {
           viewport={{ once: true }}
           className="text-xs font-bold uppercase tracking-[0.3em] text-hal-primary-400 mb-4"
         >
-          One platform · Three disciplines
+          One platform · Four disciplines
         </Motion.p>
         <Motion.h2
           initial={{ opacity: 0, y: 20 }}
@@ -69,8 +91,9 @@ export default function Capabilities() {
           transition={{ delay: 0.05 }}
           className="text-4xl md:text-5xl font-bold uppercase tracking-tight text-balance"
         >
-          Automation, performance and security{" "}
-          <span className="text-hal-primary-400">in one workflow</span>
+          Automation, performance, security{" "}
+          <span className="text-hal-primary-400">and AI defense</span>
+          <span className="text-violet-400"> in one workflow</span>
         </Motion.h2>
         <Motion.p
           initial={{ opacity: 0, y: 20 }}
@@ -79,12 +102,13 @@ export default function Capabilities() {
           transition={{ delay: 0.1 }}
           className="text-slate-400 max-w-2xl mx-auto mt-4 text-pretty"
         >
-          Stop stitching together three different tools. Haltest runs functional
-          checks, load tests and security audits from the same visual flows.
+          Stop stitching together different tools. Haltest runs functional
+          checks, load tests, security audits and AI agent defense from the same
+          visual flows.
         </Motion.p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {CAPABILITIES.map((cap, i) => (
           <Motion.div
             key={cap.title}

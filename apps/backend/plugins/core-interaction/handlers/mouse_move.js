@@ -72,6 +72,37 @@ export function escapePoint(box, direction = 'any', viewport = null, margin = ES
 }
 
 /**
+ * Computes a destination point outside the viewport.
+ *
+ * @param {string} direction - 'up' | 'down' | 'left' | 'right' | 'any'
+ * @param {number} distance - pixels from the viewport edge
+ * @param {{width: number, height: number} | null} viewport - viewport size
+ * @returns {{x: number, y: number, direction: string, inViewport: boolean}}
+ */
+export function outsideViewportPoint(direction = 'any', distance = 10, viewport = null) {
+    const vw = viewport?.width ?? Number.POSITIVE_INFINITY;
+    const vh = viewport?.height ?? Number.POSITIVE_INFINITY;
+
+    const candidates = {
+        up: { x: Math.round(vw / 2), y: -Math.round(distance) },
+        down: { x: Math.round(vw / 2), y: Math.round(vh + distance) },
+        left: { x: -Math.round(distance), y: Math.round(vh / 2) },
+        right: { x: Math.round(vw + distance), y: Math.round(vh / 2) },
+    };
+
+    const fallbackOrder = ['up', 'down', 'left', 'right'];
+    const requested = Object.hasOwn(candidates, direction) ? direction : 'any';
+    const order =
+        requested === 'any'
+            ? fallbackOrder
+            : [requested, ...fallbackOrder.filter((d) => d !== requested)];
+
+    // For outside_viewport, the destination is intentionally out-of-viewport.
+    const d = order[0];
+    return { x: candidates[d].x, y: candidates[d].y, direction: d, inViewport: false };
+}
+
+/**
  * Moves the pointer to a viewport- or element-relative destination.
  *
  * Playwright's `mouse.move` dispatches only `mousemove`; `mouseleave` is
@@ -91,6 +122,8 @@ const mouseMove = (req, res) =>
             offsetX = 0,
             offsetY = 0,
             exitDirection = 'any',
+            outsideDirection = 'any',
+            outsideDistance = 10,
             steps = 12,
             settleMs = 0,
             verifyTarget = false,
@@ -162,6 +195,13 @@ const mouseMove = (req, res) =>
                 escape = escapePoint(box, exitDirection, viewport);
                 dest = { x: escape.x, y: escape.y };
             }
+        } else if (targetMode === 'outside_viewport') {
+            // outside_viewport — move pointer outside the viewport bounds.
+            // This is a single-phase move to a coordinate intentionally outside
+            // the visible area, used for exit-intent testing. No selector needed.
+            const outside = outsideViewportPoint(outsideDirection, outsideDistance, viewport);
+            dest = { x: outside.x, y: outside.y };
+            escape = outside; // reuse for traceDetails
         } else {
             // The HTTP body schema already rejects unknown modes, but the
             // plugin/ActionRouter path does not validate. Failing loudly beats
@@ -218,6 +258,7 @@ const mouseMove = (req, res) =>
                 exitDirection: escape?.direction ?? null,
                 inViewport: escape ? escape.inViewport : null,
                 viewport,
+                outsideDistance: targetMode === 'outside_viewport' ? outsideDistance : null,
                 verification,
             },
         };
