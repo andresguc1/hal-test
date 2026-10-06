@@ -1,42 +1,23 @@
-import crypto from 'crypto';
+import { validateSession } from '../services/tollaiSessionStore.js';
 
 const TOLLAI_COOKIE_NAME = 'tollai_session';
-const TOLLAI_SESSION_TTL = 15 * 60 * 1000; // 15 minutes
 
-const activeSessions = new Map();
-
-function generateSessionToken() {
-    return 'tollai_session_' + crypto.randomBytes(16).toString('hex');
-}
-
-function createSession() {
-    const token = generateSessionToken();
-    const expiresAt = Date.now() + TOLLAI_SESSION_TTL;
-    activeSessions.set(token, { createdAt: Date.now(), expiresAt });
-    return token;
-}
-
-function validateSession(token) {
-    if (!token) return false;
-    const session = activeSessions.get(token);
-    if (!session) return false;
-    if (Date.now() > session.expiresAt) {
-        activeSessions.delete(token);
-        return false;
+function isAuthenticated(req) {
+    // Check Authorization header
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        return true;
     }
-    return true;
-}
-
-function cleanupExpiredSessions() {
-    const now = Date.now();
-    for (const [token, session] of activeSessions.entries()) {
-        if (now > session.expiresAt) {
-            activeSessions.delete(token);
+    // Check Supabase auth cookies
+    if (req.cookies) {
+        for (const [name] of Object.entries(req.cookies)) {
+            if (name.startsWith('sb-') && name.endsWith('-auth-token')) {
+                return true;
+            }
         }
     }
+    return false;
 }
-
-setInterval(cleanupExpiredSessions, 60 * 1000);
 
 export function tollaiMiddleware(options = {}) {
     const {
@@ -72,6 +53,11 @@ export function tollaiMiddleware(options = {}) {
         });
 
         if (!shouldProtect) {
+            return next();
+        }
+
+        // Skip TollAI for authenticated users
+        if (isAuthenticated(req)) {
             return next();
         }
 
@@ -121,5 +107,3 @@ export function tollaiVerifyMiddleware(req, res, next) {
     req.tollai = { verified: !!token && validateSession(token), token };
     next();
 }
-
-export { createSession, validateSession, generateSessionToken };

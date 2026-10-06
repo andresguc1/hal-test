@@ -369,19 +369,11 @@ app.get('/tollai/challenge', (req, res) => {
     });
 });
 
-// In-memory session store (use Redis in production)
-const activeSessions = new Map();
-const TOLLAI_SESSION_TTL = 15 * 60 * 1000;
-
-function cleanupExpiredSessions() {
-    const now = Date.now();
-    for (const [token, session] of activeSessions.entries()) {
-        if (now > session.expiresAt) {
-            activeSessions.delete(token);
-        }
-    }
-}
-setInterval(cleanupExpiredSessions, 60 * 1000);
+import {
+    createSession,
+    validateSession,
+    TOLLAI_SESSION_TTL,
+} from './services/tollaiSessionStore.js';
 
 // Serve TollAI client script for browser integration
 app.get('/tollai-client.js', (req, res) => {
@@ -426,19 +418,13 @@ app.post('/tollai/verify', express.json(), (req, res) => {
     }
 
     // Accept the proof and mint a session
-    const token = 'tollai_session_' + crypto.randomBytes(16).toString('hex');
+    const token = createSession();
 
     // Set session cookie
     res.cookie('tollai_session', token, {
         httpOnly: true,
         sameSite: 'lax',
         maxAge: TOLLAI_SESSION_TTL,
-    });
-
-    // Store session in memory
-    activeSessions.set(token, {
-        createdAt: Date.now(),
-        expiresAt: Date.now() + TOLLAI_SESSION_TTL,
     });
 
     res.json({
@@ -454,13 +440,8 @@ app.get('/tollai/status', (req, res) => {
     const token = req.cookies && req.cookies.tollai_session;
     let activeSessionsCount = 0;
 
-    if (token && activeSessions.has(token)) {
-        const session = activeSessions.get(token);
-        if (Date.now() <= session.expiresAt) {
-            activeSessionsCount = 1;
-        } else {
-            activeSessions.delete(token);
-        }
+    if (token && validateSession(token)) {
+        activeSessionsCount = 1;
     }
 
     res.set('Cache-Control', 'no-store');
@@ -475,14 +456,8 @@ app.get('/tollai/status', (req, res) => {
 app.post('/tollai/dwell', (req, res) => {
     const token = req.cookies && req.cookies.tollai_session;
 
-    if (!token || !activeSessions.has(token)) {
+    if (!token || !validateSession(token)) {
         return res.status(401).json({ ok: false, code: 'NO_SESSION' });
-    }
-
-    const session = activeSessions.get(token);
-    if (Date.now() > session.expiresAt) {
-        activeSessions.delete(token);
-        return res.status(401).json({ ok: false, code: 'SESSION_EXPIRED' });
     }
 
     res.json({

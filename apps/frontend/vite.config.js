@@ -48,6 +48,11 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      "/tollai": {
+        target: `http://localhost:${process.env.PORT || 2001}`,
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
 });
