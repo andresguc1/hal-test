@@ -5,7 +5,7 @@
   "use strict";
 
   const CONFIG = {
-    powDifficulty: 20, // bits
+    powDifficulty: 12, // bits
     minResponseTime: 1500,
     minDwellMs: 1500,
     sessionTTL: 15 * 60 * 1000,
@@ -160,12 +160,26 @@
       return;
     }
 
-    // No session - check if we're on challenge page
-    if (isOnChallengePage()) {
+    // No session - check if we're on a TollAI challenge page
+    const isChallengePage = await isTollAIChallengePage();
+    if (isChallengePage) {
       await startTollAIFlow(true); // true = on challenge page, will reload
     } else {
-      // On app page but no session - silently get one
-      await startTollAIFlow(false);
+      // On app page but no session - silently get one (only if needed)
+      // For public pages, we don't need to proactively get a session
+      console.log("[TollAI] No session, but not on challenge page - waiting for protected action");
+    }
+  }
+
+  // Check if a 403 response is actually a TollAI challenge page
+  async function isTollAIChallengePage() {
+    try {
+      const response = await fetch(window.location.href, { credentials: 'include' });
+      if (response.status !== 403) return false;
+      const text = await response.text();
+      return text.includes('TollAI verification required') || text.includes('tollai-client.js');
+    } catch {
+      return false;
     }
   }
 
@@ -181,12 +195,17 @@
         startDwellTracking();
       } else {
         setCookie("tollai_session", "", -1);
-        await startTollAIFlow(isOnChallengePage());
+        // Only start flow if on challenge page
+        if (await isTollAIChallengePage()) {
+          await startTollAIFlow(true);
+        }
       }
     } catch (error) {
       console.error("[TollAI] Session verification failed:", error);
       setCookie("tollai_session", "", -1);
-      await startTollAIFlow(isOnChallengePage());
+      if (await isTollAIChallengePage()) {
+        await startTollAIFlow(true);
+      }
     }
   }
 
