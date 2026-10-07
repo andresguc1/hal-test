@@ -420,12 +420,13 @@ app.post('/tollai/verify', express.json(), (req, res) => {
     // Accept the proof and mint a session
     const token = createSession();
 
-    // Set session cookie - works for localhost cross-port dev
+    // Set session cookie - use 'lax' for all localhost (same-site), 'lax' for production
+    // Cross-port dev (Vite 5173 → backend 2001) handled by proxy, not cookie
     const isLocalhost = req.hostname === 'localhost' || req.hostname === '127.0.0.1';
     res.cookie('tollai_session', token, {
         httpOnly: true,
-        sameSite: isLocalhost ? 'none' : 'lax',
-        secure: isLocalhost ? false : true, // false for localhost, true for production
+        sameSite: 'lax',
+        secure: !isLocalhost, // true for production (HTTPS), false for localhost
         maxAge: TOLLAI_SESSION_TTL,
     });
 
