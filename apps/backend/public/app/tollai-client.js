@@ -52,24 +52,36 @@
     let nonce = 0;
     const startTime = Date.now();
     const maxIterations = Math.min(Math.pow(2, difficulty) * 5, 50000000);
+    // Scale timeout with maxIterations: ~5 minutes for 5M iterations at 15-20K H/s
+    const hardTimeout = Math.max(30000, Math.min(maxIterations / 15000 * 1000, 300000)); // 30s - 5min
+
+    console.log(`[TollAI] Starting PoW: difficulty=${difficulty} bits (${zeroHexDigits} hex), maxIterations=${maxIterations.toLocaleString()}, timeout=${hardTimeout}ms`);
 
     while (nonce < maxIterations) {
+      // Hard timeout check
+      if (Date.now() - startTime > hardTimeout) {
+        throw new Error(`PoW timeout after ${hardTimeout}ms (${nonce.toLocaleString()} iterations)`);
+      }
+
       const data = challengeId + ":" + nonce;
       const hash = await sha256(data);
       const hashBigInt = BigInt("0x" + hash);
 
       if (hashBigInt <= target) {
         const workTime = Date.now() - startTime;
-        console.log(`[TollAI] PoW solved: nonce=${nonce}, time=${workTime}ms, difficulty=${difficulty} bits (${zeroHexDigits} hex)`);
+        console.log(`[TollAI] PoW solved: nonce=${nonce.toLocaleString()}, time=${workTime}ms, difficulty=${difficulty} bits (${zeroHexDigits} hex)`);
         return { nonce, hash, workTime };
       }
       nonce++;
 
-      if (nonce % 10000 === 0) {
+      if (nonce % 50000 === 0) {
+        const elapsed = Date.now() - startTime;
+        const rate = Math.round(nonce / (elapsed / 1000));
+        console.log(`[TollAI] PoW progress: ${nonce.toLocaleString()}/${maxIterations.toLocaleString()} (${rate.toLocaleString()} H/s, ${elapsed}ms)`);
         await new Promise(r => setTimeout(r, 0));
       }
     }
-    throw new Error(`PoW computation exceeded max iterations (${maxIterations}) at difficulty ${difficulty} bits`);
+    throw new Error(`PoW computation exceeded max iterations (${maxIterations.toLocaleString()}) at difficulty ${difficulty} bits`);
   }
 
   function scheduleRenewal() {
@@ -182,6 +194,11 @@
     if (isPoWRunning || isVerified) return;
     isPoWRunning = true;
 
+    // Show progress on challenge page
+    if (onChallengePage) {
+      updateChallengeUI("Computing proof of work...", "loading");
+    }
+
     try {
       const challengeResponse = await fetch("/tollai/challenge", {
         credentials: "include",
@@ -192,6 +209,7 @@
       if (!challengeData.challengeId) {
         console.error("[TollAI] Failed to get challenge");
         isPoWRunning = false;
+        if (onChallengePage) updateChallengeUI("Failed to get challenge", "error");
         return;
       }
 
@@ -199,6 +217,10 @@
       console.log(`[TollAI] Computing PoW for challenge ${challengeData.challengeId} at difficulty ${difficulty} bits`);
 
       const powResult = await computeProofOfWork(challengeData.challengeId, difficulty);
+
+      if (onChallengePage) {
+        updateChallengeUI("Verifying...", "loading");
+      }
 
       const verifyResponse = await fetch("/tollai/verify", {
         method: "POST",
@@ -218,12 +240,12 @@
         isPoWRunning = false;
         console.log("[TollAI] Session verified after PoW");
         scheduleRenewal();
-        // Small delay to ensure cookie is stored before dwell tracking
         setTimeout(startDwellTracking, 1000);
 
         // ONLY reload if we're on the challenge page (403 page)
         // On app page, we just continue silently
         if (onChallengePage) {
+          updateChallengeUI("Verification complete!", "success");
           console.log("[TollAI] On challenge page - reloading to enter app");
           setTimeout(() => window.location.reload(), 500);
         } else {
@@ -232,13 +254,28 @@
       } else {
         console.error("[TollAI] Verification failed:", verifyData);
         isPoWRunning = false;
+        if (onChallengePage) updateChallengeUI("Verification failed, retrying...", "error");
         setTimeout(() => startTollAIFlow(onChallengePage), 2000);
       }
     } catch (error) {
       console.error("[TollAI] Flow error:", error);
       isPoWRunning = false;
+      if (onChallengePage) updateChallengeUI(`Error: ${error.message}`, "error");
       setTimeout(() => startTollAIFlow(onChallengePage), 5000);
     }
+  }
+
+  function updateChallengeUI(message, type = "info") {
+    if (!isOnChallengePage()) return;
+    const container = document.querySelector('.container');
+    if (!container) return;
+    const h2 = container.querySelector('h2');
+    const p = container.querySelector('p');
+    const spinner = container.querySelector('.spinner');
+    if (h2) h2.textContent = message;
+    if (p) p.textContent = type === 'error' ? 'Error occurred, retrying...' : 'Please wait...';
+    if (spinner) spinner.style.display = type === 'error' ? 'none' : 'block';
+    container.style.borderColor = type === 'error' ? '#ef4444' : '#3b82f6';
   }
 
   function startDwellTracking() {
