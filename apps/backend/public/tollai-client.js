@@ -218,7 +218,8 @@
         isPoWRunning = false;
         console.log("[TollAI] Session verified after PoW");
         scheduleRenewal();
-        startDwellTracking();
+        // Small delay to ensure cookie is stored before dwell tracking
+        setTimeout(startDwellTracking, 1000);
 
         // ONLY reload if we're on the challenge page (403 page)
         // On app page, we just continue silently
@@ -250,13 +251,23 @@
       if (dwellMs >= CONFIG.minDwellMs) {
         reported = true;
         try {
-          await fetch("/tollai/dwell", {
+          const response = await fetch("/tollai/dwell", {
             method: "POST",
             credentials: "include",
           });
-          console.log(`[TollAI] Dwell reported: ${dwellMs}ms`);
+          if (response.ok) {
+            console.log(`[TollAI] Dwell reported: ${dwellMs}ms`);
+          } else if (response.status === 401) {
+            // Session expired/invalid - restart verification
+            console.log("[TollAI] Dwell 401 - session expired, restarting verification");
+            reported = false;
+            setCookie("tollai_session", "", -1);
+            await startTollAIFlow(isOnChallengePage());
+          } else {
+            console.error(`[TollAI] Dwell report failed: ${response.status}`);
+          }
         } catch (e) {
-          console.error("[TollAI] Dwell report failed:", e);
+          console.error("[TollAI] Dwell report error:", e);
         }
       }
     };
