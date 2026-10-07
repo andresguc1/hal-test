@@ -29,6 +29,7 @@ import errorHandler from './middlewares/errorHandler.js';
 import i18n, { middleware as i18nMiddleware } from './config/i18n.js';
 import { authenticated } from './middlewares/auth.middleware.js';
 import { tollaiMiddleware } from './middlewares/tollai.middleware.js';
+import cookieParser from 'cookie-parser';
 
 // Swagger Documentation
 import swaggerUi from 'swagger-ui-express';
@@ -65,6 +66,7 @@ if (process.env.COLLAB_ENABLED !== 'false') {
 // --- 1. SECURITY & CONFIG MIDDLEWARES ---
 app.set('trust proxy', 1);
 app.use(helmetMiddleware);
+app.use(cookieParser());
 app.use(i18nMiddleware.handle(i18n));
 
 const getAllowedOrigins = () => {
