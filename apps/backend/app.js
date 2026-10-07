@@ -28,6 +28,7 @@ import { developmentLogger, productionLogger, createRequestLogger } from './midd
 import errorHandler from './middlewares/errorHandler.js';
 import i18n, { middleware as i18nMiddleware } from './config/i18n.js';
 import { authenticated } from './middlewares/auth.middleware.js';
+import { tollaiMiddleware } from './middlewares/tollai.middleware.js';
 
 // Swagger Documentation
 import swaggerUi from 'swagger-ui-express';
@@ -253,7 +254,7 @@ app.use('/api/safety-gate', safetyGateRouter);
 
 // --- STATIC FILES SERVING (Production) ---
 
-// 1. Serve Frontend App - PUBLIC (no TollAI)
+// 1. Serve Frontend App - PUBLIC (authenticated users bypass TollAI anyway)
 app.use(
     '/app',
     express.static(path.join(PUBLIC_DIR, 'app'), {
@@ -316,33 +317,41 @@ app.get(/\/app($|\/.*)/, (req, res, next) => {
     });
 });
 
-// 2. Serve Landing Page - PUBLIC
-app.use('/', express.static(path.join(PUBLIC_DIR, 'web')));
+// 2. Serve Landing Page - PROTECTED by TollAI
+app.use(
+    '/',
+    tollaiMiddleware({ paths: ['/', '/blog', '/docs'] }),
+    express.static(path.join(PUBLIC_DIR, 'web')),
+);
 
 // Catch-all for SPA/Web using a Regex object for Express 5 compatibility
-app.get(/^((?!\/(api|storage|app|tollai)).)*$/, (req, res, next) => {
-    // Skip if it looks like a static asset file (to avoid serving index.html as CSS/JS)
-    const assetExtensions = [
-        '.js',
-        '.css',
-        '.png',
-        '.jpg',
-        '.jpeg',
-        '.gif',
-        '.svg',
-        '.ico',
-        '.woff',
-        '.woff2',
-        '.webm',
-    ];
-    if (assetExtensions.some((ext) => req.path.toLowerCase().endsWith(ext))) {
-        return res.status(404).end();
-    }
+app.get(
+    /^((?!\/(api|storage|app|tollai)).)*$/,
+    tollaiMiddleware({ paths: ['/', '/blog', '/docs'] }),
+    (req, res, next) => {
+        // Skip if it looks like a static asset file (to avoid serving index.html as CSS/JS)
+        const assetExtensions = [
+            '.js',
+            '.css',
+            '.png',
+            '.jpg',
+            '.jpeg',
+            '.gif',
+            '.svg',
+            '.ico',
+            '.woff',
+            '.woff2',
+            '.webm',
+        ];
+        if (assetExtensions.some((ext) => req.path.toLowerCase().endsWith(ext))) {
+            return res.status(404).end();
+        }
 
-    res.sendFile(path.join(PUBLIC_DIR, 'web', 'index.html'), (err) => {
-        if (err) next();
-    });
-});
+        res.sendFile(path.join(PUBLIC_DIR, 'web', 'index.html'), (err) => {
+            if (err) next();
+        });
+    },
+);
 
 // TollAI Integration Routes
 // Proof-of-Work challenge endpoint
