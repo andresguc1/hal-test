@@ -52,7 +52,8 @@
     let nonce = 0;
     const startTime = Date.now();
     const maxIterations = Math.min(Math.pow(2, difficulty) * 5, 50000000);
-    const hardTimeout = 30000; // 30 second hard timeout
+    // Scale timeout with maxIterations: ~5 minutes for 5M iterations at 15-20K H/s
+    const hardTimeout = Math.max(30000, Math.min(maxIterations / 15000 * 1000, 300000)); // 30s - 5min
 
     console.log(`[TollAI] Starting PoW: difficulty=${difficulty} bits (${zeroHexDigits} hex), maxIterations=${maxIterations.toLocaleString()}, timeout=${hardTimeout}ms`);
 
