@@ -1109,8 +1109,11 @@ export class ExecutionService {
 
         // Build the combined abort signal: the run-level signal OR the wall-clock
         // deadline. This replaces the old single run-level signal and makes the
-        // timeout actually abort the in-flight Playwright operation.
-        const combinedSignal = AbortSignal.any([state.signal, AbortSignal.timeout(wallClockMs)]);
+        // timeout actually abort the in-flight Playwright operation. The run-level
+        // signal is optional (some callers/tests run without one).
+        const combinedSignal = state.signal
+            ? AbortSignal.any([state.signal, AbortSignal.timeout(wallClockMs)])
+            : AbortSignal.timeout(wallClockMs);
 
         // SPECIAL CASE: Composition Containers (Loop, ForEach)
         if (actionType === 'loop') {
