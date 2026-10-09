@@ -109,18 +109,23 @@ export default function SettingsModal({
     );
   };
 
-  const handleProjectUpdate = useCallback(async (updates) => {
-    if (!currentProject) return;
-    try {
-      await api.put(`/projects/${currentProject.id}`, updates);
-    } catch (err) {
-      console.error("Failed to update project:", err);
-      throw err;
-    }
-  }, [currentProject]);
+  const handleProjectUpdate = useCallback(
+    async (updates) => {
+      if (!currentProject) return;
+      try {
+        await api.put(`/projects/${currentProject.id}`, updates);
+      } catch (err) {
+        console.error("Failed to update project:", err);
+        throw err;
+      }
+    },
+    [currentProject],
+  );
 
   const ProjectSettingsPanel = ({ project, onUpdate }) => {
-    const [timeoutMs, setTimeoutMs] = useState(project.defaultActionTimeoutMs ?? "");
+    const [timeoutMs, setTimeoutMs] = useState(
+      project.defaultActionTimeoutMs ?? "",
+    );
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
 

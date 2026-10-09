@@ -2010,14 +2010,14 @@ export const validateNodeConfig = (nodeType, config = {}) => {
       if (capability.min !== null && value < capability.min) {
         return {
           isValid: false,
-          missingField: `${capability.labelKey || 'Timeout'} must be at least ${capability.min}`,
+          missingField: `${capability.labelKey || "Timeout"} must be at least ${capability.min}`,
           fieldKey: "timeout",
         };
       }
       if (capability.max !== null && value > capability.max) {
         return {
           isValid: false,
-          missingField: `${capability.labelKey || 'Timeout'} must be at most ${capability.max}`,
+          missingField: `${capability.labelKey || "Timeout"} must be at most ${capability.max}`,
           fieldKey: "timeout",
         };
       }

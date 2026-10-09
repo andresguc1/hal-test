@@ -211,7 +211,11 @@ export function runPolicyEnforcer(nodes, edges) {
           // consumer ever applies it. Flagged separately, because "this value
           // is doing nothing" and "this value is too rigid" need different
           // fixes and a user cannot tell them apart from the message alone.
-          if (isNumeric && field === "timeout" && !canConfigureTimeout(nodeType)) {
+          if (
+            isNumeric &&
+            field === "timeout" &&
+            !canConfigureTimeout(nodeType)
+          ) {
             nodeWarnings.push({
               rule: "ignored_timeout",
               severity: "warning",

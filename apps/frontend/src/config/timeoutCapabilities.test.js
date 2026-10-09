@@ -43,10 +43,9 @@ describe("timeoutCapabilities registry", () => {
       "go_forward",
       "reload_page",
     ]) {
-      expect(
-        getTimeoutCapability(nodeType).semantic,
-        nodeType,
-      ).toBe(TIMEOUT_SEMANTIC.NAVIGATION);
+      expect(getTimeoutCapability(nodeType).semantic, nodeType).toBe(
+        TIMEOUT_SEMANTIC.NAVIGATION,
+      );
     }
   });
 
@@ -62,13 +61,23 @@ describe("timeoutCapabilities registry", () => {
 
   it("gives every semantic a min no greater than its default", () => {
     for (const nodeType of timeoutCapableNodeTypes()) {
-      const { semantic, min, default: fallback, max } =
-        getTimeoutCapability(nodeType);
+      const {
+        semantic,
+        min,
+        default: fallback,
+        max,
+      } = getTimeoutCapability(nodeType);
       expect(min, `${nodeType}/${semantic} min`).not.toBeNull();
       if (fallback !== null) {
-        expect(fallback, `${nodeType}/${semantic} default >= min`).toBeGreaterThanOrEqual(min);
+        expect(
+          fallback,
+          `${nodeType}/${semantic} default >= min`,
+        ).toBeGreaterThanOrEqual(min);
         if (max !== null) {
-          expect(fallback, `${nodeType}/${semantic} default <= max`).toBeLessThanOrEqual(max);
+          expect(
+            fallback,
+            `${nodeType}/${semantic} default <= max`,
+          ).toBeLessThanOrEqual(max);
         }
       }
     }
@@ -84,7 +93,9 @@ describe("timeoutCapabilities registry", () => {
     for (const nodeType of timeoutCapableNodeTypes()) {
       const { guardrail, max } = getTimeoutCapability(nodeType);
       if (guardrail === null || max === null) continue;
-      expect(guardrail, `${nodeType} guardrail <= max`).toBeLessThanOrEqual(max);
+      expect(guardrail, `${nodeType} guardrail <= max`).toBeLessThanOrEqual(
+        max,
+      );
     }
   });
 
@@ -136,7 +147,9 @@ describe("NODE_INPUTS timeout injection", () => {
   it("gives the timeout field to every capable node type", () => {
     for (const nodeType of timeoutCapableNodeTypes()) {
       const inputs = NODE_INPUTS[nodeType];
-      expect(Array.isArray(inputs), `${nodeType} needs an inputs array`).toBe(true);
+      expect(Array.isArray(inputs), `${nodeType} needs an inputs array`).toBe(
+        true,
+      );
       const matches = inputs.filter((f) => f.key === "timeout");
       expect(matches.length, `${nodeType} timeout declared once`).toBe(1);
     }
@@ -162,7 +175,9 @@ describe("NODE_INPUTS timeout injection", () => {
     // wait_network is a real, creatable node type with no schema entry, so it
     // used to fall through to `default` and lose every value but `selector`.
     expect(canConfigureTimeout("wait_network")).toBe(true);
-    expect(NODE_INPUTS.wait_network.some((f) => f.key === "timeout")).toBe(true);
+    expect(NODE_INPUTS.wait_network.some((f) => f.key === "timeout")).toBe(
+      true,
+    );
   });
 
   it("keeps set_checkbox's timeout behind advanced, as it already was", () => {
@@ -245,7 +260,9 @@ describe("cleanNodeConfiguration preserves a configured timeout", () => {
   it.each(["sticky_note", "db_query", "conditional", "no_such_node"])(
     "still strips it on %s",
     (nodeType) => {
-      expect(cleanNodeConfiguration(config, nodeType)).not.toHaveProperty("timeout");
+      expect(cleanNodeConfiguration(config, nodeType)).not.toHaveProperty(
+        "timeout",
+      );
     },
   );
 
@@ -257,7 +274,9 @@ describe("cleanNodeConfiguration preserves a configured timeout", () => {
   });
 
   it("keeps an empty timeout, so clearing the field is not a silent revert", () => {
-    expect(cleanNodeConfiguration({ timeout: "" }, "click")).toHaveProperty("timeout");
+    expect(cleanNodeConfiguration({ timeout: "" }, "click")).toHaveProperty(
+      "timeout",
+    );
   });
 
   it("keeps a value above the old 30s ceiling intact", () => {

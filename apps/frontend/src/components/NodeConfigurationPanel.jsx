@@ -1175,22 +1175,29 @@ const NodeConfigurationPanel = ({
           </div>
         );
       case "number": {
-        const timeoutSource = field.key === "timeout" && field.source
-            ? field.source
-            : null;
+        const timeoutSource =
+          field.key === "timeout" && field.source ? field.source : null;
         return (
           <div key={reactKey} className="space-y-1.5">
             <div className="flex items-center justify-between">
               <label className="text-[10px] uppercase tracking-wider font-semibold text-slate-500">
                 {field.labelKey ? t(field.labelKey) : fieldLabel}{" "}
-                {field.required && <span className="text-rose-500 ml-1">*</span>}
+                {field.required && (
+                  <span className="text-rose-500 ml-1">*</span>
+                )}
               </label>
               {timeoutSource && (
                 <span
                   className="text-[9px] px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400 font-medium"
-                  title={t("settings.project.timeoutSource." + timeoutSource, timeoutSource)}
+                  title={t(
+                    "settings.project.timeoutSource." + timeoutSource,
+                    timeoutSource,
+                  )}
                 >
-                  {t("settings.project.timeoutSource." + timeoutSource, timeoutSource)}
+                  {t(
+                    "settings.project.timeoutSource." + timeoutSource,
+                    timeoutSource,
+                  )}
                 </span>
               )}
             </div>
