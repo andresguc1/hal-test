@@ -8,6 +8,11 @@ export default defineConfig({
         globals: true,
         include: ['__tests__/**/*.test.js'],
         exclude: ['node_modules', 'dist', 'tests/**/*', '__tests__/e2e/**'],
+        // The suite boots heavy modules via dynamic import(); under a loaded
+        // machine (e.g. turbo running packages in parallel) the default 5s is
+        // too tight and causes spurious timeouts.
+        testTimeout: 30000,
+        hookTimeout: 30000,
         setupFiles: ['./vitest.setup.js'],
         globalSetup: ['./vitest.global-setup.js'],
     },
