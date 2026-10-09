@@ -9,6 +9,7 @@
         "start": "node app.js",
         "stop": "fuser -k 2001/tcp || true",
         "test": "vitest run",
+        "test:e2e": "vitest run --config vitest.e2e.config.js",
         "lint": "eslint .",
         "lint:fix": "eslint . --fix",
         "format": "prettier --write \"**/*.js\" \"!node_modules/**\"",
