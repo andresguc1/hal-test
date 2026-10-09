@@ -29,6 +29,7 @@ import i18n, { middleware as i18nMiddleware } from './config/i18n.js';
 import { authenticated } from './middlewares/auth.middleware.js';
 import cookieParser from 'cookie-parser';
 import { createToll } from 'tollai';
+import { CLIENT_SOURCE } from 'tollai/client';
 import { tollaiMiddleware as tollaiExpressMiddleware } from 'tollai/express';
 
 // Swagger Documentation
@@ -77,6 +78,7 @@ const toll = createToll({
     mode: 'api',
     protect: ['/', '/blog/**', '/docs/**'],
     exclude: ['/api/**', '/storage/**', '/app/**'],
+    clientSource: CLIENT_SOURCE,
     secret: process.env.TOLLAI_SECRET,
     powDifficulty: Number(process.env.TOLLAI_POW_DIFFICULTY) || 12,
     powTTL: 30000,
