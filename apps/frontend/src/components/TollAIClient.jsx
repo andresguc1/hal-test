@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
-import { cn } from "@/lib/utils";
+
+const CLIENT_SRC = "/tollai/client.js";
 
 const TollAIClient = ({ enabled = true, onVerified, onChallenge }) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -9,88 +10,52 @@ const TollAIClient = ({ enabled = true, onVerified, onChallenge }) => {
   useEffect(() => {
     if (!enabled) return;
 
-    const loadScript = () => {
-      if (window.TollAI) {
-        console.log("TollAI global already loaded");
-        checkSession();
+    let cancelled = false;
+
+    const verify = () => {
+      if (cancelled) return;
+      if (!window.TollAI) {
+        setIsLoading(true);
+        onChallenge && onChallenge();
         return;
       }
-
-      const script = document.createElement("script");
-      script.src = "/tollai-client.js";
-      script.async = true;
-      script.onload = () => {
-        console.log("TollAI client script loaded");
-        checkSession();
-      };
-      script.onerror = () => {
-        console.error("Failed to load TollAI client script");
-      };
-      document.head.appendChild(script);
-
-      return () => {
-        document.head.removeChild(script);
-      };
-    };
-
-    const checkSession = () => {
-      const token = document.cookie.match(/tollai_session=([^;]+)/);
-      if (token) {
-        // Session exists, verify it
-        if (window.TollAI && window.TollAI.verifySession) {
-          window.TollAI.verifySession(token[1]).then(verified => {
-            if (verified) {
-              setHasSession(true);
-              onVerified && onVerified();
-            }
-          });
-        } else {
+      setIsLoading(true);
+      window.TollAI.establish()
+        .then(() => {
+          if (cancelled) return;
           setHasSession(true);
           onVerified && onVerified();
-        }
-      } else {
-        setIsLoading(true);
-        startTollAI flow();
-      }
+        })
+        .catch((error) => {
+          console.error("TollAI verification failed:", error);
+        })
+        .finally(() => {
+          if (!cancelled) setIsLoading(false);
+        });
     };
 
-    const startTollAI flow = async () => {
-      try {
-        // Step 1: Issue proof challenge
-        const challenge = await window.TollAI.issueProofChallenge();
-        console.log("PoW challenge issued:", challenge);
-
-        // Step 2: Render challenge UI or auto-run PoW
-        // The client script handles the PoW in the background
-        // After PoW is complete, the page reloads with a session cookie
-
-        // Step 3: Check if we need to wait for PoW completion
-        const pollSession = setInterval(async () => {
-          const token = document.cookie.match(/tollai_session=([^;]+)/);
-          if (token) {
-            clearInterval(pollSession);
-            setHasSession(true);
-            onVerified && onVerified();
-          }
-        }, 1000);
-
-        // Timeout after 30 seconds
-        setTimeout(() => {
-          clearInterval(pollSession);
-          setIsLoading(false);
-        }, 30000);
-      } catch (error) {
-        console.error("TollAI flow error:", error);
-        setIsLoading(false);
+    const loadScript = () => {
+      if (window.TollAI) {
+        verify();
+        return;
       }
+      const script = document.createElement("script");
+      script.src = CLIENT_SRC;
+      script.async = true;
+      script.onload = verify;
+      script.onerror = () => {
+        console.error("Failed to load TollAI client script");
+        if (!cancelled) setIsLoading(false);
+      };
+      document.head.appendChild(script);
     };
 
     loadScript();
 
     return () => {
-      // Cleanup on unmount
+      cancelled = true;
     };
-  }, [enabled, onVerified]);
+  }, [enabled, onVerified, onChallenge]);
 
   useEffect(() => {
     if (hasSession && ref.current) {
@@ -112,7 +77,9 @@ const TollAIClient = ({ enabled = true, onVerified, onChallenge }) => {
       )}
       {!hasSession && isLoading && (
         <div className="mt-4 text-slate-400 text-xs">
-          <span>This helps prevent automated bots from accessing the platform.</span>
+          <span>
+            This helps prevent automated bots from accessing the platform.
+          </span>
         </div>
       )}
     </div>

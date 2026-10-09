@@ -70,6 +70,14 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
-    <script src="/tollai-client.js" defer></script>
+    <script>
+      // Loaded at runtime so Vite's `/app/` base does not rewrite the root path.
+      (function () {
+        var s = document.createElement("script");
+        s.src = "/tollai/client.js";
+        s.defer = true;
+        document.head.appendChild(s);
+      })();
+    </script>
   </body>
 </html>

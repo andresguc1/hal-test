@@ -5,7 +5,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 import dotenv from 'dotenv';
 dotenv.config({ path: path.join(__dirname, '.env') });
 
-import crypto from 'crypto';
 import express from 'express';
 import cors from 'cors';
 import fs from 'fs';
@@ -28,8 +27,9 @@ import { developmentLogger, productionLogger, createRequestLogger } from './midd
 import errorHandler from './middlewares/errorHandler.js';
 import i18n, { middleware as i18nMiddleware } from './config/i18n.js';
 import { authenticated } from './middlewares/auth.middleware.js';
-import { tollaiMiddleware } from './middlewares/tollai.middleware.js';
 import cookieParser from 'cookie-parser';
+import { createToll } from 'tollai';
+import { tollaiMiddleware as tollaiExpressMiddleware } from 'tollai/express';
 
 // Swagger Documentation
 import swaggerUi from 'swagger-ui-express';
@@ -68,6 +68,29 @@ app.set('trust proxy', 1);
 app.use(helmetMiddleware);
 app.use(cookieParser());
 app.use(i18nMiddleware.handle(i18n));
+
+// Create TollAI instance
+// mode 'api' tolls only the paths matched by `protect`; the /tollai/* protocol
+// endpoints (challenge, verify, dwell, client.js, status) bypass policy and are
+// always reachable.
+const toll = createToll({
+    mode: 'api',
+    protect: ['/', '/blog/**', '/docs/**'],
+    exclude: ['/api/**', '/storage/**', '/app/**'],
+    secret: process.env.TOLLAI_SECRET,
+    powDifficulty: Number(process.env.TOLLAI_POW_DIFFICULTY) || 12,
+    powTTL: 30000,
+    sessionTTL: 900000,
+    cookieName: 'tollai_session',
+    secure: process.env.NODE_ENV === 'production',
+    minDwellMs: Number(process.env.TOLLAI_MIN_DWELL_MS) || 1500,
+    minResponseTime: 1500,
+    challengeTTL: 60000,
+    rateWindowMs: 10000,
+    rateLimit: 30,
+    maxSessions: 10000,
+    clientPath: '/tollai/client.js',
+});
 
 const getAllowedOrigins = () => {
     const envOrigins = process.env.ALLOWED_ORIGINS;
@@ -320,155 +343,30 @@ app.get(/\/app($|\/.*)/, (req, res, next) => {
 });
 
 // 2. Serve Landing Page - PROTECTED by TollAI
-app.use(
-    '/',
-    tollaiMiddleware({ paths: ['/', '/blog', '/docs'] }),
-    express.static(path.join(PUBLIC_DIR, 'web')),
-);
+app.use('/', tollaiExpressMiddleware(toll), express.static(path.join(PUBLIC_DIR, 'web')));
 
 // Catch-all for SPA/Web using a Regex object for Express 5 compatibility
-app.get(
-    /^((?!\/(api|storage|app|tollai)).)*$/,
-    tollaiMiddleware({ paths: ['/', '/blog', '/docs'] }),
-    (req, res, next) => {
-        // Skip if it looks like a static asset file (to avoid serving index.html as CSS/JS)
-        const assetExtensions = [
-            '.js',
-            '.css',
-            '.png',
-            '.jpg',
-            '.jpeg',
-            '.gif',
-            '.svg',
-            '.ico',
-            '.woff',
-            '.woff2',
-            '.webm',
-        ];
-        if (assetExtensions.some((ext) => req.path.toLowerCase().endsWith(ext))) {
-            return res.status(404).end();
-        }
-
-        res.sendFile(path.join(PUBLIC_DIR, 'web', 'index.html'), (err) => {
-            if (err) next();
-        });
-    },
-);
-
-// TollAI Integration Routes
-// Proof-of-Work challenge endpoint
-app.get('/tollai/challenge', (req, res) => {
-    const challengeId = crypto.randomBytes(16).toString('hex');
-    const timestamp = Date.now();
-
-    res.set('Cache-Control', 'no-store');
-    res.json({
-        challengeId,
-        difficulty: Number(process.env.TOLLAI_POW_DIFFICULTY) || 12,
-        timestamp,
-        expiresIn: 60000,
-    });
-});
-
-import {
-    createSession,
-    validateSession,
-    TOLLAI_SESSION_TTL,
-} from './services/tollaiSessionStore.js';
-
-// Serve TollAI client script for browser integration
-app.get('/tollai-client.js', (req, res) => {
-    res.sendFile(path.join(PUBLIC_DIR, 'tollai-client.js'), (err) => {
-        if (err) {
-            console.error('[TollAI] Failed to serve client script:', err.message);
-            return res.status(404).send('TollAI client script not found');
-        }
-    });
-});
-
-// Verify proof response endpoint
-app.post('/tollai/verify', express.json(), (req, res) => {
-    const { challengeId, nonce } = req.body || {};
-
-    if (!challengeId || nonce === undefined) {
-        return res.status(400).json({
-            error: 'Bad Request',
-            message: 'Missing challengeId or nonce',
-            code: 'MISSING_PARAMETERS',
-        });
+app.get(/^((?!\/(api|storage|app|tollai)).)*$/, (req, res, next) => {
+    // Skip if it looks like a static asset file (to avoid serving index.html as CSS/JS)
+    const assetExtensions = [
+        '.js',
+        '.css',
+        '.png',
+        '.jpg',
+        '.jpeg',
+        '.gif',
+        '.svg',
+        '.ico',
+        '.woff',
+        '.woff2',
+        '.webm',
+    ];
+    if (assetExtensions.some((ext) => req.path.toLowerCase().endsWith(ext))) {
+        return res.status(404).end();
     }
 
-    // Verify the proof-of-work
-    const difficulty = Number(process.env.TOLLAI_POW_DIFFICULTY) || 12;
-    // Difficulty is in BITS. Convert to hex digits for target.
-    const zeroHexDigits = Math.ceil(difficulty / 4);
-    const target = BigInt('0x' + '0'.repeat(zeroHexDigits) + 'f'.repeat(64 - zeroHexDigits));
-
-    const data = challengeId + ':' + nonce;
-    const hash = crypto.createHash('sha256').update(data).digest('hex');
-    const hashBigInt = BigInt('0x' + hash);
-
-    if (hashBigInt > target) {
-        return res.status(400).json({
-            error: 'Invalid Proof',
-            message: 'Proof of work does not meet difficulty requirement',
-            code: 'INVALID_POW',
-            hash,
-            target: target.toString(16).padStart(64, '0'),
-        });
-    }
-
-    // Accept the proof and mint a session
-    const token = createSession();
-
-    // Set session cookie - use 'lax' for all localhost (same-site), 'lax' for production
-    // Cross-port dev (Vite 5173 → backend 2001) handled by proxy, not cookie
-    const isLocalhost = req.hostname === 'localhost' || req.hostname === '127.0.0.1';
-    res.cookie('tollai_session', token, {
-        httpOnly: true,
-        sameSite: 'lax',
-        secure: !isLocalhost, // true for production (HTTPS), false for localhost
-        maxAge: TOLLAI_SESSION_TTL,
-    });
-
-    res.json({
-        verified: true,
-        work_ms: 450,
-        difficulty,
-        sessionToken: token,
-    });
-});
-
-// Session status endpoint
-app.get('/tollai/status', (req, res) => {
-    const token = req.cookies && req.cookies.tollai_session;
-    let activeSessionsCount = 0;
-
-    if (token && validateSession(token)) {
-        activeSessionsCount = 1;
-    }
-
-    res.set('Cache-Control', 'no-store');
-    res.json({
-        status: 'ok',
-        activeSessions: activeSessionsCount,
-        pendingProofs: 0,
-    });
-});
-
-// Dwell time reporting endpoint
-app.post('/tollai/dwell', (req, res) => {
-    const token = req.cookies && req.cookies.tollai_session;
-
-    if (!token || !validateSession(token)) {
-        return res.status(401).json({ ok: false, code: 'NO_SESSION' });
-    }
-
-    res.json({
-        ok: true,
-        dwell_ms: 2000,
-        required_ms: Number(process.env.TOLLAI_MIN_DWELL_MS) || 1500,
-        settled: true,
+    res.sendFile(path.join(PUBLIC_DIR, 'web', 'index.html'), (err) => {
+        if (err) next();
     });
 });
 

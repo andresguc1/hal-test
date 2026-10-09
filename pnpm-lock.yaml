@@ -135,6 +135,9 @@ importers:
       swagger-ui-express:
         specifier: ^5.0.1
         version: 5.0.1(express@4.22.1)
+      tollai:
+        specifier: 2.0.0
+        version: 2.0.0
       ws:
         specifier: ^8.21.1
         version: 8.21.1
@@ -7351,6 +7354,10 @@ packages:
   tollai@1.0.0:
     resolution: {integrity: sha512-M7jpIUzrAG8q9zh06oA4RDTnV+qaBGXmyr6cPZGRmgb1+SLz1egVtaiA7lM/1oWbGTgbEBO6e09HoqE2Vz4BAA==}
     engines: {node: '>=14.0.0'}
+
+  tollai@2.0.0:
+    resolution: {integrity: sha512-HxwAhe7wmURpjKBiyG4hKKCB4HkEjeRXqWwheV0NCw6waFFQ1cwnh1dc71pPkqJ1iXCmwXHJjno5+Yma5Hl3GQ==}
+    engines: {node: '>=20.19'}
 
   toposort-class@1.0.1:
     resolution: {integrity: sha512-OsLcGGbYF3rMjPUf8oKktyvCiUxSbqMMS39m33MAjLTC1DVIH6x3WSt63/M77ihI09+Sdfk1AXvfhCEeUmC7mg==}
@@ -16175,6 +16182,8 @@ snapshots:
       ieee754: 1.2.1
 
   tollai@1.0.0: {}
+
+  tollai@2.0.0: {}
 
   toposort-class@1.0.1: {}
 

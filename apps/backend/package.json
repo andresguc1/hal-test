@@ -68,6 +68,7 @@
         "sqlite3": "^5.1.7",
         "swagger-jsdoc": "^6.2.8",
         "swagger-ui-express": "^5.0.1",
+        "tollai": "2.0.0",
         "ws": "^8.21.1",
         "y-leveldb": "^0.2.0",
         "y-protocols": "^1.0.7",
