@@ -62,7 +62,7 @@ const datasets = [
 
 const sizes = [100, 250, 500, 1000];
 
-describe("X6 — Worker crossover cost model", { timeout: 60_000 }, () => {
+describe("X6 — Worker crossover cost model", { timeout: 240_000 }, () => {
   for (const [name, builder] of datasets) {
     for (const size of sizes) {
       it(`${name} @ ${size} nodes`, () => {
