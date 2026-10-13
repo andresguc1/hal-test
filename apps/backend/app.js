@@ -344,11 +344,82 @@ app.get(/\/app($|\/.*)/, (req, res, next) => {
     });
 });
 
-// 2. Serve Landing Page - PROTECTED by TollAI
-app.use('/', tollaiExpressMiddleware(toll), express.static(path.join(PUBLIC_DIR, 'web')));
+// 2. Serve Landing Page - PROTECTED by TollAI (INVISIBLE on /, standard on /blog, /docs)
+const tollaiProtected = tollaiExpressMiddleware(toll);
 
-// Catch-all for SPA/Web using a Regex object for Express 5 compatibility
-app.get(/^((?!\/(api|storage|app|tollai)).)*$/, (req, res, next) => {
+// Protocol endpoints (/tollai/*) must be handled by tollai middleware globally
+app.use('/tollai', tollaiProtected);
+
+// Invisible TollAI protection for root "/" — no UI, no shell
+async function invisibleTollaiProtection(req, res, next) {
+    const cookieHeader = req.headers.cookie || '';
+    const hasSession = cookieHeader.split('; ').some((c) => c.startsWith('tollai_session='));
+
+    if (hasSession) {
+        return next(); // Already verified, serve landing page
+    }
+
+    // No session: serve invisible HTML that does PoW silently via tollai protocol
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-store');
+    return res.send(`<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Haltest</title>
+<style>body{margin:0;min-height:100vh;background:#0d1117}</style></head>
+<body>
+<div id="root"></div>
+<script>
+(function(){'use strict';
+var SESSION_COOKIE='tollai_session';
+function rotr(x,n){return((x>>>n)|(x<<(32-n)))>>>0;}
+function sha256(str){var TWO32=4294967296,pow=Math.pow;var K=new Uint32Array(64),H=new Uint32Array(8),comp={},pc=0,cand,i;
+for(cand=2;pc<64;cand++){if(!comp[cand]){for(i=0;i<313;i+=cand)comp[i]=cand;H[pc]=(pow(cand,.5)*TWO32)|0;K[pc++]=(pow(cand,1/3)*TWO32)|0;}}
+var bytes=[],c;for(i=0;i<str.length;i++){c=str.charCodeAt(i);if(c>255)return null;bytes.push(c);}
+var bitLen=bytes.length*8;bytes.push(0x80);while(bytes.length%64!==56)bytes.push(0);
+bytes.push(0,0,0,0,(bitLen>>>24)&0xff,(bitLen>>>16)&0xff,(bitLen>>>8)&0xff,bitLen&0xff);
+var w=new Uint32Array(64),t,off,p,s0,s1;
+for(off=0;off<bytes.length;off+=64){for(t=0;t<16;t++){p=off+4*t;w[t]=((bytes[p]<<24)|(bytes[p+1]<<16)|(bytes[p+2]<<8)|bytes[p+3])>>>0;}
+for(t=16;t<64;t++){s0=rotr(w[t-15],7)^rotr(w[t-15],18)^(w[t-15]>>>3);s1=rotr(w[t-2],17)^rotr(w[t-2],19)^(w[t-2]>>>10);w[t]=(w[t-16]+s0+w[t-7]+s1)>>>0;}
+var a=H[0],b=H[1],cc=H[2],d=H[3],e=H[4],f=H[5],g=H[6],h=H[7];var S1,ch,t1,S0,maj,t2;
+for(t=0;t<64;t++){S1=rotr(e,6)^rotr(e,11)^rotr(e,25);ch=((e&f)^(~e&g))>>>0;t1=(h+S1+ch+K[t]+w[t])>>>0;
+S0=rotr(a,2)^rotr(a,13)^rotr(a,22);maj=((a&b)^(a&cc)^(b&cc))>>>0;t2=(S0+maj)>>>0;
+h=g;g=f;f=e;e=(d+t1)>>>0;d=cc;cc=b;b=a;a=(t1+t2)>>>0;}
+H[0]=(H[0]+a)>>>0;H[1]=(H[1]+b)>>>0;H[2]=(H[2]+cc)>>>0;H[3]=(H[3]+d)>>>0;
+H[4]=(H[4]+e)>>>0;H[5]=(H[5]+f)>>>0;H[6]=(H[6]+g)>>>0;H[7]=(H[7]+h)>>>0;}
+var out='';for(i=0;i<8;i++)out+=H[i].toString(16).padStart(8,'0');return out;}
+function leadingZeroBits(hex){var bits=0;for(var i=0;i<hex.length&&bits<64;i++){var nib=parseInt(hex[i],16);if(nib===0){bits+=4;continue;}bits+=Math.clz32(nib)-28;break;}return bits;}
+function solvePow(challenge,difficulty){for(var nonce=0;nonce<4e9;nonce++){if((nonce&0x3fff)===0){}var d=sha256(challenge+':'+nonce);if(d&&leadingZeroBits(d)>=difficulty)return nonce;}return null;}
+function postJSON(url,body){return fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify(body)}).then(function(r){return r.json();});}
+function establish(){return fetch('/tollai/challenge').then(function(r){return r.json();}).then(function(ch){if(!ch.challenge)throw new Error('no challenge');var nonce=solvePow(ch.challenge,ch.difficulty);if(nonce===null)throw new Error('pow exhausted');return postJSON('/tollai/verify',{challenge:ch.challenge,nonce:String(nonce),difficulty:ch.difficulty}).then(function(res){if(!res.verified)throw new Error(res.code||'verify failed');});}).catch(function(){throw new Error('tollai failed');});}
+function hasSession(){return document.cookie.split('; ').some(function(c){return c.startsWith(SESSION_COOKIE+'=');});}
+establish().then(function(){location.reload();}).catch(function(){location.reload();});
+})();
+</script>
+</body></html>`);
+}
+
+// Protect root "/" with INVISIBLE TollAI
+app.get(
+    '/',
+    invisibleTollaiProtection,
+    express.static(path.join(PUBLIC_DIR, 'web')),
+    (req, res, next) => {
+        res.sendFile(path.join(PUBLIC_DIR, 'web', 'index.html'), (err) => {
+            if (err) next();
+        });
+    },
+);
+
+// Protect /blog/** and /docs/** with STANDARD TollAI (visible shell)
+app.use('/blog', tollaiProtected, express.static(path.join(PUBLIC_DIR, 'web')));
+app.use('/docs', tollaiProtected, express.static(path.join(PUBLIC_DIR, 'web')));
+
+// Landing page static assets (unprotected)
+app.use(express.static(path.join(PUBLIC_DIR, 'web')));
+
+// Catch-all for SPA/Web (unprotected routes) - Regex for Express 5 compatibility
+app.get(/^((?!\/(api|storage|app|tollai|blog|docs)).)*$/, (req, res, next) => {
     // Skip if it looks like a static asset file (to avoid serving index.html as CSS/JS)
     const assetExtensions = [
         '.js',
