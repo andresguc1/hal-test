@@ -179,11 +179,14 @@ class BrowserManager {
         // --- Idle Garbage Collector ---
         // Sweeps frequently to close sessions idle for > 2 minutes.
         // unref() so the timer never keeps the Node process alive on its own.
-        this._orphanScanAt = 0;
+        this._orphanScanAt = Date.now(); // don't scan right at the 2-minute mark
         this.idleInterval = setInterval(() => {
             this._idleSweep(Date.now()).catch(() => {});
         }, 30 * 1000); // 30 seconds sweep (faster)
         this.idleInterval.unref();
+
+        // --- IN-FLIGHT LAUNCHES (orphan-reaper guard) ---
+        this._launching = new Set();
     }
 
     /**
@@ -450,18 +453,23 @@ class BrowserManager {
         let browser;
         let launchMethod = 'launch';
 
-        if (browserType === 'lightpanda') {
-            const endpoint = process.env.LIGHTPANDA_ENDPOINT || 'ws://127.0.0.1:9222';
-            console.log(`[BrowserService] Connecting to Lightpanda via CDP at ${endpoint}`);
-            // Lightpanda uses the Chromium protocol
-            browser = await chromium.connectOverCDP({
-                endpointURL: endpoint,
-                ...(slowMo && { slowMo }),
-                ...(timeout && { timeout }),
-            });
-            launchMethod = 'connectOverCDP';
-        } else {
-            browser = await browserEngine.launch(launchOptions);
+        this._launching.add(browserId);
+        try {
+            if (browserType === 'lightpanda') {
+                const endpoint = process.env.LIGHTPANDA_ENDPOINT || 'ws://127.0.0.1:9222';
+                console.log(`[BrowserService] Connecting to Lightpanda via CDP at ${endpoint}`);
+                // Lightpanda uses the Chromium protocol
+                browser = await chromium.connectOverCDP({
+                    endpointURL: endpoint,
+                    ...(slowMo && { slowMo }),
+                    ...(timeout && { timeout }),
+                });
+                launchMethod = 'connectOverCDP';
+            } else {
+                browser = await browserEngine.launch(launchOptions);
+            }
+        } finally {
+            this._launching.delete(browserId);
         }
 
         // --- SESSION PROFILE FINGERPRINT (Fase 1) ---
@@ -767,6 +775,7 @@ class BrowserManager {
         let killed = 0;
         for (const { pid, sessionId } of sealed) {
             if (this.browsers.has(sessionId)) continue; // still owned — ignore
+            if (this._launching.has(sessionId)) continue; // in-flight launch — skip
             try {
                 process.kill(pid, 'SIGTERM');
                 console.log(
