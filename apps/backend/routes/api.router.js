@@ -5,6 +5,9 @@
 
 import { Router } from 'express';
 import validate from '../middlewares/validator.js';
+import * as path from 'path';
+import * as fsp from 'fs/promises';
+import { STORAGE_DIR, STORAGE_RUNS_DIR } from '../config/paths.js';
 
 // Unified schema import
 import * as schemas from '../schemas/index.js';
@@ -483,6 +486,192 @@ router.post('/planner/generate', (req, res) => {
         });
     } catch (err) {
         return res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// ==========================================================
+// VECTOR CACHE SETTINGS
+// ==========================================================
+
+/**
+ * GET /api/settings/vector-cache
+ * Get current vector cache configuration.
+ */
+router.get('/settings/vector-cache', async (req, res) => {
+    try {
+        const { vectorCacheConfig } = await import('../config/vectorCache.js');
+        return res.json({
+            success: true,
+            data: vectorCacheConfig,
+        });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * PUT /api/settings/vector-cache
+ * Update vector cache configuration.
+ */
+router.put('/settings/vector-cache', async (req, res) => {
+    try {
+        const { vectorCacheConfig } = await import('../config/vectorCache.js');
+        const { vectorCacheService } = await import('../services/vector-cache/index.js');
+
+        // Update config (in-memory, also persisted via frontend localStorage)
+        Object.keys(req.body).forEach((key) => {
+            if (key in vectorCacheConfig && key !== 'embeddingModel' && key !== 'vectorDimension') {
+                vectorCacheConfig[key] = req.body[key];
+            }
+        });
+
+        // If enabled changed, reinitialize vector cache service
+        if (req.body.enabled !== undefined && vectorCacheConfig.enabled) {
+            await vectorCacheService.init();
+        }
+
+        return res.json({
+            success: true,
+            data: vectorCacheConfig,
+            message: 'Vector cache settings updated',
+        });
+    } catch (error) {
+        console.error('[VectorCacheSettings] Update error:', error);
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * GET /api/settings/vector-cache/stats
+ * Get vector cache statistics.
+ */
+router.get('/settings/vector-cache/stats', async (req, res) => {
+    try {
+        const { vectorCacheService } = await import('../services/vector-cache/index.js');
+        const stats = await vectorCacheService.getStats();
+        return res.json({ success: true, data: stats });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ==========================================================
+// VECTOR CACHE SEARCH (Command Palette)
+// ==========================================================
+
+/**
+ * POST /api/vector-cache/search-nodes
+ * Semantic search for flow nodes using vector similarity.
+ * Body: { query: string, flowId: string, k?: number }
+ */
+router.post('/vector-cache/search-nodes', async (req, res) => {
+    try {
+        const { query, flowId, k = 10 } = req.body;
+        if (!query || !flowId) {
+            return res.status(400).json({ success: false, error: 'query and flowId are required' });
+        }
+        const { vectorCacheService } = await import('../services/vector-cache/index.js');
+        const results = await vectorCacheService.searchFlowNodes(query, flowId, k);
+        return res.json({ success: true, data: results });
+    } catch (error) {
+        console.error('[VectorCacheSearch] Search error:', error);
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ==========================================================
+// TRACE DIFF (Trace Comparison)
+// ==========================================================
+
+/**
+ * POST /api/trace-diff
+ * Compare two Playwright traces (.zip files) and return differences.
+ * Body: { tracePathA: string, tracePathB: string }
+ * tracePath is relative to STORAGE_DIR (e.g. "storage/runs/<runId>/traces/trace-....zip").
+ * Legacy "runs/<runId>/traces/..." paths are also accepted.
+ */
+router.post('/trace-diff', async (req, res) => {
+    try {
+        const { tracePathA, tracePathB } = req.body;
+        if (!tracePathA || !tracePathB) {
+            return res
+                .status(400)
+                .json({ success: false, error: 'tracePathA and tracePathB are required' });
+        }
+
+        const resolveTrace = (p) => {
+            const cleaned = String(p).replace(/^\/+/, '');
+            const base = cleaned.startsWith('storage/')
+                ? STORAGE_DIR
+                : cleaned.startsWith('runs/')
+                  ? STORAGE_RUNS_DIR
+                  : STORAGE_DIR;
+            const resolved = path.resolve(base, cleaned.replace(/^storage\//, ''));
+            // Prevent path traversal outside the storage root
+            if (!resolved.startsWith(path.resolve(STORAGE_DIR))) return null;
+            return resolved;
+        };
+
+        const fullPathA = resolveTrace(tracePathA);
+        const fullPathB = resolveTrace(tracePathB);
+        if (!fullPathA || !fullPathB) {
+            return res.status(400).json({ success: false, error: 'Invalid trace path' });
+        }
+
+        // Check files exist
+        try {
+            await fsp.access(fullPathA);
+            await fsp.access(fullPathB);
+        } catch {
+            return res
+                .status(404)
+                .json({ success: false, error: 'One or both trace files not found' });
+        }
+
+        const { traceDiffService } = await import('../services/trace-diff/index.js');
+        const diff = await traceDiffService.diffTraces(fullPathA, fullPathB);
+
+        return res.json({ success: true, data: diff });
+    } catch (error) {
+        console.error('[TraceDiff] Diff error:', error);
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * GET /api/trace-diff/runs/:runId/traces
+ * List available trace files for a run.
+ */
+router.get('/trace-diff/runs/:runId/traces', async (req, res) => {
+    try {
+        const { runId } = req.params;
+        const tracesDir = path.join(STORAGE_RUNS_DIR, runId, 'traces');
+
+        try {
+            const files = await fsp.readdir(tracesDir);
+            const traceFiles = (
+                await Promise.all(
+                    files
+                        .filter((f) => f.endsWith('.zip'))
+                        .map(async (f) => {
+                            const stat = await fsp.stat(path.join(tracesDir, f));
+                            return {
+                                name: f,
+                                path: `storage/runs/${runId}/traces/${f}`,
+                                size: stat.size,
+                                modified: stat.mtime,
+                            };
+                        }),
+                )
+            ).sort((a, b) => b.modified - a.modified);
+
+            return res.json({ success: true, data: traceFiles });
+        } catch {
+            return res.json({ success: true, data: [] });
+        }
+    } catch (error) {
+        console.error('[TraceDiff] List traces error:', error);
+        return res.status(500).json({ success: false, error: error.message });
     }
 });
 

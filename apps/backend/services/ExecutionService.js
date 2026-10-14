@@ -25,10 +25,54 @@ import { browserService } from './browser.service.js';
 import { actionRoutes } from '../routes/api.router.js';
 import * as schemas from '../schemas/index.js';
 import { SecurityComplianceEngine } from './SecurityComplianceEngine.js';
+import { stopTracing } from '../core/browser-utils.js';
+import * as path from 'path';
+import { STORAGE_DIR } from '../config/paths.js';
 
 export class ExecutionService {
     constructor() {
         this.activeRuns = new Map();
+    }
+
+    /**
+     * Finalizes Playwright tracing for a run's browser contexts, saves the full
+     * trace archive, and persists a relative `trace_path` on the run record so
+     * the Trace Viewer / Trace Diff features can locate it.
+     *
+     * @param {string} runId
+     * @param {string|null} browserId
+     * @param {string} tag - Log prefix
+     * @returns {Promise<string|null>} Relative trace path (storage/...) or null
+     */
+    async _finalizeRunTraces(runId, browserId, tag = 'ExecutionService') {
+        if (!browserId) return null;
+        let relativePath = null;
+        try {
+            const entry = browserService.get(browserId);
+            if (entry?.browser) {
+                const contexts = entry.browser.contexts();
+                for (const ctx of contexts) {
+                    if (!ctx._halTraceState) continue;
+                    const absolute = await stopTracing(ctx);
+                    if (absolute) {
+                        const rel = path.relative(STORAGE_DIR, absolute).split(path.sep).join('/');
+                        relativePath = `storage/${rel}`;
+                        console.log(`[${tag}] Full trace saved: ${absolute}`);
+                    }
+                }
+            }
+        } catch (traceErr) {
+            console.warn(`[${tag}] Failed to stop tracing:`, traceErr.message);
+        }
+
+        if (relativePath) {
+            try {
+                await Run.update({ trace_path: relativePath }, { where: { id: runId } });
+            } catch (persistErr) {
+                console.warn(`[${tag}] Failed to persist trace_path:`, persistErr.message);
+            }
+        }
+        return relativePath;
     }
 
     /**
@@ -286,6 +330,9 @@ export class ExecutionService {
                         `[ExecutionService] Keeping visible session ${runState.browserId} open (debug workspace)`,
                     );
                 } else {
+                    // Stop Playwright tracing and save full trace
+                    await this._finalizeRunTraces(runId, runState.browserId, 'ExecutionService');
+
                     console.log(
                         `[ExecutionService] Closing browser session ${runState.browserId} before endRun to finalize video`,
                     );
@@ -317,6 +364,9 @@ export class ExecutionService {
                         `[ExecutionService] Keeping visible session ${runState.browserId} open after failure (debug workspace)`,
                     );
                 } else {
+                    // Stop Playwright tracing and save full trace
+                    await this._finalizeRunTraces(runId, runState.browserId, 'ExecutionService');
+
                     console.log(
                         `[ExecutionService] Closing browser session ${runState.browserId} before endRun (on failure) to finalize video`,
                     );
@@ -347,6 +397,9 @@ export class ExecutionService {
                         `[Cleanup] Keeping visible session ${runState.browserId} open for run ${runId} (debug workspace)`,
                     );
                 } else {
+                    // Stop Playwright tracing and save full trace
+                    await this._finalizeRunTraces(runId, runState.browserId, 'Cleanup');
+
                     console.log(
                         `[Cleanup] Closing browser session ${runState.browserId} for run ${runId}`,
                     );

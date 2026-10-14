@@ -2,10 +2,48 @@ import { chromium, firefox, webkit } from 'playwright';
 import { createHash, randomUUID } from 'crypto';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
+import path from 'path';
 import { DEVICE_PRESETS } from '../utils/constants.js';
 import { STORAGE_DIR, STORAGE_RUNS_DIR } from '../config/paths.js';
 import { canRunHeaded } from '../core/display-utils.js';
 import fs from 'fs';
+
+/**
+ * Persists a Playwright trace for a context that is about to be closed and
+ * records the resulting path on the run record. Safe no-op for contexts that
+ * never started tracing.
+ *
+ * @param {import('playwright').BrowserContext} ctx
+ * @returns {Promise<string|null>} Relative trace path (storage/...) or null
+ */
+async function finalizeContextTrace(ctx) {
+    const state = ctx?._halTraceState;
+    if (!state?.runId || !state?.traceDir) return null;
+
+    const { runId, traceDir } = state;
+    try {
+        await fs.promises.mkdir(traceDir, { recursive: true }).catch(() => {});
+        const traceFile = path.join(traceDir, `trace-${runId}-${Date.now()}.zip`);
+        await ctx.tracing.stop({ path: traceFile });
+        ctx._halTraceState = null;
+
+        const rel = path.relative(STORAGE_DIR, traceFile).split(path.sep).join('/');
+        const relativePath = `storage/${rel}`;
+
+        try {
+            const { Run } = await import('../database/init.js');
+            await Run.update({ trace_path: relativePath }, { where: { id: runId } });
+        } catch (persistErr) {
+            console.warn(`[BrowserService] Failed to persist trace_path: ${persistErr.message}`);
+        }
+
+        console.log(`[BrowserService] Trace saved for run ${runId}: ${relativePath}`);
+        return relativePath;
+    } catch (err) {
+        console.warn(`[BrowserService] Failed to finalize trace for ${runId}: ${err.message}`);
+        return null;
+    }
+}
 
 // Redirect Playwright/Chromium temp files to /var/tmp to avoid /tmp ENOSPC issues
 // while keeping the path short enough (<108 chars) to avoid UNIX socket SIGTRAP crashes.
@@ -546,6 +584,12 @@ class BrowserManager {
                 // Try to close contexts first if possible
                 if (typeof browser.contexts === 'function') {
                     const contexts = browser.contexts();
+                    // Finalize any Playwright trace BEFORE closing the context —
+                    // e.g. the close_browser node tears the context down mid-flow,
+                    // which would otherwise destroy the trace buffers.
+                    for (const ctx of contexts) {
+                        await finalizeContextTrace(ctx);
+                    }
                     await Promise.allSettled(contexts.map((ctx) => ctx.close()));
                 }
                 await browser.close();

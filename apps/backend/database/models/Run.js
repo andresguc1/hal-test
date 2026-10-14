@@ -57,6 +57,10 @@ const Run = sequelize.define(
             type: DataTypes.ENUM('recording', 'finalizing', 'available', 'failed'),
             defaultValue: 'recording',
         },
+        trace_path: {
+            type: DataTypes.STRING,
+            allowNull: true,
+        },
         browser_version: {
             type: DataTypes.STRING,
             allowNull: true,

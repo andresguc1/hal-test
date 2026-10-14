@@ -767,6 +767,7 @@
       "integrations": "IA e Integraciones",
       "project": "Proyecto",
       "system": "Sistema",
+      "vectorCache": "Caché Vectorial",
       "canvas_coming_soon": "Configuración de Canvas (Cuadrícula, Ajuste, Minimapa) próximamente.",
       "system_coming_soon": "Configuraciones del sistema próximamente."
     },
@@ -928,6 +929,24 @@
       "error_saving_key": "Error al guardar la llave",
       "failed_to_save_key": "No se pudo guardar la llave",
       "validation_error": "Error de validación. Revisa la llave."
+    },
+    "vectorCache": {
+      "title": "Caché Vectorial (Replay Cache)",
+      "subtitle": "Base de datos vectorial local para acelerar auto-reparación de selectores y búsqueda semántica de nodos.",
+      "enable": "Activar Caché Vectorial",
+      "enableHelp": "Almacena huellas DOM y selectores exitosos en LanceDB local para acelerar self-healing futuro sin llamar a LLMs.",
+      "minConfidence": "Confianza Mínima para Guardar",
+      "minConfidenceHelp": "Solo cachear selectores con confianza por encima de este umbral. Mayor = menos entradas pero más fiables.",
+      "similarityThreshold": "Umbral de Similitud",
+      "similarityThresholdHelp": "Similitud coseno mínima para acierto en caché vectorial. Menor = más coincidencias pero mayor riesgo de falsos positivos.",
+      "ttlDays": "TTL de Entradas (Días)",
+      "ttlDaysHelp": "Días antes de que las entradas no usadas sean eliminadas automáticamente.",
+      "maxEntriesPerUrl": "Máx. Entradas por URL",
+      "maxEntriesPerUrlHelp": "Máximo de selectores cacheados por URL única. Las entradas más antiguas se eliminan primero.",
+      "stats": "Estadísticas de Caché",
+      "domFingerprints": "Huellas DOM",
+      "flowNodes": "Nodos Flujo Indexados",
+      "refreshStats": "Actualizar Estadísticas"
     },
     "title": "Ajustes",
     "close": "para cerrar",

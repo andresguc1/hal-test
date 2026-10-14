@@ -15,6 +15,7 @@ import {
 } from '../socket.js';
 import { Flow, Node, HealingLog } from '../database/init.js';
 import { executionLogger } from '../services/ExecutionLogger.js';
+import { vectorCacheService, vectorCacheConfig } from '../services/vector-cache/index.js';
 import { STORAGE_RUNS_DIR } from '../config/paths.js';
 import { auditService } from '../services/AuditService.js';
 import * as fsp from 'fs/promises';
@@ -24,6 +25,8 @@ import {
     getActivePage,
     getOrCreateContext,
     isCIEnvironment,
+    startTraceChunk,
+    stopTraceChunk,
 } from './browser-utils.js';
 import { buildPlaywrightLocator, resolveSelectors } from './selector-utils.js';
 
@@ -219,7 +222,17 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
             }
         }
 
+        // Start Playwright trace chunk for this node execution
+        if (context && nodeId) {
+            await startTraceChunk(context, nodeId, label);
+        }
+
         const result = await actionLogic(page, resolvedOpts, targetBrowserId, context);
+
+        // Stop Playwright trace chunk for this node execution
+        if (context && nodeId) {
+            await stopTraceChunk(context, nodeId);
+        }
 
         if (page && !page.isClosed()) {
             await page
@@ -303,6 +316,121 @@ async function executePlaywrightAction(req, res, actionName, actionLogic) {
                 );
             } catch (logErr) {
                 console.error('[ActionExecutor] Failed to log step result:', logErr.message);
+            }
+
+            // Vector Cache: Store successful selector + DOM fingerprint for future self-healing
+            if (vectorCacheConfig.enabled && page && !page.isClosed() && opts.selector) {
+                // Fire-and-forget to not block execution
+                (async () => {
+                    try {
+                        const compressedDOM = await Promise.race([
+                            page.evaluate((origSelector) => {
+                                const interactiveSelectors =
+                                    'button, a, input, select, textarea, label, [role="button"], [role="link"], [role="searchbox"], [onclick], [data-testid], [aria-label]';
+                                let elements = Array.from(
+                                    document.querySelectorAll(interactiveSelectors),
+                                );
+                                elements = elements.filter((el) => {
+                                    if (el.offsetWidth <= 0 || el.offsetHeight <= 0) return false;
+                                    const style = window.getComputedStyle(el);
+                                    return (
+                                        style.visibility !== 'hidden' &&
+                                        style.display !== 'none' &&
+                                        style.opacity !== '0'
+                                    );
+                                });
+                                let targetLocation = null;
+                                if (origSelector) {
+                                    try {
+                                        let targetEl = document.querySelector(origSelector);
+                                        if (!targetEl) {
+                                            const parts = origSelector.split(/[> ]+/);
+                                            for (let i = parts.length - 1; i >= 1; i--) {
+                                                try {
+                                                    const sub = parts.slice(0, i).join(' ');
+                                                    targetEl = document.querySelector(sub);
+                                                    if (targetEl) break;
+                                                } catch (e) {
+                                                    /* ignore */
+                                                }
+                                            }
+                                        }
+                                        if (targetEl) {
+                                            const r = targetEl.getBoundingClientRect();
+                                            targetLocation = {
+                                                x: r.left + r.width / 2,
+                                                y: r.top + r.height / 2,
+                                            };
+                                        }
+                                    } catch (e) {
+                                        /* ignore */
+                                    }
+                                }
+                                if (targetLocation) {
+                                    elements = elements
+                                        .map((el) => {
+                                            const r = el.getBoundingClientRect();
+                                            const x = r.left + r.width / 2;
+                                            const y = r.top + r.height / 2;
+                                            const dist = Math.sqrt(
+                                                Math.pow(x - targetLocation.x, 2) +
+                                                    Math.pow(y - targetLocation.y, 2),
+                                            );
+                                            return { el, dist };
+                                        })
+                                        .sort((a, b) => a.dist - b.dist)
+                                        .map((item) => item.el);
+                                }
+                                return elements
+                                    .slice(0, 500)
+                                    .map((el, index) => {
+                                        const tag = el.tagName.toLowerCase();
+                                        const id = el.id ? `id:${el.id}` : '';
+                                        const testId = el.getAttribute('data-testid')
+                                            ? `testId:${el.getAttribute('data-testid')}`
+                                            : '';
+                                        const aria = el.getAttribute('aria-label')
+                                            ? `aria:${el.getAttribute('aria-label')}`
+                                            : '';
+                                        const text = el.textContent
+                                            ? `text:${el.textContent.trim().replace(/\s+/g, ' ').substring(0, 50)}`
+                                            : '';
+                                        const role = el.getAttribute('role')
+                                            ? `role:${el.getAttribute('role')}`
+                                            : '';
+                                        const parts = [
+                                            `ref:${index}`,
+                                            `tag:${tag}`,
+                                            id,
+                                            testId,
+                                            aria,
+                                            role,
+                                            text,
+                                        ].filter((p) => p !== '' && !p.endsWith(':'));
+                                        return parts.join('|');
+                                    })
+                                    .join('\n');
+                            }, opts.selector),
+                            new Promise((_, reject) =>
+                                setTimeout(
+                                    () => reject(new Error('DOM extraction timed out')),
+                                    5000,
+                                ),
+                            ),
+                        ]);
+
+                        await vectorCacheService.upsertDomFingerprint({
+                            url: page.url(),
+                            selector: opts.selector,
+                            compressedDOM,
+                            actionType: actionName,
+                            confidence: 1.0,
+                            metadata: { viewport: page.viewportSize() },
+                        });
+                    } catch (e) {
+                        console.warn('[ActionExecutor] Vector cache upsert failed:', e.message);
+                    }
+                })();
             }
         }
 

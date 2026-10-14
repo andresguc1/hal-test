@@ -1,6 +1,8 @@
 import aiService from './AIService.js';
 import { bestSelector } from '../core/decisions/SelectorRanker.js';
 import { applyPolicy, ACTIONS, MODES } from '../core/decisions/DecisionPolicy.js';
+import { vectorCacheService, vectorCacheConfig } from './vector-cache/index.js';
+import { createHash } from 'crypto';
 
 /* global document, window */
 
@@ -9,43 +11,20 @@ import { applyPolicy, ACTIONS, MODES } from '../core/decisions/DecisionPolicy.js
  * Handles DOM compression and AI-powered selector repair.
  */
 class SelectorHealer {
-    /**
-     * Minimum confidence threshold for accepting a healed selector.
-     * Selectors below this confidence are rejected even if they pass DOM verification.
-     */
     static MIN_CONFIDENCE = 0.5;
-
-    /**
-     * Patterns that indicate the AI returned a selector targeting a different element type
-     * than what was originally requested (potential hallucination / wrong element).
-     */
     static SENSITIVE_SELECTORS = /password|secret|token|api[_-]?key|authorization/i;
 
-    /**
-     * Validates and sanitizes an AI-suggested selector candidate.
-     * Rejects obviously malformed selectors, low-confidence results,
-     * and selectors targeting sensitive fields when the original was not.
-     *
-     * @param {string} candidate - The AI-suggested selector
-     * @param {number} confidence - The AI-reported confidence score
-     * @param {string} originalSelector - The original failing selector
-     * @returns {{ valid: boolean, reason: string }}
-     */
     _sanitizeCandidate(candidate, confidence, originalSelector) {
         if (!candidate || typeof candidate !== 'string') {
             return { valid: false, reason: 'Empty or non-string selector returned by AI' };
         }
-
         const trimmed = candidate.trim();
         if (trimmed.length === 0) {
             return { valid: false, reason: 'Empty selector after trimming' };
         }
-
         if (trimmed.length > 500) {
             return { valid: false, reason: `Selector suspiciously long (${trimmed.length} chars)` };
         }
-
-        // Reject obviously invalid selectors (JS code injection attempts)
         if (
             trimmed.includes('function(') ||
             trimmed.includes('eval(') ||
@@ -59,19 +38,14 @@ class SelectorHealer {
             );
             return { valid: false, reason: 'Selector contains code injection patterns' };
         }
-
-        // Confidence threshold check
         if (confidence < SelectorHealer.MIN_CONFIDENCE) {
             return {
                 valid: false,
                 reason: `Confidence ${confidence} below minimum threshold ${SelectorHealer.MIN_CONFIDENCE}`,
             };
         }
-
-        // Check if selector targets a sensitive field when original didn't
         const originalIsSensitive = SelectorHealer.SENSITIVE_SELECTORS.test(originalSelector);
         const candidateIsSensitive = SelectorHealer.SENSITIVE_SELECTORS.test(trimmed);
-
         if (candidateIsSensitive && !originalIsSensitive) {
             console.warn(
                 `[SelectorHealer] ⚠️ AI selected a sensitive field selector when original was not sensitive. ` +
@@ -82,43 +56,18 @@ class SelectorHealer {
                 reason: 'Candidate targets a sensitive field not present in original selector',
             };
         }
-
         return { valid: true, reason: 'OK' };
     }
 
-    /**
-     * Compresses the DOM to only include interactive and relevant elements.
-     * This reduces token usage and improves AI accuracy.
-     * @param {string} html
-     * @returns {string} Simplified HTML
-     */
     compressDOM(html) {
-        // Since we are running in Node, we could use a parser like JSDOM,
-        // but for a lightweight "compressor" we can use regex or simple string manipulation
-        // if we have the content. However, the best way is to do it on the browser side
-        // via page.evaluate to have access to the actual DOM tree.
-        return html; // Placeholder if called with already filtered string
+        return html;
     }
 
-    /**
-     * In-browser DOM compression script.
-     * Delegated aggressively to the browser for performance on heavy pages.
-     * Includes proximity-based prioritization if an original selector is provided.
-     */
-    /**
-     * In-browser DOM compression function.
-     * Evaluated in browser context via page.evaluate.
-     * Safely handles SVGs, normalizes text spaces, avoids layout thrashing, and uses native parameter passing.
-     */
     getCompressionScript() {
         return (origSelector) => {
             const interactiveSelectors =
                 'button, a, input, select, textarea, label, [role="button"], [role="link"], [role="searchbox"], [onclick], [data-testid], [aria-label]';
-
-            // 1. Get potential candidates
             let elements = Array.from(document.querySelectorAll(interactiveSelectors));
-
-            // 2. Efficient visibility filtering (Avoid getComputedStyle when possible)
             elements = elements.filter((el) => {
                 if (el.offsetWidth <= 0 || el.offsetHeight <= 0) return false;
                 const style = window.getComputedStyle(el);
@@ -128,14 +77,11 @@ class SelectorHealer {
                     style.opacity !== '0'
                 );
             });
-
-            // 3. Proximity-based Prioritization (Pre-calculating coordinates to avoid layout thrashing)
             let targetLocation = null;
             if (origSelector) {
                 try {
                     let targetEl = document.querySelector(origSelector);
                     if (!targetEl) {
-                        // Fallback: try to find the nearest parent if selector is partially valid
                         const parts = origSelector.split(/[> ]+/);
                         for (let i = parts.length - 1; i >= 1; i--) {
                             try {
@@ -143,7 +89,7 @@ class SelectorHealer {
                                 targetEl = document.querySelector(sub);
                                 if (targetEl) break;
                             } catch (e) {
-                                // ignore query error for invalid sub-selectors
+                                /* ignore */
                             }
                         }
                     }
@@ -152,10 +98,9 @@ class SelectorHealer {
                         targetLocation = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
                     }
                 } catch (e) {
-                    // ignore query error for invalid original selector
+                    /* ignore */
                 }
             }
-
             if (targetLocation) {
                 elements = elements
                     .map((el) => {
@@ -170,10 +115,6 @@ class SelectorHealer {
                     .sort((a, b) => a.dist - b.dist)
                     .map((item) => item.el);
             }
-
-            // 4. Compact Representation (Max 500 elements)
-            // Layer 1: The "DOM-Crusher" (Content Routing & Data Compression)
-            // Maps interactive elements into a dense, non-redundant pipeline format (Pipe-delimited).
             return elements
                 .slice(0, 500)
                 .map((el, index) => {
@@ -189,8 +130,6 @@ class SelectorHealer {
                         ? `text:${el.textContent.trim().replace(/\s+/g, ' ').substring(0, 50)}`
                         : '';
                     const role = el.getAttribute('role') ? `role:${el.getAttribute('role')}` : '';
-
-                    // Build pipe-delimited dense string
                     const parts = [
                         `ref:${index}`,
                         `tag:${tag}`,
@@ -200,16 +139,12 @@ class SelectorHealer {
                         role,
                         text,
                     ].filter((p) => p !== '' && !p.endsWith(':'));
-
                     return parts.join('|');
                 })
                 .join('\n');
         };
     }
 
-    /**
-     * Verifies if a selector is valid, unique, and visible on the page.
-     */
     async verifySelector(page, selector) {
         if (!selector) return { valid: false, unique: false, visible: false };
         try {
@@ -217,7 +152,6 @@ class SelectorHealer {
                 try {
                     const elements = document.querySelectorAll(sel);
                     if (elements.length === 0) return { count: 0, visible: false };
-
                     const first = elements[0];
                     const rect = first.getBoundingClientRect();
                     const isVisible =
@@ -225,16 +159,13 @@ class SelectorHealer {
                         rect.height > 0 &&
                         window.getComputedStyle(first).visibility !== 'hidden' &&
                         window.getComputedStyle(first).display !== 'none';
-
                     return { count: elements.length, visible: isVisible };
                 } catch (e) {
                     return { error: e.message };
                 }
             }, selector);
-
             if (stats.error)
                 return { valid: false, unique: false, visible: false, error: stats.error };
-
             return {
                 valid: stats.count > 0,
                 unique: stats.count === 1,
@@ -282,7 +213,6 @@ class SelectorHealer {
             }
 
             // 1b. Deterministic gate (F0-F2): ranked candidates + policy, BEFORE any LLM call.
-            // Si hay un candidato AUTO y verifica en el DOM, se usa sin IA.
             const deterministicAttempt = bestSelector({
                 domSnippet: compressedDOM,
                 originalSelector,
@@ -334,6 +264,76 @@ class SelectorHealer {
                             `[SelectorHealer] ⚠️ Deterministic candidate failed verification: ${candidate}`,
                         );
                     }
+                }
+            }
+
+            // 1c. Vector Cache Tier (Tier 0.5): Search for similar DOM fingerprints in local vector DB
+            if (vectorCacheConfig.enabled && compressedDOM) {
+                try {
+                    console.log(
+                        `[SelectorHealer] 🔍 Vector Cache Tier: searching for similar DOM patterns...`,
+                    );
+                    if (onProgress) {
+                        onProgress({ step: 'vector_cache_search', tier: 0.5 });
+                    }
+
+                    const urlHash = createHash('sha256')
+                        .update(page.url())
+                        .digest('hex')
+                        .slice(0, 16);
+                    const domVector = await vectorCacheService.embed(compressedDOM);
+                    const candidates = await vectorCacheService.searchSimilarSelectors({
+                        domVector,
+                        urlHash,
+                        actionType: actionName,
+                        k: vectorCacheConfig.maxCandidates,
+                    });
+
+                    for (const cand of candidates) {
+                        console.log(
+                            `[SelectorHealer] 🔍 Vector Cache candidate: ${cand.selector} (sim=${cand.similarity.toFixed(3)}, conf=${cand.confidence})`,
+                        );
+                        const sanitization = this._sanitizeCandidate(
+                            cand.selector,
+                            cand.confidence,
+                            originalSelector,
+                        );
+                        if (!sanitization.valid) continue;
+
+                        if (onProgress) {
+                            onProgress({
+                                step: 'verifying_candidate',
+                                candidate: cand.selector,
+                                tier: 0.5,
+                            });
+                        }
+
+                        const verification = await this.verifySelector(page, cand.selector);
+                        if (verification.valid && verification.visible) {
+                            console.log(
+                                `[SelectorHealer] ✅ Vector Cache heal: ${cand.selector} (similarity=${cand.similarity.toFixed(3)})`,
+                            );
+                            return {
+                                correctedSelector: cand.selector,
+                                reasoning: `Vector cache match (similarity: ${cand.similarity.toFixed(3)}, prior successes: ${cand.successCount})`,
+                                confidence: Math.min(cand.confidence * cand.similarity, 0.95),
+                                verified: true,
+                                tier: 0.5,
+                                source: 'vector-cache',
+                                metadata: {
+                                    similarity: cand.similarity,
+                                    priorSuccesses: cand.successCount,
+                                    actionType: cand.actionType,
+                                },
+                            };
+                        }
+                    }
+                    console.log(`[SelectorHealer] ℹ️ Vector Cache: no valid candidates found`);
+                } catch (error) {
+                    console.warn(
+                        `[SelectorHealer] ⚠️ Vector Cache tier error (continuing to AI):`,
+                        error.message,
+                    );
                 }
             }
 

@@ -145,6 +145,7 @@ export function useFlowShortcuts(handlers = {}, enabled = true) {
     "ctrl+shift+z": handlers.onRedo,
     "ctrl+y": handlers.onRedo,
     "ctrl+e": handlers.onExecute,
+    "ctrl+k": handlers.onCommandPalette,
     delete: handlers.onDelete,
     backspace: handlers.onDelete,
     "ctrl+a": handlers.onSelectAll,

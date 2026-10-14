@@ -111,6 +111,7 @@ import VariablePanel from "./components/VariablePanel";
 import ProjectExplorer from "./components/explorer/ProjectExplorer";
 import AskAIPanel from "./components/AskAIPanel";
 import { cn } from "@/lib/utils";
+import { CommandPalette } from "./components/command-palette";
 
 const edgeTypes = {
   custom: CustomEdge,
@@ -836,6 +837,7 @@ function Dashboard({
   const [isHistoryPanelVisible, setIsHistoryPanelVisible] = useState(false);
   const [isVariablePanelVisible, setIsVariablePanelVisible] = useState(false);
   const [isAskAIPanelVisible, setIsAskAIPanelVisible] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isDatasetModalOpen, setIsDatasetModalOpen] = useState(false);
   const [isPerfModalOpen, setIsPerfModalOpen] = useState(false);
   const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
@@ -1901,6 +1903,7 @@ function Dashboard({
     onZoomIn: () => zoomIn({ duration: 300 }),
     onZoomOut: () => zoomOut({ duration: 300 }),
     onFitView: () => fitView({ duration: 300 }),
+    onCommandPalette: () => setIsCommandPaletteOpen(true),
   });
 
   // ========================================
@@ -2995,6 +2998,20 @@ function Dashboard({
           isOpen={stepDetailsModal.isOpen}
           onClose={() => setStepDetailsModal({ isOpen: false, nodeData: null })}
           nodeData={stepDetailsModal.nodeData}
+        />
+
+        {/* COMMAND PALETTE (Cmd+K) - Semantic Node Search */}
+        <CommandPalette
+          isOpen={isCommandPaletteOpen}
+          onClose={() => setIsCommandPaletteOpen(false)}
+          flowId={currentFlowId}
+          onSelectNode={(_node) => {
+            // Navigation is handled inside CommandPalette via reactFlowInstance
+          }}
+          reactFlowInstance={{
+            fitView: ({ _nodes, duration, _zoom }) => reactFlowFitView({ duration, padding: 0.1 }),
+            setNodes: (updater) => setNodes(updater),
+          }}
         />
 
         {/* TOAST SYSTEM (Positioned relative to Panel) */}

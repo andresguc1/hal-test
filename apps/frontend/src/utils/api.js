@@ -160,6 +160,7 @@ export const api = {
     };
     const response = await fetch(normalizeUrl(API_BASE_URL, endpoint), {
       headers,
+      signal: customConfig.signal,
     });
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -179,6 +180,7 @@ export const api = {
       method: "POST",
       headers,
       body: JSON.stringify(data),
+      signal: customConfig.signal,
     });
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));

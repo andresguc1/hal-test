@@ -20,7 +20,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Settings, Cpu, Monitor, AlertTriangle } from "lucide-react";
+import {
+  Settings,
+  Cpu,
+  Monitor,
+  AlertTriangle,
+  Database,
+  Zap,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import providersData from "@/data/providers.json";
@@ -122,6 +129,228 @@ export default function SettingsModal({
     [currentProject],
   );
 
+  // --- Vector Cache Configuration State ---
+  const [vectorCacheConfig, setVectorCacheConfig] = useState({
+    enabled: false,
+    minConfidenceToStore: 0.7,
+    ttlDays: 90,
+    maxEntriesPerUrl: 50,
+    similarityThreshold: 0.75,
+    loading: false,
+    saving: false,
+  });
+
+  // Load vector cache config
+  useEffect(() => {
+    if (isOpen) {
+      const stored = localStorage.getItem("hal_vector_cache_config");
+      if (stored) {
+        try {
+          setVectorCacheConfig((prev) => ({ ...prev, ...JSON.parse(stored) }));
+        } catch (e) {
+          console.error("Failed to parse vector cache config", e);
+        }
+      }
+    }
+  }, [isOpen]);
+
+  const handleVectorCacheSave = async () => {
+    setVectorCacheConfig((prev) => ({ ...prev, saving: true }));
+    try {
+      await api.put("/settings/vector-cache", vectorCacheConfig);
+      localStorage.setItem("hal_vector_cache_config", JSON.stringify(vectorCacheConfig));
+      setVectorCacheConfig((prev) => ({ ...prev, saved: true }));
+      setTimeout(() => setVectorCacheConfig((p) => ({ ...p, saved: false })), 2000);
+    } catch (err) {
+      console.error("Failed to save vector cache config:", err);
+    } finally {
+      setVectorCacheConfig((prev) => ({ ...prev, saving: false }));
+    }
+  };
+
+  const handleVectorCacheToggle = (enabled) => {
+    setVectorCacheConfig((prev) => ({ ...prev, enabled }));
+  };
+
+  const VectorCachePanel = () => {
+    return (
+      <div className="space-y-6">
+        <div className="mb-6">
+          <h3 className="text-xl font-semibold text-white flex items-center gap-2">
+            <Zap className="text-blue-400" size={20} />
+            {t("settings.vectorCache.title")}
+          </h3>
+          <p className="text-slate-400 text-sm">
+            {t("settings.vectorCache.subtitle")}
+          </p>
+        </div>
+
+        {/* Enable Toggle */}
+        <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="block text-base text-slate-300 mb-1">
+                {t("settings.vectorCache.enable")}
+              </Label>
+              <p className="text-slate-500 text-sm">
+                {t("settings.vectorCache.enableHelp")}
+              </p>
+            </div>
+            <button
+              onClick={() => handleVectorCacheToggle(!vectorCacheConfig.enabled)}
+              className={cn(
+                "relative w-14 h-8 rounded-full transition-all flex items-center p-1",
+                vectorCacheConfig.enabled
+                  ? "bg-blue-500"
+                  : "bg-slate-700"
+              )}
+              aria-label={t("settings.vectorCache.enable")}
+            >
+              <span
+                className={cn(
+                  "w-6 h-6 rounded-full bg-white transition-transform shadow-md",
+                  vectorCacheConfig.enabled ? "translate-x-full" : "translate-x-0"
+                )}
+              />
+            </button>
+          </div>
+        </div>
+
+        {/* Settings (only show when enabled) */}
+        {vectorCacheConfig.enabled && (
+          <>
+            <div className="bg-slate-800/50 h-px w-full" />
+
+            {/* Min Confidence */}
+            <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
+              <Label className="block text-base text-slate-300 mb-2">
+                {t("settings.vectorCache.minConfidence")}
+              </Label>
+              <p className="text-slate-500 text-sm mb-3">
+                {t("settings.vectorCache.minConfidenceHelp")}
+              </p>
+              <div className="flex items-center gap-4">
+                <input
+                  type="range"
+                  min="0.5"
+                  max="1"
+                  step="0.05"
+                  value={vectorCacheConfig.minConfidenceToStore}
+                  onChange={(e) => setVectorCacheConfig((prev) => ({ ...prev, minConfidenceToStore: parseFloat(e.target.value) }))}
+                  className="flex-1 accent-blue-500"
+                />
+                <span className="text-slate-300 font-mono w-12 text-right">
+                  {(vectorCacheConfig.minConfidenceToStore * 100).toFixed(0)}%
+                </span>
+              </div>
+            </div>
+
+            {/* Similarity Threshold */}
+            <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
+              <Label className="block text-base text-slate-300 mb-2">
+                {t("settings.vectorCache.similarityThreshold")}
+              </Label>
+              <p className="text-slate-500 text-sm mb-3">
+                {t("settings.vectorCache.similarityThresholdHelp")}
+              </p>
+              <div className="flex items-center gap-4">
+                <input
+                  type="range"
+                  min="0.5"
+                  max="0.95"
+                  step="0.05"
+                  value={vectorCacheConfig.similarityThreshold}
+                  onChange={(e) => setVectorCacheConfig((prev) => ({ ...prev, similarityThreshold: parseFloat(e.target.value) }))}
+                  className="flex-1 accent-blue-500"
+                />
+                <span className="text-slate-300 font-mono w-12 text-right">
+                  {(vectorCacheConfig.similarityThreshold * 100).toFixed(0)}%
+                </span>
+              </div>
+            </div>
+
+            {/* TTL Days */}
+            <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
+              <Label className="block text-base text-slate-300 mb-2">
+                {t("settings.vectorCache.ttlDays")}
+              </Label>
+              <p className="text-slate-500 text-sm mb-3">
+                {t("settings.vectorCache.ttlDaysHelp")}
+              </p>
+              <input
+                type="number"
+                min="1"
+                max="365"
+                value={vectorCacheConfig.ttlDays}
+                onChange={(e) => setVectorCacheConfig((prev) => ({ ...prev, ttlDays: Number(e.target.value) }))}
+                className="w-full max-w-xs bg-slate-900 border-slate-700 text-white placeholder-slate-500 rounded-lg px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+
+            {/* Max Entries Per URL */}
+            <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
+              <Label className="block text-base text-slate-300 mb-2">
+                {t("settings.vectorCache.maxEntriesPerUrl")}
+              </Label>
+              <p className="text-slate-500 text-sm mb-3">
+                {t("settings.vectorCache.maxEntriesPerUrlHelp")}
+              </p>
+              <input
+                type="number"
+                min="10"
+                max="500"
+                value={vectorCacheConfig.maxEntriesPerUrl}
+                onChange={(e) => setVectorCacheConfig((prev) => ({ ...prev, maxEntriesPerUrl: Number(e.target.value) }))}
+                className="w-full max-w-xs bg-slate-900 border-slate-700 text-white placeholder-slate-500 rounded-lg px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+
+            {/* Save Button */}
+            <Button
+              variant="primary"
+              onClick={handleVectorCacheSave}
+              disabled={vectorCacheConfig.saving}
+              className="w-full max-w-md"
+            >
+              {vectorCacheConfig.saving
+                ? t("common.saving")
+                : vectorCacheConfig.saved
+                ? t("common.saved")
+                : t("common.save")}
+            </Button>
+
+            {/* Stats */}
+            <div className="bg-slate-800/50 h-px w-full my-4" />
+            <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
+              <Label className="block text-base text-slate-300 mb-2">
+                {t("settings.vectorCache.stats")}
+              </Label>
+              <div className="grid grid-cols-2 gap-4 text-center">
+                <div className="bg-slate-900/50 rounded-lg p-3">
+                  <div className="text-2xl font-bold text-blue-400">—</div>
+                  <div className="text-xs text-slate-500">{t("settings.vectorCache.domFingerprints")}</div>
+                </div>
+                <div className="bg-slate-900/50 rounded-lg p-3">
+                  <div className="text-2xl font-bold text-purple-400">—</div>
+                  <div className="text-xs text-slate-500">{t("settings.vectorCache.flowNodes")}</div>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                className="mt-3 text-xs"
+                onClick={() => {
+                  // TODO: Fetch stats from backend
+                }}
+              >
+                {t("settings.vectorCache.refreshStats")}
+              </Button>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
   const ProjectSettingsPanel = ({ project, onUpdate }) => {
     const [timeoutMs, setTimeoutMs] = useState(
       project.defaultActionTimeoutMs ?? "",
@@ -216,6 +445,11 @@ export default function SettingsModal({
             id="integrations"
             icon={Cpu}
             label={t("settings.sidebar.integrations")}
+          />
+          <SidebarItem
+            id="vector-cache"
+            icon={Database}
+            label={t("settings.sidebar.vectorCache")}
           />
         </div>
 
@@ -382,6 +616,13 @@ export default function SettingsModal({
                 })()}
 
                 {/* Save button moved inside form */}
+              </div>
+            )}
+
+            {/* VECTOR CACHE TAB */}
+            {activeTab === "vector-cache" && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                <VectorCachePanel />
               </div>
             )}
           </div>

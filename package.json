@@ -61,10 +61,14 @@
       "better-sqlite3",
       "sqlite3",
       "playwright",
-      "esbuild"
+      "esbuild",
+      "sharp"
     ]
   },
   "engines": {
     "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "sharp": "^0.32.6"
   }
 }

@@ -13,10 +13,13 @@ import {
   Database,
   Download,
   Loader2,
+  FileCode,
+  GitCompare,
 } from "lucide-react";
 import { AnimatePresence, motion as Motion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRuns, dashboardKeys } from "./dashboard/hooks/useDashboardData";
+import { TraceDiffViewer } from "./trace-diff";
 
 const WIDTH_EXPANDED = 320;
 const WIDTH_COLLAPSED = 48;
@@ -30,6 +33,8 @@ export default function RunHistoryPanel({
   const [selectedRunId, setSelectedRunId] = useState(null);
   const [statusFilter, setStatusFilter] = useState("all");
   const [playingVideo, setPlayingVideo] = useState(null);
+  const [playingTrace, setPlayingTrace] = useState(null);
+  const [showDiff, setShowDiff] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [datasetsByRun, setDatasetsByRun] = useState({});
@@ -120,6 +125,13 @@ export default function RunHistoryPanel({
               </span>
             </div>
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowDiff(true)}
+                className="p-1.5 hover:bg-purple-500/20 rounded-md text-slate-400 hover:text-purple-400 transition-colors"
+                title="Compare traces"
+              >
+                <GitCompare size={14} />
+              </button>
               {runs.length > 0 && (
                 <button
                   onClick={handleClearHistory}
@@ -275,6 +287,25 @@ export default function RunHistoryPanel({
                           No video
                         </span>
                       )}
+                      {/* Trace button */}
+                      {run.trace_path && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const apiBase =
+                              import.meta.env.VITE_API_URL ||
+                              (import.meta.env.PROD
+                                ? window.location.origin
+                                : "http://localhost:2001");
+                            setPlayingTrace(`${apiBase}/${run.trace_path}`);
+                          }}
+                          className="p-1.5 bg-purple-500/20 hover:bg-purple-500/40 rounded-md text-purple-400 ui-transition border border-purple-500/30"
+                          title="View Trace"
+                        >
+                          <FileCode size={12} fill="currentColor" />
+                          View trace
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -375,6 +406,49 @@ export default function RunHistoryPanel({
               />
             </Motion.div>
           </Motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* TRACE MODAL (Playwright Trace Viewer) */}
+      <AnimatePresence>
+        {playingTrace && (
+          <Motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setPlayingTrace(null)}
+            className="fixed inset-0 bg-black/80 backdrop-blur-md z-[1000] flex items-center justify-center p-4"
+          >
+            <Motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-6xl h-[80vh] bg-black rounded-2xl overflow-hidden border border-white/10 shadow-2xl"
+            >
+              <div className="absolute top-4 right-4 z-10">
+                <button
+                  onClick={() => setPlayingTrace(null)}
+                  className="p-2 bg-black/50 hover:bg-black/80 text-white rounded-full backdrop-blur-md ui-transition"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <iframe
+                src={`https://trace.playwright.dev/?trace=${encodeURIComponent(playingTrace)}`}
+                className="w-full h-full border-0"
+                title="Playwright Trace Viewer"
+                allow="fullscreen"
+              />
+            </Motion.div>
+          </Motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* TRACE DIFF MODAL */}
+      <AnimatePresence>
+        {showDiff && (
+          <TraceDiffViewer onClose={() => setShowDiff(false)} />
         )}
       </AnimatePresence>
     </Motion.div>

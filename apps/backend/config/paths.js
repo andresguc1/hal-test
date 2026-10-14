@@ -16,10 +16,12 @@ export const STORAGE_DIR = process.env.HALTEST_HOME
 
 export const STORAGE_RUNS_DIR = path.resolve(STORAGE_DIR, 'runs');
 export const PUBLIC_DIR = path.resolve(BACKEND_ROOT, 'public');
+export const VECTOR_CACHE_DIR = path.resolve(STORAGE_DIR, 'vector-cache');
 
 export default {
     BACKEND_ROOT,
     STORAGE_DIR,
     STORAGE_RUNS_DIR,
     PUBLIC_DIR,
+    VECTOR_CACHE_DIR,
 };

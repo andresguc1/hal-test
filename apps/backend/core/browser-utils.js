@@ -694,6 +694,31 @@ async function getOrCreateContext(req, browser, browserId) {
                 await attachSecurityContextListeners(newContext);
             }
 
+            // Initialize Playwright Tracing for this context (if runId provided)
+            const runId = req.body?.runId || entry?.runId || null;
+            if (runId) {
+                try {
+                    const traceDir = path.join(STORAGE_RUNS_DIR, runId, 'traces');
+                    await fsp.mkdir(traceDir, { recursive: true }).catch(() => {});
+                    await newContext.tracing.start({
+                        screenshots: true,
+                        snapshots: true,
+                        sources: true,
+                        title: `run-${runId}`,
+                    });
+                    console.log(`[AUDIT] Playwright tracing started for run: ${runId}`);
+                    // Store trace state on context for chunk management
+                    newContext._halTraceState = {
+                        runId,
+                        traceDir,
+                        activeChunk: null,
+                        chunkStartTime: null,
+                    };
+                } catch (traceErr) {
+                    console.warn('[WARN] Failed to start tracing:', traceErr.message);
+                }
+            }
+
             // Register in the Context Pool (Fase 3) so future lookups reuse it
             // while the launch profile remains unchanged.
             if (browserId) {
@@ -918,6 +943,88 @@ function attachDialogListener(target) {
     }
 }
 
+/**
+ * Starts a new trace chunk for the given node execution.
+ * @param {Object} context - Playwright BrowserContext
+ * @param {string} nodeId - Node identifier
+ * @param {string} nodeLabel - Human-readable label
+ * @returns {Promise<void>}
+ */
+async function startTraceChunk(context, nodeId, nodeLabel) {
+    if (!context?._halTraceState) return;
+
+    try {
+        const { runId } = context._halTraceState;
+        await context.tracing.startChunk({
+            title: `${nodeLabel || 'Step'} (${nodeId})`,
+            name: `node-${nodeId}-${Date.now()}`,
+        });
+        context._halTraceState.activeChunk = nodeId;
+        context._halTraceState.chunkStartTime = Date.now();
+        console.log(`[TRACE] Started chunk for node: ${nodeId} (run: ${runId})`);
+    } catch (err) {
+        console.warn(`[TRACE] Failed to start chunk for ${nodeId}:`, err.message);
+    }
+}
+
+/**
+ * Stops the current trace chunk and saves it.
+ * @param {Object} context - Playwright BrowserContext
+ * @param {string} nodeId - Node identifier
+ * @returns {Promise<string|null>} Path to saved trace chunk or null
+ */
+async function stopTraceChunk(context, nodeId) {
+    if (!context?._halTraceState || context._halTraceState.activeChunk !== nodeId) return null;
+
+    const { traceDir } = context._halTraceState;
+
+    try {
+        const chunkName = `node-${nodeId}-${Date.now()}.zip`;
+        const chunkPath = path.join(traceDir, chunkName);
+
+        await context.tracing.stopChunk({
+            path: chunkPath,
+        });
+
+        context._halTraceState.activeChunk = null;
+        context._halTraceState.chunkStartTime = null;
+        console.log(`[TRACE] Stopped chunk for node: ${nodeId} -> ${chunkPath}`);
+        return chunkPath;
+    } catch (err) {
+        console.warn(`[TRACE] Failed to stop chunk for ${nodeId}:`, err.message);
+        return null;
+    }
+}
+
+/**
+ * Stops tracing completely and saves the full trace.
+ * @param {Object} context - Playwright BrowserContext
+ * @returns {Promise<string|null>} Path to saved trace or null
+ */
+async function stopTracing(context) {
+    if (!context?._halTraceState) return null;
+
+    const { runId, traceDir } = context._halTraceState;
+
+    try {
+        const traceName = `trace-${runId}-${Date.now()}.zip`;
+        const tracePath = path.join(traceDir, traceName);
+
+        await context.tracing.stop({
+            path: tracePath,
+        });
+
+        console.log(`[TRACE] Full trace saved for run: ${runId} -> ${tracePath}`);
+        return tracePath;
+    } catch (err) {
+        console.warn(`[TRACE] Failed to stop tracing for run ${runId}:`, err.message);
+        return null;
+    } finally {
+        // Clean up trace state
+        context._halTraceState = null;
+    }
+}
+
 export {
     NETWORK_PRESETS,
     applyNetworkConditions,
@@ -930,4 +1037,8 @@ export {
     fetchContext,
     createIsolatedContext,
     isCIEnvironment,
+    // Tracing functions
+    startTraceChunk,
+    stopTraceChunk,
+    stopTracing,
 };

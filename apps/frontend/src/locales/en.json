@@ -767,6 +767,7 @@
       "integrations": "AI & Integrations",
       "project": "Project",
       "system": "System",
+      "vectorCache": "Vector Cache",
       "canvas_coming_soon": "Canvas settings (Grid, Snap, Minimap) coming next.",
       "system_coming_soon": "System configurations coming soon."
     },
@@ -940,6 +941,24 @@
       "error_saving_key": "Error saving key",
       "failed_to_save_key": "Failed to save key",
       "validation_error": "Validation error. Please check the key."
+    },
+    "vectorCache": {
+      "title": "Vector Cache (Replay Cache)",
+      "subtitle": "Local vector database for self-healing selector acceleration and semantic node search.",
+      "enable": "Enable Vector Cache",
+      "enableHelp": "Stores DOM fingerprints and successful selectors in a local LanceDB to accelerate future self-healing without calling LLMs.",
+      "minConfidence": "Min Confidence to Store",
+      "minConfidenceHelp": "Only cache selectors with confidence above this threshold. Higher = fewer but more reliable entries.",
+      "similarityThreshold": "Similarity Threshold",
+      "similarityThresholdHelp": "Minimum cosine similarity for a vector cache hit. Lower = more matches but higher false positive risk.",
+      "ttlDays": "Entry TTL (Days)",
+      "ttlDaysHelp": "Days before unused cache entries are automatically pruned.",
+      "maxEntriesPerUrl": "Max Entries Per URL",
+      "maxEntriesPerUrlHelp": "Maximum cached selectors per unique URL. Older entries are evicted first.",
+      "stats": "Cache Statistics",
+      "domFingerprints": "DOM Fingerprints",
+      "flowNodes": "Flow Nodes Indexed",
+      "refreshStats": "Refresh Stats"
     },
     "title": "Settings",
     "close": "To close",

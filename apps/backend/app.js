@@ -143,6 +143,35 @@ const isLocalOrPrivateOrigin = (origin) => {
     return false;
 };
 
+// --- STATIC STORAGE (served before the global CORS guard) ---
+// Traces/videos stored here must be fetchable by the hosted Playwright trace
+// viewer (https://trace.playwright.dev), so storage gets its own CORS policy
+// instead of the strict API one. Add more viewers via TRACE_VIEWER_ORIGINS.
+const traceViewerOrigins = (process.env.TRACE_VIEWER_ORIGINS || 'https://trace.playwright.dev')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+const storageCors = cors({
+    origin: (origin, callback) => {
+        if (!origin || isOriginAllowed(origin) || traceViewerOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        // Not allowed: pass through without CORS headers (never throw — the
+        // browser enforces the block, the file itself stays servable).
+        callback(null, false);
+    },
+    methods: ['GET', 'HEAD', 'OPTIONS'],
+});
+
+const staticOptions = {
+    setHeaders: (res) => {
+        res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    },
+};
+app.use('/storage', storageCors, express.static(STORAGE_DIR, staticOptions));
+app.use('/api/storage', storageCors, express.static(STORAGE_DIR, staticOptions));
+
 app.use(
     cors({
         origin: (origin, callback) => {
@@ -161,15 +190,6 @@ app.use(
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-
-// --- STATIC STORAGE (Moved up for precedence) ---
-const staticOptions = {
-    setHeaders: (res) => {
-        res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-    },
-};
-app.use('/storage', express.static(STORAGE_DIR, staticOptions));
-app.use('/api/storage', express.static(STORAGE_DIR, staticOptions));
 
 // Rate Limiter
 app.use('/api', apiLimiter);
