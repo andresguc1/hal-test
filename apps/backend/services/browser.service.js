@@ -6,6 +6,7 @@ import path from 'path';
 import { DEVICE_PRESETS } from '../utils/constants.js';
 import { STORAGE_DIR, STORAGE_RUNS_DIR } from '../config/paths.js';
 import { canRunHeaded } from '../core/display-utils.js';
+import { mergeTraceChunks } from '../core/trace-utils.js';
 import fs from 'fs';
 
 /**
@@ -23,8 +24,21 @@ async function finalizeContextTrace(ctx) {
     const { runId, traceDir } = state;
     try {
         await fs.promises.mkdir(traceDir, { recursive: true }).catch(() => {});
-        const traceFile = path.join(traceDir, `trace-${runId}-${Date.now()}.zip`);
-        await ctx.tracing.stop({ path: traceFile });
+
+        // Flush a chunk that never received its stopChunk (e.g. node threw).
+        if (state.activeChunk) {
+            const chunkPath = path.join(traceDir, `node-${state.activeChunk}-${Date.now()}.zip`);
+            await ctx.tracing.stopChunk({ path: chunkPath }).catch(() => {});
+            state.activeChunk = null;
+        }
+
+        // Merge per-node chunks into a single playable trace; fall back to a
+        // one-shot export when no chunks exist.
+        let traceFile = await mergeTraceChunks(traceDir, runId);
+        if (!traceFile) {
+            traceFile = path.join(traceDir, `trace-${runId}-${Date.now()}.zip`);
+            await ctx.tracing.stop({ path: traceFile });
+        }
         ctx._halTraceState = null;
 
         const rel = path.relative(STORAGE_DIR, traceFile).split(path.sep).join('/');

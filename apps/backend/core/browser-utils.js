@@ -10,6 +10,7 @@ import { DomProtectionEngine } from '../services/security/DomProtectionEngine.js
 import { emitSecurityAlert } from '../socket.js';
 import { STORAGE_RUNS_DIR } from '../config/paths.js';
 import { DEVICE_PRESETS } from '../utils/constants.js';
+import { mergeTraceChunks } from './trace-utils.js';
 import * as fsp from 'fs/promises';
 import * as path from 'path';
 
@@ -695,7 +696,8 @@ async function getOrCreateContext(req, browser, browserId) {
             }
 
             // Initialize Playwright Tracing for this context (if runId provided)
-            const runId = req.body?.runId || entry?.runId || null;
+            const browserEntry = browserId ? browserService.get(browserId) : null;
+            const runId = req.body?.runId || browserEntry?.runId || null;
             if (runId) {
                 try {
                     const traceDir = path.join(STORAGE_RUNS_DIR, runId, 'traces');
@@ -997,7 +999,14 @@ async function stopTraceChunk(context, nodeId) {
 }
 
 /**
- * Stops tracing completely and saves the full trace.
+ * Stops tracing and returns a playable, full-run trace.
+ *
+ * Because the run records one Playwright chunk per node via
+ * `startTraceChunk`/`stopTraceChunk`, `tracing.stop({ path })` would only
+ * export the last chunk. Instead we flush any still-active chunk and merge the
+ * per-node chunk zips into a single multi-chunk trace (see `mergeTraceChunks`).
+ * When no chunks exist we fall back to a plain one-shot export.
+ *
  * @param {Object} context - Playwright BrowserContext
  * @returns {Promise<string|null>} Path to saved trace or null
  */
@@ -1007,9 +1016,28 @@ async function stopTracing(context) {
     const { runId, traceDir } = context._halTraceState;
 
     try {
-        const traceName = `trace-${runId}-${Date.now()}.zip`;
-        const tracePath = path.join(traceDir, traceName);
+        // Flush a chunk that never received its stopChunk (e.g. the node threw)
+        // so its actions are preserved in the merged trace.
+        if (context._halTraceState.activeChunk) {
+            const chunkPath = path.join(
+                traceDir,
+                `node-${context._halTraceState.activeChunk}-${Date.now()}.zip`,
+            );
+            await context.tracing.stopChunk({ path: chunkPath }).catch((flushErr) => {
+                console.warn(`[TRACE] Failed to flush active chunk:`, flushErr.message);
+            });
+            context._halTraceState.activeChunk = null;
+        }
 
+        // Merge per-node chunks into a single playable trace.
+        const merged = await mergeTraceChunks(traceDir, runId);
+        if (merged) {
+            console.log(`[TRACE] Full trace assembled for run: ${runId} -> ${merged}`);
+            return merged;
+        }
+
+        // No chunks were recorded: export the whole session in one shot.
+        const tracePath = path.join(traceDir, `trace-${runId}-${Date.now()}.zip`);
         await context.tracing.stop({
             path: tracePath,
         });

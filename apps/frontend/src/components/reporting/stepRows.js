@@ -44,25 +44,32 @@ export function buildStepRows(steps, snapshotNodeById = {}) {
       const childNodeId = c.step.node_id || c.step.nodeId;
       const childIsContainer = isContainerNode(childNodeId, c.step);
       rendered.add(c.flatIdx);
-      rows.push({
+      const childRow = {
         type: childIsContainer ? "container" : "child",
         step: c.step,
         flatIdx: c.flatIdx,
         depth,
         childIndex: childIdx + 1,
         childTotal: children.length,
-      });
+        descendantCount: 0,
+      };
+      rows.push(childRow);
       if (childIsContainer && childNodeId) {
         renderedContainers.add(childNodeId);
+        const before = rows.length;
         renderChildren(childNodeId, depth + 1);
+        childRow.descendantCount = rows.length - before;
       }
     });
   };
 
   const renderContainer = (parentId, step, flatIdx, depth = 0) => {
-    rows.push({ type: "container", step, flatIdx, depth });
+    const row = { type: "container", step, flatIdx, depth, descendantCount: 0 };
+    rows.push(row);
     renderedContainers.add(parentId);
+    const before = rows.length;
     renderChildren(parentId, depth + 1);
+    row.descendantCount = rows.length - before;
   };
 
   for (let i = 0; i < steps.length; i++) {
