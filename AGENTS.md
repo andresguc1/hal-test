@@ -61,6 +61,10 @@ pnpm clean                  # Clean all node_modules + turbo cache
 3. **Guest mode for local dev**: set `AUTH_ENABLED=false` and `VITE_AUTH_ENABLED=false` in `.env`
 4. **Turbo caches build outputs** in `.turbo/cache/` — use `pnpm clean` to fully reset
 5. **Port conflicts** — backend (2001) and frontend (3000/5173) — use `pnpm run stop` to clear
+6. **Ollama on non-loopback (Tailscale, LAN, Docker)**: set `HALTEST_ALLOWED_AI_BASE_URLS` in `apps/backend/.env` to allow the backend to connect. Examples:
+   - Single host: `HALTEST_ALLOWED_AI_BASE_URLS=100.100.110.13`
+   - Any host (dev only): `HALTEST_ALLOWED_AI_BASE_URLS=*`
+   Then restart backend: `pnpm run stop && pnpm dev:backend`
 
 ## "Open URL" Node / Cloudflare Issues
 The backend uses Playwright for browser automation. If "open url" fails:
