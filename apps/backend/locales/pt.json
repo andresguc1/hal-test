@@ -35,7 +35,7 @@
             "success": "Texto inserido com sucesso no seletor '{{selector}}'."
         },
         "scroll": {
-            "success": "Rolagem aplicada com sucesso a {{target}}."
+            "success": "Rolagem aplicada com sucesso a {{target}}. Status: {{status}}."
         },
         "manage_tabs": {
             "new_success": "Nova aba aberta com sucesso.  Total de guias: {{count}}",

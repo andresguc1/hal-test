@@ -2,6 +2,13 @@ import { executePlaywrightAction } from '../../../core/ActionExecutor.js';
 import { buildPlaywrightLocator, normalizeSelectorForDotId } from '../../../core/selector-utils.js';
 /* eslint-disable no-undef */
 
+const SCROLLED = 'Scrolled';
+const NOTHING_TO_SCROLL = 'Nothing to scroll (content fits the viewport)';
+
+// Smooth scrolling animates asynchronously: give it time to settle before
+// measuring the final position (otherwise screenshots/traces capture nothing).
+const settleDelay = (behavior) => (behavior === 'smooth' ? 350 : 50);
+
 const scroll = (req, res) =>
     executePlaywrightAction(req, res, 'scroll', async (page, opts) => {
         const {
@@ -17,7 +24,29 @@ const scroll = (req, res) =>
         } = opts;
 
         const targetSelector = selector ? await normalizeSelectorForDotId(page, selector) : null;
-        const locator = targetSelector ? buildPlaywrightLocator(page, targetSelector) : null;
+        let locator = targetSelector ? buildPlaywrightLocator(page, targetSelector) : null;
+        const vertical = direction !== 'left' && direction !== 'right';
+
+        // When the selected element has no scrollable overflow (e.g. a plain
+        // <input> picked by mistake), scrolling it is a silent no-op. In that
+        // case we fall back to scrolling the page so the user still sees
+        // movement, and we report where we actually scrolled.
+        let fallbackFrom = null;
+        if (locator) {
+            const canScroll = await locator
+                .evaluate((el) => ({
+                    y: el.scrollHeight - el.clientHeight > 1,
+                    x: el.scrollWidth - el.clientWidth > 1,
+                }))
+                .catch(() => null);
+            if (vertical ? !canScroll?.y : !canScroll?.x) {
+                console.log(
+                    `[Scroll] Selector "${targetSelector}" has no scrollable overflow; falling back to the page`,
+                );
+                fallbackFrom = targetSelector;
+                locator = null;
+            }
+        }
 
         if (scrollToEnd) {
             console.log('[Scroll] Infinite scroll mode enabled');
@@ -61,51 +90,115 @@ const scroll = (req, res) =>
 
             const finalStatus =
                 lastHeight === currentHeight ? 'Reached end' : 'Max attempts reached';
+            const target = fallbackFrom ? 'the page' : targetSelector || 'the page';
 
             return {
-                message: req.t('actions.scroll.success', { status: finalStatus }),
+                message: req.t('actions.scroll.success', {
+                    target,
+                    status: finalStatus,
+                }),
                 data: {
                     status: finalStatus,
                     attempts,
                     finalHeight: currentHeight,
+                    target,
+                    ...(fallbackFrom && { fallbackFrom }),
                 },
-                traceDetails: { selector: targetSelector, scrollToEnd: true, attempts },
+                traceDetails: {
+                    selector: targetSelector,
+                    scrollToEnd: true,
+                    attempts,
+                    ...(fallbackFrom && { fallbackFrom }),
+                },
             };
         }
 
+        const finish = (scrolledPixels) => {
+            const status = scrolledPixels !== 0 ? SCROLLED : NOTHING_TO_SCROLL;
+            const target = fallbackFrom ? 'the page' : targetSelector || 'the page';
+            return {
+                message: req.t('actions.scroll.success', {
+                    target,
+                    status,
+                }),
+                data: {
+                    status,
+                    scrolledPixels,
+                    target,
+                    ...(fallbackFrom && { fallbackFrom }),
+                },
+                traceDetails: {
+                    selector: targetSelector,
+                    direction,
+                    amount,
+                    scrolledPixels,
+                    ...(fallbackFrom && { fallbackFrom }),
+                },
+            };
+        };
+
         if (locator) {
             await locator.scrollIntoViewIfNeeded();
-            if (direction === 'up') {
-                await page.evaluate(
-                    (sel, amt) => {
-                        const el = document.querySelector(sel);
-                        if (el) el.scrollBy({ top: -amt, behavior: 'smooth' });
-                    },
-                    targetSelector,
-                    amount,
-                );
-            } else {
-                await page.evaluate(
-                    (sel, amt) => {
-                        const el = document.querySelector(sel);
-                        if (el) el.scrollBy({ top: amt, behavior: 'smooth' });
-                    },
-                    targetSelector,
-                    amount,
-                );
-            }
-        } else if (x !== undefined && y !== undefined) {
-            await page.mouse.wheel(x, y);
-        } else if (direction === 'up') {
-            await page.evaluate(() => window.scrollBy({ top: -amount, behavior }));
-        } else {
-            await page.evaluate(() => window.scrollBy({ top: amount, behavior }));
+            const before = await locator.evaluate((el) => ({
+                y: el.scrollTop,
+                x: el.scrollLeft,
+            }));
+            await page.evaluate(
+                ({ sel, amt, beh, dir }) => {
+                    const el = document.querySelector(sel);
+                    if (!el) return;
+                    if (dir === 'left' || dir === 'right') {
+                        el.scrollBy({ left: dir === 'left' ? -amt : amt, behavior: beh });
+                    } else {
+                        el.scrollBy({ top: dir === 'up' ? -amt : amt, behavior: beh });
+                    }
+                },
+                {
+                    sel: targetSelector,
+                    amt: amount,
+                    beh: behavior,
+                    dir: direction,
+                },
+            );
+            await page.waitForTimeout(settleDelay(behavior));
+            const after = await locator.evaluate((el) => ({
+                y: el.scrollTop,
+                x: el.scrollLeft,
+            }));
+            const scrolledPixels = vertical
+                ? (after?.y ?? 0) - (before?.y ?? 0)
+                : (after?.x ?? 0) - (before?.x ?? 0);
+            return finish(scrolledPixels);
         }
 
-        return {
-            message: req.t('actions.scroll.success', { status: 'Scrolled' }),
-            traceDetails: { selector: targetSelector, direction, amount },
-        };
+        if (x !== undefined && y !== undefined) {
+            await page.mouse.wheel(x, y);
+            return finish(vertical ? y : x);
+        }
+
+        const before = await page.evaluate(() => ({
+            y: window.scrollY,
+            x: window.scrollX,
+        }));
+        await page.evaluate(
+            ({ amt, beh, dir }) => {
+                if (dir === 'left' || dir === 'right') {
+                    window.scrollBy({ left: dir === 'left' ? -amt : amt, behavior: beh });
+                } else {
+                    window.scrollBy({ top: dir === 'up' ? -amt : amt, behavior: beh });
+                }
+            },
+            { amt: amount, beh: behavior, dir: direction },
+        );
+        await page.waitForTimeout(settleDelay(behavior));
+        const after = await page.evaluate(() => ({
+            y: window.scrollY,
+            x: window.scrollX,
+        }));
+        const scrolledPixels = vertical
+            ? (after?.y ?? 0) - (before?.y ?? 0)
+            : (after?.x ?? 0) - (before?.x ?? 0);
+        return finish(scrolledPixels);
     });
 
 export default scroll;

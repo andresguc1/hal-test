@@ -35,7 +35,7 @@
             "success": "Texte saisi avec succès dans le sélecteur '{{selector}}'."
         },
         "scroll": {
-            "success": "Défilement appliqué avec succès à {{target}}."
+            "success": "Défilement appliqué avec succès à {{target}}. Statut : {{status}}."
         },
         "manage_tabs": {
             "new_success": "Nouvel onglet ouvert avec succès.  Nombre total d'onglets : {{count}}",

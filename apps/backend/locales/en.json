@@ -35,7 +35,7 @@
             "success": "Text entered successfully in selector '{{selector}}'."
         },
         "scroll": {
-            "success": "Scroll applied successfully to {{target}}."
+            "success": "Scroll applied successfully to {{target}}. Status: {{status}}."
         },
         "manage_tabs": {
             "new_success": "New tab opened successfully. Total tabs: {{count}}",

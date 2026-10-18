@@ -35,7 +35,7 @@
             "success": "Texto ingresado exitosamente en selector '{{selector}}'."
         },
         "scroll": {
-            "success": "Desplazamiento aplicado correctamente a {{target}}."
+            "success": "Desplazamiento aplicado correctamente a {{target}}. Estado: {{status}}."
         },
         "manage_tabs": {
             "new_success": "Nueva pestaña abierta con éxito. Total de pestañas: {{count}}",
