@@ -419,10 +419,35 @@ printBanner();
 
 await runPreRequisiteChecks();
 
-// 🚀 Port detection with small retry to avoid race during turbo startup
+// 🚀 Port detection. Under turbo (`pnpm dev`) the backend is launched by a
+// parallel task and may take several seconds to bind (imports + migrations);
+// poll until it's up instead of spawning a duplicate instance that races on
+// the port and inherits a production NODE_ENV.
+const underTurbo = Boolean(process.env.TURBO_HASH);
 let isAlreadyRunning = await isPortListening(PORT);
-if (!isAlreadyRunning) {
-  // Give the backend a small headstart if turbo launched them simultaneously
+
+if (!isAlreadyRunning && underTurbo) {
+  console.log(
+    style(c.dim, `  ⏳ Waiting for HalTest backend on port ${PORT}...`),
+  );
+  const deadline = Date.now() + 60000;
+  while (!(isAlreadyRunning = await isPortListening(PORT))) {
+    if (Date.now() > deadline) {
+      console.error(
+        style(c.red + c.bold, `  ❌ Backend never bound port ${PORT}.`),
+      );
+      console.error(
+        style(
+          c.dim,
+          "     Check the @halt-test/backend:dev task output for errors.",
+        ),
+      );
+      process.exit(1);
+    }
+    await new Promise((r) => setTimeout(r, 500));
+  }
+} else if (!isAlreadyRunning) {
+  // Standalone mode (npx haltest): give a co-launched backend a small headstart
   await new Promise((r) => setTimeout(r, 800));
   isAlreadyRunning = await isPortListening(PORT);
 }
