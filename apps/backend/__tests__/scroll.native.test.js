@@ -36,6 +36,9 @@ const guardEvaluateArity = (args) => {
     }
 };
 
+const findScrollByCall = (calls) =>
+    calls.find(([fn]) => typeof fn === 'function' && String(fn).includes('scrollBy'));
+
 // Element probes:
 // - overflow probe (scrollHeight/clientHeight) reports a scrollable element by default;
 // - position probes (scrollTop/scrollLeft) report movement on the 2nd read so
@@ -158,7 +161,7 @@ describe('scroll handler — page.evaluate argument passing', () => {
         vi.unstubAllGlobals();
     });
 
-    it('passes a single object argument to page.evaluate when a selector is set (regression: "Too many arguments")', async () => {
+    it('scrolls a matched element through locator.evaluate with a single object arg (regression: "Too many arguments" + querySelector SyntaxError on getBy* locators)', async () => {
         const l = makeLocator();
         mockPage.locator = vi.fn(() => l);
 
@@ -171,18 +174,69 @@ describe('scroll handler — page.evaluate argument passing', () => {
         expect(json.status).toBe('success');
         assertNoIllegalEvaluateArity(mockPage);
 
-        const scrollCall = mockPage.evaluate.mock.calls.find(
-            ([fn]) => typeof fn === 'function' && String(fn).includes('scrollBy'),
-        );
+        const scrollCall = findScrollByCall(l.evaluate.mock.calls);
         expect(scrollCall).toBeDefined();
+        // locator.evaluate(fn, arg) — a single serialized object, never a bare
+        // positional value (the pre-fix page.evaluate bug) and never a
+        // document.querySelector(sel) that cannot parse a getBy* locator.
         expect(scrollCall).toHaveLength(2);
-        expect(scrollCall[1]).toEqual({
-            sel: '#feed',
-            amt: 500,
-            beh: 'smooth',
-            dir: 'down',
-        });
+        expect(scrollCall[1]).toEqual({ amt: 500, beh: 'smooth', dir: 'down' });
         expect(l.scrollIntoViewIfNeeded).toHaveBeenCalled();
+    });
+
+    it('scrolls a getByRole locator via locator.evaluate — never document.querySelector (regression: SyntaxError on Playwright locators)', async () => {
+        const l = makeLocator();
+        mockPage.getByRole = vi.fn(() => l);
+
+        const { status, json } = await callHandler(
+            mockReq({
+                selector: "getByRole('button', { name: 'Load more' })",
+                direction: 'down',
+                amount: 300,
+                behavior: 'auto',
+            }),
+        );
+
+        expect(status).toBe(200);
+        expect(json.success).toBe(true);
+        expect(mockPage.getByRole).toHaveBeenCalled();
+
+        // The old handler resolved the scroll via document.querySelector(sel),
+        // which throws a SyntaxError for a getByRole(...) string and failed the
+        // whole node. The scroll must now ride the Playwright locator. (The
+        // Vector Cache fingerprint in ActionExecutor legitimately calls
+        // page.evaluate with querySelector — but never with scrollBy, so we
+        // specifically assert no evaluate call scrolls via querySelector.)
+        const querySelectorScroll = mockPage.evaluate.mock.calls.filter(
+            ([fn]) =>
+                typeof fn === 'function' &&
+                String(fn).includes('scrollBy') &&
+                String(fn).includes('querySelector'),
+        );
+        expect(querySelectorScroll).toHaveLength(0);
+
+        const scrollCall = findScrollByCall(l.evaluate.mock.calls);
+        expect(scrollCall).toBeDefined();
+        expect(scrollCall[1]).toMatchObject({ dir: 'down' });
+    });
+
+    it('waits for the element to attach before probing overflow (regression: late-rendering target silently fell back to the page)', async () => {
+        const l = makeLocator();
+        mockPage.locator = vi.fn(() => l);
+
+        await callHandler(
+            mockReq({ selector: '#late', direction: 'down', amount: 200, behavior: 'auto' }),
+        );
+
+        // waitFor must precede the overflow probe so a not-yet-attached element
+        // is given a chance to render instead of being read as "cannot scroll".
+        const waitOrder = l.waitFor.mock.invocationCallOrder[0];
+        const overflowProbe = l.evaluate.mock.calls.findIndex(([fn]) =>
+            String(fn).includes('clientHeight'),
+        );
+        expect(l.waitFor).toHaveBeenCalledWith({ state: 'attached', timeout: 5000 });
+        expect(overflowProbe).toBeGreaterThanOrEqual(0);
+        expect(waitOrder).toBeLessThan(l.evaluate.mock.invocationCallOrder[overflowProbe]);
     });
 
     it('scrolls the matched element DOWN with the user-selected behavior (not a hardcoded "smooth")', async () => {
@@ -194,13 +248,10 @@ describe('scroll handler — page.evaluate argument passing', () => {
         );
         expect(status).toBe(200);
 
-        const [fn, arg] = mockPage.evaluate.mock.calls.find(
-            ([f]) => typeof f === 'function' && String(f).includes('scrollBy'),
-        );
+        const [fn, arg] = findScrollByCall(l.evaluate.mock.calls);
 
         const scrollBy = vi.fn();
-        vi.stubGlobal('document', { querySelector: vi.fn(() => ({ scrollBy })) });
-        fn(arg);
+        fn({ scrollBy }, arg);
 
         expect(scrollBy).toHaveBeenCalledWith({ top: 300, behavior: 'auto' });
     });
@@ -214,14 +265,10 @@ describe('scroll handler — page.evaluate argument passing', () => {
         );
         expect(status).toBe(200);
 
-        const [fn, arg] = mockPage.evaluate.mock.calls.find(
-            ([f]) => typeof f === 'function' && String(f).includes('scrollBy'),
-        );
+        const [fn, arg] = findScrollByCall(l.evaluate.mock.calls);
 
         const scrollBy = vi.fn();
-        vi.stubGlobal('document', { querySelector: vi.fn(() => ({ scrollBy })) });
-        fn(arg);
-
+        fn({ scrollBy }, arg);
         expect(scrollBy).toHaveBeenCalledWith({ top: -400, behavior: 'smooth' });
     });
 
@@ -234,14 +281,10 @@ describe('scroll handler — page.evaluate argument passing', () => {
         );
         expect(status).toBe(200);
 
-        const [fn, arg] = mockPage.evaluate.mock.calls.find(
-            ([f]) => typeof f === 'function' && String(f).includes('scrollBy'),
-        );
+        const [fn, arg] = findScrollByCall(l.evaluate.mock.calls);
 
         const scrollBy = vi.fn();
-        vi.stubGlobal('document', { querySelector: vi.fn(() => ({ scrollBy })) });
-        fn(arg);
-
+        fn({ scrollBy }, arg);
         expect(scrollBy).toHaveBeenCalledWith({ left: 200, behavior: 'auto' });
     });
 
@@ -254,14 +297,10 @@ describe('scroll handler — page.evaluate argument passing', () => {
         );
         expect(status).toBe(200);
 
-        const [fn, arg] = mockPage.evaluate.mock.calls.find(
-            ([f]) => typeof f === 'function' && String(f).includes('scrollBy'),
-        );
+        const [fn, arg] = findScrollByCall(l.evaluate.mock.calls);
 
         const scrollBy = vi.fn();
-        vi.stubGlobal('document', { querySelector: vi.fn(() => ({ scrollBy })) });
-        fn(arg);
-
+        fn({ scrollBy }, arg);
         expect(scrollBy).toHaveBeenCalledWith({ left: -200, behavior: 'smooth' });
     });
 
@@ -349,9 +388,7 @@ describe('scroll handler — page.evaluate argument passing', () => {
         );
         expect(status).toBe(200);
 
-        const [, arg] = mockPage.evaluate.mock.calls.find(
-            ([fn]) => typeof fn === 'function' && String(fn).includes('scrollBy'),
-        );
+        const [, arg] = findScrollByCall(l.evaluate.mock.calls);
         expect(arg.amt).toBe(400);
         expect(typeof arg.amt).toBe('number');
     });
@@ -606,6 +643,10 @@ describe('scroll handler — scrollToEnd (infinite scroll)', () => {
             target: 'the page',
             fallbackFrom: '#amount',
         });
-        expect(l.waitFor).not.toHaveBeenCalled();
+        // waitFor now runs before the overflow probe (so a late-rendering
+        // element is not misread as non-scrollable); the scroll itself used
+        // the window path, not a second attached-wait inside the scrollToEnd
+        // loop.
+        expect(l.waitFor).toHaveBeenCalledWith({ state: 'attached', timeout: 5000 });
     });
 });

@@ -33,6 +33,11 @@ const scroll = (req, res) =>
         // movement, and we report where we actually scrolled.
         let fallbackFrom = null;
         if (locator) {
+            // Wait for the element to attach before probing: a late-rendering
+            // target would otherwise make the probe throw, be read as "cannot
+            // scroll", and silently fall back to scrolling the page instead of
+            // the element the user selected.
+            await locator.waitFor({ state: 'attached', timeout: 5000 }).catch(() => {});
             const canScroll = await locator
                 .evaluate((el) => ({
                     y: el.scrollHeight - el.clientHeight > 1,
@@ -143,10 +148,13 @@ const scroll = (req, res) =>
                 y: el.scrollTop,
                 x: el.scrollLeft,
             }));
-            await page.evaluate(
-                ({ sel, amt, beh, dir }) => {
-                    const el = document.querySelector(sel);
-                    if (!el) return;
+            // Scroll via locator.evaluate (not page.evaluate + querySelector):
+            // the selector may be a Playwright locator (getByRole/getByText/
+            // chained) that document.querySelector cannot parse — it would
+            // throw a SyntaxError and fail the whole node. The locator uses
+            // the exact same resolution the overflow probe already validated.
+            await locator.evaluate(
+                (el, { amt, beh, dir }) => {
                     if (dir === 'left' || dir === 'right') {
                         el.scrollBy({ left: dir === 'left' ? -amt : amt, behavior: beh });
                     } else {
@@ -154,7 +162,6 @@ const scroll = (req, res) =>
                     }
                 },
                 {
-                    sel: targetSelector,
                     amt: amount,
                     beh: behavior,
                     dir: direction,
