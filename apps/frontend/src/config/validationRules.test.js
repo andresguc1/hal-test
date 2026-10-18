@@ -73,6 +73,91 @@ describe("validateNodeConfig", () => {
   });
 });
 
+describe("assert node validation", () => {
+  it("accepts a fully configured assert node with a nested target and checks", () => {
+    const config = {
+      target: {
+        selector: "#showOverview",
+        scope: "element",
+        candidates: { id: "#showOverview" },
+        selectorType: "id",
+      },
+      assertions: [
+        { type: "text", operator: "contains", expected: "Overview" },
+      ],
+      softFail: false,
+    };
+    // Regression: the generic required-field loop used to re-check the flat
+    // key "target.selector" (never present in a nested config) and fail every
+    // configured assert node with "Element to check".
+    expect(validateNodeConfig("assert", config).isValid).toBe(true);
+  });
+
+  it("requires an element selector for element scope", () => {
+    const result = validateNodeConfig("assert", {
+      assertions: [{ type: "existence", operator: "exists" }],
+    });
+    expect(result.isValid).toBe(false);
+    expect(result.missingField).toBe("Element to check");
+  });
+
+  it("does not require an element selector for page scope", () => {
+    const result = validateNodeConfig("assert", {
+      target: { scope: "page" },
+      assertions: [
+        { type: "page", operator: "title_contains", expected: "Home" },
+      ],
+    });
+    expect(result.isValid).toBe(true);
+  });
+
+  it("requires at least one check", () => {
+    const result = validateNodeConfig("assert", {
+      target: { selector: "#a", scope: "element" },
+      assertions: [],
+    });
+    expect(result.isValid).toBe(false);
+    expect(result.missingField).toBe("At least one check");
+  });
+
+  it("requires an expected value for value-bearing operators", () => {
+    const result = validateNodeConfig("assert", {
+      target: { selector: "#a", scope: "element" },
+      assertions: [{ type: "text", operator: "contains", expected: "" }],
+    });
+    expect(result.isValid).toBe(false);
+    expect(result.missingField).toBe("Expected Value");
+  });
+
+  it("still enforces the timeout range for assert", () => {
+    const result = validateNodeConfig("assert", {
+      target: { selector: "#a", scope: "element" },
+      assertions: [{ type: "existence", operator: "exists" }],
+      timeout: -5,
+    });
+    expect(result.isValid).toBe(false);
+    expect(result.fieldKey).toBe("timeout");
+  });
+});
+
+describe("assert node round-trip", () => {
+  it("stays valid after cleanNodeConfiguration preserves the nested shape", () => {
+    const config = {
+      target: {
+        selector: "#showOverview",
+        scope: "element",
+        candidates: { id: "#showOverview" },
+      },
+      assertions: [{ type: "existence", operator: "exists" }],
+    };
+    const cleaned = cleanNodeConfiguration(config, "assert");
+    expect(cleaned.assertions).toEqual([
+      { type: "existence", operator: "exists" },
+    ]);
+    expect(validateNodeConfig("assert", cleaned).isValid).toBe(true);
+  });
+});
+
 describe("set_checkbox NODE_INPUTS wiring", () => {
   const inputs = NODE_INPUTS.set_checkbox;
 

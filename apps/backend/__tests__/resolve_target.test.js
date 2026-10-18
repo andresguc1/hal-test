@@ -315,6 +315,37 @@ describe('resolveTarget', () => {
             expect(result.errors.length).toBeGreaterThan(0);
         });
     });
+
+    describe('aborted signal classification', () => {
+        it('flags an aborted resolution instead of a plain missing element', async () => {
+            const controller = new AbortController();
+            controller.abort();
+            const target = createTarget(
+                '#nonexistent',
+                { id: '#also-nonexistent', cssPath: 'div.nope' },
+                'id',
+            );
+            const result = await resolveTarget({
+                page,
+                target,
+                scope: 'element',
+                timeout: 30000,
+                signal: controller.signal,
+            });
+
+            expect(result.resolution).toBe('none');
+            expect(result.aborted).toBe(true);
+            expect(result.candidatesTried.some((c) => c.error === 'Aborted')).toBe(true);
+        });
+
+        it('does not flag aborted for a genuine missing element', async () => {
+            const target = createTarget('#nonexistent', { id: '#also-nonexistent' }, 'id');
+            const result = await resolveTarget({ page, target, scope: 'element', timeout: 300 });
+
+            expect(result.resolution).toBe('none');
+            expect(result.aborted).toBe(false);
+        });
+    });
 });
 
 describe('PICKER_CANDIDATE_ORDER', () => {

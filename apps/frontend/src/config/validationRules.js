@@ -1898,7 +1898,14 @@ export const cleanNodeConfiguration = (
  * Validates a node configuration based on the rules defined above.
  */
 export const validateNodeConfig = (nodeType, config = {}) => {
-  const rules = NODE_INPUTS[nodeType] || NODE_INPUTS.default;
+  // The assert node is fully validated by the bespoke block below, which
+  // understands its nested `target.*` object. The generic loop further down
+  // looks rules up by literal key (e.g. `config["target.selector"]`), which
+  // never matches the nested object and made every configured assert node fail
+  // with a bogus "Element to check". So the assert node skips that loop (its
+  // timeout capability is still enforced afterwards).
+  const rules =
+    nodeType === "assert" ? [] : NODE_INPUTS[nodeType] || NODE_INPUTS.default;
 
   // Special validation for assert node
   if (nodeType === "assert") {

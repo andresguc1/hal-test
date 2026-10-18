@@ -3,6 +3,7 @@ import { normalizeTimeout, playTimeout } from '../../../core/timeout-utils.js';
 import { resolveTarget, buildPlaywrightLocator } from '../../../core/selector-utils.js';
 import { assertionEngine } from '../engine/AssertionEngine.js';
 import { variableManager } from '../../../services/VariableManager.js';
+import { activeRunManager } from '../../../services/ActiveRunManager.js';
 
 /**
  * Unified `assert` node handler.
@@ -22,6 +23,7 @@ const assertNode = (req, res) =>
     executePlaywrightAction(req, res, 'assert', async (page, opts) => {
         const { target, assertion, assertions } = opts;
         const timeout = normalizeTimeout(opts.timeout);
+        const runId = req.body.runId;
         const softFail =
             opts.softFail === true ||
             opts.softFail === 'true' ||
@@ -72,33 +74,44 @@ const assertNode = (req, res) =>
         let resolutionInfo = resolution;
 
         if (resolution.resolution === 'none') {
-            if (hasHiddenAssertion) {
-                // For hidden assertions, Playwright considers "not attached" as "hidden"
-                // Create a locator from the primary selector and let the assertion engine handle it
-                const primary = target?.selector;
-                locator = buildPlaywrightLocator(page, primary);
-                resolutionInfo = {
-                    ...resolution,
-                    resolution: 'hidden-assertion-fallback',
-                    usedSelector: primary,
-                };
-            } else {
-                const details = resolution.candidatesTried
-                    .map((c) => `${c.selector} (${c.status}${c.error ? `: ${c.error}` : ''})`)
-                    .join(' | ');
+            // Distinguish a genuine run cancellation (user pressed Stop / the
+            // browser was torn down) from a per-node wall-clock timeout.
+            // req.signal is a COMBINED signal — AbortSignal.any([runSignal,
+            // AbortSignal.timeout(wallClockMs)]) — so req.signal.aborted is
+            // ALSO true whenever the node simply ran out of time. Deciding
+            // "cancelled" from it produced the misleading "the run was
+            // cancelled, or the browser/page closed" error on a healthy run.
+            // Only the run's own abort signal means cancellation.
+            const runCancelled = activeRunManager.getSignal(runId)?.aborted === true;
+            if (runCancelled) {
                 throw new Error(
                     req.t(
-                        'actions.assert.target_not_found',
-                        `Target element not found. Tried: ${details || 'no candidates'}`,
+                        'actions.assert.target_resolution_aborted',
+                        `Target resolution for "${target?.selector}" was aborted before the element could be checked. The run was cancelled, or the browser/page closed.`,
                     ),
                 );
             }
+
+            // Timed-out or transient probe abort, or the target simply did not
+            // attach within the quick probe window. Do NOT hard-fail:
+            // Playwright assertions auto-wait, and the assertion may well be an
+            // absence check (not_exists / hidden) or a slow-rendering target.
+            // A real wall-clock overrun is still surfaced truthfully by
+            // _withNodeTimeout after the engine runs.
+            const primary = target?.selector;
+            locator = resolution.locator || buildPlaywrightLocator(page, primary);
+            resolutionInfo = {
+                ...resolution,
+                resolution: hasHiddenAssertion
+                    ? 'hidden-assertion-fallback'
+                    : 'primary-not-attached',
+                usedSelector: primary,
+            };
         } else {
             locator = resolution.locator;
         }
 
         // Get run variables for snapshot access (mutability assertions)
-        const runId = req.body.runId;
         const variables = runId ? variableManager.getAll(runId) : {};
 
         const results = await assertionEngine.evaluate({
@@ -118,10 +131,20 @@ const assertNode = (req, res) =>
             const details = failedResults
                 .map((r) => r.message || `Assertion "${r.type}:${r.operator}" failed.`)
                 .join(' | ');
+            // If the selector never attached, add the candidates we tried so
+            // the failure stays as actionable as the old "Target element not
+            // found" message, without failing early (which broke slow pages).
+            let hint = '';
+            if (resolutionInfo.resolution === 'primary-not-attached') {
+                const tried = (resolutionInfo.candidatesTried || [])
+                    .map((c) => `${c.selector} (${c.status})`)
+                    .join(' | ');
+                if (tried) hint = ` Tried: ${tried}.`;
+            }
             throw new Error(
                 req.t(
                     'actions.assert.hard_failed',
-                    `Assertion failed (${passedCount}/${totalCount} passed). ${details}`,
+                    `Assertion failed (${passedCount}/${totalCount} passed). ${details}${hint}`,
                 ),
             );
         }

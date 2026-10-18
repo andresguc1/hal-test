@@ -1,6 +1,7 @@
 import { emitElementPicked, emitElementSanitized } from '../socket.js';
 /* global window, document, Element, Node, CSS */
 import ollamaService from './OllamaService.js';
+import { isPlaywrightLocator } from '../core/selector-utils.js';
 
 /**
  * The client-side code injected into the browser.
@@ -147,7 +148,9 @@ const injectInspectorUI = () => {
         // Use aria-label if available, otherwise use accessible name from innerText/label
         const roleName = ariaLabel || accessibleName;
         if (roleName) {
-            candidates.aria = `[aria-label="${ariaLabel}"]`;
+            if (ariaLabel) {
+                candidates.aria = `[aria-label="${ariaLabel}"]`;
+            }
             candidates.playwrightRole = `getByRole('${role}', { name: '${escapeSelectorValue(roleName)}' })`;
         } else if (explicitRole) {
             // Has explicit role but no accessible name
@@ -327,6 +330,7 @@ const injectInspectorUI = () => {
                 /getByLabel\(['"]([^'"]+)['"]\)/,
             )?.[1];
             const matchCount = countLabelMatches(labelValue);
+            let resolved = matchCount;
             if (matchCount > 1) {
                 const contextChain = findStableContextChain(el);
                 if (contextChain.length > 0) {
@@ -334,9 +338,9 @@ const injectInspectorUI = () => {
                         candidates.playwrightLabel.replace('page.', ''),
                         contextChain,
                     );
-                    candidates.ambiguous = true;
                     candidates.context = contextChain[0];
                     candidates.contextChain = contextChain;
+                    resolved = 1;
                 } else {
                     const cardinality = getCardinalitySelector(
                         el,
@@ -345,39 +349,21 @@ const injectInspectorUI = () => {
                     );
                     if (cardinality) {
                         candidates.playwrightLabel = cardinality;
-                        candidates.ambiguous = true;
                         candidates.cardinality = true;
+                        resolved = 1;
                     } else {
                         candidates.ambiguous = true;
                     }
                 }
             }
-            return { best: candidates.playwrightLabel, type: 'playwrightLabel', all: candidates };
+            return {
+                best: candidates.playwrightLabel,
+                type: 'playwrightLabel',
+                all: candidates,
+                matchCount: resolved,
+                ambiguous: resolved > 1,
+            };
         }
-        if (candidates.testId)
-            return {
-                best: candidates.testId,
-                type: 'testId',
-                all: candidates,
-                matchCount: 1,
-                ambiguous: false,
-            };
-        if (candidates.id)
-            return {
-                best: candidates.id,
-                type: 'id',
-                all: candidates,
-                matchCount: 1,
-                ambiguous: false,
-            };
-        if (candidates.name)
-            return {
-                best: candidates.name,
-                type: 'name',
-                all: candidates,
-                matchCount: 1,
-                ambiguous: false,
-            };
         if (candidates.playwrightPlaceholder) {
             const placeholderValue = candidates.playwrightPlaceholder.match(
                 /getByPlaceholder\(['"]([^'"]+)['"]\)/,
@@ -398,14 +384,6 @@ const injectInspectorUI = () => {
                 ambiguous: matchCount > 1,
             };
         }
-        if (candidates.aria)
-            return {
-                best: candidates.aria,
-                type: 'aria',
-                all: candidates,
-                matchCount: 1,
-                ambiguous: false,
-            };
         if (candidates.playwrightAltText) {
             const altValue = candidates.playwrightAltText.match(
                 /getByAltText\(['"]([^'"]+)['"]\)/,
@@ -480,6 +458,38 @@ const injectInspectorUI = () => {
                 ambiguous: substringCount > 1,
             };
         }
+        if (candidates.testId)
+            return {
+                best: candidates.testId,
+                type: 'testId',
+                all: candidates,
+                matchCount: 1,
+                ambiguous: false,
+            };
+        if (candidates.id)
+            return {
+                best: candidates.id,
+                type: 'id',
+                all: candidates,
+                matchCount: 1,
+                ambiguous: false,
+            };
+        if (candidates.name)
+            return {
+                best: candidates.name,
+                type: 'name',
+                all: candidates,
+                matchCount: 1,
+                ambiguous: false,
+            };
+        if (candidates.aria)
+            return {
+                best: candidates.aria,
+                type: 'aria',
+                all: candidates,
+                matchCount: 1,
+                ambiguous: false,
+            };
         if (candidates.text)
             return {
                 best: candidates.text,
@@ -497,7 +507,6 @@ const injectInspectorUI = () => {
             ambiguous: false,
         };
     }
-
     function getCssPath(el) {
         if (!(el instanceof Element)) return '';
         const path = [];
@@ -972,16 +981,17 @@ export async function startInspector(page) {
 
             (async () => {
                 try {
-                    // Check if the original selector is already a Playwright native locator
-                    const isPlaywrightLocator =
-                        /^(getByTestId|getByLabel|getByRole|getByText|getByPlaceholder|getByAltText|getByTitle)\s*\(/i.test(
-                            data.selector,
-                        );
+                    // The picker already produces the best deterministic Playwright
+                    // locator (getBy*). The AI may only ever UPGRADE a raw CSS/XPath
+                    // pick to a Playwright locator — never DOWNGRADE a getBy* locator
+                    // back to CSS. This keeps the smart picker deterministic and
+                    // Playwright-first regardless of model output.
+                    const originalIsPlaywright = isPlaywrightLocator(data.selector);
 
-                    // If we already have a Playwright locator, only use AI if it can significantly improve it
-                    // (e.g., the current locator is ambiguous or has low confidence)
+                    // If we already have a Playwright locator, only use AI if it can
+                    // significantly improve it (e.g. the locator is ambiguous).
                     const shouldSanitize =
-                        !isPlaywrightLocator || (data.ambiguous && isPlaywrightLocator);
+                        !originalIsPlaywright || (data.ambiguous && originalIsPlaywright);
 
                     let sanitized = null;
                     if (shouldSanitize) {
@@ -992,30 +1002,27 @@ export async function startInspector(page) {
                         );
                     }
 
-                    // Only emit sanitized if it's significantly better
-                    if (sanitized && sanitized.confidence > 0.75) {
-                        // Additional check: if original is already a good Playwright locator,
-                        // only use AI result if it's also Playwright and has higher confidence
-                        if (isPlaywrightLocator && sanitized.locatorType === 'fallback') {
-                            console.log(
-                                '[Inspector] AI returned fallback for Playwright locator, skipping.',
-                            );
-                        } else {
-                            console.log(
-                                `[Inspector] ✨ AI Optimized Selector — emitting element_sanitized: ${sanitized.sanitizedSelector} (confidence: ${sanitized.confidence})`,
-                            );
-                            emitElementSanitized({
-                                pickId,
-                                selector: sanitized.sanitizedSelector,
-                                originalSelector: data.selector,
-                                aiOptimized: true,
-                                confidence: sanitized.confidence,
-                                reasoning: sanitized.reasoning,
-                            });
-                        }
+                    const sanitizedIsPlaywright =
+                        sanitized && isPlaywrightLocator(sanitized.sanitizedSelector);
+
+                    // Only emit sanitized if the AI produced a genuine Playwright
+                    // locator with high confidence. A CSS/XPath/fallback result is
+                    // never allowed to replace the deterministic picker output.
+                    if (sanitized && sanitized.confidence > 0.75 && sanitizedIsPlaywright) {
+                        console.log(
+                            `[Inspector] ✨ AI Optimized Selector — emitting element_sanitized: ${sanitized.sanitizedSelector} (confidence: ${sanitized.confidence})`,
+                        );
+                        emitElementSanitized({
+                            pickId,
+                            selector: sanitized.sanitizedSelector,
+                            originalSelector: data.selector,
+                            aiOptimized: true,
+                            confidence: sanitized.confidence,
+                            reasoning: sanitized.reasoning,
+                        });
                     } else {
                         console.log(
-                            '[Inspector] AI Sanitization confidence too low or not needed, skipping re-emit.',
+                            '[Inspector] AI result not a Playwright locator or confidence too low, keeping deterministic pick.',
                         );
                     }
                 } catch (aiError) {

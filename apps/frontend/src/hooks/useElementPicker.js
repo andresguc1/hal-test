@@ -4,7 +4,10 @@ import { useTranslation } from "react-i18next";
 import { api } from "../utils/api";
 import { NODE_STATES } from "../components/hooks/flowStyles";
 import { usePickerReplay } from "./usePickerReplay";
-import { pickBestSelector } from "../utils/selectorPriority";
+import {
+  pickBestSelector,
+  isPlaywrightLocator,
+} from "../utils/selectorPriority";
 
 export const useElementPicker = ({
   selectedAction,
@@ -298,9 +301,16 @@ export const useElementPicker = ({
 
         const trimmedSelector = finalSelector.trim();
 
+        // The backend flags a pick as ambiguous either on the result or on the
+        // candidates map (e.g. a non-unique getByText that it replaced with a
+        // safe CSS fallback). Treat both as ambiguous so we skip the redundant
+        // uniqueness check and still warn the user.
+        const wasAmbiguous =
+          data.ambiguous === true || data.candidates?.ambiguous === true;
+
         let matchWarning = null;
         if (
-          !data.ambiguous &&
+          !wasAmbiguous &&
           activeBrowserId &&
           !trimmedSelector.startsWith("getBy")
         ) {
@@ -389,7 +399,7 @@ export const useElementPicker = ({
 
         if (matchWarning) {
           toast.warning(t("common.selector_ambiguous_warning", matchWarning));
-        } else if (data.ambiguous) {
+        } else if (wasAmbiguous) {
           toast.warning(
             t(
               "common.selector_ambiguous_pick",
@@ -432,6 +442,19 @@ export const useElementPicker = ({
 
       const sanitizedSelector = data.selector;
       if (!sanitizedSelector) return;
+
+      // The smart picker is Playwright-first and deterministic: an AI
+      // "optimized" selector may only ever UPGRADE a raw CSS/XPath pick to a
+      // Playwright locator, never downgrade or swap it for another CSS/XPath
+      // result. The deterministic in-page picker already chose the best raw
+      // selector, so a non-Playwright AI result is simply ignored.
+      if (!isPlaywrightLocator(sanitizedSelector)) {
+        console.log(
+          "[useElementPicker] Ignoring non-Playwright AI selector; keeping deterministic pick.",
+          { sanitizedSelector },
+        );
+        return;
+      }
 
       try {
         setNodes((currNodes) => {

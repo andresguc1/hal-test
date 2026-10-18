@@ -344,6 +344,15 @@ function buildPlaywrightLocator(page, selector) {
     return page.locator(selector);
 }
 
+// Matches a getBy* locator call, whether bare (`getByText('x')`), namespaced
+// (`page.getByRole('button')`) or chained (`page.locator('#x').getByText('y')`).
+const PLAYWRIGHT_LOCATOR_RE =
+    /(?:^|\.)\s*getBy(?:Role|Text|Label|TestId|Placeholder|AltText|Title)\s*\(/i;
+
+function isPlaywrightLocator(selector) {
+    return typeof selector === 'string' && PLAYWRIGHT_LOCATOR_RE.test(selector.trim());
+}
+
 function convertPlaywrightLocator(selector) {
     if (!selector || typeof selector !== 'string') return selector;
 
@@ -443,6 +452,14 @@ async function probeAttached(page, selector, probeTimeoutMs, signal) {
         await locator.waitFor({ state: 'attached', timeout: probeTimeoutMs, signal });
         return { locator, error: null };
     } catch (err) {
+        // Check if aborted
+        if (signal && signal.aborted) {
+            return { locator: null, error: 'Aborted', aborted: true };
+        }
+        const msg = err && err.message ? err.message : String(err);
+        if (msg.includes('aborted') || msg.includes('AbortError') || err.name === 'AbortError') {
+            return { locator: null, error: 'Aborted', aborted: true };
+        }
         // waitFor throws a strict-mode violation when the selector resolves to
         // several elements. Distinguish that "attached but ambiguous" case from
         // a genuinely missing element by counting matches.
@@ -453,7 +470,7 @@ async function probeAttached(page, selector, probeTimeoutMs, signal) {
         } catch {
             // fall through to not-attached
         }
-        return { locator: null, error: err.message };
+        return { locator: null, error: msg };
     }
 }
 
@@ -546,6 +563,7 @@ async function resolveTarget({ page, target, scope, timeout = 30000, signal }) {
     const probeMs = Math.min(1500, timeout || 30000);
     const candidatesTried = [];
     const errors = [];
+    let aborted = false;
 
     for (const candidate of orderedCandidates) {
         const probe = await probeAttached(page, candidate, probeMs, signal);
@@ -575,6 +593,7 @@ async function resolveTarget({ page, target, scope, timeout = 30000, signal }) {
         }
         candidatesTried.push({ selector: candidate, status: 'not-attached', error: probe.error });
         if (probe.error) errors.push(`${candidate}: ${probe.error}`);
+        if (probe.aborted) aborted = true;
     }
 
     const normalized = await normalizeSelectorForDotId(page, primary);
@@ -601,6 +620,7 @@ async function resolveTarget({ page, target, scope, timeout = 30000, signal }) {
         resolution: matches > 1 && usedSelector === primary ? 'none-ambiguous' : 'none',
         candidatesTried,
         errors,
+        aborted,
     };
 }
 
@@ -650,6 +670,7 @@ export {
     buildChainedLocator,
     buildPlaywrightLocator,
     convertPlaywrightLocator,
+    isPlaywrightLocator,
     normalizeSelectorForDotId,
     SELECTOR_FIELDS_BY_ACTION,
     resolveSelectors,

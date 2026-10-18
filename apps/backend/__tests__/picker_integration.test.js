@@ -6,14 +6,17 @@
  * 2. The full pipeline: Picker selector → buildPlaywrightLocator → Playwright action works
  * 3. AI sanitization preserves locator types correctly
  */
+/* global window, document, MouseEvent */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { chromium } from 'playwright';
 import {
     buildPlaywrightLocator,
     convertPlaywrightLocator,
+    isPlaywrightLocator,
     normalizeSelectorForDotId,
     resolveTarget,
 } from '../core/selector-utils.js';
+import { startInspector, stopInspector } from '../services/inspector.service.js';
 
 describe('Picker-to-Execution Integration Tests', () => {
     let browser;
@@ -149,6 +152,24 @@ describe('Picker-to-Execution Integration Tests', () => {
         });
     });
 
+    describe('isPlaywrightLocator', () => {
+        it('recognises bare, namespaced and chained getBy* locators', () => {
+            expect(isPlaywrightLocator("getByText('Submit')")).toBe(true);
+            expect(isPlaywrightLocator("getByRole('button', { name: 'Save' })")).toBe(true);
+            expect(isPlaywrightLocator("page.getByRole('link')")).toBe(true);
+            expect(isPlaywrightLocator("page.locator('#form').getByLabel('Email')")).toBe(true);
+        });
+
+        it('rejects CSS, XPath and non-string values', () => {
+            expect(isPlaywrightLocator('#showOverview')).toBe(false);
+            expect(isPlaywrightLocator('div > button')).toBe(false);
+            expect(isPlaywrightLocator('//div[@id="showOverview"]')).toBe(false);
+            expect(isPlaywrightLocator('')).toBe(false);
+            expect(isPlaywrightLocator(null)).toBe(false);
+            expect(isPlaywrightLocator(undefined)).toBe(false);
+        });
+    });
+
     describe('normalizeSelectorForDotId', () => {
         it('should pass through non-CSS selectors', async () => {
             const result = await normalizeSelectorForDotId(page, "getByTestId('foo')");
@@ -251,6 +272,69 @@ describe('Picker-to-Execution Integration Tests', () => {
                 .poll(() => p.locator('#modal-close').getAttribute('data-clicked'))
                 .toBe('1');
             await p.close();
+        });
+    });
+
+    describe('In-page picker prioritizes Playwright locators', () => {
+        const pickOnPage = async (html, elementId = 'target') => {
+            const p = await context.newPage();
+            await p.setContent(`<html><body>${html}</body></html>`);
+            await p.waitForLoadState('domcontentloaded');
+
+            await startInspector(p);
+
+            await p.evaluate(() => {
+                window.__captured = [];
+                const orig = window.onElementSelected;
+                window.onElementSelected = (data) => {
+                    window.__captured.push(data);
+                    return orig(data);
+                };
+            });
+
+            await p.evaluate((id) => {
+                document
+                    .getElementById(id)
+                    .dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+            }, elementId);
+
+            await expect.poll(() => p.evaluate(() => window.__captured.length)).toBe(1);
+            const data = await p.evaluate(() => window.__captured[0]);
+            await stopInspector(p).catch(() => {});
+            await p.close();
+            return data;
+        };
+
+        it('prefers getByText over the id selector for a div with text', async () => {
+            const data = await pickOnPage(`<div id="target">Show Overview</div>`);
+            expect(data.selector).toBe("getByText('Show Overview')");
+            expect(data.selectorType).toBe('playwrightText');
+            expect(data.candidates.id).toBe('#target');
+            expect(data.ambiguous).toBe(false);
+        });
+
+        it('prefers getByRole over the id selector for a button with text', async () => {
+            const data = await pickOnPage(`<button id="target">Show Overview</button>`);
+            expect(data.selector).toBe("getByRole('button', { name: 'Show Overview' })");
+            expect(data.selectorType).toBe('playwrightRole');
+            expect(data.candidates.id).toBe('#target');
+        });
+
+        it('prefers getByTestId over the id selector', async () => {
+            const data = await pickOnPage(
+                `<div id="target" data-testid="overview">Show Overview</div>`,
+            );
+            expect(data.selector).toBe("getByTestId('overview')");
+            expect(data.selectorType).toBe('playwrightTestId');
+            expect(data.candidates.id).toBe('#target');
+        });
+
+        it('falls back to the id selector only when no Playwright locator exists', async () => {
+            const data = await pickOnPage(`<div id="target"></div>`);
+            expect(data.selector).toBe('#target');
+            expect(data.selectorType).toBe('id');
+            expect(data.candidates.playwrightText).toBeUndefined();
+            expect(data.candidates.playwrightRole).toBeUndefined();
         });
     });
 });

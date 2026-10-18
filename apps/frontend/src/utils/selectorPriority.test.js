@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   pickBestSelector,
+  isPlaywrightLocator,
   PLAYWRIGHT_SELECTOR_PRIORITY,
 } from "./selectorPriority.js";
 
@@ -235,5 +236,93 @@ describe("Selector Priority - Playwright locators first", () => {
     expect(PLAYWRIGHT_SELECTOR_PRIORITY[11]).toBe("text");
     expect(PLAYWRIGHT_SELECTOR_PRIORITY[12]).toBe("cssPath");
     expect(PLAYWRIGHT_SELECTOR_PRIORITY[13]).toBe("xpath");
+  });
+});
+
+describe("pickBestSelector - respects backend ambiguity resolution", () => {
+  it("keeps the backend's CSS fallback when the getByText candidate is ambiguous", () => {
+    const sources = {
+      selector: "div#showOverview > table",
+      selectorType: "cssPath",
+      ambiguous: false,
+      candidates: {
+        playwrightText: "getByText('Overview')",
+        id: "#showOverview",
+        cssPath: "div#showOverview > table",
+        ambiguous: true,
+      },
+    };
+    const result = pickBestSelector(sources);
+    expect(result.selector).toBe("div#showOverview > table");
+    expect(result.type).toBe("cssPath");
+  });
+
+  it("trusts the backend selector when the result itself is flagged ambiguous", () => {
+    const sources = {
+      selector: "getByRole('button', { name: 'Save' })",
+      selectorType: "playwrightRole",
+      ambiguous: true,
+      candidates: {
+        playwrightRole: "getByRole('button', { name: 'Save' })",
+        playwrightText: "getByText('Save')",
+        cssPath: "button.save",
+      },
+    };
+    const result = pickBestSelector(sources);
+    expect(result.selector).toBe("getByRole('button', { name: 'Save' })");
+    expect(result.type).toBe("playwrightRole");
+  });
+
+  it("still re-ranks normally when nothing is flagged ambiguous", () => {
+    const sources = {
+      selector: "div > button",
+      selectorType: "cssPath",
+      candidates: {
+        playwrightText: "getByText('Submit')",
+        cssPath: "div > button",
+      },
+    };
+    const result = pickBestSelector(sources);
+    expect(result.selector).toBe("getByText('Submit')");
+    expect(result.type).toBe("playwrightText");
+  });
+
+  it("falls through to ranking when flagged ambiguous but no backend selector is present", () => {
+    const sources = {
+      candidates: {
+        playwrightText: "getByText('Overview')",
+        cssPath: "div > table",
+        ambiguous: true,
+      },
+    };
+    const result = pickBestSelector(sources);
+    expect(result.selector).toBe("getByText('Overview')");
+    expect(result.type).toBe("playwrightText");
+  });
+});
+
+describe("isPlaywrightLocator", () => {
+  it("recognises bare getBy* locators", () => {
+    expect(isPlaywrightLocator("getByText('Submit')")).toBe(true);
+    expect(isPlaywrightLocator("getByRole('button', { name: 'Save' })")).toBe(
+      true,
+    );
+    expect(isPlaywrightLocator("getByTestId('foo')")).toBe(true);
+  });
+
+  it("recognises namespaced and chained getBy* locators", () => {
+    expect(isPlaywrightLocator("page.getByRole('link')")).toBe(true);
+    expect(
+      isPlaywrightLocator("page.locator('#form').getByLabel('Email')"),
+    ).toBe(true);
+  });
+
+  it("rejects CSS, XPath and non-string values", () => {
+    expect(isPlaywrightLocator("#showOverview")).toBe(false);
+    expect(isPlaywrightLocator("div > button")).toBe(false);
+    expect(isPlaywrightLocator('//div[@id="showOverview"]')).toBe(false);
+    expect(isPlaywrightLocator("")).toBe(false);
+    expect(isPlaywrightLocator(null)).toBe(false);
+    expect(isPlaywrightLocator(undefined)).toBe(false);
   });
 });
