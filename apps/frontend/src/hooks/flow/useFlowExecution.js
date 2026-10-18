@@ -635,9 +635,10 @@ export function useFlowExecution({
           n.data?.configuration || {},
         );
         if (!validation.isValid)
-          errors.push(
-            `Node "${n.data?.label || type}" is missing field: ${validation.missingField}`,
-          );
+          errors.push({
+            message: `Node "${n.data?.label || type}" is missing field: ${validation.missingField}`,
+            nodeId: n.id,
+          });
       }
 
       // Validate structure only using reachable nodes and edges
@@ -715,8 +716,11 @@ export function useFlowExecution({
           const draftMode = useExecutionStore.getState().draftMode;
           const errors = draftMode ? [] : validateFlowStructure(nodes, edges);
           if (errors.length > 0) {
-            setApiStatus({ state: "error", message: errors[0] });
-            return { success: false, error: errors[0] };
+            const firstError = errors[0];
+            const errorMsg =
+              typeof firstError === "string" ? firstError : firstError.message;
+            setApiStatus({ state: "error", message: errorMsg });
+            return { success: false, error: errorMsg };
           }
         }
 

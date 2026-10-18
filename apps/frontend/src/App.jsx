@@ -57,7 +57,6 @@ import { HalToaster } from "./components/Toast";
 import { useHaltestSocket } from "./hooks/useHaltestSocket";
 import { useFigmaInteraction } from "./hooks/useFigmaInteraction";
 import { useTranslation } from "react-i18next";
-import i18n from "./i18n";
 import { useTheme } from "next-themes";
 import { useNodeDefinitions } from "./hooks/useNodeDefinitions";
 import RunHistoryPanel from "./components/RunHistoryPanel";
@@ -69,7 +68,6 @@ import ExecutionDashboard from "./components/reporting/ExecutionDashboard";
 import HalDashboard from "./components/dashboard/HalDashboard";
 import { api } from "./utils/api";
 import { useElementPicker } from "./hooks/useElementPicker";
-import { AnimatePresence, motion } from "framer-motion";
 import GuestModeModal from "./components/modals/GuestModeModal";
 import DatasetRunModal from "./components/modals/DatasetRunModal";
 import { ProjectExportModal } from "./components/modals/ProjectExportModal";
@@ -256,7 +254,7 @@ function Dashboard({
   // onCodePreview) — consumed by ComponentNode as a persistence-resolution badge.
   const [codePreviewByNode, setCodePreviewByNode] = React.useState({});
 
-  // TerminalPanel ref for imperative methods (loadRunMapping for Phase 4)
+  // TerminalPanel ref for imperative execution views (openExecution/setMode/clearExecution)
   const terminalPanelRef = React.useRef(null);
 
   // Phase 4 inverse: track executed steps from the active run to highlight
@@ -267,6 +265,47 @@ function Dashboard({
 
   // Active run ID for reporting/history (Phase 4 inverse highlighting)
   const [reportingRunId, setReportingRunId] = React.useState(null);
+  // Deep-dive full-screen visual report overlay (opened explicitly via "Report").
+  const [reportOverlayRunId, setReportOverlayRunId] = React.useState(null);
+
+  // The Execution History drives the terminal toolbar's execution views
+  // (Steps / Trace / Artifacts) through the panel's imperative handle.
+  const openInspector = React.useCallback(
+    (run, tab = "steps") => {
+      if (!run) return;
+      terminalPanelRef.current?.openExecution(run, tab);
+      if (!isPanelVisible) togglePanel();
+    },
+    [isPanelVisible, togglePanel],
+  );
+
+  // Never keep a stale execution from a previous flow once the flow changes.
+  React.useEffect(() => {
+    terminalPanelRef.current?.clearExecution();
+    setReportingRunId(null);
+    setReportOverlayRunId(null);
+  }, [currentFlowId]);
+
+  // After each quality execution of the current flow, surface its report in the
+  // bottom bar automatically. The History remains the place to consult any past
+  // run at any time.
+  React.useEffect(() => {
+    const handleRunCompleted = () => {
+      const { activeRunId: completedRunId, mode } =
+        useExecutionStore.getState();
+      if (
+        completedRunId &&
+        completedRunId !== "atomic_run" &&
+        mode === "calidad"
+      ) {
+        setReportingRunId(completedRunId);
+        openInspector({ id: completedRunId }, "steps");
+      }
+    };
+    window.addEventListener("hal:run-completed", handleRunCompleted);
+    return () =>
+      window.removeEventListener("hal:run-completed", handleRunCompleted);
+  }, [openInspector]);
 
   // Phase 3: jump from a code container (double-click) to its subflow canvas.
   // `flowId` comes from the mapping entry; the canvas node is looked up by
@@ -298,38 +337,6 @@ function Dashboard({
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [nodes, enterComponent, fitView],
-  );
-
-  // Phase 4: load a historical run's code mapping and focus a step in TerminalPanel
-  const handleLoadRunMapping = React.useCallback(
-    async (runId, step) => {
-      if (!terminalPanelRef.current) return;
-      try {
-        // Default to current project's settings, but allow override
-        const options = {
-          framework: "playwright",
-          language: "javascript",
-          locale: i18n.language.split("-")[0].toLowerCase(),
-          usePOM: false,
-          includeCICD: false,
-          designPattern: "flat",
-        };
-        const result = await api.getRunMapping(runId, options);
-        if (result.success && result.mappingByFile) {
-          terminalPanelRef.current.loadRunMapping({
-            mappingByFile: result.mappingByFile,
-            generationKey: result.generationKey,
-            targetNodeId: step.node_id || step.nodeId,
-            compositeNodeId: step.compositeNodeId || null,
-            subflowId: step.subflowId || null,
-          });
-        }
-      } catch (err) {
-        console.error("[App] loadRunMapping failed:", err);
-        toast.error("Failed to load code mapping for this run");
-      }
-    },
-    [api],
   );
 
   // Phase 4 inverse: compute executed mapping keys from the active run's steps
@@ -462,6 +469,34 @@ function Dashboard({
     },
     [setActiveNodeId, reactFlowFitView, setNodes],
   );
+
+  // Focus a recorded step on the main canvas (History <-> Inspector coexist).
+  const handleFocusStep = useCallback(
+    (step) => {
+      const nodeId = step?.node_id || step?.nodeId;
+      if (nodeId) handleNavigateToNode(nodeId);
+    },
+    [handleNavigateToNode],
+  );
+
+  const handleInspectStep = useCallback(
+    (step) => {
+      const nodeId = step?.node_id || step?.nodeId;
+      const node = nodes.find((n) => n.id === nodeId);
+      if (node) {
+        setActiveNodeId(nodeId);
+        setStepDetailsModal({ isOpen: true, nodeData: node.data });
+      }
+    },
+    [nodes, setActiveNodeId],
+  );
+
+  // Jump from a step in the Steps view to the generated code (Code mode).
+  // Executed blocks are highlighted via `executedMappingKeys`/`reportingRunId`.
+  const handleViewStepCode = useCallback(() => {
+    terminalPanelRef.current?.setMode("code");
+    if (!isPanelVisible) togglePanel();
+  }, [isPanelVisible, togglePanel]);
 
   const handleRunDataset = React.useCallback(
     async (dataset, concurrency = 2, options = {}) => {
@@ -978,15 +1013,20 @@ function Dashboard({
       if (!runBasic) {
         resetExecutionStates();
         setReportingRunId(null);
+        terminalPanelRef.current?.clearExecution();
         return;
       }
 
+      // Deep-dive visual report overlay (optional, full-screen).
       if (openReport) {
-        setReportingRunId(runBasic.id);
-        setIsHistoryPanelVisible(false); // Close history when opening report
+        setReportOverlayRunId(runBasic.id);
         return;
       }
 
+      // Primary flow: replay on the main canvas AND open the inspector on the
+      // step list, so History and the inspector always describe the same run.
+      setReportingRunId(runBasic.id);
+      openInspector(runBasic, "steps");
       try {
         const res = await api.get(`/runs/${runBasic.id}`);
         if (res.success) {
@@ -1001,7 +1041,7 @@ function Dashboard({
         toast.error("Failed to load run history");
       }
     },
-    [replayRun, resetExecutionStates, toast],
+    [replayRun, resetExecutionStates, toast, openInspector],
   );
 
   // Socket setup
@@ -2373,6 +2413,7 @@ function Dashboard({
             <RunHistoryPanel
               isOpen={true}
               onSelectRun={handleSelectRun}
+              onViewTrace={(run) => openInspector(run, "trace")}
               currentFlowId={currentFlowId}
             />
           ) : isVariablePanelVisible ? (
@@ -2666,7 +2707,7 @@ function Dashboard({
               </ErrorBoundary>
             </div>
 
-            {/* Real-time Execution Terminal - Now inside Main Layout */}
+            {/* Real-time Execution Terminal + integrated execution views */}
             <TerminalPanel
               ref={terminalPanelRef}
               socket={socket}
@@ -2680,6 +2721,9 @@ function Dashboard({
               onCodePreview={setCodePreviewByNode}
               onExploreSubFlow={handleExploreSubFlowFromCode}
               executedMappingKeys={executedMappingKeys}
+              onFocusStep={handleFocusStep}
+              onInspectStep={handleInspectStep}
+              onViewCode={handleViewStepCode}
             />
 
             {/* Ask AI Debug Console */}
@@ -2894,7 +2938,7 @@ function Dashboard({
           isOpen={isExecutionDashboardOpen}
           onClose={() => setIsExecutionDashboardOpen(false)}
           currentProject={currentProject}
-          onViewReport={(id) => setReportingRunId(id)}
+          onViewReport={(id) => setReportOverlayRunId(id)}
         />
 
         <StarterOverlay
@@ -3000,6 +3044,14 @@ function Dashboard({
           nodeData={stepDetailsModal.nodeData}
         />
 
+        {/* FULL-SCREEN VISUAL REPORT (deep-dive overlay, optional) */}
+        {reportOverlayRunId && (
+          <ReportDashboard
+            runId={reportOverlayRunId}
+            onClose={() => setReportOverlayRunId(null)}
+          />
+        )}
+
         {/* COMMAND PALETTE (Cmd+K) - Semantic Node Search */}
         <CommandPalette
           isOpen={isCommandPaletteOpen}
@@ -3009,7 +3061,8 @@ function Dashboard({
             // Navigation is handled inside CommandPalette via reactFlowInstance
           }}
           reactFlowInstance={{
-            fitView: ({ _nodes, duration, _zoom }) => reactFlowFitView({ duration, padding: 0.1 }),
+            fitView: ({ _nodes, duration, _zoom }) =>
+              reactFlowFitView({ duration, padding: 0.1 }),
             setNodes: (updater) => setNodes(updater),
           }}
         />
@@ -3017,15 +3070,6 @@ function Dashboard({
         {/* TOAST SYSTEM (Positioned relative to Panel) */}
         <HalToaster offsetRight={isConfigurationPanelVisible ? 350 : 0} />
       </div>
-      <AnimatePresence>
-        {reportingRunId && (
-          <ReportDashboard
-            runId={reportingRunId}
-            onClose={() => setReportingRunId(null)}
-            onViewCode={handleLoadRunMapping}
-          />
-        )}
-      </AnimatePresence>
     </>
   );
 }

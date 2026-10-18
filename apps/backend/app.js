@@ -1,5 +1,6 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 import dotenv from 'dotenv';
@@ -152,17 +153,39 @@ const traceViewerOrigins = (process.env.TRACE_VIEWER_ORIGINS || 'https://trace.p
     .map((origin) => origin.trim())
     .filter(Boolean);
 
-const storageCors = cors({
-    origin: (origin, callback) => {
-        if (!origin || isOriginAllowed(origin) || traceViewerOrigins.includes(origin)) {
-            return callback(null, true);
+const storageCors = (req, res, next) => {
+    const origin = req.headers.origin;
+    const allowed = !origin || isOriginAllowed(origin) || traceViewerOrigins.includes(origin);
+
+    // A hosted HTTPS viewer (trace.playwright.dev) fetching a local resource is
+    // subject to Chrome's Private Network Access rules: this header must be
+    // present on the preflight response or the browser blocks the request.
+    if (req.headers['access-control-request-private-network'] === 'true') {
+        res.setHeader('Access-Control-Allow-Private-Network', 'true');
+    }
+
+    if (req.method === 'OPTIONS') {
+        if (allowed && origin) {
+            res.setHeader('Access-Control-Allow-Origin', origin);
+            res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+            res.setHeader(
+                'Access-Control-Allow-Headers',
+                req.headers['access-control-request-headers'] || '*',
+            );
+            res.setHeader('Access-Control-Max-Age', '86400');
         }
-        // Not allowed: pass through without CORS headers (never throw — the
-        // browser enforces the block, the file itself stays servable).
-        callback(null, false);
-    },
-    methods: ['GET', 'HEAD', 'OPTIONS'],
-});
+        res.setHeader('Vary', 'Origin');
+        return res.status(204).end();
+    }
+
+    if (allowed && origin) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Vary', 'Origin');
+    }
+    // Always allow embedding the resource cross-origin (needed by the viewer).
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    next();
+};
 
 const staticOptions = {
     setHeaders: (res) => {
@@ -171,6 +194,56 @@ const staticOptions = {
 };
 app.use('/storage', storageCors, express.static(STORAGE_DIR, staticOptions));
 app.use('/api/storage', storageCors, express.static(STORAGE_DIR, staticOptions));
+
+// --- BUNDLED PLAYWRIGHT TRACE VIEWER (same-origin) ---
+// Serving the viewer that ships with playwright-core from our own origin lets it
+// load traces via ?trace=<url> without any cross-origin / Private Network Access
+// / permission prompts (viewer origin === trace origin).
+const require = createRequire(import.meta.url);
+let bundledTraceViewerDir = null;
+try {
+    const playwrightPkg = require.resolve('playwright/package.json');
+    const candidate = path.join(
+        path.dirname(playwrightPkg),
+        '..',
+        'playwright-core',
+        'lib',
+        'vite',
+        'traceViewer',
+    );
+    if (fs.existsSync(path.join(candidate, 'index.html'))) {
+        bundledTraceViewerDir = candidate;
+    }
+} catch {
+    // Playwright not installed — the hosted viewer stays as the only option.
+}
+
+if (bundledTraceViewerDir) {
+    const viewerHeaders = (res) => {
+        // Override helmet defaults so the viewer can render and be embedded by
+        // the (cross-origin) frontend.
+        res.removeHeader('X-Frame-Options');
+        res.setHeader(
+            'Content-Security-Policy',
+            "default-src 'self' blob: data:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors *",
+        );
+        res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Vary', 'Origin');
+    };
+    app.use(
+        '/trace-viewer',
+        (req, res, next) => {
+            viewerHeaders(res);
+            next();
+        },
+        express.static(bundledTraceViewerDir, {
+            setHeaders: viewerHeaders,
+            extensions: ['html'],
+        }),
+    );
+    console.log(`[TraceViewer] Serving bundled viewer from ${bundledTraceViewerDir}`);
+}
 
 app.use(
     cors({

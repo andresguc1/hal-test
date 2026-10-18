@@ -4,6 +4,8 @@ import React, {
   useState,
   useCallback,
   useMemo,
+  forwardRef,
+  useImperativeHandle,
 } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -24,14 +26,23 @@ import {
   Eye,
   Edit2,
   CheckCircle2,
+  ListTree,
+  FileCode,
+  Film,
 } from "lucide-react";
 import { useLogs, normalizeMode } from "../context/LogContext";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
+import PanelResizeHandle from "./ui/PanelResizeHandle";
+import ExecutionInspector from "./inspector/ExecutionInspector";
 import i18n from "../i18n";
 import { api } from "../utils/api";
 import { useProjectManager } from "./hooks/useProjectManager";
 import { useToast } from "../hooks/useToast";
+
+// Execution views rendered inside the terminal toolbar (they inspect a
+// selected run rather than the live log/shell/code streams).
+const EXECUTION_MODES = new Set(["steps", "trace", "artifacts"]);
 
 // ─── Log type → color mapping ─────────────────────────────────────────────────
 const LOG_COLORS = {
@@ -64,16 +75,22 @@ const MIN_PANEL_HEIGHT = 150;
 const MAX_PANEL_HEIGHT = 600;
 const DEFAULT_PANEL_HEIGHT = 260;
 
-export default function TerminalPanel({
-  socket,
-  nodes = [],
-  edges = [],
-  _setNodes,
-  _setEdges,
-  selectedNodeId,
-  setSelectedNodeId,
-  executionMode = "calidad",
-}) {
+const TerminalPanel = forwardRef(function TerminalPanel(
+  {
+    socket,
+    nodes = [],
+    edges = [],
+    _setNodes,
+    _setEdges,
+    selectedNodeId,
+    setSelectedNodeId,
+    executionMode = "calidad",
+    onFocusStep,
+    onInspectStep,
+    onViewCode,
+  },
+  ref,
+) {
   const { logs, clearLogs, isPanelVisible, togglePanel } = useLogs();
 
   const filteredLogs = useMemo(() => {
@@ -91,6 +108,29 @@ export default function TerminalPanel({
 
   // ─── Mode ─────────────────────────────────────────────────────────────────
   const [mode, setMode] = useState("log");
+  // Run currently inspected by the Steps / Trace / Artifacts views.
+  const [executionRun, setExecutionRun] = useState(null);
+
+  // Imperative API so the app can hand a selected run to the toolbar and drive
+  // its mode (e.g. from the Execution History).
+  useImperativeHandle(
+    ref,
+    () => ({
+      openExecution(run, tab = "steps") {
+        if (!run) return;
+        setExecutionRun(run);
+        setMode(tab);
+      },
+      setMode(nextMode) {
+        setMode(nextMode);
+      },
+      clearExecution() {
+        setExecutionRun(null);
+        setMode((prev) => (EXECUTION_MODES.has(prev) ? "log" : prev));
+      },
+    }),
+    [],
+  );
 
   // ─── Code Preview ─────────────────────────────────────────────────────────
   const [generatedCode, setGeneratedCode] = useState("");
@@ -729,6 +769,34 @@ export default function TerminalPanel({
 
   if (!isPanelVisible) return null;
 
+  const isExecutionMode = EXECUTION_MODES.has(mode);
+  const panelTitle =
+    mode === "log"
+      ? t("terminal.title_log", "Execution Logs")
+      : mode === "interactive"
+        ? t("terminal.title_interactive", "Interactive Shell")
+        : mode === "code"
+          ? t("terminal.title_code", "Code Preview")
+          : mode === "steps"
+            ? t("inspector.tab_steps", "Steps")
+            : mode === "trace"
+              ? t("inspector.tab_trace", "Trace")
+              : t("inspector.tab_artifacts", "Artifacts");
+  const panelMeta =
+    mode === "log"
+      ? `${filteredLogs.length} entries`
+      : mode === "interactive"
+        ? shellLines.length > 0
+          ? `${shellLines.length} lines`
+          : "ready"
+        : mode === "code"
+          ? isGenerating
+            ? "generating..."
+            : "synced"
+          : executionRun?.id
+            ? executionRun.id.slice(0, 8)
+            : t("inspector.no_run_short", "no run selected");
+
   return (
     <motion.div
       initial={{ scaleY: 0, opacity: 0 }}
@@ -744,33 +812,23 @@ export default function TerminalPanel({
       className="relative w-full bg-slate-950 border-t border-slate-800 z-10 flex flex-col shadow-2xl font-mono outline-none overflow-hidden focus-within:ring-1 focus-within:ring-indigo-500/30"
     >
       {/* ── Drag Handle ── */}
-      <div
-        onMouseDown={handleResizeStart}
-        className="absolute top-0 left-0 right-0 h-1.5 cursor-row-resize z-20 group hover:bg-indigo-500/20 transition-colors"
-      >
-        <div className="mx-auto mt-0.5 w-8 h-0.5 rounded-full bg-slate-600 group-hover:bg-indigo-400 transition-colors" />
-      </div>
+      <PanelResizeHandle
+        value={panelHeight}
+        min={MIN_PANEL_HEIGHT}
+        max={MAX_PANEL_HEIGHT}
+        onChange={(next) => setPanelHeight(next)}
+        onResizeStart={handleResizeStart}
+        label={t("terminal.resize", "Resize terminal panel")}
+      />
       {/* ── Header ── */}
       <div className="flex items-center justify-between px-4 py-2 bg-slate-900 border-b border-slate-800 shrink-0">
         <div className="flex items-center gap-3">
           <Terminal size={14} className="text-hal-primary-400" />
           <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-            {mode === "log"
-              ? t("terminal.title_log", "Execution Logs")
-              : mode === "interactive"
-                ? t("terminal.title_interactive", "Interactive Shell")
-                : t("terminal.title_code", "Code Preview")}
+            {panelTitle}
           </span>
           <span className="px-2 py-0.5 rounded bg-slate-800 text-[9px] text-slate-500">
-            {mode === "log"
-              ? `${filteredLogs.length} entries`
-              : mode === "interactive"
-                ? shellLines.length > 0
-                  ? `${shellLines.length} lines`
-                  : "ready"
-                : isGenerating
-                  ? "generating..."
-                  : "synced"}
+            {panelMeta}
           </span>
           {isRunning && (
             <span className="flex items-center gap-1 text-[9px] text-emerald-400 animate-pulse">
@@ -826,6 +884,51 @@ export default function TerminalPanel({
             >
               <Code2 size={11} />
               {t("terminal.code", "Code")}
+            </button>
+
+            <span className="w-px h-4 bg-slate-700 mx-0.5" aria-hidden="true" />
+
+            {/* Execution views for the selected run */}
+            <button
+              onClick={() => setMode("steps")}
+              title={t("inspector.tab_steps", "Steps")}
+              className={cn(
+                "flex items-center gap-1 px-2 py-1 rounded text-[9px] font-medium transition-all",
+                mode === "steps"
+                  ? "bg-indigo-500/20 text-indigo-400 shadow-sm"
+                  : "text-slate-400 hover:text-slate-200",
+              )}
+            >
+              <ListTree size={11} />
+              {t("inspector.tab_steps", "Steps")}
+            </button>
+
+            <button
+              onClick={() => setMode("trace")}
+              title={t("inspector.tab_trace", "Trace")}
+              className={cn(
+                "flex items-center gap-1 px-2 py-1 rounded text-[9px] font-medium transition-all",
+                mode === "trace"
+                  ? "bg-purple-500/20 text-purple-400 shadow-sm"
+                  : "text-slate-400 hover:text-slate-200",
+              )}
+            >
+              <FileCode size={11} />
+              {t("inspector.tab_trace", "Trace")}
+            </button>
+
+            <button
+              onClick={() => setMode("artifacts")}
+              title={t("inspector.tab_artifacts", "Artifacts")}
+              className={cn(
+                "flex items-center gap-1 px-2 py-1 rounded text-[9px] font-medium transition-all",
+                mode === "artifacts"
+                  ? "bg-sky-500/20 text-sky-400 shadow-sm"
+                  : "text-slate-400 hover:text-slate-200",
+              )}
+            >
+              <Film size={11} />
+              {t("inspector.tab_artifacts", "Artifacts")}
             </button>
           </div>
 
@@ -975,16 +1078,18 @@ export default function TerminalPanel({
           )}
 
           {/* Clear */}
-          <button
-            onClick={() => {
-              if (mode === "log") clearLogs(executionMode);
-              else setShellLines([]);
-            }}
-            title={t("terminal.clear", "Clear")}
-            className="p-1.5 text-slate-500 hover:text-slate-300 hover:bg-white/5 rounded transition-all"
-          >
-            <Trash2 size={14} />
-          </button>
+          {!isExecutionMode && (
+            <button
+              onClick={() => {
+                if (mode === "log") clearLogs(executionMode);
+                else setShellLines([]);
+              }}
+              title={t("terminal.clear", "Clear")}
+              className="p-1.5 text-slate-500 hover:text-slate-300 hover:bg-white/5 rounded transition-all"
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
 
           {/* Minimize */}
           <button
@@ -1001,10 +1106,20 @@ export default function TerminalPanel({
       <div
         className="flex-1 relative overflow-hidden" // Main container for content
       >
-        <div
-          ref={scrollRef}
-          className="h-full overflow-y-auto p-3 space-y-px custom-scrollbar scroll-smooth"
-        >
+        {isExecutionMode ? (
+          <ExecutionInspector
+            tab={mode}
+            runId={executionRun?.id}
+            runSummary={executionRun}
+            onFocusStep={onFocusStep}
+            onInspectStep={onInspectStep}
+            onViewCode={onViewCode}
+          />
+        ) : (
+          <div
+            ref={scrollRef}
+            className="h-full overflow-y-auto p-3 space-y-px custom-scrollbar scroll-smooth"
+          >
           <AnimatePresence mode="wait">
             {mode === "log" ? (
               <motion.div
@@ -1426,7 +1541,8 @@ export default function TerminalPanel({
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
+          </div>
+        )}
       </div>
 
       {/* ── Input Bar (Interactive Mode only) ── */}
@@ -1504,7 +1620,9 @@ export default function TerminalPanel({
       </AnimatePresence>
     </motion.div>
   );
-}
+});
+
+export default TerminalPanel;
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 

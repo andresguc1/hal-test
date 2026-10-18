@@ -157,7 +157,12 @@ function statusLabel(status) {
   return label === "SOFTFAILED" ? "SOFT FAILED" : label;
 }
 
-function ReportDashboardContent({ runId, onClose, onViewCode }) {
+function ReportDashboardContent({
+  runId,
+  onClose,
+  onViewCode,
+  embedded = false,
+}) {
   const { t } = useTranslation();
   const [run, setRun] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -619,7 +624,12 @@ function ReportDashboardContent({ runId, onClose, onViewCode }) {
 
   if (loading)
     return (
-      <div className="fixed inset-0 z-[1000] bg-slate-950 flex items-center justify-center">
+      <div
+        className={cn(
+          "bg-slate-950 flex items-center justify-center",
+          embedded ? "absolute inset-0" : "fixed inset-0 z-[1000]",
+        )}
+      >
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin" />
           <span className="text-slate-400 font-medium animate-pulse">
@@ -630,7 +640,12 @@ function ReportDashboardContent({ runId, onClose, onViewCode }) {
     );
 
   return (
-    <div className="fixed inset-0 z-[1000] bg-slate-950 text-slate-100 flex flex-col font-sans overflow-hidden">
+    <div
+      className={cn(
+        "bg-slate-950 text-slate-100 flex flex-col font-sans overflow-hidden",
+        embedded ? "absolute inset-0" : "fixed inset-0 z-[1000]",
+      )}
+    >
       {/* HEADER */}
       <header className="h-16 border-b border-white/5 bg-slate-900/50 backdrop-blur-xl px-6 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-4">
