@@ -2,11 +2,14 @@
 
 .progress-bar-container {
   position: fixed;
-  top: 80px;
-  left: 50%;
-  transform: translateX(-50%);
+  /* Anchored to the canvas work area, derived from the shell geometry:
+     below the header and clear of the left dock, so it never covers the top
+     bar. The notification stack offsets itself by the measured height of this
+     card (--hal-progress-h) so the two never overlap. */
+  top: calc(var(--hal-header-h) + 12px);
+  left: calc(var(--hal-left-panel-w) + 16px);
   width: 400px;
-  max-width: 90vw;
+  max-width: calc(100vw - var(--hal-left-panel-w) - var(--hal-panel-w) - 32px);
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
@@ -17,6 +20,14 @@
   animation: slideDown 0.3s ease-out;
 }
 
+/* On narrow viewports the card would reach the centered canvas view-mode
+   toggle, so it drops below that toggle row. */
+@media (max-width: 1024px) {
+  .progress-bar-container {
+    top: calc(var(--hal-header-h) + 64px);
+  }
+}
+
 .dark .progress-bar-container {
   background: #1e293b;
   border-color: #334155;
@@ -25,12 +36,12 @@
 
 @keyframes slideDown {
   from {
-    transform: translateX(-50%) translateY(-20px);
+    transform: translateY(-20px);
     opacity: 0;
   }
 
   to {
-    transform: translateX(-50%) translateY(0);
+    transform: translateY(0);
     opacity: 1;
   }
 }

@@ -262,7 +262,7 @@ function AppHeader({
   return (
     <header
       className={cn(
-        "h-14 w-full shrink-0 z-50 px-3 md:px-6 lg:px-8 relative transition-all duration-400",
+        "h-[var(--hal-header-h)] w-full shrink-0 z-50 px-3 md:px-6 lg:px-8 relative transition-all duration-400",
         "flex items-center justify-between",
         "bg-[var(--bg-panel)] border-b border-[var(--border-color)] glass-panel rounded-none shadow-sm font-sans",
       )}

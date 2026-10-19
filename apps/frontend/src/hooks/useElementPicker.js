@@ -184,8 +184,12 @@ export const useElementPicker = ({
             ),
           );
 
-          const replayResult = await executeToNode(selectedAction.nodeId);
-          toast.dismiss(toastId);
+          let replayResult;
+          try {
+            replayResult = await executeToNode(selectedAction.nodeId);
+          } finally {
+            toast.dismiss(toastId);
+          }
 
           if (replayResult.error) {
             const err = replayResult.error;

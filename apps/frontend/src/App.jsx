@@ -53,7 +53,7 @@ import { safeStringify } from "./utils/flowUtils";
 
 import { useFlowShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useToast } from "./hooks/useToast";
-import { HalToaster } from "./components/Toast";
+import { HalToaster, RUN_STATUS_TOAST_ID } from "./components/Toast";
 import { useHaltestSocket } from "./hooks/useHaltestSocket";
 import { useFigmaInteraction } from "./hooks/useFigmaInteraction";
 import { useTranslation } from "react-i18next";
@@ -635,8 +635,10 @@ function Dashboard({
         flowId: currentFlowId,
       });
 
-      // 1. Show Loading Toast immediately (Duration 0 = indefinite until dismissed)
-      const toastId = toast.loading(t("common.processing"));
+      // 1. Show Loading Toast immediately (stays until dismissed/replaced)
+      const toastId = toast.loading(t("common.processing"), {
+        id: RUN_STATUS_TOAST_ID,
+      });
 
       let executionSuccess = false;
       try {
@@ -653,9 +655,12 @@ function Dashboard({
             toast.loading("Closing debug session...", { id: toastId });
             await stopSession();
           } else {
-            // If user refuses to close, we abort to prevent collisions
-            toast.dismiss(toastId);
-            toast.info("Execution cancelled to preserve debug session.");
+            // If user refuses to close, we abort to prevent collisions.
+            // Replacing the loading toast in place (same id) instead of
+            // dismiss + create, which sonner resolves as a delete.
+            toast.info("Execution cancelled to preserve debug session.", {
+              id: RUN_STATUS_TOAST_ID,
+            });
             useExecutionStore
               .getState()
               .finishExecution({ status: "cancelled" });
@@ -667,8 +672,9 @@ function Dashboard({
         const result = await executeFlow({ executionMode: targetMode }); // Returns { success, stats, failedNodeId, divePath, healedNodes }
         executionSuccess = result?.success === true;
 
-        // 2. Clear loading
-        toast.dismiss(toastId);
+        // 2. The loading toast is replaced in place by the terminal status
+        //    toast below (same RUN_STATUS_TOAST_ID) — never dismiss + recreate
+        //    here: sonner would apply the queued delete to the new toast.
 
         // --- AUTO-APPLY AI HEALING ---
         if (result.healedNodes?.length > 0) {
@@ -705,6 +711,7 @@ function Dashboard({
                 defaultValue: `Flow completed, but ${softfailedCount} node(s) failed silently and were skipped.`,
                 count: softfailedCount,
               }),
+              { id: RUN_STATUS_TOAST_ID },
             );
           } else {
             addLog(
@@ -719,6 +726,7 @@ function Dashboard({
             );
             toast.success(
               t("common.flow_exec_success", "Flow executed successfully"),
+              { id: RUN_STATUS_TOAST_ID },
             );
           }
 
@@ -742,7 +750,8 @@ function Dashboard({
             // Show error toast for immediate feedback
             const errorMsg = result.error || t("common.flow_exec_error");
             toast.error(`✗ ${errorMsg}`, {
-              duration: 5000,
+              id: RUN_STATUS_TOAST_ID,
+              duration: 8000,
               style: { border: "1px solid #ef4444", color: "#ef4444" },
             });
 
@@ -778,7 +787,11 @@ function Dashboard({
         } else if (result.error && !result.stats) {
           // General Failure
           if (result.error !== "Max reintentos alcanzados") {
-            toast.error(result.error);
+            toast.error(result.error, { id: RUN_STATUS_TOAST_ID });
+          } else {
+            // Intentionally silent: clear the loading status so it does not
+            // hang forever with no terminal toast to replace it.
+            toast.dismiss(RUN_STATUS_TOAST_ID);
           }
           addLog(
             `[System] ✗ Execution failed: ${result.error} during ${
@@ -793,7 +806,12 @@ function Dashboard({
         } else {
           // Failure with Count (Run happened but no specific node tracked)
           const failedCount = result.stats?.failed || 0;
-          toast.error(`${t("common.flow_exec_error")} (${failedCount} failed)`);
+          toast.error(
+            `${t("common.flow_exec_error")} (${failedCount} failed)`,
+            {
+              id: RUN_STATUS_TOAST_ID,
+            },
+          );
           addLog(
             `[System] ✗ Execution completed with ${failedCount} failures during ${
               canvasViewMode === "performance"
@@ -806,8 +824,7 @@ function Dashboard({
           );
         }
       } catch (error) {
-        // 3. Unexpected Error
-        toast.dismiss(toastId);
+        // 3. Unexpected Error — replaces the loading toast in place
         console.error("Error ejecutando flujo:", error);
         toast.error(
           t(
@@ -817,6 +834,7 @@ function Dashboard({
               message: error.message,
             },
           ),
+          { id: RUN_STATUS_TOAST_ID },
         );
       } finally {
         let runDetails = null;
@@ -895,6 +913,7 @@ function Dashboard({
     total: 0,
     status: "",
   });
+  const [progressBarHeight, setProgressBarHeight] = useState(0);
   const [isStarterDismissed, setIsStarterDismissed] = useState(false);
   const [_isSaving, setIsSaving] = useState(false);
   const [menu, setMenu] = useState(null);
@@ -2296,7 +2315,30 @@ function Dashboard({
 
   return (
     <>
-      <div className="relative h-dvh w-screen flex flex-col overflow-hidden bg-[var(--bg-canvas)] text-[var(--text-primary)] transition-all duration-400 antialiased font-sans selection:bg-cyan-500/30 m-0 p-0 border-none">
+      <div
+        className="relative h-dvh w-screen flex flex-col overflow-hidden bg-[var(--bg-canvas)] text-[var(--text-primary)] transition-all duration-400 antialiased font-sans selection:bg-cyan-500/30 m-0 p-0 border-none"
+        style={{
+          /* Vertical band occupied by the progress bar (+ gap), measured from
+             the rendered element. Floating overlays that must not overlap it
+             (the notification stack) offset themselves by this value. */
+          "--hal-progress-h":
+            progressBarHeight > 0
+              ? `${Math.ceil(progressBarHeight) + 12}px`
+              : "0px",
+        }}
+        data-config-panel={isConfigurationPanelVisible ? "open" : "closed"}
+        data-left-panel={
+          isHistoryPanelVisible
+            ? "history"
+            : isVariablePanelVisible
+              ? "variables"
+              : isCreationPanelVisible
+                ? "toolbox"
+                : isExplorerVisible
+                  ? "explorer"
+                  : "none"
+        }
+      >
         {/* Skip Navigation Link (WCAG 2.4.1) */}
         <a
           href="#main-content"
@@ -2332,6 +2374,7 @@ function Dashboard({
             current={executionProgress.current}
             total={executionProgress.total}
             status={executionProgress.status}
+            onHeightChange={setProgressBarHeight}
             onCancel={() =>
               setExecutionProgress({ current: 0, total: 0, status: "" })
             }
@@ -3067,8 +3110,8 @@ function Dashboard({
           }}
         />
 
-        {/* TOAST SYSTEM (Positioned relative to Panel) */}
-        <HalToaster offsetRight={isConfigurationPanelVisible ? 350 : 0} />
+        {/* TOAST SYSTEM (anchored to the header/panel geometry) */}
+        <HalToaster />
       </div>
     </>
   );

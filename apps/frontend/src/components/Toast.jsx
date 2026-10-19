@@ -5,7 +5,6 @@ export { ToastContext };
 import {
   CheckCircle,
   XCircle,
-  AlertCircle,
   AlertTriangle,
   Info,
   X,
@@ -13,6 +12,21 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
+
+// Shared id so a single execution replaces its own toast instead of stacking
+export const RUN_STATUS_TOAST_ID = "hal-run-status";
+
+// Per-type lifetimes. loading stays until it is explicitly dismissed or
+// replaced by the terminal status of the same operation.
+const DEFAULT_DURATIONS = {
+  loading: Infinity,
+  error: 10000,
+  warning: 8000,
+  info: 5000,
+  success: 4000,
+};
+
+const TITLED_TYPES = new Set(["error", "warning"]);
 
 // 1. STYLE CONSTANTS
 const TOAST_STYLES = {
@@ -49,15 +63,17 @@ const TOAST_STYLES = {
 };
 
 // 2. CUSTOM TOAST COMPONENT
-const HalToast = ({ type, message, id }) => {
+const HalToast = ({ type, message, id, duration }) => {
   const { t } = useTranslation();
   const style = TOAST_STYLES[type] || TOAST_STYLES.info;
   const Icon = style.icon;
+  const assertive = TITLED_TYPES.has(type);
+  const hasTimedProgress = Number.isFinite(duration) && duration > 0;
 
   return (
     <div
-      role="alert"
-      aria-live="assertive"
+      role={assertive ? "alert" : "status"}
+      aria-live={assertive ? "assertive" : "polite"}
       className={cn(
         "relative flex items-start gap-4 p-4 pr-10 w-[350px] rounded-lg overflow-hidden transition-all duration-400",
         "bg-[var(--bg-panel)] backdrop-blur-xl border border-[var(--border-ui)]",
@@ -90,34 +106,41 @@ const HalToast = ({ type, message, id }) => {
         <X size={14} aria-hidden="true" />
       </button>
 
-      {/* PROGRESS BAR (Decorative) */}
-      <div className="absolute bottom-0 left-0 w-full h-[2px] bg-[var(--border-ui)]">
-        <div
-          className={cn(
-            "h-full animate-[progress_4s_linear_forwards] origin-left",
-            style.iconColor.replace("text-", "bg-"),
-          )}
-        />
-      </div>
+      {/* PROGRESS BAR (matches the toast lifetime) */}
+      {hasTimedProgress && (
+        <div className="absolute bottom-0 left-0 w-full h-[2px] bg-[var(--border-ui)]">
+          <div
+            className={cn(
+              "h-full animate-[progress_linear_forwards] origin-left",
+              style.iconColor.replace("text-", "bg-"),
+            )}
+            style={{ animationDuration: `${duration}ms` }}
+          />
+        </div>
+      )}
     </div>
   );
 };
 
 // 3. CONTEXT & PROVIDER
 export const ToastProvider = ({ children }) => {
-  const showToast = (message, type = "info") => {
+  const showToast = (message, type = "info", options = {}) => {
+    const duration =
+      options.duration ?? DEFAULT_DURATIONS[type] ?? DEFAULT_DURATIONS.info;
     return sonnerToast.custom(
-      (id) => <HalToast id={id} type={type} message={message} />,
-      { duration: 4000 },
+      (id) => (
+        <HalToast id={id} type={type} message={message} duration={duration} />
+      ),
+      { ...options, duration },
     );
   };
 
   const toastApi = {
-    success: (msg) => showToast(msg, "success"),
-    error: (msg) => showToast(msg, "error"),
-    warning: (msg) => showToast(msg, "warning"),
-    info: (msg) => showToast(msg, "info"),
-    loading: (msg) => showToast(msg, "loading"),
+    success: (msg, options) => showToast(msg, "success", options),
+    error: (msg, options) => showToast(msg, "error", options),
+    warning: (msg, options) => showToast(msg, "warning", options),
+    info: (msg, options) => showToast(msg, "info", options),
+    loading: (msg, options) => showToast(msg, "loading", options),
     custom: showToast,
     dismiss: (id) => sonnerToast.dismiss(id),
   };
@@ -127,17 +150,29 @@ export const ToastProvider = ({ children }) => {
   );
 };
 
-export const HalToaster = ({ offsetRight = 0 }) => {
+/* Notifications live in the free top-right band of the canvas work area: below
+   the header, below the progress bar when it is on screen, and to the left of
+   the configuration panel. Every offset is expressed in terms of the layout
+   variables defined in index.css (which App.jsx publishes on the app shell), so
+   the stack follows the real structure instead of magic numbers. */
+export const HalToaster = () => {
+  const topOffset =
+    "calc(var(--hal-header-h, 3.5rem) + 12px + var(--hal-progress-h, 0px))";
+  const rightOffset = "calc(var(--hal-panel-w, 0px) + 16px)";
+
   return (
     <Toaster
-      expand={true}
+      className="hal-toaster"
+      expand={false}
       richColors
       theme="system"
-      position="top-center" // Force top-center for better visibility
+      position="top-right"
+      offset={{ top: topOffset, right: rightOffset }}
+      mobileOffset={{ top: topOffset, right: rightOffset }}
       style={{
-        /* GPU-safe: use translateX instead of margin-right to avoid layout reflow */
-        transform: `translateX(-${offsetRight}px)`,
-        transition: "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        /* Capped so the stack never grows into the centered canvas view-mode
+           toggle and never gets clipped by the viewport. */
+        "--width": "min(350px, calc(100vw - 32px - var(--hal-panel-w, 0px)))",
       }}
       toastOptions={{
         style: { background: "transparent", border: "none", boxShadow: "none" },

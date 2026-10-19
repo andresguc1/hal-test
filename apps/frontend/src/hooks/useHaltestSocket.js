@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { io } from "socket.io-client";
 import { useLogStore } from "../context/LogContext";
 import { useExecutionStore } from "../stores/useExecutionStore";
+import { RUN_STATUS_TOAST_ID } from "../components/Toast";
 
 const getSocketURL = () => {
   const apiUrl = import.meta.env.VITE_API_URL;
@@ -363,7 +364,10 @@ export const useHaltestSocket = ({
 
       if (status === "failed" && error) {
         if (toastRef.current) {
+          // Same id as the run's "Processing..." toast: replaces it instead of
+          // stacking a second notification for the same execution.
           toastRef.current.error(`Execution Failed: ${error}`, {
+            id: RUN_STATUS_TOAST_ID,
             duration: 8000,
             style: { border: "1px solid #ef4444", color: "#ef4444" },
           });

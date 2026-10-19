@@ -42,6 +42,12 @@
   --z-popover: 100;
   --z-modal: 200;
 
+  /* LAYOUT GEOMETRY (single source of truth for floating overlays) */
+  --hal-header-h: 3.5rem; /* AppHeader h-14 = 56px */
+  --hal-footer-h: 3.5rem; /* AppFooter h-14 = 56px */
+  --hal-panel-w: 0px; /* right dock: NodeConfigurationPanel */
+  --hal-left-panel-w: 0px; /* left dock: Toolbox/Explorer/History/Variables */
+
   /* GLOBAL TRANSITION */
   --theme-transition: var(--transition-theme);
 }
@@ -382,8 +388,79 @@ textarea:focus-visible {
 
 /* Ensure focused elements are not obscured by sticky bars (WCAG 2.4.11) */
 :focus {
-  scroll-margin-top: 80px;
-  scroll-margin-bottom: 60px;
+  scroll-margin-top: calc(var(--hal-header-h) + 24px);
+  scroll-margin-bottom: calc(var(--hal-footer-h) + 4px);
+}
+
+/* ==========================================
+ * FLOATING OVERLAYS — real layout geometry
+ * ==========================================
+ * The attributes below are set by App.jsx on the app shell and inherited by
+ * every floating overlay rendered inside it, so overlays offset themselves from
+ * the actual structure (header height, dock widths) instead of magic numbers.
+ */
+
+/* Mirrors NodeConfigurationPanel's own responsive classes (w-full sm:w-80
+   md:w-[400px]) so overlays can keep clear of the panel at every breakpoint. */
+[data-config-panel="open"] {
+  --hal-panel-w: 0px; /* <640px: the panel renders full width */
+}
+
+@media (min-width: 640px) {
+  [data-config-panel="open"] {
+    --hal-panel-w: 20rem; /* sm:w-80 = 320px */
+  }
+}
+
+@media (min-width: 768px) {
+  [data-config-panel="open"] {
+    --hal-panel-w: 25rem; /* md:w-[400px] = 400px */
+  }
+}
+
+/* Mirrors each left dock's WIDTH_EXPANDED constant. */
+[data-left-panel="toolbox"],
+[data-left-panel="explorer"] {
+  --hal-left-panel-w: 17.5rem; /* 280px */
+}
+
+[data-left-panel="history"] {
+  --hal-left-panel-w: 20rem; /* 320px */
+}
+
+[data-left-panel="variables"] {
+  --hal-left-panel-w: 24rem; /* 384px */
+}
+
+/* ==========================================
+ * TOASTS (sonner wrapper) — notification zone
+ * ==========================================
+ * The stack lives in the free top-right band of the canvas: below the header
+ * (--hal-header-h) and to the left of the configuration panel (--hal-panel-w).
+ * Those offsets are passed to sonner from Toast.jsx as `offset`/`mobileOffset`.
+ *
+ * Sonner's own mobile stylesheet forces full-width, left-anchored toasts at
+ * <=600px, which would reach the centered canvas view-mode toggle. We keep the
+ * stack right-anchored with the same capped `--width` instead.
+ */
+@media (max-width: 600px) {
+  [data-sonner-toaster].hal-toaster {
+    left: auto;
+    width: var(--width);
+  }
+
+  [data-sonner-toaster].hal-toaster [data-sonner-toast] {
+    width: 100%;
+  }
+}
+
+/* On narrow viewports the stack would horizontally reach the centered canvas
+   view-mode toggle (absolute top-4), so it starts below that toggle row while
+   still clearing the header and the progress bar. */
+@media (max-width: 1024px) {
+  [data-sonner-toaster].hal-toaster {
+    top: calc(var(--hal-header-h, 3.5rem) + 64px + var(--hal-progress-h, 0px));
+  }
 }
 
 /* ==========================================

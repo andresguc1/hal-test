@@ -551,7 +551,7 @@ function AppFooter({
   const btnConfig = getButtonConfig();
 
   return (
-    <div className="w-full h-14 flex items-center justify-between px-2 md:px-4 glass-panel z-[var(--z-hud)] relative rounded-none border-t border-white/5">
+    <div className="w-full h-[var(--hal-footer-h)] flex items-center justify-between px-2 md:px-4 glass-panel z-[var(--z-hud)] relative rounded-none border-t border-white/5">
       {/* LEFT: Project & Flow Info (Compact - selectors moved to Explorer) */}
       <div className="flex items-center gap-2 md:gap-4 min-w-0">
         {/* Project indicator */}
