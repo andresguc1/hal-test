@@ -41,6 +41,7 @@ export const useHaltestSocket = ({
 }) => {
   const socketRef = useRef(null);
   const activeRunIdRef = useRef(activeRunId);
+  const abortedRunIdsRef = useRef(new Set());
   const onElementPickedRef = useRef(onElementPicked);
   const onElementSanitizedRef = useRef(onElementSanitized);
   const setNodesRef = useRef(setNodes);
@@ -61,6 +62,10 @@ export const useHaltestSocket = ({
 
   // Update refs when props change (always keep latest)
   useEffect(() => {
+    // A new active run means its runId is fresh — drop any stale aborted marker.
+    if (activeRunId && abortedRunIdsRef.current.has(activeRunId)) {
+      abortedRunIdsRef.current.delete(activeRunId);
+    }
     activeRunIdRef.current = activeRunId;
     onElementPickedRef.current = onElementPicked;
     onElementSanitizedRef.current = onElementSanitized;
@@ -103,6 +108,18 @@ export const useHaltestSocket = ({
   // Handle socket connection and listeners
 
   useEffect(() => {
+    // cleanup: remove any previous run's socket state (ghost listeners) when activeRunId changes
+    const prevSocket = socketRef.current;
+    if (prevSocket && activeRunIdRef.current && prevSocket.connected) {
+      console.log(
+        `[HaltestSocket] Run change detected, cleaning up previous socket for run ${activeRunIdRef.current}`,
+      );
+      prevSocket.disconnect();
+      if (window.__HAL_SOCKET__ === prevSocket) {
+        window.__HAL_SOCKET__ = null;
+      }
+    }
+
     console.log("Haltest Socket: 🔄 Connecting to", SOCKET_URL);
 
     socketRef.current = io(SOCKET_URL, {
@@ -123,9 +140,58 @@ export const useHaltestSocket = ({
       console.error("Haltest Socket: ❌ Connection error:", error.message);
     });
 
+    socket.on("run:aborted", (data) => {
+      console.log(
+        "[HaltestSocket] 🛑 Received run:aborted, cleaning up run-specific state",
+      );
+      // Remember the aborted runId so late `execution-status` frames from it
+      // are ignored even if they arrive after this handler.
+      if (data?.runId) {
+        abortedRunIdsRef.current.add(data.runId);
+        // Bound the set so it cannot grow unbounded across a long session.
+        if (abortedRunIdsRef.current.size > 50) {
+          const first = abortedRunIdsRef.current.values().next().value;
+          abortedRunIdsRef.current.delete(first);
+        }
+      }
+      // Reset all execution store state (clears persisted localStorage state too)
+      useExecutionStore.getState().resetExecution();
+      // Dispatch global event so other components can reset
+      window.dispatchEvent(
+        new CustomEvent("hal:run-aborted", { detail: data }),
+      );
+    });
+
     socket.on("execution-status", (data) => {
       if (!data || !data.stepId) return;
       const { stepId, status, error, result, runId, batchId, message } = data;
+
+      // Resolve active run up front so late/foreign events can be filtered
+      // BEFORE they mutate global UI state. This prevents a stale
+      // `status: "running"` frame (emitted just before an abort) from
+      // resurrecting the "running" state after the user stopped the run.
+      const storeActiveRunId = useExecutionStore.getState().activeRunId;
+      const currentActiveRunId = activeRunIdRef.current || storeActiveRunId;
+      const isAbortedRun = runId && abortedRunIdsRef.current.has(runId);
+      const isForeignRun =
+        runId &&
+        currentActiveRunId &&
+        runId !== currentActiveRunId &&
+        runId !== storeActiveRunId;
+
+      if (isAbortedRun || isForeignRun) {
+        // Still forward to telemetry dashboards, but never touch canvas/store.
+        window.dispatchEvent(
+          new CustomEvent("hal:execution-status", {
+            detail: {
+              ...data,
+              nodeId: stepId,
+              nodeName: data.nodeName || stepId,
+            },
+          }),
+        );
+        return;
+      }
 
       // Update global execution store
       if (status === "running") {
@@ -148,27 +214,11 @@ export const useHaltestSocket = ({
       );
 
       // Filter canvas React Flow state updates to prevent background parallel runs from causing canvas lag or flickering
-      const storeActiveRunId = useExecutionStore.getState().activeRunId;
-      const currentActiveRunId = activeRunIdRef.current || storeActiveRunId;
-
-      if (currentActiveRunId) {
-        if (
-          runId &&
-          runId !== currentActiveRunId &&
-          runId !== storeActiveRunId
-        ) {
-          console.log(
-            `Haltest Socket: 🚫 Ignoring canvas node state for runId ${runId} (Active: ${currentActiveRunId})`,
-          );
-          return;
-        }
-      } else {
-        if (batchId) {
-          console.log(
-            `Haltest Socket: 🚫 Ignoring background batch canvas update (batchId: ${batchId})`,
-          );
-          return;
-        }
+      if (!currentActiveRunId && batchId) {
+        console.log(
+          `Haltest Socket: 🚫 Ignoring background batch canvas update (batchId: ${batchId})`,
+        );
+        return;
       }
 
       console.log(
@@ -350,7 +400,19 @@ export const useHaltestSocket = ({
 
     socket.on("flow-finished", (data) => {
       console.log("Haltest Socket: 🏁 Flow finished", data);
-      const { status, error, failedNodeId, divePath } = data;
+      const { status, error, failedNodeId, divePath, runId } = data;
+
+      // A stopped/cancelled run should reset to idle, not present as a
+      // completed run (which would reopen the report modal for a dead run).
+      const isStopped = status === "stopped" || status === "cancelled";
+      if (isStopped) {
+        if (runId) abortedRunIdsRef.current.add(runId);
+        useExecutionStore.getState().resetExecution();
+        window.dispatchEvent(
+          new CustomEvent("hal:run-aborted", { detail: data }),
+        );
+        return;
+      }
 
       useExecutionStore.getState().finishExecution({
         status: status === "failed" ? "failed" : "completed",
@@ -760,6 +822,9 @@ export const useHaltestSocket = ({
       if (socket) {
         console.log("Haltest Socket: Cleaning up connection");
         socket.disconnect();
+        if (window.__HAL_SOCKET__ === socket) {
+          window.__HAL_SOCKET__ = null;
+        }
       }
     };
   }, []);
