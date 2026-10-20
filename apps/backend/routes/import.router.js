@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { importService } from '../services/importer/index.js';
 import sequelize from '../database/index.js';
 import { Flow, Node, Edge } from '../database/init.js';
+import { ensureUniqueFlow } from '../services/FlowDeduplicator.js';
 import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
@@ -432,12 +433,37 @@ router.post('/flow-package/:projectId', async (req, res) => {
             const sourceId = comp.id;
             const newNodeIds = new Map(); // source component-node id -> new node id
 
+            const compNodes = Array.isArray(comp.nodes) ? comp.nodes : [];
+            const compEdges = Array.isArray(comp.edges) ? comp.edges : [];
+
+            // Dedup: reuse an existing flow if content matches, or rename on collision
+            const decision = await ensureUniqueFlow({
+                projectId,
+                type: comp.type || 'component',
+                name: comp.name || 'Imported Component',
+                nodes: compNodes,
+                edges: compEdges,
+                transaction,
+            });
+
+            if (decision.action === 'reuse') {
+                idMap.set(sourceId, decision.existingFlowId);
+                createdComponents.push({
+                    sourceId,
+                    newId: decision.existingFlowId,
+                    name: decision.name,
+                    reused: true,
+                });
+                continue;
+            }
+
             const newFlow = await Flow.create(
                 {
-                    name: comp.name || 'Imported Component',
+                    name: decision.name,
                     projectId,
                     type: comp.type || 'component',
                     parentId: null,
+                    contentHash: decision.contentHash,
                 },
                 { transaction },
             );
@@ -445,7 +471,6 @@ router.post('/flow-package/:projectId', async (req, res) => {
             idMap.set(sourceId, newFlow.id);
 
             // Create nodes for this component, remapping nested flowIds recursively
-            const compNodes = Array.isArray(comp.nodes) ? comp.nodes : [];
             if (compNodes.length > 0) {
                 const nodeRecords = compNodes.map((n, idx) => {
                     const oldNodeId = n.nodeId || n.id;
@@ -470,7 +495,6 @@ router.post('/flow-package/:projectId', async (req, res) => {
             }
 
             // Create edges for this component
-            const compEdges = Array.isArray(comp.edges) ? comp.edges : [];
             if (compEdges.length > 0) {
                 await Edge.bulkCreate(
                     compEdges.map((e) => ({
@@ -493,21 +517,52 @@ router.post('/flow-package/:projectId', async (req, res) => {
         }
 
         // 2. Persist the main flow, remapping its component flowId references.
+        //    Dedup by content: reuse an existing flow if the same content already exists.
+        const mainNodes = Array.isArray(flow.nodes) ? flow.nodes : [];
+        const mainEdges = Array.isArray(flow.edges) ? flow.edges : [];
+
+        const mainDecision = await ensureUniqueFlow({
+            projectId,
+            type: flow.type || 'main',
+            name: flow.name || 'Imported Flow',
+            nodes: mainNodes,
+            edges: mainEdges,
+            transaction,
+        });
+
+        if (mainDecision.action === 'reuse') {
+            await transaction.commit();
+            const hydrated = await Flow.findByPk(mainDecision.existingFlowId, {
+                include: [
+                    { model: Node, as: 'nodes', order: [['order', 'ASC']] },
+                    { model: Edge, as: 'edges' },
+                ],
+            });
+            return res.status(200).json({
+                success: true,
+                reused: true,
+                flow: mapFlowPackage(hydrated),
+                idMap: Object.fromEntries(idMap),
+                components: createdComponents,
+            });
+        }
+
         const mainFlowId = `flow_${crypto.randomUUID()}`;
         const mainFlow = await Flow.create(
             {
                 id: mainFlowId,
-                name: flow.name || 'Imported Flow',
+                name: mainDecision.name,
                 projectId,
                 type: flow.type || 'main',
                 parentId: null,
                 viewport: flow.viewport || { x: 0, y: 0, zoom: 1 },
+                contentHash: mainDecision.contentHash,
             },
             { transaction },
         );
 
         const mainNodeIdMap = new Map();
-        const mainNodes = (flow.nodes || []).map((n, idx) => {
+        const mainNodeRecords = mainNodes.map((n, idx) => {
             const oldNodeId = n.nodeId || n.id;
             const newNodeId = oldNodeId || `${n.type}_main_${idx}`;
             mainNodeIdMap.set(oldNodeId, newNodeId);
@@ -522,15 +577,14 @@ router.post('/flow-package/:projectId', async (req, res) => {
             };
         });
 
-        if (mainNodes.length > 0) {
-            await Node.bulkCreate(mainNodes, { transaction });
+        if (mainNodeRecords.length > 0) {
+            await Node.bulkCreate(mainNodeRecords, { transaction });
 
-            const hasInput = mainNodes.some((n) => n.type === 'input');
-            const hasOutput = mainNodes.some((n) => n.type === 'output');
+            const hasInput = mainNodeRecords.some((n) => n.type === 'input');
+            const hasOutput = mainNodeRecords.some((n) => n.type === 'output');
             await mainFlow.update({ hasInput, hasOutput }, { transaction });
         }
 
-        const mainEdges = Array.isArray(flow.edges) ? flow.edges : [];
         if (mainEdges.length > 0) {
             await Edge.bulkCreate(
                 mainEdges.map((e) => ({

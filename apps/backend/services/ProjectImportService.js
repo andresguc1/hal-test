@@ -2,6 +2,7 @@ import JSZip from 'jszip';
 import crypto from 'crypto';
 import { Flow, Node, Edge, Canvas } from '../database/init.js';
 import sequelize from '../database/index.js';
+import { ensureUniqueFlow } from './FlowDeduplicator.js';
 
 class ProjectImportService {
     /**
@@ -168,8 +169,17 @@ class ProjectImportService {
             }
 
             // Generate a new ID for every known flow
-            for (const [sourceId] of allSourceFlows) {
-                flowIdMap.set(sourceId, `flow_${crypto.randomUUID()}`);
+            // Deduplicate source IDs to prevent creating duplicate flows
+            // when the same flow appears in both external components and local flows,
+            // or when the ZIP contains duplicate entries.
+            const seenSourceIds = new Set();
+            for (const sourceId of [...externalSourceIds, ...sourceFlowIds]) {
+                if (!seenSourceIds.has(sourceId)) {
+                    seenSourceIds.add(sourceId);
+                    if (!flowIdMap.has(sourceId)) {
+                        flowIdMap.set(sourceId, `flow_${crypto.randomUUID()}`);
+                    }
+                }
             }
 
             // ---- 7. Insert flows (external components first - i.e., dependencies) ----
@@ -253,10 +263,36 @@ class ProjectImportService {
         transaction,
         isExternal = false,
     ) {
+        const sourceNodes = sourceFlow.nodes || [];
+        const sourceEdges = sourceFlow.edges || [];
+
+        // Dedup against the target project: if an identical flow already exists,
+        // reuse it instead of creating a duplicate. This protects re-imports into
+        // an existing project (targetProjectId) from cloning every flow.
+        const decision = await ensureUniqueFlow({
+            projectId,
+            type: sourceFlow.type || 'main',
+            name: sourceFlow.name || (isExternal ? 'External Component' : 'Imported Flow'),
+            nodes: sourceNodes,
+            edges: sourceEdges,
+            transaction,
+        });
+
+        if (decision.action === 'reuse') {
+            return {
+                sourceId: sourceFlow.id,
+                newId: decision.existingFlowId,
+                name: decision.name,
+                type: sourceFlow.type || 'main',
+                nodeCount: 0,
+                reused: true,
+            };
+        }
+
         const flow = await Flow.create(
             {
                 id: newFlowId,
-                name: sourceFlow.name || (isExternal ? 'External Component' : 'Imported Flow'),
+                name: decision.name,
                 projectId,
                 canvasId: null,
                 type: sourceFlow.type || 'main',
@@ -264,12 +300,10 @@ class ProjectImportService {
                 viewport: sourceFlow.viewport || { x: 0, y: 0, zoom: 1 },
                 hasInput: sourceFlow.hasInput || false,
                 hasOutput: sourceFlow.hasOutput || false,
+                contentHash: decision.contentHash,
             },
             { transaction },
         );
-
-        const sourceNodes = sourceFlow.nodes || [];
-        const sourceEdges = sourceFlow.edges || [];
 
         // Remap node data references to new flow IDs
         const nodeIdMap = new Map();

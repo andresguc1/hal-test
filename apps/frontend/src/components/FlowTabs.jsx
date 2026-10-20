@@ -304,7 +304,8 @@ const FlowTabs = ({
             <div
               className="px-3 py-2 text-slate-300 hover:bg-blue-500/20 hover:text-blue-200 cursor-pointer flex items-center gap-2 text-xs font-medium transition-colors"
               onClick={() => {
-                onDuplicateFlow(contextMenu.flowId);
+                const flow = flows.find((f) => f.id === contextMenu.flowId);
+                if (flow) onDuplicateFlow(flow);
                 setContextMenu(null);
               }}
             >

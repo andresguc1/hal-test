@@ -15,6 +15,7 @@ import { exportService } from '../services/exporter/index.js';
 import { projectStorageService } from '../services/ProjectStorageService.js';
 import { projectExportService } from '../services/ProjectExportService.js';
 import { projectImportService } from '../services/ProjectImportService.js';
+import { ensureUniqueFlow } from '../services/FlowDeduplicator.js';
 import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
@@ -846,12 +847,49 @@ router.post('/projects/:projectId/flows/import-subflow', async (req, res) => {
                 .json({ success: false, error: 'Either sourceFlowId or flowJson is required' });
         }
 
+        // Dedup: reuse an existing component if identical content already exists
+        const decision = await ensureUniqueFlow({
+            projectId,
+            type: 'component',
+            name: subflowName,
+            nodes: sourceNodes,
+            edges: sourceEdges,
+            transaction,
+        });
+
+        if (decision.action === 'reuse') {
+            await transaction.commit();
+            const existing = await Flow.findByPk(decision.existingFlowId, {
+                include: [
+                    { model: Node, as: 'nodes', order: [['order', 'ASC']] },
+                    { model: Edge, as: 'edges' },
+                ],
+            });
+            return res.status(200).json({
+                success: true,
+                reused: true,
+                data: {
+                    flowId: existing.id,
+                    name: existing.name,
+                    nodeCount: existing.nodes?.length || 0,
+                    componentNode: {
+                        type: 'component',
+                        data: {
+                            label: existing.name,
+                            flowId: existing.id,
+                        },
+                    },
+                },
+            });
+        }
+
         // Create new component flow in target project
         const newFlow = await Flow.create(
             {
-                name: subflowName,
+                name: decision.name,
                 projectId,
                 type: 'component',
+                contentHash: decision.contentHash,
             },
             { transaction },
         );
@@ -1224,13 +1262,15 @@ router.post('/projects/:projectId/flows', async (req, res) => {
         const { projectId } = req.params;
         const { name, type, parentId, nodes, edges } = req.body;
 
-        // Check for duplicate flow name and auto-suffix if needed
+        // Check for duplicate flow name (same project + type) and auto-suffix if needed
+        const flowType = type || 'main';
         let finalName = name;
         let counter = 1;
         while (true) {
             const existingFlow = await Flow.findOne({
                 where: {
                     projectId,
+                    type: flowType,
                     name: finalName,
                 },
                 transaction,

@@ -50,6 +50,11 @@ const Flow = sequelize.define(
             allowNull: false,
             defaultValue: false,
         },
+        contentHash: {
+            type: DataTypes.STRING(64),
+            allowNull: true,
+            defaultValue: null,
+        },
     },
     {
         timestamps: true,
