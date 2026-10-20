@@ -892,6 +892,30 @@ function isCIEnvironment() {
 }
 
 /**
+ * Detects the Playwright messages that mean the target page/context/browser
+ * was torn down while an action was still waiting on it. Used to distinguish
+ * "the page went away" from a genuine timeout in wait-like actions.
+ *
+ * @param {Error|string} error - Error thrown by a Playwright call.
+ * @returns {boolean}
+ */
+function isPageTeardownError(error) {
+    const message = (typeof error === 'string' ? error : error?.message || '')
+        .toString()
+        .toLowerCase();
+    if (!message) return false;
+    return (
+        message.includes('has been closed') ||
+        message.includes('target page, context or browser') ||
+        message.includes('target closed') ||
+        message.includes('context was closed') ||
+        message.includes('browser has been closed') ||
+        message.includes('has been disconnected') ||
+        message.includes('target browser or context')
+    );
+}
+
+/**
  * Attaches a JavaScript dialog listener to every page of a context/frame so
  * native browser dialogs (alert/confirm/prompt/beforeunload) are recorded in
  * page._dialogQueue. Installed unconditionally (independent of security
@@ -1065,6 +1089,7 @@ export {
     fetchContext,
     createIsolatedContext,
     isCIEnvironment,
+    isPageTeardownError,
     // Tracing functions
     startTraceChunk,
     stopTraceChunk,

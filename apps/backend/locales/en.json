@@ -87,7 +87,8 @@
             "success": "Form submitted successfully."
         },
         "fill_form": {
-            "success": "Form filled successfully."
+            "success": "Form filled successfully.",
+            "error_invalid_wait_until": "Invalid waitUntil: {{waitUntil}}. Must be one of: {{valid}}"
         },
         "upload_file": {
             "success": "Files uploaded successfully."

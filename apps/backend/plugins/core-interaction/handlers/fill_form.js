@@ -1,7 +1,15 @@
 import { executePlaywrightAction } from '../../../core/ActionExecutor.js';
 import { buildPlaywrightLocator } from '../../../core/selector-utils.js';
 import { normalizeTimeout, playTimeout } from '../../../core/timeout-utils.js';
+import { isPageTeardownError } from '../../../core/browser-utils.js';
 import { variableManager } from '../../../services/VariableManager.js';
+
+const VALID_WAIT_UNTIL = ['load', 'domcontentloaded', 'networkidle', 'commit'];
+
+const createRegex = (str) => {
+    const escaped = str.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
+    return new RegExp(escaped, 'i');
+};
 
 const fillForm = (req, res) =>
     executePlaywrightAction(req, res, 'fill_form', async (page, opts) => {
@@ -12,6 +20,9 @@ const fillForm = (req, res) =>
             submitAfterFill = false,
             submitSelector,
             waitForNavigation = true,
+            waitUntil = 'load',
+            waitForResponseUrl,
+            waitForResponseStatus,
         } = opts;
         const timeoutMs = normalizeTimeout(
             req.body._timeoutResolution?.effectiveMs ?? opts.timeout,
@@ -25,6 +36,16 @@ const fillForm = (req, res) =>
             console.error('[fillFormAction] Error: fields array is missing or empty', fields);
             throw new Error(
                 req.t('errors.fields_required') || 'At least one field definition is required.',
+            );
+        }
+
+        if (waitForNavigation && !VALID_WAIT_UNTIL.includes(waitUntil)) {
+            throw new Error(
+                req.t('actions.fill_form.error_invalid_wait_until', {
+                    waitUntil,
+                    valid: VALID_WAIT_UNTIL.join(', '),
+                }) ||
+                    `Invalid waitUntil: ${waitUntil}. Must be one of: ${VALID_WAIT_UNTIL.join(', ')}`,
             );
         }
 
@@ -134,7 +155,7 @@ const fillForm = (req, res) =>
             submitAfterFill === 'true' ||
             (typeof submitSelector === 'string' && submitSelector.trim().length > 0);
         console.log(
-            `[fillFormAction] DEBUG: shouldSubmit=${shouldSubmit}, submitAfterFill=${submitAfterFill} (${typeof submitAfterFill}), submitSelector='${submitSelector}', waitForNavigation=${waitForNavigation}`,
+            `[fillFormAction] DEBUG: shouldSubmit=${shouldSubmit}, submitAfterFill=${submitAfterFill} (${typeof submitAfterFill}), submitSelector='${submitSelector}', waitForNavigation=${waitForNavigation}, waitUntil=${waitUntil}, waitForResponseUrl=${waitForResponseUrl}`,
         );
         if (shouldSubmit) {
             const submitAction = async () => {
@@ -161,16 +182,72 @@ const fillForm = (req, res) =>
                 }
             };
 
-            if (waitForNavigation) {
-                await Promise.all([
-                    page.waitForNavigation({ ...runOptions, waitUntil: 'load' }).catch((err) => {
+            let navigationAborted = false;
+            let responseWaited = false;
+            let waitedResponse = null;
+
+            if (waitForNavigation && !page.isClosed()) {
+                const navigationPromise = (async () => {
+                    // If waitForResponseUrl is provided, wait for that specific response
+                    if (waitForResponseUrl && waitForResponseUrl.trim().length > 0) {
+                        try {
+                            const regex = createRegex(waitForResponseUrl);
+                            waitedResponse = await page.waitForResponse(
+                                (resp) => {
+                                    const matchUrl = regex.test(resp.url());
+                                    const matchStatus = waitForResponseStatus
+                                        ? resp.status() === waitForResponseStatus
+                                        : true;
+                                    return matchUrl && matchStatus;
+                                },
+                                { ...runOptions },
+                            );
+                            responseWaited = true;
+                            console.log(
+                                `[fillFormAction] Waited for response: ${waitedResponse.url()} (status: ${waitedResponse.status()})`,
+                            );
+                            return;
+                        } catch (respErr) {
+                            if (isPageTeardownError(respErr) || page.isClosed()) {
+                                navigationAborted = true;
+                                console.warn(
+                                    `[fillFormAction] Response wait aborted (page closed): ${respErr.message}`,
+                                );
+                                return;
+                            }
+                            console.warn(
+                                `[fillFormAction] waitForResponse timed out: ${respErr.message}`,
+                            );
+                            throw respErr;
+                        }
+                    }
+
+                    // Otherwise wait for navigation with configurable waitUntil
+                    try {
+                        await page.waitForNavigation({ ...runOptions, waitUntil });
+                    } catch (navErr) {
+                        if (isPageTeardownError(navErr) || page.isClosed()) {
+                            navigationAborted = true;
+                            console.warn(
+                                `[fillFormAction] Navigation wait aborted (page closed): ${navErr.message}`,
+                            );
+                            return;
+                        }
                         console.warn(
-                            `[fillFormAction] waitForNavigation timed out: ${err.message}`,
+                            `[fillFormAction] waitForNavigation timed out (waitUntil=${waitUntil}): ${navErr.message}`,
                         );
-                        throw err;
-                    }),
-                    submitAction(),
-                ]);
+                        // Helpful hint for AJAX forms using default 'load'
+                        if (waitUntil === 'load') {
+                            console.warn(
+                                `[fillFormAction] HINT: Form submission may be AJAX (no full page reload). ` +
+                                    `Try setting waitUntil="networkidle" or configure waitForResponseUrl in node config.`,
+                            );
+                        }
+                        throw navErr;
+                    }
+                })();
+
+                await Promise.all([navigationPromise, submitAction()]);
             } else {
                 await submitAction();
             }
@@ -179,6 +256,17 @@ const fillForm = (req, res) =>
                 submitted: true,
                 submitSelector: submitSelector || null,
                 waitForNavigation,
+                waitUntil,
+                waitForResponseUrl: waitForResponseUrl || null,
+                ...(navigationAborted ? { navigationAborted: true } : {}),
+                ...(responseWaited && waitedResponse
+                    ? {
+                          waitedResponse: {
+                              url: waitedResponse.url(),
+                              status: waitedResponse.status(),
+                          },
+                      }
+                    : {}),
             };
         }
 
@@ -194,6 +282,9 @@ const fillForm = (req, res) =>
                 submitAfterFill,
                 submitSelector,
                 waitForNavigation,
+                waitUntil,
+                waitForResponseUrl,
+                waitForResponseStatus,
                 ...runOptions,
             },
         };

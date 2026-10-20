@@ -87,7 +87,8 @@
             "success": "Formulario enviado exitosamente."
         },
         "fill_form": {
-            "success": "Formulario rellenado exitosamente."
+            "success": "Formulario rellenado exitosamente.",
+            "error_invalid_wait_until": "waitUntil inválido: {{waitUntil}}. Debe ser uno de: {{valid}}"
         },
         "upload_file": {
             "success": "Archivos subidos exitosamente."

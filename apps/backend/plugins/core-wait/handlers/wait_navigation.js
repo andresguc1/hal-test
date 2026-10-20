@@ -1,5 +1,6 @@
 import { executePlaywrightAction } from '../../../core/ActionExecutor.js';
 import { normalizeTimeout, playTimeout } from '../../../core/timeout-utils.js';
+import { isPageTeardownError } from '../../../core/browser-utils.js';
 
 const waitNavigation = (req, res) =>
     executePlaywrightAction(req, res, 'wait_navigation', async (page, opts) => {
@@ -14,12 +15,20 @@ const waitNavigation = (req, res) =>
         }
 
         try {
+            if (page.isClosed()) {
+                throw new Error('page is already closed');
+            }
             if (url) {
                 await page.waitForURL(url, { waitUntil, ...playTimeout(timeout) });
             } else {
                 await page.waitForLoadState(waitUntil, playTimeout(timeout));
             }
         } catch (error) {
+            if (isPageTeardownError(error) || page.isClosed()) {
+                throw new Error(
+                    `Wait navigation aborted: the page/context was closed before reaching state "${waitUntil}".`,
+                );
+            }
             throw new Error(
                 `Wait navigation failed (url: ${url || 'current'}, state: ${waitUntil}, timeout: ${timeout}ms): ${error.message}`,
             );

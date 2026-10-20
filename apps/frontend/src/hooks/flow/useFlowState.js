@@ -421,6 +421,7 @@ export function useFlowState({ currentProject, currentFlowId } = {}) {
           label: NODE_LABELS[type] || type,
           type,
           state: NODE_STATES.DEFAULT,
+          configuration: data.configuration || {},
         },
       };
       setNodes((nds) => [...nds, newNode]);

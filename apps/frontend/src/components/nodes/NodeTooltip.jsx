@@ -12,6 +12,7 @@ import { NODE_CATEGORIES } from "@/config/nodeConstants";
 import { getSmartLabel } from "@/config/validationRules";
 import { NODE_TYPE_MAP } from "@/config/nodeConstants";
 import { buildNodeMetaRows } from "@/utils/nodeMetaRows";
+import { resolveTooltipPosition } from "@/utils/tooltipPosition";
 
 /**
  * Presentational content for the contextual node information bubble.
@@ -42,7 +43,7 @@ export function NodeTooltipContent({
     <div
       role="tooltip"
       className={cn(
-        "pointer-events-auto flex flex-col gap-1.5 rounded-lg",
+        "pointer-events-none flex flex-col gap-1.5 rounded-lg",
         "border border-white/15 bg-slate-950/95 backdrop-blur-xl",
         "px-3 py-2.5 text-left shadow-2xl",
         compact ? "w-44" : "w-72",
@@ -140,20 +141,17 @@ export default function CanvasNodeTooltip({ anchor, onClose, children }) {
   const TIP_WIDTH = anchor.compact ? 180 : 290;
   const sideGap = 12;
 
-  const anchorLeft = anchor.rect?.left ?? anchor.x ?? 0;
-  const anchorRight = anchor.rect?.right ?? anchor.x ?? 0;
-  const anchorTop = anchor.rect?.top ?? anchor.y ?? 0;
-
-  const overflowRight = anchorRight + TIP_WIDTH + sideGap > window.innerWidth;
-  const left = overflowRight
-    ? anchorLeft - TIP_WIDTH - sideGap
-    : anchorRight + sideGap;
-
-  const vertical = Math.max(6, Math.min(anchorTop, window.innerHeight - 40));
+  const { left, top: vertical } = resolveTooltipPosition({
+    anchor,
+    tipWidth: TIP_WIDTH,
+    sideGap,
+    viewportWidth: window.innerWidth,
+    viewportHeight: window.innerHeight,
+  });
 
   return (
     <div
-      className="fixed z-[999]"
+      className="fixed z-[999] pointer-events-none"
       style={{ left, top: vertical, maxWidth: "calc(100vw - 24px)" }}
       onMouseEnter={() => {}}
     >
@@ -161,7 +159,7 @@ export default function CanvasNodeTooltip({ anchor, onClose, children }) {
       <button
         onClick={onClose}
         aria-label="Close node info"
-        className="absolute -top-2 -right-2 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-slate-700 text-[10px] text-white shadow-lg hover:bg-slate-500 cursor-pointer"
+        className="pointer-events-auto absolute -top-2 -right-2 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-slate-700 text-[10px] text-white shadow-lg hover:bg-slate-500 cursor-pointer"
       >
         ✕
       </button>

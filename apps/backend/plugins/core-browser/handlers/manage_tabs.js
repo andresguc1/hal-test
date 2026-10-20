@@ -1,5 +1,6 @@
 import { executePlaywrightAction } from '../../../core/ActionExecutor.js';
 import { normalizeTimeout, playTimeout } from '../../../core/timeout-utils.js';
+import { isPageTeardownError } from '../../../core/browser-utils.js';
 
 const manageTabsAction = (req, res) =>
     executePlaywrightAction(req, res, 'manage_tabs', async (page, opts, browserId, context) => {
@@ -23,7 +24,21 @@ const manageTabsAction = (req, res) =>
             // Create new tab
             const newPage = await context.newPage();
             if (url) {
-                await newPage.goto(url, { waitUntil: 'load', ...playTimeout(timeout) });
+                try {
+                    await newPage.goto(url, { waitUntil: 'load', ...playTimeout(timeout) });
+                } catch (navErr) {
+                    // The context/browser can be torn down concurrently (e.g. a
+                    // close_browser node) while we navigate the freshly opened
+                    // tab. Surface a clear, actionable error instead of the raw
+                    // "Target page, context or browser has been closed".
+                    if (isPageTeardownError(navErr) || newPage.isClosed()) {
+                        throw new Error(
+                            req.t('actions.manage_tabs.error_context_closed') ||
+                                'Cannot open URL: the browser context was closed.',
+                        );
+                    }
+                    throw navErr;
+                }
                 responseData.url = newPage.url();
             } else {
                 responseData.url = 'about:blank';

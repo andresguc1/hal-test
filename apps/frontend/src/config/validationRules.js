@@ -496,6 +496,47 @@ export const NODE_INPUTS = {
           config.submitSelector.trim().length > 0),
     },
     {
+      key: "waitUntil",
+      label: "Wait until",
+      type: "select",
+      options: [
+        { label: "Network Idle (recommended for AJAX & traditional)", value: "networkidle" },
+        { label: "Load (full page load)", value: "load" },
+        { label: "DOMContentLoaded", value: "domcontentloaded" },
+        { label: "Commit (navigation committed)", value: "commit" },
+      ],
+      defaultValue: "networkidle",
+      isVisible: (config) =>
+        config.waitForNavigation &&
+        (config.submitAfterFill ||
+          (typeof config.submitSelector === "string" &&
+            config.submitSelector.trim().length > 0)),
+    },
+    {
+      key: "waitForResponseUrl",
+      label: "Wait for response URL pattern",
+      type: "text",
+      placeholder: "e.g. /api/transfer or *transfer*",
+      isVisible: (config) =>
+        config.waitForNavigation &&
+        (config.submitAfterFill ||
+          (typeof config.submitSelector === "string" &&
+            config.submitSelector.trim().length > 0)),
+    },
+    {
+      key: "waitForResponseStatus",
+      label: "Expected response status",
+      type: "number",
+      placeholder: "e.g. 200",
+      isVisible: (config) =>
+        config.waitForNavigation &&
+        (config.submitAfterFill ||
+          (typeof config.submitSelector === "string" &&
+            config.submitSelector.trim().length > 0)) &&
+        config.waitForResponseUrl &&
+        config.waitForResponseUrl.trim().length > 0,
+    },
+    {
       key: "takeScreenshot",
       label: "📸 Take Screenshot",
       type: "checkbox",

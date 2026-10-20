@@ -42,6 +42,28 @@ const fillFormBodySchema = Joi.object({
     waitForNavigation: Joi.boolean().default(true).optional().messages({
         'boolean.base': 'El campo waitForNavigation debe ser un valor booleano (true/false).',
     }),
+    waitUntil: Joi.string()
+        .valid('load', 'domcontentloaded', 'networkidle', 'commit')
+        .default('networkidle')
+        .optional()
+        .messages({
+            'any.only': 'waitUntil debe ser uno de: load, domcontentloaded, networkidle, commit',
+            'string.base': 'waitUntil debe ser una cadena de texto.',
+        }),
+    waitForResponseUrl: Joi.string().trim().allow('', null).optional().messages({
+        'string.base': 'waitForResponseUrl debe ser una cadena de texto (patrón de URL o regex).',
+    }),
+    waitForResponseStatus: Joi.number()
+        .integer()
+        .min(100)
+        .max(599)
+        .allow(null)
+        .optional()
+        .messages({
+            'number.base': 'waitForResponseStatus debe ser un número (código de estado HTTP).',
+            'number.min': 'Código de estado HTTP inválido (mínimo 100).',
+            'number.max': 'Código de estado HTTP inválido (máximo 599).',
+        }),
     timeout: Joi.number().integer().min(0).default(0).messages({
         'number.min': 'El tiempo de espera (timeout) debe ser al menos 1ms.',
     }),

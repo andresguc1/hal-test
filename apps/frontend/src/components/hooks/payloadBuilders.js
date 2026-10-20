@@ -663,6 +663,11 @@ export const fill_form = (payload = {}) => {
     submitAfterFill: asBoolean(payload?.submitAfterFill, false),
     submitSelector: asString(payload?.submitSelector, ""),
     waitForNavigation: asBoolean(payload?.waitForNavigation, true),
+    waitUntil: asString(payload?.waitUntil, "networkidle"),
+    waitForResponseUrl: asString(payload?.waitForResponseUrl, ""),
+    waitForResponseStatus: payload?.waitForResponseStatus != null
+      ? asNumber(payload?.waitForResponseStatus, null, null)
+      : null,
     timeout: asNumber(payload?.timeout, 0, 0),
     browserId: asString(payload?.browserId),
     takeScreenshot: asBoolean(payload?.takeScreenshot, true),

@@ -1107,8 +1107,12 @@ export const updateNodeDefinitions = (_categoriesData, definitionsData) => {
   }
 
   // 1. Update NODE_TYPE_MAP from API definitions (the main value)
-  Object.keys(NODE_TYPE_MAP).forEach((k) => delete NODE_TYPE_MAP[k]);
+  // Keep existing entries; only overwrite if the new definition has a label.
+  // This prevents erasing hand-curated mappings when re-fetching definitions.
   for (const [nodeType, def] of Object.entries(definitionsData)) {
+    // Skip if already present with a label (idempotent guard)
+    if (NODE_TYPE_MAP[nodeType] && NODE_TYPE_MAP[nodeType].label) continue;
+
     // Prefer the frontend's category if the node is already listed in NODE_CATEGORIES.
     // Only fall back to the backend category mapping for new/unknown node types.
     const frontendCat =
@@ -1132,25 +1136,33 @@ export const updateNodeDefinitions = (_categoriesData, definitionsData) => {
 
   // 2. Ensure every registered node type appears in a NODE_CATEGORIES entry
   //    (handles third-party plugins that add new node types)
+  // Idempotent guard: track which node types have already been added to categories
+  // in this call, so we don't push duplicates if the function is re-invoked.
+  const newlyAddedToCategories = new Set();
   const allKnownNodes = new Set();
   for (const cat of Object.values(NODE_CATEGORIES)) {
     for (const n of cat.nodes) allKnownNodes.add(n);
   }
   for (const [nodeType, def] of Object.entries(definitionsData)) {
-    if (!allKnownNodes.has(nodeType)) {
-      const frontendCat =
-        BACKEND_TO_FRONTEND_CATEGORY[def.category] || def.category;
-      if (!NODE_CATEGORIES[frontendCat]) {
-        NODE_CATEGORIES[frontendCat] = {
-          icon: Box,
-          color: def.color || "slate",
-          label: frontendCat,
-          nodes: [],
-        };
-      }
-      NODE_CATEGORIES[frontendCat].nodes.push(nodeType);
-      allKnownNodes.add(nodeType);
+    if (allKnownNodes.has(nodeType) && !newlyAddedToCategories.has(nodeType)) continue;
+
+    const frontendCat =
+      frontendNodeLookup[nodeType] ||
+      BACKEND_TO_FRONTEND_CATEGORY[def.category] || def.category;
+    if (!NODE_CATEGORIES[frontendCat]) {
+      NODE_CATEGORIES[frontendCat] = {
+        icon: Box,
+        color: def.color || "slate",
+        label: frontendCat,
+        nodes: [],
+      };
     }
+    // Only push if not already in this category's nodes array
+    if (!NODE_CATEGORIES[frontendCat].nodes.includes(nodeType)) {
+      NODE_CATEGORIES[frontendCat].nodes.push(nodeType);
+      newlyAddedToCategories.add(nodeType);
+    }
+    allKnownNodes.add(nodeType);
   }
 
   console.log(

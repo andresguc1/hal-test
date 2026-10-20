@@ -45,6 +45,13 @@ import { SelectorResultPanel } from "./SelectorResultPanel";
 import { useTranslation } from "react-i18next";
 import { useForm, Controller } from "react-hook-form";
 import { createPortal } from "react-dom";
+import {
+  normalizeFormConfig,
+  resolveSyncAction,
+  SYNC_KEEP_PENDING,
+  SYNC_SYNCED,
+} from "./hooks/nodeConfigSync";
+import { registerPendingConfigFlush } from "./hooks/pendingConfigSync";
 
 const safeStringify = (value) => {
   const seen = new WeakSet();
@@ -200,21 +207,18 @@ const NodeConfigurationPanel = ({
 
   const colorKey = safeConfig?.color || "slate";
 
-  const defaultValues = React.useMemo(() => {
-    const config = activeNode?.data?.configuration || {};
-    const merged = { ...config };
-    if (definedInputs && definedInputs.length > 0) {
-      definedInputs.forEach((input) => {
-        if (
-          merged[input.key] === undefined &&
-          input.defaultValue !== undefined
-        ) {
-          merged[input.key] = input.defaultValue;
-        }
-      });
-    }
-    return merged;
-  }, [activeNode, definedInputs]);
+  // The form registers every schema field together with its `defaultValue`, so
+  // the baseline the graph is compared against must carry those defaults too.
+  // Otherwise a node stored without them reads as permanently dirty.
+  const formBaseline = React.useCallback(
+    (config) => normalizeFormConfig(config, definedInputs),
+    [definedInputs],
+  );
+
+  const defaultValues = React.useMemo(
+    () => formBaseline(activeNode?.data?.configuration),
+    [formBaseline, activeNode],
+  );
 
   const { control, handleSubmit, reset, watch, setValue } = useForm({
     defaultValues,
@@ -242,7 +246,7 @@ const NodeConfigurationPanel = ({
   const isResettingRef = React.useRef(false);
 
   const lastSyncedConfigRef = React.useRef({
-    config: activeNode?.data?.configuration || {},
+    config: normalizeFormConfig(activeNode?.data?.configuration, definedInputs),
     nodeId: activeNode?.id,
   });
 
@@ -255,9 +259,10 @@ const NodeConfigurationPanel = ({
   React.useEffect(() => {
     if (!activeNode) return;
     const globalConfig = activeNode.data?.configuration || {};
+    const normalizedGlobalConfig = formBaseline(globalConfig);
     const hasIdChanged = activeNode.id !== lastSyncedConfigRef.current.nodeId;
     const hasConfigChanged =
-      safeStringify(globalConfig) !==
+      safeStringify(normalizedGlobalConfig) !==
       safeStringify(lastSyncedConfigRef.current.config);
 
     if (hasIdChanged || hasConfigChanged) {
@@ -271,11 +276,11 @@ const NodeConfigurationPanel = ({
         setShowAdvanced(false);
       }
       lastSyncedConfigRef.current = {
-        config: globalConfig,
+        config: normalizedGlobalConfig,
         nodeId: activeNode.id,
       };
     }
-  }, [activeNode, reset]);
+  }, [activeNode, reset, formBaseline]);
 
   const updateTimeoutRef = React.useRef(null);
 
@@ -286,18 +291,35 @@ const NodeConfigurationPanel = ({
   activeNodeRef.current = activeNode;
   const pendingSyncRef = React.useRef(null);
 
+  // Values of the currently queued (debounced) write. Re-arming the timer for
+  // values that are already queued lets unrelated re-renders (hover, tooltip,
+  // graph updates) starve the write, so the panel must recognise them.
+  const scheduledSyncRef = React.useRef(null);
+
   const flushPendingSync = React.useCallback(() => {
     const pending = pendingSyncRef.current;
-    if (!pending) return;
+    if (!pending) return false;
     pendingSyncRef.current = null;
+    scheduledSyncRef.current = null;
     if (updateTimeoutRef.current) {
       clearTimeout(updateTimeoutRef.current);
       updateTimeoutRef.current = null;
     }
     const cleanedConfig = cleanConfiguration(pending.values, pending.type);
     updateNodeConfiguration(pending.nodeId, cleanedConfig);
-    lastSyncedConfigRef.current.config = pending.values;
-  }, [cleanConfiguration, updateNodeConfiguration]);
+    lastSyncedConfigRef.current = {
+      config: formBaseline(pending.values),
+      nodeId: pending.nodeId,
+    };
+    return true;
+  }, [cleanConfiguration, updateNodeConfiguration, formBaseline]);
+
+  // The debounced write lives in the panel, but save/run/reload read the graph
+  // from outside, so they must be able to flush it first.
+  React.useEffect(
+    () => registerPendingConfigFlush(flushPendingSync),
+    [flushPendingSync],
+  );
 
   React.useEffect(() => {
     // When a different node (or nothing) is selected, flush any pending edits
@@ -308,44 +330,79 @@ const NodeConfigurationPanel = ({
     }
 
     if (!activeNode) return;
-    const currentConfigStr = safeStringify(watchedValues);
-    const lastSyncedStr = safeStringify(lastSyncedConfigRef.current.config);
+    const syncAction = resolveSyncAction({
+      formValues: watchedValues,
+      baseline: lastSyncedConfigRef.current.config,
+      scheduledValues: scheduledSyncRef.current,
+      inputs: definedInputs,
+    });
 
-    if (isResettingRef.current) {
-      // If we are in the middle of a reset, check if the watchedValues have successfully caught up
-      if (currentConfigStr === lastSyncedStr) {
-        isResettingRef.current = false;
-      }
+    if (syncAction === SYNC_KEEP_PENDING) {
+      // A write for these exact values is already queued — leave it alone.
       return;
     }
 
-    if (currentConfigStr !== lastSyncedStr) {
-      if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
-      pendingSyncRef.current = {
-        nodeId: activeNode.id,
-        type: activeNode.data?.type || activeNode.type,
-        values: watchedValues,
-      };
-      updateTimeoutRef.current = setTimeout(() => {
-        if (activeNodeRef.current?.id !== activeNode.id) return;
-
-        const cleanedConfig = cleanConfiguration(
-          watchedValues,
-          activeNode.data?.type || activeNode.type,
-        );
-
-        updateNodeConfiguration(activeNode.id, cleanedConfig);
-        lastSyncedConfigRef.current.config = watchedValues;
-        pendingSyncRef.current = null;
-      }, 200);
+    if (syncAction === SYNC_SYNCED) {
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current);
+        updateTimeoutRef.current = null;
+      }
+      pendingSyncRef.current = null;
+      scheduledSyncRef.current = null;
+      isResettingRef.current = false;
+      return;
     }
+
+    if (isResettingRef.current) {
+      // If we are in the middle of a reset, wait until the watched values have
+      // caught up with the (normalised) configuration before syncing.
+      return;
+    }
+
+    if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+    const queuedValues = { ...watchedValues };
+    pendingSyncRef.current = {
+      nodeId: activeNode.id,
+      type: activeNode.data?.type || activeNode.type,
+      values: queuedValues,
+    };
+    scheduledSyncRef.current = queuedValues;
+    updateTimeoutRef.current = setTimeout(() => {
+      if (activeNodeRef.current?.id !== activeNode.id) return;
+
+      const cleanedConfig = cleanConfiguration(
+        queuedValues,
+        activeNode.data?.type || activeNode.type,
+      );
+
+      updateNodeConfiguration(activeNode.id, cleanedConfig);
+      lastSyncedConfigRef.current = {
+        config: formBaseline(queuedValues),
+        nodeId: activeNode.id,
+      };
+      pendingSyncRef.current = null;
+      scheduledSyncRef.current = null;
+    }, 200);
   }, [
     watchedValues,
     activeNode,
     updateNodeConfiguration,
     cleanConfiguration,
     flushPendingSync,
+    definedInputs,
+    formBaseline,
   ]);
+
+  // Deselecting the node (or leaving the panel) unmounts it: flush the pending
+  // edit instead of dropping it with the timer.
+  const flushPendingSyncRef = React.useRef(flushPendingSync);
+  flushPendingSyncRef.current = flushPendingSync;
+  React.useEffect(
+    () => () => {
+      flushPendingSyncRef.current?.();
+    },
+    [],
+  );
 
   const lastActiveNodeIdRef = React.useRef(activeNode?.id);
   const labelTimeoutRef = React.useRef(null);
