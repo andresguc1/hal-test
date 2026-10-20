@@ -164,9 +164,11 @@ export const api = {
     });
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(
+      const error = new Error(
         errorData.message || `HTTP error! status: ${response.status}`,
       );
+      error.status = response.status;
+      throw error;
     }
     return await response.json();
   },
@@ -184,9 +186,11 @@ export const api = {
     });
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(
+      const error = new Error(
         errorData.message || `HTTP error! status: ${response.status}`,
       );
+      error.status = response.status;
+      throw error;
     }
     return await response.json();
   },
@@ -203,9 +207,11 @@ export const api = {
     });
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(
+      const error = new Error(
         errorData.message || `HTTP error! status: ${response.status}`,
       );
+      error.status = response.status;
+      throw error;
     }
     return await response.json();
   },
@@ -225,9 +231,13 @@ export const api = {
     const response = await fetch(normalizeUrl(API_BASE_URL, endpoint), options);
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(
+      const error = new Error(
         errorData.message || `HTTP error! status: ${response.status}`,
       );
+      // Preserve the status code so callers can make idempotent decisions
+      // (e.g. treat a 404 on DELETE as "already deleted").
+      error.status = response.status;
+      throw error;
     }
     return await response.json();
   },

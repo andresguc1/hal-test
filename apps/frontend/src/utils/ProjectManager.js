@@ -10,6 +10,13 @@ async function withRetry(fn, operationName, retries = MAX_RETRIES) {
     try {
       return await fn();
     } catch (err) {
+      // Client errors (4xx) are deterministic — retrying will not help and
+      // only spams the console (e.g. a 404 for an already-deleted project).
+      const isClientError =
+        typeof err?.status === "number" && err.status >= 400 && err.status < 500;
+      if (isClientError) {
+        throw err;
+      }
       const isLastAttempt = attempt === retries;
       logger.warn(
         `[ProjectManager] ${operationName} attempt ${attempt}/${retries} failed: ${err.message}`,
@@ -88,6 +95,15 @@ class ProjectManager {
       await api.delete(`/projects/${projectId}`);
       logger.info("Project deleted", { projectId }, "ProjectManager");
     } catch (err) {
+      // Idempotent delete: already gone → success, so the UI can drop it.
+      if (err?.status === 404) {
+        logger.warn(
+          "Project already deleted (404); treating as success",
+          { projectId },
+          "ProjectManager",
+        );
+        return;
+      }
       logger.error("Failed to delete project", err, "ProjectManager");
       throw err;
     }
@@ -234,6 +250,17 @@ class ProjectManager {
     try {
       return await api.delete(`/projects/${projectId}/flows/${flowId}`);
     } catch (err) {
+      // Idempotent delete: the flow is already gone, so treat it as success
+      // instead of surfacing a 404 (which would roll back the optimistic
+      // removal and leave a phantom flow in the UI).
+      if (err?.status === 404) {
+        logger.warn(
+          "Flow already deleted (404); treating as success",
+          { projectId, flowId },
+          "ProjectManager",
+        );
+        return { project: null, alreadyDeleted: true };
+      }
       logger.error("Failed to delete flow", err, "ProjectManager");
       throw err;
     }

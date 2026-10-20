@@ -66,13 +66,34 @@ export function useProjectManager() {
       logger.error("Failed to load projects", err, "useProjectManager"),
   });
 
-  const { data: currentProject = null, isLoading: isLoadingProject } = useQuery(
-    {
-      queryKey: ["project", currentProjectId],
-      queryFn: () => projectManager.getProject(currentProjectId),
-      enabled: !!currentProjectId,
+  const {
+    data: currentProject = null,
+    isLoading: isLoadingProject,
+    error: currentProjectError,
+  } = useQuery({
+    queryKey: ["project", currentProjectId],
+    queryFn: () => projectManager.getProject(currentProjectId),
+    enabled: !!currentProjectId,
+    // A 404 means the project no longer exists: retrying is pointless.
+    retry: (failureCount, error) => {
+      if (error?.status === 404) return false;
+      return failureCount < 2;
     },
-  );
+  });
+
+  // A deleted/missing project must not remain selected: clear the phantom
+  // selection and evict it from the projects list so the UI stops showing it
+  // and stops refetching a 404.
+  useEffect(() => {
+    if (currentProjectError?.status === 404 && currentProjectId) {
+      queryClient.removeQueries({ queryKey: ["project", currentProjectId] });
+      queryClient.setQueryData(["projects"], (old) =>
+        (old || []).filter((p) => p.id !== currentProjectId),
+      );
+      setCurrentProjectId(null);
+      setCurrentFlowId(null);
+    }
+  }, [currentProjectError, currentProjectId, queryClient, setCurrentFlowId]);
 
   useEffect(() => {
     // Auto-select preferred flow (last edited flow/component or Main Flow)
@@ -172,6 +193,27 @@ export function useProjectManager() {
   const deleteFlowMutation = useMutation({
     mutationFn: ({ projectId, flowId }) =>
       projectManager.deleteFlow(projectId, flowId),
+    onMutate: async ({ projectId, flowId }) => {
+      // Optimistic removal so the UI reacts instantly (explorer list + canvas
+      // references disappear without waiting for the round trip).
+      await queryClient.cancelQueries({ queryKey: ["project", projectId] });
+      const previousProject = queryClient.getQueryData(["project", projectId]);
+      if (previousProject) {
+        queryClient.setQueryData(["project", projectId], {
+          ...previousProject,
+          flows: (previousProject.flows || []).filter((f) => f.id !== flowId),
+        });
+      }
+      // Invalidate the sub-flow cache for the removed flow immediately.
+      subFlowCache.invalidate(projectId, flowId);
+      return { previousProject };
+    },
+    onError: (_err, { projectId }, context) => {
+      // Roll back the optimistic removal on failure.
+      if (context?.previousProject) {
+        queryClient.setQueryData(["project", projectId], context.previousProject);
+      }
+    },
     onSuccess: (response, { projectId, flowId }) => {
       // 1. Clear or switch active flow if we just deleted it (do this BEFORE query updates to avoid race conditions)
       setCurrentFlowId((prevFlowId) => {
@@ -195,6 +237,10 @@ export function useProjectManager() {
       }
       queryClient.invalidateQueries({ queryKey: ["project", projectId] });
       queryClient.invalidateQueries({ queryKey: ["projects"] }); // Sync projects list
+      subFlowCache.invalidate(projectId, flowId);
+    },
+    onSettled: (_data, _err, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
     },
   });
 

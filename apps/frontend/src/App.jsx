@@ -50,6 +50,8 @@ import {
 import { migrateFromLegacy } from "./utils/migration";
 import { runPolicyEnforcer } from "./utils/policyEnforcer";
 import { safeStringify } from "./utils/flowUtils";
+import { deriveFlowData } from "./utils/flowDerivation";
+import { flushPendingConfigSync } from "./components/hooks/pendingConfigSync";
 
 import { useFlowShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useToast } from "./hooks/useToast";
@@ -256,6 +258,48 @@ function Dashboard({
 
   // TerminalPanel ref for imperative execution views (openExecution/setMode/clearExecution)
   const terminalPanelRef = React.useRef(null);
+
+  // Tracks flows the user deleted in this session so that live canvas
+  // component nodes referencing them cannot "resurrect" them in the explorer
+  // list (derivedFlowData step 4) before/after the delete round-trip settles.
+  const [deletedFlowIds, setDeletedFlowIds] = React.useState(() => new Set());
+  const markFlowDeleted = React.useCallback((flowId) => {
+    if (!flowId) return;
+    setDeletedFlowIds((prev) => {
+      if (prev.has(flowId)) return prev;
+      const next = new Set(prev);
+      next.add(flowId);
+      return next;
+    });
+  }, []);
+  const unmarkFlowDeleted = React.useCallback((flowId) => {
+    if (!flowId) return;
+    setDeletedFlowIds((prev) => {
+      if (!prev.has(flowId)) return prev;
+      const next = new Set(prev);
+      next.delete(flowId);
+      return next;
+    });
+  }, []);
+  const handleDeleteFlow = React.useCallback(
+    (f) => {
+      const flowId = typeof f === "string" ? f : f?.id;
+      if (!flowId) return;
+      markFlowDeleted(flowId);
+      Promise.resolve(deleteFlow(flowId)).catch(() => {
+        // Delete failed — the flow still exists, stop hiding it.
+        unmarkFlowDeleted(flowId);
+      });
+      if (flowId === currentFlowId) {
+        setNodes([]);
+        setEdges([]);
+        if (!currentProject?.flows || currentProject.flows.length <= 1) {
+          setIsStarterDismissed(false);
+        }
+      }
+    },
+    [deleteFlow, markFlowDeleted, unmarkFlowDeleted, currentFlowId, currentProject?.flows],
+  );
 
   // Phase 4 inverse: track executed steps from the active run to highlight
   // code blocks in TerminalPanel. Key format: "${instanceKey || 'null'}:${nodeId}".
@@ -548,8 +592,26 @@ function Dashboard({
 
   const [canvasViewMode, setCanvasViewMode] = useState("calidad");
 
+  // The configuration panel writes edits into the graph on a short debounce.
+  // Saving and running read the graph, so flush a queued edit first and re-enter
+  // once React has committed it, instead of acting on a stale configuration.
+  const handleExecuteFlowRef = React.useRef(null);
+  const handleSaveFlowRef = React.useRef(null);
+  const flushPendingConfigThenRetry = React.useCallback((retry) => {
+    if (!flushPendingConfigSync()) return false;
+    requestAnimationFrame(() => retry());
+    return true;
+  }, []);
+
   const handleExecuteFlow = useCallback(
     async (options = {}) => {
+      if (
+        flushPendingConfigThenRetry(() =>
+          handleExecuteFlowRef.current?.(options),
+        )
+      ) {
+        return;
+      }
       const targetMode = options?.executionMode || canvasViewMode;
       // --- COLLABORATION LOCK CHECKS ---
       if (isCollaborative) {
@@ -878,6 +940,7 @@ function Dashboard({
       remoteExecution,
       canvasViewMode,
       navigate,
+      flushPendingConfigThenRetry,
     ],
   );
 
@@ -1383,6 +1446,10 @@ function Dashboard({
     [createFlow, ensureProjectAndGetId, setNodes, setEdges, toast, t],
   );
 
+  React.useEffect(() => {
+    handleExecuteFlowRef.current = handleExecuteFlow;
+  }, [handleExecuteFlow]);
+
   const handleSaveFlow = useCallback(() => {
     if (!currentFlowId) {
       toast.info(
@@ -1392,6 +1459,10 @@ function Dashboard({
         ),
       );
       setCreationModal({ isOpen: true, type: "flow" });
+      return;
+    }
+
+    if (flushPendingConfigThenRetry(() => handleSaveFlowRef.current?.())) {
       return;
     }
 
@@ -1405,7 +1476,23 @@ function Dashboard({
     } finally {
       setIsSaving(false);
     }
-  }, [saveFlow, currentFlowId, toast, t]);
+  }, [saveFlow, currentFlowId, toast, t, flushPendingConfigThenRetry]);
+
+  React.useEffect(() => {
+    handleSaveFlowRef.current = handleSaveFlow;
+  }, [handleSaveFlow]);
+
+  // Flush a queued configuration edit into the graph when the page is leaving
+  // so a fast reload does not drop the last keystrokes.
+  React.useEffect(() => {
+    const flush = () => flushPendingConfigSync();
+    window.addEventListener("pagehide", flush);
+    window.addEventListener("beforeunload", flush);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      window.removeEventListener("beforeunload", flush);
+    };
+  }, []);
 
   // Export/Import Flow handlers (currently unused)
   /* 
@@ -2226,92 +2313,16 @@ function Dashboard({
   // RENDER - MAREA LAYOUT
   // ========================================
 
-  const derivedFlowData = useMemo(() => {
-    const dbFlows = currentProject?.flows || [];
-    const overrideNames = new Map();
-
-    // 1. Scan ALL DB flows to find component nodes and extract their custom names
-    dbFlows.forEach((f) => {
-      let fNodes = [];
-      if (Array.isArray(f.nodes)) {
-        fNodes = f.nodes;
-      } else if (typeof f.nodes === "string") {
-        try {
-          fNodes = JSON.parse(f.nodes) || [];
-          if (!Array.isArray(fNodes)) fNodes = [];
-        } catch {
-          fNodes = [];
-        }
-      }
-      fNodes.forEach((n) => {
-        if (
-          (n.type === "component" || n.data?.type === "component") &&
-          n.data?.flowId
-        ) {
-          overrideNames.set(
-            n.data.flowId,
-            n.data.customLabel || n.data.label || "Untitled Component",
-          );
-        }
-      });
-    });
-
-    // 2. Override with live canvas nodes (in case of unsaved edits in current flow)
-    nodes.forEach((n) => {
-      if (
-        (n.type === "component" || n.data?.type === "component") &&
-        n.data?.flowId
-      ) {
-        overrideNames.set(
-          n.data.flowId,
-          n.data.customLabel || n.data.label || "Untitled Component",
-        );
-      }
-    });
-
-    // 3. Rebuild flows list with updated names
-    const flowMap = new Map();
-    dbFlows.forEach((f) => {
-      if (f.type === "component" && overrideNames.has(f.id)) {
-        flowMap.set(f.id, {
-          ...f,
-          name: overrideNames.get(f.id),
-          isLive: true,
-        });
-      } else {
-        flowMap.set(f.id, f);
-      }
-    });
-
-    // 4. Also add any live components on canvas that might not be in DB yet
-    nodes.forEach((n) => {
-      if (
-        (n.type === "component" || n.data?.type === "component") &&
-        n.data?.flowId
-      ) {
-        if (!flowMap.has(n.data.flowId)) {
-          flowMap.set(n.data.flowId, {
-            id: n.data.flowId,
-            name: n.data.customLabel || n.data.label || "Untitled Component",
-            type: "component",
-            isLive: true,
-          });
-        }
-      }
-    });
-
-    // Determine current flow name
-    const currentOverride = overrideNames.get(currentFlowId);
-    let name = "No Flow Selected";
-    if (currentOverride) {
-      name = currentOverride;
-    } else {
-      const f = dbFlows.find((f) => f.id === currentFlowId);
-      if (f) name = f.name;
-    }
-
-    return { flows: [...flowMap.values()], flowName: name };
-  }, [currentProject?.flows, nodes, currentFlowId]);
+  const derivedFlowData = useMemo(
+    () =>
+      deriveFlowData({
+        dbFlows: currentProject?.flows || [],
+        nodes,
+        currentFlowId,
+        deletedFlowIds,
+      }),
+    [currentProject?.flows, nodes, currentFlowId, deletedFlowIds],
+  );
 
   return (
     <>
@@ -2509,15 +2520,49 @@ function Dashboard({
               }
               onNewFlow={() => setCreationModal({ isOpen: true, type: "flow" })}
               onRenameFlow={(f, newName) => renameFlow(f.id, newName)}
-              onDeleteFlow={(f) => {
-                deleteFlow(f.id);
-                if (f.id === currentFlowId) {
-                  setNodes([]);
-                  setEdges([]);
-                }
-              }}
+              onDeleteFlow={handleDeleteFlow}
               onDuplicateFlow={(f) => {
-                createFlow(`${f.name} (copy)`, f.type);
+                const flow =
+                  typeof f === "string"
+                    ? (currentProject?.flows || []).find((fl) => fl.id === f) ||
+                      derivedFlowData.flows.find((fl) => fl.id === f)
+                    : f;
+                if (!flow) {
+                  toast.error(t("common.flow_not_found", "Flow not found."));
+                  return;
+                }
+                const parseMaybe = (val) => {
+                  if (Array.isArray(val)) return val;
+                  if (typeof val === "string") {
+                    try {
+                      const parsed = JSON.parse(val);
+                      return Array.isArray(parsed) ? parsed : [];
+                    } catch {
+                      return [];
+                    }
+                  }
+                  return [];
+                };
+                const sourceNodes = parseMaybe(flow.nodes);
+                const sourceEdges = parseMaybe(flow.edges);
+                if (sourceNodes.length === 0) {
+                  toast.warning(
+                    t(
+                      "common.duplicate_open_flow",
+                      "Open the flow before duplicating to copy its content.",
+                    ),
+                  );
+                  return;
+                }
+                createFlow(
+                  `${flow.name} (copy)`,
+                  currentProject?.id,
+                  {
+                    type: flow.type,
+                    nodes: sourceNodes,
+                    edges: sourceEdges,
+                  },
+                );
               }}
               onMoveFlowType={(flowId, newType) =>
                 moveFlowType(flowId, newType)
@@ -2939,16 +2984,7 @@ function Dashboard({
           }}
           onNewFlow={() => setCreationModal({ isOpen: true, type: "flow" })}
           onRenameFlow={(f, newName) => renameFlow(f.id, newName)}
-          onDeleteFlow={(f) => {
-            deleteFlow(f.id);
-            if (f.id === currentFlowId) {
-              setNodes([]);
-              setEdges([]);
-              if (!currentProject?.flows || currentProject.flows.length <= 1) {
-                setIsStarterDismissed(false);
-              }
-            }
-          }}
+          onDeleteFlow={handleDeleteFlow}
           // Global Props
           version={`v${__APP_VERSION__}`}
           isReadOnly={false}

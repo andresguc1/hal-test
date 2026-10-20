@@ -84,6 +84,24 @@ describe("ProjectManager - Projects", () => {
     expect(api.delete).toHaveBeenCalledWith("/projects/proj-1");
   });
 
+  it("should treat a 404 on deleteProject as already-deleted (idempotent)", async () => {
+    const err = new Error("HTTP error! status: 404");
+    err.status = 404;
+    api.delete.mockRejectedValue(err);
+
+    await expect(
+      projectManager.deleteProject("proj-1"),
+    ).resolves.toBeUndefined();
+  });
+
+  it("should still throw non-404 errors on deleteProject", async () => {
+    const err = new Error("HTTP error! status: 500");
+    err.status = 500;
+    api.delete.mockRejectedValue(err);
+
+    await expect(projectManager.deleteProject("proj-1")).rejects.toThrow();
+  });
+
   it("should list projects", async () => {
     api.get.mockResolvedValue([
       { id: "p1", name: "Project 1" },
@@ -155,6 +173,27 @@ describe("ProjectManager - Flows", () => {
     await projectManager.deleteFlow("proj-1", "flow-1");
 
     expect(api.delete).toHaveBeenCalledWith("/projects/proj-1/flows/flow-1");
+  });
+
+  it("should treat a 404 on deleteFlow as already-deleted (idempotent)", async () => {
+    const err = new Error("HTTP error! status: 404");
+    err.status = 404;
+    api.delete.mockRejectedValue(err);
+
+    const result = await projectManager.deleteFlow("proj-1", "flow-1");
+
+    expect(result.alreadyDeleted).toBe(true);
+    expect(result.project).toBeNull();
+  });
+
+  it("should not retry getProject on a 404 (deterministic client error)", async () => {
+    const err = new Error("HTTP error! status: 404");
+    err.status = 404;
+    api.get.mockRejectedValue(err);
+
+    await expect(projectManager.getProject("gone")).rejects.toThrow();
+    // Only one attempt: retrying a 404 is pointless and spams the console.
+    expect(api.get).toHaveBeenCalledTimes(1);
   });
 });
 
