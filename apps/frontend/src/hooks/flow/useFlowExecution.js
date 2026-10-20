@@ -154,6 +154,15 @@ export function useFlowExecution({
       executionAbortController.current.abort();
     }
 
+    // Reset the global execution store so status/activeRunId/flowId do not
+    // linger after a forced stop (prevents the footer staying in "RUNNING...",
+    // stale socket filters, and reopening the old report for a dead run).
+    try {
+      useExecutionStore.getState().resetExecution();
+    } catch (storeErr) {
+      console.warn("[useFlowExecution] Failed to reset execution store:", storeErr);
+    }
+
     if (!activeBrowserId) {
       setActiveRunId(null);
       setApiStatus({ state: "idle", message: "Execution stopped" });

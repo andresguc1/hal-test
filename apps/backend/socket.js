@@ -54,7 +54,17 @@ export const getIO = () => {
     return io;
 };
 
-// ─── Existing emitters ────────────────────────────────────────────────────────
+/**
+ * Emit that a run has been aborted/reset.
+ * Frontend should listen for 'run:aborted' to clean up run-specific state.
+ * @param {string} runId
+ */
+export const emitRunAborted = ({ runId }) => {
+    if (io) {
+        console.log(`[Socket.io] Emitting run:aborted for run ID: ${runId}`);
+        io.emit('run:aborted', { runId });
+    }
+};
 
 export const emitExecutionStatus = ({
     stepId,

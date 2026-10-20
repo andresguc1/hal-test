@@ -8,7 +8,7 @@ import { persist } from "zustand/middleware";
  */
 export const useExecutionStore = create(
   persist(
-    (set, get) => ({
+    (set, _get) => ({
       status: "idle",
       mode: "calidad",
       activeRunId: null,
@@ -40,7 +40,7 @@ export const useExecutionStore = create(
       startExecution: ({ mode, runId, flowId, totalNodes = 0 }) =>
         set({
           status: "running",
-          mode: mode || get().mode || "calidad",
+          mode: mode || _get().mode || "calidad",
           activeRunId: runId || null,
           flowId: flowId || null,
           progressPercent: 5,
@@ -75,6 +75,9 @@ export const useExecutionStore = create(
           progressPercent: 100,
           currentNode: null,
           error: error || null,
+          // Clear the active run id so late socket events from the finished run
+          // can no longer repaint canvas state or reopen the old report.
+          activeRunId: null,
           lastRunSummary: summary !== null ? summary : state.lastRunSummary,
           lastPerfReport:
             perfReport !== null ? perfReport : state.lastPerfReport,
@@ -85,6 +88,8 @@ export const useExecutionStore = create(
       resetExecution: () =>
         set({
           status: "idle",
+          activeRunId: null,
+          flowId: null,
           progressPercent: 0,
           executedNodesCount: 0,
           totalNodesCount: 0,

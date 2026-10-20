@@ -289,6 +289,17 @@ export class ExecutionService {
             options: options,
         };
 
+        // Wire the engine's REAL execution state into ActiveRunManager so that a
+        // forced stop (abortAndReset) clears executed/activated node pointers
+        // atomically. Previously the manager reset a phantom `controllerState`
+        // object that nothing read, leaving the live runState untouched.
+        activeRunManager.setResetCallback(runId, () => {
+            if (runState.executedNodeIds) runState.executedNodeIds.clear();
+            if (runState.activatedNodeIds) runState.activatedNodeIds.clear();
+            runState.pendingNodePointer = null;
+            runState.aborted = true;
+        });
+
         // Initialize all edges to 'idle' visually
         edges.forEach((e) => {
             const edgeId = e.edgeId || e.id;
@@ -417,7 +428,65 @@ export class ExecutionService {
         if (options.variables && options.variables.__perfMode) {
             return { runId, nodeMetrics: runState.nodeMetrics };
         }
+
         return runId;
+    }
+
+    /**
+     * Robust abort and reset execution method.
+     * Guarantees:
+     * 1. Aborts any active Playwright browser context for this run
+     * 2. Clears the execution state queue (executedNodeIds, activatedNodeIds)
+     * 3. Resets the flow pointer to the input/start node
+     * 4. Notifies the frontend via WebSocket that state has returned to IDLE
+     *
+     * This is the method to call for abrupt user-initiated stops (Stop Execution).
+     * It should be called before starting a new execution to ensure a clean slate.
+     *
+     * @param {string} runId - The run ID to abort and reset
+     * @returns {Promise<void>}
+     */
+    async abortAndResetExecution(runId) {
+        console.log(`[ExecutionService] 🛑🔄 Aborting and resetting execution: ${runId}`);
+
+        // 1. Abort the active run manager (cancels pending nodes, resets pointers).
+        //    This now invokes the engine's real resetCallback, clearing the live
+        //    runState (executedNodeIds / activatedNodeIds / pendingNodePointer).
+        activeRunManager.abortAndReset(runId);
+
+        // 2. Clear variable scopes (root + derived composite scopes) to avoid
+        //    stale loop/for_each/component state leaking into the next run.
+        try {
+            variableManager.clear(runId);
+            variableManager.clearByPrefix?.(`${runId}_`);
+        } catch (varErr) {
+            console.warn(`[ExecutionService] Warning clearing variables:`, varErr.message);
+        }
+
+        // 3. Release the run-bound browser session (idempotent).
+        try {
+            await browserService.releaseRun(runId);
+        } catch (browserErr) {
+            console.warn(`[ExecutionService] Warning releasing browser run:`, browserErr.message);
+        }
+
+        // 4. Finalize the DB run row so it does not stay 'running' forever.
+        try {
+            await executionLogger.endRun(runId, 'stopped').catch(() => {});
+        } catch (endErr) {
+            console.warn(`[ExecutionService] Warning ending run row:`, endErr.message);
+        }
+
+        // 5. Emit WebSocket events so the frontend returns to IDLE.
+        try {
+            const { emitRunAborted, emitFlowFinished } = await import('../socket.js');
+            emitRunAborted({ runId });
+            emitFlowFinished({ runId, status: 'stopped' });
+        } catch (emitErr) {
+            console.warn(`[ExecutionService] Warning emitting abort status:`, emitErr.message);
+        }
+
+        console.log(`[ExecutionService] ✅ Execution ${runId} aborted and reset complete`);
     }
 
     async validateGraph(nodes, edges, divePath = []) {

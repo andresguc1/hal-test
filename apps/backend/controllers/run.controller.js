@@ -594,17 +594,35 @@ export const cancelRunAction = async (req, res) => {
         const { id } = req.params;
         console.log(`[RunController] 🛑 Request to cancel run ID or Flow ID: ${id}`);
 
-        // 1. Release execution lock if it exists for run or flow
-        await executionLock.release(id);
-        const run = await Run.findByPk(id);
-        if (run) {
-            await executionLock.release(run.flow_id || run.flowId);
+        // The client may send either a runId or a flowId. Resolve the run row
+        // when `id` matches a run so we can release the lock and reset state
+        // against the correct identifiers.
+        const run = await Run.findByPk(id).catch(() => null);
+        const runId = run ? run.id : id;
+        const flowId = run ? run.flow_id || run.flowId : await resolveFlowIdForId(id);
+
+        // 1. Release execution lock (keyed by flowId).
+        if (flowId) {
+            await executionLock.release(flowId).catch(() => {});
         }
 
-        // 2. Abort in ActiveRunManager
-        const aborted = activeRunManager.abort(id);
+        // 2. Abort + reset execution state. This delegates to the canonical
+        //    routine: aborts the controller, invokes the engine's real reset
+        //    callback (clearing executedNodeIds/activatedNodeIds/pointers),
+        //    clears variable scopes (incl. derived composite scopes), releases
+        //    the run-bound browser, finalizes the DB run row, and notifies the
+        //    frontend via WebSocket.
+        let aborted = false;
+        try {
+            await executionService.abortAndResetExecution(runId);
+            aborted = true;
+        } catch (abortErr) {
+            console.warn('[RunController] abortAndResetExecution failed:', abortErr.message);
+            // Fallback to the lower-level manager so the signal still fires.
+            aborted = activeRunManager.abortAndReset(runId);
+        }
 
-        // 3. Force abort worker pool processes
+        // 3. Force abort worker pool processes (performance runs).
         try {
             const { abortAllPools } = await import('../services/WorkerPool.js');
             abortAllPools();
@@ -615,13 +633,29 @@ export const cancelRunAction = async (req, res) => {
         return res.status(200).json({
             success: true,
             aborted,
-            message: `Run ${id} cancelled successfully.`,
+            runId,
+            flowId: flowId || null,
+            message: `Run ${runId} cancelled successfully.`,
         });
     } catch (error) {
         console.error('[RunController] cancelRunAction Error:', error);
         return res.status(500).json({ success: false, error: error.message });
     }
 };
+
+/**
+ * Resolves a flowId from an arbitrary id that may itself be a flowId.
+ * Returns null when the id does not correspond to an existing flow.
+ */
+async function resolveFlowIdForId(id) {
+    if (!id) return null;
+    try {
+        const flow = await Flow.findByPk(id);
+        return flow ? flow.id : null;
+    } catch {
+        return null;
+    }
+}
 
 export const startDatasetBatchRunAction = async (req, res) => {
     try {

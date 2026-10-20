@@ -50,6 +50,65 @@ describe('Execution Cancellation & AI Interruption', () => {
         });
     });
 
+    describe('ActiveRunManager reset callback + abort race', () => {
+        it('invokes the reset callback exactly once when aborted via abortAndReset', () => {
+            const runId = 'test_reset_1';
+            const reset = vi.fn();
+            activeRunManager.register(runId, reset);
+
+            activeRunManager.abortAndReset(runId);
+            expect(reset).toHaveBeenCalledTimes(1);
+            expect(activeRunManager.isAborted(runId)).toBe(true);
+
+            // Idempotent: a second abort must not re-run the reset.
+            activeRunManager.abortAndReset(runId);
+            expect(reset).toHaveBeenCalledTimes(1);
+        });
+
+        it('setResetCallback attaches a reset after register and abortAndReset runs it', () => {
+            const runId = 'test_reset_2';
+            const reset = vi.fn();
+            const signal = activeRunManager.register(runId);
+
+            activeRunManager.setResetCallback(runId, reset);
+            activeRunManager.abortAndReset(runId);
+
+            expect(signal.aborted).toBe(true);
+            expect(reset).toHaveBeenCalledTimes(1);
+        });
+
+        it('honors an abort that arrives before register (pendingAborts race)', () => {
+            const runId = 'test_race_1';
+
+            // Cancel lands first — nothing is registered yet.
+            expect(activeRunManager.abortAndReset(runId)).toBe(false);
+
+            // Late registration must inherit the abort: signal is already aborted
+            // and the reset callback fires immediately.
+            const reset = vi.fn();
+            const signal = activeRunManager.register(runId, reset);
+
+            expect(signal.aborted).toBe(true);
+            expect(activeRunManager.isAborted(runId)).toBe(true);
+            expect(reset).toHaveBeenCalledTimes(1);
+        });
+
+        it('done() clears the run and pendingAborts so it can be reused', () => {
+            const runId = 'test_done_1';
+            const reset = vi.fn();
+            activeRunManager.register(runId, reset);
+            activeRunManager.abortAndReset(runId);
+            activeRunManager.done(runId);
+
+            expect(activeRunManager.isActive(runId)).toBe(false);
+            expect(activeRunManager.isAborted(runId)).toBe(false);
+
+            // A fresh register for the same id is clean again.
+            const signal2 = activeRunManager.register(runId, reset);
+            expect(signal2.aborted).toBe(false);
+        });
+    });
+
     describe('AIService combined signals', () => {
         it('should support parentSignal in generateText and combine it', async () => {
             generateText.mockResolvedValueOnce({ text: 'mock text' });

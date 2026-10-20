@@ -173,6 +173,28 @@ class VariableManager {
         if (this.lastRunId === runId) this.lastRunId = null;
     }
 
+    /**
+     * Clears every run scope whose id starts with the given prefix.
+     * Used to purge derived composite scopes (`${runId}_child_*`,
+     * `${runId}_loop_*`) that a plain clear(runId) cannot reach.
+     *
+     * @param {string} prefix - e.g. "run-123_"
+     * @returns {number} number of scopes removed
+     */
+    clearByPrefix(prefix) {
+        if (!prefix) return 0;
+        let removed = 0;
+        for (const key of Object.keys(this.scopes.runs)) {
+            if (key.startsWith(prefix)) {
+                delete this.scopes.runs[key];
+                delete this.aliases[key];
+                if (this.initializedVars) delete this.initializedVars[key];
+                removed++;
+            }
+        }
+        return removed;
+    }
+
     clearAll() {
         this.scopes.runs = {};
         this.scopes.legacy_flow = {};
