@@ -52,6 +52,27 @@ const mapFlowData = (flow) => {
     };
 };
 
+// Flows are referenced by foreign keys that Sequelize associations do not
+// manage (execution_runs.flow_id, Flows.parentId). These FKs are NO ACTION at
+// the SQL level, so destroying a flow/project fails with
+// "FOREIGN KEY constraint failed" unless we detach those references first.
+// We preserve run history by nulling flow_id, and detach child flows by
+// clearing their parentId (the flows themselves are deleted separately).
+const detachFlowReferences = async (flowIds, transaction) => {
+    const ids = (flowIds || []).filter(Boolean);
+    if (ids.length === 0) return;
+
+    const replacements = { ids };
+    await sequelize.query(
+        `UPDATE "execution_runs" SET "flow_id" = NULL WHERE "flow_id" IN (:ids)`,
+        { replacements, transaction },
+    );
+    await sequelize.query(`UPDATE "Flows" SET "parentId" = NULL WHERE "parentId" IN (:ids)`, {
+        replacements,
+        transaction,
+    });
+};
+
 // Helper to get Project with full flow stats (nodeCount)
 const getProjectWithFlowStats = async (projectId) => {
     return await Project.findByPk(projectId, {
@@ -474,6 +495,8 @@ router.delete('/projects/bulk', async (req, res) => {
 
         // Delete each project (cascade handles children)
         for (const project of projects) {
+            const flowIds = (project.flows || []).map((f) => f.id);
+            await detachFlowReferences(flowIds, transaction);
             await project.destroy({ transaction });
         }
 
@@ -544,6 +567,8 @@ const handleBulkDelete = async (req, res) => {
         const notFoundIds = uniqueIds.filter((id) => !deletedIds.includes(id));
 
         for (const project of projects) {
+            const flowIds = (project.flows || []).map((f) => f.id);
+            await detachFlowReferences(flowIds, transaction);
             await project.destroy({ transaction });
         }
 
@@ -1159,6 +1184,16 @@ router.delete('/projects/:id', async (req, res) => {
             return res.status(404).json({ error: 'Project not found' });
         }
 
+        // Detach FKs (execution_runs.flow_id, Flows.parentId) before cascade.
+        const projectFlows = await Flow.findAll({
+            where: { projectId: project.id },
+            attributes: ['id'],
+        });
+        await detachFlowReferences(
+            projectFlows.map((f) => f.id),
+            null,
+        );
+
         await project.destroy();
         res.json({ message: 'Project deleted' });
     } catch (error) {
@@ -1638,6 +1673,8 @@ router.delete('/projects/:projectId/flows/:flowId', async (req, res) => {
         });
         if (!flow) return res.status(404).json({ error: 'Flow not found' });
 
+        // Detach FKs that SQLite enforces but Sequelize does not cascade.
+        await detachFlowReferences([flow.id], null);
         await flow.destroy();
 
         // Return the updated project with all remaining flows
