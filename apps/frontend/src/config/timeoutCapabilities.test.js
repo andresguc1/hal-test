@@ -26,7 +26,7 @@ describe("timeoutCapabilities registry", () => {
     // The registry covers a subset of the node types, so the useful assertion
     // is about the size of that subset and its boundaries: adding a type by
     // accident, or dropping one that can be bounded, both show up here.
-    expect(timeoutCapableNodeTypes().length).toBe(50);
+    expect(timeoutCapableNodeTypes().length).toBe(51);
 
     const categorised = Object.values(NODE_CATEGORIES).flatMap((category) =>
       category.nodes.map((id) => id.id ?? id),

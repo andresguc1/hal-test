@@ -9,6 +9,7 @@ import {
   deepClone,
   sanitizeForSerialization,
 } from "../../utils/flowUtils";
+import { stripTransientNodeData, stripTransientNodeDataDeep } from "../../utils/transientNodeKeys";
 import { getContainerFlowId } from "./utils";
 import { STARTER_TEMPLATE } from "../../config/starterTemplate";
 import { useCollaboration } from "../../collaboration";
@@ -111,9 +112,13 @@ export function useFlowSync({
       try {
         const rawNodes = deepClone(nodesRef.current || []);
         const rawEdges = deepClone(edgesRef.current || []);
+        // Strip transitory execution metadata before sanitization, to prevent
+        // state/result/screenshots/executionTime from being persisted to the backend.
+        const cleanedNodes = stripTransientNodeDataDeep(rawNodes);
+        const cleanedEdges = stripTransientNodeDataDeep(rawEdges);
         const flowData = {
-          nodes: sanitizeForSerialization(rawNodes),
-          edges: sanitizeForSerialization(rawEdges),
+          nodes: sanitizeForSerialization(cleanedNodes),
+          edges: sanitizeForSerialization(cleanedEdges),
           viewport: getViewport(),
           updatedAt: new Date().toISOString(),
         };
@@ -230,9 +235,13 @@ export function useFlowSync({
         return;
       }
       if (flow) {
-        setNodes(flow.nodes || []);
+        // Strip transitory execution metadata that may have leaked from previous runs,
+        // to prevent configuration contamination and backend 500s on save.
+        const strippedNodes = (flow.nodes || []).map(stripTransientNodeData);
+        const strippedEdges = (flow.edges || []).map(stripTransientNodeData);
+        setNodes(strippedNodes);
         setEdges(
-          (flow.edges || []).map((e) => {
+          (strippedEdges || []).map((e) => {
             const sourceHandle =
               e.sourceHandle === "default" ? undefined : e.sourceHandle;
             const targetHandle =
@@ -241,7 +250,7 @@ export function useFlowSync({
               ...e,
               ...(sourceHandle && { sourceHandle }),
               ...(targetHandle && { targetHandle }),
-              type: "custom",
+              type: e.type || "custom",
               animated: !import.meta.env.DEV,
             };
           }),

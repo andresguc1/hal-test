@@ -265,6 +265,16 @@ const NodeConfigurationPanel = ({
       safeStringify(normalizedGlobalConfig) !==
       safeStringify(lastSyncedConfigRef.current.config);
 
+    // If there is a pending sync for this node, flush it first so the edit
+    // is not discarded when the panel resets its form state.
+    const pending = pendingSyncRef.current;
+    const pendingForSameNode = pending && pending.nodeId === activeNode.id;
+
+    if (pendingForSameNode) {
+      // Flush the pending write before resetting, preserving the user's edit.
+      flushPendingSync();
+    }
+
     if (hasIdChanged || hasConfigChanged) {
       isResettingRef.current = true;
       reset(globalConfig);
@@ -1645,11 +1655,10 @@ const NodeConfigurationPanel = ({
               <button
                 onClick={() => {
                   const isDisabled = !activeNode.data?.disabled;
-                  activeNode.data.disabled = isDisabled;
-                  updateNodeConfiguration(activeNode.id, {
-                    ...activeNode.data,
-                    disabled: isDisabled,
-                  });
+                  // Only update the disabled field, do NOT mutate activeNode.data directly.
+                  // Passing the whole spread {...activeNode.data} used to nest configuration
+                  // and leak execution metadata; now we only write the isolated key.
+                  updateNodeConfiguration(activeNode.id, { disabled: isDisabled });
                   window.dispatchEvent(
                     new CustomEvent("node-data-updated", {
                       detail: { nodeId: activeNode.id },

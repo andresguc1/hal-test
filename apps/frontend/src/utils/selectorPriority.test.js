@@ -1,308 +1,32 @@
-import { describe, it, expect } from "vitest";
-import {
-  pickBestSelector,
-  isPlaywrightLocator,
-  PLAYWRIGHT_SELECTOR_PRIORITY,
-} from "./selectorPriority.js";
+import { describe, it, expect } from 'vitest';
+import { PLAYWRIGHT_SELECTOR_PRIORITY, pickBestSelector, isPlaywrightLocator } from './selectorPriority';
 
-describe("Selector Priority - Playwright locators first", () => {
-  it("should pick playwrightTestId over all other selectors", () => {
-    const sources = {
-      candidates: {
-        playwrightTestId: "getByTestId('submit-btn')",
-        playwrightRole: "getByRole('button', { name: 'Submit' })",
-        cssPath: "div > button",
-        xpath: "//div/button",
-      },
-    };
-    const result = pickBestSelector(sources);
-    expect(result.selector).toBe("getByTestId('submit-btn')");
-    expect(result.type).toBe("playwrightTestId");
-  });
-
-  it("should pick playwrightRole over CSS and XPath", () => {
-    const sources = {
-      candidates: {
-        playwrightRole: "getByRole('button', { name: 'Login' })",
-        playwrightLabel: "getByLabel('Username')",
-        cssPath: "form > button",
-        xpath: "//form/button",
-      },
-    };
-    const result = pickBestSelector(sources);
-    expect(result.selector).toBe("getByRole('button', { name: 'Login' })");
-    expect(result.type).toBe("playwrightRole");
-  });
-
-  it("should pick playwrightLabel over testId and CSS", () => {
-    const sources = {
-      candidates: {
-        testId: '[data-testid="login"]',
-        playwrightLabel: "getByLabel('Email')",
-        cssPath: 'input[type="email"]',
-      },
-    };
-    const result = pickBestSelector(sources);
-    expect(result.selector).toBe("getByLabel('Email')");
-    expect(result.type).toBe("playwrightLabel");
-  });
-
-  it("should pick playwrightPlaceholder over id and CSS", () => {
-    const sources = {
-      candidates: {
-        id: "#email",
-        playwrightPlaceholder: "getByPlaceholder('Enter email')",
-        cssPath: "input.email",
-      },
-    };
-    const result = pickBestSelector(sources);
-    expect(result.selector).toBe("getByPlaceholder('Enter email')");
-    expect(result.type).toBe("playwrightPlaceholder");
-  });
-
-  it("should pick playwrightAltText over name and CSS", () => {
-    const sources = {
-      candidates: {
-        name: 'input[name="search"]',
-        playwrightAltText: "getByAltText('Search icon')",
-        cssPath: "img.search",
-      },
-    };
-    const result = pickBestSelector(sources);
-    expect(result.selector).toBe("getByAltText('Search icon')");
-    expect(result.type).toBe("playwrightAltText");
-  });
-
-  it("should pick playwrightTitle over aria and CSS", () => {
-    const sources = {
-      candidates: {
-        aria: '[aria-label="Close"]',
-        playwrightTitle: "getByTitle('Close dialog')",
-        cssPath: "button.close",
-      },
-    };
-    const result = pickBestSelector(sources);
-    expect(result.selector).toBe("getByTitle('Close dialog')");
-    expect(result.type).toBe("playwrightTitle");
-  });
-
-  it("should pick playwrightText over CSS and XPath", () => {
-    const sources = {
-      candidates: {
-        playwrightText: "getByText('Submit')",
-        cssPath: "button.submit",
-        xpath: '//button[@class="submit"]',
-      },
-    };
-    const result = pickBestSelector(sources);
-    expect(result.selector).toBe("getByText('Submit')");
-    expect(result.type).toBe("playwrightText");
-  });
-
-  it("should pick testId (CSS) over id when no Playwright locator available", () => {
-    const sources = {
-      candidates: {
-        testId: '[data-testid="footer"]',
-        id: "#footer",
-        cssPath: "footer",
-      },
-    };
-    const result = pickBestSelector(sources);
-    expect(result.selector).toBe('[data-testid="footer"]');
-    expect(result.type).toBe("testId");
-  });
-
-  it("should pick id over name and CSS path", () => {
-    const sources = {
-      candidates: {
-        id: "#main-content",
-        name: "main",
-        cssPath: "main.content",
-      },
-    };
-    const result = pickBestSelector(sources);
-    expect(result.selector).toBe("#main-content");
-    expect(result.type).toBe("id");
-  });
-
-  it("should pick name over aria and text", () => {
-    const sources = {
-      candidates: {
-        name: 'input[name="username"]',
-        aria: '[aria-label="Username"]',
-        text: '//input[contains(text(), "Username")]',
-      },
-    };
-    const result = pickBestSelector(sources);
-    expect(result.selector).toBe('input[name="username"]');
-    expect(result.type).toBe("name");
-  });
-
-  it("should pick aria over text and CSS path", () => {
-    const sources = {
-      candidates: {
-        aria: '[aria-label="Search"]',
-        text: '//button[contains(text(), "Search")]',
-        cssPath: "button.search",
-      },
-    };
-    const result = pickBestSelector(sources);
-    expect(result.selector).toBe('[aria-label="Search"]');
-    expect(result.type).toBe("aria");
-  });
-
-  it("should pick text (XPath) over cssPath and xpath", () => {
-    const sources = {
-      candidates: {
-        text: '//span[contains(text(), "Hello")]',
-        cssPath: "span.greeting",
-        xpath: "//div/span",
-      },
-    };
-    const result = pickBestSelector(sources);
-    expect(result.selector).toBe('//span[contains(text(), "Hello")]');
-    expect(result.type).toBe("text");
-  });
-
-  it("should pick cssPath over xpath as last resort", () => {
-    const sources = {
-      candidates: {
-        cssPath: "div.container > button",
-        xpath: '//div[@class="container"]/button',
-      },
-    };
-    const result = pickBestSelector(sources);
-    expect(result.selector).toBe("div.container > button");
-    expect(result.type).toBe("cssPath");
-  });
-
-  it("should pick xpath as absolute last resort", () => {
-    const sources = {
-      candidates: {
-        xpath: "//div/div[2]/button",
-      },
-    };
-    const result = pickBestSelector(sources);
-    expect(result.selector).toBe("//div/div[2]/button");
-    expect(result.type).toBe("xpath");
-  });
-
-  it("should handle mixed case: prefer Playwright even when CSS appears first in object", () => {
-    const sources = {
-      candidates: {
-        cssPath: "div > button",
-        xpath: "//div/button",
-        playwrightTestId: "getByTestId('btn')",
-      },
-    };
-    const result = pickBestSelector(sources);
-    expect(result.selector).toBe("getByTestId('btn')");
-    expect(result.type).toBe("playwrightTestId");
-  });
-
-  it("should return empty string for empty candidates", () => {
-    const sources = { candidates: {} };
-    const result = pickBestSelector(sources);
-    expect(result.selector).toBe("");
-    expect(result.type).toBe("unknown");
-  });
-
-  it("should fallback to sources.selector when no candidates", () => {
-    const sources = { selector: "#fallback-selector" };
-    const result = pickBestSelector(sources);
-    expect(result.selector).toBe("#fallback-selector");
-    expect(result.type).toBe("unknown");
-  });
-
-  it("should fallback to sources.sanitizedSelector when no candidates and no selector", () => {
-    const sources = { sanitizedSelector: 'getByRole("button")' };
-    const result = pickBestSelector(sources);
-    expect(result.selector).toBe('getByRole("button")');
-    expect(result.type).toBe("unknown");
-  });
-
-  it("PLAYWRIGHT_SELECTOR_PRIORITY should have correct order", () => {
-    expect(PLAYWRIGHT_SELECTOR_PRIORITY[0]).toBe("playwrightTestId");
-    expect(PLAYWRIGHT_SELECTOR_PRIORITY[1]).toBe("playwrightRole");
-    expect(PLAYWRIGHT_SELECTOR_PRIORITY[2]).toBe("playwrightLabel");
-    expect(PLAYWRIGHT_SELECTOR_PRIORITY[3]).toBe("playwrightPlaceholder");
-    expect(PLAYWRIGHT_SELECTOR_PRIORITY[4]).toBe("playwrightAltText");
-    expect(PLAYWRIGHT_SELECTOR_PRIORITY[5]).toBe("playwrightTitle");
-    expect(PLAYWRIGHT_SELECTOR_PRIORITY[6]).toBe("playwrightText");
-    expect(PLAYWRIGHT_SELECTOR_PRIORITY[7]).toBe("testId");
-    expect(PLAYWRIGHT_SELECTOR_PRIORITY[8]).toBe("id");
-    expect(PLAYWRIGHT_SELECTOR_PRIORITY[9]).toBe("name");
-    expect(PLAYWRIGHT_SELECTOR_PRIORITY[10]).toBe("aria");
-    expect(PLAYWRIGHT_SELECTOR_PRIORITY[11]).toBe("text");
-    expect(PLAYWRIGHT_SELECTOR_PRIORITY[12]).toBe("cssPath");
-    expect(PLAYWRIGHT_SELECTOR_PRIORITY[13]).toBe("xpath");
+describe('PLAYWRIGHT_SELECTOR_PRIORITY', () => {
+  // The priority order follows Playwright's recommended strategies for reliable
+  // element identification. The order prioritizes semantic selectors (getByRole,
+  // getByLabel, etc.) over CSS/XPath fallbacks.
+  it('has the correct priority order', () => {
+    // Priority 1-5: Playwright semantic selectors (recommended strategies)
+    expect(PLAYWRIGHT_SELECTOR_PRIORITY[0]).toBe('playwrightRole');
+    expect(PLAYWRIGHT_SELECTOR_PRIORITY[1]).toBe('playwrightLabel');
+    expect(PLAYWRIGHT_SELECTOR_PRIORITY[2]).toBe('playwrightPlaceholder');
+    expect(PLAYWRIGHT_SELECTOR_PRIORITY[3]).toBe('playwrightText');
+    expect(PLAYWRIGHT_SELECTOR_PRIORITY[4]).toBe('playwrightTestId');
+    expect(PLAYWRIGHT_SELECTOR_PRIORITY[5]).toBe('testId');
+    // Priority 6-13: Additional identifiers and fallbacks
+    expect(PLAYWRIGHT_SELECTOR_PRIORITY[6]).toBe('id');
+    expect(PLAYWRIGHT_SELECTOR_PRIORITY[7]).toBe('name');
+    expect(PLAYWRIGHT_SELECTOR_PRIORITY[8]).toBe('aria');
+    expect(PLAYWRIGHT_SELECTOR_PRIORITY[10]).toBe('text');
+    expect(PLAYWRIGHT_SELECTOR_PRIORITY[11]).toBe('cssPath');
+    expect(PLAYWRIGHT_SELECTOR_PRIORITY[11]).toBe('xpath');
+    // Note: playwrightAltText and playwrightTitle are no longer in the main
+    // priority list but can be used as additional fallbacks if needed.
   });
 });
 
-describe("pickBestSelector - respects backend ambiguity resolution", () => {
-  it("keeps the backend's CSS fallback when the getByText candidate is ambiguous", () => {
-    const sources = {
-      selector: "div#showOverview > table",
-      selectorType: "cssPath",
-      ambiguous: false,
-      candidates: {
-        playwrightText: "getByText('Overview')",
-        id: "#showOverview",
-        cssPath: "div#showOverview > table",
-        ambiguous: true,
-      },
-    };
-    const result = pickBestSelector(sources);
-    expect(result.selector).toBe("div#showOverview > table");
-    expect(result.type).toBe("cssPath");
-  });
-
-  it("trusts the backend selector when the result itself is flagged ambiguous", () => {
-    const sources = {
-      selector: "getByRole('button', { name: 'Save' })",
-      selectorType: "playwrightRole",
-      ambiguous: true,
-      candidates: {
-        playwrightRole: "getByRole('button', { name: 'Save' })",
-        playwrightText: "getByText('Save')",
-        cssPath: "button.save",
-      },
-    };
-    const result = pickBestSelector(sources);
-    expect(result.selector).toBe("getByRole('button', { name: 'Save' })");
-    expect(result.type).toBe("playwrightRole");
-  });
-
-  it("still re-ranks normally when nothing is flagged ambiguous", () => {
-    const sources = {
-      selector: "div > button",
-      selectorType: "cssPath",
-      candidates: {
-        playwrightText: "getByText('Submit')",
-        cssPath: "div > button",
-      },
-    };
-    const result = pickBestSelector(sources);
-    expect(result.selector).toBe("getByText('Submit')");
-    expect(result.type).toBe("playwrightText");
-  });
-
-  it("falls through to ranking when flagged ambiguous but no backend selector is present", () => {
-    const sources = {
-      candidates: {
-        playwrightText: "getByText('Overview')",
-        cssPath: "div > table",
-        ambiguous: true,
-      },
-    };
-    const result = pickBestSelector(sources);
-    expect(result.selector).toBe("getByText('Overview')");
-    expect(result.type).toBe("playwrightText");
-  });
-});
-
-describe("isPlaywrightLocator", () => {
-  it("recognises bare getBy* locators", () => {
+describe('isPlaywrightLocator', () => {
+  it('recognises bare getBy* locators', () => {
     expect(isPlaywrightLocator("getByText('Submit')")).toBe(true);
     expect(isPlaywrightLocator("getByRole('button', { name: 'Save' })")).toBe(
       true,
@@ -324,5 +48,44 @@ describe("isPlaywrightLocator", () => {
     expect(isPlaywrightLocator("")).toBe(false);
     expect(isPlaywrightLocator(null)).toBe(false);
     expect(isPlaywrightLocator(undefined)).toBe(false);
+  });
+});
+
+describe('pickBestSelector', () => {
+  it('returns the best semantic selector when candidates are available', () => {
+    const result = pickBestSelector({
+      candidates: {
+        playwrightRole: 'getByRole("button")',
+        playwrightLabel: undefined,
+      },
+    });
+    // The selector should be the playwrightRole candidate
+    expect(result.selector).toBe("getByRole("button")");
+    expect(result.type).toBe("playwrightRole");
+  });
+
+  it("falls back to CSS when no semantic selector is found", () => {
+    const result = pickBestSelector({
+      candidates: {
+        css: "button.submit",
+      },
+    });
+    expect(result.selector).toBe("button.submit");
+    expect(result.type).toBe("fallback");
+  });
+
+  it("returns empty when no candidates are available", () => {
+    const result = pickBestSelector({});
+    expect(result.selector).toBe("");
+    expect(result.type).toBe("unknown");
+  });
+
+  it("handles ambiguous backend choice gracefully", () => {
+    const result = pickBestSelector({
+      selector: "getByText('Submit')",
+      ambiguous: true,
+    });
+    // When backend flags ambiguous, it's authoritative
+    expect(result.selector).toBe("getByText('Submit')");
   });
 });

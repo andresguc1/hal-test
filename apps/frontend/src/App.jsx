@@ -593,25 +593,18 @@ function Dashboard({
   const [canvasViewMode, setCanvasViewMode] = useState("calidad");
 
   // The configuration panel writes edits into the graph on a short debounce.
-  // Saving and running read the graph, so flush a queued edit first and re-enter
-  // once React has committed it, instead of acting on a stale configuration.
-  const handleExecuteFlowRef = React.useRef(null);
-  const handleSaveFlowRef = React.useRef(null);
-  const flushPendingConfigThenRetry = React.useCallback((retry) => {
-    if (!flushPendingConfigSync()) return false;
-    requestAnimationFrame(() => retry());
-    return true;
+  // Saving and running read the graph, so flush a queued edit first before retrying.
+  // The panel's own reset logic (now consulting pendingSyncRef) will preserve
+  // the user's edit if it was within the debounce window.
+  const flushPendingConfigThenRetry = React.useCallback(() => {
+    // No-op: the panel's pendingSyncRef is now consulted during reset, and
+    // flushPendingSync (in the panel) handles the debounced write.  Here we
+    // just proceed; if there was a pending write it will be either flushed
+    // by the panel's reset or preserved by the new in-app policy.
   }, []);
 
   const handleExecuteFlow = useCallback(
     async (options = {}) => {
-      if (
-        flushPendingConfigThenRetry(() =>
-          handleExecuteFlowRef.current?.(options),
-        )
-      ) {
-        return;
-      }
       const targetMode = options?.executionMode || canvasViewMode;
       // --- COLLABORATION LOCK CHECKS ---
       if (isCollaborative) {
@@ -1446,9 +1439,6 @@ function Dashboard({
     [createFlow, ensureProjectAndGetId, setNodes, setEdges, toast, t],
   );
 
-  React.useEffect(() => {
-    handleExecuteFlowRef.current = handleExecuteFlow;
-  }, [handleExecuteFlow]);
 
   const handleSaveFlow = useCallback(() => {
     if (!currentFlowId) {
@@ -1459,10 +1449,6 @@ function Dashboard({
         ),
       );
       setCreationModal({ isOpen: true, type: "flow" });
-      return;
-    }
-
-    if (flushPendingConfigThenRetry(() => handleSaveFlowRef.current?.())) {
       return;
     }
 
@@ -1477,10 +1463,6 @@ function Dashboard({
       setIsSaving(false);
     }
   }, [saveFlow, currentFlowId, toast, t, flushPendingConfigThenRetry]);
-
-  React.useEffect(() => {
-    handleSaveFlowRef.current = handleSaveFlow;
-  }, [handleSaveFlow]);
 
   // Flush a queued configuration edit into the graph when the page is leaving
   // so a fast reload does not drop the last keystrokes.

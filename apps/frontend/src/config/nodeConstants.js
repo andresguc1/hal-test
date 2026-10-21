@@ -141,7 +141,7 @@ export const NODE_CATEGORIES = {
     icon: Folder,
     color: "yellow", // Files = Yellow (High visibility)
     label: "Files & Data",
-    nodes: ["read_file", "write_file", "upload_file", "download_file"],
+    nodes: ["read_file", "write_file", "upload_file", "download_file", "handle_downloads"],
   },
   data_extraction: {
     icon: Table2,

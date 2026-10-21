@@ -242,6 +242,7 @@ const NODE_TYPE_SEMANTICS = Object.freeze({
   // Files and data
   upload_file: TIMEOUT_SEMANTIC.ACTION,
   download_file: TIMEOUT_SEMANTIC.WAIT,
+  handle_downloads: TIMEOUT_SEMANTIC.WAIT,
   extract: TIMEOUT_SEMANTIC.ACTION,
 
   // CLI and system
