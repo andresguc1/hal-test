@@ -1787,7 +1787,77 @@ export const NODE_INPUTS = {
     },
   ],
 
-  // --- DEFAULT FALLBACK ---
+    handle_downloads: [
+    {
+      key: "selector",
+      label: "Selector",
+      type: "selector",
+      placeholder: "getByRole('link', { name: 'Download' }), #download-btn",
+      required: true,
+      description:
+        "Elemento que dispara la descarga al hacer click.",
+    },
+    {
+      key: "action",
+      label: "Download Action",
+      type: "select",
+      options: [
+        { label: "💾 Save File", value: "save" },
+        { label: "✅ Validate & Delete (CI/CD)", value: "validateAndDelete" },
+        { label: "⏳ Wait Only", value: "wait" },
+      ],
+      defaultValue: "save",
+      required: true,
+      description:
+        "Save conserva el archivo. Validate & Delete verifica tamaño/nombre y elimina. Wait solo espera el evento.",
+    },
+    {
+      key: "path",
+      label: "Save Path",
+      type: "text",
+      placeholder: "~/Downloads (default)",
+      isVisible: (c) => c.action === "save",
+      required: false,
+      description:
+        "Ruta destino. Si está vacío usa ~/Downloads por defecto. " +
+        "Se recomienda especificar una ruta absoluta o relativa cuando la acción sea 'Save File'.",
+    },
+    {
+      key: "expectedFileName",
+      label: "Expected Filename",
+      type: "text",
+      placeholder: "report_sales.pdf",
+      isVisible: (c) => c.action === "validateAndDelete",
+      description:
+        "Nombre exacto del archivo esperado. Se valida contra suggestedFilename().",
+    },
+    {
+      key: "minSizeKB",
+      label: "Min Size (KB)",
+      type: "number",
+      placeholder: "1",
+      isVisible: (c) => c.action === "validateAndDelete",
+      description:
+        "Tamaño mínimo en KB. Falla si el archivo es más pequeño.",
+    },
+    {
+      key: "maxSizeKB",
+      label: "Max Size (KB)",
+      type: "number",
+      placeholder: "10240",
+      isVisible: (c) => c.action === "validateAndDelete",
+      description:
+        "Tamaño máximo en KB. Falla si el archivo es más grande.",
+    },
+    {
+      key: "continueOnError",
+      label: "🛡️ Continue on failure (Soft Fail)",
+      type: "checkbox",
+      defaultValue: false,
+      advanced: true,
+    },
+  ],
+// --- DEFAULT FALLBACK ---
   default: [
     {
       key: "selector",

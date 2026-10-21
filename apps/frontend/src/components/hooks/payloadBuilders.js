@@ -1177,31 +1177,50 @@ export const handle_hooks = (payload) => {
 // ---------------------------------------------
 
 export const handle_downloads = (payload) => {
-  const action = asString(payload?.action);
+  const action = asString(payload?.action, "save");
   const browserId = asString(payload?.browserId);
 
   if (!browserId) {
     throw new Error("browserId is required for handle_downloads.");
   }
 
-  const allowedActions = ["wait", "save", "validate", "saveAndValidate"];
+  // INTELLIGENT SELECTOR HANDLING: convert common selector formats
+  // to Playwright-compatible format, preventing errors like:
+  // "page.click: Unexpected token getByText(" while parsing css selector
+  let selector = asString(payload?.selector);
+  if (!selector) {
+    throw new Error("selector is required for handle_downloads.");
+  }
+
+  // Convert testing library selectors to Playwright format
+  selector = convertSelectorToPlaywright(selector);
+
+  // New + legacy allowed actions (backward compatible)
+  const allowedActions = [
+    "wait",
+    "save",
+    "validate",
+    "saveAndValidate",
+    "validateAndDelete",
+  ];
   if (!allowedActions.includes(action)) {
     throw new Error(`Invalid action. Allowed: ${allowedActions.join(", ")}`);
   }
 
-  const saveActions = ["save", "saveAndValidate"];
-  const validateActions = ["validate", "saveAndValidate"];
+  const validateAndDeleteActions = ["validateAndDelete"];
+  const validateActions = ["validate", "saveAndValidate", "validateAndDelete"];
 
   const path = asString(payload?.path);
   const expectedFileName = asString(payload?.expectedFileName);
   const minSizeKB = asNumber(payload?.minSizeKB, undefined, 0);
   const maxSizeKB = asNumber(payload?.maxSizeKB, undefined, 0);
 
-  if (saveActions.includes(action) && !path) {
+  if (validateAndDeleteActions.includes(action) && !expectedFileName) {
     throw new Error(
-      'path is required for "save" or "saveAndValidate" actions.',
+      'expectedFileName is required for "validateAndDelete" action.',
     );
   }
+  // path is optional for save action; backend will use a default if not provided
   if (validateActions.includes(action) && !expectedFileName) {
     throw new Error(
       'expectedFileName is required for actions that include "validate".',
@@ -1216,15 +1235,20 @@ export const handle_downloads = (payload) => {
   }
 
   const body = {
-    action: action,
+    selector, // now Playwright-compatible
+    action,
     timeout: asNumber(payload?.timeout, 0, 0),
-    browserId: browserId,
+    browserId,
+    path,
   };
 
-  if (path) body.path = path;
   if (expectedFileName) body.expectedFileName = expectedFileName;
   if (minSizeKB !== undefined) body.minSizeKB = minSizeKB;
   if (maxSizeKB !== undefined) body.maxSizeKB = maxSizeKB;
+  if (payload?.continueOnError !== undefined) {
+    body.continueOnError = payload.continueOnError;
+  }
+  if (payload?.variableName) body.variableName = payload.variableName;
 
   return body;
 };
@@ -1633,3 +1657,48 @@ export const backend_js = (payload) => {
     timeout: asNumber(payload?.timeout, 0, 0),
   };
 };
+
+/**
+ * Converts common testing library selector formats to Playwright-compatible selectors.
+ * This prevents errors like: "page.click: Unexpected token getByText(" while parsing css selector
+ *
+ * Supported conversions:
+ * - getByText('text')        -> text='text' (Playwright text selector)
+ * - getByLabelText('label')  -> [value='label'] (Playwright input selector)
+ * - getByRole('role', options) -> kept as-is (Playwright native)
+ * - CSS selectors (#id, .class, tag) -> kept as-is
+ *
+ * @param {string} selector - The selector string from user configuration
+ * @returns {string} Playwright-compatible selector
+ */
+function convertSelectorToPlaywright(selector) {
+  // Already Playwright role format: keep as-is
+  if (selector.startsWith('getByRole(')) {
+    return selector;
+  }
+
+  // Testing library getByText -> Playwright text selector
+  const getByTextMatch = selector.match(/getByText\(['"](.+)['"]\)/);
+  if (getByTextMatch) {
+    const text = getByTextMatch[1];
+    // Playwright supports: text='...', also can use :text-contains
+    return `text='${text}'`;
+  }
+
+  // Testing library getByLabelText -> Playwright adaptation
+  const getByLabelTextMatch = selector.match(/getByLabelText\(['"](.+)['"]\)/);
+  if (getByLabelTextMatch) {
+    const label = getByLabelTextMatch[1];
+    // For input elements, Playwright can use [value='...'] or label matching
+    return `[value='${label}']`;
+  }
+
+  // CSS selectors, XPath, or other formats - keep as-is
+  // Playwright will handle CSS selectors natively
+  return selector;
+}
+
+/**
+ * Builds the payload for the handle_downloads node.
+ * Includes intelligent selector handling to prevent format errors.
+ */
