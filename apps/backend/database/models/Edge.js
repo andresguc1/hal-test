@@ -33,6 +33,11 @@ const Edge = sequelize.define(
             type: DataTypes.STRING,
             allowNull: false,
         },
+        type: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            defaultValue: 'custom',
+        },
     },
     {
         timestamps: true,
