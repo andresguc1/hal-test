@@ -359,6 +359,9 @@
         "select_option_no_options": "No se encontraron opciones seleccionables dentro de \"{{selector}}\". {{message}}",
         "select_option_value_required": "El valor, etiqueta o índice a seleccionar es obligatorio.",
         "select_option_not_native": "El selector \"{{selector}}\" no apunta a un elemento <select> nativo ni a una de sus <option>.",
-        "pick_option_required": "Es obligatorio proporcionar optionText (texto de la opción) u optionIndex (posición numérica)."
+        "pick_option_required": "Es obligatorio proporcionar optionText (texto de la opción) u optionIndex (posición numérica).",
+        "download_too_small": "Archivo descargado demasiado pequeño: {{actualSizeKB}} KB (mínimo: {{minSizeKB}} KB)",
+        "download_too_large": "Archivo descargado demasiado grande: {{actualSizeKB}} KB (máximo: {{maxSizeKB}} KB)",
+        "expected_file_mismatch": "Archivo esperado \"{{expected}}\" pero el servidor envió \"{{actual}\""
     }
 }

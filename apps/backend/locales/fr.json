@@ -350,9 +350,12 @@
         "select_option_no_options": "Aucune option sélectionnable trouvée dans \"{{selector}}\". {{message}}",
         "select_option_value_required": "La valeur, l'étiquette ou l'index à sélectionner est obligatoire.",
         "select_option_not_native": "Le sélecteur \"{{selector}}\" ne pointe pas vers un élément <select> natif ou l'une de ses <option>.",
-        "pick_option_required": "Vous devez fournir optionText (texte de l'option) ou optionIndex (position numérique).",
+"pick_option_required": "Vous devez fournir optionText (texte de l'option) ou optionIndex (position numérique).",
         "mouse_move_unresolved_selector": "Impossible de résoudre le sélecteur '{{selector}}' pour déplacer le pointeur.",
         "mouse_move_no_bounding_box": "L'élément '{{selector}}' n'a pas de cadre de délimitation visible, impossible de calculer une coordonnée de pointeur.",
-        "mouse_move_unknown_mode": "targetMode '{{targetMode}}' inconnu pour mouse_move. Valeurs attendues : viewport_absolute, element_center, element_offset, away_from_element."
+        "mouse_move_unknown_mode": "targetMode '{{targetMode}}' inconnu pour mouse_move. Valeurs attendues : viewport_absolute, element_center, element_offset, away_from_element.",
+        "download_too_small": "Fichier téléchargé trop petit : {{actualSizeKB}} KB (minimum : {{minSizeKB}} KB)",
+        "download_too_large": "Fichier téléchargé trop grand : {{actualSizeKB}} KB (maximum : {{maxSizeKB}} KB)",
+        "expected_file_mismatch": "Fichier attendu \"{{expected}}\" mais le serveur a envoyé \"{{actual}\""
     }
 }

@@ -805,7 +805,10 @@
       "action": {
         "break": "Break",
         "continue": "Continue",
-        "return": "Return"
+        "return": "Return",
+        "save": "💾 Save File",
+        "validateAndDelete": "✅ Validate & Delete (CI/CD)",
+        "wait": "⏳ Wait Only"
       },
       "operation": {
         "map": "Map (Transform)",
@@ -1983,5 +1986,45 @@
   },
   "codePreview": {
     "flow_node_not_found": "The sub-flow component is not on the current canvas."
+  },
+  "en": {
+    "selector_alternatives_found": "Found alternatives: {{candidates}}",
+    "selector_no_candidates": "No recognizable candidates found on the page",
+    "selector_suggestions_css": "Try a CSS selector (e.g., button.primary-action)",
+    "selector_selected": "Selected selector:",
+    "selector_matches": "matches",
+    "selector_ambiguous": " (ambiguous)",
+    "selector_fallback": " (fallback selector)",
+    "selector_semantic": " (semantic selector)"
+  },
+  "es": {
+    "selector_alternatives_found": "Found alternatives: {{candidates}}",
+    "selector_no_candidates": "No se encontraron candidatos reconocibles en la página",
+    "selector_suggestions_css": "Prueba un selector CSS (ej. button.primary-action)",
+    "selector_selected": "Selector seleccionado:",
+    "selector_matches": "coincide",
+    "selector_ambiguous": " (ambiguo)",
+    "selector_fallback": " (selector de respaldo)",
+    "selector_semantic": " (selector semántico)"
+  },
+  "fr": {
+    "selector_alternatives_found": "Found alternatives: {{candidates}}",
+    "selector_no_candidates": "Aucun candidat reconnaissable trouvé sur la page",
+    "selector_suggestions_css": "Essayez un selector CSS (ex. button.primary-action)",
+    "selector_selected": "Sélecteur sélectionné :",
+    "selector_matches": "correspond",
+    "selector_ambiguous": " (ambigu)",
+    "selector_fallback": " (sélecteur de fallback)",
+    "selector_semantic": " (selector sémantique)"
+  },
+  "pt": {
+    "selector_alternatives_found": "Found alternatives: {{candidates}}",
+    "selector_no_candidates": "Nenhum candidato reconhecível encontrado na página",
+    "selector_suggestions_css": "Tente um selector CSS (ex. button.primary-action)",
+    "selector_selected": "Selector selecionado:",
+    "selector_matches": "corresponde",
+    "selector_ambiguous": " (ambíguo)",
+    "selector_fallback": " (selector de fallback)",
+    "selector_semantic": " (selector semântico)"
   }
 }
