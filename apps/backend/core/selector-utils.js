@@ -1,6 +1,9 @@
 // core/selector-utils.js - Selector & Locator Utilities
 // Extracted from action.controller.js for reuse across plugins
 // ==========================================================
+/* global document */
+
+import SelectorRanker from './core/decisions/SelectorRanker.js';
 
 function extractQuotedValue(str, prefixLength) {
     const content = str.slice(prefixLength, -1);
@@ -494,11 +497,60 @@ async function disambiguateGetByText(page, selector) {
     if (!match) return null;
     const text = match[2].replace(/\\'/g, "'").replace(/\\"/g, '"');
     try {
-        const locator = page.getByText(text, { exact: true });
-        const count = await locator.count();
-        if (count !== 1) return null;
-        const escaped = String(text).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-        return { locator, selector: `getByText('${escaped}', { exact: true })` };
+        // Strategy 1: Try with exact: true first
+        const exactLocator = page.getByText(text, { exact: true });
+        const exactCount = await exactLocator.count();
+        if (exactCount === 1) {
+            const escaped = String(text).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            return {
+                locator: exactLocator,
+                selector: `getByText('${escaped}', { exact: true })`,
+            };
+        }
+
+        // Strategy 2: Try without exact (substring match) - might have been already exact
+        const softLocator = page.getByText(text);
+        const softCount = await softLocator.count();
+        if (softCount === 1) {
+            return {
+                locator: softLocator,
+                selector: `getByText('${text}')`,
+            };
+        }
+
+        // Strategy 3: Try combining text with role attribute to disambiguate
+        const roleOptions = { name: text, exact: true };
+        const roleLocator = page.getByRole('button', roleOptions);
+        const roleCount = await roleLocator.count();
+        if (roleCount === 1) {
+            return {
+                locator: roleLocator,
+                selector: `getByRole('button', { name: '${text}', exact: true })`,
+            };
+        }
+
+        // Strategy 4: Try combining text with [data-testid] or other attributes
+        const testIdLocator = page.locator('[data-testid]').filter({ hasText: text });
+        const testIdCount = await testIdLocator.count();
+        if (testIdCount === 1) {
+            return {
+                locator: testIdLocator,
+                selector: `[data-testid][hasText="${text}"]`,
+            };
+        }
+
+        // Strategy 5: Try with exact:true but also filter by role
+        const roleExactOptions = { name: text, exact: true };
+        const roleExactLocator = page.getByRole('button', roleExactOptions);
+        const roleExactCount = await roleExactLocator.count();
+        if (roleExactCount === 1) {
+            return {
+                locator: roleExactLocator,
+                selector: `getByRole('button', { name: '${text}', exact: true })`,
+            };
+        }
+
+        return null;
     } catch {
         return null;
     }
@@ -609,6 +661,27 @@ async function resolveTarget({ page, target, scope, timeout = 30000, signal }) {
             usedSelector = exact.selector;
             effectiveSelectorType = 'text';
             candidatesTried.push({ selector: usedSelector, status: 'attached' });
+        } else {
+            // Fallback: use deterministic selector ranking to find a unique candidate
+            const dom = await page.evaluate(() => document.documentElement.outerHTML);
+            const ranked = SelectorRanker.rankCandidates({
+                domSnippet: dom,
+                originalSelector: primary,
+            });
+            const best = ranked[0];
+            if (best && best.confidence > 0 && !best.ambiguity) {
+                const candidateLocator = buildPlaywrightLocator(page, best.selector);
+                const candidateMatches = await countMatches(candidateLocator);
+                if (candidateMatches === 1) {
+                    locator = candidateLocator;
+                    usedSelector = best.selector;
+                    effectiveSelectorType = 'deterministic';
+                    candidatesTried.push({
+                        selector: usedSelector,
+                        status: 'deterministic-fallback',
+                    });
+                }
+            }
         }
     }
 
